@@ -19,6 +19,17 @@ from django.core.management.utils import get_random_secret_key
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "").split(",") + [
+    "127.0.0.1",
+    "localhost",
+    "0.0.0.0",
+]
+CSRF_TRUSTED_ORIGINS = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") + [
+    "https://127.0.0.1",
+    "https://localhost",
+    "https://0.0.0.0",
+]
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
@@ -29,6 +40,17 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", get_random_secret_key())
 # This is the token required for getting deprivation quintiles from the RCPCH Census Platform
 RCPCH_CENSUS_PLATFORM_URL = os.getenv("RCPCH_CENSUS_PLATFORM_URL")
 RCPCH_CENSUS_PLATFORM_TOKEN = os.getenv("RCPCH_CENSUS_PLATFORM_TOKEN")
+
+# This is th token for getting the GP details from the postcode
+NHS_ODS_API_URL = os.getenv("NHS_ODS_API_URL")
+NHS_ODS_API_URL_SUBSCRIPTION_KEY = os.getenv("NHS_ODS_API_URL_SUBSCRIPTION_KEY")
+
+# This is the NHS Spine services - it does not require authentication
+# It is possible to retrieve the ods code from the NHS API above, but not to narrow down
+# by organisation type - many practices host multiple entities (pharmacies, private companies etc)
+# and it is not possible to filter out just the Prescribing Cost Centres, which is NHS digital
+# jargon for a GP practice
+NHS_SPINE_SERVICES_URL = "https://directory.spineservices.nhs.uk/ORD/2-0-0"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -45,6 +67,9 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "rest_framework",
+    # application
+    "project.npda",
 ]
 
 MIDDLEWARE = [
@@ -83,10 +108,33 @@ WSGI_APPLICATION = "project.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.contrib.gis.db.backends.postgis",
+        "NAME": os.environ.get("NPDA_POSTGRES_DB_NAME"),
+        "USER": os.environ.get("NPDA_POSTGRES_DB_USER"),
+        "PASSWORD": os.environ.get("NPDA_POSTGRES_DB_PASSWORD"),
+        "HOST": os.environ.get("NPDA_POSTGRES_DB_HOST"),
+        "PORT": os.environ.get("NPDA_POSTGRES_DB_PORT"),
     }
 }
+
+# rest framework settings
+REST_FRAMEWORK = {
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 10,
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework.authentication.SessionAuthentication",
+        "rest_framework.authentication.BasicAuthentication",
+        "rest_framework.authentication.TokenAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),
+}
+
+AUTHENTICATION_BACKENDS = (
+    "django.contrib.auth.backends.ModelBackend",  # this is default
+)
 
 
 # Password validation
@@ -107,25 +155,37 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
-# Internationalization
-# https://docs.djangoproject.com/en/4.2/topics/i18n/
-
-LANGUAGE_CODE = "en-us"
-
-TIME_ZONE = "UTC"
-
-USE_I18N = True
-
-USE_TZ = True
-
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
+STATICFILES_DIRS = (str(BASE_DIR.joinpath("static")),)
+STATIC_ROOT = str(BASE_DIR.joinpath("staticfiles"))
+# STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+WHITENOISE_ROOT = os.path.join(BASE_DIR, "static/root")
+
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Internationalization
+# https://docs.djangoproject.com/en/3.2/topics/i18n/
+
+LANGUAGE_CODE = "en-gb"
+
+TIME_ZONE = "Europe/London"
+
+USE_I18N = True
+
+# The USE_L10N setting is deprecated. Starting with Django 5.0, localized formatting of data will always be enabled. For example Django will display numbers and dates using the format of the current locale.
+# USE_L10N = True
+
+USE_TZ = True

@@ -10,6 +10,7 @@ from .hospital_admission_reasons import *
 from .leave_pdu_reasons import *
 from .postcodes import *
 from .pz_codes import *
+from .rcpch_organisations import *
 from .retinal_screening_results import *
 from .sex_types import *
 from .smoking_status import *

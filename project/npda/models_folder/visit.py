@@ -1,12 +1,12 @@
 # python imports
 
 # django imports
-from django.db import models
-from django.db.models import (
+from django.contrib.gis.db import models
+from django.contrib.gis.db.models import (
     CharField,
     DateField,
     DecimalField,
-    IntegerChoices,
+    PositiveSmallIntegerField,
     IntegerField,
 )
 
@@ -89,7 +89,7 @@ class Visit(models.Model, HelpTextMixin):
         default=None,
     )
 
-    hba1c_format = IntegerChoices(
+    hba1c_format = PositiveSmallIntegerField(
         verbose_name="HbA1c result format",
         help_text={
             "label": "Values in either mmol/mol or % will be accepted.",
@@ -112,7 +112,7 @@ class Visit(models.Model, HelpTextMixin):
         default=None,
     )
 
-    treatment = IntegerChoices(
+    treatment = PositiveSmallIntegerField(
         verbose_name="Diabetes Treatment at time of Hba1c measurement",
         help_text={
             "label": "Enter the treatment at the time of the visit for all types of diabetes. Options 1-6 usually will relate to children and young people with Type 1 diabetes. Options 7-8 usually will relate to children and young people with non-Type 1 diabetes.",
@@ -124,7 +124,7 @@ class Visit(models.Model, HelpTextMixin):
         default=None,
     )
 
-    closed_loop_system = IntegerChoices(
+    closed_loop_system = PositiveSmallIntegerField(
         verbose_name="If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
         help_text={
             "label": "Leave blank if insulin pump not used at time of HbA1c measurement. Licenced closed loop systems currently available in the UK are: • Medtronic 670g & 780g • T:slim Control IQ • CamAPS FX Any others e.g. Omnipod and Dexcom would be DIY, unlicenced.",
@@ -136,7 +136,7 @@ class Visit(models.Model, HelpTextMixin):
         default=None,
     )
 
-    glucose_monitoring = IntegerChoices(
+    glucose_monitoring = PositiveSmallIntegerField(
         verbose_name="At the time of HbA1c measurement, in addition to standard blood glucose monitoring (SBGM), was the patient using any other method of glucose monitoring?",
         help_text={
             "label": "Choose the modified flash glucose monitor option if the patient is using their flash monitor in combination with a separate device or app so that it functions as a continuous glucose monitor, with or without alarms. The Freestyle Libre 2 is classified as a flash glucose monitor.",
@@ -161,7 +161,6 @@ class Visit(models.Model, HelpTextMixin):
 
     diastolic_blood_pressure = IntegerField(
         verbose_name="Diastolic Blood pressure",
-        help_text="Diastolic Blood pressure",
         help_text={
             "label": "Mandatory for Blood Pressure care process completion. Enter Systolic BP and Diastolic BP (if collected) Please use the methodology from the Diagnosis, Evaluation, and Treatment of High Blood Pressure in Children and Adolescents Report if performed.",
             "reference": "To assess cardiovascular risk. NG18: 1.2.110 Offer children and young people with type 1 diabetes monitoring for: hypertension annually from 12 years. NG18: 1.3.43 Offer children and young people with type 2 diabetes annual monitoring for: hypertension starting at diagnosis.",
@@ -173,7 +172,6 @@ class Visit(models.Model, HelpTextMixin):
 
     blood_pressure_observation_date = DateField(
         verbose_name="Observation Date (Blood Pressure)",
-        help_text="Observation Date (Blood Pressure)",
         help_text={
             "label": "Provide an observation date within the audit period. Date relates to both the systolic AND/OR diastolic pressure measurement.",
             "reference": "",
@@ -205,9 +203,8 @@ class Visit(models.Model, HelpTextMixin):
         default=None,
     )
 
-    retinal_screening_result = IntegerChoices(
+    retinal_screening_result = PositiveSmallIntegerField(
         verbose_name="Retinal Screening Result",
-        help_text="Retinal Screening Result",
         help_text={
             "label": "Provide a result for retinal screening only if screen performed. Abnormal is defined as any level of retinopathy in either eye.",
             "reference": "",
@@ -242,7 +239,7 @@ class Visit(models.Model, HelpTextMixin):
         default=None,
     )
 
-    albuminuria_stage = IntegerChoices(
+    albuminuria_stage = PositiveSmallIntegerField(
         verbose_name="Albuminuria Stage",
         help_text={
             "label": "Submit your interpretation of the urinary albumin level based on your local laboratory reference ranges. Mandatory if level submitted.",
@@ -289,7 +286,7 @@ class Visit(models.Model, HelpTextMixin):
         default=None,
     )
 
-    thyroid_treatment_status = IntegerChoices(
+    thyroid_treatment_status = PositiveSmallIntegerField(
         verbose_name="At time of, or following measurement of thyroid function, was the patient prescribed any thyroid treatment?",
         help_text={
             "label": "Mandatory if thyroid testing performed, Data for this item can be entered into the audit if prescribed at a video/telephone appointment",
@@ -312,7 +309,7 @@ class Visit(models.Model, HelpTextMixin):
         default=None,
     )
 
-    gluten_free_diet = IntegerChoices(
+    gluten_free_diet = PositiveSmallIntegerField(
         verbose_name="Has the patient been recommended a Gluten-free diet?",
         help_text={
             "label": "Provide dietary status for all patients: A 'yes' response will be interpreted as the patient having a diagnosis of coeliac disease. Dietary status should be reported for every patient within each audit year to allow prevalence of coeliac disease to be calculated. Data for this item can be entered into the audit if a gluten-free diet was recommended at a video/telephone appointment.",
@@ -335,7 +332,7 @@ class Visit(models.Model, HelpTextMixin):
         default=None,
     )
 
-    psychological_additional_support_status = IntegerChoices(
+    psychological_additional_support_status = PositiveSmallIntegerField(
         verbose_name="Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?",
         help_text={
             "label": "Applicable if patient was assessed to require ongoing psychological/CAMHS support. If the patient is already receiving treatment, record ‘Yes’. Data for this item can be entered into the audit if determined following a remote assessment. NG18: 1.3.37 Offer children and young people with type 2 diabetes and their family members or carers (as appropriate) timely and ongoing access to mental health professionals with an understanding of diabetes because they may experience psychological problems (such as anxiety, depression, behavioural and conduct disorders and family conflict) or psychosocial difficulties that can impact on the management of diabetes and wellbeing. [2004, amended 2015]",
@@ -347,7 +344,7 @@ class Visit(models.Model, HelpTextMixin):
         default=None,
     )
 
-    smoking_status = IntegerChoices(
+    smoking_status = PositiveSmallIntegerField(
         verbose_name="Does the patient smoke?",
         help_text={
             "label": "Enter smoking status of the patient. Data for this item can be entered into the audit if collected at a video/telephone appointment.",
@@ -381,7 +378,7 @@ class Visit(models.Model, HelpTextMixin):
         default=None,
     )
 
-    dietician_additional_appointment_offered = IntegerChoices(
+    dietician_additional_appointment_offered = PositiveSmallIntegerField(
         verbose_name="Was the patient offered an additional appointment with a paediatric dietitian?",
         help_text={
             "label": "The additional appointment could be 1:1 or group session, via phone call, video call or face to face.",
@@ -401,7 +398,7 @@ class Visit(models.Model, HelpTextMixin):
         default=None,
     )
 
-    ketone_meter_training = IntegerChoices(
+    ketone_meter_training = PositiveSmallIntegerField(
         verbose_name="Was the patient using (or trained to use) blood ketone testing equipment at time of visit?",
         help_text={
             "label": "Type 1 diabetes only Data for this item can be entered into the audit if collected at a video/telephone appointment.",
@@ -454,7 +451,7 @@ class Visit(models.Model, HelpTextMixin):
         default=None,
     )
 
-    hospital_admission_reason = IntegerChoices(
+    hospital_admission_reason = PositiveSmallIntegerField(
         verbose_name="Use option 1: Stabilisation of diabetes for new patients admitted without DKA or other admissions where the purpose was to stabilise blood glucose such as recurrent hyperglycaemia without acidosis.",
         help_text={
             "label": "",
@@ -466,10 +463,12 @@ class Visit(models.Model, HelpTextMixin):
         default=None,
     )
 
-    dka_additional_therapies = IntegerChoices(
+    dka_additional_therapies = PositiveSmallIntegerField(
         verbose_name="Additional therapies used in DKA management",
-        help_text="Only complete if DKA selected in previous question: During this DKA admission did the patient receive any of the following therapies?",
-        help_text={"label": "", "reference": ""},
+        help_text={
+            "label": "Only complete if DKA selected in previous question: During this DKA admission did the patient receive any of the following therapies?",
+            "reference": "",
+        },
         choices=DKA_ADDITIONAL_THERAPIES,
         null=True,
         blank=True,
@@ -490,7 +489,7 @@ class Visit(models.Model, HelpTextMixin):
 
     # relationships
 
-    patient = models.ForeignKey(to="project.Patient", on_delete=models.CASCADE)
+    patient = models.ForeignKey(to="npda.Patient", on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = "Patient"

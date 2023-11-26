@@ -2,8 +2,8 @@
 from datetime import date
 
 # django imports
-from django.db import models
-from django.db.models import CharField, DateField, IntegerChoices
+from django.contrib.gis.db import models
+from django.contrib.gis.db.models import CharField, DateField, PositiveSmallIntegerField
 
 # npda imports
 from ...constants import (
@@ -12,10 +12,28 @@ from ...constants import (
     SEX_TYPE,
     UNKNOWN_POSTCODES_NO_SPACES,
 )
-from ..general_functions import stringify_time_elapsed, imd_for_postcode
+from ..general_functions import (
+    stringify_time_elapsed,
+    imd_for_postcode,
+    gp_practice_for_postcode,
+    gp_details_for_ods_code,
+)
 
 
 class Patient(models.Model):
+    """
+    The Patient class.
+
+    The index of multiple deprivation is calculated in the save() method using the postcode supplied and the
+    RCPCH Census Platform
+
+    The GP practice ODS code is stored, with details pulled from the NHS ODS API - TODO
+
+    Custom methods age and age_days, returns the age
+
+
+    """
+
     nhs_number = CharField(  # the NHS number for England and Wales
         "NHS Number", unique=True, blank=True, null=True, max_length=10
     )
@@ -47,7 +65,9 @@ class Patient(models.Model):
         null=True,
     )
 
-    diabetes_type = IntegerChoices(verbose_name="Diabetes Type", choices=DIABETES_TYPES)
+    diabetes_type = PositiveSmallIntegerField(
+        verbose_name="Diabetes Type", choices=DIABETES_TYPES
+    )
 
     diagnosis_date = DateField(verbose_name="Date of Diabetes Diagnosis")
 
@@ -59,6 +79,12 @@ class Patient(models.Model):
 
     gp_practice_ods_code = models.CharField(verbose_name="GP Practice Code")
 
+    class Meta:
+        verbose_name = "Patient"
+        verbose_name_plural = "Patients"
+        ordering = ("nhs_number",)
+
+    # class methods
     def age_days(self, today_date=date.today()):
         """
         Returns the age of the patient in years, months and days
@@ -94,4 +120,8 @@ class Patient(models.Model):
                         f"Cannot calculate deprivation score for {self.postcode}: {error}"
                     )
                     pass
+
+                # use postcode to retrieve GP surgery ODS code from spine
+                self.gp_practice_ods_code = gp_practice_for_postcode(self.postcode)
+
         return super().save(*args, **kwargs)

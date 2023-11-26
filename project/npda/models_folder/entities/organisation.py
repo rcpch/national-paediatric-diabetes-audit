@@ -8,7 +8,6 @@ from django.contrib.gis.db.models import (
 )
 
 # 3rd party
-from simple_history.models import HistoricalRecords
 from ..time_and_user_abstract_base_classes import TimeStampAbstractBaseClass
 
 
@@ -39,35 +38,28 @@ class Organisation(TimeStampAbstractBaseClass):
     )  # date this Organisation was last amended according to the ORD
 
     trust = models.ForeignKey(
-        to="epilepsy12.Trust",
+        to="npda.Trust",
         on_delete=models.CASCADE,
         null=True,
         blank=True,
         default=None,
     )
     local_health_board = models.ForeignKey(
-        to="epilepsy12.LocalHealthBoard",
+        to="npda.LocalHealthBoard",
         on_delete=models.CASCADE,
         null=True,
         blank=True,
         default=None,
     )
     integrated_care_board = models.ForeignKey(
-        to="epilepsy12.IntegratedCareBoard",
+        to="npda.IntegratedCareBoard",
         on_delete=models.CASCADE,
         null=True,
         blank=True,
         default=None,
     )
     nhs_england_region = models.ForeignKey(
-        to="epilepsy12.NHSEnglandRegion",
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        default=None,
-    )
-    openuk_network = models.ForeignKey(
-        to="epilepsy12.OPENUKNetwork",
+        to="npda.NHSEnglandRegion",
         on_delete=models.CASCADE,
         null=True,
         blank=True,
@@ -75,7 +67,7 @@ class Organisation(TimeStampAbstractBaseClass):
     )
     # administrative regions
     london_borough = models.ForeignKey(
-        to="epilepsy12.LondonBorough",
+        to="npda.LondonBorough",
         on_delete=models.CASCADE,
         null=True,
         blank=True,
@@ -83,18 +75,8 @@ class Organisation(TimeStampAbstractBaseClass):
     )
 
     country = models.ForeignKey(
-        to="epilepsy12.Country", on_delete=models.PROTECT, null=True, blank=True
+        to="npda.Country", on_delete=models.PROTECT, null=True, blank=True
     )
-
-    history = HistoricalRecords()
-
-    @property
-    def _history_user(self):
-        return self.updated_by
-
-    @_history_user.setter
-    def _history_user(self, value):
-        self.updated_by = value
 
     class Meta:
         indexes = [models.Index(fields=["name"])]
