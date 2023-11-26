@@ -176,12 +176,6 @@ def seed_organisations(apps, schema_editor):
         "\033[31m",
     )
 
-    print(
-        "\033[31m",
-        "Updating all RCPCH organisations with OPEN UK network relationships...",
-        "\033[31m",
-    )
-
 
 class Migration(migrations.Migration):
     dependencies = [
