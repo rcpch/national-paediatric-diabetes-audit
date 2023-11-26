@@ -7,7 +7,10 @@ from .ethnicities import *
 from .glucose_monitoring_types import *
 from .hba1c_format import *
 from .hospital_admission_reasons import *
+from .integrated_care_boards import *
 from .leave_pdu_reasons import *
+from .local_health_boards import *
+from .nhs_england_regions import *
 from .postcodes import *
 from .pz_codes import *
 from .rcpch_organisations import *
@@ -15,4 +18,5 @@ from .retinal_screening_results import *
 from .sex_types import *
 from .smoking_status import *
 from .thyroid_treatment_status import *
+from .trust import *
 from .yes_no_unknown import *
