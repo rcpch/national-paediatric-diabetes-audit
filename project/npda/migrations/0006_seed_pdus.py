@@ -29,19 +29,20 @@ def seed_pdus(apps, schema_editor):
         print("\033[31m", "Adding new Paediatric Diabetes Units...", "\033[31m")
 
         for added, pdu in enumerate(PZ_CODES):
-            if "pz_code" in pdu:
-                if Organisation.objects.filter(ods_code=pdu["pz_code"]).exists():
+            if "ods_code" in pdu:
+                if Organisation.objects.filter(ods_code=pdu["ods_code"]).exists():
                     try:
-                        o = Organisation.objects.filter(ods_code=pdu["pz_code"]).get()
+                        o = Organisation.objects.filter(ods_code=pdu["ods_code"]).get()
                         pdu = PaediatricDiabetesUnit.objects.create(
                             pz_code=pdu["pz_code"], organisation=o
                         )
                         pdu.save()
-                        print(f"{added+1}: {pdu['organisation']}")
                     except Exception as error:
                         print(f"Unable to save {o} - {pdu['pz_code']}: {error}")
+            else:
+                print(f"{pdu['paediatric_unit']} not added")
 
-        print(f"{added+1} organisations added.")
+        print(f"{added+1} PDUs added.")
 
 
 class Migration(migrations.Migration):

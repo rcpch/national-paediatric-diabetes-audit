@@ -6,9 +6,11 @@ requests
 ## django and misc
 dj_database_url
 django
+django-filter
 django-htmx
 djangorestframework
 docutils
+markdown
 pandas
 psycopg2-binary
 whitenoise

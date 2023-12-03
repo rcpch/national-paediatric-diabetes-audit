@@ -1,4 +1,4 @@
-version: "3.12"
+version: "3.11"
 
 x-global-environment: &global
   env_file:
@@ -20,7 +20,6 @@ services:
       - caddy-data:/config/
       - ./Caddyfile:/etc/caddy/Caddyfile
       - ./staticdocs:/srv/staticdocs
-
 
   # Django web application
   django: &django
@@ -45,15 +44,14 @@ services:
       - postgis-data:/var/lib/postgresql/data
     restart: always
 
-  # mkdocs:
-  #   <<: *django # this will inherit all the settings from the django service
-  #   ports:
-  #     - 8002:8002
-  #   command: >
-  #     sh -c "mkdocs build --config-file documentation/mkdocs.yml &&
-  #       mkdocs serve --config-file documentation/mkdocs.yml"
-  #   restart: always
-
+  mkdocs:
+    <<: *django # this will inherit all the settings from the django service
+    ports:
+      - 8002:8002
+    command: >
+      sh -c "mkdocs build --config-file documentation/mkdocs.yml &&
+        mkdocs serve --config-file documentation/mkdocs.yml"
+    restart: always
 
 volumes:
   caddy-data:
