@@ -3,3 +3,5 @@ staticdocs
 staticfiles
 
 __pycache__
+.DS_Store
+/.cache
