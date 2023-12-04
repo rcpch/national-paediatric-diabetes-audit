@@ -1,0 +1,14 @@
+{% extends "rest_framework/login_base.html" %}
+{% load static %}
+{% load rest_framework %}
+
+{% block bootstrap_theme %}
+    <link rel="stylesheet" href="{% static 'bootstrap.min.css' %}" type="text/css">
+{% endblock %}
+
+{% block branding %}
+<span>
+    <h3 style="margin: 0 0 0 0;">National Paediatric Diabetes Audit</h3>
+    <img src="{% static 'npda-logo.png' %}" style="width: 10%;"/>
+</span>
+{% endblock %}
