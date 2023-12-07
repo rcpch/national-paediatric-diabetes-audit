@@ -15,4 +15,4 @@ class PaediatricDiabetesUnit(models.Model):
         ordering = ("pz_code",)
 
     def __str__(self) -> str:
-        return self.organisation
+        return f"{self.organisation} - {self.pz_code}"
