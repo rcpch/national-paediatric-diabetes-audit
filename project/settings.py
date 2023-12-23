@@ -50,7 +50,9 @@ NHS_ODS_API_URL_SUBSCRIPTION_KEY = os.getenv("NHS_ODS_API_URL_SUBSCRIPTION_KEY")
 # by organisation type - many practices host multiple entities (pharmacies, private companies etc)
 # and it is not possible to filter out just the Prescribing Cost Centres, which is NHS digital
 # jargon for a GP practice
-NHS_SPINE_SERVICES_URL = "https://directory.spineservices.nhs.uk/ORD/2-0-0"
+NHS_SPINE_SERVICES_URL = os.getenv("NHS_SPINE_SERVICES_URL")
+
+POSTCODE_API_BASE_URL = os.getenv("POSTCODE_API_BASE_URL")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True

@@ -15,7 +15,7 @@ def gp_practice_for_postcode(postcode: str):
     Returns GP practice as an object from NHS API against a postcode
     """
 
-    request_url = f"/organisations?PostCode={postcode}&PrimaryRoleId=RO177"
+    request_url = f"{settings.NHS_ODS_API_URL}/organisations?PostCode={postcode}&PrimaryRoleId=RO177"
 
     try:
         response = requests.get(
