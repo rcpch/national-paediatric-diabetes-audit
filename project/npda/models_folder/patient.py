@@ -59,7 +59,7 @@ class Patient(models.Model):
     index_of_multiple_deprivation_quintile = models.PositiveSmallIntegerField(
         # this is a calculated field - it relies on the availability of the RCPCH Census Platform
         # A quintile is calculated on save and persisted in the database
-        "index of multiple deprivation calculated from MySociety data.",
+        "index of multiple deprivation calculated from RCPCH Census Platform.",
         blank=True,
         editable=False,
         null=True,

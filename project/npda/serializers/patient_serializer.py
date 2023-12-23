@@ -11,6 +11,13 @@ class PatientSerializer(serializers.HyperlinkedModelSerializer):
         else:
             raise serializers.ValidationError("Invalid NHS Number")
 
+    def validate_death_date(self, value):
+        if value and self.date_of_birth > value:
+            raise serializers.ValidationError(
+                "Date of death cannot be before date of birth."
+            )
+        return value
+
     class Meta:
         model = Patient
         fields = "__all__"
