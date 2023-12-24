@@ -27,7 +27,7 @@ def gp_practice_for_postcode(postcode: str):
         )
         response.raise_for_status()
     except HTTPError as e:
-        print(e.response.text)
+        raise Exception(e.response.text["message"])
 
     return response.json()["Organisations"][0]["OrgId"]
 

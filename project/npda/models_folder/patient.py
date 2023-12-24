@@ -4,6 +4,7 @@ from datetime import date
 # django imports
 from django.contrib.gis.db import models
 from django.contrib.gis.db.models import CharField, DateField, PositiveSmallIntegerField
+from django.core.exceptions import ValidationError
 
 # npda imports
 from ...constants import (
@@ -16,7 +17,6 @@ from ..general_functions import (
     stringify_time_elapsed,
     imd_for_postcode,
     gp_practice_for_postcode,
-    gp_details_for_ods_code,
 )
 
 
@@ -26,8 +26,6 @@ class Patient(models.Model):
 
     The index of multiple deprivation is calculated in the save() method using the postcode supplied and the
     RCPCH Census Platform
-
-    The GP practice ODS code is stored, with details pulled from the NHS ODS API - TODO
 
     Custom methods age and age_days, returns the age
 
@@ -77,7 +75,13 @@ class Patient(models.Model):
         null=True,
     )
 
-    gp_practice_ods_code = models.CharField(verbose_name="GP Practice Code")
+    gp_practice_ods_code = models.CharField(
+        verbose_name="GP Practice Code", blank=True, null=True
+    )
+
+    gp_practice_postcode = models.CharField(
+        verbose_name="GP Practice postcode", blank=True, null=True
+    )
 
     class Meta:
         verbose_name = "Patient"
@@ -123,5 +127,21 @@ class Patient(models.Model):
 
                 # use postcode to retrieve GP surgery ODS code from spine
                 self.gp_practice_ods_code = gp_practice_for_postcode(self.postcode)
+
+        if self.gp_practice_ods_code is None and self.gp_practice_postcode is None:
+            raise ValidationError(
+                "GP Practice ODS code and GP Practice postcode cannot both be empty. At least one must be supplied."
+            )
+
+        if self.gp_practice_ods_code is None and self.gp_practice_postcode is not None:
+            """
+            calculate the GP Practice ODS Code from the GP practice postcode
+            """
+            try:
+                ods_code = gp_practice_for_postcode(self.gp_practice_postcode)
+            except Exception as error:
+                raise ValidationError(error)
+
+            self.gp_practice_ods_code = ods_code
 
         return super().save(*args, **kwargs)

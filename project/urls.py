@@ -18,7 +18,13 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers
 from django.views.generic import TemplateView
-from .npda.viewsets import UserViewSet, PatientViewSet, PDUViewSet, VisitViewSet
+from .npda.viewsets import (
+    UserViewSet,
+    PatientViewSet,
+    PDUViewSet,
+    VisitViewSet,
+    OrganisationViewSet,
+)
 from .npda.views import *
 
 router = routers.DefaultRouter()
@@ -26,6 +32,7 @@ router.register(r"users", UserViewSet)
 router.register(r"visits", VisitViewSet)
 router.register(r"patients", PatientViewSet)
 router.register(r"pdus", PDUViewSet)
+router.register(r"organisations", OrganisationViewSet)
 
 urlpatterns = [
     path("", include(router.urls)),
