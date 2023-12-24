@@ -125,20 +125,18 @@ class Patient(models.Model):
                     )
                     pass
 
-                # use postcode to retrieve GP surgery ODS code from spine
-                self.gp_practice_ods_code = gp_practice_for_postcode(self.postcode)
-
         if self.gp_practice_ods_code is None and self.gp_practice_postcode is None:
             raise ValidationError(
                 "GP Practice ODS code and GP Practice postcode cannot both be empty. At least one must be supplied."
             )
 
-        if self.gp_practice_ods_code is None and self.gp_practice_postcode is not None:
+        if not self.gp_practice_ods_code and self.gp_practice_postcode:
             """
             calculate the GP Practice ODS Code from the GP practice postcode
             """
             try:
                 ods_code = gp_practice_for_postcode(self.gp_practice_postcode)
+                print(f"Hello ods code: {ods_code}")
             except Exception as error:
                 raise ValidationError(error)
 

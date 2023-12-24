@@ -21,10 +21,11 @@ class PatientSerializer(serializers.HyperlinkedModelSerializer):
                 raise serializers.ValidationError(
                     "Date of diagnosis cannot be after date of death."
                 )
-        if data["diagnosis_date"] < data["date_of_birth"]:
-            raise serializers.ValidationError(
-                "Date of diagnosis cannot be before date of birth."
-            )
+        if data["diagnosis_date"] is not None:
+            if data["diagnosis_date"] < data["date_of_birth"]:
+                raise serializers.ValidationError(
+                    "Date of diagnosis cannot be before date of birth."
+                )
         if (
             data["gp_practice_ods_code"] is None
             and data["gp_practice_postcode"] is None
@@ -35,7 +36,7 @@ class PatientSerializer(serializers.HyperlinkedModelSerializer):
 
         if data["gp_practice_postcode"] is not None:
             try:
-                print(gp_practice_for_postcode(data["gp_practice_postcode"]))
+                gp_practice_for_postcode(data["gp_practice_postcode"])
             except Exception as error:
                 raise serializers.ValidationError(error)
 
