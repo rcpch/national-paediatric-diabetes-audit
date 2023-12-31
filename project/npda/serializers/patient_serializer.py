@@ -1,6 +1,7 @@
 from rest_framework import serializers
 import nhs_number
 from django.apps import apps
+from drf_spectacular.utils import extend_schema_serializer, OpenApiExample
 from ..general_functions import validate_postcode
 
 Patient = apps.get_model("npda", "Patient")
@@ -9,7 +10,26 @@ Organisation = apps.get_model("npda", "Organisation")
 from ..general_functions import gp_practice_for_postcode
 
 
-# Serializers define the API representation.
+@extend_schema_serializer(
+    examples=[
+        OpenApiExample(
+            "/patient/1/",
+            value={
+                "": "",
+                "": "",
+                "": "",
+                "": "",
+                "": "",
+                "": "",
+                "": "",
+                "": "",
+                "": "",
+                "": "",
+            },
+            response_only=True,
+        )
+    ]
+)
 class PatientSerializer(serializers.HyperlinkedModelSerializer):
     def validate(self, data):
         if data["death_date"] is not None:

@@ -9,6 +9,7 @@ django
 django-filter
 django-htmx
 djangorestframework
+drf-spectacular
 docutils
 markdown
 pandas

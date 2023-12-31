@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "drf_spectacular",
     # application
     "project.npda",
 ]
@@ -128,6 +129,16 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+# drf-spectacular schema settings
+SPECTACULAR_SETTINGS = {
+    "TITLE": "RCPCH National Paediatric Diabetes Audit API",
+    "DESCRIPTION": "RCPCH National Paediatric Diabetes Audit.",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    # OTHER SETTINGS
 }
 
 AUTHENTICATION_BACKENDS = (

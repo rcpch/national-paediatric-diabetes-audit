@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers
 from django.views.generic import TemplateView
+from drf_spectacular.views import SpectacularJSONAPIView, SpectacularSwaggerView
 from .npda.viewsets import (
     UserViewSet,
     PatientViewSet,
@@ -38,4 +39,12 @@ urlpatterns = [
     path("", include(router.urls)),
     path("admin/", admin.site.urls),
     path("api-auth/", include("rest_framework.urls")),
+    # JSON Schema
+    path("schema/", SpectacularJSONAPIView.as_view(), name="schema"),
+    # Swagger UI
+    path(
+        "swagger-ui/",
+        SpectacularSwaggerView.as_view(),
+        name="swagger-ui",
+    ),
 ]
