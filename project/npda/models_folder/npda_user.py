@@ -8,7 +8,7 @@ from django.db.models.functions import Lower
 from django.contrib.gis.db.models import UniqueConstraint
 from django.apps import apps
 
-from ..constants import *
+from ...constants import *
 
 
 class NPDAUserManager(BaseUserManager):

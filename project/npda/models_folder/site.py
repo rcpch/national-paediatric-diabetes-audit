@@ -13,12 +13,15 @@ from ...constants import LEAVE_PDU_REASONS
 
 
 class Site(models.Model):
-    date_leaving_service = DateField(verbose_name="Date of leaving service")
-
-    date_leaving_service = DateField(verbose_name="Date of leaving service")
+    date_leaving_service = DateField(
+        verbose_name="Date of leaving service", blank=True, null=True
+    )
 
     reason_leaving_service = PositiveSmallIntegerField(
-        verbose_name="Reason for leaving service", choices=LEAVE_PDU_REASONS
+        verbose_name="Reason for leaving service",
+        choices=LEAVE_PDU_REASONS,
+        blank=True,
+        null=True,
     )
 
     # relationships
