@@ -38,18 +38,15 @@ def gp_details_for_ods_code(ods_code: str):
     Returns address, name and long/lat for ods code
     """
 
-    request_url = f"{settings.NHS_ODS_API_URL}&search={ods_code}"
+    url = f"{settings.NHS_SPINE_SERVICES_URL}/organisations/{ods_code}"
 
     try:
         response = requests.get(
-            url=request_url,
-            headers={
-                "subscription-key": f"{settings.NHS_ODS_API_URL_SUBSCRIPTION_KEY}"
-            },
+            url=url,
             timeout=10,  # times out after 10 seconds
         )
         response.raise_for_status()
     except HTTPError as e:
-        print(e.response.text)
+        return {"error": e}
 
-    return response.json()["value"][0]
+    return response.json()["Organisations"][0]
