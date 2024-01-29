@@ -75,7 +75,7 @@ class NPDAUserManager(BaseUserManager):
         """
         Create and save a SuperUser with the given email and password.
         """
-        Organisation = apps.get_model("npda", "Organisation")
+        # Organisation = apps.get_model("npda", "Organisation")
 
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("is_active", True)
@@ -102,9 +102,10 @@ class NPDAUserManager(BaseUserManager):
                 extra_fields.setdefault("view_preference", 2)  # national scope
                 extra_fields.setdefault("organisation_employer", None)
             else:
-                organisation_employer = Organisation.objects.get(
-                    ods_code="RJZ01"
-                )  # clinicians added to KCH by default
+                organisation_employer = None
+                # Organisation.objects.get(
+                #     ods_code="RJZ01"
+                # )  # clinicians added to KCH by default
                 extra_fields.setdefault("organisation_employer", organisation_employer)
 
         logged_in_user = self.create_user(email.lower(), password, **extra_fields)
@@ -180,11 +181,12 @@ class NPDAUser(AbstractUser, PermissionsMixin):
 
     objects = NPDAUserManager()
 
-    organisation_employer = models.ForeignKey(
-        "npda.Organisation",
-        on_delete=models.CASCADE,
-        blank=True,
+    organisation_employer = models.CharField(
+        _("Employing organisation"),
+        help_text=_("Enter your employing organisation"),
+        max_length=150,
         null=True,
+        blank=True,
     )
 
     def get_full_name(self):

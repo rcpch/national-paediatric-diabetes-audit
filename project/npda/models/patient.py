@@ -2,6 +2,7 @@
 from datetime import date
 
 # django imports
+from django.utils.translation import gettext_lazy as _
 from django.contrib.gis.db import models
 from django.contrib.gis.db.models import CharField, DateField, PositiveSmallIntegerField
 from django.core.exceptions import ValidationError

@@ -1,1 +1,1 @@
-from .models_folder import *
+from .models import *

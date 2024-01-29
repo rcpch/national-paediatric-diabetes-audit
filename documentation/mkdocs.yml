@@ -13,7 +13,7 @@ repo_name: rcpch/national-paediatric-diabetes-audit
 edit_uri: blob/development/documentation/docs
 
 # `mkdocs serve` serves the documentation at custom port (to avoid clashing with other services we commonly run)
-dev_addr: "0.0.0.0:8002"
+dev_addr: "0.0.0.0:8007"
 
 # Specifies the destination directory in which to build the static site
 site_dir: ../staticdocs

@@ -5,7 +5,6 @@ from drf_spectacular.utils import extend_schema_serializer, OpenApiExample
 from ..general_functions import validate_postcode
 
 Patient = apps.get_model("npda", "Patient")
-Organisation = apps.get_model("npda", "Organisation")
 
 from ..general_functions import gp_practice_for_postcode
 

@@ -22,9 +22,7 @@ from drf_spectacular.views import SpectacularJSONAPIView, SpectacularSwaggerView
 from .npda.viewsets import (
     UserViewSet,
     PatientViewSet,
-    PDUViewSet,
     VisitViewSet,
-    OrganisationViewSet,
 )
 from .npda.views import *
 
@@ -32,8 +30,6 @@ router = routers.DefaultRouter()
 router.register(r"users", UserViewSet)
 router.register(r"visits", VisitViewSet)
 router.register(r"patients", PatientViewSet)
-router.register(r"pdus", PDUViewSet)
-router.register(r"organisations", OrganisationViewSet)
 
 urlpatterns = [
     path("", include(router.urls)),

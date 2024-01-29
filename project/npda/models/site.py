@@ -1,6 +1,7 @@
 # python imports
 
 # django imports
+from django.utils.translation import gettext_lazy as _
 from django.contrib.gis.db import models
 from django.contrib.gis.db.models import (
     DateField,
@@ -25,7 +26,13 @@ class Site(models.Model):
     )
 
     # relationships
-    pdu = ForeignKey(to="npda.PaediatricDiabetesUnit", on_delete=models.CASCADE)
+    pdu = models.CharField(
+        _("PZ Code"),
+        help_text=_("Enter the PZ Code"),
+        max_length=150,
+        null=True,
+        blank=True,
+    )
 
     patient = ForeignKey(to="npda.Patient", on_delete=models.CASCADE)
 

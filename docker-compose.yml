@@ -1,4 +1,4 @@
-version: "3.11"
+version: "3.12"
 
 x-global-environment: &global
   env_file:
@@ -12,8 +12,8 @@ services:
       - django
     image: caddy
     ports:
-      - "80:80"
-      - "443:443"
+      - "8008:80"
+      - "8009:443"
     restart: always
     volumes:
       - caddy-data:/data/
@@ -31,6 +31,7 @@ services:
       - .:/app/
     command: >
       sh -c "python manage.py collectstatic --noinput &&
+        python manage.py makemigrations &&
         python manage.py migrate &&
         echo $$DJANGO_STARTUP_COMMAND &&
         $$DJANGO_STARTUP_COMMAND"
@@ -47,7 +48,7 @@ services:
   mkdocs:
     <<: *django # this will inherit all the settings from the django service
     ports:
-      - 8002:8002
+      - 8007:8007
     command: >
       sh -c "mkdocs build --config-file documentation/mkdocs.yml &&
         mkdocs serve --config-file documentation/mkdocs.yml"
