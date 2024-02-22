@@ -12,8 +12,8 @@ services:
       - django
     image: caddy
     ports:
-      - "8008:80"
-      - "8009:443"
+      - "80:80"
+      - "443:443"
     restart: always
     volumes:
       - caddy-data:/data/
