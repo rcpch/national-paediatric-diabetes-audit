@@ -38,7 +38,7 @@ def csv_upload(csv_file=None):
     Patient = apps.get_model("npda", "Patient")
     Site = apps.get_model("npda", "Site")
     Visit = apps.get_model("npda", "Visit")
-    PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+    # PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
 
     csv_file = os.path.join(
         settings.BASE_DIR, "project", "npda", "dummy_sheets", "dummy_sheet.csv"
@@ -578,10 +578,16 @@ def csv_upload(csv_file=None):
         except Exception as error:
             raise Exception(f"Could not save patient: {error}")
 
+        
+        # This is a temporizing step while we have no Organisations models available
+        """
         try:
             pdu = PaediatricDiabetesUnit.objects.get(pz_code=row["PDU Number"])
         except Exception as error:
             raise Exception(f"Could not find PDU: {error}")
+        """
+        pdu = None
+
 
         try:
             site, created = Site.objects.get_or_create(

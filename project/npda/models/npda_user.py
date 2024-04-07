@@ -29,13 +29,13 @@ class NPDAUserManager(BaseUserManager):
         if not email:
             raise ValueError(_("You must provide an email address"))
 
-        if not extra_fields.get("organisation_employer") and not extra_fields.get(
-            "is_rcpch_staff"
-        ):
-            # Non-RCPCH staff (is_rcpch_staff) are not affiliated with a organisation
-            raise ValueError(
-                _("You must provide the name of your main organisation trust.")
-            )
+        # if not extra_fields.get("organisation_employer") and not extra_fields.get(
+        #     "is_rcpch_staff"
+        # ):
+        #     # Non-RCPCH staff (is_rcpch_staff) are not affiliated with a organisation
+        #     raise ValueError(
+        #         _("You must provide the name of your main organisation trust.")
+        #     )
 
         if not role:
             raise ValueError(_("You must provide your role in the NPDA audit."))
@@ -106,7 +106,7 @@ class NPDAUserManager(BaseUserManager):
                 # Organisation.objects.get(
                 #     ods_code="RJZ01"
                 # )  # clinicians added to KCH by default
-                extra_fields.setdefault("organisation_employer", organisation_employer)
+        extra_fields.setdefault("organisation_employer", organisation_employer)
 
         logged_in_user = self.create_user(email.lower(), password, **extra_fields)
 

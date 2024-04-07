@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<div class="flex flex-row min-h-screen justify-center">
+    <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
+      <div class="inline-block min-w-full py-2 sm:px-6 lg:px-8">
+          <div class="relative overflow-x-auto shadow-md">
+              <table class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+                  <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-rcpch_dark_blue dark:text-white">
+                    <tr>
+                      <th scope="col" class="px-6 py-3">NHS Number</th>
+                      <th scope="col" class="px-6 py-3">Sex</th>
+                      <th scope="col" class="px-6 py-3">Date of Birth</th>
+                      <th scope="col" class="px-6 py-3">Postcode</th>
+                      <th scope="col" class="px-6 py-3">Ethnicity</th>
+                      <th scope="col" class="px-6 py-3">Diabetes Type</th>
+                      <th scope="col" class="px-6 py-3">Diagnosis Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% if patients %}
+                        {% for patient in patients %}
+                        <tr class="bg-white border-b dark:bg-rcpch_light_blue dark:text-white dark:border-gray-100 hover:bg-r dark:hover:bg-gray-600">
+                            <td class="px-6 py-4">{{ patient.nhs_number }}</td>
+                            <td class="px-6 py-4">{{ patient.get_sex_display }}</td>
+                            <td class="px-6 py-4">{{ patient.date_of_birth }}</td>
+                            <td class="px-6 py-4">{{ patient.postcode }}</td>
+                            <td class="px-6 py-4">{{ patient.get_ethnicity_display }}</td>
+                            <td class="px-6 py-4">{{ patient.get_diabetes_type_display }}</td>
+                            <td class="px-6 py-4">{{ patient.diagnosis_date }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <h5>No patients yet!</h5>
+                    {% endif %}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                        <th>
+                            <strong>
+                                Total: {{patients.count}} patients
+                            </strong>
+                        </th>
+                    </tr>
+                  </tfoot>
+                </table>
+          </div>
+      </div>
+    </div>
+</div>
+{% endblock %}

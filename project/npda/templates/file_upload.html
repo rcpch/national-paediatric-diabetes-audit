@@ -1,17 +1,33 @@
 <div class="max-w-xl w-full">
-    <label
-        class="flex justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-md appearance-none cursor-pointer hover:border-gray-400 focus:outline-none">
-        <span class="flex items-center space-x-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-            <span class="font-medium text-gray-600">
-                Drop files to Attach, or
-                <span class="text-blue-600 underline">browse</span>
-            </span>
-        </span>
-        <input type="file" name="file_upload" class="hidden">
-    </label>
+    {% if file_uploaded %}
+        <p>File uploaded - Thank you!</p>
+        <a href="{% url 'patients' %}" class="bg-blue-500 hover:bg-white text-white font-semibold hover:text-blue-500 py-2 px-3 border border-blue-500 hover:border-blue-500 rounded" type="submit">View Data</a>
+    {% else %}
+        <form method="POST" enctype="multipart/form-data" action="home" >
+            <label for="#upload_input" class="flex justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-md appearance-none cursor-pointer hover:border-gray-400 focus:outline-none">
+                <span class="flex items-center space-x-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2"> 
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <span class="font-medium text-gray-600">
+                        Please drop your NPDA CSV file here, or
+                        <input id="upload_input" class="block w-full text-sm text-slate-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-md file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-blue-50 file:text-blue-500
+                        hover:file:bg-blue-500
+                        hover:file:text-white
+                        hover:text-gray-400
+                    " type="file" name="csv_upload">
+                    </span>
+                        {% csrf_token %}
+                            <button class="bg-blue-500 hover:bg-white text-white font-semibold hover:text-blue-500 py-2 px-3 border border-blue-500 hover:border-blue-500 rounded" type="submit">Upload</button>
+                    </span>
+            </label>
+        </form>
+    {% endif %}
+
 </div>
