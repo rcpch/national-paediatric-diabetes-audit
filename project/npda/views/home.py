@@ -5,7 +5,7 @@ from ..models import Patient
 
 
 def home(request):
-    file_uploaded=False
+    file_uploaded = False
     if request.method == "POST":
         form = UploadFileForm(request.POST, request.FILES)
         file = request.FILES["csv_upload"]
@@ -14,16 +14,20 @@ def home(request):
     else:
         form = UploadFileForm()
 
-
-    context = {
-        "file_uploaded": file_uploaded,
-        "form": form
-    }
+    context = {"file_uploaded": file_uploaded, "form": form}
     template = "home.html"
     return render(request=request, template_name=template, context=context)
 
+
 def patients(request):
-    template_name="patients.html"
+    template_name = "patients.html"
     patients = Patient.objects.all()
-    context={ "patients": patients}
+    context = {"patients": patients}
+    return render(request=request, template_name=template_name, context=context)
+
+
+def patient(request, patient_id):
+    template_name = "patient.html"
+    patient = Patient.objects.get(pk=patient_id)
+    context = {"patient": patient}
     return render(request=request, template_name=template_name, context=context)

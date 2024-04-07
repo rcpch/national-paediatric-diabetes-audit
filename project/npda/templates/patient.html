@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<h1>{{patient.pk}}</h1>
+{% for visit in patient.visit %}
+    {{ visit.visit_date }}
+{% endfor %}
+{% endblock %}
