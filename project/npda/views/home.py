@@ -1,7 +1,7 @@
 from django.shortcuts import get_object_or_404, redirect, render
 from ..general_functions import csv_upload
 from ..forms.upload import UploadFileForm
-from ..models import Patient
+from ..models import Patient, Visit
 
 
 def home(request):
@@ -29,5 +29,6 @@ def patients(request):
 def patient(request, patient_id):
     template_name = "patient.html"
     patient = Patient.objects.get(pk=patient_id)
-    context = {"patient": patient}
+    visits = Visit.objects.filter(patient=patient)
+    context = {"visits": visits}
     return render(request=request, template_name=template_name, context=context)
