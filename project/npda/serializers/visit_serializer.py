@@ -23,7 +23,7 @@ from ..models import Visit
         )
     ]
 )
-class VisitSerializer(serializers.HyperlinkedModelSerializer):
+class VisitSerializer(serializers.ModelSerializer):
     class Meta:
         model = Visit
         fields = "__all__"

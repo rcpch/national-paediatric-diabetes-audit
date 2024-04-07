@@ -4,10 +4,8 @@ from rest_framework import viewsets
 from ..serializers import VisitSerializer
 from drf_spectacular.utils import (
     extend_schema,
-    OpenApiParameter,
     OpenApiExample,
     OpenApiResponse,
-    PolymorphicProxySerializer,
 )
 from drf_spectacular.types import OpenApiTypes
 
