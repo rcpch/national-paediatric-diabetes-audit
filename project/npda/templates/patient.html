@@ -106,7 +106,7 @@
             </div>
             <div class="py-2">
                 <div class="group relative w-max">
-                    <strong>coeliac status:</strong> {{ visit.coeliac_screen_date }}
+                    <strong>Coeliac status:</strong> {{ visit.coeliac_screen_date }}
                     <span class="pointer-events-none absolute -top-7 left-0 w-max opacity-0 transition-opacity group-hover:opacity-100 bg-gray-600 text-white px-5">
                         <small>{{visit.get_coeliac_screen_date_help_label_text }}</small>
                     </span>
@@ -133,7 +133,7 @@
             </div>
             <div class="py-2">
                 <div class="group relative w-max">
-                    <strong>CHO counting (III):</strong> {{ visit.carbohydrate_counting_level_three_education_date }}
+                    <strong>CHO counting (Level 3):</strong> {{ visit.carbohydrate_counting_level_three_education_date }}
                     <span class="pointer-events-none absolute -top-7 left-0 w-max opacity-0 transition-opacity group-hover:opacity-100 bg-gray-600 text-white px-5">
                         <small>{{visit.get_carbohydrate_counting_level_three_education_date_help_label_text }}</small>
                     </span>
@@ -175,9 +175,11 @@
             {% endfor %}
         {% else %}
         <h5 class="py-2"><i>This child/young person has no visit data currently...</i></h5>
-        <a href="{% url 'patients' %}" class="bg-blue-500 hover:bg-white text-white font-semibold hover:text-blue-500 py-2 px-3 border border-blue-500 hover:border-blue-500 rounded">Go back</a>
         {% endif %}
-      </div>
+        <div class="py-5">
+            <a href="{% url 'patients' %}" class="bg-blue-500 hover:bg-white text-white font-semibold hover:text-blue-500 py-2 px-3 mt-20 border border-blue-500 hover:border-blue-500 rounded">Go back</a>
+        </div>
+    </div>
     </div>
 </div>
 {% endblock %}

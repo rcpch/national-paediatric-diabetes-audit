@@ -30,5 +30,5 @@ def patient(request, patient_id):
     template_name = "patient.html"
     patient = Patient.objects.get(pk=patient_id)
     visits = Visit.objects.filter(patient=patient)
-    context = {"visits": visits}
+    context = {"visits": visits, "patient": patient}
     return render(request=request, template_name=template_name, context=context)
