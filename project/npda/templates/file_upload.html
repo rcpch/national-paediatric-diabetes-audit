@@ -1,7 +1,9 @@
 <div class="max-w-xl w-full">
     {% if file_uploaded %}
-        <p>File uploaded - Thank you!</p>
-        <a href="{% url 'patients' %}" class="bg-blue-500 hover:bg-white text-white font-semibold hover:text-blue-500 py-2 px-3 border border-blue-500 hover:border-blue-500 rounded" type="submit">View Data</a>
+        <span class="flex flex-row">
+            <p>File uploaded - Thank you!</p>
+            <a href="{% url 'patients' %}" class="bg-blue-500 hover:bg-white text-white font-semibold hover:text-blue-500 py-2 px-3 border border-blue-500 hover:border-blue-500 rounded" type="submit">View Data</a>
+        </span>
     {% else %}
         <form method="POST" enctype="multipart/form-data" action="home" >
             <label for="#upload_input" class="flex justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-md appearance-none cursor-pointer hover:border-gray-400 focus:outline-none">
