@@ -26,7 +26,7 @@ def patients(request):
     return render(request=request, template_name=template_name, context=context)
 
 
-def patient(request, patient_id):
+def patient_visit(request, patient_id):
     template_name = "patient.html"
     patient = Patient.objects.get(pk=patient_id)
     visits = Visit.objects.filter(patient=patient)

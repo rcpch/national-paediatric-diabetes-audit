@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load tailwind_filters %}
+
+{% block content %}
+  <div>
+    <h1>{{ object }}</h1>
+    <form id="update-form" method="post">
+      {% csrf_token %}
+      {% crispy form %}
+      <button type="submit">Update</button>
+    </form>
+  </div>
+{% endblock %}
