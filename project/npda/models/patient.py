@@ -3,6 +3,7 @@ from datetime import date
 
 # django imports
 from django.utils.translation import gettext_lazy as _
+from django.urls import reverse
 from django.contrib.gis.db import models
 from django.contrib.gis.db.models import CharField, DateField, PositiveSmallIntegerField
 from django.core.exceptions import ValidationError
@@ -88,6 +89,9 @@ class Patient(models.Model):
         verbose_name = "Patient"
         verbose_name_plural = "Patients"
         ordering = ("nhs_number",)
+    
+    def get_absolute_url(self):
+        return reverse("patient-detail", kwargs={"pk": self.pk})
 
     # class methods
     def age_days(self, today_date=date.today()):

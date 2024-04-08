@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load tailwind_filters %}
+
+{% block content %}
+  <div class="w-full max-w-7xl mx-auto px-4 bg-rcpch_light_blue">
+    <h1>Deleting {{ object.nhs_number }}</h1>
+    <form method="post">{% csrf_token %}
+        <p>Are you sure you want to delete "{{ object }}"?</p>
+        {{ form }}
+        <input type="submit" value="Confirm">
+    </form>
+  </div>
+{% endblock %}
