@@ -30,7 +30,7 @@ def patient_visit(request, patient_id):
     """
     returns a list of visits and visit data
     """
-    template_name = "patient.html"
+    template_name = "visits.html"
     patient = Patient.objects.get(pk=patient_id)
     visits = Visit.objects.filter(patient=patient)
     context = {"visits": visits, "patient": patient}
