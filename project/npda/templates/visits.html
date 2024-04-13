@@ -6,12 +6,12 @@
       <div class="inline-block min-w-full py-2 sm:px-6 lg:px-8">
             <strong>All Audit Visits for {{patient.nhs_number}} (NPDA ID-{{patient.pk}})</strong>
           <div class="relative overflow-x-auto">
-              <table class="w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
+              <table class="table-auto w-3/4 text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
                   <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">
                     <tr>
                       <th scope="col" class="px-6 py-3">Visit ID</th>
                       <th scope="col" class="px-6 py-3">Visit Date</th>
-                      <th></th>
+                      <th scope="col">Categories</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -19,15 +19,19 @@
                     {% if visits %}
                         {% for visit in visits %}
                           <tr class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white">
-                              <td><strong>{{ visit.pk }}</strong></td>
-                              <td class="px-6 py-4 text-center">{{ visit.visit_date }}</td>
-                              <td>
-                                {% if visit.height is not None or visit.weight is not None or visit.height_weight_observation_date is not None %}
-                                  <span class="bg-rcpch_light_blue rounded-full px-3 py-1 text-sm font-semibold text-gray-600">Weight/Height</span>
-                                {% endif %}
+                              <td class="px-5"><strong>{{ visit.visit.pk }}</strong></td>
+                              <td class="px-6 py-4">{{ visit.visit.visit_date }}</td>
+                              <td class="w-1/4 py-5">
+                                {% for item in visit.categories %}
+                                  {% for key, value in item.items %}
+                                    {% if value %}
+                                      <span class="bg-rcpch_light_blue rounded-full px-3 py-1 mt-2 mb-2 text-sm font-semibold text-gray-600"><small>{{key}}</small></span>
+                                      {% endif %}
+                                  {% endfor %}
+                                {% endfor %}
                               </td>
                               <td>
-                                <a href="{% url 'visit-update' patient.pk visit.pk %}" class="text-rcpch_pink px-2 flex justify-center items-center">
+                                <a href="{% url 'visit-update' patient.pk visit.visit.pk %}" class="text-rcpch_pink px-2 flex justify-center items-center">
                                   <strong>Visit Details</strong>
                                   <svg class="h-8 w-8 text-rcpch_pink"  width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">  <path stroke="none" d="M0 0h24v24H0z"/>  <polyline points="9 6 15 12 9 18" /></svg>
                                 </a>

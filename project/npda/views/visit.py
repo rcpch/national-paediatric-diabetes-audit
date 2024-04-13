@@ -1,8 +1,10 @@
 from django.shortcuts import render
 from django.views.generic.edit import CreateView, UpdateView, DeleteView, FormView
 from django.urls import reverse_lazy
+from django.db.models import Value
 from ..models import Visit, Patient
 from ..forms.visit_form import VisitForm
+from ..general_functions import get_visit_categories
 
 
 def patient_visits(request, patient_id):
@@ -12,7 +14,11 @@ def patient_visits(request, patient_id):
     template_name = "visits.html"
     patient = Patient.objects.get(pk=patient_id)
     visits = Visit.objects.filter(patient=patient)
-    context = {"visits": visits, "patient": patient}
+    calculated_visits = []
+    for visit in visits:
+        visit_categories = get_visit_categories(visit)
+        calculated_visits.append({"visit": visit, "categories": visit_categories})
+    context = {"visits": calculated_visits, "patient": patient}
     return render(request=request, template_name=template_name, context=context)
 
 
