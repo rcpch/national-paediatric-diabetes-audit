@@ -32,7 +32,7 @@
                               <td class="px-6 py-4 text-center">{{ patient.get_diabetes_type_display }}</td>
                               <td class="px-6 py-4 text-center">{{ patient.diagnosis_date }}</td>
                               <td>
-                                <a href="{% url 'patient_visit' patient.pk %}" class="text-rcpch_pink px-2 flex justify-center items-center">
+                                <a href="{% url 'patient_visits' patient.pk %}" class="text-rcpch_pink px-2 flex justify-center items-center">
                                   <strong>Visits</strong>
                                   <svg class="h-8 w-8 text-rcpch_pink"  width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">  <path stroke="none" d="M0 0h24v24H0z"/>  <polyline points="9 6 15 12 9 18" /></svg>
                                 </a>

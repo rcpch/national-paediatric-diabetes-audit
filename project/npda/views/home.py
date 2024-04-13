@@ -19,14 +19,7 @@ def home(request):
     return render(request=request, template_name=template, context=context)
 
 
-def patients(request):
-    template_name = "patients.html"
-    patients = Patient.objects.all()
-    context = {"patients": patients}
-    return render(request=request, template_name=template_name, context=context)
-
-
-def patient_visit(request, patient_id):
+def patient_visits(request, patient_id):
     """
     returns a list of visits and visit data
     """

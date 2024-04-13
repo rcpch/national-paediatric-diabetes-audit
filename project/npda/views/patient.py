@@ -1,11 +1,25 @@
-from typing import Any
-from django.views.generic.edit import CreateView, UpdateView, DeleteView, FormView
+from django.shortcuts import render
+from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from ..models import Patient
 from ..forms.patient_form import PatientForm
 
 
+def patients(request):
+    """
+    Return a list of all children
+    """
+    template_name = "patients.html"
+    patients = Patient.objects.all()
+    context = {"patients": patients}
+    return render(request=request, template_name=template_name, context=context)
+
+
 class PatientCreateView(CreateView):
+    """
+    Handle creation of new patient in audit
+    """
+
     model = Patient
     form_class = PatientForm
 
@@ -17,6 +31,10 @@ class PatientCreateView(CreateView):
 
 
 class PatientUpdateView(UpdateView):
+    """
+    Handle update of patient in audit
+    """
+
     model = Patient
     form_class = PatientForm
 
@@ -28,17 +46,9 @@ class PatientUpdateView(UpdateView):
 
 
 class PatientDeleteView(DeleteView):
+    """
+    Handle deletion of child from audit
+    """
+
     model = Patient
     success_url = reverse_lazy("patients")
-
-
-# class PatientFormView(FormView):
-#     template_name = "patient_form.html"
-#     form_class = PatientForm
-#     success_url = "/thanks/"
-
-#     def form_valid(self, form):
-#         # This method is called when valid form data has been POSTed.
-#         # It should return an HttpResponse.
-#         print("form is valid")
-#         return super().form_valid(form)
