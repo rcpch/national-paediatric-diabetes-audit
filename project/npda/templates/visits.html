@@ -12,6 +12,7 @@
                       <th scope="col" class="px-6 py-3">Visit ID</th>
                       <th scope="col" class="px-6 py-3">Visit Date</th>
                       <th></th>
+                      <th></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -20,6 +21,11 @@
                           <tr class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white">
                               <td><strong>{{ visit.pk }}</strong></td>
                               <td class="px-6 py-4 text-center">{{ visit.visit_date }}</td>
+                              <td>
+                                {% if visit.height is not None or visit.weight is not None or visit.height_weight_observation_date is not None %}
+                                  <span class="bg-rcpch_light_blue rounded-full px-3 py-1 text-sm font-semibold text-gray-600">Weight/Height</span>
+                                {% endif %}
+                              </td>
                               <td>
                                 <a href="{% url 'visit-update' patient.pk visit.pk %}" class="text-rcpch_pink px-2 flex justify-center items-center">
                                   <strong>Visit Details</strong>
