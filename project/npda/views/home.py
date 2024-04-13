@@ -27,6 +27,9 @@ def patients(request):
 
 
 def patient_visit(request, patient_id):
+    """
+    returns a list of visits and visit data
+    """
     template_name = "patient.html"
     patient = Patient.objects.get(pk=patient_id)
     visits = Visit.objects.filter(patient=patient)

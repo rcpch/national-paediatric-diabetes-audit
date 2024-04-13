@@ -1,8 +1,10 @@
 from django import forms
 from ..models import Patient
+from ...constants.styles.form_styles import *
 
 
 class PatientForm(forms.ModelForm):
+
     class Meta:
         model = Patient
         fields = [
@@ -18,34 +20,20 @@ class PatientForm(forms.ModelForm):
             "gp_practice_postcode",
         ]
         widgets = {
-            "nhs_number": forms.TextInput(
-                attrs={"hx-post": '{% url "patient-update" object.pk %}'}
+            "nhs_number": forms.TextInput(attrs={"class": TEXT_INPUT}),
+            "sex": forms.Select(attrs={"class": SELECT}),
+            "date_of_birth": forms.DateInput(
+                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
             ),
-            "sex": forms.TextInput(
-                attrs={"hx-post": '{% url "patient-update" object.pk %}'}
+            "postcode": forms.TextInput(attrs={"class": TEXT_INPUT}),
+            "ethnicity": forms.Select(attrs={"class": SELECT}),
+            "diabetes_type": forms.Select(attrs={"class": SELECT}),
+            "diagnosis_date": forms.DateInput(
+                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
             ),
-            "date_of_birth": forms.TextInput(
-                attrs={"hx-post": '{% url "patient-update" object.pk %}'}
+            "death_date": forms.DateInput(
+                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
             ),
-            "postcode": forms.TextInput(
-                attrs={"hx-post": '{% url "patient-update" object.pk %}'}
-            ),
-            "ethnicity": forms.TextInput(
-                attrs={"hx-post": '{% url "patient-update" object.pk %}'}
-            ),
-            "diabetes_type": forms.TextInput(
-                attrs={"hx-post": '{% url "patient-update" object.pk %}'}
-            ),
-            "diagnosis_date": forms.TextInput(
-                attrs={"hx-post": '{% url "patient-update" object.pk %}'}
-            ),
-            "death_date": forms.TextInput(
-                attrs={"hx-post": '{% url "patient-update" object.pk %}'}
-            ),
-            "gp_practice_ods_code": forms.TextInput(
-                attrs={"hx-post": '{% url "patient-update" object.pk %}'}
-            ),
-            "gp_practice_postcode": forms.TextInput(
-                attrs={"hx-post": '{% url "patient-update" object.pk %}'}
-            ),
+            "gp_practice_ods_code": forms.TextInput(attrs={"class": TEXT_INPUT}),
+            "gp_practice_postcode": forms.TextInput(attrs={"class": TEXT_INPUT}),
         }

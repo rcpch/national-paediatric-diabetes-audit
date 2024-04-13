@@ -15,19 +15,21 @@
                       <th scope="col" class="px-6 py-3">Ethnicity</th>
                       <th scope="col" class="px-6 py-3">Diabetes Type</th>
                       <th scope="col" class="px-6 py-3">Diagnosis Date</th>
+                      <th></th>
                     </tr>
                   </thead>
                   <tbody>
                     {% if patients %}
                         {% for patient in patients %}
                           <tr class="border-b bg-rcpch_light_blue text-white border-gray-100 hover:bg-r hover:bg-gray-600">
-                              <td><a href="{% url 'patient_visit' patient_id=patient.pk %}" class="text-white hover:text-rcpch_strong_blue px-2"><strong>{{ patient.nhs_number }}</strong></a></td>
+                              <td><a href="{% url 'patient-update' patient.pk %}" class="text-white hover:text-rcpch_strong_blue px-2"><strong>{{ patient.nhs_number }}</strong></a></td>
                               <td class="px-6 py-4">{{ patient.get_sex_display }}</td>
                               <td class="px-6 py-4">{{ patient.date_of_birth }}</td>
                               <td class="px-6 py-4">{{ patient.postcode }}</td>
                               <td class="px-6 py-4">{{ patient.get_ethnicity_display }}</td>
                               <td class="px-6 py-4">{{ patient.get_diabetes_type_display }}</td>
                               <td class="px-6 py-4">{{ patient.diagnosis_date }}</td>
+                              <td><a href="{% url 'patient_visit' patient.pk %}" class="text-white hover:text-rcpch_strong_blue px-2"><strong>Visits</strong></a></td>
                           </tr>
                         {% endfor %}
                     {% else %}
