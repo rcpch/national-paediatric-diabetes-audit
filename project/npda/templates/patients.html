@@ -5,9 +5,10 @@
     <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
       <div class="inline-block min-w-full py-2 sm:px-6 lg:px-8">
           <div class="relative overflow-x-auto">
-              <table class="w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5">
+              <table class="w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
                   <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">
                     <tr>
+                      <th scope="col" class="px-6 py-3">NPDA ID</th>
                       <th scope="col" class="px-6 py-3">NHS Number</th>
                       <th scope="col" class="px-6 py-3">Sex</th>
                       <th scope="col" class="px-6 py-3">Date of Birth</th>
@@ -22,7 +23,8 @@
                     {% if patients %}
                         {% for patient in patients %}
                           <tr class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white">
-                              <td><a href="{% url 'patient-update' patient.pk %}" class="px-2 flex text-center hover:text-rcpch_pink"><strong>{{ patient.nhs_number }}</strong></a></td>
+                              <td><a href="{% url 'patient-update' patient.pk %}" class="px-2 flex text-center hover:text-rcpch_pink"><strong>{{ patient.pk }}</strong></a></td>
+                              <td class="px-6 py-4 text-center">{{ patient.nhs_number }}</td>
                               <td class="px-6 py-4 text-center">{{ patient.get_sex_display }}</td>
                               <td class="px-6 py-4 text-center">{{ patient.date_of_birth }}</td>
                               <td class="px-6 py-4 text-center">{{ patient.postcode }}</td>
