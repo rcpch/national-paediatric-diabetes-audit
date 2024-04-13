@@ -17,14 +17,3 @@ def home(request):
     context = {"file_uploaded": file_uploaded, "form": form}
     template = "home.html"
     return render(request=request, template_name=template, context=context)
-
-
-def patient_visits(request, patient_id):
-    """
-    returns a list of visits and visit data
-    """
-    template_name = "visits.html"
-    patient = Patient.objects.get(pk=patient_id)
-    visits = Visit.objects.filter(patient=patient)
-    context = {"visits": visits, "patient": patient}
-    return render(request=request, template_name=template_name, context=context)
