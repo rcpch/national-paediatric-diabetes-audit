@@ -1,7 +1,4 @@
 {% extends 'base.html' %}
-{% load crispy_forms_tags %}
-{% load tailwind_filters %}
-
 {% block content %}
 <div class="bg-rcpch_light_blue py-8">
   <div class="w-full max-w-3xl mx-auto px-2 py-4 m-2 shadow-md bg-white font-montserrat">
@@ -14,6 +11,9 @@
           </div>
           <div class="md:w-2/3">
               {{ field }}
+              {% for error in field.errors %}
+                <strong class="text-red">{{ error|escape }}</strong>  
+              {% endfor %}
           </div>
         </div>
       {% endfor %}
