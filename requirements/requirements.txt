@@ -15,8 +15,6 @@ markdown
 pandas
 psycopg2-binary
 whitenoise
-django-crispy-forms
-crispy-tailwind
 
 ## graphing
 plotly

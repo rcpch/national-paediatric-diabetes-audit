@@ -398,6 +398,17 @@ class Visit(models.Model, HelpTextMixin):
         default=None,
     )
 
+    flu_immunisation_recommended_date = DateField(
+        verbose_name="Date that influenza immunisation was recommended",
+        help_text={
+            "label": "If no date entered during the audit year then an assumption of incomplete care process will be made. Data for this item can be entered into the audit if the influenza immunisation was recommended at a video/telephone appointment.",
+            "reference": "NG18: 1.2.16 Explain to children and young people with type 1 diabetes and their family members or carers (as appropriate) that the Department of Health's Green Book recommends annual immunisation against influenza for children and young people with diabetes over the age of 6months. [2004] NG18: 1.3.12 Explain to children and young people with type 2 diabetes and their family members or carers (as appropriate) that the Department of Health's Green Book recommends annual immunisation against influenza for children and young people with diabetes. [2004, amended 2015]",
+        },
+        null=True,
+        blank=True,
+        default=None,
+    )
+
     ketone_meter_training = PositiveSmallIntegerField(
         verbose_name="Was the patient using (or trained to use) blood ketone testing equipment at time of visit?",
         help_text={
@@ -405,17 +416,6 @@ class Visit(models.Model, HelpTextMixin):
             "reference": "NG18: 1.2.74 Offer children and young people with type 1 diabetes blood ketone testing strips and a meter, and advise them and their family members or carers (as appropriate) to test for ketonaemia if they are ill or have hyperglycaemia.",
         },
         choices=YES_NO_UNKNOWN,
-        null=True,
-        blank=True,
-        default=None,
-    )
-
-    flu_immunisation_recommended_date = DateField(
-        verbose_name="Date that influenza immunisation was recommended",
-        help_text={
-            "label": "If no date entered during the audit year then an assumption of incomplete care process will be made. Data for this item can be entered into the audit if the influenza immunisation was recommended at a video/telephone appointment.",
-            "reference": "NG18: 1.2.16 Explain to children and young people with type 1 diabetes and their family members or carers (as appropriate) that the Department of Health's Green Book recommends annual immunisation against influenza for children and young people with diabetes over the age of 6months. [2004] NG18: 1.3.12 Explain to children and young people with type 2 diabetes and their family members or carers (as appropriate) that the Department of Health's Green Book recommends annual immunisation against influenza for children and young people with diabetes. [2004, amended 2015]",
-        },
         null=True,
         blank=True,
         default=None,

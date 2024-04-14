@@ -67,8 +67,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "drf_spectacular",
-    "crispy_forms",
-    "crispy_tailwind",
+    "project.npda.templatetags.npda_tags",
     # application
     "project.npda",
 ]

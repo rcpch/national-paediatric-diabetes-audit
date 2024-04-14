@@ -1,9 +1,17 @@
 from django import forms
 from ..models import Visit
 from ...constants.styles.form_styles import *
+from ..general_functions import get_visit_category_for_field
 
 
 class VisitForm(forms.ModelForm):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            category = get_visit_category_for_field(field_name=field_name)
+            if category:
+                field.category = category.value
 
     class Meta:
         model = Visit
@@ -40,8 +48,8 @@ class VisitForm(forms.ModelForm):
             "carbohydrate_counting_level_three_education_date",
             "dietician_additional_appointment_offered",
             "dietician_additional_appointment_date",
-            "ketone_meter_training",
             "flu_immunisation_recommended_date",
+            "ketone_meter_training",
             "sick_day_rules_training_date",
             "hospital_admission_date",
             "hospital_discharge_date",
@@ -115,10 +123,10 @@ class VisitForm(forms.ModelForm):
             "dietician_additional_appointment_date": forms.DateInput(
                 format="%Y-%m-%d", attrs={"class": DATE_INPUT}
             ),
-            "ketone_meter_training": forms.Select(attrs={"class": SELECT}),
             "flu_immunisation_recommended_date": forms.DateInput(
                 format="%Y-%m-%d", attrs={"class": DATE_INPUT}
             ),
+            "ketone_meter_training": forms.Select(attrs={"class": SELECT}),
             "sick_day_rules_training_date": forms.DateInput(
                 format="%Y-%m-%d", attrs={"class": DATE_INPUT}
             ),
