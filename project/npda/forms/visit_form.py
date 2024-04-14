@@ -1,7 +1,6 @@
 from django import forms
 from ..models import Visit
-from ...constants.styles.form_styles import *
-from ..general_functions import get_visit_category_for_field
+from ...constants.styles import *
 
 
 class VisitForm(forms.ModelForm):
@@ -133,3 +132,4 @@ class VisitForm(forms.ModelForm):
             "dka_additional_therapies": forms.Select(attrs={"class": SELECT}),
             "hospital_admission_other": forms.TextInput(attrs={"class": TEXT_INPUT}),
         }
+    

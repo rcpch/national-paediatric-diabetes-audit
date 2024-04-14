@@ -5,7 +5,7 @@
 <div class="bg-rcpch_light_blue py-8">
   <div class="w-full max-w-3xl mx-auto px-2 py-4 m-2 shadow-md bg-white font-montserrat">
     <strong>{{title}}</strong>
-    <form id="update-form" method="post" action="">
+    <form id="update-form" method="post" {% if form_method == "create" %} action="{% url 'visit-create' patient_id %}" {% else %} action="{% url 'visit-update' patient_id=patient_id pk=visit.pk %}" {% endif %}>
       {% csrf_token %}
       {% for field in form %}
 

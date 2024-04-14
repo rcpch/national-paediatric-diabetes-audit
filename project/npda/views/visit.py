@@ -1,6 +1,8 @@
+from django.forms import BaseModelForm
 from django.shortcuts import render
 from django.views.generic.edit import CreateView, UpdateView, DeleteView, FormView
 from django.urls import reverse_lazy,reverse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.db.models import Value
 from ..models import Visit, Patient
 from ..forms.visit_form import VisitForm
@@ -30,11 +32,22 @@ class VisitCreateView(CreateView):
         context = super().get_context_data(**kwargs)
         context["patient_id"] = self.kwargs["patient_id"]
         context["title"] = "Add New Visit"
+        context["form_method"] = "create"
         context["button_title"] = "Add New Visit"
         return context
     
     def get_success_url(self):
         return reverse('patient_visits', kwargs={'patient_id': self.kwargs['patient_id']})
+    
+    def form_valid(self, form, **kwargs):
+        self.object = form.save(commit=False)
+        self.object.patient_id = self.kwargs['patient_id']
+        super(VisitCreateView, self).form_valid(form)
+        return HttpResponseRedirect(self.get_success_url())
+    
+    def form_invalid(self, form: BaseModelForm) -> HttpResponse:
+        print("invalid")
+        return super().form_invalid(form)
 
 
 class VisitUpdateView(UpdateView):
@@ -46,6 +59,7 @@ class VisitUpdateView(UpdateView):
         context["patient_id"] = self.kwargs["patient_id"]
         context["title"] = "Edit Visit Details"
         context["button_title"] = "Edit Visit Details"
+        context["form_method"] = "update"
         return context
     
     def get_success_url(self):

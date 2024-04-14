@@ -10,7 +10,8 @@ def get_visit_categories(visit_instance):
         category_present = False
         for field in category[1]:
             if hasattr(visit_instance, field):
-                category_present = True
+                if getattr(visit_instance, field) is not None:
+                    category_present = True
         categories.append({category[0].value: category_present})
     return categories
 
