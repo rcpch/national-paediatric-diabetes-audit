@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% load static %}
 {% block content %}
-<div class="flex flex-row min-h-screen justify-center">
+<div class="flex flex-row min-h-screen justify-center px-10">
     <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
       <div class="inline-block min-w-full py-2 sm:px-6 lg:px-8">
           <div class="relative overflow-x-auto">
-              <table class="w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
+              <table class="table-auto w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
                   <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">
                     <tr>
                       <th scope="col" class="px-6 py-3">NPDA ID</th>
@@ -31,9 +31,9 @@
                               <td class="px-6 py-4 text-center">{{ patient.get_ethnicity_display }}</td>
                               <td class="px-6 py-4 text-center">{{ patient.get_diabetes_type_display }}</td>
                               <td class="px-6 py-4 text-center">{{ patient.diagnosis_date }}</td>
-                              <td>
+                              <td class="px-6 text-center w-80">
                                 <a href="{% url 'patient_visits' patient.pk %}" class="text-rcpch_pink px-2 flex justify-center items-center">
-                                  <strong>Visits</strong>
+                                  <strong>Visits ({{patient.visit_set.all.count}})</strong>
                                   <svg class="h-8 w-8 text-rcpch_pink"  width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">  <path stroke="none" d="M0 0h24v24H0z"/>  <polyline points="9 6 15 12 9 18" /></svg>
                                 </a>
                               </td>
@@ -44,7 +44,7 @@
                     {% endif %}
                   </tbody>
                   <tfoot>
-                    <tr class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">
+                    <tr class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white py-5">
                         <th class="px-2">
                             <strong>
                                 Total: {{patients.count}} patients

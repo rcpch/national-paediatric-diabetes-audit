@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.views.generic.edit import CreateView, UpdateView, DeleteView, FormView
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy,reverse
 from django.db.models import Value
 from ..models import Visit, Patient
 from ..forms.visit_form import VisitForm
@@ -32,6 +32,9 @@ class VisitCreateView(CreateView):
         context["title"] = "Add New Visit"
         context["button_title"] = "Add New Visit"
         return context
+    
+    def get_success_url(self):
+        return reverse('patient_visits', kwargs={'patient_id': self.kwargs['patient_id']})
 
 
 class VisitUpdateView(UpdateView):
@@ -44,6 +47,9 @@ class VisitUpdateView(UpdateView):
         context["title"] = "Edit Visit Details"
         context["button_title"] = "Edit Visit Details"
         return context
+    
+    def get_success_url(self):
+        return reverse('patient_visits', kwargs={'patient_id': self.kwargs['patient_id']})
 
 
 class VisitDeleteView(DeleteView):
