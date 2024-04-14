@@ -6,13 +6,6 @@ from ..general_functions import get_visit_category_for_field
 
 class VisitForm(forms.ModelForm):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for field_name, field in self.fields.items():
-            category = get_visit_category_for_field(field_name=field_name)
-            if category:
-                field.category = category.value
-
     class Meta:
         model = Visit
         fields = [
