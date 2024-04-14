@@ -28,6 +28,7 @@ class VisitCreateView(CreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["patient_id"] = self.kwargs["patient_id"]
         context["title"] = "Add New Visit"
         context["button_title"] = "Add New Visit"
         return context
@@ -39,6 +40,7 @@ class VisitUpdateView(UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["patient_id"] = self.kwargs["patient_id"]
         context["title"] = "Edit Visit Details"
         context["button_title"] = "Edit Visit Details"
         return context
