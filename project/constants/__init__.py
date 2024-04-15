@@ -16,4 +16,5 @@ from .sex_types import *
 from .smoking_status import *
 from .thyroid_treatment_status import *
 from .user import *
+from .visit_categories import *
 from .yes_no_unknown import *

@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "drf_spectacular",
+    "project.npda.templatetags.npda_tags",
     # application
     "project.npda",
 ]
@@ -82,6 +83,10 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "project.urls"
+
+CRISPY_ALLOWED_TEMPLATE_PACKS = "tailwind"
+
+CRISPY_TEMPLATE_PACK = "tailwind"
 
 TEMPLATES = [
     {

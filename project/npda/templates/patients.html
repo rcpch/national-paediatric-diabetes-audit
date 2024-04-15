@@ -1,13 +1,14 @@
 {% extends "base.html" %}
 {% load static %}
 {% block content %}
-<div class="flex flex-row min-h-screen justify-center">
+<div class="flex flex-row min-h-screen justify-center px-10">
     <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
       <div class="inline-block min-w-full py-2 sm:px-6 lg:px-8">
           <div class="relative overflow-x-auto">
-              <table class="w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400">
+              <table class="table-auto w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
                   <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">
                     <tr>
+                      <th scope="col" class="px-6 py-3">NPDA ID</th>
                       <th scope="col" class="px-6 py-3">NHS Number</th>
                       <th scope="col" class="px-6 py-3">Sex</th>
                       <th scope="col" class="px-6 py-3">Date of Birth</th>
@@ -15,19 +16,27 @@
                       <th scope="col" class="px-6 py-3">Ethnicity</th>
                       <th scope="col" class="px-6 py-3">Diabetes Type</th>
                       <th scope="col" class="px-6 py-3">Diagnosis Date</th>
+                      <th></th>
                     </tr>
                   </thead>
                   <tbody>
                     {% if patients %}
                         {% for patient in patients %}
-                          <tr class="border-b bg-rcpch_light_blue text-white border-gray-100 hover:bg-r hover:bg-gray-600">
-                              <td><a href="{% url 'patient' patient_id=patient.pk %}" class="text-white hover:text-rcpch_strong_blue px-2"><strong>{{ patient.nhs_number }}</strong></a></td>
-                              <td class="px-6 py-4">{{ patient.get_sex_display }}</td>
-                              <td class="px-6 py-4">{{ patient.date_of_birth }}</td>
-                              <td class="px-6 py-4">{{ patient.postcode }}</td>
-                              <td class="px-6 py-4">{{ patient.get_ethnicity_display }}</td>
-                              <td class="px-6 py-4">{{ patient.get_diabetes_type_display }}</td>
-                              <td class="px-6 py-4">{{ patient.diagnosis_date }}</td>
+                          <tr class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white">
+                              <td><a href="{% url 'patient-update' patient.pk %}" class="px-2 flex text-center hover:text-rcpch_pink"><strong>{{ patient.pk }}</strong></a></td>
+                              <td class="px-6 py-4 text-center">{{ patient.nhs_number }}</td>
+                              <td class="px-6 py-4 text-center">{{ patient.get_sex_display }}</td>
+                              <td class="px-6 py-4 text-center">{{ patient.date_of_birth }}</td>
+                              <td class="px-6 py-4 text-center">{{ patient.postcode }}</td>
+                              <td class="px-6 py-4 text-center">{{ patient.get_ethnicity_display }}</td>
+                              <td class="px-6 py-4 text-center">{{ patient.get_diabetes_type_display }}</td>
+                              <td class="px-6 py-4 text-center">{{ patient.diagnosis_date }}</td>
+                              <td class="px-6 text-center w-80">
+                                <a href="{% url 'patient_visits' patient.pk %}" class="text-rcpch_pink px-2 flex justify-center items-center">
+                                  <strong>Visits ({{patient.visit_set.all.count}})</strong>
+                                  <svg class="h-8 w-8 text-rcpch_pink"  width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">  <path stroke="none" d="M0 0h24v24H0z"/>  <polyline points="9 6 15 12 9 18" /></svg>
+                                </a>
+                              </td>
                           </tr>
                         {% endfor %}
                     {% else %}
@@ -35,17 +44,20 @@
                     {% endif %}
                   </tbody>
                   <tfoot>
-                    <tr class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">
+                    <tr class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white py-5">
                         <th class="px-2">
                             <strong>
                                 Total: {{patients.count}} patients
                             </strong>
                         </th>
-                    </tr>
-                  </tfoot>
-                </table>
-          </div>
-      </div>
+                        <th class="px-2">
+                        </th>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                <a href="{% url 'patient-add' %}" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 mt-40 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Add Child</a>
+        </div>
     </div>
 </div>
 {% endblock %}

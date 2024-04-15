@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="bg-rcpch_light_blue py-8">
+  <div class="w-full max-w-3xl mx-auto px-2 py-4 m-2 shadow-md bg-white font-montserrat">
+    <strong>{{title}}</strong>
+    <form id="update-form" method="post" action="">
+      {% for field in form %}
+        <div class="md:flex md:items-center mb-6">
+          <div class="md:w-1/3">
+              <label for="{{ field.id_for_label }}" class="block text-gray-700 font-bold md:text-right mb-1 md:mb-0 pr-4"><small>{{ field.label }}</small></label>
+          </div>
+          <div class="md:w-2/3">
+              {{ field }}
+              {% for error in field.errors %}
+                <strong class="text-red">{{ error|escape }}</strong>  
+              {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+      <button type="submit" value="Submit" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 mt-20 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">{{button_title}}</button>
+      <a class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 mt-20 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue" href="{% url 'patients' %}">Back to list</a>
+    </form>
+  </div>
+</div>
+{% endblock %}
