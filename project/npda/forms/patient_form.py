@@ -4,7 +4,7 @@ from ...constants.styles.form_styles import *
 
 
 class PatientForm(forms.ModelForm):
-
+    
     class Meta:
         model = Patient
         fields = [
@@ -20,7 +20,7 @@ class PatientForm(forms.ModelForm):
             "gp_practice_postcode",
         ]
         widgets = {
-            "nhs_number": forms.TextInput(attrs={"class": TEXT_INPUT}),
+            "nhs_number": forms.TextInput(attrs={"class": TEXT_INPUT},),
             "sex": forms.Select(attrs={"class": SELECT}),
             "date_of_birth": forms.DateInput(
                 format="%Y-%m-%d", attrs={"class": DATE_INPUT}

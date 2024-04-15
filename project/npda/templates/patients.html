@@ -15,7 +15,7 @@
                       <th scope="col" class="px-6 py-3">Postcode</th>
                       <th scope="col" class="px-6 py-3">Ethnicity</th>
                       <th scope="col" class="px-6 py-3">Diabetes Type</th>
-                      <th scope="col" class="px-6 py-3">Diagnosis Date</th>
+                      <th scope="col" class="px-2 py-3">Diagnosis Date</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -31,7 +31,7 @@
                               <td class="px-6 py-4 text-center">{{ patient.get_ethnicity_display }}</td>
                               <td class="px-6 py-4 text-center">{{ patient.get_diabetes_type_display }}</td>
                               <td class="px-6 py-4 text-center">{{ patient.diagnosis_date }}</td>
-                              <td class="px-6 text-center w-80">
+                              <td class="px-2 text-right w-80">
                                 <a href="{% url 'patient_visits' patient.pk %}" class="text-rcpch_pink px-2 flex justify-center items-center">
                                   <strong>Visits ({{patient.visit_set.all.count}})</strong>
                                   <svg class="h-8 w-8 text-rcpch_pink"  width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">  <path stroke="none" d="M0 0h24v24H0z"/>  <polyline points="9 6 15 12 9 18" /></svg>
