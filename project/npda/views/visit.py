@@ -1,9 +1,9 @@
 from django.forms import BaseModelForm
 from django.shortcuts import render
-from django.views.generic.edit import CreateView, UpdateView, DeleteView, FormView
+from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django.contrib.messages.views import SuccessMessageMixin
 from django.urls import reverse_lazy,reverse
 from django.http import HttpResponse, HttpResponseRedirect
-from django.db.models import Value
 from ..models import Visit, Patient
 from ..forms.visit_form import VisitForm
 from ..general_functions import get_visit_categories
@@ -24,9 +24,10 @@ def patient_visits(request, patient_id):
     return render(request=request, template_name=template_name, context=context)
 
 
-class VisitCreateView(CreateView):
+class VisitCreateView(SuccessMessageMixin, CreateView):
     model = Visit
     form_class = VisitForm
+    success_message = "New vist added successfully"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -53,6 +54,7 @@ class VisitCreateView(CreateView):
 class VisitUpdateView(UpdateView):
     model = Visit
     form_class = VisitForm
+    success_message = "Visit edited successfully"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -66,6 +68,7 @@ class VisitUpdateView(UpdateView):
         return reverse('patient_visits', kwargs={'patient_id': self.kwargs['patient_id']})
 
 
-class VisitDeleteView(DeleteView):
+class VisitDeleteView(SuccessMessageMixin, DeleteView):
     model = Visit
     success_url = reverse_lazy("patient_visits")
+    success_message = "Visit removed successfully"
