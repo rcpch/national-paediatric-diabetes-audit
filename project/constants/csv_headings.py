@@ -243,3 +243,24 @@ ALL_DATES = [
     "Start date (Hospital Provider Spell)",
     "Discharge date (Hospital provider spell)",
 ]
+
+ALL_VISIT_DATES = [
+    ("visit_date","Visit/Appointment Date"),
+    ("height_weight_observation_date","Observation Date (Height and weight)"),
+    ("hba1c_date","Observation Date: Hba1c Value"),
+    ("blood_pressure_observation_date","Observation Date (Blood Pressure)"),
+    ("foot_examination_observation_date","Foot Assessment / Examination Date"),
+    ("retinal_screening_observation_date","Retinal Screening date"),
+    ("albumin_creatinine_ratio_date","Observation Date: Urinary Albumin Level"),
+    ("total_cholesterol_date","Observation Date: Total Cholesterol Level"),
+    ("thyroid_function_date","Observation Date: Thyroid Function"),
+    ("coeliac_screen_date","Observation Date: Coeliac Disease Screening"),
+    ("psychological_screening_assessment_date","Observation Date - Psychological Screening Assessment"),
+    ("smoking_cessation_referral_date","Date of offer of referral to smoking cessation service (if patient is a current smoker)"),
+    ("carbohydrate_counting_level_three_education_date","Date of Level 3 carbohydrate counting education received"),
+    ("dietician_additional_appointment_date","Date of additional appointment with dietitian"),
+    ("flu_immunisation_recommended_date","Date that influenza immunisation was recommended"),
+    ("sick_day_rules_training_date","Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia"),
+    ("hospital_admission_date","Start date (Hospital Provider Spell)"),
+    ("hospital_discharge_date","Discharge date (Hospital provider spell)")
+]

@@ -2,6 +2,7 @@ from django.forms import BaseModelForm
 from django.shortcuts import render
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.contrib.messages.views import SuccessMessageMixin
+from django.contrib import messages
 from django.urls import reverse_lazy,reverse
 from django.http import HttpResponse, HttpResponseRedirect
 from ..models import Visit, Patient
@@ -27,7 +28,6 @@ def patient_visits(request, patient_id):
 class VisitCreateView(SuccessMessageMixin, CreateView):
     model = Visit
     form_class = VisitForm
-    success_message = "New vist added successfully"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -38,7 +38,14 @@ class VisitCreateView(SuccessMessageMixin, CreateView):
         return context
     
     def get_success_url(self):
+        messages.add_message(self.request, messages.SUCCESS, "New visit added successfully")
         return reverse('patient_visits', kwargs={'patient_id': self.kwargs['patient_id']})
+    
+    def get_initial(self):
+        initial =  super().get_initial()
+        patient = Patient.objects.get(pk=self.kwargs['patient_id'])
+        initial['patient']=patient
+        return initial
     
     def form_valid(self, form, **kwargs):
         self.object = form.save(commit=False)
@@ -54,7 +61,6 @@ class VisitCreateView(SuccessMessageMixin, CreateView):
 class VisitUpdateView(UpdateView):
     model = Visit
     form_class = VisitForm
-    success_message = "Visit edited successfully"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -65,7 +71,14 @@ class VisitUpdateView(UpdateView):
         return context
     
     def get_success_url(self):
+        messages.add_message(self.request, messages.SUCCESS, "Visit edited successfully")
         return reverse('patient_visits', kwargs={'patient_id': self.kwargs['patient_id']})
+    
+    def get_initial(self):
+        initial =  super().get_initial()
+        patient = Patient.objects.get(pk=self.kwargs['patient_id'])
+        initial['patient']=patient
+        return initial
 
 
 class VisitDeleteView(SuccessMessageMixin, DeleteView):

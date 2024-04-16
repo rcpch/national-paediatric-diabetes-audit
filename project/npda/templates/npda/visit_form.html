@@ -19,12 +19,14 @@
           <div class="md:w-1/3">
               <label for="{{ field.id_for_label }}" class="block text-gray-700 font-bold md:text-right mb-1 md:mb-0 pr-4"><small>{{ field.label }}</small></label>
           </div>
-            <div class="md:w-2/3">
-              {{ field }}
-              {% for error in field.errors %}
-                <strong class="text-rcpch_pink">{{ error|escape }}</strong>  
-              {% endfor %}
-            </div>
+          <div class="md:w-2/3">
+            {{ field }}
+            {% for error in field.errors %}
+              <p>
+                <strong class="text-gray-700">{{ error|escape }}</strong>
+              </p>  
+            {% endfor %}
+          </div>
         </div>
 
         {% endwith %}
