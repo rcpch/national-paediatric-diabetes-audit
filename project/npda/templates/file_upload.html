@@ -15,17 +15,12 @@
                     </svg>
                     <span class="font-medium text-gray-600">
                         Please drop your NPDA CSV file here, or
-                        <input id="upload_input" class="block w-full text-sm text-slate-500
-                        file:mr-4 file:py-2 file:px-4
-                        file:rounded-md file:border-0
-                        file:text-sm file:font-semibold
-                        file:bg-blue-50 file:text-blue-500
-                        hover:file:bg-blue-500
-                        hover:file:text-white
-                        hover:text-gray-400" type="file" name="csv_upload">
+                            <button class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">
+                                <input id="upload_input" type="file" name="csv_upload">
+                            </button>
                     </span>
                         {% csrf_token %}
-                            <button class="bg-blue-500 hover:bg-white text-white font-semibold hover:text-blue-500 py-2 px-3 border border-blue-500 hover:border-blue-500 rounded" type="submit">Upload</button>
+                            <button class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue" type="submit">Upload</button>
                     </span>
             </label>
         </form>

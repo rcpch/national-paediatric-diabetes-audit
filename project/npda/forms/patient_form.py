@@ -2,6 +2,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from ..models import Patient
 from ...constants.styles.form_styles import *
+from ..general_functions import validate_postcode
 
 
 class PatientForm(forms.ModelForm):
@@ -49,6 +50,13 @@ class PatientForm(forms.ModelForm):
             "gp_practice_ods_code": forms.TextInput(attrs={"class": TEXT_INPUT}),
             "gp_practice_postcode": forms.TextInput(attrs={"class": TEXT_INPUT}),
         }
+    
+    def clean_postcode(self):
+        postcode = self.cleaned_data['postcode']
+        if not validate_postcode(postcode=postcode):
+            raise ValidationError('Postcode invalid')
+        return postcode
+
     
     def clean(self):
         cleaned_data = super().clean()
