@@ -1,10 +1,9 @@
-from django.forms import BaseModelForm
 from django.shortcuts import render
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib import messages
 from django.urls import reverse_lazy,reverse
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponseRedirect
 from ..models import Visit, Patient
 from ..forms.visit_form import VisitForm
 from ..general_functions import get_visit_categories
@@ -52,10 +51,6 @@ class VisitCreateView(SuccessMessageMixin, CreateView):
         self.object.patient_id = self.kwargs['patient_id']
         super(VisitCreateView, self).form_valid(form)
         return HttpResponseRedirect(self.get_success_url())
-    
-    def form_invalid(self, form: BaseModelForm) -> HttpResponse:
-        print("invalid")
-        return super().form_invalid(form)
 
 
 class VisitUpdateView(UpdateView):

@@ -1,7 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from ...constants.styles import *
-from ...constants import ALL_VISIT_DATES
 from ..general_functions.validate_dates import validate_date
 from ..models import Visit
 
