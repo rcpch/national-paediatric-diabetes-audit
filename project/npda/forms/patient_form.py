@@ -6,17 +6,6 @@ from ..general_functions import validate_postcode
 
 
 class PatientForm(forms.ModelForm):
-
-    # nhs_number=forms.CharField(max_length=10, min_length=10, required=True)
-    # sex=forms.CharField(required=True)
-    # date_of_birth=forms.DateField(required=True)
-    # postcode=forms.CharField()
-    # ethnicity=forms.CharField()
-    # diabetes_type=forms.CharField(required=True)
-    # diagnosis_date=forms.DateField(required=True)
-    # death_date=forms.DateField()
-    # gp_practice_ods_code=forms.CharField()
-    # gp_practice_postcode=forms.CharField()
     
     class Meta:
         model = Patient
