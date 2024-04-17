@@ -13,8 +13,10 @@
           <div class="md:w-2/3">
               {{ field }}
               {% for error in field.errors %}
-                <strong class="text-rcpch_pink">{{ error|escape }}</strong>  
-              {% endfor %}
+              <p>
+                <strong class="text-gray-700">{{ error|escape }}</strong>
+              </p>  
+            {% endfor %}
           </div>
         </div>
       {% endfor %}

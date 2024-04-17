@@ -35,15 +35,13 @@ class Patient(models.Model):
     """
 
     nhs_number = CharField(  # the NHS number for England and Wales
-        "NHS Number", unique=True, blank=True, null=True, max_length=10
+        "NHS Number", unique=True, max_length=10
     )
 
     sex = models.IntegerField("Stated gender", choices=SEX_TYPE, blank=True, null=True)
 
     date_of_birth = DateField(
-        "date of birth (YYYY-MM-DD)",
-        blank=True,
-        null=True,
+        "date of birth (YYYY-MM-DD)"
     )
     postcode = CharField(
         "Postcode of usual address",
