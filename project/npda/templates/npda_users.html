@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<div class="flex flex-row min-h-screen justify-center px-10">
+    <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
+      <div class="inline-block min-w-full py-2 sm:px-6 lg:px-8">
+          <div class="relative overflow-x-auto">
+              <table class="table-auto w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
+                  <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">
+                    <tr>
+                        <th scope="col" class="px-6 py-3">NPDA UserID</th>
+                        <th scope="col" class="px-6 py-3">Title</th>
+                        <th scope="col" class="px-6 py-3">First Name</th>
+                        <th scope="col" class="px-6 py-3">Surname</th>
+                        <th scope="col" class="px-6 py-3">Email</th>
+                        <th scope="col" class="px-6 py-3">Is Staff</th>
+                        <th scope="col" class="px-6 py-3">Is Superuser</th>
+                        <th scope="col" class="px-6 py-3">Is RCPCH Audit Team Member</th>
+                        <th scope="col" class="px-6 py-3">Is RCPCH Staff</th>
+                        <th scope="col" class="px-6 py-3">Role</th>
+                        <th scope="col" class="px-6 py-3">Employer</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                        {% for npda_user in npda_users %}
+                          <tr class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white">
+                            <td><a href="{% url 'npdauser-update' npda_user.pk %}" class="px-2 flex text-center hover:text-rcpch_pink"><strong>{{ npda_user.pk }}</strong></a></td>
+                            <td class="px-6 py-4 text-center">{{npda_user.get_title_display}}</td>
+                            <td class="px-6 py-4 text-center">{{npda_user.first_name}}</td>
+                            <td class="px-6 py-4 text-center">{{npda_user.surname}}</td>
+                            <td class="px-6 py-4 text-center">{{npda_user.email}}</td>
+                            <td class="px-6 py-4 text-center">{{npda_user.is_staff}}</td>
+                            <td class="px-6 py-4 text-center">{{npda_user.is_superuser}}</td>
+                            <td class="px-6 py-4 text-center">{{npda_user.is_rcpch_audit_team_member}}</td>
+                            <td class="px-6 py-4 text-center">{{npda_user.is_rcpch_staff}}</td>
+                            <td class="px-6 py-4 text-center">{{npda_user.get_role_display}}</td>
+                            <td class="px-6 py-4 text-center">{{npda_user.organisation_employer}}</td>
+                          </tr>
+                        {% endfor %}
+                  </tbody>
+                  <tfoot>
+                    {% if npda_users.count > 0 %}
+                    <tr class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white py-5">
+                        <th class="px-2">
+                            <strong>
+                                Total: 
+                            </strong>
+                        </th>
+                        <th class="px-2">
+                            {{npda_users.count}} Users
+                        </th>
+                    </tr>
+                    {% else %}
+                    <tr class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white py-5">
+                        <th>
+                            <h5>No NPDA users yet!</h5>
+                        </th>
+                    </tr>
+                  {% endif %}
+                    </tfoot>
+                  </table>
+                </div>
+                <a href="{% url 'npdauser-create' %}" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 mt-40 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Add NPDA User</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

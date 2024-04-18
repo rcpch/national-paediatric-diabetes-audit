@@ -44,5 +44,5 @@ urlpatterns = [
         SpectacularSwaggerView.as_view(),
         name="swagger-ui",
     ),
-    path("", include("project.npda.urls"), name="data"),
+    path("", include("project.npda.urls")),
 ]
