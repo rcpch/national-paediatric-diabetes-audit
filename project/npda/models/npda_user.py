@@ -172,7 +172,7 @@ class NPDAUser(AbstractUser, PermissionsMixin):
         null=False,
     )
     date_joined = models.DateTimeField(default=timezone.now)
-    role = models.PositiveSmallIntegerField(choices=ROLES, blank=True, null=True)
+    role = models.PositiveSmallIntegerField(choices=ROLES)
     email_confirmed = models.BooleanField(default=False)
     password_last_set = models.DateTimeField(default=timezone.now)
 
