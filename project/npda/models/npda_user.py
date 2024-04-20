@@ -6,9 +6,9 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.gis.db import models
 from django.db.models.functions import Lower
 from django.contrib.gis.db.models import UniqueConstraint
-from django.apps import apps
 
 from ...constants import *
+from ..general_functions import *
 
 
 class NPDAUserManager(BaseUserManager):
@@ -65,9 +65,9 @@ class NPDAUserManager(BaseUserManager):
         """
         Allocate Groups - the groups already have permissions allocated
         """
-        # group = group_for_role(user.role)
+        group = group_for_role(user.role)
         user.save()
-        # user.groups.add(group)
+        user.groups.add(group)
 
         return user
 
@@ -116,8 +116,8 @@ class NPDAUserManager(BaseUserManager):
         Allocate Roles
         """
 
-        # group = group_for_role(logged_in_user.role)
-        # logged_in_user.groups.add(group)
+        group = group_for_role(logged_in_user.role)
+        logged_in_user.groups.add(group)
 
 
 class NPDAUser(AbstractUser, PermissionsMixin):
@@ -224,6 +224,7 @@ class NPDAUser(AbstractUser, PermissionsMixin):
                 name="user_email_ci_uniqueness",
             ),
         ]
+        permissions = [CAN_PUBLISH_NPDA_DATA, CAN_CONSENT_TO_AUDIT_PARTICIPATION]
 
     def __str__(self) -> str:
         return self.get_full_name()
