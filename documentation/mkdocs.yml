@@ -134,3 +134,5 @@ nav:
     - 'legal/license.md'
     - 'legal/privacy.md'
     - 'legal/terms-of-service.md'
+  - Developer:
+    - 'developer/users.md'
