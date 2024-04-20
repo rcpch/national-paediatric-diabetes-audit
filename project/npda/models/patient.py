@@ -14,6 +14,9 @@ from ...constants import (
     DIABETES_TYPES,
     SEX_TYPE,
     UNKNOWN_POSTCODES_NO_SPACES,
+    CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING,
+    CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING,
+    CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
 )
 from ..general_functions import (
     stringify_time_elapsed,
@@ -40,9 +43,7 @@ class Patient(models.Model):
 
     sex = models.IntegerField("Stated gender", choices=SEX_TYPE, blank=True, null=True)
 
-    date_of_birth = DateField(
-        "date of birth (YYYY-MM-DD)"
-    )
+    date_of_birth = DateField("date of birth (YYYY-MM-DD)")
     postcode = CharField(
         "Postcode of usual address",
         max_length=8,
@@ -87,7 +88,12 @@ class Patient(models.Model):
         verbose_name = "Patient"
         verbose_name_plural = "Patients"
         ordering = ("nhs_number",)
-    
+        permissions = [
+            CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING,
+            CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING,
+            CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
+        ]
+
     def get_absolute_url(self):
         return reverse("patient-detail", kwargs={"pk": self.pk})
 

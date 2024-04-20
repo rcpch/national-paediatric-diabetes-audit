@@ -492,8 +492,8 @@ class Visit(models.Model, HelpTextMixin):
     patient = models.ForeignKey(to="npda.Patient", on_delete=models.CASCADE)
 
     class Meta:
-        verbose_name = "Patient"
-        verbose_name_plural = "Patients"
+        verbose_name = "Visit"
+        verbose_name_plural = "Visits"
 
     def __str__(self) -> str:
         return f"Patient visit for {self.patient} on {self.visit_date}"

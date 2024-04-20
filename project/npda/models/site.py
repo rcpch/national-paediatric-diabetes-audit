@@ -8,9 +8,16 @@ from django.contrib.gis.db.models import (
     PositiveSmallIntegerField,
     ForeignKey,
 )
+from ...constants import *
 
 # npda imports
-from ...constants import LEAVE_PDU_REASONS
+from ...constants import (
+    LEAVE_PDU_REASONS,
+    CAN_ALLOCATE_NPDA_LEAD_CENTRE,
+    CAN_DELETE_NPDA_LEAD_CENTRE,
+    CAN_EDIT_NPDA_LEAD_CENTRE,
+    CAN_TRANSFER_NPDA_LEAD_CENTRE,
+)
 
 
 class Site(models.Model):
@@ -39,6 +46,12 @@ class Site(models.Model):
     class Meta:
         verbose_name = "Site"
         verbose_name_plural = "Sites"
+        permissions = [
+            CAN_ALLOCATE_NPDA_LEAD_CENTRE,
+            CAN_DELETE_NPDA_LEAD_CENTRE,
+            CAN_EDIT_NPDA_LEAD_CENTRE,
+            CAN_TRANSFER_NPDA_LEAD_CENTRE,
+        ]
 
     def __str__(self) -> str:
         return f"{self.patient} at {self.pdu}"

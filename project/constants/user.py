@@ -41,11 +41,11 @@ Role                                Group
 Audit Centre Lead Clinician         trust_audit_team_full_access
 Audit Centre Clinician              trust_audit_team_edit_access
 Audit Centre Administrator          trust_audit_team_view_only
-RCPCH Audit Team                    epilepsy12_audit_team_full_access
+RCPCH Audit Team                    npda_audit_team_full_access
 RCPCH Audit Children and Family     patient_access
 """
 # logged in user access all areas: can create/update/delete any audit data, logs, epilepsy key words and organisation trusts, groups and permissions
-EPILEPSY12_AUDIT_TEAM_FULL_ACCESS = "epilepsy12_audit_team_full_access"
+NPDA_AUDIT_TEAM_FULL_ACCESS = "npda_audit_team_full_access"
 
 # logged in user can view all data relating to their trust(s) but not logs
 TRUST_AUDIT_TEAM_VIEW_ONLY = "trust_audit_team_view_only"
@@ -60,7 +60,7 @@ TRUST_AUDIT_TEAM_FULL_ACCESS = "trust_audit_team_full_access"
 PATIENT_ACCESS = "patient_access"
 
 GROUPS = (
-    EPILEPSY12_AUDIT_TEAM_FULL_ACCESS,
+    NPDA_AUDIT_TEAM_FULL_ACCESS,
     TRUST_AUDIT_TEAM_VIEW_ONLY,
     TRUST_AUDIT_TEAM_EDIT_ACCESS,
     TRUST_AUDIT_TEAM_FULL_ACCESS,
@@ -71,34 +71,18 @@ GROUPS = (
 Custom permissions
 """
 
-# Case
-CAN_LOCK_CHILD_CASE_DATA_FROM_EDITING = (
-    "can_lock_child_case_data_from_editing",
+# Patient
+CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING = (
+    "can_lock_child_patient_data_from_editing",
     "Can lock a child's record from editing.",
 )
-CAN_UNLOCK_CHILD_CASE_DATA_FROM_EDITING = (
-    "can_unlock_child_case_data_from_editing",
+CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING = (
+    "can_unlock_child_patient_data_from_editing",
     "Can unlock a child's record from editing.",
 )
 CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT = (
     "can_opt_out_child_from_inclusion_in_audit",
-    "Can sanction an opt out from participating in the audit. Note all the child's date except NPDA unique identifier are irretrievably deleted.",
-)
-
-# Registration
-CAN_APPROVE_ELIGIBILITY = (
-    "can_approve_eligibility",
-    "Can approve eligibility for NPDA.",
-)
-
-CAN_REGISTER_CHILD_IN_NPDA = (
-    "can_register_child_in_npda",
-    "Can register child in NPDA. (A cohort number is automatically allocated)",
-)
-# TODO #512 unregistering a child in Epilepsy12 is currently not implemented
-CAN_UNREGISTER_CHILD_IN_NPDA = (
-    "can_unregister_child_in_npda",
-    "Can unregister a child in NPDA. Their record and previously entered data is untouched.",
+    "Can sanction an opt out from participating in the audit. Note all the child's date except Epilepsy12 unique identifier are irretrievably deleted.",
 )
 
 CAN_ALLOCATE_NPDA_LEAD_CENTRE = (
@@ -128,17 +112,15 @@ CAN_PUBLISH_NPDA_DATA = (
 )
 
 CAN_CONSENT_TO_AUDIT_PARTICIPATION = (
+    # Not actively used - can be applied to patients in future
     "can_consent_to_audit_participation",
-    "Can consent to participating in the NPDA.",
+    "Can consent to participating in NPDA.",
 )
 
 PERMISSIONS = (
-    CAN_LOCK_CHILD_CASE_DATA_FROM_EDITING,
-    CAN_UNLOCK_CHILD_CASE_DATA_FROM_EDITING,
+    CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING,
+    CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING,
     CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
-    CAN_APPROVE_ELIGIBILITY,
-    CAN_REGISTER_CHILD_IN_NPDA,
-    CAN_UNREGISTER_CHILD_IN_NPDA,
     CAN_EDIT_NPDA_LEAD_CENTRE,
     CAN_ALLOCATE_NPDA_LEAD_CENTRE,
     CAN_TRANSFER_NPDA_LEAD_CENTRE,
