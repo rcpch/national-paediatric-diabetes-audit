@@ -157,12 +157,24 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 10},
     },
     {
         "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+    },
+    {
+        "NAME": "epilepsy12.validators.CapitalAndSymbolValidator",
+        "OPTIONS": {
+            "symbols": "!@£$%^&*()_-+=|~",
+            "number_of_symbols": 1,
+            "number_of_capitals": 1,
+        },
+    },
+    {
+        "NAME": "epilepsy12.validators.NumberValidator",  # must have one number
     },
 ]
 
