@@ -12,9 +12,17 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 import os
+import logging
 
 #  django imports
 from django.core.management.utils import get_random_secret_key
+
+# RCPCH imports
+from .logging_settings import (
+    LOGGING,
+)  # no it is not an unused import, it pulls LOGGING into the settings file
+
+logger = logging.getLogger(__name__)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -178,6 +186,32 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Two Factor Authentication / One Time Password Settings (2FA / one-time login codes)
+OTP_EMAIL_SUBJECT = "Your National Paediatric Diabetes Audit one-time login code"
+OTP_EMAIL_BODY_TEMPLATE_PATH = "../templates/two_factor/email_token.txt"
+OTP_EMAIL_BODY_HTML_TEMPLATE_PATH = "../templates/two_factor/email_token.html"
+OTP_EMAIL_TOKEN_VALIDITY = 60 * 5  # default N(seconds) email token valid for
+
+# EMAIL SETTINGS (SMTP)
+DEFAULT_FROM_EMAIL = os.environ.get("EMAIL_DEFAULT_FROM_EMAIL")
+SMTP_EMAIL_ENABLED = os.getenv("SMTP_EMAIL_ENABLED", "False") == "True"
+logger.info("SMTP_EMAIL_ENABLED: %s", SMTP_EMAIL_ENABLED)
+if SMTP_EMAIL_ENABLED is True:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = os.environ.get("EMAIL_HOST_SERVER")
+    EMAIL_PORT = os.environ.get("EMAIL_HOST_PORT")
+    EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
+    EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
+    EMAIL_USE_TLS = True
+    EMAIL_TIMEOUT = 10
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+logger.info("EMAIL_BACKEND: %s", EMAIL_BACKEND)
+
+PASSWORD_RESET_TIMEOUT = os.environ.get("PASSWORD_RESET_TIMEOUT", 259200)  # Default: 259200 (3 days, in seconds)
+
+SITE_CONTACT_EMAIL = os.environ.get("SITE_CONTACT_EMAIL")
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
@@ -186,6 +220,8 @@ STATICFILES_DIRS = (str(BASE_DIR.joinpath("static")),)
 STATIC_ROOT = str(BASE_DIR.joinpath("staticfiles"))
 # STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 WHITENOISE_ROOT = os.path.join(BASE_DIR, "static/root")
+
+SMTP_EMAIL_ENABLED="False"
 
 STORAGES = {
     "staticfiles": {

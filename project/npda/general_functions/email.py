@@ -18,7 +18,7 @@ def construct_confirm_email(request, user):
     c = {
         "email": user.email,
         'domain': get_current_site(request),
-        'site_name': 'Epilepsy12',
+        'site_name': 'National Paediatric Diabetes Audit',
         "uid": urlsafe_base64_encode(force_bytes(user.pk)),
         "user": user,
         'token': default_token_generator.make_token(user),

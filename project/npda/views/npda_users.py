@@ -1,9 +1,11 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from django.contrib.messages.views import SuccessMessageMixin
+from django.contrib import messages
 from ..models import NPDAUser
 from ..forms.npda_user_form import NPDAUserForm
+from ..general_functions import construct_confirm_email, send_email_to_recipients, construct_transfer_npda_site_email, construct_transfer_npda_site_outcome_email, group_for_role
 
 
 def npda_users(request):
@@ -32,6 +34,55 @@ class NPDAUserCreateView(SuccessMessageMixin, CreateView):
         context["button_title"] = "Add NPDA User"
         context["form_method"] = "create"
         return context
+    
+    def is_valid(self, form):
+        new_user = form.save(commit=False)
+        new_user.set_unusable_password()
+        new_user.is_active = True
+        new_user.email_confirmed = False
+        new_user.view_preference = 0
+        try:
+            new_user.save()
+        except Exception as error:
+            messages.error(
+                self.request,
+                f"Error: {error}. Account not created. Please contact the NPDA team if this issue persists.",
+            )
+            return redirect(
+                "npda_users",
+                # organisation_id=organisation_id,
+            )
+
+        new_group = group_for_role(new_user.role)
+
+        try:
+            new_user.groups.add(new_group)
+        except Exception as error:
+            messages.error(
+                self.request,
+                f"Error: {error}. Account not created. Please contact Epilepsy12 if this issue persists.",
+            )
+            return redirect(
+                "npda_users",
+                # organisation_id=organisation_id,
+            )
+
+        # user created - send email with reset link to new user
+        subject = "Password Reset Requested"
+        email = construct_confirm_email(request=self.request, user=new_user)
+
+        send_email_to_recipients(
+            recipients=[new_user.email], subject=subject, message=email
+        )
+
+        messages.success(
+            self.request,
+            f"Account created successfully. Confirmation email has been sent to {new_user.email}.",
+        )
+        return redirect(
+            "npda_users",
+            # organisation_id=organisation_id,
+        )
 
 
 class NPDAUserUpdateView(SuccessMessageMixin, UpdateView):
