@@ -1,8 +1,14 @@
+from datetime import datetime, timezone, timedelta
+from django.forms import BaseModelForm
+from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
-from django.urls import reverse_lazy
+from django.contrib.auth.views import PasswordResetView
+from django.urls import reverse_lazy, reverse
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib import messages
+from django.utils.html import strip_tags
+from django.conf import settings
 from ..models import NPDAUser
 from ..forms.npda_user_form import NPDAUserForm
 from ..general_functions import construct_confirm_email, send_email_to_recipients, construct_transfer_npda_site_email, construct_transfer_npda_site_outcome_email, group_for_role
@@ -25,8 +31,8 @@ class NPDAUserCreateView(SuccessMessageMixin, CreateView):
 
     model = NPDAUser
     form_class = NPDAUserForm
-    success_message = "New NPDA user created was created successfully"
-    success_url=reverse_lazy('npda_users')
+    # success_message = "New NPDA user created was created successfully"
+    # success_url=reverse_lazy('npda_users')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -35,7 +41,7 @@ class NPDAUserCreateView(SuccessMessageMixin, CreateView):
         context["form_method"] = "create"
         return context
     
-    def is_valid(self, form):
+    def form_valid(self, form):
         new_user = form.save(commit=False)
         new_user.set_unusable_password()
         new_user.is_active = True
@@ -79,7 +85,15 @@ class NPDAUserCreateView(SuccessMessageMixin, CreateView):
             self.request,
             f"Account created successfully. Confirmation email has been sent to {new_user.email}.",
         )
+
         return redirect(
+            "npda_users",
+            # organisation_id=organisation_id,
+        )
+    
+    def get_success_url(self) -> str:
+        print("called")
+        return reverse(
             "npda_users",
             # organisation_id=organisation_id,
         )
@@ -116,3 +130,26 @@ class NPDAUserDeleteView(SuccessMessageMixin, DeleteView):
     model = NPDAUser
     success_message = "NPDA User removed from database"
     success_url=reverse_lazy('npda_users')
+
+class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
+    template_name = "registration/password_reset.html"
+    html_email_template_name = "registration/password_reset_email.html"
+    email_template_name = strip_tags("registration/password_reset_email.html")
+    subject_template_name = "registration/password_reset_subject.txt"
+    success_message = (
+        "We've emailed you instructions for setting your password, "
+        "if an account exists with the email you entered. You should receive them shortly."
+        " If you don't receive an email, "
+        "please make sure you've entered the address you registered with, and check your spam folder."
+    )
+    extra_email_context = {
+        "reset_password_link_expires_at": datetime.now()
+        + timedelta(seconds=int(settings.PASSWORD_RESET_TIMEOUT))
+    }
+    success_url = reverse_lazy("index")
+
+    # extend form_valid to set user.password_last_set
+    def form_valid(self, form):
+        self.request.user.password_last_set = timezone.now()
+
+        return super().form_valid(form)

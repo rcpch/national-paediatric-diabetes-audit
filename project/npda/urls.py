@@ -1,6 +1,9 @@
-from django.urls import path
+from django.urls import path, include
+from django.contrib.auth.views import PasswordResetConfirmView
+from django.contrib.auth import urls as auth_urls
 from project.npda.views import npda_users
 from project.npda.views.visit import VisitCreateView, VisitDeleteView, VisitUpdateView, patient_visits
+from project.npda.forms.npda_user_form import NPDAUpdatePasswordForm
 
 from .views import *
 
@@ -53,5 +56,20 @@ urlpatterns = [
         "npda_users/<int:pk>/delete",
         view=NPDAUserDeleteView.as_view(),
         name='npdauser-delete'
-    )
+    ),
+    path("captcha/", include("captcha.urls")),
+    path("account/", include(auth_urls)),
+    path(
+        "account/password-reset/",
+        view=ResetPasswordView.as_view(),
+        name="password_reset",
+    ),
+    path(
+        "account/password-reset-confirm/<uidb64>/<token>",
+        view=PasswordResetConfirmView.as_view(
+            form_class=NPDAUpdatePasswordForm,
+            template_name="registration/password_reset_confirm.html",
+        ),
+        name="password_reset_confirm",
+    ),
 ]

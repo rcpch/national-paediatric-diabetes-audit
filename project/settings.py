@@ -59,7 +59,13 @@ NHS_SPINE_SERVICES_URL = os.getenv("NHS_SPINE_SERVICES_URL")
 POSTCODE_API_BASE_URL = os.getenv("POSTCODE_API_BASE_URL")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "False") == "True"
+if DEBUG is True:
+    CAPTCHA_TEST_MODE = True  # if in debug mode, can just type 'PASSED' and captcha validates. Default value is False
+
+# GENERAL CAPTCHA SETTINGS
+CAPTCHA_IMAGE_SIZE = (200, 50)
+CAPTCHA_FONT_SIZE = 40
 
 ALLOWED_HOSTS = []
 
@@ -75,6 +81,15 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "drf_spectacular",
+     # 2fa
+    "django_otp",
+    "django_otp.plugins.otp_static",
+    "django_otp.plugins.otp_totp",
+    "django_otp.plugins.otp_email",
+    # "two_factor.plugins.email",
+    # "two_factor",
+    # "two_factor.plugins.phonenumber",  # we don't use phones currently but required for app to work
+    "captcha",
     # application
     "project.npda",
 ]
@@ -173,17 +188,17 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
-    {
-        "NAME": "epilepsy12.validators.CapitalAndSymbolValidator",
-        "OPTIONS": {
-            "symbols": "!@£$%^&*()_-+=|~",
-            "number_of_symbols": 1,
-            "number_of_capitals": 1,
-        },
-    },
-    {
-        "NAME": "epilepsy12.validators.NumberValidator",  # must have one number
-    },
+    # {
+    #     "NAME": "npda.validators.CapitalAndSymbolValidator",
+    #     "OPTIONS": {
+    #         "symbols": "!@£$%^&*()_-+=|~",
+    #         "number_of_symbols": 1,
+    #         "number_of_capitals": 1,
+    #     },
+    # },
+    # {
+    #     "NAME": "npda.validators.NumberValidator",  # must have one number
+    # },
 ]
 
 # Two Factor Authentication / One Time Password Settings (2FA / one-time login codes)
