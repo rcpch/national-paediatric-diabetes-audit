@@ -993,3 +993,5 @@ Traceback (most recent call last):
 AttributeError: type object 'datetime.timezone' has no attribute 'now'
 [2024-04-23 22:37:02,859] ERROR [django.server:212] "POST /account/password-reset-confirm/MTE/set-password HTTP/1.1" 500 118536
 [2024-04-23 22:38:43,155] WARNING [django.security.SuspiciousSession:108] Session data corrupted
+[2024-04-27 15:51:46,161] WARNING [django.security.SuspiciousSession:108] Session data corrupted
+[2024-04-27 15:51:46,821] WARNING [django.security.SuspiciousSession:108] Session data corrupted
