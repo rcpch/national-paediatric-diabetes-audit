@@ -45,6 +45,7 @@ for item in tf_urls:
 urlpatterns = [
     path("api/", include(router.urls)),
     path("admin/", admin.site.urls),
+    path("", include(tf_urls)),
     path("api-auth/", include("rest_framework.urls")),
     # JSON Schema
     path("schema/", SpectacularJSONAPIView.as_view(), name="schema"),

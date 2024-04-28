@@ -1,6 +1,7 @@
 import re
 from django import template
 from django.utils.safestring import mark_safe
+from django.conf import settings
 from ..general_functions import get_visit_category_for_field
 from ...constants import VisitCategories
 
@@ -94,3 +95,8 @@ def category_for_first_item(form, field, index):
         return ""
     else:
         return current_visit_category.value
+
+
+@register.simple_tag
+def site_contact_email():
+    return settings.SITE_CONTACT_EMAIL

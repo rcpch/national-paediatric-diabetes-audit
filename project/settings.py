@@ -81,7 +81,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "drf_spectacular",
-     # 2fa
+    # 2fa
     "django_otp",
     "django_otp.plugins.otp_static",
     "django_otp.plugins.otp_totp",
@@ -228,9 +228,11 @@ if SMTP_EMAIL_ENABLED is True:
     EMAIL_TIMEOUT = 10
 else:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-logger.info("EMAIL_BACKEND: %s", EMAIL_BACKEND)
+# logger.info("EMAIL_BACKEND: %s", EMAIL_BACKEND)
 
-PASSWORD_RESET_TIMEOUT = os.environ.get("PASSWORD_RESET_TIMEOUT", 259200)  # Default: 259200 (3 days, in seconds)
+PASSWORD_RESET_TIMEOUT = os.environ.get(
+    "PASSWORD_RESET_TIMEOUT", 259200
+)  # Default: 259200 (3 days, in seconds)
 
 SITE_CONTACT_EMAIL = os.environ.get("SITE_CONTACT_EMAIL")
 
@@ -243,7 +245,7 @@ STATIC_ROOT = str(BASE_DIR.joinpath("staticfiles"))
 # STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 WHITENOISE_ROOT = os.path.join(BASE_DIR, "static/root")
 
-SMTP_EMAIL_ENABLED="False"
+SMTP_EMAIL_ENABLED = "False"
 
 STORAGES = {
     "staticfiles": {
