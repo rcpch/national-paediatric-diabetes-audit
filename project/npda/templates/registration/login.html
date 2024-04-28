@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<div class="max-w-xl w-full">
+
+  
+  {% csrf_token %}
+
+  
+      
+      <div class="w-full md:w-1/4 px-5 mb-4 flex flex-col align-center">
+        <div>
+          <h2>Sign In</h2>
+        </div>
+        <img src='{% static "npda-logo.png" %}'>
+      </div>
+
+        <form method="post" >
+          {% csrf_token %}
+            {% for field in form %}
+              <p>
+                <h5>{{ field.label_tag }}</h5>
+                {{ field }}
+                {% if field.help_text %}
+                  <small style="color: grey">{{ field.help_text }}</small>
+                {% endif %}
+                {% for error in field.errors %}
+                  <div class='ui red message' style="color: red">{{ error }}</div>
+                {% endfor %}
+              </p>
+            {% endfor %}
+
+          <div class='field'>
+            <button class="ui rcpch_primary button" type="submit">Sign in</button>
+          </div>
+          
+          <div class='two fields'>
+
+              <div class="field">
+                <a href="{% url 'password_reset' %}">Reset Password</a>
+              </div>
+              
+          </div>
+
+        </form>
+
+    </div>
+  
+  </div>
+  
+{% endblock %}

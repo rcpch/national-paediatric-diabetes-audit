@@ -6,10 +6,16 @@
               <span class="self-center text-xl font-semibold whitespace-nowrap light:text-black">National Paediatric Diabetes Audit</span>
           </a>
           <div class="flex items-right lg:order-2">
-            {% if request.user %}
-              <a href="#" class="block py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-1 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue"><small>Log out</small></a>
+            {% if user.is_authenticated %}
+            <div>
+                {{ user.get_full_name }}
+            </div>
+            <form method="POST" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button class="class="block py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-1 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue" type="submit">Log out</button>
+              </form>
               {% else %}
-              <a href="#" class="block py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-1 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue"><small>Log in</small></a>
+              <a href="{% url 'two_factor:login' %}" class="block py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-1 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue"><small>Log in</small></a>
               <a href="#" class="block py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-1 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue"><small>Request account</small></a>
               {% endif %}
               <button data-collapse-toggle="mobile-menu-2" type="button" class="inline-flex items-center p-2 ml-1 text-sm text-gray-500 rounded-lg lg:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 text-gray-400 hover:bg-gray-700 focus:ring-gray-600" aria-controls="mobile-menu-2" aria-expanded="false">

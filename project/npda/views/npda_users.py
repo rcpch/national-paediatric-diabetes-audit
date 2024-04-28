@@ -3,7 +3,7 @@ from django.forms import BaseModelForm
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
-from django.contrib.auth.views import PasswordResetView
+from django.contrib.auth.views import PasswordResetView, LoginView
 from django.urls import reverse_lazy, reverse
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib import messages
@@ -11,7 +11,13 @@ from django.utils.html import strip_tags
 from django.conf import settings
 from ..models import NPDAUser
 from ..forms.npda_user_form import NPDAUserForm
-from ..general_functions import construct_confirm_email, send_email_to_recipients, construct_transfer_npda_site_email, construct_transfer_npda_site_outcome_email, group_for_role
+from ..general_functions import (
+    construct_confirm_email,
+    send_email_to_recipients,
+    construct_transfer_npda_site_email,
+    construct_transfer_npda_site_outcome_email,
+    group_for_role,
+)
 
 
 def npda_users(request):
@@ -40,7 +46,7 @@ class NPDAUserCreateView(SuccessMessageMixin, CreateView):
         context["button_title"] = "Add NPDA User"
         context["form_method"] = "create"
         return context
-    
+
     def form_valid(self, form):
         new_user = form.save(commit=False)
         new_user.set_unusable_password()
@@ -90,7 +96,7 @@ class NPDAUserCreateView(SuccessMessageMixin, CreateView):
             "npda_users",
             # organisation_id=organisation_id,
         )
-    
+
     def get_success_url(self) -> str:
         print("called")
         return reverse(
@@ -107,19 +113,18 @@ class NPDAUserUpdateView(SuccessMessageMixin, UpdateView):
     model = NPDAUser
     form_class = NPDAUserForm
     success_message = "NPDA User record updated successfully"
-    success_url=reverse_lazy('npda_users')
+    success_url = reverse_lazy("npda_users")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["title"] = "Edit NPDA User Details"
         context["button_title"] = "Edit NPDA User Details"
         context["form_method"] = "update"
-        context["npda_user_id"] = self.kwargs['pk']
+        context["npda_user_id"] = self.kwargs["pk"]
         return context
-    
+
     def is_valid(self):
         return super(NPDAUserForm, self).is_valid()
-
 
 
 class NPDAUserDeleteView(SuccessMessageMixin, DeleteView):
@@ -129,7 +134,8 @@ class NPDAUserDeleteView(SuccessMessageMixin, DeleteView):
 
     model = NPDAUser
     success_message = "NPDA User removed from database"
-    success_url=reverse_lazy('npda_users')
+    success_url = reverse_lazy("npda_users")
+
 
 class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
     template_name = "registration/password_reset.html"
@@ -153,3 +159,6 @@ class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
         self.request.user.password_last_set = timezone.now()
 
         return super().form_valid(form)
+
+
+# class RCPCHLoginView(LoginView):

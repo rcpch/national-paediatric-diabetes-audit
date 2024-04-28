@@ -20,6 +20,8 @@ from django.urls import path, include
 from rest_framework import routers
 from django.views.generic import TemplateView
 from drf_spectacular.views import SpectacularJSONAPIView, SpectacularSwaggerView
+from two_factor.urls import urlpatterns as tf_urls
+from django.contrib.auth.views import LoginView
 from .npda.viewsets import (
     UserViewSet,
     PatientViewSet,
@@ -31,6 +33,14 @@ router = routers.DefaultRouter()
 router.register(r"users", UserViewSet)
 router.register(r"visits", VisitViewSet)
 router.register(r"patients", PatientViewSet)
+
+# OVERRIDE TWO_FACTOR LOGIN URL TO CAPTCHA LOGIN
+for item in tf_urls:
+    if type(item) == list:
+        for url_pattern in item:
+            if vars(url_pattern).get("name") == "login":
+                url_pattern.callback = LoginView.as_view()
+        break
 
 urlpatterns = [
     path("api/", include(router.urls)),

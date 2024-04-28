@@ -86,9 +86,9 @@ INSTALLED_APPS = [
     "django_otp.plugins.otp_static",
     "django_otp.plugins.otp_totp",
     "django_otp.plugins.otp_email",
-    # "two_factor.plugins.email",
-    # "two_factor",
-    # "two_factor.plugins.phonenumber",  # we don't use phones currently but required for app to work
+    "two_factor.plugins.email",
+    "two_factor",
+    "two_factor.plugins.phonenumber",  # we don't use phones currently but required for app to work
     "captcha",
     # application
     "project.npda",
@@ -102,6 +102,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    #  2 factor authentication
+    "django_otp.middleware.OTPMiddleware",
 ]
 
 ROOT_URLCONF = "project.urls"
@@ -173,6 +175,11 @@ AUTHENTICATION_BACKENDS = (
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
 AUTH_USER_MODEL = "npda.NPDAUser"
+
+# LOGIN_URL = "/registration/login/"
+LOGIN_URL = "two_factor:login"  # change LOGIN_URL to the 2fa one
+LOGIN_REDIRECT_URL = "two_factor:profile"
+LOGOUT_REDIRECT_URL = "two_factor:login"
 
 AUTH_PASSWORD_VALIDATORS = [
     {
