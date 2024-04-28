@@ -1,18 +1,18 @@
 {% load i18n %}
 
-<div class="rcpch_signin_buttons_wrapper">
-  <div class="field">
-    <button type="submit" class="ui rcpch_primary button">
+<div class=" flex flex-col justify-center items-center">
+  
+    <button type="submit" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 mt-5 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">
       {% trans "Next" %}
     </button>
-  </div>
+  
   {% if wizard.steps.prev %}
   <div class="field">
     <button
       name="wizard_goto_step"
       type="submit"
       value="{{ wizard.steps.prev }}"
-      class="ui rcpch_grey button"
+      class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 mt-5 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue"
     >
       Back
     </button>
@@ -23,9 +23,9 @@
 <!--IF NO PREV BUTTON -> MUST BE AT FIRST SIGNIN PAGE -->
 {% if not wizard.steps.prev %}
 <div class="field">
-  <a href="{% url 'password_reset' %}">Reset Password</a>
+  <a href="{% url 'password_reset' %}" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 mt-5 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Reset Password</a>
   <div>
-    <p class="ui rcpch_warning message login">
+    <p class="text-rcpch_red font-montserrat">
       For users of the old platform (cohort 1 - 5), you will require a new
       username and password to access this new platform. Please contact your
       Lead Clinician or 

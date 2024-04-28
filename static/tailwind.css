@@ -8,4 +8,9 @@
   }
   .dropdown:hover .dropdown-menu {
     display: block;
+    background-color: white;
+    margin: 10 10 10 10;
+    padding: 10 10 10 10;
+    border-color: white;
+    border-width: 5px;
   }

@@ -12,17 +12,14 @@
 
 {% block content %}
 
-<div class='ui rcpch container'>
-  <div class="ui two column centered grid">
-    <div class="column">
+<div class=" flex flex-col justify-center items-center">
 
       {% if wizard.steps.current == 'auth' %}
-      <div class="ui header">
+      <div>
         <img src='{% static "images/epilepsy12-logo-1.png" %}'>
-        <div class="content">
-          <h2>Sign In</h2>
-        </div>
+          <h2 class="font-montserrat text-lg font-semibold mt-5">Sign In</h2>
       </div>
+
       {% elif wizard.steps.current == 'token' %}
         <p>Enter the one-time login code from your registered method of two-factor authentication:</p>
       {% elif wizard.steps.current == 'backup' %}
@@ -31,7 +28,7 @@
           enter one of these backup tokens to login to your account.{% endblocktrans %}</p>
       {% endif %}
 
-      <form action="" method="post" class="ui rcpch form">
+      <form action="" method="post" class="w-full max-w-sm">
         {% csrf_token %}
         {% include "two_factor/_wizard_forms.html" %}
 
