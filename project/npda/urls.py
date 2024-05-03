@@ -2,11 +2,12 @@ from django.urls import path, include
 from django.contrib.auth.views import PasswordResetConfirmView, LoginView, LogoutView
 from django.contrib.auth import urls as auth_urls
 from project.npda.views import npda_users
-from project.npda.views.visit import (
+from project.npda.views import (
     VisitCreateView,
     VisitDeleteView,
     VisitUpdateView,
     patient_visits,
+    PatientListView,
 )
 from project.npda.forms.npda_user_form import NPDAUpdatePasswordForm
 
@@ -16,7 +17,7 @@ urlpatterns = [
     path("captcha/", include("captcha.urls")),
     path("account/", include(auth_urls)),
     path("home", view=home, name="home"),
-    path("patients", view=patients, name="patients"),
+    path("patients", view=PatientListView.as_view(), name="patients"),
     path("patient/<int:patient_id>/visits", view=patient_visits, name="patient_visits"),
     path(
         "patient/<int:patient_id>/visits/create",

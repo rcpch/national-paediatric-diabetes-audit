@@ -1,9 +1,8 @@
 from datetime import datetime, timezone, timedelta
-from django.forms import BaseModelForm
-from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.contrib.auth.views import PasswordResetView, LoginView
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy, reverse
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib import messages
@@ -36,7 +35,7 @@ def npda_users(request):
     return render(request=request, template_name=template_name, context=context)
 
 
-class NPDAUserCreateView(SuccessMessageMixin, CreateView):
+class NPDAUserCreateView(SuccessMessageMixin, CreateView, LoginRequiredMixin):
     """
     Handle creation of new patient in audit
     """
@@ -111,7 +110,7 @@ class NPDAUserCreateView(SuccessMessageMixin, CreateView):
         )
 
 
-class NPDAUserUpdateView(SuccessMessageMixin, UpdateView):
+class NPDAUserUpdateView(SuccessMessageMixin, UpdateView, LoginRequiredMixin):
     """
     Handle update of patient in audit
     """
@@ -133,7 +132,7 @@ class NPDAUserUpdateView(SuccessMessageMixin, UpdateView):
         return super(NPDAUserForm, self).is_valid()
 
 
-class NPDAUserDeleteView(SuccessMessageMixin, DeleteView):
+class NPDAUserDeleteView(SuccessMessageMixin, DeleteView, LoginRequiredMixin):
     """
     Handle deletion of child from audit
     """
