@@ -1,6 +1,7 @@
 from datetime import datetime, timezone, timedelta
 from django.shortcuts import render, redirect
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django.views.generic import ListView
 from django.contrib.auth.views import PasswordResetView, LoginView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy, reverse
@@ -25,14 +26,11 @@ NPDAUser list and NPDAUser creation, deletion and update
 """
 
 
-def npda_users(request):
-    """
-    Return a list of all children
-    """
+class NPDAUserListView(ListView):
     template_name = "npda_users.html"
-    npda_users = NPDAUser.objects.all()
-    context = {"npda_users": npda_users}
-    return render(request=request, template_name=template_name, context=context)
+
+    def get_queryset(self):
+        return NPDAUser.objects.all().order_by("surname")
 
 
 class NPDAUserCreateView(SuccessMessageMixin, CreateView, LoginRequiredMixin):
