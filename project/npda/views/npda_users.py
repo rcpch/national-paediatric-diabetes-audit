@@ -1,5 +1,6 @@
-from datetime import datetime, timezone, timedelta
-from django.shortcuts import render, redirect
+from datetime import datetime, timedelta
+from django.utils import timezone
+from django.shortcuts import redirect
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
 from django.contrib.auth.views import PasswordResetView, LoginView
@@ -155,7 +156,7 @@ class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
         "reset_password_link_expires_at": datetime.now()
         + timedelta(seconds=int(settings.PASSWORD_RESET_TIMEOUT))
     }
-    success_url = reverse_lazy("index")
+    success_url = reverse_lazy("login")
 
     # extend form_valid to set user.password_last_set
     def form_valid(self, form):

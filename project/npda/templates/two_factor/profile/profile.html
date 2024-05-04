@@ -16,10 +16,9 @@
           </div>
 
       {% else %}
-        <div class="ui icon rcpch_important message">
-          <i class="key icon"></i>
-          <div class="content">
-            <div class="header">
+        <div>
+          <div>
+            <div>
               Enable two-factor authentication
             </div>
             <p>
@@ -27,7 +26,7 @@
             account. You must enable this to use the National Paediatric Diabetes Audit platform.{% endblocktrans %}
             </p>
             <p>
-              <a href="{% url 'two_factor:setup' %}" class="rcpch_blue_link">
+              <a href="{% url 'two_factor:setup' %}">
                 {% trans "Enable two-factor authentication" %}
               </a>
             </p>
