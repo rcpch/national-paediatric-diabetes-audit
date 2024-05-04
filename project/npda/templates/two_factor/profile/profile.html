@@ -19,14 +19,14 @@
         <div>
           <div>
             <div>
-              Enable two-factor authentication
+              <h2 class="text-lg font-montserrat font-semibold mt-5 mb-5">Enable two-factor authentication</h2>
             </div>
-            <p>
+            <p class="mb-5">
             {% blocktrans trimmed %}Two-factor authentication is not enabled for your
             account. You must enable this to use the National Paediatric Diabetes Audit platform.{% endblocktrans %}
             </p>
             <p>
-              <a href="{% url 'two_factor:setup' %}">
+              <a href="{% url 'two_factor:setup' %}" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 mt-5 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">
                 {% trans "Enable two-factor authentication" %}
               </a>
             </p>

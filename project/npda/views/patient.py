@@ -16,7 +16,7 @@ class PatientListView(LoginRequiredMixin, ListView):
         return Patient.objects.all().order_by("id")
 
 
-class PatientCreateView(SuccessMessageMixin, CreateView, LoginRequiredMixin):
+class PatientCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
     """
     Handle creation of new patient in audit
     """
@@ -34,7 +34,7 @@ class PatientCreateView(SuccessMessageMixin, CreateView, LoginRequiredMixin):
         return context
 
 
-class PatientUpdateView(SuccessMessageMixin, UpdateView, LoginRequiredMixin):
+class PatientUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
     """
     Handle update of patient in audit
     """
@@ -56,7 +56,7 @@ class PatientUpdateView(SuccessMessageMixin, UpdateView, LoginRequiredMixin):
         return super(PatientForm, self).is_valid()
 
 
-class PatientDeleteView(SuccessMessageMixin, DeleteView, LoginRequiredMixin):
+class PatientDeleteView(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
     """
     Handle deletion of child from audit
     """

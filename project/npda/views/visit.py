@@ -11,7 +11,7 @@ from ..forms.visit_form import VisitForm
 from ..general_functions import get_visit_categories
 
 
-class PatientVisitsListView(ListView):
+class PatientVisitsListView(LoginRequiredMixin, ListView):
     model = Visit
     template_name = "visits.html"
 
@@ -29,7 +29,7 @@ class PatientVisitsListView(ListView):
         return context
 
 
-class VisitCreateView(SuccessMessageMixin, CreateView, LoginRequiredMixin):
+class VisitCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
     model = Visit
     form_class = VisitForm
 
@@ -62,7 +62,7 @@ class VisitCreateView(SuccessMessageMixin, CreateView, LoginRequiredMixin):
         return HttpResponseRedirect(self.get_success_url())
 
 
-class VisitUpdateView(UpdateView, LoginRequiredMixin):
+class VisitUpdateView(LoginRequiredMixin, UpdateView):
     model = Visit
     form_class = VisitForm
 
@@ -89,7 +89,7 @@ class VisitUpdateView(UpdateView, LoginRequiredMixin):
         return initial
 
 
-class VisitDeleteView(SuccessMessageMixin, DeleteView, LoginRequiredMixin):
+class VisitDeleteView(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
     model = Visit
     success_url = reverse_lazy("patient_visits")
     success_message = "Visit removed successfully"

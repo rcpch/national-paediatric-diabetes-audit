@@ -34,7 +34,7 @@ class NPDAUserListView(ListView):
         return NPDAUser.objects.all().order_by("surname")
 
 
-class NPDAUserCreateView(SuccessMessageMixin, CreateView, LoginRequiredMixin):
+class NPDAUserCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
     """
     Handle creation of new patient in audit
     """
@@ -109,7 +109,7 @@ class NPDAUserCreateView(SuccessMessageMixin, CreateView, LoginRequiredMixin):
         )
 
 
-class NPDAUserUpdateView(SuccessMessageMixin, UpdateView, LoginRequiredMixin):
+class NPDAUserUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
     """
     Handle update of patient in audit
     """
@@ -131,7 +131,7 @@ class NPDAUserUpdateView(SuccessMessageMixin, UpdateView, LoginRequiredMixin):
         return super(NPDAUserForm, self).is_valid()
 
 
-class NPDAUserDeleteView(SuccessMessageMixin, DeleteView, LoginRequiredMixin):
+class NPDAUserDeleteView(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
     """
     Handle deletion of child from audit
     """
