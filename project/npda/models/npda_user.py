@@ -225,6 +225,7 @@ class NPDAUser(AbstractUser, PermissionsMixin):
             ),
         ]
         permissions = [CAN_PUBLISH_NPDA_DATA, CAN_CONSENT_TO_AUDIT_PARTICIPATION]
+        ordering = ("surname",)
 
     def __str__(self) -> str:
         return self.get_full_name()

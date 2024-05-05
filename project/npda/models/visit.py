@@ -494,6 +494,7 @@ class Visit(models.Model, HelpTextMixin):
     class Meta:
         verbose_name = "Visit"
         verbose_name_plural = "Visits"
+        ordering = ("-visit_date",)
 
     def __str__(self) -> str:
         return f"Patient visit for {self.patient} on {self.visit_date}"

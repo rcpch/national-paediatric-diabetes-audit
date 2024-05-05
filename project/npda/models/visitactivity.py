@@ -23,9 +23,9 @@ class VisitActivity(models.Model):
     npdauser = models.ForeignKey("npda.NPDAUser", on_delete=models.CASCADE)
 
     class Meta:
-        indexes = [models.Index(fields=["activity_datetime"])]
-        verbose_name = "VisitActivity"
-        verbose_name_plural = "VisitActivities"
+        indexes = [models.Index(fields=["-activity_datetime"])]
+        verbose_name = "User Access Log"
+        verbose_name_plural = "User Access Logs"
         ordering = ("activity_datetime",)
 
     def __str__(self) -> str:
