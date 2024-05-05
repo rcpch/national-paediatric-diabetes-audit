@@ -10,11 +10,9 @@
                   <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">
                     <tr>
                         <th scope="col" class="py-3 w-1/12">NPDA UserID</th>
-                        <th scope="col" class="py-3 w-1/12">Title</th>
-                        <th scope="col" class="py-3 w-1/12">First Name</th>
-                        <th scope="col" class="py-3 w-1/12">Surname</th>
+                        <th scope="col" class="py-3 w-2/12">Name</th>
                         <th scope="col" class="px-0 py-3 w-2/12">Email</th>
-                        <th scope="col" class="py-3 -mx-6 w-3/12 text-center">Memberships</th>
+                        <th scope="col" class="py-3 -mx-6 w-3/12 text-left">Memberships</th>
                         <th scope="col" class="w-1/12">Role</th>
                         <th scope="col" class="w-1/12">Employer</th>
                         <th class="w-1/12">Logs</th>
@@ -23,10 +21,15 @@
                   <tbody>
                         {% for npda_user in npdauser_list %}
                           <tr class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white">
-                            <td><a href="{% url 'npdauser-update' npda_user.pk %}" class="px-2 flex text-left hover:text-rcpch_pink"><strong>{{ npda_user.pk }}</strong></a></td>
-                            <td class="text-left">{{npda_user.get_title_display}}</td>
-                            <td class="text-left">{{npda_user.first_name}}</td>
-                            <td class="text-left">{{npda_user.surname}}</td>
+                            <td>
+                              <div class='has-tooltip'>
+                                  <a href="{% url 'npdauser-update' npda_user.pk %}" class="px-2 flex text-left hover:text-rcpch_pink"><strong>{{ npda_user.pk }}</strong></a>
+                                  <span class='tooltip rounded shadow-lg px-2 py-2 bg-gray-500 text-white -mt-12'>NPDA User Unique ID</span>
+                                </div>
+                            </td>
+                            <td class="text-left">
+                              {{npda_user.get_full_name}}
+                            </td>
                             <td class="text-left">
                               <span class="flex flex-nowrap">
                                 {{npda_user.email}}
@@ -147,8 +150,6 @@
                         <th class="px-2">
                             {{ npdauser_list|length }} User{% if npdauser_list|length > 1 %}s{% endif %}
                         </th>
-                        <th></th>
-                        <th></th>
                         <th></th>
                         <th></th>
                         <th></th>
