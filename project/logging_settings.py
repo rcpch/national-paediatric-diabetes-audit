@@ -21,7 +21,7 @@ django_loggers = {
     }
     for logger_name in (
         "django.request",
-        "django.utils",  # The django.utils logger logs events from Django and other miscellaneous log events e.g. autoreload
+        # "django.utils",  # The django.utils logger logs events from Django and other miscellaneous log events e.g. autoreload
         "django.security",
         "django.db.backends",  # The django.db.backends logger logs SQL queries. Set the level to DEBUG or higher to log SQL queries.
         "django.template",
@@ -105,7 +105,6 @@ LOGGING = {
         "django": {
             "handlers": ["django_console", "npda_logfile"],
             "level": CONSOLE_DJANGO_LOG_LEVEL,
-
         },
         **django_loggers,  # this injects the default django logger settings defined above
         "npda": {

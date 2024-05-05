@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # "django.forms",
     "rest_framework",
     "drf_spectacular",
     # 2fa
@@ -175,8 +176,6 @@ AUTHENTICATION_BACKENDS = (
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
 AUTH_USER_MODEL = "npda.NPDAUser"
-
-# LOGIN_URL = "/registration/login/"
 LOGIN_URL = "two_factor:login"  # change LOGIN_URL to the 2fa one
 LOGIN_REDIRECT_URL = "two_factor:profile"
 LOGOUT_REDIRECT_URL = "two_factor:login"

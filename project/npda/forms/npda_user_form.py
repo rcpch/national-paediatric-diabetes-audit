@@ -91,6 +91,9 @@ class CaptchaAuthenticationForm(AuthenticationForm):
 
     def __init__(self, request, *args, **kwargs) -> None:
         super().__init__(request, *args, **kwargs)
+        self.fields["username"].widget.attrs.update({"class": TEXT_INPUT})
+        self.fields["password"].widget.attrs.update({"class": TEXT_INPUT})
+        self.fields["captcha"].widget.attrs.update({"class": TEXT_INPUT})
 
     def clean_username(self) -> dict[str]:
         email = super().clean()["username"]
