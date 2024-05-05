@@ -1,0 +1,7 @@
+Your one-time login code is: {{ token }}
+
+If you have any questions, please contact the RCPCH National Paediatric Diabetes Audit team.
+
+Yours Sincerely,
+
+The RCPCH National Paediatric Diabetes Audit team

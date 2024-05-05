@@ -1,9 +1,11 @@
 from django.shortcuts import get_object_or_404, redirect, render
+from django.contrib.auth.decorators import login_required
 from ..general_functions import csv_upload
 from ..forms.upload import UploadFileForm
 from ..models import Patient, Visit
 
 
+@login_required
 def home(request):
     file_uploaded = False
     if request.method == "POST":

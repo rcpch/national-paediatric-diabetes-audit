@@ -1,34 +1,127 @@
 from django import forms
-from django.core.exceptions import ValidationError
+from django.contrib.auth.forms import SetPasswordForm, AuthenticationForm
 from ..models import NPDAUser
 from ...constants.styles.form_styles import *
+import logging
+from django.utils import timezone
+from django.utils.translation import gettext as _
+from django.conf import settings
+from captcha.fields import CaptchaField
+
+# Logging setup
+logger = logging.getLogger(__name__)
 
 
 class NPDAUserForm(forms.ModelForm):
-    
+
     class Meta:
         model = NPDAUser
         fields = [
-            'title',
-            'first_name',
-            'surname',
-            'email',
-            'is_staff',
-            'is_superuser',
-            'is_rcpch_audit_team_member',
-            'is_rcpch_staff',
-            'role',
-            'organisation_employer'
+            "title",
+            "first_name",
+            "surname",
+            "email",
+            "is_staff",
+            "is_superuser",
+            "is_rcpch_audit_team_member",
+            "is_rcpch_staff",
+            "role",
+            "organisation_employer",
         ]
         widgets = {
-            'title': forms.Select(attrs={"class": SELECT}),
-            'first_name': forms.TextInput(attrs={"class": TEXT_INPUT}),
-            'surname':forms.TextInput(attrs={"class": TEXT_INPUT}),
-            'email': forms.EmailInput(attrs={"class": TEXT_INPUT}),
-            'is_staff':forms.CheckboxInput(attrs={"class": "accent-rcpch_pink"}),
-            'is_superuser':forms.CheckboxInput(attrs={"class": "accent-rcpch_pink"}),
-            'is_rcpch_audit_team_member':forms.CheckboxInput(attrs={"class": "accent-rcpch_pink"}),
-            'is_rcpch_staff':forms.CheckboxInput(attrs={"class": "accent-rcpch_pink"}),
-            'role':forms.Select(attrs={"class": SELECT}),
-            'organisation_employer':forms.Select(attrs={"class": SELECT}),
+            "title": forms.Select(attrs={"class": SELECT}),
+            "first_name": forms.TextInput(attrs={"class": TEXT_INPUT}),
+            "surname": forms.TextInput(attrs={"class": TEXT_INPUT}),
+            "email": forms.EmailInput(attrs={"class": TEXT_INPUT}),
+            "is_staff": forms.CheckboxInput(attrs={"class": "accent-rcpch_pink"}),
+            "is_superuser": forms.CheckboxInput(attrs={"class": "accent-rcpch_pink"}),
+            "is_rcpch_audit_team_member": forms.CheckboxInput(
+                attrs={"class": "accent-rcpch_pink"}
+            ),
+            "is_rcpch_staff": forms.CheckboxInput(attrs={"class": "accent-rcpch_pink"}),
+            "role": forms.Select(attrs={"class": SELECT}),
+            "organisation_employer": forms.Select(attrs={"class": SELECT}),
         }
+
+
+class NPDAUpdatePasswordForm(SetPasswordForm):
+    # form show when setting or resetting password
+    # password validation occurs here and updates the password_last_set field
+    is_admin = False
+
+    def __init__(self, user, *args, **kwargs):
+        self.user = user
+        if (
+            self.user.is_rcpch_audit_team_member
+            or self.user.is_superuser
+            or self.user.is_rcpch_staff
+        ):
+            self.is_admin = True
+        super(SetPasswordForm, self).__init__(*args, **kwargs)
+
+    def clean(self) -> dict[str]:
+        if self.is_admin and len(super().clean()["new_password1"]) < 16:
+            raise forms.ValidationError(
+                {
+                    "new_password2": _(
+                        "RCPCH audit team members must have passwords of 16 characters or more."
+                    )
+                }
+            )
+        return super().clean()
+
+    def save(self, *args, commit=True, **kwargs):
+        user = super().save(*args, commit=False, **kwargs)
+        user.password_last_set = timezone.now()
+        if commit:
+            logger.debug(f"Updating password_last_set to {timezone.now()}")
+            user.save()
+        return user
+
+
+# IF IN DEBUG MODE, PRE-FILL CAPTCHA VALUE
+class DebugCaptchaField(CaptchaField):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.widget.widgets[-1].attrs["value"] = "PASSED"
+
+
+class CaptchaAuthenticationForm(AuthenticationForm):
+    captcha = DebugCaptchaField() if settings.DEBUG else CaptchaField()
+
+    def __init__(self, request, *args, **kwargs) -> None:
+        super().__init__(request, *args, **kwargs)
+        self.fields["username"].widget.attrs.update({"class": TEXT_INPUT})
+        self.fields["password"].widget.attrs.update({"class": TEXT_INPUT})
+        self.fields["captcha"].widget.attrs.update({"class": TEXT_INPUT})
+
+    def clean_username(self) -> dict[str]:
+        email = super().clean()["username"]
+        if email:
+            try:
+                user = NPDAUser.objects.get(email=email.lower()).DoesNotExist
+            except NPDAUser.DoesNotExist:
+                return super().clean()
+
+            user = NPDAUser.objects.get(email=email.lower())
+
+            # visit_activities = VisitActivity.objects.filter(
+            #     npda12user=user
+            # ).order_by("-activity_datetime")[:5]
+
+            # failed_login_activities = [
+            #     activity for activity in visit_activities if activity.activity == 2
+            # ]
+
+            # if failed_login_activities:
+            #     first_activity = failed_login_activities[-1]
+
+            #     if len(
+            #         failed_login_activities
+            #     ) >= 5 and timezone.now() <= first_activity.activity_datetime + timezone.timedelta(
+            #         minutes=10
+            #     ):
+            #         raise forms.ValidationError(
+            #             "You have failed to login 5 or more consecutive times. You have been locked out for 10 minutes"
+            #         )
+            return email.lower()

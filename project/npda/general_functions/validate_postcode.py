@@ -26,7 +26,6 @@ def validate_postcode(postcode):
         response.raise_for_status()
     except HTTPError as e:
         print(e.response.text)
-        if response.status_code == 404:
-            return False
+        return False
 
     return True

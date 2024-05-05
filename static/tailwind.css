@@ -1,0 +1,17 @@
+.tooltip{
+    visibility: hidden;
+    position: absolute;
+  }
+  .has-tooltip:hover .tooltip {
+    visibility: visible;
+    z-index: 100;
+  }
+  .dropdown:hover .dropdown-menu {
+    display: block;
+    background-color: white;
+    z-index: 1;
+    margin: 10 10 10 10;
+    padding: 10 10 10 10;
+    border-color: white;
+    border-width: 5px;
+  }

@@ -1,10 +1,11 @@
 {% extends "base.html" %}
 {% load static %}
 {% block content %}
-<div class="flex flex-row min-h-screen justify-center px-10">
+<div class="flex flex-col justify-center px-10">
     <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
       <div class="inline-block min-w-full py-2 sm:px-6 lg:px-8">
           <div class="relative overflow-x-auto">
+            {% if patient_list %}
               <table class="table-auto w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
                   <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">
                     <tr>
@@ -20,8 +21,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    {% if patients %}
-                        {% for patient in patients %}
+                        {% for patient in patient_list %}
                           <tr class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white">
                               <td><a href="{% url 'patient-update' patient.pk %}" class="px-2 flex text-center hover:text-rcpch_pink"><strong>{{ patient.pk }}</strong></a></td>
                               <td class="px-6 py-4 text-center">{{ patient.nhs_number }}</td>
@@ -39,25 +39,36 @@
                               </td>
                           </tr>
                         {% endfor %}
-                    {% else %}
-                        <h5>No patients yet!</h5>
-                    {% endif %}
-                  </tbody>
-                  <tfoot>
-                    <tr class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white py-5">
-                        <th class="px-2">
+                      </tbody>
+                      <tfoot>
+                        <tr class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white py-5">
+                          <th class="px-2">
                             <strong>
-                                Total: {{patients.count}} patients
+                              Total: {{patients.count}} patients
                             </strong>
-                        </th>
-                        <th class="px-2">
-                        </th>
-                      </tr>
-                    </tfoot>
-                  </table>
+                          </th>
+                          <th class="px-2">
+                          </th>
+                          <th></th>
+                          <th></th>
+                          <th></th>
+                          <th></th>
+                          <th></th>
+                          <th></th>
+                          <th></th>
+                        </tr>
+                      </tfoot>
+                    </table>
+                    {% else %}
+                        <h5 class="mb-5 font-montserrat font-semibold">No patients yet!</h5>
+                    {% endif %}
                 </div>
                 <a href="{% url 'patient-add' %}" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 mt-40 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Add Child</a>
         </div>
+    </div>
+    <div class="font-montserrat font-semibold mt-10">
+      <h5 class="text-lg">Patient Upload Summary</h5>
+      <p class="text-md">This will contain a table summary of uploaded cases, maybe with ticks against those deemed valid, and crosses against those that failed with a list of invalid fields</p>
     </div>
 </div>
 {% endblock %}
