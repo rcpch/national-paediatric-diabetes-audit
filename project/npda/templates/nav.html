@@ -1,29 +1,29 @@
 <header>
   <nav class="bg-white border-gray-50 px-4 lg:px-6 py-2.5">
-      <div class="flex flex-row justify-between mx-auto max-w-screen-xl">
+      <div >
 
           
-          <div class="hidden justify-between items-start lg:flex lg:w-auto lg:order-1" id="mobile-menu-2">
-              <ul class="flex-row justify-between items-center w-100 mt-3 font-medium lg:flex-row lg:mt-0 flex">
-                    <a href="{% url 'home' %}" class="flex items-left">
-                        <img src="https://www.rcpch.ac.uk/themes/rcpch/images/logo-desktop.svg" class="mr-3 h-6 sm:h-9" alt="RCPCH Logo" />
+          <div class="lg:flex lg:w-auto lg:order-1" id="mobile-menu-2">
+              <ul class="w-full block flex justify-between items-center">
+                    <a href="{% url 'home' %}" class="flex flex-row">
+                        <img src="https://www.rcpch.ac.uk/themes/rcpch/images/logo-desktop.svg" class="mr-3 h-6 sm:h-9 " alt="RCPCH Logo" />
                         <span class="self-center text-xl font-semibold whitespace-nowrap light:text-black">National Paediatric Diabetes Audit</span>
                     </a>
-                    <li>
-                        <a href="http://0.0.0.0:8007/" class="block py-2 pr-4 pl-3 mb-4-4 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-5 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue"><small>Clinician User Guide</small></a>
+                    <li class="mr-6">
+                        <a href="http://0.0.0.0:8007/" class="lg:flex-grow block py-2 pr-4 pl-3 mb-4-4 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-5 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue"><small>Clinician User Guide</small></a>
                     </li>
                 {% if user.is_authenticated %}
-                    <li>
+                    <li class="mr-6">
                         <a href="{% url 'home' %}" class="block py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-5 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue" aria-current="page"><small>Upload CSV</small></a>
                     </li>
-                    <li>
+                    <li class="mr-6">
                         <a href="{% url 'patients' %}" class="block py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-5 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue"><small>PDU Reports</small></a>
                     </li>
-                    <li>
+                    <li class="mr-6">
                         <a href="{% url 'npda_users' %}" class="block py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-5 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue"><small>PDU User Managment</small></a>
                     </li>
                     
-                    <div class="dropdown inline-block relative">
+                    <li class="dropdown inline-block relative mr-6">
                         <button class="bg-white text-gray-700 font-semibold py-2 px-4 rounded inline-flex items-center">
                         <span class="mr-1">
                             <div class="px-2 font-semibold text-sm flex flex-row justify-center items-center">
@@ -42,13 +42,13 @@
                             <li class="">{% csrf_token %}<button type="submit">Log out</button></li>
                         </ul>
                         </form>
-                    </div>
+                    </li>
                           
                 {% else %}
               
-                    <div class="items-stretch">
+                    <li class="mr-6">
     
-                        <div class="dropdown inline-block relative ">
+                        <div class="dropdown inline-block relative">
                         <button class="bg-white text-gray-700 font-semibold py-2 px-4 rounded inline-flex items-center">
                             <span class="mr-1">Account</span>
                             <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/> </svg>
@@ -59,7 +59,7 @@
                         </ul>
                         </div>
                     
-                    </div>
+                    </li>
                   
                 {% endif %}
                 </ul>
