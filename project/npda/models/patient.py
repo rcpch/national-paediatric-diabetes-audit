@@ -87,12 +87,18 @@ class Patient(models.Model):
     class Meta:
         verbose_name = "Patient"
         verbose_name_plural = "Patients"
-        ordering = ("nhs_number",)
+        ordering = (
+            "pk",
+            "nhs_number",
+        )
         permissions = [
             CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING,
             CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING,
             CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
         ]
+
+    def __str__(self) -> str:
+        return f"ID: {self.pk}, {self.nhs_number}"
 
     def get_absolute_url(self):
         return reverse("patient-detail", kwargs={"pk": self.pk})
