@@ -55,6 +55,11 @@ urlpatterns = [
     path("npda_users", view=NPDAUserListView.as_view(), name="npda_users"),
     path("npda_users/add", view=NPDAUserCreateView.as_view(), name="npdauser-create"),
     path(
+        "npda_users/<int:npdauser_id>/logs",
+        view=NPDAUserLogsListView.as_view(),
+        name="npdauser-logs",
+    ),
+    path(
         "npda_users/<int:pk>/update",
         view=NPDAUserUpdateView.as_view(),
         name="npdauser-update",

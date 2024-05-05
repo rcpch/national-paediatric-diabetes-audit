@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.shortcuts import redirect
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
-from django.contrib.auth.views import PasswordResetView, LoginView
+from django.contrib.auth.views import PasswordResetView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy, reverse
 from django.contrib.messages.views import SuccessMessageMixin
@@ -11,7 +11,7 @@ from django.contrib import messages
 from django.utils.html import strip_tags
 from django.conf import settings
 from two_factor.views import LoginView as TwoFactorLoginView
-from ..models import NPDAUser
+from ..models import NPDAUser, VisitActivity
 from ..forms.npda_user_form import NPDAUserForm, CaptchaAuthenticationForm
 from ..general_functions import (
     construct_confirm_email,
@@ -27,7 +27,7 @@ NPDAUser list and NPDAUser creation, deletion and update
 """
 
 
-class NPDAUserListView(ListView):
+class NPDAUserListView(LoginRequiredMixin, ListView):
     template_name = "npda_users.html"
 
     def get_queryset(self):
@@ -141,6 +141,25 @@ class NPDAUserDeleteView(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
     success_url = reverse_lazy("npda_users")
 
 
+class NPDAUserLogsListView(LoginRequiredMixin, ListView):
+    template_name = "npda_user_logs.html"
+    model = VisitActivity
+
+    def get_context_data(self, **kwargs):
+        npdauser_id = self.kwargs.get("npdauser_id")
+        context = super(NPDAUserLogsListView, self).get_context_data(**kwargs)
+        npdauser = NPDAUser.objects.get(pk=npdauser_id)
+        visitactivities = VisitActivity.objects.filter(npdauser=npdauser)
+        context["visitactivities"] = visitactivities
+        context["npdauser"] = npdauser
+        return context
+
+
+"""
+Authentication and password change
+"""
+
+
 class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
     template_name = "registration/password_reset.html"
     html_email_template_name = "registration/password_reset_email.html"
@@ -163,11 +182,6 @@ class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
         self.request.user.password_last_set = timezone.now()
 
         return super().form_valid(form)
-
-
-"""
-Authentication and password change
-"""
 
 
 class RCPCHLoginView(TwoFactorLoginView):
