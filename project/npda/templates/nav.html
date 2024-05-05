@@ -3,8 +3,8 @@
       <div >
 
           
-          <div class="lg:flex lg:w-auto lg:order-1" id="mobile-menu-2">
-              <ul class="w-full block flex flex-row items-center">
+        <div class="lg:flex lg:w-auto lg:order-1" id="mobile-menu-2">
+            <ul class="w-full block flex flex-row items-center">
                     <a href="{% url 'home' %}" class="flex flex-row">
                         <img src="https://www.rcpch.ac.uk/themes/rcpch/images/logo-desktop.svg" class="mr-3 h-6 sm:h-9 " alt="RCPCH Logo" />
                         <span class="self-center text-xl font-semibold whitespace-nowrap light:text-black mr-5">National Paediatric Diabetes Audit</span>
@@ -13,25 +13,23 @@
                         <a href="http://0.0.0.0:8007/" class="font-montserrat font-semibold lg:flex-grow block py-2 pr-4 pl-3 mb-4-4 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-5 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue">Clinician User Guide</a>
                     </li>
                 {% if user.is_authenticated %}
-                    <li class="mr-6">
+                    <li class="mr-2">
                         <a href="{% url 'home' %}" class="block font-montserrat font-semibold py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-5 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue" aria-current="page">Upload CSV</a>
                     </li>
-                    <li class="mr-6">
+                    <li class="mr-2">
                         <a href="{% url 'patients' %}" class="block font-montserrat font-semibold py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-5 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue">PDU Reports</a>
                     </li>
-                    <li class="mr-6">
+                    <li class="mr-2">
                         <a href="{% url 'npda_users' %}" class="block font-montserrat font-semibold py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-5 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue">PDU User Managment</a>
                     </li>
                     
-                  </ul>        
-                {% endif %}
+            </ul>        
                 
-                {% if user.is_authenticated %}
-
-                <li class="dropdown inline-block relative mr-6">
+            <ul class="flex justify-end">
+                <li class="dropdown inline-block relative mr-2">
                     <button class="bg-white text-gray-700 font-semibold py-2 px-4 rounded inline-flex items-center">
                     <span class="mr-1">
-                        <div class="px-2 font-semibold text-sm flex flex-row justify-center items-center">
+                        <div class="px-1 font-semibold text-sm flex flex-row justify-center items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" class="svg-icon" style="width: 2em; height: 2em;vertical-align: middle;fill: currentColor;overflow: hidden;" viewBox="0 0 1024 1024" version="1.1">
                                 <path d="M797.6 183.5v657.1c0 19.6-7.1 36.5-20.9 50.5-14 14-30.8 20.9-50.5 20.9H297.7c-19.6 0-36.5-7.1-50.5-20.9-14-14-20.9-30.8-20.9-50.5V183.5c0-19.6 6.9-36.5 20.9-50.5 14-14 30.8-20.9 50.5-20.9h157.1v42.8c0 4.1 1.3 7.7 4 10.3 2.7 2.7 6.1 4 10.3 4h85.7c4.1 0 7.7-1.3 10.3-4 2.7-2.7 4-6.1 4-10.3V112h157.1c19.6 0 36.5 7.1 50.5 20.9 14 14.2 20.9 31 20.9 50.6z m-57.2 657.1V226.3h-457v614.2c0 3.8 1.4 7.3 4.2 10.1 2.8 2.8 6.2 4.2 10.1 4.2h428.6c3.8 0 7.3-1.4 10.1-4.2 2.6-2.8 4-6.1 4-10z m-61-219.6c2.7 16 4 33.6 4 52.7s-5.5 35-16.5 47.7c-11 12.8-24.6 19.1-40.7 19.1H397.7c-16 0-29.6-6.3-40.7-19.1-11-12.8-16.5-28.7-16.5-47.7 0-19 1.3-36.7 4-52.7s7.1-31.5 13.2-46.3 15.2-26.6 27.2-35 26.4-12.8 43.1-12.8c23.9 22.4 51.9 33.5 83.9 33.5 32.1 0 60.1-11.2 83.9-33.5 16.6 0 31 4.2 43.1 12.8 12 8.5 21.2 20.1 27.2 35 6.2 14.8 10.6 30.2 13.3 46.3z m-94.9-250.7c20 19.8 30.1 43.6 30.1 71.6s-10.1 51.9-30.1 71.6c-20 19.9-44.3 29.7-72.5 29.7-28.3 0-52.5-9.9-72.6-29.7-20-19.7-30.1-43.6-30.1-71.5 0-28 10.1-51.9 30.1-71.6 20-19.8 44.2-29.7 72.6-29.7 28.2 0 52.5 9.9 72.5 29.6z"/>
                             </svg>
@@ -48,10 +46,14 @@
                     </ul>
                     </form>
                 </li>
+            </ul>
 
-                {% else %}
-                
-                <li class="flex justify-end">
+         {% else %}
+
+            </ul>
+            <ul class="flex justify-end">
+
+                <li>
                     
                     <div class="dropdown inline-block relative">
                         <button class="bg-white text-gray-700 font-semibold py-2 px-4 rounded inline-flex items-center">
@@ -65,10 +67,11 @@
                     </div>
                     
                 </li>
+            </ul>
                 {% endif %}
                   
 
-                </ul>
+                
             </div>
 
               <button data-collapse-toggle="mobile-menu-2" type="button" class="inline-flex items-center p-2 ml-1 text-sm text-gray-500 rounded-lg lg:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 text-gray-400 hover:bg-gray-700 focus:ring-gray-600" aria-controls="mobile-menu-2" aria-expanded="false">
