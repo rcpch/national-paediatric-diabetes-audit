@@ -1,5 +1,5 @@
 ---
-title: Developer
+title: Users
 author: Dr Simon Chapman
 ---
 
@@ -32,3 +32,17 @@ The last group has no real implementation at the moment but in time it is hoped 
 | Administrator    | Site    |   -  |    -   |    -   |    -   | ------ |
 | RCPCH Audit Team | Site    |   X  |    X   |    X   |    X   | CAN_EDIT_NPDA_LEAD_CENTRE, CAN_ALLOCATE_NPDA_LEAD_CENTRE, CAN_TRANSFER_NPDA_LEAD_CENTRE, CAN_DELETE_NPDA_LEAD_CENTRE, CAN_PUBLISH_NPDA_DATA |
 | |
+
+#### NPDAUser model
+
+The NPDAUser model subclasses the AbstractUser
+This has the basic django user functions but has the following extra custome fields
+
+- `is_active`: boolean
+- `is_staff`: boolean - this is a django field which defines access to the Django Admin
+- `is_superuser`: boolean - this is a django field which give access to all models, including the admin
+- `is_rcpch_audit_team_member`: boolean - a custom field that defines the user is an RCPCH audit team member
+- `is_rcpch_staff`: boolean - a custom field that defines the user is an RCPCH staff member. This is as opposed to a clinician who may be a member of the audit team, but not an RCPCH employee
+- `is_patient_or_carer`: boolean - a custom field that defines the user is a patient or carer
+- `role` - user type as above
+- `organisation_employer` - this is a relational field with an Organisation. Only applies to clinicians and therefore is None for RCPCH employees.
