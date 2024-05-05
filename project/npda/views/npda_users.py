@@ -171,6 +171,8 @@ Authentication and password change
 
 
 class RCPCHLoginView(TwoFactorLoginView):
+    template_name = "two_factor/core/login.html"
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # Override original Django Auth Form with Captcha field inserted
