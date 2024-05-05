@@ -11,6 +11,7 @@
 {% endfor %}
 
 {% for field in wizard.form %}
+    {% csrf_token %}
     <p>
     <h5 class="text-gray font-montserrat">{{ field.label_tag }}</h5>
         {{field}}

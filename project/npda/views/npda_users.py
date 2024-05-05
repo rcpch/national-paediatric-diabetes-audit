@@ -181,6 +181,7 @@ class RCPCHLoginView(TwoFactorLoginView):
         response = super().done(form_list)
         response_url = getattr(response, "url")
         login_redirect_url = reverse(settings.LOGIN_REDIRECT_URL)
+        return response
 
     #     # Successful login, redirect to login page
     #     if response_url == login_redirect_url:

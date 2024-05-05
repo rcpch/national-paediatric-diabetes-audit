@@ -20,7 +20,7 @@
       </div>
 
       {% elif wizard.steps.current == 'token' %}
-        <p>Enter the one-time login code from your registered method of two-factor authentication:</p>
+        <p class="font-montserrat mb-5">Enter the one-time login code from your registered method of two-factor authentication:</p>
       {% elif wizard.steps.current == 'backup' %}
         <p>{% blocktrans trimmed %}Use this form for entering backup tokens for logging in.
           These tokens have been generated for you to print and keep safe. Please
