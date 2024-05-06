@@ -124,7 +124,7 @@ class NPDAUserUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
         context["title"] = "Edit NPDA User Details"
         context["button_title"] = "Edit NPDA User Details"
         context["form_method"] = "update"
-        context["npda_user_id"] = self.kwargs["pk"]
+        context["npda_user"] = NPDAUser.objects.get(pk=self.kwargs["pk"])
         return context
 
     def is_valid(self):
