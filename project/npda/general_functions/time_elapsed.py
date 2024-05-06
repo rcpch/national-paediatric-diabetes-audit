@@ -15,6 +15,8 @@ def stringify_time_elapsed(start_date, end_date):
     Calculated field. Returns time elapsed between two dates as a string.
     """
     if end_date and start_date:
+        if end_date < start_date:
+            raise ValueError("End date cannot be before start date")
         elapsed = relativedelta(end_date, start_date)
         # Initialise empty string
         string_delta = ""
