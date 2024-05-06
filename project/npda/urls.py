@@ -1,7 +1,6 @@
 from django.urls import path, include
-from django.contrib.auth.views import PasswordResetConfirmView, LoginView, LogoutView
+from django.contrib.auth.views import PasswordResetConfirmView, LogoutView
 from django.contrib.auth import urls as auth_urls
-from project.npda.views import npda_users
 from project.npda.views import (
     VisitCreateView,
     VisitDeleteView,
@@ -85,6 +84,6 @@ urlpatterns = [
         ),
         name="password_reset_confirm",
     ),
-    path("account/login", view=LoginView.as_view(), name="login"),
+    path("account/login", view=RCPCHLoginView.as_view(), name="login"),
     path("account/logout", view=LogoutView.as_view(), name="logout"),
 ]

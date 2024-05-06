@@ -107,6 +107,8 @@ MIDDLEWARE = [
     "django_otp.middleware.OTPMiddleware",
 ]
 
+MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
+
 ROOT_URLCONF = "project.urls"
 
 TEMPLATES = [
