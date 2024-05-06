@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from django.http import HttpRequest, HttpResponse
 from django.utils import timezone
 from django.shortcuts import redirect
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
@@ -129,6 +130,33 @@ class NPDAUserUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
 
     def is_valid(self):
         return super(NPDAUserForm, self).is_valid()
+
+    def post(self, request: HttpRequest, *args: str, **kwargs) -> HttpResponse:
+        """
+        Override POST method to resend email if recipient create account token has expired
+        TODO: Only Superusers or Lead Clinicians can do this
+        """
+        if "resend_email" in request.POST:
+            npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
+            subject = "Password Reset Requested"
+            email = construct_confirm_email(request=request, user=npda_user)
+
+            send_email_to_recipients(
+                recipients=[npda_user.email],
+                subject=subject,
+                message=email,
+            )
+
+            messages.success(
+                request,
+                f"Confirmation and password reset request resent to {npda_user.email}.",
+            )
+            redirect_url = reverse(
+                "npda_users",
+            )
+            return redirect(redirect_url)
+        else:
+            return super().post(request, *args, **kwargs)
 
 
 class NPDAUserDeleteView(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
