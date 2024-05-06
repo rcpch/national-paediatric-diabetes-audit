@@ -9,18 +9,18 @@ import pytest
 from django.contrib.auth.models import Group
 
 # E12 Imports
-from npda.tests.UserDataClasses import (
+from project.npda.tests.UserDataClasses import (
     test_user_audit_centre_administrator_data,
     test_user_audit_centre_clinician_data,
     test_user_audit_centre_lead_clinician_data,
     test_user_rcpch_audit_team_data,
     test_user_clinicial_audit_team_data,
 )
-from npda.models import (
-    Epilepsy12User,
-    Organisation,
+from project.npda.models import (
+    NPDAUser,
+    # Organisation,
 )
-from .NPDAUserFactory import E12UserFactory
+from .NPDAUserFactory import NPDAUserFactory
 from project.constants.user import (
     RCPCH_AUDIT_TEAM,
 )
@@ -39,11 +39,11 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
 
     with django_db_blocker.unblock():
         # Don't repeat seed
-        if not Epilepsy12User.objects.exists():
-            TEST_USER_ORGANISATION = Organisation.objects.get(
-                ods_code="RP401",
-                trust__ods_code="RP4",
-            )
+        if not NPDAUser.objects.exists():
+            # TEST_USER_ORGANISATION = Organisation.objects.get(
+            #     ods_code="RP401",
+            #     trust__ods_code="RP4",
+            # )
 
             is_active = True
             is_staff = False
@@ -71,7 +71,7 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
                     is_staff=is_staff,
                     is_rcpch_audit_team_member=is_rcpch_audit_team_member,
                     is_rcpch_staff=is_rcpch_staff,
-                    organisation_employer=TEST_USER_ORGANISATION,
+                    # organisation_employer=TEST_USER_ORGANISATION,
                     groups=[user.group_name],
                 )
         else:

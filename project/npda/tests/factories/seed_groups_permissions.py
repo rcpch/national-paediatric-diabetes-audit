@@ -2,7 +2,7 @@ import pytest
 
 from django.contrib.auth.models import Group
 
-from npda.management.commands.create_groups import groups_seeder
+from project.npda.management.commands.create_groups import groups_seeder
 
 
 @pytest.mark.django_db

@@ -4,7 +4,7 @@ Set up dataclasses for E12 User Test Fixtures
 
 # Standard Imports
 from dataclasses import dataclass
-from npda.general_functions import group_for_role
+from project.npda.general_functions import group_for_role
 
 # RCPCH Imports
 from project.constants.user import (
