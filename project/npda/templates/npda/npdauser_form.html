@@ -2,7 +2,7 @@
 {% block content %}
 <div class="bg-rcpch_light_blue py-8">
   <div class="w-full max-w-3xl mx-auto px-2 py-4 m-2 shadow-md bg-white font-montserrat">
-    <strong>{{title}}</strong>
+    <strong>{{title}}{% if form_method == 'update' %} for {{npda_user.get_full_name}}{% endif %}</strong>
     <form id="update-form" method="post" action="">
       {% csrf_token %}
       {% for field in form %}
@@ -23,6 +23,9 @@
       <button type="submit" value="Submit" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 mt-20 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">{{button_title}}</button>
       <a class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 mt-20 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue" href="{% url 'npda_users' %}">Back to list</a>
       {% if form_method == 'update' %}
+        {% if not npda_user.email_confirmed %}
+          <button value="Submit" name="resend_email" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 mt-20 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Resend Confirmation Email</button>
+        {% endif %}
       <a class="bg-rcpch_red text-white font-semibold hover:text-white py-2.5 px-3 mt-20 border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint" href="{% url 'npdauser-delete' npdauser.pk %}">Delete</a>
       {% endif %}
     </form>

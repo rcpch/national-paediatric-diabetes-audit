@@ -21,7 +21,7 @@ django_loggers = {
     }
     for logger_name in (
         "django.request",
-        # "django.utils",  # The django.utils logger logs events from Django and other miscellaneous log events e.g. autoreload
+        "django.utils",  # The django.utils logger logs events from Django and other miscellaneous log events e.g. autoreload
         "django.security",
         "django.db.backends",  # The django.db.backends logger logs SQL queries. Set the level to DEBUG or higher to log SQL queries.
         "django.template",
