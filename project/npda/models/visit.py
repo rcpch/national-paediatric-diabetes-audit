@@ -9,6 +9,7 @@ from django.contrib.gis.db.models import (
     PositiveSmallIntegerField,
     IntegerField,
 )
+from django.contrib.postgres.fields import ArrayField
 
 # npda imports
 from .help_text_mixin import HelpTextMixin
@@ -488,10 +489,15 @@ class Visit(models.Model, HelpTextMixin):
     )
 
     is_valid = models.BooleanField(
-        verbose_name="Record is valid", blank=True, null=True
+        verbose_name="Record is valid", blank=True, null=True, default=False
     )
 
-    errors = models.CharField(verbose_name="Validation errors", blank=True, null=True)
+    errors = ArrayField(
+        models.CharField(
+            verbose_name="Validation errors", blank=True, null=True, default=None
+        ),
+        null=True,
+    )
 
     # relationships
 

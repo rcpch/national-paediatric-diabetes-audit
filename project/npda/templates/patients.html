@@ -23,7 +23,7 @@
                   <tbody>
                         {% for patient in patient_list %}
                           <tr class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white">
-                              <td><a href="{% url 'patient-update' patient.pk %}" class="px-2 flex text-center hover:text-rcpch_pink"><strong>{{ patient.pk }}</strong></a></td>
+                              <td><a href="{% url 'patient-update' patient.pk %}" class="px-2 flex text-center hover:text-rcpch_pink"><strong>{{ patient.pk }} {{patient.is_valid}}</strong></a></td>
                               <td class="px-6 py-4 text-center">{{ patient.nhs_number }}</td>
                               <td class="px-6 py-4 text-center">{{ patient.get_sex_display }}</td>
                               <td class="px-6 py-4 text-center">{{ patient.date_of_birth }}</td>
@@ -44,7 +44,7 @@
                         <tr class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white py-5">
                           <th class="px-2">
                             <strong>
-                              Total: {{patients.count}} patients
+                              Total: {{patient_list.count}} patients
                             </strong>
                           </th>
                           <th class="px-2">
