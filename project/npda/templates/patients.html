@@ -22,8 +22,13 @@
                   </thead>
                   <tbody>
                         {% for patient in patient_list %}
-                          <tr class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white">
-                              <td><a href="{% url 'patient-update' patient.pk %}" class="px-2 flex text-center hover:text-rcpch_pink"><strong>{{ patient.pk }} {{patient.is_valid}}</strong></a></td>
+                          <tr 
+                            {% if patient.is_valid %} 
+                              class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white"
+                            {% else %} 
+                              class="border-b bg-rcpch_red_light_tint3 text-rcpch_red border-gray-100 hover:bg-r hover:bg-rcpch_red hover:text-white"
+                            {% endif %}>
+                              <td><a href="{% url 'patient-update' patient.pk %}" class="px-2 flex text-center hover:text-rcpch_pink"><strong>{{ patient.pk }}</strong></a></td>
                               <td class="px-6 py-4 text-center">{{ patient.nhs_number }}</td>
                               <td class="px-6 py-4 text-center">{{ patient.get_sex_display }}</td>
                               <td class="px-6 py-4 text-center">{{ patient.date_of_birth }}</td>
@@ -32,9 +37,22 @@
                               <td class="px-6 py-4 text-center">{{ patient.get_diabetes_type_display }}</td>
                               <td class="px-6 py-4 text-center">{{ patient.diagnosis_date }}</td>
                               <td class="px-2 text-right w-80">
-                                <a href="{% url 'patient_visits' patient.pk %}" class="text-rcpch_pink px-2 flex justify-center items-center">
+                                <a 
+                                  href="{% url 'patient_visits' patient.pk %}" 
+                                  {% if patient.is_valid %} 
+                                    class="text-rcpch_pink px-2 flex justify-center items-center"
+                                  {% else %}
+                                    class="text-rcpch_red px-2 flex justify-center items-center hover:text-white"
+                                  {% endif %}
+                                >
                                   <strong>Visits ({{patient.visit_set.all.count}})</strong>
-                                  <svg class="h-8 w-8 text-rcpch_pink"  width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">  <path stroke="none" d="M0 0h24v24H0z"/>  <polyline points="9 6 15 12 9 18" /></svg>
+                                  <svg
+                                  {% if patient.is_valid %}
+                                    class="h-8 w-8 text-rcpch_pink"
+                                  {% else %}
+                                    class="h-8 w-8 text-rcpch_red hover:text-white"
+                                  {% endif %}
+                                    width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">  <path stroke="none" d="M0 0h24v24H0z"/>  <polyline points="9 6 15 12 9 18" /></svg>
                                 </a>
                               </td>
                           </tr>

@@ -19,7 +19,7 @@ class PatientVisitsListView(LoginRequiredMixin, ListView):
         patient_id = self.kwargs.get("patient_id")
         context = super(PatientVisitsListView, self).get_context_data(**kwargs)
         patient = Patient.objects.get(pk=patient_id)
-        visits = Visit.objects.filter(patient=patient)
+        visits = Visit.objects.filter(patient=patient).order_by("is_valid", "id")
         calculated_visits = []
         for visit in visits:
             visit_categories = get_visit_categories(visit)

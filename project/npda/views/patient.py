@@ -13,7 +13,7 @@ class PatientListView(LoginRequiredMixin, ListView):
     template_name = "patients.html"
 
     def get_queryset(self):
-        return Patient.objects.all().order_by("id")
+        return Patient.objects.all().order_by("is_valid", "id")
 
 
 class PatientCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
