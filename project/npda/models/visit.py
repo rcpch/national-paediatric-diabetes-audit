@@ -492,11 +492,8 @@ class Visit(models.Model, HelpTextMixin):
         verbose_name="Record is valid", blank=True, null=True, default=False
     )
 
-    errors = ArrayField(
-        models.CharField(
-            verbose_name="Validation errors", blank=True, null=True, default=None
-        ),
-        null=True,
+    errors = models.JSONField(
+        verbose_name="Validation errors", blank=True, null=True, default=None
     )
 
     # relationships

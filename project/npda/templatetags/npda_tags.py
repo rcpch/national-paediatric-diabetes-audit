@@ -1,9 +1,10 @@
 import re
+import json
 from django import template
 from django.utils.safestring import mark_safe
 from django.conf import settings
 from ..general_functions import get_visit_category_for_field
-from ...constants import VisitCategories
+from ...constants import VisitCategories, VISIT_FIELD_FLAT_LIST
 
 register = template.Library()
 
@@ -100,3 +101,14 @@ def category_for_first_item(form, field, index):
 @register.simple_tag
 def site_contact_email():
     return settings.SITE_CONTACT_EMAIL
+
+
+@register.filter
+def error_for_field(messages, field):
+    concatenated_fields = ""
+    if field in VISIT_FIELD_FLAT_LIST:
+        return "There are errors associated with one or more of this child's visits."
+    for message in messages:
+        if field == message["field"]:
+            concatenated_fields += f"{message['message']},\n"
+    return concatenated_fields if len(concatenated_fields) > 0 else None
