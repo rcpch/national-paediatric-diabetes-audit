@@ -20,7 +20,7 @@
                   <tbody>
                         {% for visit in visits %}
                           <tr class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white">
-                              <td class="px-5"><strong>{{ visit.visit.pk }}</strong></td>
+                              {% if  %}<td class="text-red px-5">{% else %}<td class="px-5">{% endif %}<strong>{{ visit.visit.pk }}</strong></td>
                               <td class="px-6 py-4">{{ visit.visit.visit_date }}</td>
                               <td class="py-5 flex flex-wrap">
                                   {% for item in visit.categories %}

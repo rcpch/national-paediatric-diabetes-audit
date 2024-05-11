@@ -487,6 +487,12 @@ class Visit(models.Model, HelpTextMixin):
         default=None,
     )
 
+    is_valid = models.BooleanField(
+        verbose_name="Record is valid", blank=True, null=True
+    )
+
+    errors = models.CharField(verbose_name="Validation errors", blank=True, null=True)
+
     # relationships
 
     patient = models.ForeignKey(to="npda.Patient", on_delete=models.CASCADE)

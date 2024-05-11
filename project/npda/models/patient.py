@@ -84,6 +84,12 @@ class Patient(models.Model):
         verbose_name="GP Practice postcode", blank=True, null=True
     )
 
+    is_valid = models.BooleanField(
+        verbose_name="Record is valid", blank=True, null=True
+    )
+
+    errors = models.CharField(verbose_name="Validation errors", blank=True, null=True)
+
     class Meta:
         verbose_name = "Patient"
         verbose_name_plural = "Patients"
