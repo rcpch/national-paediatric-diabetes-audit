@@ -29,11 +29,11 @@ plotly==5.19.0
 nhs-number
 
 # live application server
-gunicorn==21.2.0
+gunicorn>=22.0.0
 
 # code linting and formatting
 autopep8==2.0.4
-black==24.2.0
+black>=24.3.0
 
 # testing and code analysis
 coverage==7.4.3
