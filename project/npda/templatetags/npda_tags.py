@@ -111,10 +111,11 @@ def error_for_field(messages, field):
     concatenated_fields = ""
     if field in VISIT_FIELD_FLAT_LIST:
         return "There are errors associated with one or more of this child's visits."
-    for message in messages:
-        if field == message["field"]:
-            concatenated_fields += f"{message['message']},\n"
-    return concatenated_fields if len(concatenated_fields) > 0 else None
+    if len(messages) > 0:
+        for message in messages:
+            if field == message["field"]:
+                concatenated_fields += f"{message['message']},\n"
+    return concatenated_fields if len(concatenated_fields) > 0 else []
 
 
 @register.filter
