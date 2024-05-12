@@ -21,7 +21,6 @@ def home(request):
                 return redirect('home')
         else:
             form = UploadFileForm()
-        print(file_uploaded)
         context = {"file_uploaded": file_uploaded, "form": form}
         template = "home.html"
         return render(request=request, template_name=template, context=context)

@@ -108,7 +108,6 @@ class NPDAUserCreateView(
         )
 
     def get_success_url(self) -> str:
-        print("called")
         return reverse(
             "npda_users",
             # organisation_id=organisation_id,

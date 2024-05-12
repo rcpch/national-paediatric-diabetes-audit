@@ -4,7 +4,7 @@ from django import template
 from django.utils.safestring import mark_safe
 from django.conf import settings
 from ..general_functions import get_visit_category_for_field
-from ...constants import VisitCategories, VISIT_FIELD_FLAT_LIST
+from ...constants import VisitCategories, VISIT_FIELD_FLAT_LIST, VISIT_FIELDS
 
 register = template.Library()
 
@@ -105,6 +105,9 @@ def site_contact_email():
 
 @register.filter
 def error_for_field(messages, field):
+    """
+    Returns all errors for a given field
+    """
     concatenated_fields = ""
     if field in VISIT_FIELD_FLAT_LIST:
         return "There are errors associated with one or more of this child's visits."
@@ -112,3 +115,27 @@ def error_for_field(messages, field):
         if field == message["field"]:
             concatenated_fields += f"{message['message']},\n"
     return concatenated_fields if len(concatenated_fields) > 0 else None
+
+
+@register.filter
+def errors_for_category(category, error_list):
+    """
+    Returns all error messages for a given category
+    """
+    selected_category = None
+    for visit_category in VisitCategories:
+        if visit_category.value == category:
+            selected_category = visit_category
+
+    final_string = ""
+    for error in error_list:
+        if error:
+            error_field_list = []
+
+            for visit_field in VISIT_FIELDS:
+                if visit_field[0] == selected_category:
+                    error_field_list = visit_field[1]
+            if len(error_field_list) > 0:
+                if error["field"] in error_field_list:
+                    final_string += f"{error['message']}\n"
+    return final_string

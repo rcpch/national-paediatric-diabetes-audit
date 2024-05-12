@@ -41,7 +41,14 @@
                                           {% endif  %}
                                           >
                                           <small>
-                                            {{item.category}}
+                                            {% if item.has_error %}
+                                            <div class="has-tooltip">
+                                              <span class='tooltip rounded shadow-lg px-2 py-2 bg-gray-500 text-white -mt-4 text-left hover:text-white'>{{ item.category|errors_for_category:visit.visit.errors }}</span>
+                                              {{item.category}}
+                                            </div>
+                                            {% else %}
+                                              {{item.category}}
+                                            {% endif %}
                                           </small>
                                         </span>
                                         {% endif %}

@@ -160,7 +160,6 @@ class Patient(models.Model):
             """
             try:
                 ods_code = gp_practice_for_postcode(self.gp_practice_postcode)
-                print(f"Hello ods code: {ods_code}")
             except Exception as error:
                 raise ValidationError(error)
 
