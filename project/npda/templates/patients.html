@@ -30,7 +30,7 @@
                             </tr>
                           </thead>
                           {% endif %}
-                          {% if not patient.is_valid or patient.visit_error_count > 0 and forloop.counter0 == total_valid_patients %}
+                          {% if not patient.is_valid or patient.visit_error_count > 0 and forloop.counter == total_valid_patients %}
                           <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_strong_blue text-white">
                             <tr>
                               <th colspan="9" class="px-6 py-3">Patients with records failing validation: {{total_invalid_patients}}</th>
