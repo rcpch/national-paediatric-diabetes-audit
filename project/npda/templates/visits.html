@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load npda_tags %}
 {% block content %}
 <div class="flex flex-row min-h-screen justify-center px-10">
   <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
@@ -23,7 +24,7 @@
                         {% if visit.visit.is_valid %} 
                           class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white"
                         {% else %} 
-                          class="border-b bg-rcpch_red_light_tint3 text-black border-gray-100 hover:bg-rcpch_red hover:text-white"
+                          class="border-b bg-rcpch_red_light_tint3 text-black border-gray-100 hover:bg-rcpch_red_light_tint1 hover:text-white"
                         {% endif %}>
                               <td  class="px-5">
                                     <strong>{{ visit.visit.pk }}</strong>
@@ -31,19 +32,19 @@
                               <td class="px-6 py-4">{{ visit.visit.visit_date }}</td>
                               <td class="py-5 flex flex-wrap">
                                   {% for item in visit.categories %}
-                                    {% for key, value in item.items %} 
-                                      {% if value %}
+                                    {% if item.present %}  
                                         <span 
-                                          {% if visit.visit.is_valid %}
-                                            class="bg-rcpch_dark_blue px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white"
+                                          {% if item.has_error %}
+                                            class="bg-rcpch_red hover:bg-rcpch_red_dark_tint px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white"
                                           {% else %}
                                             class="bg-rcpch_dark_blue px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white"
-                                          {% endif %}
+                                          {% endif  %}
                                           >
-                                          <small>{{key}}</small>
+                                          <small>
+                                            {{item.category}}
+                                          </small>
                                         </span>
                                         {% endif %}
-                                    {% endfor %}
                                   {% endfor %}
                               </td>
                               <td>

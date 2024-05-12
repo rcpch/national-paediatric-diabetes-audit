@@ -1,3 +1,4 @@
+from django.forms import BaseModelForm
 from django.shortcuts import render
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
@@ -5,7 +6,7 @@ from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.urls import reverse_lazy, reverse
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from ..models import Visit, Patient
 from ..forms.visit_form import VisitForm
 from ..general_functions import get_visit_categories
@@ -87,6 +88,21 @@ class VisitUpdateView(LoginRequiredMixin, UpdateView):
         patient = Patient.objects.get(pk=self.kwargs["patient_id"])
         initial["patient"] = patient
         return initial
+
+    def form_valid(self, form: BaseModelForm) -> HttpResponse:
+        visit = form.save(commit=True)
+        # visit_categories = get_visit_categories(visit)
+        # patient = Patient.objects.get(pk=self.kwargs["patient_id"])
+        visit.errors = []
+        visit.is_valid = True
+        visit.save(update_fields=["errors", "is_valid"])
+        context = {"patient_id": self.kwargs["patient_id"]}
+        messages.add_message(
+            self.request, messages.SUCCESS, "Visit edited successfully"
+        )
+        return HttpResponseRedirect(
+            redirect_to=reverse("patient_visits", kwargs=context)
+        )
 
 
 class VisitDeleteView(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
