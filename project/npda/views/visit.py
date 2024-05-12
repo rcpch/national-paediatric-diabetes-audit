@@ -91,8 +91,6 @@ class VisitUpdateView(LoginRequiredMixin, UpdateView):
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
         visit = form.save(commit=True)
-        # visit_categories = get_visit_categories(visit)
-        # patient = Patient.objects.get(pk=self.kwargs["patient_id"])
         visit.errors = []
         visit.is_valid = True
         visit.save(update_fields=["errors", "is_valid"])
