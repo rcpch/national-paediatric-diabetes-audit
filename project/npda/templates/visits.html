@@ -19,16 +19,29 @@
                   </thead>
                   <tbody>
                         {% for visit in visits %}
-                          <tr class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white">
+                        <tr 
+                        {% if visit.visit.is_valid %} 
+                          class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white"
+                        {% else %} 
+                          class="border-b bg-rcpch_red_light_tint3 text-black border-gray-100 hover:bg-rcpch_red hover:text-white"
+                        {% endif %}>
                               <td  class="px-5">
-                                    <strong>{{ visit.visit.pk }} {{visit.visit.is_valid}}</strong>
+                                    <strong>{{ visit.visit.pk }}</strong>
                               </td>
                               <td class="px-6 py-4">{{ visit.visit.visit_date }}</td>
                               <td class="py-5 flex flex-wrap">
                                   {% for item in visit.categories %}
                                     {% for key, value in item.items %} 
                                       {% if value %}
-                                        <span class="bg-rcpch_dark_blue px-2 py-2 mx-1 my-1 text-sm font-semibold text-white"><small>{{key}}</small></span>
+                                        <span 
+                                          {% if visit.visit.is_valid %}
+                                            class="bg-rcpch_dark_blue px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white"
+                                          {% else %}
+                                            class="bg-rcpch_dark_blue px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white"
+                                          {% endif %}
+                                          >
+                                          <small>{{key}}</small>
+                                        </span>
                                         {% endif %}
                                     {% endfor %}
                                   {% endfor %}
