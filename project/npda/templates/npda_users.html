@@ -142,19 +142,11 @@
                   <tfoot>
                     {% if npdauser_list %}
                     <tr class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white py-5">
-                        <th class="px-2">
+                        <th colspan="9" class="px-2">
                             <strong>
-                                Total: 
+                                Total: {{ npdauser_list|length }} User{% if npdauser_list|length > 1 %}s{% endif %}
                             </strong>
                         </th>
-                        <th class="px-2">
-                            {{ npdauser_list|length }} User{% if npdauser_list|length > 1 %}s{% endif %}
-                        </th>
-                        <th></th>
-                        <th></th>
-                        <th></th>
-                        <th></th>
-                        <th></th>
                     </tr>
                     {% else %}
                     <tr class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white py-5">

@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 from django.contrib.gis.db import models
 from django.contrib.gis.db.models import CharField, DateField, PositiveSmallIntegerField
+from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 
 # npda imports
@@ -84,6 +85,14 @@ class Patient(models.Model):
         verbose_name="GP Practice postcode", blank=True, null=True
     )
 
+    is_valid = models.BooleanField(
+        verbose_name="Record is valid", blank=True, null=True, default=False
+    )
+
+    errors = models.JSONField(
+        verbose_name="Validation errors", blank=True, null=True, default=None
+    )
+
     class Meta:
         verbose_name = "Patient"
         verbose_name_plural = "Patients"
@@ -151,7 +160,6 @@ class Patient(models.Model):
             """
             try:
                 ods_code = gp_practice_for_postcode(self.gp_practice_postcode)
-                print(f"Hello ods code: {ods_code}")
             except Exception as error:
                 raise ValidationError(error)
 

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load npda_tags %}
 {% block content %}
 <div class="flex flex-row min-h-screen justify-center px-10">
   <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
@@ -19,16 +20,38 @@
                   </thead>
                   <tbody>
                         {% for visit in visits %}
-                          <tr class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white">
-                              <td class="px-5"><strong>{{ visit.visit.pk }}</strong></td>
+                        <tr 
+                        {% if visit.visit.is_valid %} 
+                          class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white"
+                        {% else %} 
+                          class="border-b bg-rcpch_red_light_tint3 text-black border-gray-100 hover:bg-rcpch_red_light_tint1 hover:text-white"
+                        {% endif %}>
+                              <td  class="px-5">
+                                    <strong>{{ visit.visit.pk }}</strong>
+                              </td>
                               <td class="px-6 py-4">{{ visit.visit.visit_date }}</td>
                               <td class="py-5 flex flex-wrap">
                                   {% for item in visit.categories %}
-                                    {% for key, value in item.items %} 
-                                      {% if value %}
-                                        <span class="bg-rcpch_dark_blue px-2 py-2 mx-1 my-1 text-sm font-semibold text-white"><small>{{key}}</small></span>
+                                    {% if item.present %}  
+                                        <span 
+                                          {% if item.has_error %}
+                                            class="bg-rcpch_red hover:bg-rcpch_red_dark_tint px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white"
+                                          {% else %}
+                                            class="bg-rcpch_dark_blue px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white"
+                                          {% endif  %}
+                                          >
+                                          <small>
+                                            {% if item.has_error %}
+                                            <div class="has-tooltip">
+                                              <span class='tooltip rounded shadow-lg px-2 py-2 bg-gray-500 text-white -mt-20 text-left hover:text-white'>{{ item.category|errors_for_category:visit.visit.errors }}</span>
+                                              {{item.category}}
+                                            </div>
+                                            {% else %}
+                                              {{item.category}}
+                                            {% endif %}
+                                          </small>
+                                        </span>
                                         {% endif %}
-                                    {% endfor %}
                                   {% endfor %}
                               </td>
                               <td>
@@ -41,17 +64,12 @@
                         {% endfor %}
                   </tbody>
                   <tfoot>
-                    <tr class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">
-                      <th class="flex justify-end px-2">
+                    <tr class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white py-5">
+                      <th colspan="4" class="px-2">
                         <strong>
-                          Total:
+                          Total: {{visit_list.count}} Visit{% if visit_list|length > 1 %}s{% endif %}
                         </strong>
                       </th>
-                      <th class="px-2">
-                        {{visit_list.count}} Visit{% if visit_list|length > 1 %}s{% endif %}
-                      </th>
-                      <th></th>
-                      <th></th>
                     </tr>
                   </tfoot>
               </table>

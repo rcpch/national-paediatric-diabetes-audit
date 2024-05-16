@@ -4,6 +4,7 @@ from django.views.generic import ListView
 from django.urls import reverse_lazy
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Count, Case, When, IntegerField
 from ..models import Patient
 from ..forms.patient_form import PatientForm
 
@@ -13,7 +14,24 @@ class PatientListView(LoginRequiredMixin, ListView):
     template_name = "patients.html"
 
     def get_queryset(self):
-        return Patient.objects.all().order_by("id")
+        return (
+            Patient.objects.all()
+            .annotate(
+                visit_error_count=Count(Case(When(visit__is_valid=False, then=1)))
+            )
+            .order_by("is_valid", "visit_error_count", "pk")
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        total_valid_patients = Patient.objects.filter(
+            is_valid=True, visit__is_valid=True
+        ).count()
+        context["total_valid_patients"] = total_valid_patients
+        context["total_invalid_patients"] = (
+            Patient.objects.all().count() - total_valid_patients
+        )
+        return context
 
 
 class PatientCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
