@@ -258,7 +258,7 @@ def csv_upload(csv_file=None):
 
             if (
                 date_under_examination < date_of_diagnosis
-                and date_under_examination_field_name is not "date_of_death"
+                and date_under_examination_field_name != "date_of_death"
             ):
                 error = {
                     "field": date_under_examination_field_name,
