@@ -13,6 +13,7 @@ from django.contrib.postgres.fields import ArrayField
 
 # npda imports
 from .help_text_mixin import HelpTextMixin
+from .categorised_formfield_mixin import *
 from ...constants import (
     ALBUMINURIA_STAGES,
     CLOSED_LOOP_TYPES,
@@ -29,7 +30,7 @@ from ...constants import (
 
 
 class Visit(models.Model, HelpTextMixin):
-    visit_date = DateField(
+    visit_date = CategorisedDateField(
         verbose_name="Visit/Appointment Date",
         help_text={
             "label": "N.B. the date of any care process or outcome measure within a row may not always be identical to the visit date.",
@@ -40,7 +41,7 @@ class Visit(models.Model, HelpTextMixin):
         default=None,
     )
 
-    height = DecimalField(
+    height = CategorisedDecimalField(
         verbose_name="Patient Height (cm)",
         help_text={
             "label": "At least one height/weight measurement should be recorded during the audit year. BMI will be calculated centrally.",
@@ -51,9 +52,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Measurements"
     )
 
-    weight = DecimalField(
+    weight = CategorisedDecimalField(
         verbose_name="Patient Weight (kg)",
         help_text={
             "label": "Patient Weight (kg)",
@@ -64,9 +66,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Measurements"
     )
 
-    height_weight_observation_date = DateField(
+    height_weight_observation_date = CategorisedDateField(
         verbose_name="Observation Date (Height and weight)",
         help_text={
             "label": "Combined observation date for height and weight. If only height or weight measured still enter date.",
@@ -75,9 +78,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Measurements"
     )
 
-    hba1c = DecimalField(
+    hba1c = CategorisedDecimalField(
         verbose_name="Hba1c Value",
         help_text={
             "label": "Collect and submit ALL the measurements with dates taken throughout the audit cycle.",
@@ -88,9 +92,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="HBA1c"
     )
 
-    hba1c_format = PositiveSmallIntegerField(
+    hba1c_format = CategorisedPositiveSmallIntegerField(
         verbose_name="HbA1c result format",
         help_text={
             "label": "Values in either mmol/mol or % will be accepted.",
@@ -100,9 +105,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="HBA1c"
     )
 
-    hba1c_date = DateField(
+    hba1c_date = CategorisedDateField(
         verbose_name="Observation Date: Hba1c Value",
         help_text={
             "label": "Date performed (within the audit year) is mandatory if observation value provided is to be accepted.",
@@ -111,9 +117,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="HBA1c"
     )
 
-    treatment = PositiveSmallIntegerField(
+    treatment = CategorisedPositiveSmallIntegerField(
         verbose_name="Diabetes Treatment at time of Hba1c measurement",
         help_text={
             "label": "Enter the treatment at the time of the visit for all types of diabetes. Options 1-6 usually will relate to children and young people with Type 1 diabetes. Options 7-8 usually will relate to children and young people with non-Type 1 diabetes.",
@@ -123,9 +130,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Treatment"
     )
 
-    closed_loop_system = PositiveSmallIntegerField(
+    closed_loop_system = CategorisedPositiveSmallIntegerField(
         verbose_name="If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
         help_text={
             "label": "Leave blank if insulin pump not used at time of HbA1c measurement. Licenced closed loop systems currently available in the UK are: • Medtronic 670g & 780g • T:slim Control IQ • CamAPS FX Any others e.g. Omnipod and Dexcom would be DIY, unlicenced.",
@@ -135,9 +143,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Treatment"
     )
 
-    glucose_monitoring = PositiveSmallIntegerField(
+    glucose_monitoring = CategorisedPositiveSmallIntegerField(
         verbose_name="At the time of HbA1c measurement, in addition to standard blood glucose monitoring (SBGM), was the patient using any other method of glucose monitoring?",
         help_text={
             "label": "Choose the modified flash glucose monitor option if the patient is using their flash monitor in combination with a separate device or app so that it functions as a continuous glucose monitor, with or without alarms. The Freestyle Libre 2 is classified as a flash glucose monitor.",
@@ -147,9 +156,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="CGM"
     )
 
-    systolic_blood_pressure = IntegerField(
+    systolic_blood_pressure = CategorisedIntegerField(
         verbose_name="Systolic Blood Pressure",
         help_text={
             "label": "Mandatory for Blood Pressure care process completion. Enter Systolic BP and Diastolic BP (if collected) Please use the methodology from the Diagnosis, Evaluation, and Treatment of High Blood Pressure in Children and Adolescents Report if performed.",
@@ -158,9 +168,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="BP"
     )
 
-    diastolic_blood_pressure = IntegerField(
+    diastolic_blood_pressure = CategorisedIntegerField(
         verbose_name="Diastolic Blood pressure",
         help_text={
             "label": "Mandatory for Blood Pressure care process completion. Enter Systolic BP and Diastolic BP (if collected) Please use the methodology from the Diagnosis, Evaluation, and Treatment of High Blood Pressure in Children and Adolescents Report if performed.",
@@ -169,9 +180,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="BP"
     )
 
-    blood_pressure_observation_date = DateField(
+    blood_pressure_observation_date = CategorisedDateField(
         verbose_name="Observation Date (Blood Pressure)",
         help_text={
             "label": "Provide an observation date within the audit period. Date relates to both the systolic AND/OR diastolic pressure measurement.",
@@ -180,9 +192,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="BP"
     )
 
-    foot_examination_observation_date = DateField(
+    foot_examination_observation_date = CategorisedDateField(
         verbose_name="Foot Assessment / Examination Date",
         help_text={
             "label": "Complete only if screen performed. Mandatory care process if 12 years or older.",
@@ -191,9 +204,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Foot Care"
     )
 
-    retinal_screening_observation_date = DateField(
+    retinal_screening_observation_date = CategorisedDateField(
         verbose_name="Retinal Screening date",
         help_text={
             "label": "Complete only if screen performed. Mandatory care process if 12 years or older",
@@ -202,9 +216,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="DECS"
     )
 
-    retinal_screening_result = PositiveSmallIntegerField(
+    retinal_screening_result = CategorisedPositiveSmallIntegerField(
         verbose_name="Retinal Screening Result",
         help_text={
             "label": "Provide a result for retinal screening only if screen performed. Abnormal is defined as any level of retinopathy in either eye.",
@@ -214,9 +229,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="DECS"
     )
 
-    albumin_creatinine_ratio = DecimalField(
+    albumin_creatinine_ratio = CategorisedDecimalField(
         verbose_name="Urinary Albumin Level (ACR)",
         help_text={
             "label": "Mandatory for children with type 1 diabetes aged 12 years and above and optional before 12 years. Mandatory for children with type 2 diabetes from diagnosis.",
@@ -227,9 +243,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="ACR"
     )
 
-    albumin_creatinine_ratio_date = DateField(
+    albumin_creatinine_ratio_date = CategorisedDateField(
         verbose_name="Observation Date: Urinary Albumin Level",
         help_text={
             "label": "Provide and observation date if a value provided.",
@@ -238,9 +255,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="ACR"
     )
 
-    albuminuria_stage = PositiveSmallIntegerField(
+    albuminuria_stage = CategorisedPositiveSmallIntegerField(
         verbose_name="Albuminuria Stage",
         help_text={
             "label": "Submit your interpretation of the urinary albumin level based on your local laboratory reference ranges. Mandatory if level submitted.",
@@ -250,9 +268,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="ACR"
     )
 
-    total_cholesterol = DecimalField(
+    total_cholesterol = CategorisedDecimalField(
         verbose_name="Total Cholesterol Level (mmol/l)",
         help_text={
             "label": "Mandatory only for children with type 2 diabetes annually from diagnosis. Entry for patient with type 1 s is optional and will not be included as an essential care process but will be reported as an outcome measure. Report if performed.",
@@ -263,9 +282,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Cholesterol"
     )
 
-    total_cholesterol_date = DateField(
+    total_cholesterol_date = CategorisedDateField(
         verbose_name="Observation Date: Total Cholesterol Level",
         help_text={
             "label": "Mandatory to provide an observation date if performed.",
@@ -274,9 +294,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Cholesterol"
     )
 
-    thyroid_function_date = DateField(
+    thyroid_function_date = CategorisedDateField(
         verbose_name="Observation Date: Thyroid Function",
         help_text={
             "label": "Mandatory if thyroid testing performed, Data for this item can be entered into the audit if prescribed at a video/telephone appointment",
@@ -285,9 +306,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Thyroid"
     )
 
-    thyroid_treatment_status = PositiveSmallIntegerField(
+    thyroid_treatment_status = CategorisedPositiveSmallIntegerField(
         verbose_name="At time of, or following measurement of thyroid function, was the patient prescribed any thyroid treatment?",
         help_text={
             "label": "Mandatory if thyroid testing performed, Data for this item can be entered into the audit if prescribed at a video/telephone appointment",
@@ -297,9 +319,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Thyroid"
     )
 
-    coeliac_screen_date = DateField(
+    coeliac_screen_date = CategorisedDateField(
         verbose_name="Observation Date: Coeliac Disease Screening",
         help_text={
             "label": "Date of coeliac disease screening only to be completed if patient was diagnosed within audit year. Process complete if date is within 90 days of diagnosis for patient with Type 1 diabetes.",
@@ -308,9 +331,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Coeliac"
     )
 
-    gluten_free_diet = PositiveSmallIntegerField(
+    gluten_free_diet = CategorisedPositiveSmallIntegerField(
         verbose_name="Has the patient been recommended a Gluten-free diet?",
         help_text={
             "label": "Provide dietary status for all patients: A 'yes' response will be interpreted as the patient having a diagnosis of coeliac disease. Dietary status should be reported for every patient within each audit year to allow prevalence of coeliac disease to be calculated. Data for this item can be entered into the audit if a gluten-free diet was recommended at a video/telephone appointment.",
@@ -320,9 +344,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Coeliac"
     )
 
-    psychological_screening_assessment_date = DateField(
+    psychological_screening_assessment_date = CategorisedDateField(
         verbose_name="Observation Date - Psychological Screening Assessment",
         help_text={
             "label": "The absence of a date will be taken to indicate assessment for need of psychological support outside of MDT clinics has not taken place. Data for this item can be entered into the audit if an assessment was performed remotely e.g. via video/telephone.",
@@ -331,9 +356,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Psychology"
     )
 
-    psychological_additional_support_status = PositiveSmallIntegerField(
+    psychological_additional_support_status = CategorisedPositiveSmallIntegerField(
         verbose_name="Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?",
         help_text={
             "label": "Applicable if patient was assessed to require ongoing psychological/CAMHS support. If the patient is already receiving treatment, record ‘Yes’. Data for this item can be entered into the audit if determined following a remote assessment. NG18: 1.3.37 Offer children and young people with type 2 diabetes and their family members or carers (as appropriate) timely and ongoing access to mental health professionals with an understanding of diabetes because they may experience psychological problems (such as anxiety, depression, behavioural and conduct disorders and family conflict) or psychosocial difficulties that can impact on the management of diabetes and wellbeing. [2004, amended 2015]",
@@ -343,9 +369,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Psychology"
     )
 
-    smoking_status = PositiveSmallIntegerField(
+    smoking_status = CategorisedPositiveSmallIntegerField(
         verbose_name="Does the patient smoke?",
         help_text={
             "label": "Enter smoking status of the patient. Data for this item can be entered into the audit if collected at a video/telephone appointment.",
@@ -355,9 +382,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Smoking"
     )
 
-    smoking_cessation_referral_date = DateField(
+    smoking_cessation_referral_date = CategorisedDateField(
         verbose_name="Date of offer of referral to smoking cessation service (if patient is a current smoker)",
         help_text={
             "label": "Leave blank if not made. Data for this item can be entered into the audit if offered at a video/telephone appointment.",
@@ -366,9 +394,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Smoking"
     )
 
-    carbohydrate_counting_level_three_education_date = DateField(
+    carbohydrate_counting_level_three_education_date = CategorisedDateField(
         verbose_name="Date of Level 3 carbohydrate counting education received",
         help_text={
             "label": "Level 3 carbohydrate counting is defined as carbohydrate counting with adjustment of insulin dosage according to an insulin:carbohydrate ratio. Enter date when provided. Process complete if date is within 14 days of diagnosis for patient with Type 1 diabetes. To be reported for patients diagnosed with type 1 diabetes during the audit year. If no date entered during the audit year then an assumption of incomplete care process will be made. Data for this item can be entered into the audit if received at a video/telephone appointment.",
@@ -377,9 +406,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Dietician"
     )
 
-    dietician_additional_appointment_offered = PositiveSmallIntegerField(
+    dietician_additional_appointment_offered = CategorisedPositiveSmallIntegerField(
         verbose_name="Was the patient offered an additional appointment with a paediatric dietitian?",
         help_text={
             "label": "The additional appointment could be 1:1 or group session, via phone call, video call or face to face.",
@@ -389,17 +419,19 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Dietician"
     )
 
-    dietician_additional_appointment_date = DateField(
+    dietician_additional_appointment_date = CategorisedDateField(
         verbose_name="Date of additional appointment with dietitian",
         help_text={"label": "", "reference": ""},
         null=True,
         blank=True,
         default=None,
+        category="Dietician"
     )
 
-    flu_immunisation_recommended_date = DateField(
+    flu_immunisation_recommended_date = CategorisedDateField(
         verbose_name="Date that influenza immunisation was recommended",
         help_text={
             "label": "If no date entered during the audit year then an assumption of incomplete care process will be made. Data for this item can be entered into the audit if the influenza immunisation was recommended at a video/telephone appointment.",
@@ -408,9 +440,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Immunisation (flu)"
     )
 
-    ketone_meter_training = PositiveSmallIntegerField(
+    ketone_meter_training = CategorisedPositiveSmallIntegerField(
         verbose_name="Was the patient using (or trained to use) blood ketone testing equipment at time of visit?",
         help_text={
             "label": "Type 1 diabetes only Data for this item can be entered into the audit if collected at a video/telephone appointment.",
@@ -420,9 +453,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Sick Day Rules"
     )
 
-    sick_day_rules_training_date = DateField(
+    sick_day_rules_training_date = CategorisedDateField(
         verbose_name="Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia",
         help_text={
             "label": "Applies to patients with type 1 and type 2 diabetes. If no date entered during the audit year then an assumption of incomplete care process will be made. Data for this item can be entered into the audit if given at a video/telephone appointment.",
@@ -431,9 +465,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Sick Day Rules"
     )
 
-    hospital_admission_date = DateField(
+    hospital_admission_date = CategorisedDateField(
         verbose_name="Start date (Hospital Provider Spell)",
         help_text={
             "label": "Please enter every hospital admission the patient has had (day case or longer) on separate rows. These should include admissions for stabilisation of diabetes (at diagnosis and/or in established patients), DKA (new and/or established patients), ketosis without acidosis, hypoglycaemia, surgical procedures or other causes.",
@@ -442,17 +477,19 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Hospital Admission"
     )
 
-    hospital_discharge_date = DateField(
+    hospital_discharge_date = CategorisedDateField(
         verbose_name="Discharge date (Hospital provider spell)",
         help_text={"label": "", "reference": "For calculating number of bed days."},
         null=True,
         blank=True,
         default=None,
+        category="Hospital Admission"
     )
 
-    hospital_admission_reason = PositiveSmallIntegerField(
+    hospital_admission_reason = CategorisedPositiveSmallIntegerField(
         verbose_name="Use option 1: Stabilisation of diabetes for new patients admitted without DKA or other admissions where the purpose was to stabilise blood glucose such as recurrent hyperglycaemia without acidosis.",
         help_text={
             "label": "",
@@ -462,9 +499,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Hospital Admission"
     )
 
-    dka_additional_therapies = PositiveSmallIntegerField(
+    dka_additional_therapies = CategorisedPositiveSmallIntegerField(
         verbose_name="Additional therapies used in DKA management",
         help_text={
             "label": "Only complete if DKA selected in previous question: During this DKA admission did the patient receive any of the following therapies?",
@@ -474,9 +512,10 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Hospital Admission"
     )
 
-    hospital_admission_other = CharField(
+    hospital_admission_other = CategorisedCharField(
         verbose_name="Only complete if OTHER selected: Reason for admission (free text)",
         help_text={
             "label": "Mandatory only if ‘DKA’ selected as Reason for admission.",
@@ -486,6 +525,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
+        category="Hospital Admission"
     )
 
     is_valid = models.BooleanField(
