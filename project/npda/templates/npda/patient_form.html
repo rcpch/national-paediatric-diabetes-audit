@@ -14,7 +14,7 @@
             {% if field.html_name == "sex" or field.html_name == "diabetes_type" or field.html_name == "ethnicity" %}
               <select id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="select rcpch-select">
                 {% for choice in field.field.choices %}
-                  <option>{{choice.1}}</option>
+                  <option value="{{choice.0}}">{{choice.1}}</option>
                 {% endfor %}
               </select>
             {% else %}
