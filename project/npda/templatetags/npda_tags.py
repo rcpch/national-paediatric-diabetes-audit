@@ -109,6 +109,8 @@ def error_for_field(messages, field):
     Returns all errors for a given field
     """
     concatenated_fields = ""
+    if messages is None:
+        messages = []
     if field in VISIT_FIELD_FLAT_LIST:
         return "There are errors associated with one or more of this child's visits."
     if len(messages) > 0:
