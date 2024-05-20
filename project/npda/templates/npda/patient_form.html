@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load npda_tags %}
 {% block content %}
 <div class="bg-rcpch_light_blue py-8">
   <div class="w-full max-w-3xl mx-auto px-2 py-4 m-2 shadow-md bg-white font-montserrat">
@@ -11,13 +12,13 @@
             <label for="{{ field.id_for_label }}" class="block text-gray-700 font-bold md:text-right mb-1 md:mb-0 pr-4"><small>{{ field.label }}</small></label>
           </div>
           <div class="md:w-2/3">
-            {% if field.html_name == "sex" or field.html_name == "diabetes_type" or field.html_name == "ethnicity" %}
+            {% if field.field.widget|is_select %}
               <select id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="select rcpch-select">
                 {% for choice in field.field.choices %}
                 <option value="{{choice.0}}">{{choice.1}}</option>
                 {% endfor %}
               </select>
-            {% elif field.html_name == "date_of_birth" or field.html_name == "diagnosis_date" or field.html_name == "death_date" %}
+            {% elif field.field.widget|is_dateinput %}
               <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text">
             {% else %}
               <input type="text" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text">
