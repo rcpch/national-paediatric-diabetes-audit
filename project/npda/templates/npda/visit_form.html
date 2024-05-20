@@ -15,7 +15,9 @@
             </div>
             <div class="md:w-2/3">
               {% comment %} Add styling to field here {% endcomment %}
-              {{ field }}
+              {% if field.id_for_label == "id_visit_date" %}
+                <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text">
+              {% endif %}
               {% for error in field.errors %}
                 <p>
                   <strong class="text-gray-700">{{ error|escape }}</strong>
