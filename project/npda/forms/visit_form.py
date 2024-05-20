@@ -4,6 +4,8 @@ from ...constants.styles import *
 from ..general_functions.validate_dates import validate_date
 from ..models import Visit
 
+class DateInput(forms.DateInput):
+    input_type='date'
 
 class VisitForm(forms.ModelForm):
 
@@ -64,83 +66,47 @@ class VisitForm(forms.ModelForm):
         ]
 
         widgets = {
-            "visit_date": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
-            ),
+            "visit_date": DateInput(),
             "height": forms.TextInput(attrs={"class": TEXT_INPUT}),
             "weight": forms.TextInput(attrs={"class": TEXT_INPUT}),
-            "height_weight_observation_date": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
-            ),
+            "height_weight_observation_date": DateInput(),
             "hba1c": forms.TextInput(attrs={"class": TEXT_INPUT}),
             "hba1c_format": forms.Select(),
-            "hba1c_date": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
-            ),
+            "hba1c_date": DateInput(),
             "treatment": forms.Select(),
             "closed_loop_system": forms.Select(),
             "glucose_monitoring": forms.Select(),
             "systolic_blood_pressure": forms.TextInput(attrs={"class": TEXT_INPUT}),
             "diastolic_blood_pressure": forms.TextInput(attrs={"class": TEXT_INPUT}),
-            "blood_pressure_observation_date": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
-            ),
-            "foot_examination_observation_date": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
-            ),
-            "retinal_screening_observation_date": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
-            ),
+            "blood_pressure_observation_date": DateInput(),
+            "foot_examination_observation_date": DateInput(),
+            "retinal_screening_observation_date": DateInput(),
             "retinal_screening_result": forms.Select(),
             "albumin_creatinine_ratio": forms.TextInput(attrs={"class": TEXT_INPUT}),
-            "albumin_creatinine_ratio_date": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
-            ),
+            "albumin_creatinine_ratio_date": DateInput(),
             "albuminuria_stage": forms.Select(),
             "total_cholesterol": forms.TextInput(attrs={"class": TEXT_INPUT}),
-            "total_cholesterol_date": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
-            ),
-            "thyroid_function_date": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
-            ),
+            "total_cholesterol_date": DateInput(),
+            "thyroid_function_date": DateInput(),
             "thyroid_treatment_status": forms.Select(),
-            "coeliac_screen_date": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
-            ),
+            "coeliac_screen_date": DateInput(),
             "gluten_free_diet": forms.Select(),
-            "psychological_screening_assessment_date": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
-            ),
+            "psychological_screening_assessment_date": DateInput(),
             "psychological_additional_support_status": forms.Select(
                 
             ),
             "smoking_status": forms.Select(),
-            "smoking_cessation_referral_date": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
-            ),
-            "carbohydrate_counting_level_three_education_date": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
-            ),
+            "smoking_cessation_referral_date": DateInput(),
+            "carbohydrate_counting_level_three_education_date": DateInput(),
             "dietician_additional_appointment_offered": forms.Select(
                 
             ),
-            "dietician_additional_appointment_date": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
-            ),
-            "flu_immunisation_recommended_date": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
-            ),
+            "dietician_additional_appointment_date": DateInput(),
+            "flu_immunisation_recommended_date": DateInput(),
             "ketone_meter_training": forms.Select(),
-            "sick_day_rules_training_date": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
-            ),
-            "hospital_admission_date": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
-            ),
-            "hospital_discharge_date": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
-            ),
+            "sick_day_rules_training_date": DateInput(),
+            "hospital_admission_date": DateInput(),
+            "hospital_discharge_date": DateInput(),
             "hospital_admission_reason": forms.Select(),
             "dka_additional_therapies": forms.Select(),
             "hospital_admission_other": forms.TextInput(attrs={"class": TEXT_INPUT}),
