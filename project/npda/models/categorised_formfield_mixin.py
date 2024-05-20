@@ -11,9 +11,6 @@ class CategorisedDateField(CategorisedFieldMixin, models.DateField):
 class CategorisedDecimalField(CategorisedFieldMixin, models.DecimalField):
     pass
 
-class CategorisedDateField(CategorisedFieldMixin, models.DateField):
-    pass
-
 class CategorisedPositiveSmallIntegerField(CategorisedFieldMixin, models.PositiveSmallIntegerField):
     pass
 
