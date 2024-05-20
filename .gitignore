@@ -1,7 +1,7 @@
 envs/.env
 staticdocs
 staticfiles
-logs/npda.log.*
+logs
 
 __pycache__
 .DS_Store
