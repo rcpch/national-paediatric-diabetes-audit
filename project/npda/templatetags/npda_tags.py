@@ -146,3 +146,7 @@ def errors_for_category(category, error_list):
                 if error["field"] in error_field_list:
                     final_string += f"{error['message']}\n"
     return final_string
+
+@register.filter
+def is_dateinput(widget):
+    return isinstance(widget, (forms.DateInput))
