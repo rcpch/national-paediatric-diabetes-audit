@@ -12,6 +12,11 @@ class VisitForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.patient = kwargs['initial'].get('patient')
         super(VisitForm, self).__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            model_field = Visit._meta.get_field(field_name)
+            if hasattr(model_field, 'category'):
+                field.category = model_field.category
+
 
     class Meta:
         model = Visit
@@ -68,13 +73,13 @@ class VisitForm(forms.ModelForm):
                 format="%Y-%m-%d", attrs={"class": DATE_INPUT}
             ),
             "hba1c": forms.TextInput(attrs={"class": TEXT_INPUT}),
-            "hba1c_format": forms.Select(attrs={"class": SELECT}),
+            "hba1c_format": forms.Select(),
             "hba1c_date": forms.DateInput(
                 format="%Y-%m-%d", attrs={"class": DATE_INPUT}
             ),
-            "treatment": forms.Select(attrs={"class": SELECT}),
-            "closed_loop_system": forms.Select(attrs={"class": SELECT}),
-            "glucose_monitoring": forms.Select(attrs={"class": SELECT}),
+            "treatment": forms.Select(),
+            "closed_loop_system": forms.Select(),
+            "glucose_monitoring": forms.Select(),
             "systolic_blood_pressure": forms.TextInput(attrs={"class": TEXT_INPUT}),
             "diastolic_blood_pressure": forms.TextInput(attrs={"class": TEXT_INPUT}),
             "blood_pressure_observation_date": forms.DateInput(
@@ -86,12 +91,12 @@ class VisitForm(forms.ModelForm):
             "retinal_screening_observation_date": forms.DateInput(
                 format="%Y-%m-%d", attrs={"class": DATE_INPUT}
             ),
-            "retinal_screening_result": forms.Select(attrs={"class": SELECT}),
+            "retinal_screening_result": forms.Select(),
             "albumin_creatinine_ratio": forms.TextInput(attrs={"class": TEXT_INPUT}),
             "albumin_creatinine_ratio_date": forms.DateInput(
                 format="%Y-%m-%d", attrs={"class": DATE_INPUT}
             ),
-            "albuminuria_stage": forms.Select(attrs={"class": SELECT}),
+            "albuminuria_stage": forms.Select(),
             "total_cholesterol": forms.TextInput(attrs={"class": TEXT_INPUT}),
             "total_cholesterol_date": forms.DateInput(
                 format="%Y-%m-%d", attrs={"class": DATE_INPUT}
@@ -99,18 +104,18 @@ class VisitForm(forms.ModelForm):
             "thyroid_function_date": forms.DateInput(
                 format="%Y-%m-%d", attrs={"class": DATE_INPUT}
             ),
-            "thyroid_treatment_status": forms.Select(attrs={"class": SELECT}),
+            "thyroid_treatment_status": forms.Select(),
             "coeliac_screen_date": forms.DateInput(
                 format="%Y-%m-%d", attrs={"class": DATE_INPUT}
             ),
-            "gluten_free_diet": forms.Select(attrs={"class": SELECT}),
+            "gluten_free_diet": forms.Select(),
             "psychological_screening_assessment_date": forms.DateInput(
                 format="%Y-%m-%d", attrs={"class": DATE_INPUT}
             ),
             "psychological_additional_support_status": forms.Select(
-                attrs={"class": SELECT}
+                
             ),
-            "smoking_status": forms.Select(attrs={"class": SELECT}),
+            "smoking_status": forms.Select(),
             "smoking_cessation_referral_date": forms.DateInput(
                 format="%Y-%m-%d", attrs={"class": DATE_INPUT}
             ),
@@ -118,7 +123,7 @@ class VisitForm(forms.ModelForm):
                 format="%Y-%m-%d", attrs={"class": DATE_INPUT}
             ),
             "dietician_additional_appointment_offered": forms.Select(
-                attrs={"class": SELECT}
+                
             ),
             "dietician_additional_appointment_date": forms.DateInput(
                 format="%Y-%m-%d", attrs={"class": DATE_INPUT}
@@ -126,7 +131,7 @@ class VisitForm(forms.ModelForm):
             "flu_immunisation_recommended_date": forms.DateInput(
                 format="%Y-%m-%d", attrs={"class": DATE_INPUT}
             ),
-            "ketone_meter_training": forms.Select(attrs={"class": SELECT}),
+            "ketone_meter_training": forms.Select(),
             "sick_day_rules_training_date": forms.DateInput(
                 format="%Y-%m-%d", attrs={"class": DATE_INPUT}
             ),
@@ -136,10 +141,30 @@ class VisitForm(forms.ModelForm):
             "hospital_discharge_date": forms.DateInput(
                 format="%Y-%m-%d", attrs={"class": DATE_INPUT}
             ),
-            "hospital_admission_reason": forms.Select(attrs={"class": SELECT}),
-            "dka_additional_therapies": forms.Select(attrs={"class": SELECT}),
+            "hospital_admission_reason": forms.Select(),
+            "dka_additional_therapies": forms.Select(),
             "hospital_admission_other": forms.TextInput(attrs={"class": TEXT_INPUT}),
         }
+
+    categories = [
+        "Measurements", 
+        "HBA1c", 
+        "Treatment", 
+        "CGM", 
+        "BP", 
+        "Foot Care", 
+        "DECS", 
+        "ACR",
+        "Cholesterol",
+        "Thyroid",
+        "Coeliac",
+        "Psychology",
+        "Smoking",
+        "Dietician",
+        "Sick Day Rules",
+        "Immunisation (flu)",
+        "Hospital Admission"
+    ]
 
     def clean_height(self):
         data = self.cleaned_data["height"]
