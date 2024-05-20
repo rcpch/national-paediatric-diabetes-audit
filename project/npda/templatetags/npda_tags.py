@@ -1,6 +1,6 @@
 import re
 import json
-from django import template
+from django import template, forms
 from django.utils.safestring import mark_safe
 from django.conf import settings
 from ..general_functions import get_visit_category_for_field
@@ -101,6 +101,10 @@ def category_for_first_item(form, field, index):
 @register.simple_tag
 def site_contact_email():
     return settings.SITE_CONTACT_EMAIL
+
+@register.filter
+def is_select(widget):
+    return isinstance(widget, (forms.Select, forms.SelectMultiple))
 
 
 @register.filter
