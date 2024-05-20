@@ -17,6 +17,8 @@
                 <option value="{{choice.0}}">{{choice.1}}</option>
                 {% endfor %}
               </select>
+            {% elif field.html_name == "date_of_birth" or field.html_name == "diagnosis_date" or field.html_name == "death_date" %}
+              {{ field }}
             {% else %}
               <input type="text" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text">
             {% endif %}
