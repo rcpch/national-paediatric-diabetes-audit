@@ -33,3 +33,11 @@ WORKDIR /app/
 # (Excludes any files/dirs matched by patterns in .dockerignore)
 COPY . /app/
 
+# Copy the startup script into the image
+COPY logging_startup.sh /logging_startup.sh
+
+# Make the startup script executable
+RUN chmod +x /logging_startup.sh
+
+# Run the startup script
+ENTRYPOINT ["/logging_startup.sh"]
