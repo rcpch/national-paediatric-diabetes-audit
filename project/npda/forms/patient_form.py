@@ -23,13 +23,13 @@ class PatientForm(forms.ModelForm):
         ]
         widgets = {
             "nhs_number": forms.TextInput(attrs={"class": TEXT_INPUT},),
-            "sex": forms.Select(attrs={"class": SELECT}),
+            "sex": forms.Select(),
             "date_of_birth": forms.DateInput(
                 format="%Y-%m-%d", attrs={"class": DATE_INPUT}
             ),
             "postcode": forms.TextInput(attrs={"class": TEXT_INPUT}),
-            "ethnicity": forms.Select(attrs={"class": SELECT}),
-            "diabetes_type": forms.Select(attrs={"class": SELECT}),
+            "ethnicity": forms.Select(),
+            "diabetes_type": forms.Select(),
             "diagnosis_date": forms.DateInput(
                 format="%Y-%m-%d", attrs={"class": DATE_INPUT}
             ),
