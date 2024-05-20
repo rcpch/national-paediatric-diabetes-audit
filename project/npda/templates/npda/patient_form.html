@@ -14,24 +14,28 @@
             {% if field.html_name == "sex" or field.html_name == "diabetes_type" or field.html_name == "ethnicity" %}
               <select id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="select rcpch-select">
                 {% for choice in field.field.choices %}
-                  <option value="{{choice.0}}">{{choice.1}}</option>
+                <option value="{{choice.0}}">{{choice.1}}</option>
                 {% endfor %}
               </select>
             {% else %}
               <input type="text" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text">
             {% endif %}
               {% for error in field.errors %}
-              <p>
+              <div role="alert" class="alert alert-error py-1 my-0 rounded-none">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span>{{ error|escape }}</span>
+              </div>
+              {% comment %} <p>
                 <strong class="text-gray-700">{{ error|escape }}</strong>
-              </p>  
+              </p>   {% endcomment %}
             {% endfor %}
           </div>
         </div>
       {% endfor %}
       
       <div class="flex justify-end">
-        <a role="button" class="btn rcpch-btn" href='{% url 'patients' %}'>Back to list</a>
-        <button type="submit" value="Submit" class="btn rcpch-btn">{{button_title}}</button>
+        <a role="button" class="btn rcpch-light-blue-btn" href='{% url 'patients' %}'>Back to list</a>
+        <button type="submit" value="Submit" class="btn rcpch-light-blue-btn">{{button_title}}</button>
       </div>
       {% if form_method == 'update' %}
       <a class="bg-rcpch_red text-white font-semibold hover:text-white py-2.5 px-3 mt-20 border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint" href="{% url 'patient-delete' patient_id %}">Delete</a>
