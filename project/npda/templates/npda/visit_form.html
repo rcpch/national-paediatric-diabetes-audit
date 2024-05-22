@@ -15,7 +15,7 @@
             </div>
             <div class="md:w-2/3">
               {% if field.id_for_label == "id_visit_date" %}
-                <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text" {% if field.value %} value={{ field.value|date:"Y-m-d" }} {% endif %}>
+                <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text" {% if field.value %} value={{ field.value|date:"Y-m-d" }} {% elif form_method == "create" %} value={% today_date %} {% endif %}>
               {% endif %}
               {% for error in field.errors %}
                 <p>
@@ -48,7 +48,7 @@
                         {% endfor %}
                       </select>
                   {% elif field.field.widget|is_dateinput %}
-                    <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text" {% if field.value %} value={{ field.value|date:"Y-m-d" }} {% endif %}>
+                    <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text" {% if field.value %} value={{ field.value|date:"Y-m-d" }} {% elif form_method == "create" %} value={% today_date %} {% endif %}>
                   {% else %}
                       <input type="text" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text rounded-none" {% if field.field.required %} placeholder="Required" {% endif %} {% if field.value %} value={{ field.value }} {% elif field.value == 0 %} value="0.0" {% endif %}>
                   {% endif %}
@@ -92,7 +92,7 @@
                             {% endfor %}
                           </select>
                       {% elif field.field.widget|is_dateinput %}
-                          <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text" {% if field.value %} value={{ field.value|date:"Y-m-d" }} {% endif %}>
+                          <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text" {% if field.value %} value={{ field.value|date:"Y-m-d" }} {% elif form_method == "create" %} value={% today_date %} {% endif %}>
                       {% else %}
                           <input type="text" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text rounded-none" {% if field.field.required %} placeholder="Required" {% endif %} {% if field.value %} value={{ field.value }} {% elif field.value == 0 %} value="0.0" {% endif %}>
                       {% endif %}

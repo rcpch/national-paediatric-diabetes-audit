@@ -5,6 +5,7 @@ from django.utils.safestring import mark_safe
 from django.conf import settings
 from ..general_functions import get_visit_category_for_field
 from ...constants import VisitCategories, VISIT_FIELD_FLAT_LIST, VISIT_FIELDS
+from datetime import date
 
 register = template.Library()
 
@@ -150,3 +151,8 @@ def errors_for_category(category, error_list):
 @register.filter
 def is_dateinput(widget):
     return isinstance(widget, (forms.DateInput))
+
+
+@register.simple_tag
+def today_date():
+    return date.today().strftime('%Y-%m-%d')
