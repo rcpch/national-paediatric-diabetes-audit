@@ -107,3 +107,11 @@ class VisitDeleteView(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
     model = Visit
     success_url = reverse_lazy("patient_visits")
     success_message = "Visit removed successfully"
+
+    def get_success_url(self):
+        messages.add_message(
+            self.request, messages.SUCCESS, "Visit edited successfully"
+        )
+        return reverse(
+            "patient_visits", kwargs={"patient_id": self.kwargs["patient_id"]}
+        )

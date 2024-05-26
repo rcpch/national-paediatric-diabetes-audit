@@ -39,7 +39,12 @@
   </style>
   <script>
     tailwind.config = {
+      darkMode: false,
       theme: {
+        backgroundColor: theme => ({
+          ...theme('colors'),
+          'rcpch_lightest_grey': '#f3f3f3',
+        }),
         extend: {
           fontFamily: {
             'montserrat':['Montserrat', 'regular'],
@@ -127,8 +132,14 @@
             rcpch_dark_red: "#9a0500",
           }
         }
-      }
+      },
+      variants: {
+        extend: {
+          backgroundColor: ['active'],
+        },
+      },
     }
+  </script>
   </script>
 </head>
 
