@@ -4,6 +4,8 @@ from ..models import Patient
 from ...constants.styles.form_styles import *
 from ..general_functions import validate_postcode
 
+class DateInput(forms.DateInput):
+    input_type='date'
 
 class PatientForm(forms.ModelForm):
     
@@ -23,19 +25,13 @@ class PatientForm(forms.ModelForm):
         ]
         widgets = {
             "nhs_number": forms.TextInput(attrs={"class": TEXT_INPUT},),
-            "sex": forms.Select(attrs={"class": SELECT}),
-            "date_of_birth": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
-            ),
+            "sex": forms.Select(),
+            "date_of_birth": DateInput(),
             "postcode": forms.TextInput(attrs={"class": TEXT_INPUT}),
-            "ethnicity": forms.Select(attrs={"class": SELECT}),
-            "diabetes_type": forms.Select(attrs={"class": SELECT}),
-            "diagnosis_date": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
-            ),
-            "death_date": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": DATE_INPUT}
-            ),
+            "ethnicity": forms.Select(),
+            "diabetes_type": forms.Select(),
+            "diagnosis_date": DateInput(),
+            "death_date": DateInput(),
             "gp_practice_ods_code": forms.TextInput(attrs={"class": TEXT_INPUT}),
             "gp_practice_postcode": forms.TextInput(attrs={"class": TEXT_INPUT}),
         }

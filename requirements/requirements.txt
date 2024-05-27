@@ -1,6 +1,6 @@
 # Python standard library imports
 python-dateutil==2.9.0.post0
-requests==2.31.0
+requests>=2.32.0
 
 # third party imports
 ## django and misc

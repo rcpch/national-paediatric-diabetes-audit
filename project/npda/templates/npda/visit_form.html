@@ -8,37 +8,161 @@
     <form id="update-form" method="post" {% if form_method == "create" %} action="{% url 'visit-create' patient_id %}" {% else %} action="{% url 'visit-update' patient_id=patient_id pk=visit.pk %}" {% endif %}>
       {% csrf_token %}
       {% for field in form %}
-
-        {% with field|match_category as field_category %}
-        {% with field_category|colour_for_category as background_colour %}
-        
-          <strong>{% category_for_first_item form field forloop.counter %}</strong>
-        
-
-        <div class="md:flex md:items-center mb-6 {% if background_colour %} bg-{{background_colour}} {% endif %}">
-          <div class="md:w-1/3">
-              <label for="{{ field.id_for_label }}" class="block text-gray-700 font-bold md:text-right mb-1 md:mb-0 pr-4"><small>{{ field.label }}</small></label>
+        {% if field.field.category is None %}
+          <div class="md:flex md:items-center mb-6 {% if background_colour %} bg-{{background_colour}} {% endif %}">
+            <div class="md:w-1/3">
+                <label for="{{ field.id_for_label }}" class="block text-gray-700 font-bold md:text-center mb-1 md:mb-0 pr-4"><small>{{ field.label }}</small></label>
+            </div>
+            <div class="md:w-2/3">
+              {% if field.id_for_label == "id_visit_date" %}
+                <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text" {% if field.value %} value={{ field.value|date:"Y-m-d" }} {% elif form_method == "create" %} value={% today_date %} {% endif %}>
+              {% endif %}
+              {% for error in field.errors %}
+                <p>
+                  <strong class="text-gray-700">{{ error|escape }}</strong>
+                </p>  
+              {% endfor %}
+            </div>
           </div>
-          <div class="md:w-2/3">
-            {{ field }}
-            {% for error in field.errors %}
-              <p>
-                <strong class="text-gray-700">{{ error|escape }}</strong>
-              </p>  
+        {% endif %}
+      {% endfor %}
+
+      <div role="tablist" class="tabs tabs-bordered">
+        <input type="radio" name="my_tabs_1" role="tab" class="tab" aria-label="Routine&nbsp;Measurements" checked/>
+        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-none p-6">
+        {% for field_category in form.categories %}
+          {% with field_category|colour_for_category as background_colour %}
+          {% if field_category == "Measurements" or field_category == "HBA1c" or field_category == "Treatment" or field_category == "CGM" %}
+            <div class="flex flex-col mb-6 {% if background_colour %} bg-{{background_colour}} {% endif %}">
+            {% for field in form %}
+                {% if field.field.category == field_category %}
+                <div class="flex flex-row my-2 mx-2">
+                  <div class="flex items-center justify-center md:w-1/3">
+                    <label for="{{ field.id_for_label }}" class="block text-gray-700 font-bold md:text-center mb-1 md:mb-0 pr-4"><small>{{ field.label }}</small></label>
+                  </div>
+                  <div class="flex space-between md:w-2/3">
+                  {% if field.field.widget|is_select %}
+                      <select id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="select rcpch-select rounded-none">
+                        {% for choice in field.field.choices %}
+                        <option value="{{choice.0}}" {% if field.value == choice.0 %} selected="{{ field.value }}" {% endif %}>{{choice.1}}</option>
+                        {% endfor %}
+                      </select>
+                  {% elif field.field.widget|is_dateinput %}
+                    <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text" {% if field.value %} value={{ field.value|date:"Y-m-d" }} {% elif form_method == "create" %} value={% today_date %} {% endif %}>
+                  {% else %}
+                      <input type="text" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text rounded-none" {% if field.field.required %} placeholder="Required" {% endif %} {% if field.value %} value={{ field.value }} {% elif field.value == 0 %} value="0.0" {% endif %}>
+                  {% endif %}
+                  {% for error in field.errors %}
+                      <p>
+                        <strong class="text-gray-700">{{ error|escape }}</strong>
+                      </p>  
+                  {% endfor %}
+                  </div>
+                </div>
+                {% endif %}
             {% endfor %}
-          </div>
+            </div>
+          {% endif %}
+          {% endwith %}
+        {% endfor %}
+        </div>
+        
+        <input type="radio" name="my_tabs_1" role="tab" class="tab rounded-none" aria-label="Annual&nbsp;Review"/>
+        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-none p-6">
+          {% for field_category in form.categories %}
+            {% with field_category|colour_for_category as background_colour %}
+            {% if field_category == "BP" or field_category == "Foot Care" or field_category == "DECS" or field_category == "ACR" or field_category == "Cholesterol" or field_category == "Thyroid" or field_category == "Coeliac" or field_category == "Psychology" or field_category == "Smoking" or field_category == "Dietician" or field_category == "Sick Day Rules" or field_category == "Immunisation (flu)" %}
+              <div class="collapse collapse-arrow my-2 bg-base-200">
+                <input type="radio" name="my-accordion-3" checked="checked" /> 
+                <div class="collapse-title text-xl font-medium">
+                  <strong>{{field_category}}</strong>
+                </div>
+                <div class="collapse-content flex flex-col mb-6 {% if background_colour %} bg-{{background_colour}} {% endif %}">
+                  {% for field in form %}
+                    {% if field.field.category == field_category %}
+                    <div class="flex flex-row my-2 mx-2">
+                      <div class="flex items-center justify-center md:w-1/3">
+                        <label for="{{ field.id_for_label }}" class="{% if background_colour == "rcpch_dark_blue" %} text-white-700 {% else %} text-gray-700 {% endif %} block font-bold md:text-center mb-1 md:mb-0 pr-4"><small>{{ field.label }}</small></label>
+                      </div>
+                      <div class="flex space-between md:w-2/3">
+                      {% if field.field.widget|is_select %}
+                          <select id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="select rcpch-select rounded-none">
+                            {% for choice in field.field.choices %}
+                            <option value="{{choice.0}}" {% if field.value == choice.0 %} selected="{{ field.value }}" {% endif %}>{{choice.1}}</option>
+                            {% endfor %}
+                          </select>
+                      {% elif field.field.widget|is_dateinput %}
+                          <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text" {% if field.value %} value={{ field.value|date:"Y-m-d" }} {% elif form_method == "create" %} value={% today_date %} {% endif %}>
+                      {% else %}
+                          <input type="text" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text rounded-none" {% if field.field.required %} placeholder="Required" {% endif %} {% if field.value %} value={{ field.value }} {% elif field.value == 0 %} value="0.0" {% endif %}>
+                      {% endif %}
+                      {% for error in field.errors %}
+                          <p>
+                            <strong class="text-gray-700">{{ error|escape }}</strong>
+                          </p>  
+                      {% endfor %}
+                      </div>
+                    </div>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+            {% endwith %}
+          {% endfor %}
         </div>
 
-        {% endwith %}
-        {% endwith %}
+        <input type="radio" name="my_tabs_1" role="tab" class="tab w" aria-label="Inpatient&nbsp;Entry"/>
+        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-none p-6">
+        {% for field_category in form.categories %}
+          {% with field_category|colour_for_category as background_colour %}
+            {% if field_category == "Hospital Admission" %}
+            <div class="flex flex-col mb-6 {% if background_colour %} bg-{{background_colour}} {% endif %}">
+            {% for field in form %}
+                {% if field.field.category == field_category %}
+                <div class="flex flex-row my-2 mx-2">
+                  <div class="flex items-center justify-center md:w-1/3">
+                    <label for="{{ field.id_for_label }}" class="block text-gray-700 font-bold md:text-center mb-1 md:mb-0 pr-4"><small>{{ field.label }}</small></label>
+                  </div>
+                  <div class="flex space-between md:w-2/3">
+                  {% if field.field.widget|is_select %}
+                      <select id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="select rcpch-select rounded-none">
+                        {% for choice in field.field.choices %}
+                        <option value="{{choice.0}}" {% if field.value == choice.0 %} selected="{{ field.value }}" {% endif %}>{{choice.1}}</option>
+                        {% endfor %}
+                      </select>
+                  {% elif field.field.widget|is_dateinput %}
+                      <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text" {% if field.value %} value={{ field.value|date:"Y-m-d" }} {% endif %}>
+                  {% else %}
+                      <input type="text" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text rounded-none" {% if field.field.required %} placeholder="Required" {% endif %} {% if field.value %} value={{ field.value }} {% elif field.value == 0 %} value="0.0" {% endif %}>
+                  {% endif %}
+                  {% for error in field.errors %}
+                      <p>
+                        <strong class="text-gray-700">{{ error|escape }}</strong>
+                      </p>  
+                  {% endfor %}
+                  </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+            </div>
+          {% endif %}
+          {% endwith %}
+        {% endfor %}
+        </div>
+
         
-        
-      {% endfor %}
-      <button type="submit" value="Submit" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 mt-20 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">{{button_title}}</button>
-      <a class="bg-rcpch_yellow_light_tint1 text-white font-semibold hover:text-white py-2.5 px-3 mt-20 border border-rcpch_yellow_light_tint1 hover:bg-rcpch_yellow hover:border-rcpch_yellow" href="{% url 'patient_visits' patient_id=patient_id %}">Cancel</a>
-      {% if form_method == 'update' %}
-      <a class="bg-rcpch_red text-white font-semibold hover:text-white py-2.5 px-3 mt-20 border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint" href="{% url 'visit-delete' patient_id visit.pk %}">Delete</a>
-      {% endif %}
+              
+      </div>
+
+
+      <div class="flex justify-end">
+        <button type="submit" value="Submit" class="btn rcpch-btn bg-rcpch_light_blue border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">{{button_title}}</button>
+        <a class="btn rcpch-btn bg-rcpch_yellow_light_tint1 border border-rcpch_yellow_light_tint1 hover:bg-rcpch_yellow hover:border-rcpch_yellow" href="{% url 'patient_visits' patient_id=patient_id %}">Cancel</a>
+        {% if form_method == 'update' %}
+        <a class="btn rcpch-btn bg-rcpch_red text-white font-semibold hover:text-white py-2.5 px-3 mt-20 border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint" href="{% url 'visit-delete' patient_id visit.pk %}">Delete</a>
+        {% endif %}
+      </div>
     </form>
   </div>
 </div>
