@@ -1,17 +1,22 @@
-from django.forms import BaseForm
-from django.http.response import HttpResponse, HttpResponseRedirect
-from django.shortcuts import render
-from django.views.generic.edit import CreateView, UpdateView, DeleteView
-from django.views.generic import ListView
-from django.urls import reverse_lazy
+# Django imports
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count, Case, When, IntegerField
+from django.db.models import Count, Case, When
+from django.forms import BaseForm
+from django.http.response import HttpResponse
+from django.urls import reverse_lazy
+from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django.views.generic import ListView
+
+# Third party imports
+from two_factor.views.mixins import OTPRequiredMixin
+
+# RCPCH imports
 from ..models import Patient
 from ..forms.patient_form import PatientForm
 
 
-class PatientListView(LoginRequiredMixin, ListView):
+class PatientListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
     model = Patient
     template_name = "patients.html"
 
@@ -37,7 +42,9 @@ class PatientListView(LoginRequiredMixin, ListView):
         return context
 
 
-class PatientCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
+class PatientCreateView(
+    LoginRequiredMixin, OTPRequiredMixin, SuccessMessageMixin, CreateView
+):
     """
     Handle creation of new patient in audit
     """
@@ -62,7 +69,9 @@ class PatientCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
         return super().form_valid(form)
 
 
-class PatientUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
+class PatientUpdateView(
+    LoginRequiredMixin, OTPRequiredMixin, SuccessMessageMixin, UpdateView
+):
     """
     Handle update of patient in audit
     """
@@ -87,7 +96,9 @@ class PatientUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
         return super().form_valid(form)
 
 
-class PatientDeleteView(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
+class PatientDeleteView(
+    LoginRequiredMixin, OTPRequiredMixin, SuccessMessageMixin, DeleteView
+):
     """
     Handle deletion of child from audit
     """
