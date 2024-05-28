@@ -79,9 +79,6 @@ class PatientUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
         context["patient_id"] = self.kwargs["pk"]
         return context
 
-    def is_valid(self):
-        return super(PatientForm, self).is_valid()
-
 
 class PatientDeleteView(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
     """

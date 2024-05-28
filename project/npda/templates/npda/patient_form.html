@@ -19,9 +19,9 @@
                 {% endfor %}
               </select>
             {% elif field.field.widget|is_dateinput %}
-              <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text">
+              <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" value="{{ field.value|date:"Y-m-d" }}" class="input rcpch-input-text">
             {% else %}
-              <input type="text" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text">
+              <input type="text" id="{{ field.id_for_label }}" name="{{ field.html_name }}" value="{{ field.value }}" class="input rcpch-input-text">
             {% endif %}
               {% for error in field.errors %}
               <div role="alert" class="alert alert-error py-1 my-0 rounded-none">
