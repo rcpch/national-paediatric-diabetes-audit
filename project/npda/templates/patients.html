@@ -29,13 +29,14 @@
                               <th colspan="9" class="px-6 py-3">Patients where all records have been validated: {{total_valid_patients}}</th>
                             </tr>
                           </thead>
-                          {% endif %}
-                          {% if not patient.is_valid or patient.visit_error_count > 0 and forloop.counter0 == total_valid_patients %}
-                          <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_strong_blue text-white">
-                            <tr>
-                              <th colspan="9" class="px-6 py-3">Patients with records failing validation: {{total_invalid_patients}}</th>
-                            </tr>
-                          </thead>
+                          {% else %}
+                            {% if forloop.counter == index_of_first_invalid_patient %}
+                              <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_strong_blue text-white">
+                                <tr>
+                                  <th colspan="9" class="px-6 py-3">Patients with records failing validation: {{total_invalid_patients}}</th>
+                                </tr>
+                              </thead>
+                              {% endif %}
                           {% endif %}
                           <tr 
                             {% if patient.is_valid and patient.visit_error_count < 1 %} 
@@ -111,10 +112,10 @@
                                 <!-- <div class="has-tooltip"> -->
                                   <a 
                                   href="{% url 'patient_visits' patient.pk %}" 
-                                  {% if patient.is_valid %} 
+                                  {% if patient.is_valid and patient.visit_error_count < 1 %} 
                                   class="text-rcpch_pink px-2 flex justify-end align-center hover:text-white"
                                   {% else %}
-                                  class="text-rcpch_red hover:text-white"
+                                  class="text-rcpch_red hover:text-white flex justify-end"
                                   {% endif %}
                                   >
                                   <!-- <span class='tooltip '></span>  -->

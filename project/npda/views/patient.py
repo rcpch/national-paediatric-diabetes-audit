@@ -1,3 +1,5 @@
+from django.forms import BaseForm
+from django.http.response import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
@@ -31,6 +33,7 @@ class PatientListView(LoginRequiredMixin, ListView):
         context["total_invalid_patients"] = (
             Patient.objects.all().count() - total_valid_patients
         )
+        context["index_of_first_invalid_patient"] = total_valid_patients + 1
         return context
 
 
@@ -51,6 +54,13 @@ class PatientCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
         context["form_method"] = "create"
         return context
 
+    def form_valid(self, form: BaseForm) -> HttpResponse:
+        # the Patient record is therefore valid
+        patient = form.save(commit=False)
+        patient.is_valid = True
+        patient.save()
+        return super().form_valid(form)
+
 
 class PatientUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
     """
@@ -70,8 +80,11 @@ class PatientUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
         context["patient_id"] = self.kwargs["pk"]
         return context
 
-    def is_valid(self):
-        return super(PatientForm, self).is_valid()
+    def form_valid(self, form: BaseForm) -> HttpResponse:
+        patient = form.save(commit=False)
+        patient.is_valid = True
+        patient.save()
+        return super().form_valid(form)
 
 
 class PatientDeleteView(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
