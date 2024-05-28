@@ -20,6 +20,6 @@
     }
 
     log {
-        level INFO # switch to DEBUG for more verbose logging
+        level ERROR # switch to DEBUG for more verbose logging
     }
 }
