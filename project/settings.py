@@ -129,6 +129,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "project.wsgi.application"
 
+# Session cookies
+SESSION_COOKIE_SECURE = True  # enforces HTTPS
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_HTTPONLY = True  # cannot access session cookie on client-side using JS
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # session expires on browser close
+
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
