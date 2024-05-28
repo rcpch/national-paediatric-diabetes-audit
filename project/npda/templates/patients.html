@@ -22,7 +22,6 @@
                     </tr>
                   </thead>
                   <tbody>
-                        {}
                         {% for patient in patient_list %}
                           {% if patient.is_valid and patient.visit_error_count < 1 and forloop.counter0 == 0 %}
                           <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_strong_blue text-white">

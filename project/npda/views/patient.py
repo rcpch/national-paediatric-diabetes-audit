@@ -55,10 +55,11 @@ class PatientCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
         return context
 
     def form_valid(self, form: BaseForm) -> HttpResponse:
-        form.cleaned_data["is_valid"] = True
-        print(form.cleaned_data)
-        form.save()
-        return HttpResponseRedirect(self.success_url)
+        # the Patient record is therefore valid
+        patient = form.save(commit=False)
+        patient.is_valid = True
+        patient.save()
+        return super().form_valid(form)
 
 
 class PatientUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
@@ -78,6 +79,12 @@ class PatientUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
         context["form_method"] = "update"
         context["patient_id"] = self.kwargs["pk"]
         return context
+
+    def form_valid(self, form: BaseForm) -> HttpResponse:
+        patient = form.save(commit=False)
+        patient.is_valid = True
+        patient.save()
+        return super().form_valid(form)
 
 
 class PatientDeleteView(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
