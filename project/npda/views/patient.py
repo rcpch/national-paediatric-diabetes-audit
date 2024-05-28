@@ -1,7 +1,7 @@
 # Django imports
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count, Case, When
+from django.db.models import Count, Case, When, Q
 from django.forms import BaseForm
 from django.http.response import HttpResponse
 from django.urls import reverse_lazy
@@ -31,9 +31,15 @@ class PatientListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        total_valid_patients = Patient.objects.filter(
-            is_valid=True, visit__is_valid=True
-        ).count()
+        total_valid_patients = (
+            Patient.objects.all()
+            .annotate(
+                visit_error_count=Count(Case(When(visit__is_valid=False, then=1)))
+            )
+            .order_by("is_valid", "visit_error_count", "pk")
+            .filter(is_valid=True, visit_error_count__lt=1)
+            .count()
+        )
         context["total_valid_patients"] = total_valid_patients
         context["total_invalid_patients"] = (
             Patient.objects.all().count() - total_valid_patients
