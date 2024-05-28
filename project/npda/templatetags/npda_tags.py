@@ -103,6 +103,7 @@ def category_for_first_item(form, field, index):
 def site_contact_email():
     return settings.SITE_CONTACT_EMAIL
 
+
 @register.filter
 def is_select(widget):
     return isinstance(widget, (forms.Select, forms.SelectMultiple))
@@ -148,6 +149,7 @@ def errors_for_category(category, error_list):
                     final_string += f"{error['message']}\n"
     return final_string
 
+
 @register.filter
 def is_dateinput(widget):
     return isinstance(widget, (forms.DateInput))
@@ -155,4 +157,12 @@ def is_dateinput(widget):
 
 @register.simple_tag
 def today_date():
-    return date.today().strftime('%Y-%m-%d')
+    return date.today().strftime("%Y-%m-%d")
+
+
+@register.simple_tag
+def patient_valid(patient):
+    if not patient.is_valid or patient.visit_set.filter(is_valid=False).exists():
+        return False
+    else:
+        return True

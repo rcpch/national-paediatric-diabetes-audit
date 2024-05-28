@@ -1,3 +1,5 @@
+from django.forms import BaseForm
+from django.http.response import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
@@ -31,6 +33,7 @@ class PatientListView(LoginRequiredMixin, ListView):
         context["total_invalid_patients"] = (
             Patient.objects.all().count() - total_valid_patients
         )
+        context["index_of_first_invalid_patient"] = total_valid_patients + 1
         return context
 
 
@@ -50,6 +53,12 @@ class PatientCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
         context["button_title"] = "Add New Child"
         context["form_method"] = "create"
         return context
+
+    def form_valid(self, form: BaseForm) -> HttpResponse:
+        form.cleaned_data["is_valid"] = True
+        print(form.cleaned_data)
+        form.save()
+        return HttpResponseRedirect(self.success_url)
 
 
 class PatientUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
