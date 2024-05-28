@@ -1,18 +1,24 @@
-from django.forms import BaseModelForm
-from django.shortcuts import render
-from django.views.generic.edit import CreateView, UpdateView, DeleteView
-from django.views.generic import ListView
+# Django imports
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
-from django.urls import reverse_lazy, reverse
+from django.forms import BaseModelForm
 from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import render
+from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django.views.generic import ListView
+from django.urls import reverse_lazy, reverse
+
+# Third party imports
+from two_factor.views.mixins import OTPRequiredMixin
+
+# RCPCH imports
 from ..models import Visit, Patient
 from ..forms.visit_form import VisitForm
 from ..general_functions import get_visit_categories
 
 
-class PatientVisitsListView(LoginRequiredMixin, ListView):
+class PatientVisitsListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
     model = Visit
     template_name = "visits.html"
 
@@ -30,7 +36,9 @@ class PatientVisitsListView(LoginRequiredMixin, ListView):
         return context
 
 
-class VisitCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
+class VisitCreateView(
+    LoginRequiredMixin, OTPRequiredMixin, SuccessMessageMixin, CreateView
+):
     model = Visit
     form_class = VisitForm
 
@@ -63,7 +71,7 @@ class VisitCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
         return HttpResponseRedirect(self.get_success_url())
 
 
-class VisitUpdateView(LoginRequiredMixin, UpdateView):
+class VisitUpdateView(LoginRequiredMixin, OTPRequiredMixin, UpdateView):
     model = Visit
     form_class = VisitForm
 
@@ -103,7 +111,9 @@ class VisitUpdateView(LoginRequiredMixin, UpdateView):
         )
 
 
-class VisitDeleteView(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
+class VisitDeleteView(
+    LoginRequiredMixin, OTPRequiredMixin, SuccessMessageMixin, DeleteView
+):
     model = Visit
     success_url = reverse_lazy("patient_visits")
     success_message = "Visit removed successfully"
