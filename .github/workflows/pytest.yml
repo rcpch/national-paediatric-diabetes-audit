@@ -1,28 +1,42 @@
-name: Run Pytest
+# Runs the Pytest test suite when PRs are made against any branch
+
+name: Run Pytest via Docker Compose on all PRs
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
+    branches:
+      - "*"
+  push:
     branches:
       - main
 
 jobs:
-  build:
+  build-and-run-pytest-suite-in-docker-compose:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Set up Python
-        uses: actions/setup-python@v2
+      - name: Checkout full code repo
+        uses: actions/checkout@v4
         with:
-          python-version: 3.x
+          fetch-depth: 0 # to allow git_context_processor.py to still work
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Create .env file from repo secrets
+        run: |
+          echo -e "${{ secrets.ENVIRONMENT }}" | base64 -d > envs/.env
+          cat envs/.env
 
-      - name: Run Pytest
-        run: pytest
+      - name: Install Docker Compose
+        run: |
+          sudo apt-get install -y docker-compose
+
+      - name: Show Docker environment info
+        run: |
+          docker compose config
+
+      - name: Build Docker images and run containers with compose
+        run: |
+          docker compose up -d
+
+      - name: Run tests
+        run: |
+          docker compose exec django pytest -v
