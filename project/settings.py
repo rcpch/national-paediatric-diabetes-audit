@@ -49,6 +49,8 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", get_random_secret_key())
 RCPCH_CENSUS_PLATFORM_URL = os.getenv("RCPCH_CENSUS_PLATFORM_URL")
 RCPCH_CENSUS_PLATFORM_TOKEN = os.getenv("RCPCH_CENSUS_PLATFORM_TOKEN")
 
+RCPCH_NHS_ORGANISATIONS_URL = os.getenv("RCPCH_NHS_ORGANISATIONS_URL")
+
 # This is the NHS Spine services - it does not require authentication
 # It is possible to retrieve the ods code from the NHS API above, but not to narrow down
 # by organisation type - many practices host multiple entities (pharmacies, private companies etc)
