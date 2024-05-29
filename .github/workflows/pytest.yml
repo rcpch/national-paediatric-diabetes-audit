@@ -22,8 +22,7 @@ jobs:
 
       - name: Create .env file from repo secrets
         run: |
-          echo -e "${{ secrets.ENVIRONMENT }}" | base64 -d > envs/.env
-          cat envs/.env
+          echo -n "${{ secrets.ENVIRONMENT }}" | base64 -d > envs/.env
 
       - name: Install Docker Compose
         run: |
