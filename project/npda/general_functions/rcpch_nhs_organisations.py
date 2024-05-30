@@ -37,7 +37,7 @@ def get_all_nhs_organisations():
     This function returns all NHS organisations from the RCPCH dataset.
     """
 
-    url = f"{settings.RCPCH_NHS_ORGANISATIONS_URL}/organisations"
+    url = f"https://rcpch-nhs-organisations.azurewebsites.net/organisations/limited"
 
     try:
         response = requests.get(

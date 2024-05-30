@@ -59,7 +59,13 @@ class NPDAUserForm(forms.ModelForm):
         self.fields["surname"].required = True
         self.fields["email"].required = True
         self.fields["role"].required = True
-        self.fields["organisation_employer"].queryset = get_all_nhs_organisations()
+        # retrieve all organisations from the RCPCH NHS Organisations API
+        organisation_list = []
+        for organisation in get_all_nhs_organisations():
+            organisation_list.append(
+                (organisation.get("ods_code"), organisation.get("name"))
+            )
+        self.fields["organisation_employer"].choices = organisation_list
 
 
 class NPDAUpdatePasswordForm(SetPasswordForm):

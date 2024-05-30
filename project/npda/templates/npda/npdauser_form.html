@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load npda_tags %}
 {% block content %}
 <div class="bg-rcpch_light_blue py-8">
   <div class="w-full max-w-3xl mx-auto px-2 py-4 m-2 shadow-md bg-white font-montserrat">
@@ -11,12 +12,20 @@
               <label for="{{ field.id_for_label }}" class="block text-gray-700 font-bold md:text-right mb-1 md:mb-0 pr-4"><small>{{ field.label }}</small></label>
           </div>
           <div class="md:w-2/3">
-              {{ field }}
-              {% for error in field.errors %}
-              <p>
-                <strong class="text-gray-700">{{ error|escape }}</strong>
-              </p>  
-            {% endfor %}
+              {% if field.field.widget|is_select %}
+                <select id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="select rcpch-select rounded-none">
+                  {% for choice in field.field.choices %}
+                  <option value="{{choice.0}}" {% if field.value == choice.0 %} selected="{{ field.value }}" {% endif %}>{{choice.1}}</option>
+                  {% endfor %}
+                </select>
+              {% else %}
+                {{ field }}
+                {% for error in field.errors %}
+                <p>
+                  <strong class="text-gray-700">{{ error|escape }}</strong>
+                </p>  
+                {% endfor %}
+              {% endif %}
           </div>
         </div>
       {% endfor %}
