@@ -86,4 +86,6 @@ class PatientSerializer(serializers.HyperlinkedModelSerializer):
             "death_date",
             "gp_practice_ods_code",
             "gp_practice_postcode",
+            "is_valid",
+            "errors",
         )
