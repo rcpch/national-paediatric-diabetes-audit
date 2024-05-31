@@ -6,6 +6,27 @@ from requests.exceptions import HTTPError
 from django.conf import settings
 
 
+def retrieve_pdus():
+    """
+    Returns all PDUs from the RCPCH NHS Organisations API
+    """
+
+    url = settings.RCPCH_NHS_ORGANISATIONS
+    request_url = f"{url}/paediatric_diabetes_units/organisations/"
+
+    try:
+        response = requests.get(
+            url=request_url,
+            timeout=10,  # times out after 10 seconds
+        )
+        response.raise_for_status()
+    except HTTPError as e:
+        print(e.response.text)
+        raise Exception("PDUs not found")
+
+    return response.json()
+
+
 def retrieve_pdu(pz_number):
     """
     Returns GP practice as an object from NHS API against a postcode

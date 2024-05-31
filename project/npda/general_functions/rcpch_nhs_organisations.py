@@ -49,7 +49,13 @@ def get_all_nhs_organisations():
         print(e.response.text)
         raise Exception("No NHS organisations found")
 
-    return response.json()
+    # convert the response to choices list
+    organisation_list = []
+    for organisation in response.json():
+        organisation_list.append(
+            (organisation.get("ods_code"), organisation.get("name"))
+        )
+    return organisation_list
 
 
 # [
