@@ -18,6 +18,8 @@ from ..forms.visit_form import VisitForm
 from ..general_functions import get_visit_categories
 
 
+
+
 class PatientVisitsListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
     model = Visit
     template_name = "visits.html"
@@ -81,6 +83,18 @@ class VisitUpdateView(LoginRequiredMixin, OTPRequiredMixin, UpdateView):
         context["title"] = "Edit Visit Details"
         context["button_title"] = "Edit Visit Details"
         context["form_method"] = "update"
+        visit_instance = Visit.objects.get(pk=self.kwargs["pk"])
+        visit_categories = get_visit_categories(visit_instance)
+        context["visit_categories"] = visit_categories
+        categories_with_errors = []
+        categories_without_errors = []
+        for category in visit_categories:
+            if category["has_error"] == False:
+                categories_without_errors.append(category["category"])
+            else:
+                categories_with_errors.append(category["category"])
+        context["categories_with_errors"] = categories_with_errors
+        context["categories_without_errors"] = categories_without_errors
         return context
 
     def get_success_url(self):
