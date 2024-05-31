@@ -8,6 +8,7 @@ from django.shortcuts import render
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
 from django.urls import reverse_lazy, reverse
+import logging
 
 # Third party imports
 from two_factor.views.mixins import OTPRequiredMixin
@@ -16,6 +17,8 @@ from two_factor.views.mixins import OTPRequiredMixin
 from ..models import Visit, Patient
 from ..forms.visit_form import VisitForm
 from ..general_functions import get_visit_categories
+
+logger = logging.getLogger(__name__)
 
 
 class PatientVisitsListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
@@ -81,6 +84,21 @@ class VisitUpdateView(LoginRequiredMixin, OTPRequiredMixin, UpdateView):
         context["title"] = "Edit Visit Details"
         context["button_title"] = "Edit Visit Details"
         context["form_method"] = "update"
+        visit_instance = Visit.objects.get(pk=self.kwargs["pk"])
+        visit_categories = get_visit_categories(visit_instance)
+        context["visit_categories"] = visit_categories
+        categories_with_errors = []
+        categories_without_errors = []
+        for category in visit_categories:
+            print(category)
+            if category["has_error"] == False:
+                print("BELOW is category.category")
+                print(category["category"])
+                categories_without_errors.append(category["category"])
+            else:
+                categories_with_errors.append(category["category"])
+        context["categories_with_errors"] = categories_with_errors
+        context["categories_without_errors"] = categories_without_errors
         return context
 
     def get_success_url(self):
