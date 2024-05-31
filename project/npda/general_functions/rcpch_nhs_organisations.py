@@ -17,7 +17,9 @@ def get_nhs_organisation(ods_code: str):
     This function returns details of an NHS organisation against an ODS code from the RCPCH dataset.
     """
 
-    url = f"{settings.RCPCH_NHS_ORGANISATIONS_URL}/organisations/?ods_code={ods_code}"
+    url = (
+        f"{settings.RCPCH_NHS_ORGANISATIONS_API_URL}/organisations/?ods_code={ods_code}"
+    )
 
     try:
         response = requests.get(
