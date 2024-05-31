@@ -8,7 +8,6 @@ from django.shortcuts import render
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
 from django.urls import reverse_lazy, reverse
-import logging
 
 # Third party imports
 from two_factor.views.mixins import OTPRequiredMixin
@@ -18,7 +17,7 @@ from ..models import Visit, Patient
 from ..forms.visit_form import VisitForm
 from ..general_functions import get_visit_categories
 
-logger = logging.getLogger(__name__)
+
 
 
 class PatientVisitsListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
@@ -90,10 +89,7 @@ class VisitUpdateView(LoginRequiredMixin, OTPRequiredMixin, UpdateView):
         categories_with_errors = []
         categories_without_errors = []
         for category in visit_categories:
-            print(category)
             if category["has_error"] == False:
-                print("BELOW is category.category")
-                print(category["category"])
                 categories_without_errors.append(category["category"])
             else:
                 categories_with_errors.append(category["category"])
