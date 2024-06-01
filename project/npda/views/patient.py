@@ -14,9 +14,10 @@ from two_factor.views.mixins import OTPRequiredMixin
 # RCPCH imports
 from ..models import Patient
 from ..forms.patient_form import PatientForm
+from .mixins import LoginAndOTPRequiredMixin
 
 
-class PatientListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
+class PatientListView(LoginAndOTPRequiredMixin, ListView):
     model = Patient
     template_name = "patients.html"
 
@@ -49,7 +50,7 @@ class PatientListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
 
 
 class PatientCreateView(
-    LoginRequiredMixin, OTPRequiredMixin, SuccessMessageMixin, CreateView
+    LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateView
 ):
     """
     Handle creation of new patient in audit
@@ -76,7 +77,7 @@ class PatientCreateView(
 
 
 class PatientUpdateView(
-    LoginRequiredMixin, OTPRequiredMixin, SuccessMessageMixin, UpdateView
+    LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateView
 ):
     """
     Handle update of patient in audit
@@ -103,7 +104,7 @@ class PatientUpdateView(
 
 
 class PatientDeleteView(
-    LoginRequiredMixin, OTPRequiredMixin, SuccessMessageMixin, DeleteView
+    LoginAndOTPRequiredMixin, SuccessMessageMixin, DeleteView
 ):
     """
     Handle deletion of child from audit

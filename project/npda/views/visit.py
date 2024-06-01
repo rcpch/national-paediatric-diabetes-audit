@@ -16,11 +16,10 @@ from two_factor.views.mixins import OTPRequiredMixin
 from ..models import Visit, Patient
 from ..forms.visit_form import VisitForm
 from ..general_functions import get_visit_categories
+from .mixins import LoginAndOTPRequiredMixin
 
 
-
-
-class PatientVisitsListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
+class PatientVisitsListView(LoginAndOTPRequiredMixin, ListView):
     model = Visit
     template_name = "visits.html"
 
@@ -39,7 +38,7 @@ class PatientVisitsListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
 
 
 class VisitCreateView(
-    LoginRequiredMixin, OTPRequiredMixin, SuccessMessageMixin, CreateView
+    LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateView
 ):
     model = Visit
     form_class = VisitForm
@@ -73,7 +72,7 @@ class VisitCreateView(
         return HttpResponseRedirect(self.get_success_url())
 
 
-class VisitUpdateView(LoginRequiredMixin, OTPRequiredMixin, UpdateView):
+class VisitUpdateView(LoginAndOTPRequiredMixin, UpdateView):
     model = Visit
     form_class = VisitForm
 
@@ -126,7 +125,7 @@ class VisitUpdateView(LoginRequiredMixin, OTPRequiredMixin, UpdateView):
 
 
 class VisitDeleteView(
-    LoginRequiredMixin, OTPRequiredMixin, SuccessMessageMixin, DeleteView
+    LoginAndOTPRequiredMixin, SuccessMessageMixin, DeleteView
 ):
     model = Visit
     success_url = reverse_lazy("patient_visits")

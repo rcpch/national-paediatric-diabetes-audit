@@ -1,19 +1,19 @@
 from datetime import datetime, timedelta
 import logging
+
 from django.http import HttpRequest, HttpResponse
 from django.utils import timezone
 from django.shortcuts import redirect
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
 from django.contrib.auth.views import PasswordResetView
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy, reverse
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib import messages
 from django.utils.html import strip_tags
 from django.conf import settings
 from two_factor.views import LoginView as TwoFactorLoginView
-from two_factor.views.mixins import OTPRequiredMixin
+
 from ..models import NPDAUser, VisitActivity
 from ..forms.npda_user_form import NPDAUserForm, CaptchaAuthenticationForm
 from ..general_functions import (
@@ -23,6 +23,7 @@ from ..general_functions import (
     construct_transfer_npda_site_outcome_email,
     group_for_role,
 )
+from .mixins import LoginAndOTPRequiredMixin
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ NPDAUser list and NPDAUser creation, deletion and update
 """
 
 
-class NPDAUserListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
+class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
     template_name = "npda_users.html"
 
     def get_queryset(self):
@@ -39,7 +40,7 @@ class NPDAUserListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
 
 
 class NPDAUserCreateView(
-    LoginRequiredMixin, OTPRequiredMixin, SuccessMessageMixin, CreateView
+    LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateView
 ):
     """
     Handle creation of new patient in audit
@@ -115,7 +116,7 @@ class NPDAUserCreateView(
 
 
 class NPDAUserUpdateView(
-    LoginRequiredMixin, OTPRequiredMixin, SuccessMessageMixin, UpdateView
+    LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateView
 ):
     """
     Handle update of patient in audit
@@ -166,7 +167,7 @@ class NPDAUserUpdateView(
 
 
 class NPDAUserDeleteView(
-    LoginRequiredMixin, OTPRequiredMixin, SuccessMessageMixin, DeleteView
+    LoginAndOTPRequiredMixin, SuccessMessageMixin, DeleteView
 ):
     """
     Handle deletion of child from audit
@@ -177,7 +178,7 @@ class NPDAUserDeleteView(
     success_url = reverse_lazy("npda_users")
 
 
-class NPDAUserLogsListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
+class NPDAUserLogsListView(LoginAndOTPRequiredMixin, ListView):
     template_name = "npda_user_logs.html"
     model = VisitActivity
 
@@ -220,7 +221,7 @@ class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
         return super().form_valid(form)
 
 
-class RCPCHLoginView(TwoFactorLoginView):
+class RCPCHLoginView(TwoFactorLoginView, LoginAndOTPRequiredMixin):
     template_name = "two_factor/core/login.html"
 
     def __init__(self, **kwargs):
