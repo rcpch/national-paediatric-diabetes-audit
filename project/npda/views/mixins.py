@@ -17,7 +17,7 @@ class LoginAndOTPRequiredMixin(AccessMixin):
     """
 
     def dispatch(self, request, *args, **kwargs):
-        logger.warning('inside MIXIN')
+        
         # Check if the user is authenticated
         if not request.user.is_authenticated:
             return self.handle_no_permission()
