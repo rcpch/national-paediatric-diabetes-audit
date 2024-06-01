@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta
 import logging
 from django.http import HttpRequest, HttpResponse
@@ -22,6 +23,8 @@ from ..general_functions import (
     construct_transfer_npda_site_email,
     construct_transfer_npda_site_outcome_email,
     group_for_role,
+    retrieve_pdu_from_organisation_ods_code,
+    retrieve_pdus,
 )
 
 logger = logging.getLogger(__name__)
@@ -35,7 +38,43 @@ class NPDAUserListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
     template_name = "npda_users.html"
 
     def get_queryset(self):
-        return NPDAUser.objects.all().order_by("surname")
+        # scope list of users to those in the same organisation as the logged in user if they are not a superuser or RCPCH Audit Team Member or RCPCH Staff member
+        if (
+            self.request.user.is_superuser
+            or self.request.user.is_rcpch_audit_team_member
+            or self.request.user.is_rcpch_staff
+        ):
+            # superusers, RCPCH Audit Team Members and RCPCH Staff can see all users
+            # all_pdus = retrieve_pdus()
+
+            # retrieve all PDUs as well as their child organisations and store in session
+            # self.request.session["pdu_organisations"] = all_pdus
+            # print(all_pdus)
+            return NPDAUser.objects.all().order_by("surname")
+        else:
+            current_user_ods_code = self.request.user.organisation_employer
+            if "sibling_organisations" not in self.request.session:
+                sibling_organisations = retrieve_pdu_from_organisation_ods_code(
+                    current_user_ods_code
+                )
+                # store the results in session
+                self.request.session["sibling_organisations"] = sibling_organisations
+
+            print(self.request.session["sibling_organisations"])
+            # pull out the sibling organisations and store in a list, to use to filter only those users in organisations in the same PDU
+            siblings = []
+            for sibling_organisation in self.request.session["sibling_organisations"][
+                0
+            ]["organisations"]:
+                siblings.append(sibling_organisation["ods_code"])
+            return NPDAUser.objects.filter(organisation_employer__in=siblings).order_by(
+                "surname"
+            )
+
+    def get_context_data(self, **kwargs):
+        context = super(NPDAUserListView, self).get_context_data(**kwargs)
+        context["title"] = "NPDA Users"
+        return context
 
 
 class NPDAUserCreateView(

@@ -48,8 +48,11 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", get_random_secret_key())
 # This is the token required for getting deprivation quintiles from the RCPCH Census Platform
 RCPCH_CENSUS_PLATFORM_URL = os.getenv("RCPCH_CENSUS_PLATFORM_URL")
 RCPCH_CENSUS_PLATFORM_TOKEN = os.getenv("RCPCH_CENSUS_PLATFORM_TOKEN")
-
-RCPCH_NHS_ORGANISATIONS_API_URL = os.getenv("RCPCH_NHS_ORGANISATIONS_API_URL")
+# TODO #83  - Fix the broken env in Azure and remove hardcoded URL
+RCPCH_NHS_ORGANISATIONS_API_URL = os.getenv(
+    "RCPCH_NHS_ORGANISATIONS_API_URL",
+    "https://rcpch-nhs-organisations.azurewebsites.net",
+)
 
 # This is the NHS Spine services - it does not require authentication
 # It is possible to retrieve the ods code from the NHS API above, but not to narrow down
