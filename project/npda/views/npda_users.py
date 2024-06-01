@@ -229,8 +229,8 @@ class RCPCHLoginView(TwoFactorLoginView):
         self.form_list["auth"] = CaptchaAuthenticationForm
 
     def post(self, *args, **kwargs):
-        
-        # In local development, override the token workflow, just sign in 
+
+        # In local development, override the token workflow, just sign in
         # the user without 2FA token
         if settings.DEBUG:
             request = self.request
@@ -242,14 +242,11 @@ class RCPCHLoginView(TwoFactorLoginView):
             )
             if user is not None:
                 login(request, user)
-                return redirect('home')
+                return redirect("home")
 
         # Otherwise, continue with usual workflow
         response = super().post(*args, **kwargs)
         return self.delete_cookies_from_response(response)
-        
-        
-        
 
     # Override successful login redirect to org summary page
     def done(self, form_list, **kwargs):

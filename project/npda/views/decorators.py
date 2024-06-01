@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 # Logging setup
 logger = logging.getLogger(__name__)
 
+
 def login_and_otp_required():
     """
     Must have verified via 2FA
@@ -16,17 +17,15 @@ def login_and_otp_required():
     def decorator(view):
         # First use login_required on decorator
         login_required(view)
-        
-        
 
         def wrapper(request, *args, **kwargs):
             # Then, ensure 2fa verified
             user = request.user
 
             # Bypass 2fa if local dev, with warning message
-            if settings.DEBUG and user.is_superuser:
+            if settings.DEBUG:
                 logger.warning(
-                    "User %s has bypassed 2FA for %s as settings.DEBUG is %s and user is superuser",
+                    "User %s has bypassed 2FA for %s as settings.DEBUG is %s",
                     user,
                     view,
                     settings.DEBUG,
@@ -36,9 +35,13 @@ def login_and_otp_required():
             # Prevent unverified users
             if not user.is_verified():
                 user_list = user.__dict__
-                epilepsy12_user = user_list['_wrapped']
-                logger.info("User %s is unverified. Tried accessing %s", epilepsy12_user , view.__qualname__)
-                raise PermissionDenied('Unverified user')
+                epilepsy12_user = user_list["_wrapped"]
+                logger.info(
+                    "User %s is unverified. Tried accessing %s",
+                    epilepsy12_user,
+                    view.__qualname__,
+                )
+                raise PermissionDenied("Unverified user")
 
             return view(request, *args, **kwargs)
 
