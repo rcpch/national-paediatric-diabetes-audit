@@ -221,7 +221,7 @@ class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
         return super().form_valid(form)
 
 
-class RCPCHLoginView(TwoFactorLoginView, LoginAndOTPRequiredMixin):
+class RCPCHLoginView(TwoFactorLoginView):
     template_name = "two_factor/core/login.html"
 
     def __init__(self, **kwargs):
