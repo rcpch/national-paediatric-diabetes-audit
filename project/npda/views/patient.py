@@ -79,8 +79,12 @@ class PatientCreateView(
     success_url = reverse_lazy("patients")
 
     def get_context_data(self, **kwargs):
+        pz_code = self.request.session.get("sibling_organisations", {}).get(
+            "pz_code", ""
+        )
+        organisation_ods_code = self.request.user.organisation_employer
         context = super().get_context_data(**kwargs)
-        context["title"] = "Add New Child"
+        context["title"] = f"Add New Child to {organisation_ods_code} ({pz_code})"
         context["button_title"] = "Add New Child"
         context["form_method"] = "create"
         return context
@@ -106,8 +110,12 @@ class PatientUpdateView(
     success_url = reverse_lazy("patients")
 
     def get_context_data(self, **kwargs):
+        pz_code = self.request.session.get("sibling_organisations", {}).get(
+            "pz_code", ""
+        )
+        ods_code = self.request.user.organisation_employer
         context = super().get_context_data(**kwargs)
-        context["title"] = "Edit Child Details"
+        context["title"] = f"Edit Child Details in {ods_code}({pz_code})"
         context["button_title"] = "Edit Child Details"
         context["form_method"] = "update"
         context["patient_id"] = self.kwargs["pk"]
