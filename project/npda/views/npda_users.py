@@ -1,20 +1,22 @@
 import json
 from datetime import datetime, timedelta
 import logging
+
 from django.http import HttpRequest, HttpResponse
 from django.utils import timezone
 from django.shortcuts import redirect
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
 from django.contrib.auth.views import PasswordResetView
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy, reverse
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib import messages
+from django.contrib.auth import login, authenticate
 from django.utils.html import strip_tags
 from django.conf import settings
 from two_factor.views import LoginView as TwoFactorLoginView
-from two_factor.views.mixins import OTPRequiredMixin
+
+
 from ..models import NPDAUser, VisitActivity
 from ..forms.npda_user_form import NPDAUserForm, CaptchaAuthenticationForm
 from ..general_functions import (
@@ -26,6 +28,10 @@ from ..general_functions import (
     retrieve_pdu_from_organisation_ods_code,
     retrieve_pdus,
 )
+from .mixins import LoginAndOTPRequiredMixin
+from django.utils.decorators import method_decorator
+from .decorators import login_and_otp_required
+from django.contrib.auth.decorators import login_required
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +40,7 @@ NPDAUser list and NPDAUser creation, deletion and update
 """
 
 
-class NPDAUserListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
+class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
     template_name = "npda_users.html"
 
     def get_queryset(self):
@@ -77,9 +83,7 @@ class NPDAUserListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
         return context
 
 
-class NPDAUserCreateView(
-    LoginRequiredMixin, OTPRequiredMixin, SuccessMessageMixin, CreateView
-):
+class NPDAUserCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateView):
     """
     Handle creation of new patient in audit
     """
@@ -157,9 +161,7 @@ class NPDAUserCreateView(
         )
 
 
-class NPDAUserUpdateView(
-    LoginRequiredMixin, OTPRequiredMixin, SuccessMessageMixin, UpdateView
-):
+class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateView):
     """
     Handle update of patient in audit
     """
@@ -214,9 +216,7 @@ class NPDAUserUpdateView(
             return super().post(request, *args, **kwargs)
 
 
-class NPDAUserDeleteView(
-    LoginRequiredMixin, OTPRequiredMixin, SuccessMessageMixin, DeleteView
-):
+class NPDAUserDeleteView(LoginAndOTPRequiredMixin, SuccessMessageMixin, DeleteView):
     """
     Handle deletion of child from audit
     """
@@ -226,7 +226,7 @@ class NPDAUserDeleteView(
     success_url = reverse_lazy("npda_users")
 
 
-class NPDAUserLogsListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
+class NPDAUserLogsListView(LoginAndOTPRequiredMixin, ListView):
     template_name = "npda_user_logs.html"
     model = VisitActivity
 
@@ -276,6 +276,26 @@ class RCPCHLoginView(TwoFactorLoginView):
         super().__init__(**kwargs)
         # Override original Django Auth Form with Captcha field inserted
         self.form_list["auth"] = CaptchaAuthenticationForm
+
+    def post(self, *args, **kwargs):
+
+        # In local development, override the token workflow, just sign in
+        # the user without 2FA token
+        if settings.DEBUG:
+            request = self.request
+
+            user = authenticate(
+                request,
+                username=request.POST.get("auth-username"),
+                password=request.POST.get("auth-password"),
+            )
+            if user is not None:
+                login(request, user)
+                return redirect("home")
+
+        # Otherwise, continue with usual workflow
+        response = super().post(*args, **kwargs)
+        return self.delete_cookies_from_response(response)
 
     # Override successful login redirect to org summary page
     def done(self, form_list, **kwargs):

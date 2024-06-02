@@ -1,5 +1,5 @@
 from django.urls import path, include
-from django.contrib.auth.views import PasswordResetConfirmView, LogoutView
+from django.contrib.auth.views import PasswordResetConfirmView
 from django.contrib.auth import urls as auth_urls
 from project.npda.views import (
     VisitCreateView,
@@ -13,8 +13,6 @@ from project.npda.forms.npda_user_form import NPDAUpdatePasswordForm
 from .views import *
 
 urlpatterns = [
-    path("captcha/", include("captcha.urls")),
-    path("account/", include(auth_urls)),
     path("home", view=home, name="home"),
     # Patient views
     path("patients", view=PatientListView.as_view(), name="patients"),
@@ -68,7 +66,7 @@ urlpatterns = [
         view=NPDAUserDeleteView.as_view(),
         name="npdauser-delete",
     ),
-    # authentication
+    # Authentication -> NOTE: 2FA is implemented in project-level URLS with tf_urls
     path("captcha/", include("captcha.urls")),
     path("account/", include(auth_urls)),
     path(
@@ -84,6 +82,4 @@ urlpatterns = [
         ),
         name="password_reset_confirm",
     ),
-    path("account/login", view=RCPCHLoginView.as_view(), name="login"),
-    path("account/logout", view=LogoutView.as_view(), name="logout"),
 ]
