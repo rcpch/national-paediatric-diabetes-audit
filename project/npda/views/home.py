@@ -29,6 +29,7 @@ def home(request):
         context = {"file_uploaded": file_uploaded, "form": form}
         template = "home.html"
         return render(request=request, template_name=template, context=context)
+
     else:
         form = UploadFileForm()
     context = {"file_uploaded": file_uploaded, "form": form}
