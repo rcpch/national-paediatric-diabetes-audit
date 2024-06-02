@@ -38,16 +38,10 @@ class NPDAUserListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
     template_name = "npda_users.html"
 
     def get_queryset(self):
-        # scope list of users to those in the same organisation as the logged in user
-        current_user_ods_code = self.request.user.organisation_employer
-        if "sibling_organisations" not in self.request.session:
-            sibling_organisations = retrieve_pdu_from_organisation_ods_code(
-                current_user_ods_code
-            )
-            # store the results in session
-            self.request.session["sibling_organisations"] = sibling_organisations
+        # scope the queryset to filter only those users in organisations in the same PDU. This is to prevent users from seeing all users in the system
+        # The user's organisation, PDU and siblings are stored in the session when they log in
 
-        # pull out the sibling organisations and store in a list, to use to filter only those users in organisations in the same PDU
+        # create a list of sibling organisations' ODS codes who share the same PDU as the user
         siblings_ods_codes = [
             sibling["ods_code"]
             for sibling in self.request.session["sibling_organisations"][
@@ -55,10 +49,12 @@ class NPDAUserListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
             ]
         ]
 
+        # get all users in the sibling organisations
         npda_users = NPDAUser.objects.filter(
             organisation_employer__in=siblings_ods_codes
         ).order_by("surname")
 
+        # add sibling organisation details to each user (PZ code, organisation name, parent name etc.)
         for user in npda_users:
             matching_sibling = next(
                 (
@@ -275,6 +271,17 @@ class RCPCHLoginView(TwoFactorLoginView):
     def done(self, form_list, **kwargs):
         response = super().done(form_list)
         response_url = getattr(response, "url")
+
+        # successful login, get PDU and organisation details from user and store in session
+        current_user_ods_code = self.request.user.organisation_employer
+        if "sibling_organisations" not in self.request.session:
+            sibling_organisations = retrieve_pdu_from_organisation_ods_code(
+                current_user_ods_code
+            )
+            # store the results in session
+            self.request.session["sibling_organisations"] = sibling_organisations
+
+        # redirect to home page
         login_redirect_url = reverse(settings.LOGIN_REDIRECT_URL)
 
         # Successful 2FA and login
