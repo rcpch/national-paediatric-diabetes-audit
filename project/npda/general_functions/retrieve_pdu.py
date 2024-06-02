@@ -56,7 +56,7 @@ def retrieve_pdu_from_organisation_ods_code(ods_code):
     ods_code = ods_code.upper()
 
     url = settings.RCPCH_NHS_ORGANISATIONS_API_URL
-    request_url = f"{url}/paediatric_diabetes_units/sibling-organisations/{ods_code}/"
+    request_url = f"{url}/paediatric_diabetes_units/sibling-organisations/{ods_code}"
 
     try:
         response = requests.get(
@@ -68,4 +68,4 @@ def retrieve_pdu_from_organisation_ods_code(ods_code):
         print(e.response.text)
         raise Exception(f"{ods_code} not found")
 
-    return response.json()
+    return response.json()[0]

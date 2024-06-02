@@ -60,16 +60,33 @@ class NPDAUserListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
                 # store the results in session
                 self.request.session["sibling_organisations"] = sibling_organisations
 
-            print(self.request.session["sibling_organisations"])
             # pull out the sibling organisations and store in a list, to use to filter only those users in organisations in the same PDU
-            siblings = []
-            for sibling_organisation in self.request.session["sibling_organisations"][
-                0
-            ]["organisations"]:
-                siblings.append(sibling_organisation["ods_code"])
-            return NPDAUser.objects.filter(organisation_employer__in=siblings).order_by(
-                "surname"
-            )
+            siblings_ods_codes = [
+                sibling["ods_code"]
+                for sibling in self.request.session["sibling_organisations"][
+                    "organisations"
+                ]
+            ]
+
+            npda_users = NPDAUser.objects.filter(
+                organisation_employer__in=siblings_ods_codes
+            ).order_by("surname")
+
+            for user in npda_users:
+                matching_sibling = next(
+                    (
+                        sibling
+                        for sibling in self.request.session["sibling_organisations"][
+                            "organisations"
+                        ]
+                        if sibling["ods_code"] == user.organisation_employer
+                    ),
+                    None,
+                )
+                if matching_sibling is not None:
+                    for key, value in matching_sibling.items():
+                        setattr(user, key, value)
+            return npda_users
 
     def get_context_data(self, **kwargs):
         context = super(NPDAUserListView, self).get_context_data(**kwargs)

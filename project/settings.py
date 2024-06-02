@@ -53,6 +53,7 @@ RCPCH_NHS_ORGANISATIONS_API_URL = os.getenv(
     "RCPCH_NHS_ORGANISATIONS_API_URL",
     "https://rcpch-nhs-organisations.azurewebsites.net",
 )
+RCPCH_NHS_ORGANISATIONS_API_URL = "https://rcpch-nhs-organisations.azurewebsites.net"
 
 # This is the NHS Spine services - it does not require authentication
 # It is possible to retrieve the ods code from the NHS API above, but not to narrow down
