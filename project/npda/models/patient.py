@@ -86,7 +86,7 @@ class Patient(models.Model):
     )
 
     is_valid = models.BooleanField(
-        verbose_name="Record is valid", blank=True, null=True, default=False
+        verbose_name="Record is valid", blank=False, null=False, default=False
     )
 
     errors = models.JSONField(

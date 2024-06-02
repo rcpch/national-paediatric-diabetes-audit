@@ -33,9 +33,17 @@ class Site(models.Model):
     )
 
     # relationships
-    pdu = models.CharField(
+    paediatric_diabetes_unit_pz_code = models.CharField(
         _("PZ Code"),
         help_text=_("Enter the PZ Code"),
+        max_length=150,
+        null=True,
+        blank=True,
+    )
+
+    organisation_ods_code = models.CharField(
+        _("Organisation ODS Code"),
+        help_text=_("Enter the Organisation ODS Code"),
         max_length=150,
         null=True,
         blank=True,

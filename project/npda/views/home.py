@@ -15,7 +15,8 @@ def home(request):
         if request.method == "POST":
             form = UploadFileForm(request.POST, request.FILES)
             file = request.FILES["csv_upload"]
-            file_uploaded = csv_upload(csv_file=file)
+            pz_code = request.session.get("sibling_organisations", {}).get("pdu_pz_code", "")
+            file_uploaded = csv_upload(csv_file=file, organisation_ods_code=request.user.organisation_employer, pdu_pz_code=pz_code)
             if file_uploaded["status"]==500:
                 messages.error(request=request,message=f"{file_uploaded["errors"]}")
                 return redirect('home')

@@ -23,7 +23,10 @@ class PatientListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
     def get_queryset(self):
         """
         Return all patients with the number of errors in their visits
+        Order by valid patients first, then by number of errors in visits, then by primary key
+        Scope to patient only in the same organisation as the user
         """
+        # sibling_organisations =
         return (
             Patient.objects.all()
             .annotate(
