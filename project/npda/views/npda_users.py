@@ -283,7 +283,6 @@ class RCPCHLoginView(TwoFactorLoginView):
         # the user without 2FA token
         if settings.DEBUG:
             request = self.request
-
             user = authenticate(
                 request,
                 username=request.POST.get("auth-username"),
@@ -291,6 +290,16 @@ class RCPCHLoginView(TwoFactorLoginView):
             )
             if user is not None:
                 login(request, user)
+                # successful login, get PDU and organisation details from user and store in session
+                current_user_ods_code = self.request.user.organisation_employer
+                if "sibling_organisations" not in self.request.session:
+                    sibling_organisations = retrieve_pdu_from_organisation_ods_code(
+                        current_user_ods_code
+                    )
+                    # store the results in session
+                    self.request.session["sibling_organisations"] = (
+                        sibling_organisations
+                    )
                 return redirect("home")
 
         # Otherwise, continue with usual workflow
@@ -299,9 +308,9 @@ class RCPCHLoginView(TwoFactorLoginView):
 
     # Override successful login redirect to org summary page
     def done(self, form_list, **kwargs):
+        # this will not be called if debug=True
         response = super().done(form_list)
         response_url = getattr(response, "url")
-
         # successful login, get PDU and organisation details from user and store in session
         current_user_ods_code = self.request.user.organisation_employer
         if "sibling_organisations" not in self.request.session:

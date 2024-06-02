@@ -33,9 +33,8 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
         Scope to patient only in the same organisation as the user
         """
         # filter patients to only those in the same organisation as the user
-        user_pz_code = self.request.session.get("sibling_organisations", {}).get(
-            "pz_code", None
-        )
+        user_pz_code = self.request.session.get("sibling_organisations").get("pz_code")
+        logger.error(f"here is the pz code: {user_pz_code}")
         return (
             Patient.objects.filter(site__paediatric_diabetes_unit_pz_code=user_pz_code)
             .annotate(
@@ -72,9 +71,7 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
         return context
 
 
-class PatientCreateView(
-    LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateView
-):
+class PatientCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateView):
     """
     Handle creation of new patient in audit
     """
@@ -103,9 +100,7 @@ class PatientCreateView(
         return super().form_valid(form)
 
 
-class PatientUpdateView(
-    LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateView
-):
+class PatientUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateView):
     """
     Handle update of patient in audit
     """
@@ -133,9 +128,7 @@ class PatientUpdateView(
         return super().form_valid(form)
 
 
-class PatientDeleteView(
-    LoginAndOTPRequiredMixin, SuccessMessageMixin, DeleteView
-):
+class PatientDeleteView(LoginAndOTPRequiredMixin, SuccessMessageMixin, DeleteView):
     """
     Handle deletion of child from audit
     """
