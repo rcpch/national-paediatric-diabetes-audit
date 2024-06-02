@@ -100,13 +100,15 @@ class NPDAUserManager(BaseUserManager):
             if extra_fields.get("role") == 4:
                 extra_fields.setdefault("is_rcpch_staff", True)
                 extra_fields.setdefault("view_preference", 2)  # national scope
-                extra_fields.setdefault("organisation_employer", None)
+                extra_fields.setdefault(
+                    "organisation_employer", "RJZ01"
+                )  # Default to King's College Hospital
             else:
-                organisation_employer = None
-                # Organisation.objects.get(
-                #     ods_code="RJZ01"
-                # )  # clinicians added to KCH by default
-        extra_fields.setdefault("organisation_employer", organisation_employer)
+                extra_fields.setdefault("is_rcpch_staff", False)
+                extra_fields.setdefault("view_preference", 2)  # national scope
+                extra_fields.setdefault(
+                    "organisation_employer", "RJZ01"
+                )  # Default to King's College Hospital - superusers can change this later
 
         logged_in_user = self.create_user(email.lower(), password, **extra_fields)
 

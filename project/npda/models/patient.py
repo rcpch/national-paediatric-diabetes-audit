@@ -86,7 +86,7 @@ class Patient(models.Model):
     )
 
     is_valid = models.BooleanField(
-        verbose_name="Record is valid", blank=True, null=True, default=False
+        verbose_name="Record is valid", blank=False, null=False, default=False
     )
 
     errors = models.JSONField(
@@ -105,6 +105,14 @@ class Patient(models.Model):
             CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING,
             CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
         ]
+
+    # relationships
+    site = models.ForeignKey(
+        to="npda.Site",
+        on_delete=models.CASCADE,
+        related_name="patients",
+        verbose_name="Sites",
+    )
 
     def __str__(self) -> str:
         return f"ID: {self.pk}, {self.nhs_number}"
