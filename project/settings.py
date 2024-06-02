@@ -88,6 +88,8 @@ INSTALLED_APPS = [
     # "django.forms",
     "rest_framework",
     "drf_spectacular",
+    # django htmx
+    "django_htmx",
     # 2fa
     "django_otp",
     "django_otp.plugins.otp_static",
@@ -109,6 +111,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django_htmx.middleware.HtmxMiddleware",
     #  2 factor authentication
     "django_otp.middleware.OTPMiddleware",
 ]

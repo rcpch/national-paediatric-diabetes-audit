@@ -3,16 +3,19 @@ import logging
 
 # Django imports
 from django.contrib.messages.views import SuccessMessageMixin
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count, Case, When, Q
+from django.db.models import Count, Case, When
 from django.forms import BaseForm
 from django.http.response import HttpResponse
+from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
+from django.http import HttpResponse
 
 # Third party imports
 from two_factor.views.mixins import OTPRequiredMixin
+
+from project.npda.models.npda_user import NPDAUser
 
 # RCPCH imports
 from ..models import Patient
@@ -54,6 +57,7 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
             "pz_code", None
         )
         context["pz_code"] = user_pz_code
+        context["ods_code"] = self.request.user.organisation_employer
         total_valid_patients = (
             Patient.objects.all()
             .annotate(
@@ -69,6 +73,22 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
         )
         context["index_of_first_invalid_patient"] = total_valid_patients + 1
         return context
+
+    def post(self, request, *args: str, **kwargs) -> HttpResponse:
+        """
+        Override POST method to requery the database for the list of patients if  view preference changes
+        """
+        if request.htmx:
+            view_preference = request.POST.get("view_preference")
+            user = NPDAUser.objects.get(pk=request.user.pk)
+            user.view_preference = view_preference
+            user.save()
+            context = {
+                "view_preference": user.view_preference,
+                "ods_code": user.organisation_employer,
+                "pz_code": request.session.get("sibling_organisations").get("pz_code"),
+            }
+            return render(request, "partials/view_preference.html", context=context)
 
 
 class PatientCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateView):
