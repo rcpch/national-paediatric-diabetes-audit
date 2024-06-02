@@ -40,7 +40,7 @@ from .nhs_ods_requests import gp_details_for_ods_code
 logger = logging.getLogger(__name__)
 
 
-def csv_upload(csv_file=None):
+def csv_upload(csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
     """
     Processes standardised NPDA csv file and persists results in NPDA tables
 
@@ -781,12 +781,32 @@ def csv_upload(csv_file=None):
             site_errors,
         ) = validate_row(row)
 
+        try:
+            # save site
+            site, created = Site.objects.get_or_create(
+                date_leaving_service=(
+                    row["Date of leaving service"]
+                    if not pd.isnull(row["Date of leaving service"])
+                    else None
+                ),
+                reason_leaving_service=(
+                    row["Reason for leaving service"]
+                    if not pd.isnull(row["Reason for leaving service"])
+                    else None
+                ),
+                paediatric_diabetes_unit_pz_code=pdu_pz_code,
+                organisation_ods_code=organisation_ods_code,
+            )
+        except Exception as error:
+            raise Exception(f"Could not save site: {error}")
+
         nhs_number = row["NHS Number"].replace(" ", "")
 
         try:
             patient, created = Patient.objects.update_or_create(
                 nhs_number=nhs_number,
                 defaults={
+                    "site": site,
                     "date_of_birth": row["Date of Birth"],
                     "postcode": row["Postcode of usual address"],
                     "sex": row["Stated gender"],
@@ -803,33 +823,6 @@ def csv_upload(csv_file=None):
             )
         except Exception as error:
             raise Exception(f"Could not save patient: {error}")
-
-        # This is a temporizing step while we have no Organisations models available
-        """
-        try:
-            pdu = PaediatricDiabetesUnit.objects.get(pz_code=row["PDU Number"])
-        except Exception as error:
-            raise Exception(f"Could not find PDU: {error}")
-        """
-        pdu = None
-
-        try:
-            site, created = Site.objects.get_or_create(
-                date_leaving_service=(
-                    row["Date of leaving service"]
-                    if not pd.isnull(row["Date of leaving service"])
-                    else None
-                ),
-                reason_leaving_service=(
-                    row["Reason for leaving service"]
-                    if not pd.isnull(row["Reason for leaving service"])
-                    else None
-                ),
-                pdu=pdu,
-                patient=patient,
-            )
-        except Exception as error:
-            raise Exception(f"Could not save site: {error}")
 
         try:
             obj = {

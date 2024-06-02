@@ -1,3 +1,6 @@
+# python imports
+import logging
+
 # Django imports
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -14,15 +17,27 @@ from two_factor.views.mixins import OTPRequiredMixin
 # RCPCH imports
 from ..models import Patient
 from ..forms.patient_form import PatientForm
+from .mixins import LoginAndOTPRequiredMixin
+
+logger = logging.getLogger(__name__)
 
 
-class PatientListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
+class PatientListView(LoginAndOTPRequiredMixin, ListView):
     model = Patient
     template_name = "patients.html"
 
     def get_queryset(self):
+        """
+        Return all patients with the number of errors in their visits
+        Order by valid patients first, then by number of errors in visits, then by primary key
+        Scope to patient only in the same organisation as the user
+        """
+        # filter patients to only those in the same organisation as the user
+        user_pz_code = self.request.session.get("sibling_organisations", {}).get(
+            "pz_code", None
+        )
         return (
-            Patient.objects.all()
+            Patient.objects.filter(site__paediatric_diabetes_unit_pz_code=user_pz_code)
             .annotate(
                 visit_error_count=Count(Case(When(visit__is_valid=False, then=1)))
             )
@@ -30,7 +45,16 @@ class PatientListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
         )
 
     def get_context_data(self, **kwargs):
+        """
+        Add total number of valid and invalid patients to the context, as well as the index of the first invalid patient in the list
+        Include the number of errors in each patient's visits
+        Pass the context to the template
+        """
         context = super().get_context_data(**kwargs)
+        user_pz_code = self.request.session.get("sibling_organisations", {}).get(
+            "pz_code", None
+        )
+        context["pz_code"] = user_pz_code
         total_valid_patients = (
             Patient.objects.all()
             .annotate(
@@ -49,7 +73,7 @@ class PatientListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
 
 
 class PatientCreateView(
-    LoginRequiredMixin, OTPRequiredMixin, SuccessMessageMixin, CreateView
+    LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateView
 ):
     """
     Handle creation of new patient in audit
@@ -61,8 +85,12 @@ class PatientCreateView(
     success_url = reverse_lazy("patients")
 
     def get_context_data(self, **kwargs):
+        pz_code = self.request.session.get("sibling_organisations", {}).get(
+            "pz_code", ""
+        )
+        organisation_ods_code = self.request.user.organisation_employer
         context = super().get_context_data(**kwargs)
-        context["title"] = "Add New Child"
+        context["title"] = f"Add New Child to {organisation_ods_code} ({pz_code})"
         context["button_title"] = "Add New Child"
         context["form_method"] = "create"
         return context
@@ -76,7 +104,7 @@ class PatientCreateView(
 
 
 class PatientUpdateView(
-    LoginRequiredMixin, OTPRequiredMixin, SuccessMessageMixin, UpdateView
+    LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateView
 ):
     """
     Handle update of patient in audit
@@ -88,8 +116,11 @@ class PatientUpdateView(
     success_url = reverse_lazy("patients")
 
     def get_context_data(self, **kwargs):
+        patient = Patient.objects.get(pk=self.kwargs["pk"])
+        pz_code = patient.site.paediatric_diabetes_unit_pz_code
+        ods_code = patient.site.organisation_ods_code
         context = super().get_context_data(**kwargs)
-        context["title"] = "Edit Child Details"
+        context["title"] = f"Edit Child Details in {ods_code}({pz_code})"
         context["button_title"] = "Edit Child Details"
         context["form_method"] = "update"
         context["patient_id"] = self.kwargs["pk"]
@@ -103,7 +134,7 @@ class PatientUpdateView(
 
 
 class PatientDeleteView(
-    LoginRequiredMixin, OTPRequiredMixin, SuccessMessageMixin, DeleteView
+    LoginAndOTPRequiredMixin, SuccessMessageMixin, DeleteView
 ):
     """
     Handle deletion of child from audit

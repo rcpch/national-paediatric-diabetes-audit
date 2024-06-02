@@ -1,12 +1,21 @@
-from django import forms
-from django.contrib.auth.forms import SetPasswordForm, AuthenticationForm
-from ..models import NPDAUser
-from ...constants.styles.form_styles import *
+# python imports
 import logging
+
+# django imports
+from django.conf import settings
+from django.contrib.auth.forms import SetPasswordForm, AuthenticationForm
+from django import forms
 from django.utils import timezone
 from django.utils.translation import gettext as _
-from django.conf import settings
+
+# third party imports
 from captcha.fields import CaptchaField
+
+# RCPCH imports
+from ...constants.styles.form_styles import *
+from ..models import NPDAUser
+from project.npda.general_functions import get_all_nhs_organisations
+
 
 # Logging setup
 logger = logging.getLogger(__name__)
@@ -42,6 +51,34 @@ class NPDAUserForm(forms.ModelForm):
             "role": forms.Select(attrs={"class": SELECT}),
             "organisation_employer": forms.Select(attrs={"class": SELECT}),
         }
+
+    def __init__(self, *args, **kwargs) -> None:
+        # get the request object from the kwargs
+        self.request = kwargs.pop("request", None)
+
+        super().__init__(*args, **kwargs)
+        self.fields["title"].required = True
+        self.fields["first_name"].required = True
+        self.fields["surname"].required = True
+        self.fields["email"].required = True
+        self.fields["role"].required = True
+        # retrieve all organisations from the RCPCH NHS Organisations API
+        if (
+            self.request.user.is_superuser
+            or self.request.user.is_rcpch_audit_team_member
+            or self.request.user.is_rcpch_staff
+        ):
+            # this is an ordered list of tuples from the API
+            self.fields["organisation_employer"].choices = get_all_nhs_organisations()
+        else:
+            # create list of choices from the session data
+            sibling_organisations = [
+                (sibling["ods_code"], sibling["name"])
+                for sibling in self.request.session.get("sibling_organisations")[
+                    "organisations"
+                ]
+            ]
+            self.fields["organisation_employer"].choices = sibling_organisations
 
 
 class NPDAUpdatePasswordForm(SetPasswordForm):

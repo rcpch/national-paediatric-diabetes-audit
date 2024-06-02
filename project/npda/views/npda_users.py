@@ -1,19 +1,22 @@
+import json
 from datetime import datetime, timedelta
 import logging
+
 from django.http import HttpRequest, HttpResponse
 from django.utils import timezone
 from django.shortcuts import redirect
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
 from django.contrib.auth.views import PasswordResetView
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy, reverse
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib import messages
+from django.contrib.auth import login, authenticate
 from django.utils.html import strip_tags
 from django.conf import settings
 from two_factor.views import LoginView as TwoFactorLoginView
-from two_factor.views.mixins import OTPRequiredMixin
+
+
 from ..models import NPDAUser, VisitActivity
 from ..forms.npda_user_form import NPDAUserForm, CaptchaAuthenticationForm
 from ..general_functions import (
@@ -22,7 +25,13 @@ from ..general_functions import (
     construct_transfer_npda_site_email,
     construct_transfer_npda_site_outcome_email,
     group_for_role,
+    retrieve_pdu_from_organisation_ods_code,
+    retrieve_pdus,
 )
+from .mixins import LoginAndOTPRequiredMixin
+from django.utils.decorators import method_decorator
+from .decorators import login_and_otp_required
+from django.contrib.auth.decorators import login_required
 
 logger = logging.getLogger(__name__)
 
@@ -31,24 +40,62 @@ NPDAUser list and NPDAUser creation, deletion and update
 """
 
 
-class NPDAUserListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
+class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
     template_name = "npda_users.html"
 
     def get_queryset(self):
-        return NPDAUser.objects.all().order_by("surname")
+        # scope the queryset to filter only those users in organisations in the same PDU. This is to prevent users from seeing all users in the system
+        # The user's organisation, PDU and siblings are stored in the session when they log in
+
+        # create a list of sibling organisations' ODS codes who share the same PDU as the user
+        siblings_ods_codes = [
+            sibling["ods_code"]
+            for sibling in self.request.session["sibling_organisations"][
+                "organisations"
+            ]
+        ]
+
+        # get all users in the sibling organisations
+        npda_users = NPDAUser.objects.filter(
+            organisation_employer__in=siblings_ods_codes
+        ).order_by("surname")
+
+        # add sibling organisation details to each user (PZ code, organisation name, parent name etc.)
+        for user in npda_users:
+            matching_sibling = next(
+                (
+                    sibling
+                    for sibling in self.request.session["sibling_organisations"][
+                        "organisations"
+                    ]
+                    if sibling["ods_code"] == user.organisation_employer
+                ),
+                None,
+            )
+            if matching_sibling is not None:
+                for key, value in matching_sibling.items():
+                    setattr(user, key, value)
+        return npda_users
+
+    def get_context_data(self, **kwargs):
+        context = super(NPDAUserListView, self).get_context_data(**kwargs)
+        context["title"] = "NPDA Users"
+        return context
 
 
-class NPDAUserCreateView(
-    LoginRequiredMixin, OTPRequiredMixin, SuccessMessageMixin, CreateView
-):
+class NPDAUserCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateView):
     """
     Handle creation of new patient in audit
     """
 
     model = NPDAUser
     form_class = NPDAUserForm
-    # success_message = "New NPDA user created was created successfully"
-    # success_url=reverse_lazy('npda_users')
+
+    def get_form_kwargs(self):
+        # add the request object to the form kwargs
+        kwargs = super().get_form_kwargs()
+        kwargs["request"] = self.request
+        return kwargs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -114,9 +161,7 @@ class NPDAUserCreateView(
         )
 
 
-class NPDAUserUpdateView(
-    LoginRequiredMixin, OTPRequiredMixin, SuccessMessageMixin, UpdateView
-):
+class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateView):
     """
     Handle update of patient in audit
     """
@@ -125,6 +170,12 @@ class NPDAUserUpdateView(
     form_class = NPDAUserForm
     success_message = "NPDA User record updated successfully"
     success_url = reverse_lazy("npda_users")
+
+    def get_form_kwargs(self):
+        # add the request object to the form kwargs
+        kwargs = super().get_form_kwargs()
+        kwargs["request"] = self.request
+        return kwargs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -165,9 +216,7 @@ class NPDAUserUpdateView(
             return super().post(request, *args, **kwargs)
 
 
-class NPDAUserDeleteView(
-    LoginRequiredMixin, OTPRequiredMixin, SuccessMessageMixin, DeleteView
-):
+class NPDAUserDeleteView(LoginAndOTPRequiredMixin, SuccessMessageMixin, DeleteView):
     """
     Handle deletion of child from audit
     """
@@ -177,7 +226,7 @@ class NPDAUserDeleteView(
     success_url = reverse_lazy("npda_users")
 
 
-class NPDAUserLogsListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
+class NPDAUserLogsListView(LoginAndOTPRequiredMixin, ListView):
     template_name = "npda_user_logs.html"
     model = VisitActivity
 
@@ -228,10 +277,41 @@ class RCPCHLoginView(TwoFactorLoginView):
         # Override original Django Auth Form with Captcha field inserted
         self.form_list["auth"] = CaptchaAuthenticationForm
 
+    def post(self, *args, **kwargs):
+
+        # In local development, override the token workflow, just sign in
+        # the user without 2FA token
+        if settings.DEBUG:
+            request = self.request
+
+            user = authenticate(
+                request,
+                username=request.POST.get("auth-username"),
+                password=request.POST.get("auth-password"),
+            )
+            if user is not None:
+                login(request, user)
+                return redirect("home")
+
+        # Otherwise, continue with usual workflow
+        response = super().post(*args, **kwargs)
+        return self.delete_cookies_from_response(response)
+
     # Override successful login redirect to org summary page
     def done(self, form_list, **kwargs):
         response = super().done(form_list)
         response_url = getattr(response, "url")
+
+        # successful login, get PDU and organisation details from user and store in session
+        current_user_ods_code = self.request.user.organisation_employer
+        if "sibling_organisations" not in self.request.session:
+            sibling_organisations = retrieve_pdu_from_organisation_ods_code(
+                current_user_ods_code
+            )
+            # store the results in session
+            self.request.session["sibling_organisations"] = sibling_organisations
+
+        # redirect to home page
         login_redirect_url = reverse(settings.LOGIN_REDIRECT_URL)
 
         # Successful 2FA and login
