@@ -21,6 +21,9 @@ class PatientListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
     template_name = "patients.html"
 
     def get_queryset(self):
+        """
+        Return all patients with the number of errors in their visits
+        """
         return (
             Patient.objects.all()
             .annotate(
@@ -30,6 +33,11 @@ class PatientListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
         )
 
     def get_context_data(self, **kwargs):
+        """
+        Add total number of valid and invalid patients to the context, as well as the index of the first invalid patient in the list
+        Include the number of errors in each patient's visits
+        Pass the context to the template
+        """
         context = super().get_context_data(**kwargs)
         total_valid_patients = (
             Patient.objects.all()

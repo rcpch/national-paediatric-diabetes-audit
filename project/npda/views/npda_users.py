@@ -86,8 +86,12 @@ class NPDAUserCreateView(
 
     model = NPDAUser
     form_class = NPDAUserForm
-    # success_message = "New NPDA user created was created successfully"
-    # success_url=reverse_lazy('npda_users')
+
+    def get_form_kwargs(self):
+        # add the request object to the form kwargs
+        kwargs = super().get_form_kwargs()
+        kwargs["request"] = self.request
+        return kwargs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -164,6 +168,12 @@ class NPDAUserUpdateView(
     form_class = NPDAUserForm
     success_message = "NPDA User record updated successfully"
     success_url = reverse_lazy("npda_users")
+
+    def get_form_kwargs(self):
+        # add the request object to the form kwargs
+        kwargs = super().get_form_kwargs()
+        kwargs["request"] = self.request
+        return kwargs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

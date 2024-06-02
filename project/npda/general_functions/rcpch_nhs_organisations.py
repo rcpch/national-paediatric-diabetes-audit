@@ -36,7 +36,8 @@ def get_nhs_organisation(ods_code: str):
 
 def get_all_nhs_organisations():
     """
-    This function returns all NHS organisations from the RCPCH dataset.
+    This function returns all NHS organisations from the RCPCH dataset and returns them to the caller as a list of tuples.
+    These are typically used in Django forms as choices.
     """
 
     url = f"https://rcpch-nhs-organisations.azurewebsites.net/organisations/limited"

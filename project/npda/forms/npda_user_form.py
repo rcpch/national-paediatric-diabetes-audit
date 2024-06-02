@@ -53,6 +53,9 @@ class NPDAUserForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs) -> None:
+        # get the request object from the kwargs
+        self.request = kwargs.pop("request", None)
+
         super().__init__(*args, **kwargs)
         self.fields["title"].required = True
         self.fields["first_name"].required = True
@@ -60,7 +63,22 @@ class NPDAUserForm(forms.ModelForm):
         self.fields["email"].required = True
         self.fields["role"].required = True
         # retrieve all organisations from the RCPCH NHS Organisations API
-        self.fields["organisation_employer"].choices = get_all_nhs_organisations()
+        if (
+            self.request.user.is_superuser
+            or self.request.user.is_rcpch_audit_team_member
+            or self.request.user.is_rcpch_staff
+        ):
+            # this is an ordered list of tuples from the API
+            self.fields["organisation_employer"].choices = get_all_nhs_organisations()
+        else:
+            # create list of choices from the session data
+            sibling_organisations = [
+                (sibling["ods_code"], sibling["name"])
+                for sibling in self.request.session.get("sibling_organisations")[
+                    "organisations"
+                ]
+            ]
+            self.fields["organisation_employer"].choices = sibling_organisations
 
 
 class NPDAUpdatePasswordForm(SetPasswordForm):
