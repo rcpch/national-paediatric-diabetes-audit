@@ -26,9 +26,12 @@ class PatientListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
         Order by valid patients first, then by number of errors in visits, then by primary key
         Scope to patient only in the same organisation as the user
         """
-        # sibling_organisations =
+        # filter patients to only those in the same organisation as the user
+        user_pz_code = self.request.session.get("sibling_organisations", {}).get(
+            "pz_code", None
+        )
         return (
-            Patient.objects.all()
+            Patient.objects.filter(site__paediatric_diabetes_unit_pz_code=user_pz_code)
             .annotate(
                 visit_error_count=Count(Case(When(visit__is_valid=False, then=1)))
             )
@@ -42,6 +45,10 @@ class PatientListView(LoginRequiredMixin, OTPRequiredMixin, ListView):
         Pass the context to the template
         """
         context = super().get_context_data(**kwargs)
+        user_pz_code = self.request.session.get("sibling_organisations", {}).get(
+            "pz_code", None
+        )
+        context["pz_code"] = user_pz_code
         total_valid_patients = (
             Patient.objects.all()
             .annotate(

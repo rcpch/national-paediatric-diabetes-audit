@@ -62,4 +62,4 @@ class Site(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"{self.patient} at {self.pdu}"
+        return f"{self.patient} at {self.organisation_ods_code}({self.paediatric_diabetes_unit_pz_code})"
