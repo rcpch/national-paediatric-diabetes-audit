@@ -106,6 +106,14 @@ class Patient(models.Model):
             CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
         ]
 
+    # relationships
+    site = models.ForeignKey(
+        to="npda.Site",
+        on_delete=models.CASCADE,
+        related_name="patients",
+        verbose_name="Sites",
+    )
+
     def __str__(self) -> str:
         return f"ID: {self.pk}, {self.nhs_number}"
 

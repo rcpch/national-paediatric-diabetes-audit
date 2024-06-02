@@ -49,8 +49,6 @@ class Site(models.Model):
         blank=True,
     )
 
-    patient = ForeignKey(to="npda.Patient", on_delete=models.CASCADE)
-
     class Meta:
         verbose_name = "Site"
         verbose_name_plural = "Sites"

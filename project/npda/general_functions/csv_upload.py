@@ -781,12 +781,32 @@ def csv_upload(csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
             site_errors,
         ) = validate_row(row)
 
+        try:
+            # save site
+            site, created = Site.objects.get_or_create(
+                date_leaving_service=(
+                    row["Date of leaving service"]
+                    if not pd.isnull(row["Date of leaving service"])
+                    else None
+                ),
+                reason_leaving_service=(
+                    row["Reason for leaving service"]
+                    if not pd.isnull(row["Reason for leaving service"])
+                    else None
+                ),
+                paediatric_diabetes_unit_pz_code=pdu_pz_code,
+                organisation_ods_code=organisation_ods_code,
+            )
+        except Exception as error:
+            raise Exception(f"Could not save site: {error}")
+
         nhs_number = row["NHS Number"].replace(" ", "")
 
         try:
             patient, created = Patient.objects.update_or_create(
                 nhs_number=nhs_number,
                 defaults={
+                    "site": site,
                     "date_of_birth": row["Date of Birth"],
                     "postcode": row["Postcode of usual address"],
                     "sex": row["Stated gender"],
@@ -803,26 +823,6 @@ def csv_upload(csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
             )
         except Exception as error:
             raise Exception(f"Could not save patient: {error}")
-
-        try:
-            # save site
-            Site.objects.get_or_create(
-                date_leaving_service=(
-                    row["Date of leaving service"]
-                    if not pd.isnull(row["Date of leaving service"])
-                    else None
-                ),
-                reason_leaving_service=(
-                    row["Reason for leaving service"]
-                    if not pd.isnull(row["Reason for leaving service"])
-                    else None
-                ),
-                paediatric_diabetes_unit_pz_code=pdu_pz_code,
-                organisation_ods_code=organisation_ods_code,
-                patient=patient,
-            )
-        except Exception as error:
-            raise Exception(f"Could not save site: {error}")
 
         try:
             obj = {
