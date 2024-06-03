@@ -84,6 +84,8 @@ class VisitUpdateView(LoginAndOTPRequiredMixin, UpdateView):
         context["form_method"] = "update"
         visit_instance = Visit.objects.get(pk=self.kwargs["pk"])
         visit_categories = get_visit_categories(visit_instance)
+        context["routine_measurements_categories"] = ["Measurements", "HBA1c", "Treatment", "CGM", "BP"]
+        context["annual_review_categories"] = ["Foot Care", "DECS", "ACR", "Cholesterol", "Thyroid", "Coeliac", "Psychology", "Smoking", "Dietician", "Sick Day Rules", "Immunisation (flu)"]
         context["visit_categories"] = visit_categories
         categories_with_errors = []
         categories_without_errors = []
@@ -94,6 +96,7 @@ class VisitUpdateView(LoginAndOTPRequiredMixin, UpdateView):
                 categories_with_errors.append(category["category"])
         context["categories_with_errors"] = categories_with_errors
         context["categories_without_errors"] = categories_without_errors
+        
         return context
 
     def get_success_url(self):
