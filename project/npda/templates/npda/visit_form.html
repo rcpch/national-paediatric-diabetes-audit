@@ -29,7 +29,7 @@
       {% endfor %}
 
       <div role="tablist" class="tabs tabs-bordered">
-        <input type="radio" name="my_tabs_1" role="tab" class="tab
+        <input type="radio" name="my_tabs_1" role="tab" class="tab font-bold
           {% for category in routine_measurements_categories %} 
           {% if category in categories_with_errors %} bg-rcpch_red 
           {% else %} bg-rcpch_pink {% endif %} {% endfor %}" 
@@ -75,7 +75,7 @@
         {% endfor %}
         </div>
         
-        <input type="radio" name="my_tabs_1" role="tab" class="tab rounded-none 
+        <input type="radio" name="my_tabs_1" role="tab" class="tab rounded-none font-bold
           {% for category in annual_review_categories %} 
           {% if category in categories_with_errors %} bg-rcpch_red 
           {% elif category in categories_without_errors %} bg-rcpch_pink {% endif %} {% endfor %}" 
@@ -127,7 +127,7 @@
           {% endfor %}
         </div>
 
-        <input type="radio" name="my_tabs_1" role="tab" aria-label="Inpatient&nbsp;Entry" class="tab w
+        <input type="radio" name="my_tabs_1" role="tab" aria-label="Inpatient&nbsp;Entry" class="tab w font-bold
           {% if "Hospital Admission" in categories_with_errors %}
           bg-rcpch_red
           {% elif "Hospital Admission" in categories_without_errors %}
