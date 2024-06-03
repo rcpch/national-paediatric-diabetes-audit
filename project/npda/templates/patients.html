@@ -9,8 +9,8 @@
             <h1 class="text-3xl font-montserrat font-semibold text-rcpch_dark_blue">Patients under the care of {{pz_code}} {{request.user.view_preference}}</h1>
             {% if patient_list %}
             {% url 'patients' as hx_post %}
-            <div id="view_preference">
-              {% include 'partials/view_preference.html'  with view_preference=request.user.view_preference hx_post=hx_post %}
+            <div id="patient_view_preference">
+              {% include 'partials/view_preference.html'  with view_preference=request.user.view_preference hx_post=hx_post organisation_choices=organisation_choices ods_code_select_name="patient_ods_code_select_name" pz_code_select_name="patient_pz_code_select_name" ods_code=ods_code pdu_choices=pdu_choices chosen_pdu=chosen_pdu hx_target="#patient_view_preference" %}
             </div>
               <table class="table-auto w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
                   <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">

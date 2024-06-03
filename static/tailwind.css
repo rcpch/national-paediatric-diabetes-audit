@@ -15,3 +15,9 @@
     border-color: white;
     border-width: 5px;
   }
+
+  input[type="radio"]:checked {
+    background-color: #e00087 !important;
+    color: white !important;
+    border-color: #e00087 !important;
+}

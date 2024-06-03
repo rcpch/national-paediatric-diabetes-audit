@@ -16,6 +16,11 @@ from django.utils.html import strip_tags
 from django.conf import settings
 from two_factor.views import LoginView as TwoFactorLoginView
 
+from project.npda.general_functions.rcpch_nhs_organisations import (
+    get_all_nhs_organisations,
+)
+from project.npda.general_functions.retrieve_pdu import retrieve_pdu_list
+
 
 from ..models import NPDAUser, VisitActivity
 from ..forms.npda_user_form import NPDAUserForm, CaptchaAuthenticationForm
@@ -300,6 +305,16 @@ class RCPCHLoginView(TwoFactorLoginView):
                     self.request.session["sibling_organisations"] = (
                         sibling_organisations
                     )
+
+                if "organisation_choices" not in self.request.session:
+                    # get all NHS organisations in user's PDU as list of tuples (ODS code, name)
+                    self.request.session["organisation_choices"] = [
+                        (choice["ods_code"], choice["name"])
+                        for choice in sibling_organisations["organisations"]
+                    ]
+
+                if "pdu_choices" not in self.request.session:
+                    self.request.session["pdu_choices"] = retrieve_pdu_list()
                 return redirect("home")
 
         # Otherwise, continue with usual workflow

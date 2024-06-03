@@ -15,6 +15,14 @@ from django.http import HttpResponse
 # Third party imports
 from two_factor.views.mixins import OTPRequiredMixin
 
+from project.npda.general_functions.rcpch_nhs_organisations import (
+    get_all_nhs_organisations,
+)
+from project.npda.general_functions.retrieve_pdu import (
+    retrieve_pdu,
+    retrieve_pdu_from_organisation_ods_code,
+    retrieve_pdu_list,
+)
 from project.npda.models.npda_user import NPDAUser
 
 # RCPCH imports
@@ -37,7 +45,6 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
         """
         # filter patients to only those in the same organisation as the user
         user_pz_code = self.request.session.get("sibling_organisations").get("pz_code")
-        logger.error(f"here is the pz code: {user_pz_code}")
         return (
             Patient.objects.filter(site__paediatric_diabetes_unit_pz_code=user_pz_code)
             .annotate(
@@ -56,8 +63,6 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
         user_pz_code = self.request.session.get("sibling_organisations", {}).get(
             "pz_code", None
         )
-        context["pz_code"] = user_pz_code
-        context["ods_code"] = self.request.user.organisation_employer
         total_valid_patients = (
             Patient.objects.all()
             .annotate(
@@ -67,11 +72,20 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
             .filter(is_valid=True, visit_error_count__lt=1)
             .count()
         )
+        context["pz_code"] = user_pz_code
+        context["ods_code"] = self.request.user.organisation_employer
         context["total_valid_patients"] = total_valid_patients
         context["total_invalid_patients"] = (
             Patient.objects.all().count() - total_valid_patients
         )
         context["index_of_first_invalid_patient"] = total_valid_patients + 1
+        context["organisation_choices"] = self.request.session.get(
+            "organisation_choices"
+        )
+        context["pdu_choices"] = self.request.session.get("pdu_choices")
+        context["chosen_pdu"] = self.request.session.get("sibling_organisations").get(
+            "pz_code"
+        )
         return context
 
     def post(self, request, *args: str, **kwargs) -> HttpResponse:
@@ -79,15 +93,70 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
         Override POST method to requery the database for the list of patients if  view preference changes
         """
         if request.htmx:
-            view_preference = request.POST.get("view_preference")
-            user = NPDAUser.objects.get(pk=request.user.pk)
-            user.view_preference = view_preference
-            user.save()
+            view_preference = request.POST.get("view_preference", None)
+            ods_code = request.POST.get("patient_ods_code_select_name", None)
+            pz_code = request.POST.get("patient_pz_code_select_name", None)
+
+            print(f"selected ods code: {ods_code}")
+            if ods_code:
+                # call back from the organisation select
+                # retrieve the sibling organisations and store in session
+                sibling_organisations = retrieve_pdu_from_organisation_ods_code(
+                    ods_code=ods_code
+                )
+                # store the results in session
+                self.request.session["sibling_organisations"] = sibling_organisations
+            else:
+                ods_code = request.session.get("sibling_organisations")[
+                    "organisations"
+                ][0][
+                    "ods_code"
+                ]  # set the ods code to the first in the list
+                print(f"first in the list ods code: {ods_code}")
+
+            if pz_code:
+                # call back from the PDU select
+                # retrieve the sibling organisations and store in session
+                sibling_organisations = retrieve_pdu(pz_number=pz_code)
+                # store the results in session
+                self.request.session["sibling_organisations"] = sibling_organisations
+
+                self.request.session["organisation_choices"] = [
+                    (choice["ods_code"], choice["name"])
+                    for choice in sibling_organisations["organisations"]
+                ]
+                ods_code = request.session.get("sibling_organisations")[
+                    "organisations"
+                ][0][
+                    "ods_code"
+                ]  # set the ods code to the first in the new list
+            else:
+                pz_code = request.session.get("sibling_organisations").get("pz_code")
+
+            if view_preference:
+                user = NPDAUser.objects.get(pk=request.user.pk)
+                user.view_preference = view_preference
+                user.save()
+            else:
+                user = NPDAUser.objects.get(pk=request.user.pk)
+
             context = {
-                "view_preference": user.view_preference,
-                "ods_code": user.organisation_employer,
+                "view_preference": int(user.view_preference),
+                "ods_code": ods_code,
                 "pz_code": request.session.get("sibling_organisations").get("pz_code"),
+                "hx_post": reverse_lazy("patients"),
+                "organisation_choices": self.request.session.get(
+                    "organisation_choices"
+                ),
+                "pdu_choices": self.request.session.get("pdu_choices"),
+                "chosen_pdu": request.session.get("sibling_organisations").get(
+                    "pz_code"
+                ),
+                "ods_code_select_name": "patient_ods_code_select_name",
+                "pz_code_select_name": "patient_pz_code_select_name",
+                "hx_target": "#patient_view_preference",
             }
+
             return render(request, "partials/view_preference.html", context=context)
 
 
