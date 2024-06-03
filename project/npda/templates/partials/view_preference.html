@@ -7,7 +7,7 @@
     </div>
     <div class="w-full max-w-custom">
         {% if view_preference == 0 %}
-            <select name="{{ ods_code_select_name }}" class="select rcpch-select rounded-none w-full" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+            <select name="{{ ods_code_select_name }}" class="select rcpch-select rounded-none w-full" hx-post="{{hx_post}}" hx-trigger="change" hx-target="{{hx_target}}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
                 {% for choice in organisation_choices %}
                 <option value="{{choice.0}}" {% if ods_code == choice.0 %} selected="{{ ods_code }}" {% endif %}>{{choice.1}}</option>
                 {% endfor %}

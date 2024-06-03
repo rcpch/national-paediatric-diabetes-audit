@@ -97,7 +97,6 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
             ods_code = request.POST.get("patient_ods_code_select_name", None)
             pz_code = request.POST.get("patient_pz_code_select_name", None)
 
-            print(f"selected ods code: {ods_code}")
             if ods_code:
                 # call back from the organisation select
                 # retrieve the sibling organisations and store in session
@@ -112,7 +111,6 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
                 ][0][
                     "ods_code"
                 ]  # set the ods code to the first in the list
-                print(f"first in the list ods code: {ods_code}")
 
             if pz_code:
                 # call back from the PDU select
