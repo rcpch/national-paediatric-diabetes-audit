@@ -13,7 +13,7 @@ from django.views.generic import ListView
 from django.http import HttpResponse
 
 # Third party imports
-from two_factor.views.mixins import OTPRequiredMixin
+from django_htmx.http import trigger_client_event
 
 from project.npda.general_functions.rcpch_nhs_organisations import (
     get_all_nhs_organisations,
@@ -88,6 +88,21 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
         )
         return context
 
+    def get(self, request, *args: str, **kwargs) -> HttpResponse:
+        response = super().get(request, *args, **kwargs)
+        if request.htmx:
+            # filter the patients to only those in the same organisation as the user
+            # trigger a GET request from the patient table to update the list of patients
+            # by calling the get_queryset method again with the new ods_code/pz_code stored in session
+            queryset = self.get_queryset()
+            context = self.get_context_data()
+            context["patient_list"] = queryset
+
+            return render(
+                request, "partials/patient_table.html", context=self.get_context_data()
+            )
+        return response
+
     def post(self, request, *args: str, **kwargs) -> HttpResponse:
         """
         Override POST method to requery the database for the list of patients if  view preference changes
@@ -105,12 +120,14 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
                 )
                 # store the results in session
                 self.request.session["sibling_organisations"] = sibling_organisations
+                self.request.session["ods_code"] = ods_code
             else:
                 ods_code = request.session.get("sibling_organisations")[
                     "organisations"
                 ][0][
                     "ods_code"
                 ]  # set the ods code to the first in the list
+                self.request.session["ods_code"] = ods_code
 
             if pz_code:
                 # call back from the PDU select
@@ -128,6 +145,7 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
                 ][0][
                     "ods_code"
                 ]  # set the ods code to the first in the new list
+                self.request.session["ods_code"] = ods_code
             else:
                 pz_code = request.session.get("sibling_organisations").get("pz_code")
 
@@ -155,7 +173,12 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
                 "hx_target": "#patient_view_preference",
             }
 
-            return render(request, "partials/view_preference.html", context=context)
+            response = render(request, "partials/view_preference.html", context=context)
+
+            trigger_client_event(
+                response=response, name="patients", params={}
+            )  # reloads the form to show the active steps
+            return response
 
 
 class PatientCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateView):

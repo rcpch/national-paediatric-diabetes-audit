@@ -326,8 +326,11 @@ class RCPCHLoginView(TwoFactorLoginView):
         # this will not be called if debug=True
         response = super().done(form_list)
         response_url = getattr(response, "url")
-        # successful login, get PDU and organisation details from user and store in session
+        # successful login, get PDU, ODS and organisation details from user and store in session
         current_user_ods_code = self.request.user.organisation_employer
+        if "ods_code" not in self.request.session:
+            self.request.session["ods_code"] = current_user_ods_code
+
         if "sibling_organisations" not in self.request.session:
             sibling_organisations = retrieve_pdu_from_organisation_ods_code(
                 current_user_ods_code
