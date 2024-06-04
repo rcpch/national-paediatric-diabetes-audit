@@ -17,13 +17,13 @@ class LoginAndOTPRequiredMixin(AccessMixin):
     """
 
     def dispatch(self, request, *args, **kwargs):
-        
+
         # Check if the user is authenticated
         if not request.user.is_authenticated:
             return self.handle_no_permission()
 
         # Check if the user is superuser and bypass 2FA in debug mode
-        if settings.DEBUG and request.user.is_superuser:
+        if settings.DEBUG and request.user.is_authenticated:
             logger.warning(
                 "User %s has bypassed 2FA for %s as settings.DEBUG is %s and user is superuser",
                 request.user,
