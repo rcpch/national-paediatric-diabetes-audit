@@ -7,17 +7,13 @@
       <div class="inline-block min-w-full py-2 sm:px-6 lg:px-8">
           <div class="relative overflow-x-auto">
             <h1 class="text-3xl font-montserrat font-semibold text-rcpch_dark_blue">Patients under the care of {{pz_code}}</h1>
-            {% if patient_list %}
             {% url 'patients' as hx_post %}
-            <div id="patient_view_preference">
-                  {% include 'partials/view_preference.html'  with view_preference=request.user.view_preference hx_post=hx_post organisation_choices=organisation_choices ods_code_select_name="patient_ods_code_select_name" pz_code_select_name="patient_pz_code_select_name" ods_code=ods_code pdu_choices=pdu_choices chosen_pdu=chosen_pdu hx_target="#patient_view_preference" %}
-                </div>
-                <div id="patient_table">
-                  {% include 'partials/patient_table.html' with patient_list=patient_list index_of_first_invalid_patient=index_of_first_invalid_patient total_invalid_patients=total_invalid_patients %}
-                </div>
-              {% else %}
-                <h5 class="mb-5 font-montserrat font-semibold">No patients yet!</h5>
-              {% endif %}
+            <div id="patient_view_preference" class="mb-5">
+              {% include 'partials/view_preference.html'  with view_preference=request.user.view_preference hx_post=hx_post organisation_choices=organisation_choices ods_code_select_name="patient_ods_code_select_name" pz_code_select_name="patient_pz_code_select_name" ods_code=ods_code pdu_choices=pdu_choices chosen_pdu=chosen_pdu hx_target="#patient_view_preference" %}
+            </div>
+            <div id="patient_table">
+              {% include 'partials/patient_table.html' with patient_list=patient_list index_of_first_invalid_patient=index_of_first_invalid_patient total_invalid_patients=total_invalid_patients %}
+            </div>
           </div>
           <a href="{% url 'patient-add' %}" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 mt-40 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Add Child</a>
         </div>

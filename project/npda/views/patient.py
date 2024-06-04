@@ -43,15 +43,38 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
         Order by valid patients first, then by number of errors in visits, then by primary key
         Scope to patient only in the same organisation as the user
         """
-        # filter patients to only those in the same organisation as the user
-        user_pz_code = self.request.session.get("sibling_organisations").get("pz_code")
-        return (
-            Patient.objects.filter(site__paediatric_diabetes_unit_pz_code=user_pz_code)
-            .annotate(
-                visit_error_count=Count(Case(When(visit__is_valid=False, then=1)))
+        pz_code = self.request.session.get("sibling_organisations").get("pz_code")
+        ods_code = self.request.session.get("ods_code")
+        # filter patients to the view preference of the user
+        if self.request.user.view_preference == 0:
+            # organisation view
+            return (
+                Patient.objects.filter(site__organisation_ods_code=ods_code)
+                .annotate(
+                    visit_error_count=Count(Case(When(visit__is_valid=False, then=1)))
+                )
+                .order_by("is_valid", "visit_error_count", "pk")
             )
-            .order_by("is_valid", "visit_error_count", "pk")
-        )
+        elif self.request.user.view_preference == 1:
+            # PDU view
+            return (
+                Patient.objects.filter(site__paediatric_diabetes_unit_pz_code=pz_code)
+                .annotate(
+                    visit_error_count=Count(Case(When(visit__is_valid=False, then=1)))
+                )
+                .order_by("is_valid", "visit_error_count", "pk")
+            )
+        elif self.request.user.view_preference == 2:
+            # National view
+            return (
+                Patient.objects.all()
+                .annotate(
+                    visit_error_count=Count(Case(When(visit__is_valid=False, then=1)))
+                )
+                .order_by("is_valid", "visit_error_count", "pk")
+            )
+        else:
+            raise ValueError("Invalid view preference")
 
     def get_context_data(self, **kwargs):
         """
