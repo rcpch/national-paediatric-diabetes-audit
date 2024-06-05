@@ -39,7 +39,7 @@
           {% endif %}" 
           aria-label="Routine&nbsp;Measurements" checked
         />
-        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-none">
+        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-none mt-4">
         {% for field_category in form.categories %}
           {% with field_category|colour_for_category as background_colour %}
           {% if field_category == "Measurements" or field_category == "HBA1c" or field_category == "Treatment" or field_category == "CGM" or field_category == "BP"%}
