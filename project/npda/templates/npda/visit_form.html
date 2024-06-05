@@ -100,12 +100,28 @@
           {% for field_category in form.categories %}
             {% with field_category|colour_for_category as background_colour %}
             {% if field_category == "Foot Care" or field_category == "DECS" or field_category == "ACR" or field_category == "Cholesterol" or field_category == "Thyroid" or field_category == "Coeliac" or field_category == "Psychology" or field_category == "Smoking" or field_category == "Dietician" or field_category == "Sick Day Rules" or field_category == "Immunisation (flu)" %}
-              <div class="collapse collapse-arrow my-2 bg-base-200 rounded-none {% if field_category in categories_with_errors %} bg-rcpch_red {% elif field_category in categories_without_errors %} bg-rcpch_pink {% else %} bg-rcpch_dark_blue {% endif %}">
+              <div class="collapse collapse-arrow my-2 bg-base-200 rounded-none 
+                {% if field_category in categories_with_errors %} 
+                  bg-rcpch_red 
+                {% elif field_category in categories_without_errors %} 
+                  bg-rcpch_pink 
+                {% else %} 
+                  bg-rcpch_dark_blue 
+                {% endif %}
+              ">
                 <input type="radio" name="my-accordion-3" checked="checked" /> 
                 <div class="collapse-title text-xl font-medium text-white">
                   <strong>{{field_category}}</strong>
                 </div>
-                <div class="collapse-content flex flex-col mb-6 text-lg {% if field_category in categories_with_errors %} bg-rcpch_red {% elif field_category in categories_without_errors %} bg-rcpch_pink {% else %} bg-rcpch_dark_blue {% endif %}">
+                <div class="collapse-content flex flex-col mb-6 text-lg 
+                  {% if field_category in categories_with_errors %} 
+                    bg-rcpch_red 
+                  {% elif field_category in categories_without_errors %} 
+                    bg-rcpch_pink 
+                  {% else %} 
+                    bg-rcpch_dark_blue 
+                  {% endif %}
+                ">
                   {% for field in form %}
                     {% if field.field.category == field_category %}
                     <div class="flex flex-row my-2 mx-2">
@@ -151,50 +167,50 @@
         "/>
         <div role="tabpanel" class="
           tab-content bg-base-100 border-base-300 rounded-none p-6">
-        {% for field_category in form.categories %}
-          {% with field_category|colour_for_category as background_colour %}
-            {% if field_category == "Hospital Admission" %}
-            <div class="flex flex-col mb-6 
-              {% if background_colour %} 
-                bg-{{background_colour}} 
-              {% endif %}
-              {% if "Hospital Admission" in categories_with_errors %}
-                outline outline-8 outline-rcpch_red
-              {% endif %}"
-            >
-            {% for field in form %}
-                {% if field.field.category == field_category %}
-                <div class="flex flex-row my-2 mx-2">
-                  <div class="flex items-center justify-center md:w-1/3">
-                    <label for="{{ field.id_for_label }}" class="block text-gray-700 font-bold md:text-center mb-1 md:mb-0 pr-4"><small>{{ field.label }}</small></label>
-                  </div>
-                  <div class="flex space-between md:w-2/3">
-                  {% if field.field.widget|is_select %}
-                      <select id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="select rcpch-select rounded-none">
-                        {% for choice in field.field.choices %}
-                        <option value="{{choice.0}}" {% if field.value == choice.0 %} selected="{{ field.value }}" {% endif %}>{{choice.1}}</option>
-                        {% endfor %}
-                      </select>
-                  {% elif field.field.widget|is_dateinput %}
-                      <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text" {% if field.value %} value={{ field.value|date:"Y-m-d" }} {% endif %}>
-                      <button type='button' _="on click set #{{ field.id_for_label}}'s value to '{% today_date %}'" class="btn rcpch-btn bg-rcpch_light_blue border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Today</button>
-                      <button type='button' _="on click set #{{ field.id_for_label}}'s value to #id_visit_date.value" class="btn rcpch-btn bg-rcpch_light_blue border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Fill with Visit Date</button>
-                  {% else %}
-                      <input type="text" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text rounded-none" {% if field.field.required %} placeholder="Required" {% endif %} {% if field.value %} value={{ field.value }} {% elif field.value == 0 %} value="0.0" {% endif %}>
+          {% for field_category in form.categories %}
+            {% with field_category|colour_for_category as background_colour %}
+              {% if field_category == "Hospital Admission" %}
+                <div class="flex flex-col mb-6 
+                  {% if background_colour %} 
+                    bg-{{background_colour}} 
                   {% endif %}
-                  {% for error in field.errors %}
-                      <p>
-                        <strong class="text-gray-700">{{ error|escape }}</strong>
-                      </p>  
-                  {% endfor %}
-                  </div>
+                  {% if "Hospital Admission" in categories_with_errors %}
+                    outline outline-8 outline-rcpch_red
+                  {% endif %}"
+                >
+                {% for field in form %}
+                    {% if field.field.category == field_category %}
+                    <div class="flex flex-row my-2 mx-2">
+                      <div class="flex items-center justify-center md:w-1/3">
+                        <label for="{{ field.id_for_label }}" class="block text-gray-700 font-bold md:text-center mb-1 md:mb-0 pr-4"><small>{{ field.label }}</small></label>
+                      </div>
+                      <div class="flex space-between md:w-2/3">
+                      {% if field.field.widget|is_select %}
+                          <select id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="select rcpch-select rounded-none">
+                            {% for choice in field.field.choices %}
+                            <option value="{{choice.0}}" {% if field.value == choice.0 %} selected="{{ field.value }}" {% endif %}>{{choice.1}}</option>
+                            {% endfor %}
+                          </select>
+                      {% elif field.field.widget|is_dateinput %}
+                          <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text" {% if field.value %} value={{ field.value|date:"Y-m-d" }} {% endif %}>
+                          <button type='button' _="on click set #{{ field.id_for_label}}'s value to '{% today_date %}'" class="btn rcpch-btn bg-rcpch_light_blue border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Today</button>
+                          <button type='button' _="on click set #{{ field.id_for_label}}'s value to #id_visit_date.value" class="btn rcpch-btn bg-rcpch_light_blue border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Fill with Visit Date</button>
+                      {% else %}
+                          <input type="text" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text rounded-none" {% if field.field.required %} placeholder="Required" {% endif %} {% if field.value %} value={{ field.value }} {% elif field.value == 0 %} value="0.0" {% endif %}>
+                      {% endif %}
+                      {% for error in field.errors %}
+                          <p>
+                            <strong class="text-gray-700">{{ error|escape }}</strong>
+                          </p>  
+                      {% endfor %}
+                      </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
                 </div>
-                {% endif %}
-            {% endfor %}
-            </div>
-          {% endif %}
-          {% endwith %}
-        {% endfor %}
+              {% endif %}
+            {% endwith %}
+          {% endfor %}
         </div>
 
         
