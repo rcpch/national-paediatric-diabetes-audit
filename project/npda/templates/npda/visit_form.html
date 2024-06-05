@@ -43,7 +43,14 @@
         {% for field_category in form.categories %}
           {% with field_category|colour_for_category as background_colour %}
           {% if field_category == "Measurements" or field_category == "HBA1c" or field_category == "Treatment" or field_category == "CGM" or field_category == "BP"%}
-            <div class="flex flex-col mb-6 {% if background_colour %} bg-{{background_colour}} {% endif %}">
+            <div class="flex flex-col mb-6 
+            {% if background_colour %} 
+              bg-{{background_colour}} 
+            {% endif %} 
+            {% if field_category in routine_measurements_categories_with_errors %}
+              outline outline-8 outline-rcpch_red
+            {% endif %}"
+            >
             {% for field in form %}
                 {% if field.field.category == field_category %}
                 <div class="flex flex-row my-2 mx-2">

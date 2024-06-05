@@ -47,7 +47,7 @@ def colour_for_category(category):
     # returns a colour for a given category
     colours = [
         {"category": VisitCategories.HBA1, "colour": "rcpch_red_light_tint2"},
-        {"category": VisitCategories.MEASUREMENT, "colour": "rcpch_red"},
+        {"category": VisitCategories.MEASUREMENT, "colour": "rcpch_vivid_green"},
         {"category": VisitCategories.TREATMENT, "colour": "rcpch_orange"},
         {"category": VisitCategories.CGM, "colour": "rcpch_orange_light_tint2"},
         {"category": VisitCategories.BP, "colour": "rcpch_yellow"},
