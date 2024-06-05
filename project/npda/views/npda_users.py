@@ -4,22 +4,26 @@ import logging
 
 from django.http import HttpRequest, HttpResponse
 from django.utils import timezone
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
 from django.contrib.auth.views import PasswordResetView
-from django.urls import reverse_lazy, reverse
+from django.urls import reverse, reverse_lazy
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib import messages
 from django.contrib.auth import login, authenticate
 from django.utils.html import strip_tags
 from django.conf import settings
-from two_factor.views import LoginView as TwoFactorLoginView
 
+# third party imports
+from two_factor.views import LoginView as TwoFactorLoginView
+from django_htmx.http import trigger_client_event
+
+# RCPCH imports
 from project.npda.general_functions.rcpch_nhs_organisations import (
     get_all_nhs_organisations,
 )
-from project.npda.general_functions.retrieve_pdu import retrieve_pdu_list
+from project.npda.general_functions.retrieve_pdu import retrieve_pdu, retrieve_pdu_list
 
 
 from ..models import NPDAUser, VisitActivity
@@ -52,40 +56,140 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
         # scope the queryset to filter only those users in organisations in the same PDU. This is to prevent users from seeing all users in the system
         # The user's organisation, PDU and siblings are stored in the session when they log in
 
-        # create a list of sibling organisations' ODS codes who share the same PDU as the user
-        siblings_ods_codes = [
-            sibling["ods_code"]
-            for sibling in self.request.session["sibling_organisations"][
-                "organisations"
+        if self.request.user.view_preference == 0:
+            # organisation view
+            ods_code = self.request.session.get("ods_code")
+            return NPDAUser.objects.filter(
+                site__organisation_ods_code=ods_code
+            ).order_by("surname")
+        elif self.request.user.view_preference == 1:
+            # PDU view
+            # create a list of sibling organisations' ODS codes who share the same PDU as the user
+            siblings_ods_codes = [
+                sibling["ods_code"]
+                for sibling in self.request.session["sibling_organisations"][
+                    "organisations"
+                ]
             ]
-        ]
-
-        # get all users in the sibling organisations
-        npda_users = NPDAUser.objects.filter(
-            organisation_employer__in=siblings_ods_codes
-        ).order_by("surname")
-
-        # add sibling organisation details to each user (PZ code, organisation name, parent name etc.)
-        for user in npda_users:
-            matching_sibling = next(
-                (
-                    sibling
-                    for sibling in self.request.session["sibling_organisations"][
-                        "organisations"
-                    ]
-                    if sibling["ods_code"] == user.organisation_employer
-                ),
-                None,
-            )
-            if matching_sibling is not None:
-                for key, value in matching_sibling.items():
-                    setattr(user, key, value)
-        return npda_users
+            # get all users in the sibling organisations
+            return NPDAUser.objects.filter(
+                organisation_employer__in=siblings_ods_codes
+            ).order_by("surname")
+        elif self.request.user.view_preference == 2:
+            return NPDAUser.objects.all().order_by("surname")
+        else:
+            raise ValueError("Invalid view preference")
 
     def get_context_data(self, **kwargs):
         context = super(NPDAUserListView, self).get_context_data(**kwargs)
         context["title"] = "NPDA Users"
+        user_pz_code = self.request.session.get("sibling_organisations", {}).get(
+            "pz_code", None
+        )
+        context["pz_code"] = user_pz_code
+        context["ods_code"] = self.request.user.organisation_employer
+        context["organisation_choices"] = self.request.session.get(
+            "organisation_choices"
+        )
+        context["pdu_choices"] = self.request.session.get("pdu_choices")
+        context["chosen_pdu"] = self.request.session.get("sibling_organisations").get(
+            "pz_code"
+        )
         return context
+
+    def get(self, request, *args: str, **kwargs) -> HttpResponse:
+        response = super().get(request, *args, **kwargs)
+        if request.htmx:
+            # filter the npdausers to only those in the same organisation as the user
+            # trigger a GET request from the patient table to update the list of npdausers
+            # by calling the get_queryset method again with the new ods_code/pz_code stored in session
+            queryset = self.get_queryset()
+            context = self.get_context_data()
+            context["npdauser_list"] = queryset
+
+            return render(
+                request,
+                "partials/npda_user_table.html",
+                context=self.get_context_data(),
+            )
+        return response
+
+    def post(self, request, *args: str, **kwargs) -> HttpResponse:
+        """
+        Override POST method to requery the database for the list of patients if  view preference changes
+        """
+        if request.htmx:
+            view_preference = request.POST.get("view_preference", None)
+            ods_code = request.POST.get("npdauser_ods_code_select_name", None)
+            pz_code = request.POST.get("npdauser_pz_code_select_name", None)
+
+            if ods_code:
+                # call back from the organisation select
+                # retrieve the sibling organisations and store in session
+                sibling_organisations = retrieve_pdu_from_organisation_ods_code(
+                    ods_code=ods_code
+                )
+                # store the results in session
+                self.request.session["sibling_organisations"] = sibling_organisations
+                self.request.session["ods_code"] = ods_code
+            else:
+                ods_code = request.session.get("sibling_organisations")[
+                    "organisations"
+                ][0][
+                    "ods_code"
+                ]  # set the ods code to the first in the list
+                self.request.session["ods_code"] = ods_code
+
+            if pz_code:
+                # call back from the PDU select
+                # retrieve the sibling organisations and store in session
+                sibling_organisations = retrieve_pdu(pz_number=pz_code)
+                # store the results in session
+                self.request.session["sibling_organisations"] = sibling_organisations
+
+                self.request.session["organisation_choices"] = [
+                    (choice["ods_code"], choice["name"])
+                    for choice in sibling_organisations["organisations"]
+                ]
+                ods_code = request.session.get("sibling_organisations")[
+                    "organisations"
+                ][0][
+                    "ods_code"
+                ]  # set the ods code to the first in the new list
+                self.request.session["ods_code"] = ods_code
+            else:
+                pz_code = request.session.get("sibling_organisations").get("pz_code")
+
+            if view_preference:
+                user = NPDAUser.objects.get(pk=request.user.pk)
+                user.view_preference = view_preference
+                user.save()
+            else:
+                user = NPDAUser.objects.get(pk=request.user.pk)
+
+            context = {
+                "view_preference": int(user.view_preference),
+                "ods_code": ods_code,
+                "pz_code": request.session.get("sibling_organisations").get("pz_code"),
+                "hx_post": reverse_lazy("npda_users"),
+                "organisation_choices": self.request.session.get(
+                    "organisation_choices"
+                ),
+                "pdu_choices": self.request.session.get("pdu_choices"),
+                "chosen_pdu": request.session.get("sibling_organisations").get(
+                    "pz_code"
+                ),
+                "ods_code_select_name": "npdauser_ods_code_select_name",
+                "pz_code_select_name": "npdauser_pz_code_select_name",
+                "hx_target": "#npdauser_view_preference",
+            }
+
+            response = render(request, "partials/view_preference.html", context=context)
+
+            trigger_client_event(
+                response=response, name="patients", params={}
+            )  # reloads the form to show the active steps
+            return response
 
 
 class NPDAUserCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateView):
