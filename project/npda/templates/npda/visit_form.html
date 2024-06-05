@@ -44,12 +44,12 @@
           {% with field_category|colour_for_category as background_colour %}
           {% if field_category == "Measurements" or field_category == "HBA1c" or field_category == "Treatment" or field_category == "CGM" or field_category == "BP"%}
             <div class="flex flex-col mb-6 
-            {% if background_colour %} 
-              bg-{{background_colour}} 
-            {% endif %} 
-            {% if field_category in routine_measurements_categories_with_errors %}
-              outline outline-8 outline-rcpch_red
-            {% endif %}"
+              {% if background_colour %} 
+                bg-{{background_colour}} 
+              {% endif %} 
+              {% if field_category in routine_measurements_categories_with_errors %}
+                outline outline-8 outline-rcpch_red
+              {% endif %}"
             >
             {% for field in form %}
                 {% if field.field.category == field_category %}
@@ -144,9 +144,9 @@
 
         <input type="radio" name="my_tabs_1" role="tab" aria-label="Inpatient&nbsp;Entry" class="tab w font-bold
           {% if "Hospital Admission" in categories_with_errors %}
-          bg-rcpch_red
+            bg-rcpch_red
           {% elif "Hospital Admission" in categories_without_errors %}
-          bg-rcpch_pink
+            bg-rcpch_pink
           {% endif %}
         "/>
         <div role="tabpanel" class="
@@ -154,7 +154,14 @@
         {% for field_category in form.categories %}
           {% with field_category|colour_for_category as background_colour %}
             {% if field_category == "Hospital Admission" %}
-            <div class="flex flex-col mb-6 {% if background_colour %} bg-{{background_colour}} {% endif %}">
+            <div class="flex flex-col mb-6 
+              {% if background_colour %} 
+                bg-{{background_colour}} 
+              {% endif %}
+              {% if "Hospital Admission" in categories_with_errors %}
+                outline outline-8 outline-rcpch_red
+              {% endif %}"
+            >
             {% for field in form %}
                 {% if field.field.category == field_category %}
                 <div class="flex flex-row my-2 mx-2">
