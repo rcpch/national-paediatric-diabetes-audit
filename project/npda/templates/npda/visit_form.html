@@ -30,9 +30,13 @@
 
       <div role="tablist" class="tabs tabs-bordered">
         <input type="radio" name="my_tabs_1" role="tab" class="tab font-bold
-          {% for category in routine_measurements_categories %} 
-          {% if category in categories_with_errors %} bg-rcpch_red 
-          {% else %} bg-rcpch_pink {% endif %} {% endfor %}" 
+          {% if routine_measurements_categories_with_errors and form_method == 'update' %} 
+            bg-rcpch_red 
+          {% elif form_method == 'create' %} 
+            bg-white 
+          {% else %} 
+            bg-rcpch_pink
+          {% endif %}" 
           aria-label="Routine&nbsp;Measurements" checked
         />
         <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-none">
@@ -76,9 +80,13 @@
         </div>
         
         <input type="radio" name="my_tabs_1" role="tab" class="tab rounded-none font-bold
-          {% for category in annual_review_categories %} 
-          {% if category in categories_with_errors %} bg-rcpch_red 
-          {% elif category in categories_without_errors %} bg-rcpch_pink {% endif %} {% endfor %}" 
+          {% if annual_review_categories_with_errors %} 
+            bg-rcpch_red 
+          {% elif form_method == 'create' %} 
+            bg-white 
+          {% else %} 
+            bg-rcpch_pink
+          {% endif %}" 
           aria-label="Annual&nbsp;Review"
         />
         <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-none p-6">
