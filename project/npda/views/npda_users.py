@@ -59,9 +59,9 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
         if self.request.user.view_preference == 0:
             # organisation view
             ods_code = self.request.session.get("ods_code")
-            return NPDAUser.objects.filter(
-                site__organisation_ods_code=ods_code
-            ).order_by("surname")
+            return NPDAUser.objects.filter(organisation_employer=ods_code).order_by(
+                "surname"
+            )
         elif self.request.user.view_preference == 1:
             # PDU view
             # create a list of sibling organisations' ODS codes who share the same PDU as the user
@@ -83,11 +83,11 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super(NPDAUserListView, self).get_context_data(**kwargs)
         context["title"] = "NPDA Users"
-        user_pz_code = self.request.session.get("sibling_organisations", {}).get(
+        pz_code = self.request.session.get("sibling_organisations", {}).get(
             "pz_code", None
         )
-        context["pz_code"] = user_pz_code
-        context["ods_code"] = self.request.user.organisation_employer
+        context["pz_code"] = pz_code
+        context["ods_code"] = self.request.session.get("ods_code")
         context["organisation_choices"] = self.request.session.get(
             "organisation_choices"
         )
@@ -103,6 +103,7 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
             # filter the npdausers to only those in the same organisation as the user
             # trigger a GET request from the patient table to update the list of npdausers
             # by calling the get_queryset method again with the new ods_code/pz_code stored in session
+            logger.warning("HTMX request received")
             queryset = self.get_queryset()
             context = self.get_context_data()
             context["npdauser_list"] = queryset
@@ -187,7 +188,7 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
             response = render(request, "partials/view_preference.html", context=context)
 
             trigger_client_event(
-                response=response, name="patients", params={}
+                response=response, name="npda_users", params={}
             )  # reloads the form to show the active steps
             return response
 
@@ -409,6 +410,9 @@ class RCPCHLoginView(TwoFactorLoginView):
                     self.request.session["sibling_organisations"] = (
                         sibling_organisations
                     )
+
+                if "ods_code" not in self.request.session:
+                    self.request.session["ods_code"] = current_user_ods_code
 
                 if "organisation_choices" not in self.request.session:
                     # get all NHS organisations in user's PDU as list of tuples (ODS code, name)

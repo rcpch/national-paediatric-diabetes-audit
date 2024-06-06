@@ -4,7 +4,7 @@
         <input hx-post="{{hx_post}}" hx-target="{{hx_target}}" hx-trigger="click" hx-swap="innerHTML" class="join-item btn bg-rcpch_light_blue hover:bg-rcpch_dark_blue text-white font-montserrat focus:bg-rcpch_pink border-rcpch_light_blue form-check-input form-checked:bg-red form-checked:text-white" type="radio" name="view_preference" value="0" aria-label="Organisation - {{ods_code}}" {% if view_preference == 0 %} checked {% endif %} />
         <input hx-post="{{hx_post}}" hx-target="{{hx_target}}" hx-trigger="click" hx-swap="innerHTML" class="join-item btn bg-rcpch_light_blue hover:bg-rcpch_dark_blue text-white font-montserrat focus:bg-rcpch_pink border-rcpch_light_blue" type="radio" name="view_preference" value="1" aria-label="Paediatric Diabetes Unit - {{pz_code}}" {% if view_preference == 1 %} checked {% endif %} />
         {% if request.user.is_superuser or request.user.is_rcpch_audit_team_member or request.user.is_rcpch_staff %}
-            <input hx-post="{{hx_post}}" hx-target="{{hx_target}}" hx-trigger="click" hx-swap="innerHTML" class="join-item btn bg-rcpch_light_blue hover:bg-rcpch_dark_blue text-white font-montserrat focus:bg-rcpch_pink border-rcpch_light_blue" type="radio" name="view_preference" value="3" aria-label="All" {% if view_preference == 3 %} checked {% endif %} />
+            <input hx-post="{{hx_post}}" hx-target="{{hx_target}}" hx-trigger="click" hx-swap="innerHTML" class="join-item btn bg-rcpch_light_blue hover:bg-rcpch_dark_blue text-white font-montserrat focus:bg-rcpch_pink border-rcpch_light_blue" type="radio" name="view_preference" value="2" aria-label="All" {% if view_preference == 2 %} checked {% endif %} />
         {% endif %}
     </div>
     <div class="w-full max-w-custom">
