@@ -117,16 +117,19 @@ You can use our convenience script to create a superuser in the context of the `
 ```console
 s/create-superuser
 ```
-The script will prompt you for required user attributes:
+
+**NOTE**: assign the username and password to the same as the values in the `example.env` (or your `.env`, if these values are different) for convenience pre-filled fields for login.
+
+The script will prompt you for required user attributes e.g.
 
 ```console
-Email address: myexampleemail@example.com
+Email address: incubator@rcpch.ac.uk
 Role: 1
 First name: Test
 Surname: User
 Is rcpch audit team member: True
-Password:
-Password (again):
+Password: BR#GbdPH5j#utYShr&%QUB$*BS#YbLA8w6QxN8H4
+Password (again): BR#GbdPH5j#utYShr&%QUB$*BS#YbLA8w6QxN8H4
 Superuser created successfully.
 ```
 
