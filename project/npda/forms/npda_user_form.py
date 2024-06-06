@@ -135,7 +135,7 @@ class CaptchaAuthenticationForm(AuthenticationForm):
         # If in DEBUG -> don't require captch, pre fill fields
         if settings.DEBUG:
             logger.warning(
-                f"{settings.LOCAL_DEV_ADMIN_EMAIL} {settings.LOCAL_DEV_ADMIN_PASSWORD}"
+                f"IN LOCAL DEVELOPMENT, BYPASSING LOGIN BY PREFILLING FIELDS"
             )
             self.fields["username"].widget.attrs["value"] = (
                 settings.LOCAL_DEV_ADMIN_EMAIL
