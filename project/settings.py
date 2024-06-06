@@ -49,10 +49,7 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", get_random_secret_key())
 RCPCH_CENSUS_PLATFORM_URL = os.getenv("RCPCH_CENSUS_PLATFORM_URL")
 RCPCH_CENSUS_PLATFORM_TOKEN = os.getenv("RCPCH_CENSUS_PLATFORM_TOKEN")
 # TODO #83  - Fix the broken env in Azure and remove hardcoded URL
-RCPCH_NHS_ORGANISATIONS_API_URL = os.getenv(
-    "RCPCH_NHS_ORGANISATIONS_API_URL",
-    "https://rcpch-nhs-organisations.azurewebsites.net",
-)
+RCPCH_NHS_ORGANISATIONS_API_URL = os.getenv("RCPCH_NHS_ORGANISATIONS_API_URL")
 RCPCH_NHS_ORGANISATIONS_API_URL = "https://rcpch-nhs-organisations.azurewebsites.net"
 
 # This is the NHS Spine services - it does not require authentication
@@ -88,6 +85,8 @@ INSTALLED_APPS = [
     # "django.forms",
     "rest_framework",
     "drf_spectacular",
+    # django htmx
+    "django_htmx",
     # 2fa
     "django_otp",
     "django_otp.plugins.otp_static",
@@ -109,6 +108,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django_htmx.middleware.HtmxMiddleware",
     #  2 factor authentication
     "django_otp.middleware.OTPMiddleware",
 ]

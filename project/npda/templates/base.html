@@ -40,7 +40,7 @@
   </style>
   <script>
     tailwind.config = {
-      darkMode: false,
+      darkMode: 'media',
       theme: {
         backgroundColor: theme => ({
           ...theme('colors'),
@@ -50,6 +50,9 @@
           fontFamily: {
             'montserrat':['Montserrat', 'regular'],
             'arial':['Arial', 'sans-serif']
+          },
+          maxWidth: {
+            'custom': '33.7rem' // Replace '30rem' with the exact width you want
           },
           colors: {
             rcpch_lightest_grey: "#f3f3f3",
@@ -138,7 +141,7 @@
         extend: {
           backgroundColor: ['active'],
         },
-      },
+      }
     }
   </script>
   </script>
