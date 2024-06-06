@@ -17,10 +17,11 @@
                         Please drop your NPDA CSV file here, or
                             <button class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">
                                 <input id="upload_input" type="file" name="csv_upload">
+                                <span class="loading loading-spinner loading-lg text-rcpch_pink hidden" id="upload-spinner"></span>
                             </button>
                     </span>
                         {% csrf_token %}
-                            <button class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue" type="submit">Upload</button>
+                            <button class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue" type="submit" _="on click remove .hidden from #upload-spinner">Upload</button>
                     </span>
             </label>
         </form>
