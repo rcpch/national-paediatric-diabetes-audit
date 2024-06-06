@@ -14,10 +14,10 @@
         <tbody>
             {% for npda_user in npdauser_list %}
                 <tr class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white">
-                <td>
+                <td class="px-6 py-4 text-center">
                     <div class='has-tooltip items-center'>
                         <span class='tooltip rounded shadow-lg px-2 py-2 bg-gray-500 text-white -mt-4 text-left'>NPDA User Unique ID</span>
-                        <a href="{% url 'npdauser-update' npda_user.pk %}" class="px-2 flex text-left hover:text-rcpch_pink"><strong>{{ npda_user.pk }}</strong></a>
+                        <a href="{% url 'npdauser-update' npda_user.pk %}" class="px-2 flex text-center hover:text-rcpch_pink"><strong>{{ npda_user.pk }}</strong></a>
                     </div>
                 </td>
                 <td class="text-left">
