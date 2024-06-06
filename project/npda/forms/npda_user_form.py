@@ -120,7 +120,7 @@ class NPDAUpdatePasswordForm(SetPasswordForm):
 class DebugCaptchaField(CaptchaField):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.widget.widgets[-1].attrs["value"] = "PASSED"
+        self.widget.widgets[-1].attrs["value"] = "DEBUGMODE"
 
 
 class CaptchaAuthenticationForm(AuthenticationForm):
@@ -131,6 +131,21 @@ class CaptchaAuthenticationForm(AuthenticationForm):
         self.fields["username"].widget.attrs.update({"class": TEXT_INPUT})
         self.fields["password"].widget.attrs.update({"class": TEXT_INPUT})
         self.fields["captcha"].widget.attrs.update({"class": TEXT_INPUT})
+
+        # If in DEBUG -> don't require captch, pre fill fields
+        if settings.DEBUG:
+            logger.warning(
+                f"{settings.LOCAL_DEV_ADMIN_EMAIL} {settings.LOCAL_DEV_ADMIN_PASSWORD}"
+            )
+            self.fields["username"].widget.attrs["value"] = (
+                settings.LOCAL_DEV_ADMIN_EMAIL
+                or "SET LOCAL DEV ADMIN EMAIL IN ENVIRONMENT VARIABLES"
+            )
+            self.fields["password"].widget.attrs["value"] = (
+                settings.LOCAL_DEV_ADMIN_PASSWORD
+                or "SET LOCAL DEV ADMIN PASSWORD IN ENVIRONMENT VARIABLES"
+            )
+            self.fields["captcha"].required = False
 
     def clean_username(self) -> dict[str]:
         email = super().clean()["username"]
