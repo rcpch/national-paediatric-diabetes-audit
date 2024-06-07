@@ -71,9 +71,7 @@ class AuditCohort(models.Model):
             return 4
 
     def __str__(self) -> str:
-        return (
-            f"{self.patient}, {self.visit}, {self.audit_year}, {self.cohort_number()}"
-        )
+        return f"{self.patient}, {self.audit_year}, {self.cohort_number}"
 
     def save(self, *args, **kwargs) -> None:
         self.audit_year = int(self.data_uploaded_date.year)

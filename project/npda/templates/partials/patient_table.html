@@ -1,17 +1,19 @@
 {% load npda_tags %}
 {% if patient_list %}
-    <table class="table-auto w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
+    <table class="table table-md w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
         <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">
             <tr>
-            <th scope="col" class="px-6 py-3">NPDA ID</th>
-            <th scope="col" class="px-6 py-3">NHS Number</th>
-            <th scope="col" class="px-6 py-3">Sex</th>
-            <th scope="col" class="px-6 py-3">Date of Birth</th>
-            <th scope="col" class="px-6 py-3">Postcode</th>
-            <th scope="col" class="px-6 py-3">Ethnicity</th>
-            <th scope="col" class="px-6 py-3">Diabetes Type</th>
-            <th scope="col" class="px-2 py-3">Diagnosis Date</th>
-            <th></th>
+            <th scope="col" class="px-2 py-3 text-center">NPDA ID</th>
+            <th scope="col" class="px-2 py-3 text-center">NHS Number</th>
+            <th scope="col" class="px-2 py-3 text-center">Sex</th>
+            <th scope="col" class="px-2 py-3 text-center">Date of Birth</th>
+            <th scope="col" class="px-2 py-3 text-center">Postcode</th>
+            <th scope="col" class="px-2 py-3 text-center">Ethnicity</th>
+            <th scope="col" class="px-2 py-3 text-center">Diabetes Type</th>
+            <th scope="col" class="px-2 py-3 text-center">Diagnosis Date</th>
+            <th scope="col" class="px-2 py-3 text-center">Date Uploaded</th>
+            <th scope="col" class="px-2 py-3 text-center">Audit Year</th>
+            <th scope="col"></th>
             </tr>
         </thead>
         <tbody>
@@ -19,14 +21,14 @@
                 {% if patient.is_valid and patient.visit_error_count < 1 and forloop.counter0 == 0 %}
                 <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_strong_blue text-white">
                     <tr>
-                    <th colspan="9" class="px-6 py-3">Patients where all records have been validated: {{total_valid_patients}}</th>
+                    <th colspan="11" class="px-6 py-3">Patients where all records have been validated: {{total_valid_patients}}</th>
                     </tr>
                 </thead>
                 {% else %}
                     {% if forloop.counter == index_of_first_invalid_patient %}
                     <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_strong_blue text-white">
                         <tr>
-                        <th colspan="9" class="px-6 py-3">Patients with records failing validation: {{total_invalid_patients}}</th>
+                        <th colspan="11" class="px-6 py-3">Patients with records failing validation: {{total_invalid_patients}}</th>
                         </tr>
                     </thead>
                     {% endif %}
@@ -101,6 +103,12 @@
                         {% endif %}
                         {{ patient.diagnosis_date }}
                     </td>
+                    <td class="px-6 py-4 text-center">
+                            {{patient.last_upload_date|date:"d/m/Y H:m s"}}
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                            {{patient.audit_year}} ({{patient.cohort_number}})
+                    </td>
                     <td class="px-2 text-right w-80 relative group">
                         <!-- <div class="has-tooltip"> -->
                         <a 
@@ -142,14 +150,13 @@
                                 <path stroke="none" d="M0 0h24v24H0z"/>  <polyline points="9 6 15 12 9 18" />
                                 </svg>
                             </a>
-                        <!-- </div> -->
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
             <tfoot>
                 <tr class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white py-5">
-                    <th colspan="9" class="px-2">
+                    <th colspan="11" class="px-2">
                         <strong>
                         Total: {{patient_list.count}} patients
                         </strong>
