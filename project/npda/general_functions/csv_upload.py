@@ -2,11 +2,11 @@
 import os
 import logging
 from typing import Literal
-import json
 
 # django imports
 from django.apps import apps
 from django.conf import settings
+from django.utils import timezone
 
 # third part imports
 import pandas as pd
@@ -51,7 +51,7 @@ def csv_upload(csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
     Patient = apps.get_model("npda", "Patient")
     Site = apps.get_model("npda", "Site")
     Visit = apps.get_model("npda", "Visit")
-    # PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+    AuditCohort = apps.get_model("npda", "AuditCohort")
 
     csv_file = os.path.join(
         settings.BASE_DIR, "project", "npda", "dummy_sheets", "dummy_sheet_invalid.csv"
@@ -780,10 +780,10 @@ def csv_upload(csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
             site_is_valid,
             site_errors,
         ) = validate_row(row)
-
+        # save the site
         try:
             # save site
-            site, created = Site.objects.get_or_create(
+            site, created = Site.objects.update_or_create(
                 date_leaving_service=(
                     row["Date of leaving service"]
                     if not pd.isnull(row["Date of leaving service"])
@@ -1042,9 +1042,17 @@ def csv_upload(csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
             # Otherwise data, even if invalid, is saved
             return {"status": 422, "errors": f"Could not save visit {obj}: {error}"}
 
+        # save the audit progress - there is one record per visit
+        AuditCohort.objects.create(
+            patient=patient,
+            data_uploaded_date=timezone.now(),
+            submission_valid=True,
+        )
+
         return {"status": 200, "errors": None}
 
-    # save the results - validate  as you go within the save_row function
+        # save the results - validate  as you go within the save_row function
+
     try:
         dataframe.apply(save_row, axis=1)
     except Exception as error:
