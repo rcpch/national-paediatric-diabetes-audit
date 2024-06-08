@@ -58,6 +58,12 @@ class AuditCohort(models.Model):
         related_name="submissions",
     )
 
+    user_confirmed = models.BooleanField(
+        "User confirmed",
+        default=False,
+        help_text="User has confirmed the submission",
+    )
+
     patient = models.ForeignKey(
         to="npda.Patient", on_delete=models.CASCADE, related_name="audit_cohorts"
     )

@@ -24,6 +24,7 @@ from ..general_functions import (
     stringify_time_elapsed,
     imd_for_postcode,
     gp_practice_for_postcode,
+    validate_postcode,
 )
 
 
@@ -144,17 +145,23 @@ class Patient(models.Model):
         # Skips the calculation if the postcode is on the 'unknown' list
         if self.postcode:
             if str(self.postcode).replace(" ", "") not in UNKNOWN_POSTCODES_NO_SPACES:
-                try:
-                    self.index_of_multiple_deprivation_quintile = imd_for_postcode(
-                        self.postcode
+                validated = validate_postcode(self.postcode)
+                if not validated:
+                    raise ValidationError(
+                        _("Postcode is not valid. Please enter a valid postcode.")
                     )
-                except Exception as error:
-                    # Deprivation score not persisted if deprivation score server down
-                    self.index_of_multiple_deprivation_quintile = None
-                    print(
-                        f"Cannot calculate deprivation score for {self.postcode}: {error}"
-                    )
-                    pass
+                else:
+                    try:
+                        self.index_of_multiple_deprivation_quintile = imd_for_postcode(
+                            self.postcode
+                        )
+                    except Exception as error:
+                        # Deprivation score not persisted if deprivation score server down
+                        self.index_of_multiple_deprivation_quintile = None
+                        print(
+                            f"Cannot calculate deprivation score for {self.postcode}: {error}"
+                        )
+                        pass
 
         if self.gp_practice_ods_code is None and self.gp_practice_postcode is None:
             raise ValidationError(

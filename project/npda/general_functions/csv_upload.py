@@ -1,6 +1,7 @@
 # python imports
-import os
+from datetime import date
 import logging
+import os
 from typing import Literal
 
 # django imports
@@ -35,6 +36,7 @@ from ...constants import (
 
 from .validate_postcode import validate_postcode
 from .nhs_ods_requests import gp_details_for_ods_code
+from .cohort_for_date import retrieve_cohort_for_date
 
 # Logging setup
 logger = logging.getLogger(__name__)
@@ -1042,25 +1044,22 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
                 "is_valid": visit_is_valid,
                 "errors": (visit_errors if visit_errors is not None else None),
             }
-            Visit.objects.update_or_create(**obj)
+            Visit.objects.create(**obj)
         except Exception as error:
             # called if database error or similar and database could not save instances.
             # Otherwise data, even if invalid, is saved
             return {"status": 422, "errors": f"Could not save visit {obj}: {error}"}
 
-        # save the audit progress - there is one record per patient
-        if {"field": "nhs_number", "message": "NHS Number invalid."} in patient_errors:
-            AuditCohort.objects.filter(patient=patient).update(
-                submission_active=False
-            )  # set previously submitted uploads to invalid
-        # create a new record
-        AuditCohort.objects.create(
+        AuditCohort.objects.update_or_create(
             patient=patient,
-            submission_date=timezone.now(),
-            submission_active=True,
-            submission_by=user,
             pz_code=pdu_pz_code,
             ods_code=organisation_ods_code,
+            defaults={
+                "submission_active": True,
+                "submission_date": timezone.now(),
+                "submission_by": user,
+                "user_confirmed": False,
+            },
         )
 
         return {"status": 200, "errors": None}
@@ -1074,3 +1073,48 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         return {"status": 500, "errors": error}
 
     return {"status": 200, "errors": None}
+
+
+def csv_summarise(csv_file):
+    """
+    This function takes a csv file and processes the file to create a summary of the data
+    It returns a dictionary with the status of the operation and the summary data
+    """
+    Patient = apps.get_model("npda", "Patient")
+    # read the csv file
+    try:
+        dataframe = pd.read_csv(
+            csv_file, parse_dates=ALL_DATES, dayfirst=True, date_format="%d/%m/%Y"
+        )
+    except Exception as error:
+        return {
+            "status": 422,
+            "errors": f"Could not read csv file: {error}",
+            "summary": None,
+        }
+
+    total_records = len(dataframe)
+    number_unique_nhs_numbers = dataframe["NHS Number"].nunique()
+    unique_nhs_numbers_no_spaces = (
+        dataframe["NHS Number"].apply(lambda x: x.replace(" ", "")).unique()
+    )
+    count_of_records_per_nhs_number = dataframe["NHS Number"].value_counts()
+    matching_patients_in_current_cohort = Patient.objects.filter(
+        nhs_number__in=list(unique_nhs_numbers_no_spaces),
+        audit_cohorts__submission_active=True,
+        audit_cohorts__audit_year=date.today().year,
+        audit_cohorts__cohort_number=retrieve_cohort_for_date(
+            date_instance=date.today()
+        ),
+    ).count()
+
+    summary = {
+        "total_records": total_records,
+        "number_unique_nhs_numbers": number_unique_nhs_numbers,
+        "count_of_records_per_nhs_number": list(
+            count_of_records_per_nhs_number.items()
+        ),
+        "matching_patients_in_current_cohort": matching_patients_in_current_cohort,
+    }
+
+    return summary

@@ -1,12 +1,44 @@
 <div class="max-w-xl w-full">
     {% if file_uploaded %}
         
-            <p class="font-montserrat mb-5">File uploaded - Thank you!</p>
-            <a href="{% url 'patients' %}" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue" type="submit">View Data</a>
+            <h5 class="font-montserrat mb-5"><strong>File uploaded - Thank you!</strong></h5>
+            <div class="border-rcpch_light_blue font-montserrat rounded-none flex flex-col justify-start">
+                {% if summary %}
+                    <h3 class="font-bold">Summary</h3>
+                    <div class="text-md">Total uploaded rows: <strong>{{summary.total_records}}</strong></div>
+                    <div class="text-md">Number of unique patients: <strong>{{summary.number_unique_nhs_numbers}}</strong></div>
+                    {% if summary.count_of_records_per_nhs_number|length > 0 %}
+                        <div class="text-md">The breakdown of records per NHS number are:</div>
+                            {% for nhs_number, visit_count in summary.count_of_records_per_nhs_number %}
+                                <p class="text-md">- <i>{{nhs_number}}</i>: <strong>{{visit_count}}</strong> records/visits<p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% if summary.matching_patients_in_current_cohort > 0 %}
+                        <div class="font-bold">{{summary.matching_patients_in_current_cohort}} patients already exist in the NPDA database for this audit year.</div>
+                        <div class="text-md">If you wish to proceed, existing data held will be overwritten with this submission.</div>
+                            <form method="post" action="{% url 'home' %}">
+                                {% csrf_token %}
+                                <button type="submit" name="submit-data" value="overwrite-data" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue" type="submit">Overwrites and View Data</button>
+                            </form>
+                    {% else %}
+                        <form method="post" action="{% url 'home' %}">
+                            {% csrf_token %}
+                            <button type="submit" name="submit-data" value="view-data" class="inline-block bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Submit Data for Validation</button>
+                        </form>
+                    {% endif %}
+                {% else %}
+                    <form method="post"  action="{% url 'home' %}">
+                        {% csrf_token %}
+                        <button type="submit" name="submit-data" value="submit-data" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue" type="submit">View Data</button>
+                    </form>
+                {% endif %}
+
+            </div>
 
     {% else %}
         <form method="POST" enctype="multipart/form-data" action="home" >
-            <label for="#upload_input" class="flex justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-md appearance-none cursor-pointer hover:border-gray-400 focus:outline-none">
+            <label for="#upload_input" class="flex justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-none appearance-none cursor-pointer hover:border-gray-400 focus:outline-none">
                 <span class="flex items-center space-x-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor" stroke-width="2"> 
@@ -21,7 +53,7 @@
                             </button>
                     </span>
                         {% csrf_token %}
-                            <button class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue" type="submit" _="on click remove .hidden from #upload-spinner">Upload</button>
+                            <button class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue" type="submit" _="on click remove .hidden from #upload-spinner">Submit Data</button>
                     </span>
             </label>
         </form>

@@ -14,8 +14,8 @@ services:
       - "443:443"
     restart: always
     volumes:
-      - caddy-data:/data/
-      - caddy-data:/config/
+      - npda-caddy-data:/data/
+      - npda-caddy-data:/config/
       - ./Caddyfile:/etc/caddy/Caddyfile
       - ./staticdocs:/srv/staticdocs
 
@@ -41,7 +41,7 @@ services:
     <<: *global # this will inherit all the envs from x-global-environment
     image: postgis/postgis:15-3.3
     volumes:
-      - postgis-data:/var/lib/postgresql/data
+      - npda-postgis-data:/var/lib/postgresql/data
     restart: always
 
   mkdocs:
@@ -54,5 +54,5 @@ services:
     restart: always
 
 volumes:
-  caddy-data:
-  postgis-data:
+  npda-caddy-data:
+  npda-postgis-data:
