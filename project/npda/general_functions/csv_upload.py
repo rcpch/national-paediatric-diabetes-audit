@@ -40,7 +40,7 @@ from .nhs_ods_requests import gp_details_for_ods_code
 logger = logging.getLogger(__name__)
 
 
-def csv_upload(csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
+def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
     """
     Processes standardised NPDA csv file and persists results in NPDA tables
 
@@ -658,6 +658,12 @@ def csv_upload(csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
             error = {"field": "nhs_number", "message": "NHS Number invalid."}
             patient_errors.append(error)
 
+        if AuditCohort.objects.filter(
+            patient__nhs_number=row_number, submission_active=True
+        ).exists():
+            error = {"field": "nhs_number", "message": "NHS Number already exists."}
+            patient_errors.append(error)
+
         if validate_postcode(postcode=postcode):
             pass
         else:
@@ -1042,11 +1048,19 @@ def csv_upload(csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
             # Otherwise data, even if invalid, is saved
             return {"status": 422, "errors": f"Could not save visit {obj}: {error}"}
 
-        # save the audit progress - there is one record per visit
+        # save the audit progress - there is one record per patient
+        if {"field": "nhs_number", "message": "NHS Number invalid."} in patient_errors:
+            AuditCohort.objects.filter(patient=patient).update(
+                submission_active=False
+            )  # set previously submitted uploads to invalid
+        # create a new record
         AuditCohort.objects.create(
             patient=patient,
-            data_uploaded_date=timezone.now(),
-            submission_valid=True,
+            submission_date=timezone.now(),
+            submission_active=True,
+            submission_by=user,
+            pz_code=pdu_pz_code,
+            ods_code=organisation_ods_code,
         )
 
         return {"status": 200, "errors": None}

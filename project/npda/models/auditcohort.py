@@ -10,23 +10,6 @@ class AuditCohort(models.Model):
     This class is used to define the cohort of patients that are being audited. The cohort tracks the progress of the audit
     """
 
-    data_uploaded_date = models.DateTimeField(
-        "Date data uploaded", auto_now_add=True, help_text="Date the data was uploaded"
-    )
-
-    submission_valid = models.BooleanField(
-        "Data validated",
-        default=True,
-        help_text="Data is earmarked for inclusion in the audit",
-    )
-
-    patient = models.ForeignKey(
-        "npda.Patient",
-        on_delete=models.CASCADE,
-        related_name="patients_audit_cohorts",
-        help_text="Patient being audited",
-    )
-
     audit_year = models.IntegerField(
         "Audit year",
         blank=False,
@@ -41,6 +24,44 @@ class AuditCohort(models.Model):
         help_text="The cohort number of the patient",
     )
 
+    pz_code = models.CharField(
+        "PZ code",
+        max_length=10,
+        blank=False,
+        null=False,
+        help_text="The PZ code of the Paediatric Diabetes Unit",
+    )
+
+    ods_code = models.CharField(
+        "PZ code",
+        max_length=10,
+        blank=False,
+        null=False,
+        help_text="The ODS code of the Organisation",
+    )
+
+    submission_date = models.DateTimeField(
+        "Submission date",
+        auto_now_add=True,
+        help_text="Date the submission was created",
+    )
+
+    submission_active = models.BooleanField(
+        "Submission active",
+        default=True,
+        help_text="Submission is active and being considered for inclusion in the audit",
+    )
+
+    submission_by = models.ForeignKey(
+        on_delete=models.CASCADE,
+        to="npda.NPDAUser",
+        related_name="submissions",
+    )
+
+    patient = models.ForeignKey(
+        to="npda.Patient", on_delete=models.CASCADE, related_name="audit_cohorts"
+    )
+
     def calculate_cohort_number(self):
         """
         Returns the cohort number of the patient
@@ -52,13 +73,13 @@ class AuditCohort(models.Model):
         Returns 4 if the patient has more than 75% of the audit year remaining
         """
         audit_start_date = date(self.audit_year, 4, 1)
-        if self.data_uploaded_date.date() < audit_start_date:
+        if self.submission_date.date() < audit_start_date:
             # The patient was audited in the previous year
-            days_remaining = (audit_start_date - self.data_uploaded_date.date()).days
+            days_remaining = (audit_start_date - self.submission_date.date()).days
         else:
             # The patient was audited in the current year
             audit_end_date = date(self.audit_year + 1, 3, 31)
-            days_remaining = (audit_start_date - self.data_uploaded_date.date()).days
+            days_remaining = (audit_start_date - self.submission_date.date()).days
         total_days = (audit_end_date - audit_start_date).days
         completed_days = total_days - days_remaining
         if (days_remaining / completed_days) < 0.25:
@@ -74,7 +95,7 @@ class AuditCohort(models.Model):
         return f"{self.patient}, {self.audit_year}, {self.cohort_number}"
 
     def save(self, *args, **kwargs) -> None:
-        self.audit_year = int(self.data_uploaded_date.year)
+        self.audit_year = int(self.submission_date.year)
         cohort_number = self.calculate_cohort_number()
         self.cohort_number = cohort_number
         super().save(*args, **kwargs)
@@ -82,4 +103,4 @@ class AuditCohort(models.Model):
     class Meta:
         verbose_name = "Audit Cohort"
         verbose_name_plural = "Audit Cohorts"
-        ordering = ("patient", "audit_year", "cohort_number")
+        ordering = ("audit_year", "cohort_number")
