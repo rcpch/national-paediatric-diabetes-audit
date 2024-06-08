@@ -18,19 +18,14 @@
                   <option value="{{choice.0}}" {% if field.value == choice.0 %} selected="{{ field.value }}" {% endif %}>{{choice.1}}</option>
                   {% endfor %}
                 </select>
-                {% for error in field.errors %}
-                <p>
-                  <strong class="text-gray-700">{{ error|escape }}</strong>
-                </p>  
-                {% endfor %}
               {% else %}
                 {{ field }}
-                {% for error in field.errors %}
+              {% endif %}
+              {% for error in field.errors %}
                 <p>
                   <strong class="text-gray-700">{{ error|escape }}</strong>
                 </p>  
-                {% endfor %}
-              {% endif %}
+              {% endfor %}
           </div>
         </div>
       {% endfor %}
