@@ -42,7 +42,6 @@ class AuditCohort(models.Model):
 
     submission_date = models.DateTimeField(
         "Submission date",
-        auto_now_add=True,
         help_text="Date the submission was created",
     )
 
@@ -58,10 +57,10 @@ class AuditCohort(models.Model):
         related_name="submissions",
     )
 
-    user_confirmed = models.BooleanField(
-        "User confirmed",
+    submission_approved = models.BooleanField(
+        "Submission approved",
         default=False,
-        help_text="User has confirmed the submission",
+        help_text="Submission has been approved for inclusion in the audit",
     )
 
     patient = models.ForeignKey(

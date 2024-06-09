@@ -1,0 +1,38 @@
+{% if auditcohort %}
+    <div class="row">
+        <div class="col-md-12">
+            <h3>Upload History</h3>
+            <table class="table-auto w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
+                <thead>
+                    <tr>
+                        <th>Submission Date</th>
+                        <th>Submission By</th>
+                        <th>Audit Year (Cohort)</th>
+                        <th>Patient Number</th>
+                        <th>Active</th>
+                        <th>Download</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for audit in auditcohort %}
+                        <tr>
+                            <td>{{audit.submission_date|date:"d/m/Y H:m s"}}</td>
+                            <td>{{audit.submission_by}}</td>
+                            <td>{{audit.audit_year}} ({{audit.cohort_number}})</td>
+                            <td>{{audit.patient_count}}</td>
+                            <td>{{audit.submission_active}}</td>
+                            <td><form type="post" action="{% url 'home' %}"><button name="submit-data" value="download-data"  class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-1 px-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue btn-sm">Download</button></form></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% else %}
+    <div class="row">
+        <div class="col-md-12 font-montserrat">
+            <h3>Upload History</h3>
+            <p>No audit files uploaded yet for {{request.session.sibling_organisations.pz_code}}.</p>
+        </div>
+    </div>
+{% endif %}

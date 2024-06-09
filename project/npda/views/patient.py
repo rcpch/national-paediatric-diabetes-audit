@@ -60,7 +60,9 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
         else:
             raise ValueError("Invalid view preference")
 
-        patient_queryset = Patient.objects.filter(audit_cohorts__submission_active=True)
+        patient_queryset = Patient.objects.filter(
+            audit_cohorts__submission_active=True, audit_cohorts__user_confirmed=True
+        )
         if filtered_patients is not None:
             patient_queryset = patient_queryset.filter(filtered_patients)
 

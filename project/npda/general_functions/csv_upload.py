@@ -774,7 +774,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         )
 
     # private method - saves the csv row in the model as a record
-    def save_row(row):
+    def save_row(row, timestamp):
         """
         Save each row as a record
         First validate the values in the row, then create a Patient instance - if contains invalid items, set is_valid to False, with the error messages
@@ -1055,10 +1055,9 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             pz_code=pdu_pz_code,
             ods_code=organisation_ods_code,
             defaults={
-                "submission_active": True,
-                "submission_date": timezone.now(),
+                "submission_active": False,
+                "submission_date": timestamp,
                 "submission_by": user,
-                "user_confirmed": False,
             },
         )
 
@@ -1066,8 +1065,11 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
 
         # save the results - validate  as you go within the save_row function
 
+    # by passing this in we can use the same timestamp for all records
+    timestamp = timezone.now()
+
     try:
-        dataframe.apply(save_row, axis=1)
+        dataframe.apply(lambda row: save_row(row, timestamp=timestamp), axis=1)
     except Exception as error:
         # There was an error saving one or more records - this is likely not a problem with the data passed in
         return {"status": 500, "errors": error}
