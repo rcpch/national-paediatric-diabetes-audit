@@ -108,6 +108,14 @@ def site_contact_email():
 def is_select(widget):
     return isinstance(widget, (forms.Select, forms.SelectMultiple))
 
+@register.filter
+def is_dateinput(widget):
+    return isinstance(widget, (forms.DateInput))
+
+@register.filter
+def is_textinput(widget):
+    return isinstance(widget, (forms.CharField, forms.TextInput, forms.EmailField))
+
 
 @register.filter
 def error_for_field(messages, field):
@@ -148,11 +156,6 @@ def errors_for_category(category, error_list):
                 if error["field"] in error_field_list:
                     final_string += f"{error['message']}\n"
     return final_string
-
-
-@register.filter
-def is_dateinput(widget):
-    return isinstance(widget, (forms.DateInput))
 
 
 @register.simple_tag
