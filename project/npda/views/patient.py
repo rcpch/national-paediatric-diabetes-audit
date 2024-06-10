@@ -61,25 +61,26 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
             raise ValueError("Invalid view preference")
 
         patient_queryset = Patient.objects.filter(
-            audit_cohorts__submission_active=True, audit_cohorts__user_confirmed=True
+            audit_cohorts__submission_active=True,
+            audit_cohorts__submission_approved=True,
         )
         if filtered_patients is not None:
             patient_queryset = patient_queryset.filter(filtered_patients)
 
         # retrieve the audit year  and cohort number from the most recent submission
         latest_auditcohort = (
-            AuditCohort.objects.filter(
-                patient_id=OuterRef("pk"), submission_active=True
-            )
-            .order_by("-submission_date")
-            .values("cohort_number", "audit_year")[:1]
+            AuditCohort.objects.all().order_by("-submission_date").first()
         )
 
+        if latest_auditcohort:
+            patients_in_latest_cohort = latest_auditcohort.patient_set.all()
+
         return patient_queryset.annotate(
+            # id__in=Subquery(patients_in_latest_cohort.values("id")),
             visit_error_count=Count(Case(When(visit__is_valid=False, then=1))),
             last_upload_date=Max("audit_cohorts__submission_date"),
-            audit_year=Subquery(latest_auditcohort.values("audit_year")),
-            cohort_number=Subquery(latest_auditcohort.values("cohort_number")),
+            # audit_year=Subquery(patients_in_latest_cohort.values("audit_year")),
+            # cohort_number=Subquery(patients_in_latest_cohort.values("cohort_number")),
         ).order_by("is_valid", "visit_error_count", "pk")
 
     def get_context_data(self, **kwargs):

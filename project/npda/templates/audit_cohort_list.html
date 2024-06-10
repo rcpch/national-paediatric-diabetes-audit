@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<div class="flex flex-row min-h-screen justify-center px-10">
+    <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
+      <div class="inline-block min-w-full py-2 sm:px-6 lg:px-8">
+          <div class="relative overflow-x-auto">
+          <strong>All Audit Cohorts for {{pz_code}}</strong>
+          {% include 'partials/audit_upload_history.html' with auditcohorts=auditcohorts %}
+          </div>
+      </div>
+    </div>
+</div>
+{% endblock %}

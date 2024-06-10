@@ -660,12 +660,6 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             error = {"field": "nhs_number", "message": "NHS Number invalid."}
             patient_errors.append(error)
 
-        if AuditCohort.objects.filter(
-            patient__nhs_number=row_number, submission_active=True
-        ).exists():
-            error = {"field": "nhs_number", "message": "NHS Number already exists."}
-            patient_errors.append(error)
-
         if validate_postcode(postcode=postcode):
             pass
         else:
@@ -788,6 +782,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             site_is_valid,
             site_errors,
         ) = validate_row(row)
+
         # save the site
         try:
             # save site
@@ -1050,8 +1045,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             # Otherwise data, even if invalid, is saved
             return {"status": 422, "errors": f"Could not save visit {obj}: {error}"}
 
-        AuditCohort.objects.update_or_create(
-            patient=patient,
+        audit_cohort, created = AuditCohort.objects.update_or_create(
             pz_code=pdu_pz_code,
             ods_code=organisation_ods_code,
             defaults={
@@ -1060,6 +1054,8 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
                 "submission_by": user,
             },
         )
+
+        audit_cohort.patients.add(patient)
 
         return {"status": 200, "errors": None}
 

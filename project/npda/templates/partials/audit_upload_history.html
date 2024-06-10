@@ -1,9 +1,9 @@
-{% if auditcohort %}
+{% if auditcohorts %}
     <div class="row">
         <div class="col-md-12">
             <h3>Upload History</h3>
-            <table class="table-auto w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
-                <thead>
+            <table class="table table-md w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">
                     <tr>
                         <th>Submission Date</th>
                         <th>Submission By</th>
@@ -14,14 +14,20 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for audit in auditcohort %}
+                    {% for audit in auditcohorts %}
                         <tr>
                             <td>{{audit.submission_date|date:"d/m/Y H:m s"}}</td>
                             <td>{{audit.submission_by}}</td>
                             <td>{{audit.audit_year}} ({{audit.cohort_number}})</td>
                             <td>{{audit.patient_count}}</td>
                             <td>{{audit.submission_active}}</td>
-                            <td><form type="post" action="{% url 'home' %}"><button name="submit-data" value="download-data"  class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-1 px-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue btn-sm">Download</button></form></td>
+                            <td>
+                                <form type="post" action="{% url 'home' %}" class="join">
+                                    {% csrf_token %}
+                                    <button name="submit-data" value="download-data" type="submit" class="join-item bg-rcpch_light_blue text-white font-semibold hover:text-white py-1 px-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue btn-sm rounded-none">Download</button>
+                                    <button name="submit-data" value="delete-data"  type="submit" class="join-item bg-rcpch_red text-white font-semibold hover:text-white py-1 px-2 border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint btn-sm rounded-none">Delete</button>
+                                </form>
+                            </td>
                         </tr>
                     {% endfor %}
                 </tbody>

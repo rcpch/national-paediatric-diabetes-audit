@@ -54,7 +54,6 @@ class AuditCohort(models.Model):
     submission_by = models.ForeignKey(
         on_delete=models.CASCADE,
         to="npda.NPDAUser",
-        related_name="submissions",
     )
 
     submission_approved = models.BooleanField(
@@ -63,9 +62,7 @@ class AuditCohort(models.Model):
         help_text="Submission has been approved for inclusion in the audit",
     )
 
-    patient = models.ForeignKey(
-        to="npda.Patient", on_delete=models.CASCADE, related_name="audit_cohorts"
-    )
+    patients = models.ManyToManyField(to="npda.Patient", related_name="audit_cohorts")
 
     def calculate_cohort_number(self):
         """
