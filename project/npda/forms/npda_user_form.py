@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 
 class NPDAUserForm(forms.ModelForm):
 
+    use_required_attribute = False
+
     class Meta:
         model = NPDAUser
         fields = [
