@@ -1,10 +1,11 @@
 # python imports
+from datetime import date
 import logging
 
 # Django imports
 from django.apps import apps
 from django.contrib.messages.views import SuccessMessageMixin
-from django.db.models import Count, Case, When, Max, Q, OuterRef, Subquery
+from django.db.models import Count, Case, When, Max, Q, F
 from django.forms import BaseForm
 from django.http.response import HttpResponse
 from django.shortcuts import render
@@ -16,6 +17,7 @@ from django.http import HttpResponse
 # Third party imports
 from django_htmx.http import trigger_client_event
 
+from project.npda.general_functions.cohort_for_date import retrieve_cohort_for_date
 from project.npda.general_functions.rcpch_nhs_organisations import (
     get_all_nhs_organisations,
 )
@@ -67,8 +69,11 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
         if filtered_patients is not None:
             patient_queryset = patient_queryset.filter(filtered_patients)
 
+        AuditCohort = apps.get_model(app_label="npda", model_name="AuditCohort")
+
         return patient_queryset.annotate(
-            # id__in=Subquery(patients_in_latest_cohort.values("id")),
+            audit_year=F("audit_cohorts__audit_year"),
+            cohort_number=F("audit_cohorts__cohort_number"),
             visit_error_count=Count(Case(When(visit__is_valid=False, then=1))),
             last_upload_date=Max("audit_cohorts__submission_date"),
         ).order_by("is_valid", "visit_error_count", "pk")
