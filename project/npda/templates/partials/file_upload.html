@@ -16,22 +16,11 @@
                     {% endif %}
                     {% if summary.matching_patients_in_current_cohort > 0 %}
                         <div class="font-bold">{{summary.matching_patients_in_current_cohort}} patients already exist in the NPDA database for this audit year.</div>
-                        <div class="text-md">If you wish to proceed, existing data held will be overwritten with this submission.</div>
-                            <form method="post" action="{% url 'home' %}">
-                                {% csrf_token %}
-                                <button type="submit" name="submit-data" value="overwrite-data" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue" type="submit">Overwrites and View Data</button>
-                            </form>
-                    {% else %}
-                        <form method="post" action="{% url 'home' %}">
-                            {% csrf_token %}
-                            <button type="submit" name="submit-data" value="view-data" class="inline-block bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Submit Data for Validation</button>
-                        </form>
+                        <div class="text-md">This data will become the active submission but the previous submission will be retained.</div>
                     {% endif %}
-                {% else %}
-                    <form method="post"  action="{% url 'home' %}">
-                        {% csrf_token %}
-                        <button type="submit" name="submit-data" value="submit-data" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue" type="submit">View Data</button>
-                    </form>
+                        <a href='audit_cohorts'><button class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue" type="submit">View Submissions</button></a>
+                    {% else %}
+                        <a href='audit_cohorts'><button class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue" type="submit">View Submissions</button></a>
                 {% endif %}
 
             </div>
