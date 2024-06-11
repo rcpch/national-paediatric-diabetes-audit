@@ -22,7 +22,11 @@ urlpatterns = [
         name="audit_cohorts",
     ),
     # Patient views
-    path("patients", view=PatientListView.as_view(), name="patients"),
+    path(
+        "patients",
+        view=PatientListView.as_view(),
+        name="patients",
+    ),
     path("patient/add/", PatientCreateView.as_view(), name="patient-add"),
     path(
         "patient/<int:pk>/update",

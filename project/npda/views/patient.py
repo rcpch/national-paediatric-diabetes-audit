@@ -45,12 +45,13 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
         """
         pz_code = self.request.session.get("sibling_organisations").get("pz_code")
         ods_code = self.request.session.get("ods_code")
-        AuditCohort = apps.get_model("npda", "AuditCohort")
         filtered_patients = None
         # filter patients to the view preference of the user
         if self.request.user.view_preference == 0:
             # organisation view
-            filtered_patients = Q(site__organisation_ods_code=ods_code)
+            filtered_patients = Q(
+                site__organisation_ods_code=ods_code,
+            )
         elif self.request.user.view_preference == 1:
             # PDU view
             filtered_patients = Q(site__paediatric_diabetes_unit_pz_code=pz_code)
@@ -62,25 +63,14 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
 
         patient_queryset = Patient.objects.filter(
             audit_cohorts__submission_active=True,
-            audit_cohorts__submission_approved=True,
         )
         if filtered_patients is not None:
             patient_queryset = patient_queryset.filter(filtered_patients)
-
-        # retrieve the audit year  and cohort number from the most recent submission
-        latest_auditcohort = (
-            AuditCohort.objects.all().order_by("-submission_date").first()
-        )
-
-        if latest_auditcohort:
-            patients_in_latest_cohort = latest_auditcohort.patient_set.all()
 
         return patient_queryset.annotate(
             # id__in=Subquery(patients_in_latest_cohort.values("id")),
             visit_error_count=Count(Case(When(visit__is_valid=False, then=1))),
             last_upload_date=Max("audit_cohorts__submission_date"),
-            # audit_year=Subquery(patients_in_latest_cohort.values("audit_year")),
-            # cohort_number=Subquery(patients_in_latest_cohort.values("cohort_number")),
         ).order_by("is_valid", "visit_error_count", "pk")
 
     def get_context_data(self, **kwargs):

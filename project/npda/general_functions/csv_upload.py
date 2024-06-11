@@ -824,23 +824,21 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         nhs_number = row["NHS Number"].replace(" ", "")
 
         try:
-            patient, created = Patient.objects.update_or_create(
+            patient = Patient.objects.create(
                 nhs_number=nhs_number,
-                defaults={
-                    "site": site,
-                    "date_of_birth": row["Date of Birth"],
-                    "postcode": row["Postcode of usual address"],
-                    "sex": row["Stated gender"],
-                    "ethnicity": row["Ethnic Category"],
-                    "diabetes_type": row["Diabetes Type"],
-                    "diagnosis_date": row["Date of Diabetes Diagnosis"],
-                    "death_date": (
-                        row["Death Date"] if not pd.isnull(row["Death Date"]) else None
-                    ),
-                    "gp_practice_ods_code": row["GP Practice Code"],
-                    "is_valid": patient_is_valid,
-                    "errors": (patient_errors if patient_errors is not None else None),
-                },
+                site=site,
+                date_of_birth=row["Date of Birth"],
+                postcode=row["Postcode of usual address"],
+                sex=row["Stated gender"],
+                ethnicity=row["Ethnic Category"],
+                diabetes_type=row["Diabetes Type"],
+                diagnosis_date=row["Date of Diabetes Diagnosis"],
+                death_date=(
+                    row["Death Date"] if not pd.isnull(row["Death Date"]) else None
+                ),
+                gp_practice_ods_code=row["GP Practice Code"],
+                is_valid=patient_is_valid,
+                errors=(patient_errors if patient_errors is not None else None),
             )
         except Exception as error:
             raise Exception(f"Could not save patient: {error}")
@@ -1078,7 +1076,10 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
     timestamp = timezone.now()
 
     try:
-        dataframe.apply(lambda row: save_row(row, timestamp=timestamp, cohort_id=new_cohort.pk), axis=1)
+        dataframe.apply(
+            lambda row: save_row(row, timestamp=timestamp, cohort_id=new_cohort.pk),
+            axis=1,
+        )
     except Exception as error:
         # There was an error saving one or more records - this is likely not a problem with the data passed in
         return {"status": 500, "errors": error}
