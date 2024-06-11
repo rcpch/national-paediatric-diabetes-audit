@@ -15,6 +15,7 @@ from django.views.generic import ListView
 # RCPCH imports
 from ..general_functions import csv_upload, csv_summarise, retrieve_cohort_for_date
 from .mixins import LoginAndOTPRequiredMixin
+from ..models import AuditCohort, Patient
 
 
 class AuditCohortsListView(LoginAndOTPRequiredMixin, ListView):
@@ -50,6 +51,7 @@ class AuditCohortsListView(LoginAndOTPRequiredMixin, ListView):
                 submission_by=Concat(
                     "submission_by__first_name", Value(" "), "submission_by__surname"
                 ),
+                pk=F("id"),
             )
             .order_by(
                 "submission_date",
@@ -93,9 +95,24 @@ class AuditCohortsListView(LoginAndOTPRequiredMixin, ListView):
         :param request: The request
         :param args: The arguments
         :param kwargs: The keyword arguments
-        :return: The response
+        :return: the updated table data
         """
-        return super().post(request, *args, **kwargs)
+        button_name = request.POST.get("submit-data")
+        if button_name == "delete-data":
+
+            # delete the cohort submission patients
+            audit_cohort = AuditCohort.objects.filter(
+                pk=request.POST.get("audit_id")
+            ).get()
+            audit_cohort.patients.all().delete()
+            # then delete the cohort submission itself
+            audit_cohort.delete()
+            messages.success(request, "Cohort submission deleted successfully")
+        # POST is not supported for this view
+        # Must therefore return the queryset as an obect_list and context
+        self.object_list = self.get_queryset()
+        context = self.get_context_data(object_list=self.object_list)
+        return render(request, self.template_name, context=context)
 
     def render_to_response(self, context: dict) -> HttpResponse:
         """

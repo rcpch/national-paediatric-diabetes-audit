@@ -22,8 +22,9 @@
                             <td>{{audit.patient_count}}</td>
                             <td>{{audit.submission_active}}</td>
                             <td>
-                                <form type="post" action="{% url 'home' %}" class="join">
+                                <form method="post" action="{% url 'audit_cohorts' %}" class="join">
                                     {% csrf_token %}
+                                    <input type="hidden" name="audit_id" value="{{audit.pk}}">
                                     <button name="submit-data" value="download-data" type="submit" class="join-item bg-rcpch_light_blue text-white font-semibold hover:text-white py-1 px-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue btn-sm rounded-none">Download</button>
                                     <button name="submit-data" value="delete-data"  type="submit" class="join-item bg-rcpch_red text-white font-semibold hover:text-white py-1 px-2 border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint btn-sm rounded-none">Delete</button>
                                 </form>
