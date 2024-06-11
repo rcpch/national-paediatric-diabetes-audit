@@ -107,6 +107,11 @@ class AuditCohortsListView(LoginAndOTPRequiredMixin, ListView):
             audit_cohort.patients.all().delete()
             # then delete the cohort submission itself
             audit_cohort.delete()
+            # set the submission_active flag to True for the most recent submission
+            if AuditCohort.objects.count() > 0:
+                new_first = AuditCohort.objects.order_by("-submission_date").first()
+                new_first.submission_active = True
+                new_first.save()
             messages.success(request, "Cohort submission deleted successfully")
         # POST is not supported for this view
         # Must therefore return the queryset as an obect_list and context
