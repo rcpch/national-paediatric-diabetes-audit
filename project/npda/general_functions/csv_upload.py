@@ -1,5 +1,6 @@
 # python imports
 from datetime import date
+import time
 import logging
 import os
 from typing import Literal
@@ -222,10 +223,10 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             """
             Creates error object from item, list and string text
             """
-            item_match = False
-            for choice in allowed_list:
-                if choice[0] == list_item:
-                    item_match = True
+            # Convert allowed_list to a dictionary if it's not already one
+            allowed_dict = {choice[0]: choice[1] for choice in allowed_list}
+            # Check if list_item is in the dictionary
+            item_match = list_item in allowed_dict
 
             if item_match:
                 # all items are valid, no errors
