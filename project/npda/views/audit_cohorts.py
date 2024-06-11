@@ -54,7 +54,7 @@ class AuditCohortsListView(LoginAndOTPRequiredMixin, ListView):
                 pk=F("id"),
             )
             .order_by(
-                "submission_date",
+                "-submission_date",
                 "pz_code",
                 "ods_code",
                 "audit_year",

@@ -55,6 +55,24 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
     Visit = apps.get_model("npda", "Visit")
     AuditCohort = apps.get_model("npda", "AuditCohort")
 
+    # set previous cohort to inactive
+    AuditCohort.objects.filter(
+        pz_code=pdu_pz_code,
+        ods_code=organisation_ods_code,
+        audit_year=date.today().year,
+        cohort_number=retrieve_cohort_for_date(date_instance=date.today()),
+    ).update(submission_active=False)
+
+    # create new cohort
+    new_cohort = AuditCohort.objects.create(
+        pz_code=pdu_pz_code,
+        ods_code=organisation_ods_code,
+        audit_year=date.today().year,
+        cohort_number=retrieve_cohort_for_date(date_instance=date.today()),
+        submission_date=timezone.now(),
+        submission_by=user,
+    )
+
     csv_file = os.path.join(
         settings.BASE_DIR, "project", "npda", "dummy_sheets", "dummy_sheet_invalid.csv"
     )
@@ -768,7 +786,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         )
 
     # private method - saves the csv row in the model as a record
-    def save_row(row, timestamp):
+    def save_row(row, timestamp, cohort_id):
         """
         Save each row as a record
         First validate the values in the row, then create a Patient instance - if contains invalid items, set is_valid to False, with the error messages
@@ -1045,17 +1063,12 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             # Otherwise data, even if invalid, is saved
             return {"status": 422, "errors": f"Could not save visit {obj}: {error}"}
 
-        audit_cohort, created = AuditCohort.objects.update_or_create(
-            pz_code=pdu_pz_code,
-            ods_code=organisation_ods_code,
-            defaults={
-                "submission_active": False,
-                "submission_date": timestamp,
-                "submission_by": user,
-            },
-        )
+        # create a new cohort
+        audit_cohort = AuditCohort.objects.get(pk=cohort_id)
 
+        audit_cohort.timestamp = timestamp
         audit_cohort.patients.add(patient)
+        audit_cohort.save()
 
         return {"status": 200, "errors": None}
 
@@ -1065,7 +1078,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
     timestamp = timezone.now()
 
     try:
-        dataframe.apply(lambda row: save_row(row, timestamp=timestamp), axis=1)
+        dataframe.apply(lambda row: save_row(row, timestamp=timestamp, cohort_id=new_cohort.pk), axis=1)
     except Exception as error:
         # There was an error saving one or more records - this is likely not a problem with the data passed in
         return {"status": 500, "errors": error}
