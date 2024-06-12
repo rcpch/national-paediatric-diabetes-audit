@@ -83,9 +83,9 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
             "pz_code", None
         )
         total_valid_patients = (
-            Patient.objects.all()
+            Patient.objects.filter(audit_cohorts__submission_active=True)
             .annotate(
-                visit_error_count=Count(Case(When(visit__is_valid=False, then=1)))
+                visit_error_count=Count(Case(When(visit__is_valid=False, then=1))),
             )
             .order_by("is_valid", "visit_error_count", "pk")
             .filter(is_valid=True, visit_error_count__lt=1)
@@ -95,7 +95,8 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
         context["ods_code"] = self.request.user.organisation_employer
         context["total_valid_patients"] = total_valid_patients
         context["total_invalid_patients"] = (
-            Patient.objects.all().count() - total_valid_patients
+            Patient.objects.filter(audit_cohorts__submission_active=True).count()
+            - total_valid_patients
         )
         context["index_of_first_invalid_patient"] = total_valid_patients + 1
         context["organisation_choices"] = self.request.session.get(
