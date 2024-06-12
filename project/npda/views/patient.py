@@ -17,10 +17,6 @@ from django.http import HttpResponse
 # Third party imports
 from django_htmx.http import trigger_client_event
 
-from project.npda.general_functions.cohort_for_date import retrieve_cohort_for_date
-from project.npda.general_functions.rcpch_nhs_organisations import (
-    get_all_nhs_organisations,
-)
 from project.npda.general_functions.retrieve_pdu import (
     retrieve_pdu,
     retrieve_pdu_from_organisation_ods_code,
@@ -68,8 +64,6 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
         )
         if filtered_patients is not None:
             patient_queryset = patient_queryset.filter(filtered_patients)
-
-        AuditCohort = apps.get_model(app_label="npda", model_name="AuditCohort")
 
         return patient_queryset.annotate(
             audit_year=F("audit_cohorts__audit_year"),
