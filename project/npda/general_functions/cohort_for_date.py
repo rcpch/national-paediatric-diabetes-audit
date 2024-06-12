@@ -3,7 +3,13 @@ from datetime import date
 
 def retrieve_cohort_for_date(date_instance: date) -> int:
     """
-    Returns the cohort for a given date.
+    Returns the cohort number of the patient
+
+    **The audit year starts on the 1st of April and ends on the 31st of March the following year**
+    Returns 1 if the patient has less than 25% of the audit year remaining
+    Returns 2 if the patient has less than 50% of the audit year remaining
+    Returns 3 if the patient has less than 75% of the audit year remaining
+    Returns 4 if the patient has more than 75% of the audit year remaining
     """
     # Audit cohort start date is on the 1st April every year
     audit_start_date = date(date.today().year, 4, 1)
