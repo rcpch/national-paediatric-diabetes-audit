@@ -21,7 +21,7 @@ from project.npda.general_functions.retrieve_pdu import (
     retrieve_pdu,
     retrieve_pdu_from_organisation_ods_code,
 )
-from project.npda.models.npda_user import NPDAUser
+from project.npda.models import NPDAUser, AuditCohort
 
 # RCPCH imports
 from ..models import Patient
@@ -235,15 +235,12 @@ class PatientCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateVie
         )
         patient.site = site
         patient.is_valid = True
+        # add patient to the latest audit cohort
+        if AuditCohort.objects.count() > 0:
+            new_first = AuditCohort.objects.order_by("-submission_date").first()
+            new_first.patients.add(patient)
         patient.save()
         return super().form_valid(form)
-
-    def form_invalid(self, form: BaseForm) -> HttpResponse:
-        response = super().form_invalid(form)
-        print(form.errors)
-        # if self.request.htmx:
-        #     return response
-        return response
 
 
 class PatientUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateView):

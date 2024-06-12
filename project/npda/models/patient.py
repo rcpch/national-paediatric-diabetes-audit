@@ -180,10 +180,3 @@ class Patient(models.Model):
             self.gp_practice_ods_code = ods_code
 
         return super().save(*args, **kwargs)
-
-    def delete(
-        self,
-    ) -> tuple[int, dict[str, int]]:
-        # delete all the sites associated with the patient
-        apps.get_model("npda.Site").objects.filter(patient=self.patient).delete()
-        return super().delete()
