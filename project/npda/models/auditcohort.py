@@ -66,32 +66,33 @@ class AuditCohort(models.Model):
 
     def calculate_cohort_number(self):
         """
-        Returns the cohort number of the patient
+        Returns the cohort number of the patient, where cohort corresponds to which quarter of the audit year the submission date lies in
 
         **The audit year starts on the 1st of April and ends on the 31st of March the following year**
-        Returns 1 if the patient has less than 25% of the audit year remaining
-        Returns 2 if the patient has less than 50% of the audit year remaining
-        Returns 3 if the patient has less than 75% of the audit year remaining
-        Returns 4 if the patient has more than 75% of the audit year remaining
+        Returns cohort = 4 if the patient has less than 25% of the audit year remaining 
+        Returns cohort = 3 if the patient has less than 50% of the audit year remaining
+        Returns cohort = 2 if the patient has less than 75% of the audit year remaining
+        Returns cohort = 1 if the patient has more than 75% of the audit year remaining
         """
         audit_start_date = date(self.audit_year, 4, 1)
         if self.submission_date.date() < audit_start_date:
             # The patient was audited in the previous year
-            days_remaining = (audit_start_date - self.submission_date.date()).days
+            audit_start_date = date(self.audit_year - 1, 4, 1)
+            audit_end_date = date(self.audit_year, 3, 31)
+            days_remaining = (audit_end_date - self.submission_date.date()).days
         else:
             # The patient was audited in the current year
             audit_end_date = date(self.audit_year + 1, 3, 31)
-            days_remaining = (audit_start_date - self.submission_date.date()).days
+            days_remaining = (audit_end_date - self.submission_date.date()).days
         total_days = (audit_end_date - audit_start_date).days
-        completed_days = total_days - days_remaining
-        if (days_remaining / completed_days) < 0.25:
-            return 1
-        elif (days_remaining / completed_days) < 0.5:
-            return 2
-        elif (days_remaining / completed_days) < 0.75:
-            return 3
-        else:
+        if (days_remaining / total_days) < 0.25:
             return 4
+        elif (days_remaining / total_days) < 0.5:
+            return 3
+        elif (days_remaining / total_days) < 0.75:
+            return 2
+        else:
+            return 1
 
     def __str__(self) -> str:
         return f"{self.patient}, {self.audit_year}, {self.cohort_number}"
