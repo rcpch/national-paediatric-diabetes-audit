@@ -40,7 +40,7 @@
                     class="border-b bg-rcpch_red_light_tint3 text-rcpch_red border-gray-100 hover:bg-r hover:bg-rcpch_red_light_tint2 hover:text-white" 
                     {% endif %}>
                     <td><a href="{% url 'patient-update' patient.pk %}" class="px-2 flex text-center hover:text-rcpch_pink"><strong>{{ patient.pk }}</strong></a></td>
-                    <td class="px-6 py-4 flex flex-row items-center">
+                    <td class="px-6 py-4 text-center items-center">
                         {% if patient.errors|error_for_field:"nhs_number" %}
                         <div class="relative has-tooltip items-center">
                             <span class='absolute tooltip rounded shadow-lg px-2 py-2 bg-gray-500 text-white -mt-24'>{{patient.errors|error_for_field:"nhs_number"}}</span>
