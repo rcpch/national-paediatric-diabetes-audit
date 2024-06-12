@@ -1,12 +1,14 @@
 # python imports
-import os
+from datetime import date
+import time
 import logging
+import os
 from typing import Literal
-import json
 
 # django imports
 from django.apps import apps
 from django.conf import settings
+from django.utils import timezone
 
 # third part imports
 import pandas as pd
@@ -35,12 +37,13 @@ from ...constants import (
 
 from .validate_postcode import validate_postcode
 from .nhs_ods_requests import gp_details_for_ods_code
+from .cohort_for_date import retrieve_cohort_for_date
 
 # Logging setup
 logger = logging.getLogger(__name__)
 
 
-def csv_upload(csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
+def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
     """
     Processes standardised NPDA csv file and persists results in NPDA tables
 
@@ -51,7 +54,25 @@ def csv_upload(csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
     Patient = apps.get_model("npda", "Patient")
     Site = apps.get_model("npda", "Site")
     Visit = apps.get_model("npda", "Visit")
-    # PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+    AuditCohort = apps.get_model("npda", "AuditCohort")
+
+    # set previous cohort to inactive
+    AuditCohort.objects.filter(
+        pz_code=pdu_pz_code,
+        ods_code=organisation_ods_code,
+        audit_year=date.today().year,
+        cohort_number=retrieve_cohort_for_date(date_instance=date.today()),
+    ).update(submission_active=False)
+
+    # create new cohort
+    new_cohort = AuditCohort.objects.create(
+        pz_code=pdu_pz_code,
+        ods_code=organisation_ods_code,
+        audit_year=date.today().year,
+        cohort_number=retrieve_cohort_for_date(date_instance=date.today()),
+        submission_date=timezone.now(),
+        submission_by=user,
+    )
 
     csv_file = os.path.join(
         settings.BASE_DIR, "project", "npda", "dummy_sheets", "dummy_sheet_invalid.csv"
@@ -202,10 +223,10 @@ def csv_upload(csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
             """
             Creates error object from item, list and string text
             """
-            item_match = False
-            for choice in allowed_list:
-                if choice[0] == list_item:
-                    item_match = True
+            # Convert allowed_list to a dictionary if it's not already one
+            allowed_dict = {choice[0]: choice[1] for choice in allowed_list}
+            # Check if list_item is in the dictionary
+            item_match = list_item in allowed_dict
 
             if item_match:
                 # all items are valid, no errors
@@ -766,7 +787,7 @@ def csv_upload(csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
         )
 
     # private method - saves the csv row in the model as a record
-    def save_row(row):
+    def save_row(row, timestamp, cohort_id):
         """
         Save each row as a record
         First validate the values in the row, then create a Patient instance - if contains invalid items, set is_valid to False, with the error messages
@@ -781,9 +802,10 @@ def csv_upload(csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
             site_errors,
         ) = validate_row(row)
 
+        # save the site
         try:
             # save site
-            site, created = Site.objects.get_or_create(
+            site, created = Site.objects.update_or_create(
                 date_leaving_service=(
                     row["Date of leaving service"]
                     if not pd.isnull(row["Date of leaving service"])
@@ -803,23 +825,21 @@ def csv_upload(csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
         nhs_number = row["NHS Number"].replace(" ", "")
 
         try:
-            patient, created = Patient.objects.update_or_create(
+            patient = Patient.objects.create(
                 nhs_number=nhs_number,
-                defaults={
-                    "site": site,
-                    "date_of_birth": row["Date of Birth"],
-                    "postcode": row["Postcode of usual address"],
-                    "sex": row["Stated gender"],
-                    "ethnicity": row["Ethnic Category"],
-                    "diabetes_type": row["Diabetes Type"],
-                    "diagnosis_date": row["Date of Diabetes Diagnosis"],
-                    "death_date": (
-                        row["Death Date"] if not pd.isnull(row["Death Date"]) else None
-                    ),
-                    "gp_practice_ods_code": row["GP Practice Code"],
-                    "is_valid": patient_is_valid,
-                    "errors": (patient_errors if patient_errors is not None else None),
-                },
+                site=site,
+                date_of_birth=row["Date of Birth"],
+                postcode=row["Postcode of usual address"],
+                sex=row["Stated gender"],
+                ethnicity=row["Ethnic Category"],
+                diabetes_type=row["Diabetes Type"],
+                diagnosis_date=row["Date of Diabetes Diagnosis"],
+                death_date=(
+                    row["Death Date"] if not pd.isnull(row["Death Date"]) else None
+                ),
+                gp_practice_ods_code=row["GP Practice Code"],
+                is_valid=patient_is_valid,
+                errors=(patient_errors if patient_errors is not None else None),
             )
         except Exception as error:
             raise Exception(f"Could not save patient: {error}")
@@ -1036,19 +1056,78 @@ def csv_upload(csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
                 "is_valid": visit_is_valid,
                 "errors": (visit_errors if visit_errors is not None else None),
             }
-            Visit.objects.update_or_create(**obj)
+            Visit.objects.create(**obj)
         except Exception as error:
             # called if database error or similar and database could not save instances.
             # Otherwise data, even if invalid, is saved
             return {"status": 422, "errors": f"Could not save visit {obj}: {error}"}
 
+        # create a new cohort
+        audit_cohort = AuditCohort.objects.get(pk=cohort_id)
+
+        audit_cohort.timestamp = timestamp
+        audit_cohort.patients.add(patient)
+        audit_cohort.save()
+
         return {"status": 200, "errors": None}
 
-    # save the results - validate  as you go within the save_row function
+        # save the results - validate  as you go within the save_row function
+
+    # by passing this in we can use the same timestamp for all records
+    timestamp = timezone.now()
+
     try:
-        dataframe.apply(save_row, axis=1)
+        dataframe.apply(
+            lambda row: save_row(row, timestamp=timestamp, cohort_id=new_cohort.pk),
+            axis=1,
+        )
     except Exception as error:
         # There was an error saving one or more records - this is likely not a problem with the data passed in
         return {"status": 500, "errors": error}
 
     return {"status": 200, "errors": None}
+
+
+def csv_summarise(csv_file):
+    """
+    This function takes a csv file and processes the file to create a summary of the data
+    It returns a dictionary with the status of the operation and the summary data
+    """
+    Patient = apps.get_model("npda", "Patient")
+    # read the csv file
+    try:
+        dataframe = pd.read_csv(
+            csv_file, parse_dates=ALL_DATES, dayfirst=True, date_format="%d/%m/%Y"
+        )
+    except Exception as error:
+        return {
+            "status": 422,
+            "errors": f"Could not read csv file: {error}",
+            "summary": None,
+        }
+
+    total_records = len(dataframe)
+    number_unique_nhs_numbers = dataframe["NHS Number"].nunique()
+    unique_nhs_numbers_no_spaces = (
+        dataframe["NHS Number"].apply(lambda x: x.replace(" ", "")).unique()
+    )
+    count_of_records_per_nhs_number = dataframe["NHS Number"].value_counts()
+    matching_patients_in_current_cohort = Patient.objects.filter(
+        nhs_number__in=list(unique_nhs_numbers_no_spaces),
+        audit_cohorts__submission_active=True,
+        audit_cohorts__audit_year=date.today().year,
+        audit_cohorts__cohort_number=retrieve_cohort_for_date(
+            date_instance=date.today()
+        ),
+    ).count()
+
+    summary = {
+        "total_records": total_records,
+        "number_unique_nhs_numbers": number_unique_nhs_numbers,
+        "count_of_records_per_nhs_number": list(
+            count_of_records_per_nhs_number.items()
+        ),
+        "matching_patients_in_current_cohort": matching_patients_in_current_cohort,
+    }
+
+    return summary

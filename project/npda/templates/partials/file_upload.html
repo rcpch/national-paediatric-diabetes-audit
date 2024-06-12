@@ -1,0 +1,51 @@
+<div class="max-w-xl w-full">
+    {% if file_uploaded %}
+        
+            <h5 class="font-montserrat mb-5"><strong>File uploaded - Thank you!</strong></h5>
+            <div class="border-rcpch_light_blue font-montserrat rounded-none flex flex-col justify-start">
+                {% if summary %}
+                    <h3 class="font-bold">Summary</h3>
+                    <div class="text-md">Total uploaded rows: <strong>{{summary.total_records}}</strong></div>
+                    <div class="text-md">Number of unique patients: <strong>{{summary.number_unique_nhs_numbers}}</strong></div>
+                    {% if summary.count_of_records_per_nhs_number|length > 0 %}
+                        <div class="text-md">The breakdown of records per NHS number are:</div>
+                            {% for nhs_number, visit_count in summary.count_of_records_per_nhs_number %}
+                                <p class="text-md">- <i>{{nhs_number}}</i>: <strong>{{visit_count}}</strong> records/visits<p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% if summary.matching_patients_in_current_cohort > 0 %}
+                        <div class="font-bold">{{summary.matching_patients_in_current_cohort}} patients already exist in the NPDA database for this audit year.</div>
+                        <div class="text-md">This data will become the active submission but the previous submission will be retained.</div>
+                    {% endif %}
+                        <a href='audit_cohorts'><button class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue" type="submit">View Submissions</button></a>
+                    {% else %}
+                        <a href='audit_cohorts'><button class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue" type="submit">View Submissions</button></a>
+                {% endif %}
+
+            </div>
+
+    {% else %}
+        <form method="POST" enctype="multipart/form-data" action="home" >
+            <label for="#upload_input" class="flex justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-none appearance-none cursor-pointer hover:border-gray-400 focus:outline-none">
+                <span class="flex items-center space-x-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2"> 
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <span class="font-medium text-gray-600 font-montserrat">
+                        Please drop your NPDA CSV file here, or
+                            <button class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 border border-rcpch_light_blue hover:bg-rcpch_dark_blue hover:border-rcpch_dark_blue font-montserrat">
+                                <input id="upload_input" type="file" name="csv_upload">
+                                <span class="loading loading-spinner loading-lg text-rcpch_pink hidden" id="upload-spinner"></span>
+                            </button>
+                    </span>
+                        {% csrf_token %}
+                            <button class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue" type="submit" _="on click remove .hidden from #upload-spinner">Submit Data</button>
+                    </span>
+            </label>
+        </form>
+    {% endif %}
+
+</div>

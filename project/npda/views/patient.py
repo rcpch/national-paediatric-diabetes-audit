@@ -1,9 +1,11 @@
 # python imports
+from datetime import date
 import logging
 
 # Django imports
+from django.apps import apps
 from django.contrib.messages.views import SuccessMessageMixin
-from django.db.models import Count, Case, When
+from django.db.models import Count, Case, When, Max, Q, F
 from django.forms import BaseForm
 from django.http.response import HttpResponse
 from django.shortcuts import render
@@ -15,13 +17,9 @@ from django.http import HttpResponse
 # Third party imports
 from django_htmx.http import trigger_client_event
 
-from project.npda.general_functions.rcpch_nhs_organisations import (
-    get_all_nhs_organisations,
-)
 from project.npda.general_functions.retrieve_pdu import (
     retrieve_pdu,
     retrieve_pdu_from_organisation_ods_code,
-    retrieve_pdu_list,
 )
 from project.npda.models.npda_user import NPDAUser
 
@@ -45,36 +43,34 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
         """
         pz_code = self.request.session.get("sibling_organisations").get("pz_code")
         ods_code = self.request.session.get("ods_code")
+        filtered_patients = None
         # filter patients to the view preference of the user
         if self.request.user.view_preference == 0:
             # organisation view
-            return (
-                Patient.objects.filter(site__organisation_ods_code=ods_code)
-                .annotate(
-                    visit_error_count=Count(Case(When(visit__is_valid=False, then=1)))
-                )
-                .order_by("is_valid", "visit_error_count", "pk")
+            filtered_patients = Q(
+                site__organisation_ods_code=ods_code,
             )
         elif self.request.user.view_preference == 1:
             # PDU view
-            return (
-                Patient.objects.filter(site__paediatric_diabetes_unit_pz_code=pz_code)
-                .annotate(
-                    visit_error_count=Count(Case(When(visit__is_valid=False, then=1)))
-                )
-                .order_by("is_valid", "visit_error_count", "pk")
-            )
+            filtered_patients = Q(site__paediatric_diabetes_unit_pz_code=pz_code)
         elif self.request.user.view_preference == 2:
-            # National view
-            return (
-                Patient.objects.all()
-                .annotate(
-                    visit_error_count=Count(Case(When(visit__is_valid=False, then=1)))
-                )
-                .order_by("is_valid", "visit_error_count", "pk")
-            )
+            # National view - no filter
+            pass
         else:
             raise ValueError("Invalid view preference")
+
+        patient_queryset = Patient.objects.filter(
+            audit_cohorts__submission_active=True,
+        )
+        if filtered_patients is not None:
+            patient_queryset = patient_queryset.filter(filtered_patients)
+
+        return patient_queryset.annotate(
+            audit_year=F("audit_cohorts__audit_year"),
+            cohort_number=F("audit_cohorts__cohort_number"),
+            visit_error_count=Count(Case(When(visit__is_valid=False, then=1))),
+            last_upload_date=Max("audit_cohorts__submission_date"),
+        ).order_by("is_valid", "visit_error_count", "pk")
 
     def get_context_data(self, **kwargs):
         """

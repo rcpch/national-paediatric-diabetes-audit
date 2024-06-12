@@ -2,12 +2,13 @@
 from datetime import date
 
 # django imports
-from django.utils.translation import gettext_lazy as _
-from django.urls import reverse
+from django.apps import apps
 from django.contrib.gis.db import models
 from django.contrib.gis.db.models import CharField, DateField, PositiveSmallIntegerField
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
+from django.urls import reverse
 
 # npda imports
 from ...constants import (
@@ -23,6 +24,7 @@ from ..general_functions import (
     stringify_time_elapsed,
     imd_for_postcode,
     gp_practice_for_postcode,
+    validate_postcode,
 )
 
 
@@ -34,12 +36,10 @@ class Patient(models.Model):
     RCPCH Census Platform
 
     Custom methods age and age_days, returns the age
-
-
     """
 
     nhs_number = CharField(  # the NHS number for England and Wales
-        "NHS Number", unique=True, max_length=10
+        "NHS Number", max_length=10
     )
 
     sex = models.IntegerField("Stated gender", choices=SEX_TYPE, blank=True, null=True)
@@ -145,17 +145,23 @@ class Patient(models.Model):
         # Skips the calculation if the postcode is on the 'unknown' list
         if self.postcode:
             if str(self.postcode).replace(" ", "") not in UNKNOWN_POSTCODES_NO_SPACES:
-                try:
-                    self.index_of_multiple_deprivation_quintile = imd_for_postcode(
-                        self.postcode
+                validated = validate_postcode(self.postcode)
+                if not validated:
+                    raise ValidationError(
+                        _("Postcode is not valid. Please enter a valid postcode.")
                     )
-                except Exception as error:
-                    # Deprivation score not persisted if deprivation score server down
-                    self.index_of_multiple_deprivation_quintile = None
-                    print(
-                        f"Cannot calculate deprivation score for {self.postcode}: {error}"
-                    )
-                    pass
+                else:
+                    try:
+                        self.index_of_multiple_deprivation_quintile = imd_for_postcode(
+                            self.postcode
+                        )
+                    except Exception as error:
+                        # Deprivation score not persisted if deprivation score server down
+                        self.index_of_multiple_deprivation_quintile = None
+                        print(
+                            f"Cannot calculate deprivation score for {self.postcode}: {error}"
+                        )
+                        pass
 
         if self.gp_practice_ods_code is None and self.gp_practice_postcode is None:
             raise ValidationError(
@@ -174,3 +180,10 @@ class Patient(models.Model):
             self.gp_practice_ods_code = ods_code
 
         return super().save(*args, **kwargs)
+
+    def delete(
+        self,
+    ) -> tuple[int, dict[str, int]]:
+        # delete all the sites associated with the patient
+        apps.get_model("npda.Site").objects.filter(patient=self.patient).delete()
+        return super().delete()
