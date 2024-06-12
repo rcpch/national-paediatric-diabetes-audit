@@ -224,9 +224,26 @@ class PatientCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateVie
     def form_valid(self, form: BaseForm) -> HttpResponse:
         # the Patient record is therefore valid
         patient = form.save(commit=False)
+        # add the site to the patient record
+        site = apps.get_model("npda", "Site").objects.create(
+            paediatric_diabetes_unit_pz_code=self.request.session.get(
+                "sibling_organisations", {}
+            ).get("pz_code"),
+            organisation_ods_code=self.request.user.organisation_employer,
+            date_leaving_service=form.cleaned_data.get("date_leaving_service"),
+            reason_leaving_service=form.cleaned_data.get("reason_leaving_service"),
+        )
+        patient.site = site
         patient.is_valid = True
         patient.save()
         return super().form_valid(form)
+
+    def form_invalid(self, form: BaseForm) -> HttpResponse:
+        response = super().form_invalid(form)
+        print(form.errors)
+        # if self.request.htmx:
+        #     return response
+        return response
 
 
 class PatientUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateView):
