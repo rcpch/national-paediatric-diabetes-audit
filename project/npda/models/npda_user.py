@@ -112,8 +112,6 @@ class NPDAUserManager(BaseUserManager):
 
         logged_in_user = self.create_user(email.lower(), password, **extra_fields)
 
-        print(logged_in_user)
-
         """
         Allocate Roles
         """
