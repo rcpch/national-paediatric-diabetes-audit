@@ -40,7 +40,7 @@ def get_all_nhs_organisations():
     These are typically used in Django forms as choices.
     """
 
-    url = f"https://rcpch-nhs-organisations.azurewebsites.net/organisations/limited"
+    url = f"{settings.RCPCH_NHS_ORGANISATIONS_API_URL}/organisations/limited"
 
     try:
         response = requests.get(
