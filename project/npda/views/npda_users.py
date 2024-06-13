@@ -327,7 +327,7 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateVi
 
 class NPDAUserDeleteView(LoginAndOTPRequiredMixin, SuccessMessageMixin, DeleteView):
     """
-    Handle deletion of child from audit
+    Handle deletion of user from audit
     """
 
     model = NPDAUser
