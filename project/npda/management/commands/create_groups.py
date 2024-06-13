@@ -106,7 +106,7 @@ def groups_seeder(
         {"codename": "view_patient", "content_type": patientContentType}, 
     ]
 
-    EDITOR_PERMISSIONS = [
+    EDITOR_CUSTOM_PERMISSIONS = [
         # custom
         {
             "codename": CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT[0],
@@ -128,8 +128,6 @@ def groups_seeder(
 
     """
     Full access inherit all editor permissions
-    In addition they can
-    - create, change and delete NPDAUsers
     - transfer to another lead NPDA centre
 
     NOTE Additional constraints are applied in view decorators to prevent users accessing 
@@ -185,7 +183,7 @@ def groups_seeder(
             if group == NPDA_AUDIT_TEAM_FULL_ACCESS:
                 # basic permissions
                 add_permissions_to_group(RCPCH_AUDIT_TEAM_PERMISSIONS, newGroup)
-                add_permissions_to_group(EDITOR_PERMISSIONS, newGroup)
+                add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
                 add_permissions_to_group(FULL_ACCESS_CUSTOM_PERMISSIONS, newGroup)
 
             # TRUST_AUDIT_TEAM_VIEW_ONLY = ADMINISTRATOR
@@ -197,13 +195,13 @@ def groups_seeder(
             elif group == TRUST_AUDIT_TEAM_EDIT_ACCESS:
                 # basic permissions
                 add_permissions_to_group(CLINICIAN_PERMISSIONS, newGroup)
-                add_permissions_to_group(EDITOR_PERMISSIONS, newGroup)
+                add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
 
             # TRUST_AUDIT_TEAM_FULL_ACCESS = LEAD CLINICIAN
             elif group == TRUST_AUDIT_TEAM_FULL_ACCESS:
                 # basic permissions
                 add_permissions_to_group(LEAD_CLINICIAN_PERMISSIONS, newGroup)
-                add_permissions_to_group(EDITOR_PERMISSIONS, newGroup)
+                add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
                 add_permissions_to_group(FULL_ACCESS_CUSTOM_PERMISSIONS, newGroup)
 
             elif group == PATIENT_ACCESS:
@@ -251,7 +249,7 @@ def groups_seeder(
                 if group == NPDA_AUDIT_TEAM_FULL_ACCESS:
                     # basic permissions
                     add_permissions_to_group(RCPCH_AUDIT_TEAM_PERMISSIONS, newGroup)
-                    add_permissions_to_group(EDITOR_PERMISSIONS, newGroup)
+                    add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
                     add_permissions_to_group(FULL_ACCESS_CUSTOM_PERMISSIONS, newGroup)
 
                 # TRUST_AUDIT_TEAM_VIEW_ONLY = ADMINISTRATOR
@@ -263,13 +261,13 @@ def groups_seeder(
                 elif group == TRUST_AUDIT_TEAM_EDIT_ACCESS:
                     # basic permissions
                     add_permissions_to_group(CLINICIAN_PERMISSIONS, newGroup)
-                    add_permissions_to_group(EDITOR_PERMISSIONS, newGroup)
+                    add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
 
                 # TRUST_AUDIT_TEAM_FULL_ACCESS = LEAD CLINICIAN
                 elif group == TRUST_AUDIT_TEAM_FULL_ACCESS:
                     # basic permissions
                     add_permissions_to_group(LEAD_CLINICIAN_PERMISSIONS, newGroup)
-                    add_permissions_to_group(EDITOR_PERMISSIONS, newGroup)
+                    add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
                     add_permissions_to_group(FULL_ACCESS_CUSTOM_PERMISSIONS, newGroup)
 
                 elif group == PATIENT_ACCESS:
