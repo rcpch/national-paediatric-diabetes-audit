@@ -69,7 +69,7 @@ class AuditCohort(models.Model):
         Returns the cohort number of the patient, where cohort corresponds to which quarter of the audit year the submission date lies in
 
         **The audit year starts on the 1st of April and ends on the 31st of March the following year**
-        Returns cohort = 4 if the patient has less than 25% of the audit year remaining 
+        Returns cohort = 4 if the patient has less than 25% of the audit year remaining
         Returns cohort = 3 if the patient has less than 50% of the audit year remaining
         Returns cohort = 2 if the patient has less than 75% of the audit year remaining
         Returns cohort = 1 if the patient has more than 75% of the audit year remaining
@@ -95,7 +95,7 @@ class AuditCohort(models.Model):
             return 1
 
     def __str__(self) -> str:
-        return f"{self.patient}, {self.audit_year}, {self.cohort_number}"
+        return f"{self.audit_year} ({self.cohort_number}), {self.patients.count()} patients"
 
     def save(self, *args, **kwargs) -> None:
         self.audit_year = int(self.submission_date.year)

@@ -21,7 +21,7 @@ from project.npda.general_functions.retrieve_pdu import (
     retrieve_pdu,
     retrieve_pdu_from_organisation_ods_code,
 )
-from project.npda.models.npda_user import NPDAUser
+from project.npda.models import NPDAUser, AuditCohort
 
 # RCPCH imports
 from ..models import Patient
@@ -83,9 +83,9 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
             "pz_code", None
         )
         total_valid_patients = (
-            Patient.objects.all()
+            Patient.objects.filter(audit_cohorts__submission_active=True)
             .annotate(
-                visit_error_count=Count(Case(When(visit__is_valid=False, then=1)))
+                visit_error_count=Count(Case(When(visit__is_valid=False, then=1))),
             )
             .order_by("is_valid", "visit_error_count", "pk")
             .filter(is_valid=True, visit_error_count__lt=1)
@@ -95,7 +95,8 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
         context["ods_code"] = self.request.user.organisation_employer
         context["total_valid_patients"] = total_valid_patients
         context["total_invalid_patients"] = (
-            Patient.objects.all().count() - total_valid_patients
+            Patient.objects.filter(audit_cohorts__submission_active=True).count()
+            - total_valid_patients
         )
         context["index_of_first_invalid_patient"] = total_valid_patients + 1
         context["organisation_choices"] = self.request.session.get(
@@ -224,7 +225,21 @@ class PatientCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateVie
     def form_valid(self, form: BaseForm) -> HttpResponse:
         # the Patient record is therefore valid
         patient = form.save(commit=False)
+        # add the site to the patient record
+        site = apps.get_model("npda", "Site").objects.create(
+            paediatric_diabetes_unit_pz_code=self.request.session.get(
+                "sibling_organisations", {}
+            ).get("pz_code"),
+            organisation_ods_code=self.request.user.organisation_employer,
+            date_leaving_service=form.cleaned_data.get("date_leaving_service"),
+            reason_leaving_service=form.cleaned_data.get("reason_leaving_service"),
+        )
+        patient.site = site
         patient.is_valid = True
+        # add patient to the latest audit cohort
+        if AuditCohort.objects.count() > 0:
+            new_first = AuditCohort.objects.order_by("-submission_date").first()
+            new_first.patients.add(patient)
         patient.save()
         return super().form_valid(form)
 
