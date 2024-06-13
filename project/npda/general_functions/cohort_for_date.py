@@ -14,23 +14,23 @@ def retrieve_cohort_for_date(date_instance: date) -> int:
     Returns cohort = 1 if the patient has more than 75% of the audit year remaining
     """
     # Audit start date is on the 1st April every year
-    audit_start_date = date(date.today().year, 4, 1)
+    audit_start_date = date(date_instance.year, 4, 1)
     if date_instance < audit_start_date:
         # The patient was audited in the previous year
-        audit_start_date = date(date.today().year - 1, 4, 1)
-        audit_end_date = date(date.today().year, 3, 31)
-        days_remaining = (audit_end_date - date_instance).days
+        audit_start_date = date(date_instance.year - 1, 4, 1)
+        audit_end_date = date(date_instance.year, 3, 31)
+        days_elapsed = (date_instance - audit_start_date).days
     else:
         # The patient was audited in the current year
         # Audit end date is on the 31st of March of every year
-        audit_end_date = date(date.today().year + 1, 3, 31)
-        days_remaining = (audit_end_date - date_instance).days
+        audit_end_date = date(date_instance.year + 1, 3, 31)
+        days_elapsed = (date_instance - audit_start_date).days
     total_days = (audit_end_date - audit_start_date).days
-    if (days_remaining / total_days) < 0.25:
-        return 4
-    elif (days_remaining / total_days) < 0.5:
-        return 3
-    elif (days_remaining / total_days) < 0.75:
-        return 2
-    else:
+    if (days_elapsed / total_days) < 0.25:
         return 1
+    elif (days_elapsed / total_days) < 0.5:
+        return 2
+    elif (days_elapsed / total_days) < 0.75:
+        return 3
+    else:
+        return 4
