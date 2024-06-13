@@ -55,8 +55,7 @@ def groups_seeder(
     ]
     """
     Editors inherit all view permissions
-    Note editor access permissions do not include creating, updating or deleting Epilepsy12Users.
-    Editor access include deleting patients
+    Note editor access permissions do not include creating, updating or deleting NPDAUser.
     Editor access permissions do include creating, updating or delete patient records
     
     Editors can create, update and delete neurology, general paediatric and surgical sites, but 
@@ -66,7 +65,6 @@ def groups_seeder(
     records of users or children in organisations other than their own
     """
     EDITOR_PERMISSIONS = [
-        {"codename": "delete_patient", "content_type": patientContentType},
         {"codename": "change_visit", "content_type": visitContentType},
         {"codename": "add_visit", "content_type": visitContentType},
         {"codename": "delete_visit", "content_type": visitContentType},
@@ -103,7 +101,7 @@ def groups_seeder(
     records of users or children in organisations other than their own
     """
     FULL_ACCESS_PERMISSIONS = [
-        # epilepsy12 user
+        # npda user
         {"codename": "add_npdauser", "content_type": npdaUserContentType},
         {
             "codename": "change_npdauser",
@@ -125,21 +123,10 @@ def groups_seeder(
             "codename": CAN_TRANSFER_NPDA_LEAD_CENTRE[0],
             "content_type": siteContentType,
         },
-    ]
-
-    """
-    NPDA Team inherit all view, edit and full access permissions. In addition they may:
-    - opt children out of NPDA
-    - allocate, update and delete NPDA lead site status
-    - publish NPDA data to the public site
-    
-    NOTE RCPCH team are able to access all users and all children nationally.
-    """
-    NPDA_AUDIT_TEAM_ACCESS_PERMISSIONS = [
-        # {
-        #     "codename": CAN_PUBLISH_NPDA_DATA[0],
-        #     "content_type": organisationKPIAggregationContentType,
-        # },
+        {
+            "codename": "delete_patient", 
+            "content_type": patientContentType
+        }
     ]
 
     PATIENT_ACCESS_PERMISSIONS = [
@@ -173,8 +160,6 @@ def groups_seeder(
             newGroup = Group.objects.filter(name=group).get()
 
             if group == NPDA_AUDIT_TEAM_FULL_ACCESS:
-                # custom permissions
-                add_permissions_to_group(NPDA_AUDIT_TEAM_ACCESS_PERMISSIONS, newGroup)
                 # basic permissions
                 add_permissions_to_group(VIEW_PERMISSIONS, newGroup)
                 add_permissions_to_group(ADMIN_PATIENT_MANAGEMENT_PERMISSIONS, newGroup)
@@ -246,10 +231,6 @@ def groups_seeder(
                 # add permissions to group
 
                 if group == NPDA_AUDIT_TEAM_FULL_ACCESS:
-                    # custom permissions
-                    add_permissions_to_group(
-                        NPDA_AUDIT_TEAM_ACCESS_PERMISSIONS, newGroup
-                    )
                     # basic permissions
                     add_permissions_to_group(VIEW_PERMISSIONS, newGroup)
                     add_permissions_to_group(
