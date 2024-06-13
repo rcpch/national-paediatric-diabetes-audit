@@ -12,7 +12,6 @@ from project.npda.models import Patient
 from .PatientFactory import PatientFactory
 
 
-@pytest.mark.django_db
 @pytest.fixture(scope="session")
 def seed_cases_fixture(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():

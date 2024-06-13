@@ -26,7 +26,6 @@ from project.constants.user import (
 )
 
 
-@pytest.mark.django_db
 @pytest.fixture(scope="session")
 def seed_users_fixture(django_db_setup, django_db_blocker):
     users = [
