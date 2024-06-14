@@ -5,6 +5,7 @@ import logging
 # Django imports
 from django.apps import apps
 from django.contrib.messages.views import SuccessMessageMixin
+from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.db.models import Count, Case, When, Max, Q, F
 from django.forms import BaseForm
 from django.http.response import HttpResponse
@@ -272,11 +273,11 @@ class PatientUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateVie
         return super().form_valid(form)
 
 
-class PatientDeleteView(LoginAndOTPRequiredMixin, SuccessMessageMixin, DeleteView):
+class PatientDeleteView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, DeleteView):
     """
     Handle deletion of child from audit
     """
-
+    permission_required = 'npda.delete_patient'
     model = Patient
     success_message = "Child removed from database"
     success_url = reverse_lazy("patients")
