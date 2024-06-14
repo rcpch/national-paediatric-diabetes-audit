@@ -32,7 +32,8 @@ from .mixins import LoginAndOTPRequiredMixin
 logger = logging.getLogger(__name__)
 
 
-class PatientListView(LoginAndOTPRequiredMixin, ListView):
+class PatientListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, ListView):
+    permission_required = 'npda.view_patient'
     model = Patient
     template_name = "patients.html"
 
@@ -202,11 +203,11 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
             return response
 
 
-class PatientCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateView):
+class PatientCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, CreateView):
     """
     Handle creation of new patient in audit
     """
-
+    permision_required = 'npda.add_patient'
     model = Patient
     form_class = PatientForm
     success_message = "New child record created was created successfully"
@@ -245,11 +246,12 @@ class PatientCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateVie
         return super().form_valid(form)
 
 
-class PatientUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateView):
+class PatientUpdateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, UpdateView):
     """
     Handle update of patient in audit
     """
 
+    permission_required = 'npda.change_patient'
     model = Patient
     form_class = PatientForm
     success_message = "New child record updated successfully"
