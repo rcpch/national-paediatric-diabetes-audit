@@ -38,42 +38,75 @@ def groups_seeder(
     NOTE Additional constraints are applied in view decorators to prevent users accessing 
     records of users or children in organisations other than their own
     """
-    VIEW_PERMISSIONS = [
-        {"codename": "view_npdauser", "content_type": npdaUserContentType},
-        {"codename": "view_patient", "content_type": patientContentType},
-        {"codename": "view_visit", "content_type": visitContentType},
-        {"codename": "view_site", "content_type": siteContentType},
-    ]
 
-    """
-    Administrators have additional privileges in relation to patient management
-    Permissions include create, update and view cases, but not delete them
-    """
-    ADMIN_PATIENT_MANAGEMENT_PERMISSIONS = [
+    LEAD_CLINICIAN_PERMISSIONS = [
+        # patient-related permissions
+        {"codename": "view_patient", "content_type": patientContentType},
         {"codename": "change_patient", "content_type": patientContentType},
         {"codename": "add_patient", "content_type": patientContentType},
-    ]
-    """
-    Editors inherit all view permissions
-    Note editor access permissions do not include creating, updating or deleting Epilepsy12Users.
-    Editor access include deleting patients
-    Editor access permissions do include creating, updating or delete patient records
-    
-    Editors can create, update and delete neurology, general paediatric and surgical sites, but 
-    cannot create, update or delete lead NPDA centre allocation, or transfer
-
-    NOTE Additional constraints are applied in view decorators to prevent users accessing 
-    records of users or children in organisations other than their own
-    """
-    EDITOR_PERMISSIONS = [
         {"codename": "delete_patient", "content_type": patientContentType},
+
+        # visit-related permissions
+        {"codename": "view_visit", "content_type": visitContentType},
         {"codename": "change_visit", "content_type": visitContentType},
         {"codename": "add_visit", "content_type": visitContentType},
         {"codename": "delete_visit", "content_type": visitContentType},
-        # sites
+
+        # site-related permissions = None
+    ]
+
+    CLINICIAN_PERMISSIONS = [
+        # patient-related permissions
+        {"codename": "view_patient", "content_type": patientContentType},
+        {"codename": "change_patient", "content_type": patientContentType},
+        {"codename": "add_patient", "content_type": patientContentType},
+
+        # visit-related permissions
+        {"codename": "view_visit", "content_type": visitContentType},
+        {"codename": "change_visit", "content_type": visitContentType},
+        {"codename": "add_visit", "content_type": visitContentType},
+
+        # site-related permissions = None
+    ]
+
+    ADMINISTRATOR_PERMISSIONS = [
+        # patient-related permissions
+        {"codename": "view_patient", "content_type": patientContentType},
+        {"codename": "change_patient", "content_type": patientContentType},
+        {"codename": "add_patient", "content_type": patientContentType},
+
+        # visit-related permissions
+        {"codename": "view_visit", "content_type": visitContentType},
+
+        # site-related permissions = None
+    ]
+
+    RCPCH_AUDIT_TEAM_PERMISSIONS = [
+        # patient-related permissions
+        {"codename": "view_patient", "content_type": patientContentType},
+        {"codename": "change_patient", "content_type": patientContentType},
+        {"codename": "add_patient", "content_type": patientContentType},
+        {"codename": "delete_patient", "content_type": patientContentType},
+
+        # visit-related permissions
+        {"codename": "view_visit", "content_type": visitContentType},
+        {"codename": "change_visit", "content_type": visitContentType},
+        {"codename": "add_visit", "content_type": visitContentType},
+        {"codename": "delete_visit", "content_type": visitContentType},
+
+        # site-related permissions
+        {"codename": "view_site", "content_type": siteContentType},
         {"codename": "change_site", "content_type": siteContentType},
         {"codename": "add_site", "content_type": siteContentType},
         {"codename": "delete_site", "content_type": siteContentType},
+        
+    ]
+
+    PATIENT_PERMISSIONS = [
+        {"codename": "view_patient", "content_type": patientContentType}, 
+    ]
+
+    EDITOR_CUSTOM_PERMISSIONS = [
         # custom
         {
             "codename": CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT[0],
@@ -95,24 +128,13 @@ def groups_seeder(
 
     """
     Full access inherit all editor permissions
-    In addition they can
-    - create, change and delete NPDAUsers
     - transfer to another lead NPDA centre
 
     NOTE Additional constraints are applied in view decorators to prevent users accessing 
     records of users or children in organisations other than their own
     """
-    FULL_ACCESS_PERMISSIONS = [
-        # epilepsy12 user
-        {"codename": "add_npdauser", "content_type": npdaUserContentType},
-        {
-            "codename": "change_npdauser",
-            "content_type": npdaUserContentType,
-        },
-        {
-            "codename": "delete_npdauser",
-            "content_type": npdaUserContentType,
-        },
+    FULL_ACCESS_CUSTOM_PERMISSIONS = [
+        # npda user
         {
             "codename": CAN_DELETE_NPDA_LEAD_CENTRE[0],
             "content_type": siteContentType,
@@ -125,21 +147,6 @@ def groups_seeder(
             "codename": CAN_TRANSFER_NPDA_LEAD_CENTRE[0],
             "content_type": siteContentType,
         },
-    ]
-
-    """
-    NPDA Team inherit all view, edit and full access permissions. In addition they may:
-    - opt children out of NPDA
-    - allocate, update and delete NPDA lead site status
-    - publish NPDA data to the public site
-    
-    NOTE RCPCH team are able to access all users and all children nationally.
-    """
-    NPDA_AUDIT_TEAM_ACCESS_PERMISSIONS = [
-        # {
-        #     "codename": CAN_PUBLISH_NPDA_DATA[0],
-        #     "content_type": organisationKPIAggregationContentType,
-        # },
     ]
 
     PATIENT_ACCESS_PERMISSIONS = [
@@ -172,43 +179,36 @@ def groups_seeder(
             # add permissions to group
             newGroup = Group.objects.filter(name=group).get()
 
+            # NPDA_AUDIT_TEAM_FULL_ACCESS = RCPCH AUDIT TEAM
             if group == NPDA_AUDIT_TEAM_FULL_ACCESS:
-                # custom permissions
-                add_permissions_to_group(NPDA_AUDIT_TEAM_ACCESS_PERMISSIONS, newGroup)
                 # basic permissions
-                add_permissions_to_group(VIEW_PERMISSIONS, newGroup)
-                add_permissions_to_group(ADMIN_PATIENT_MANAGEMENT_PERMISSIONS, newGroup)
-                add_permissions_to_group(EDITOR_PERMISSIONS, newGroup)
-                add_permissions_to_group(FULL_ACCESS_PERMISSIONS, newGroup)
+                add_permissions_to_group(RCPCH_AUDIT_TEAM_PERMISSIONS, newGroup)
+                add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
+                add_permissions_to_group(FULL_ACCESS_CUSTOM_PERMISSIONS, newGroup)
 
+            # TRUST_AUDIT_TEAM_VIEW_ONLY = ADMINISTRATOR
             elif group == TRUST_AUDIT_TEAM_VIEW_ONLY:
-                # custom permissions
-
                 # basic permissions
-                add_permissions_to_group(VIEW_PERMISSIONS, newGroup)
+                add_permissions_to_group(ADMINISTRATOR_PERMISSIONS, newGroup)
 
+            # TRUST_AUDIT_TEAM_EDIT_ACCESS = CLINICIAN
             elif group == TRUST_AUDIT_TEAM_EDIT_ACCESS:
-                # custom permissions
-
                 # basic permissions
-                add_permissions_to_group(VIEW_PERMISSIONS, newGroup)
-                add_permissions_to_group(ADMIN_PATIENT_MANAGEMENT_PERMISSIONS, newGroup)
-                add_permissions_to_group(EDITOR_PERMISSIONS, newGroup)
+                add_permissions_to_group(CLINICIAN_PERMISSIONS, newGroup)
+                add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
 
+            # TRUST_AUDIT_TEAM_FULL_ACCESS = LEAD CLINICIAN
             elif group == TRUST_AUDIT_TEAM_FULL_ACCESS:
-                # custom permissions
-
                 # basic permissions
-                add_permissions_to_group(VIEW_PERMISSIONS, newGroup)
-                add_permissions_to_group(ADMIN_PATIENT_MANAGEMENT_PERMISSIONS, newGroup)
-                add_permissions_to_group(EDITOR_PERMISSIONS, newGroup)
-                add_permissions_to_group(FULL_ACCESS_PERMISSIONS, newGroup)
+                add_permissions_to_group(LEAD_CLINICIAN_PERMISSIONS, newGroup)
+                add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
+                add_permissions_to_group(FULL_ACCESS_CUSTOM_PERMISSIONS, newGroup)
 
             elif group == PATIENT_ACCESS:
                 # custom permissions
                 add_permissions_to_group(PATIENT_ACCESS_PERMISSIONS, newGroup)
                 # basic permissions
-                add_permissions_to_group(VIEW_PERMISSIONS, newGroup)
+                add_permissions_to_group(PATIENT_PERMISSIONS, newGroup)
 
             else:
                 if verbose:
@@ -245,62 +245,42 @@ def groups_seeder(
                     print(f"...adding permissions to {group}...")
                 # add permissions to group
 
+                # NPDA_AUDIT_TEAM_FULL_ACCESS = RCPCH AUDIT TEAM
                 if group == NPDA_AUDIT_TEAM_FULL_ACCESS:
-                    # custom permissions
-                    add_permissions_to_group(
-                        NPDA_AUDIT_TEAM_ACCESS_PERMISSIONS, newGroup
-                    )
                     # basic permissions
-                    add_permissions_to_group(VIEW_PERMISSIONS, newGroup)
-                    add_permissions_to_group(
-                        ADMIN_PATIENT_MANAGEMENT_PERMISSIONS, newGroup
-                    )
-                    add_permissions_to_group(EDITOR_PERMISSIONS, newGroup)
-                    add_permissions_to_group(FULL_ACCESS_PERMISSIONS, newGroup)
+                    add_permissions_to_group(RCPCH_AUDIT_TEAM_PERMISSIONS, newGroup)
+                    add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
+                    add_permissions_to_group(FULL_ACCESS_CUSTOM_PERMISSIONS, newGroup)
 
+                # TRUST_AUDIT_TEAM_VIEW_ONLY = ADMINISTRATOR
                 elif group == TRUST_AUDIT_TEAM_VIEW_ONLY:
-                    # custom permissions
-
                     # basic permissions
-                    add_permissions_to_group(VIEW_PERMISSIONS, newGroup)
-                    add_permissions_to_group(
-                        ADMIN_PATIENT_MANAGEMENT_PERMISSIONS, newGroup
-                    )
+                    add_permissions_to_group(ADMINISTRATOR_PERMISSIONS, newGroup)
 
+                # TRUST_AUDIT_TEAM_EDIT_ACCESS = CLINICIAN
                 elif group == TRUST_AUDIT_TEAM_EDIT_ACCESS:
-                    # custom permissions
-
                     # basic permissions
-                    add_permissions_to_group(VIEW_PERMISSIONS, newGroup)
-                    add_permissions_to_group(
-                        ADMIN_PATIENT_MANAGEMENT_PERMISSIONS, newGroup
-                    )
-                    add_permissions_to_group(EDITOR_PERMISSIONS, newGroup)
+                    add_permissions_to_group(CLINICIAN_PERMISSIONS, newGroup)
+                    add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
 
+                # TRUST_AUDIT_TEAM_FULL_ACCESS = LEAD CLINICIAN
                 elif group == TRUST_AUDIT_TEAM_FULL_ACCESS:
-                    # custom permissions
-
                     # basic permissions
-                    add_permissions_to_group(VIEW_PERMISSIONS, newGroup)
-                    add_permissions_to_group(
-                        ADMIN_PATIENT_MANAGEMENT_PERMISSIONS, newGroup
-                    )
-                    add_permissions_to_group(EDITOR_PERMISSIONS, newGroup)
-                    add_permissions_to_group(FULL_ACCESS_PERMISSIONS, newGroup)
+                    add_permissions_to_group(LEAD_CLINICIAN_PERMISSIONS, newGroup)
+                    add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
+                    add_permissions_to_group(FULL_ACCESS_CUSTOM_PERMISSIONS, newGroup)
 
                 elif group == PATIENT_ACCESS:
                     # custom permissions
                     add_permissions_to_group(PATIENT_ACCESS_PERMISSIONS, newGroup)
                     # basic permissions
-                    add_permissions_to_group(VIEW_PERMISSIONS, newGroup)
+                    add_permissions_to_group(PATIENT_PERMISSIONS, newGroup)
 
                 else:
                     if verbose:
                         print("Error: group does not exist!")
 
-                    else:
-                        if verbose:
-                            print("Error: group does not exist!")
+
 
         if not verbose:
             print("groups_seeder(verbose=False), no output, groups seeded.")
