@@ -27,5 +27,3 @@ from project.npda.models import Patient
 register(PatientFactory)  # => patient_factory
 register(PatientVisitFactory)  # => patient_visit_factory
 register(NPDAUserFactory)  # => npdauser_factory
-
-

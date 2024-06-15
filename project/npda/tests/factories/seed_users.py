@@ -1,15 +1,12 @@
-"""
-Seeds E12 Users in test db once per session.
-"""
-
-# Standard imports
 import pytest
-import logging
-
-# 3rd Party imports
-from django.contrib.auth.models import Group
-
-# E12 Imports
+from django.contrib.sessions.middleware import SessionMiddleware
+from django.test.client import RequestFactory
+from django.urls import reverse
+from project.npda.general_functions import (
+    retrieve_pdu_from_organisation_ods_code,
+    retrieve_pdu_list,
+    get_nhs_organisation,
+)
 from project.npda.tests.UserDataClasses import (
     test_user_audit_centre_administrator_data,
     test_user_audit_centre_clinician_data,
@@ -17,16 +14,11 @@ from project.npda.tests.UserDataClasses import (
     test_user_rcpch_audit_team_data,
     test_user_clinicial_audit_team_data,
 )
-from project.npda.models import (
-    NPDAUser,
-)
+from project.npda.models import NPDAUser
 from .NPDAUserFactory import NPDAUserFactory
-from project.constants.user import (
-    RCPCH_AUDIT_TEAM,
-)
-from project.npda.general_functions import get_nhs_organisation
+from project.constants.user import RCPCH_AUDIT_TEAM
+import logging
 
-# Logging
 logger = logging.getLogger(__name__)
 
 
@@ -85,3 +77,5 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
             )
 
             logger.info(f"Seeded {first_name} at {GOSH}.")
+
+
