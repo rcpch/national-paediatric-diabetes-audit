@@ -21,7 +21,9 @@ class NPDAUserFactory(factory.django.DjangoModelFactory):
     is_active = True
     is_superuser = False
     email_confirmed = True
-    organisation_employer = factory.LazyFunction(lambda: get_nhs_organisation(ods_code="RP401"))
+    organisation_employer = factory.LazyFunction(
+        lambda: get_nhs_organisation(ods_code="RP401")["name"]
+    )
 
     @factory.post_generation
     def groups(self, create, extracted, **kwargs):
