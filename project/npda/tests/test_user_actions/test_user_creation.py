@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 def test_user_creation(
     seed_groups_fixture,
     seed_users_fixture,
-    seed_cases_fixture,
+    seed_patients_fixture,
     client,
 ):
     """Test user can create in same organisation"""
