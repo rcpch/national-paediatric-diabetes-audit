@@ -13,7 +13,7 @@ from .PatientFactory import PatientFactory
 
 
 @pytest.fixture(scope="session")
-def seed_cases_fixture(django_db_setup, django_db_blocker):
+def seed_patients_fixture(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
         # prevent repeat seed
         if not Patient.objects.all().exists():
@@ -33,4 +33,4 @@ def seed_cases_fixture(django_db_setup, django_db_blocker):
                 # organisations__organisation=organisation,
             )
         else:
-            print("Test cases seeded. Skipping")
+            print("Test patients seeded. Skipping")

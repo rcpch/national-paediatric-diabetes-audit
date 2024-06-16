@@ -13,7 +13,7 @@ import pytest
 from project.npda.tests.factories import (
     seed_groups_fixture,
     seed_users_fixture,
-    seed_cases_fixture,
+    seed_patients_fixture,
     PatientFactory,
     PatientVisitFactory,
     NPDAUserFactory,

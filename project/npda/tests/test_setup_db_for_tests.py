@@ -13,7 +13,7 @@ from project.npda.models import NPDAUser
 def test__seed_test_db(
     seed_groups_fixture,
     seed_users_fixture,
-    seed_cases_fixture,
+    seed_patients_fixture,
 ):
     assert Group.objects.all().exists()
     assert NPDAUser.objects.all().exists()
