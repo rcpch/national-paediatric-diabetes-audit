@@ -1,4 +1,5 @@
 # python
+import logging 
 
 # django
 
@@ -9,6 +10,8 @@ from requests.exceptions import HTTPError
 # npda imports
 from django.conf import settings
 
+# Logging
+logger = logging.getLogger(__name__)
 
 def gp_practice_for_postcode(postcode: str):
     """
@@ -48,5 +51,6 @@ def gp_details_for_ods_code(ods_code: str):
         response.raise_for_status()
     except HTTPError as e:
         return {"error": e}
-
-    return response.json()["Organisations"][0]
+    
+    logger.warning(response.json())
+    return response.json()["Organisation"][0]
