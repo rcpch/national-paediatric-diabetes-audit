@@ -53,4 +53,4 @@ def gp_details_for_ods_code(ods_code: str):
         return {"error": e}
     
     logger.warning(response.json())
-    return response.json()["Organisation"][0]
+    return response.json()["Organisation"]
