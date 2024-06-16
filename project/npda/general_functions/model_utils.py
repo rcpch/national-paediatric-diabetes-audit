@@ -1,9 +1,13 @@
-import pprint
+import logging
+from pprint import pformat
 
 from django.db.models.fields.related import ForeignKey
 
+# Logging
+logger = logging.getLogger(__name__)
 
-def pretty_print_instance(instance) -> None:
+
+def print_instance_field_attrs(instance):
     """
     Pretty prints all field attributes and values of a Django model instance.
 
@@ -11,11 +15,10 @@ def pretty_print_instance(instance) -> None:
         - instance: Django model instance
     """
     if not instance:
-        print("No instance provided.")
+        logger.info("No instance provided.")
         return
 
     model = instance.__class__
-    print(f"{model.__name__} instance:")
     fields_dict = {}
     for field in model._meta.get_fields():
         field_name = field.name
@@ -26,4 +29,5 @@ def pretty_print_instance(instance) -> None:
             fields_dict[field_name] = field_value
         except AttributeError:
             fields_dict[field_name] = "<error retrieving value>"
-    pprint(fields_dict, indent=2)
+
+    logger.info(f"{model.__name__} instance:\n{pformat(fields_dict, indent=2)}")
