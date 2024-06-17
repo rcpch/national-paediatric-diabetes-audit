@@ -80,6 +80,8 @@ class VisitUpdateView(LoginAndOTPRequiredMixin, UpdateView):
         context = super().get_context_data(**kwargs)
         visit_instance = Visit.objects.get(pk=self.kwargs["pk"])
         visit_categories = get_visit_categories(visit_instance)
+        context["visit_instance"] = visit_instance
+        context["visit_errors"] = [visit_instance.errors]
         context["patient_id"] = self.kwargs["patient_id"]
         context["visit_id"] = self.kwargs["pk"]
         context["title"] = "Edit Visit Details"
