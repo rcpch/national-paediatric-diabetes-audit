@@ -207,7 +207,7 @@ class PatientCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Succe
     """
     Handle creation of new patient in audit
     """
-    permision_required = 'npda.add_patient'
+    permission_required = 'npda.add_patient'
     model = Patient
     form_class = PatientForm
     success_message = "New child record created was created successfully"
