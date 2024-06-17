@@ -1,6 +1,6 @@
 # Django imports
 from django.contrib.messages.views import SuccessMessageMixin
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.contrib import messages
 from django.forms import BaseModelForm
 from django.http import HttpResponse, HttpResponseRedirect
@@ -19,7 +19,8 @@ from ..general_functions import get_visit_categories
 from .mixins import LoginAndOTPRequiredMixin
 
 
-class PatientVisitsListView(LoginAndOTPRequiredMixin, ListView):
+class PatientVisitsListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, ListView):
+    permission_required = 'npda.view_visit'
     model = Visit
     template_name = "visits.html"
 
@@ -39,7 +40,10 @@ class PatientVisitsListView(LoginAndOTPRequiredMixin, ListView):
         return context
 
 
-class VisitCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateView):
+class VisitCreateView(
+    LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, CreateView
+):
+    permission_required = "npda.add_visit"
     model = Visit
     form_class = VisitForm
 
@@ -72,7 +76,8 @@ class VisitCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateView)
         return HttpResponseRedirect(self.get_success_url())
 
 
-class VisitUpdateView(LoginAndOTPRequiredMixin, UpdateView):
+class VisitUpdateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, UpdateView):
+    permission_required = 'npda.change_visit'
     model = Visit
     form_class = VisitForm
 
@@ -162,7 +167,10 @@ class VisitUpdateView(LoginAndOTPRequiredMixin, UpdateView):
         )
 
 
-class VisitDeleteView(LoginAndOTPRequiredMixin, SuccessMessageMixin, DeleteView):
+class VisitDeleteView(
+    LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, DeleteView
+):
+    permission_required = "npda.delete_visit"
     model = Visit
     success_url = reverse_lazy("patient_visits")
     success_message = "Visit removed successfully"
