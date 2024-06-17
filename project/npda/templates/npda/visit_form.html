@@ -4,7 +4,7 @@
 {% block content %}
 <div class="flex justify-center bg-white py-8">
   <div class="w-full mx-96 px-2 py-4 m-2 shadow-md bg-white font-montserrat">
-    <strong>{{ title }} - NPDA Patient {{ patient_id }} - NPDA Visit No. {{ visit_id }}</strong>
+    <strong>{{ title }} - NPDA Patient {{ patient_id }} {% if visit_id %}- NPDA Visit No. {{ visit_id }} {% endif %}</strong>
     <form id="update-form" method="post" {% if form_method == "create" %} action="{% url 'visit-create' patient_id %}" {% else %} action="{% url 'visit-update' patient_id=patient_id pk=visit.pk %}" {% endif %}>
       {% csrf_token %}
       {% for field in form %}
