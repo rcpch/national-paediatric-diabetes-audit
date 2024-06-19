@@ -28,7 +28,7 @@ def groups_seeder(
 ):
     patientContentType = ContentType.objects.get_for_model(Patient)
     visitContentType = ContentType.objects.get_for_model(Visit)
-    npdaUserContentType = ContentType.objects.get_for_model(NPDAUser)
+    npdauserContentType = ContentType.objects.get_for_model(NPDAUser)
     siteContentType = ContentType.objects.get_for_model(Site)
 
     """
@@ -55,10 +55,10 @@ def groups_seeder(
         # site-related permissions = None
 
         # NPDA-user related permissions
-        {"codename": "view_npdaUser", "content_type": npdaUserContentType},
-        {"codename": "change_npdaUser", "content_type": npdaUserContentType},
-        {"codename": "add_npdaUser", "content_type": npdaUserContentType},
-        {"codename": "delete_npdaUser", "content_type": npdaUserContentType},
+        {"codename": "view_npdauser", "content_type": npdauserContentType},
+        {"codename": "change_npdauser", "content_type": npdauserContentType},
+        {"codename": "add_npdauser", "content_type": npdauserContentType},
+        {"codename": "delete_npdauser", "content_type": npdauserContentType},
     ]
 
     CLINICIAN_PERMISSIONS = [
@@ -75,7 +75,7 @@ def groups_seeder(
         # site-related permissions = None
 
         # npdaUser related permissions
-        {"codename": "view_npdaUser", "content_type": npdaUserContentType},
+        {"codename": "view_npdauser", "content_type": npdauserContentType},
     ]
 
     ADMINISTRATOR_PERMISSIONS = [
@@ -90,10 +90,10 @@ def groups_seeder(
         # site-related permissions = None
 
         # NPDA-user related permissions
-        {"codename": "view_npdaUser", "content_type": npdaUserContentType},
-        {"codename": "change_npdaUser", "content_type": npdaUserContentType},
-        {"codename": "add_npdaUser", "content_type": npdaUserContentType},
-        {"codename": "delete_npdaUser", "content_type": npdaUserContentType},
+        {"codename": "view_npdauser", "content_type": npdauserContentType},
+        {"codename": "change_npdauser", "content_type": npdauserContentType},
+        {"codename": "add_npdauser", "content_type": npdauserContentType},
+        {"codename": "delete_npdauser", "content_type": npdauserContentType},
     ]
 
     RCPCH_AUDIT_TEAM_PERMISSIONS = [
@@ -116,10 +116,10 @@ def groups_seeder(
         {"codename": "delete_site", "content_type": siteContentType},
 
         # NPDA-user related permissions
-        {"codename": "view_npdaUser", "content_type": npdaUserContentType},
-        {"codename": "change_npdaUser", "content_type": npdaUserContentType},
-        {"codename": "add_npdaUser", "content_type": npdaUserContentType},
-        {"codename": "delete_npdaUser", "content_type": npdaUserContentType},
+        {"codename": "view_npdauser", "content_type": npdauserContentType},
+        {"codename": "change_npdauser", "content_type": npdauserContentType},
+        {"codename": "add_npdauser", "content_type": npdauserContentType},
+        {"codename": "delete_npdauser", "content_type": npdauserContentType},
     ]
 
     PATIENT_PERMISSIONS = [
@@ -173,7 +173,7 @@ def groups_seeder(
         # currently not used
         {
             "codename": CAN_CONSENT_TO_AUDIT_PARTICIPATION[0],
-            "content_type": npdaUserContentType,
+            "content_type": npdauserContentType,
         },
     ]
 
