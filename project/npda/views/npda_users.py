@@ -12,6 +12,7 @@ from django.urls import reverse, reverse_lazy
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib import messages
 from django.contrib.auth import login, authenticate
+from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.utils.html import strip_tags
 from django.conf import settings
 
@@ -49,7 +50,9 @@ NPDAUser list and NPDAUser creation, deletion and update
 """
 
 
-class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
+class NPDAUserListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, ListView):
+    permission_required = "npda.view_npdauser"
+
     template_name = "npda_users.html"
 
     def get_queryset(self):
