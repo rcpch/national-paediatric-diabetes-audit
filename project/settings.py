@@ -72,8 +72,6 @@ if DEBUG is True:
 CAPTCHA_IMAGE_SIZE = (200, 50)
 CAPTCHA_FONT_SIZE = 40
 
-ALLOWED_HOSTS = []
-
 
 # Application definition
 

@@ -25,10 +25,12 @@ class LoginAndOTPRequiredMixin(AccessMixin):
         # Check if the user is superuser and bypass 2FA in debug mode
         if settings.DEBUG and request.user.is_authenticated:
             logger.warning(
-                "User %s has bypassed 2FA for %s as settings.DEBUG is %s and user is superuser",
+                "User %s has bypassed 2FA for %s as settings.DEBUG is %s and user has role %s and is superuser status: %s",
                 request.user,
                 self.__class__.__name__,
                 settings.DEBUG,
+                request.user.get_role_display(),
+                request.user.is_superuser,
             )
             return super().dispatch(request, *args, **kwargs)
 
