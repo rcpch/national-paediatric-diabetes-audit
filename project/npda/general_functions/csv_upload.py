@@ -37,7 +37,7 @@ from ...constants import (
 
 from .validate_postcode import validate_postcode
 from .nhs_ods_requests import gp_details_for_ods_code
-from .cohort_for_date import retrieve_cohort_for_date
+from .quarter_for_date import retrieve_quarter_for_date
 
 # Logging setup
 logger = logging.getLogger(__name__)
@@ -56,20 +56,20 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
     Visit = apps.get_model("npda", "Visit")
     AuditCohort = apps.get_model("npda", "AuditCohort")
 
-    # set previous cohort to inactive
+    # set previous quarter to inactive
     AuditCohort.objects.filter(
         pz_code=pdu_pz_code,
         ods_code=organisation_ods_code,
         audit_year=date.today().year,
-        cohort_number=retrieve_cohort_for_date(date_instance=date.today()),
+        quarter=retrieve_quarter_for_date(date_instance=date.today()),
     ).update(submission_active=False)
 
-    # create new cohort
+    # create new quarter
     new_cohort = AuditCohort.objects.create(
         pz_code=pdu_pz_code,
         ods_code=organisation_ods_code,
         audit_year=date.today().year,
-        cohort_number=retrieve_cohort_for_date(date_instance=date.today()),
+        quarter=retrieve_quarter_for_date(date_instance=date.today()),
         submission_date=timezone.now(),
         submission_by=user,
     )
@@ -1062,7 +1062,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             # Otherwise data, even if invalid, is saved
             return {"status": 422, "errors": f"Could not save visit {obj}: {error}"}
 
-        # create a new cohort
+        # create a new quarter
         audit_cohort = AuditCohort.objects.get(pk=cohort_id)
 
         audit_cohort.timestamp = timestamp
@@ -1112,13 +1112,11 @@ def csv_summarise(csv_file):
         dataframe["NHS Number"].apply(lambda x: x.replace(" ", "")).unique()
     )
     count_of_records_per_nhs_number = dataframe["NHS Number"].value_counts()
-    matching_patients_in_current_cohort = Patient.objects.filter(
+    matching_patients_in_current_quarter = Patient.objects.filter(
         nhs_number__in=list(unique_nhs_numbers_no_spaces),
         audit_cohorts__submission_active=True,
         audit_cohorts__audit_year=date.today().year,
-        audit_cohorts__cohort_number=retrieve_cohort_for_date(
-            date_instance=date.today()
-        ),
+        audit_cohorts__quarter=retrieve_quarter_for_date(date_instance=date.today()),
     ).count()
 
     summary = {
@@ -1127,7 +1125,7 @@ def csv_summarise(csv_file):
         "count_of_records_per_nhs_number": list(
             count_of_records_per_nhs_number.items()
         ),
-        "matching_patients_in_current_cohort": matching_patients_in_current_cohort,
+        "matching_patients_in_current_quarter": matching_patients_in_current_quarter,
     }
 
     return summary

@@ -1,9 +1,9 @@
 import pytest
-from project.npda.general_functions import retrieve_cohort_for_date
+from project.npda.general_functions import retrieve_quarter_for_date
 from datetime import date
 
 
-# Test cases for retrieve_cohort_for_date function
+# Test cases for retrieve_quarter_for_date function
 @pytest.mark.parametrize(
     "test_input,expected",
     [
@@ -22,5 +22,5 @@ from datetime import date
         (date(2023, 4, 2), 1),  # Just after the audit year starts
     ],
 )
-def test_retrieve_cohort_for_date(test_input, expected):
-    assert retrieve_cohort_for_date(test_input) == expected
+def test_retrieve_quarter_for_date(test_input, expected):
+    assert retrieve_quarter_for_date(test_input) == expected

@@ -2,6 +2,8 @@ from datetime import date
 from typing import Any, Iterable
 from django.db import models
 
+from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
+
 
 class AuditCohort(models.Model):
     """
@@ -17,11 +19,11 @@ class AuditCohort(models.Model):
         help_text="Year the audit is being conducted",
     )
 
-    cohort_number = models.IntegerField(
-        "Cohort number",
+    quarter = models.IntegerField(
+        "Quarter",
         blank=False,
         null=False,
-        help_text="The cohort number of the patient",
+        help_text="The quarter in the audit year of the patient",
     )
 
     pz_code = models.CharField(
@@ -64,46 +66,15 @@ class AuditCohort(models.Model):
 
     patients = models.ManyToManyField(to="npda.Patient", related_name="audit_cohorts")
 
-    def calculate_cohort_number(self):
-        """
-        Returns the cohort number of the patient, where cohort corresponds to which quarter of the audit year the submission date lies in
-
-        **The audit year starts on the 1st of April and ends on the 31st of March the following year**
-        Returns cohort = 4 if the patient has less than 25% of the audit year remaining
-        Returns cohort = 3 if the patient has less than 50% of the audit year remaining
-        Returns cohort = 2 if the patient has less than 75% of the audit year remaining
-        Returns cohort = 1 if the patient has more than 75% of the audit year remaining
-        """
-        audit_start_date = date(self.audit_year, 4, 1)
-        if self.submission_date.date() < audit_start_date:
-            # The patient was audited in the previous year
-            audit_start_date = date(self.audit_year - 1, 4, 1)
-            audit_end_date = date(self.audit_year, 3, 31)
-            days_remaining = (audit_end_date - self.submission_date.date()).days
-        else:
-            # The patient was audited in the current year
-            audit_end_date = date(self.audit_year + 1, 3, 31)
-            days_remaining = (audit_end_date - self.submission_date.date()).days
-        total_days = (audit_end_date - audit_start_date).days
-        if (days_remaining / total_days) < 0.25:
-            return 4
-        elif (days_remaining / total_days) < 0.5:
-            return 3
-        elif (days_remaining / total_days) < 0.75:
-            return 2
-        else:
-            return 1
-
     def __str__(self) -> str:
-        return f"{self.audit_year} ({self.cohort_number}), {self.patients.count()} patients"
+        return f"{self.audit_year} ({self.quarter}), {self.patients.count()} patients"
 
     def save(self, *args, **kwargs) -> None:
         self.audit_year = int(self.submission_date.year)
-        cohort_number = self.calculate_cohort_number()
-        self.cohort_number = cohort_number
+        self.quarter = retrieve_quarter_for_date(self.submission_date.date())
         super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = "Audit Cohort"
         verbose_name_plural = "Audit Cohorts"
-        ordering = ("audit_year", "cohort_number")
+        ordering = ("audit_year", "quarter")

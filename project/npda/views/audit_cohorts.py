@@ -13,7 +13,7 @@ from django.urls import reverse
 from django.views.generic import ListView
 
 # RCPCH imports
-from ..general_functions import csv_upload, csv_summarise, retrieve_cohort_for_date
+from ..general_functions import csv_upload, csv_summarise
 from .mixins import LoginAndOTPRequiredMixin
 from ..models import AuditCohort, Patient
 
@@ -42,9 +42,7 @@ class AuditCohortsListView(LoginAndOTPRequiredMixin, ListView):
                 ),
                 ods_code=self.request.session.get("ods_code"),
             )
-            .values(
-                "submission_date", "pz_code", "ods_code", "cohort_number", "audit_year"
-            )
+            .values("submission_date", "pz_code", "ods_code", "quarter", "audit_year")
             .annotate(
                 patient_count=Count("patients"),
                 submission_active=F("submission_active"),
@@ -58,7 +56,7 @@ class AuditCohortsListView(LoginAndOTPRequiredMixin, ListView):
                 "pz_code",
                 "ods_code",
                 "audit_year",
-                "cohort_number",
+                "quarter",
                 "submission_active",
             )
         )

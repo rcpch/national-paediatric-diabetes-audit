@@ -67,7 +67,7 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
 
         return patient_queryset.annotate(
             audit_year=F("audit_cohorts__audit_year"),
-            cohort_number=F("audit_cohorts__cohort_number"),
+            quarter=F("audit_cohorts__quarter"),
             visit_error_count=Count(Case(When(visit__is_valid=False, then=1))),
             last_upload_date=Max("audit_cohorts__submission_date"),
         ).order_by("is_valid", "visit_error_count", "pk")
