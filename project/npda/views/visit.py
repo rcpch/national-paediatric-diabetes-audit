@@ -27,6 +27,7 @@ class PatientVisitsListView(LoginAndOTPRequiredMixin, ListView):
         patient_id = self.kwargs.get("patient_id")
         context = super(PatientVisitsListView, self).get_context_data(**kwargs)
         patient = Patient.objects.get(pk=patient_id)
+        active_cohort = patient.audit_cohorts.filter(submission_active=True).first()
         visits = Visit.objects.filter(patient=patient).order_by("is_valid", "id")
         calculated_visits = []
         for visit in visits:
@@ -34,12 +35,11 @@ class PatientVisitsListView(LoginAndOTPRequiredMixin, ListView):
             calculated_visits.append({"visit": visit, "categories": visit_categories})
         context["visits"] = calculated_visits
         context["patient"] = patient
+        context["active_cohort"] = active_cohort
         return context
 
 
-class VisitCreateView(
-    LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateView
-):
+class VisitCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateView):
     model = Visit
     form_class = VisitForm
 
@@ -88,26 +88,50 @@ class VisitUpdateView(LoginAndOTPRequiredMixin, UpdateView):
         context["button_title"] = "Edit Visit Details"
         context["form_method"] = "update"
         context["visit_categories"] = visit_categories
-        context["routine_measurements_categories"] = ["Measurements", "HBA1c", "Treatment", "CGM", "BP"]
-        context["annual_review_categories"] = ["Foot Care", "DECS", "ACR", "Cholesterol", "Thyroid", "Coeliac", "Psychology", "Smoking", "Dietician", "Sick Day Rules", "Immunisation (flu)"]
+        context["routine_measurements_categories"] = [
+            "Measurements",
+            "HBA1c",
+            "Treatment",
+            "CGM",
+            "BP",
+        ]
+        context["annual_review_categories"] = [
+            "Foot Care",
+            "DECS",
+            "ACR",
+            "Cholesterol",
+            "Thyroid",
+            "Coeliac",
+            "Psychology",
+            "Smoking",
+            "Dietician",
+            "Sick Day Rules",
+            "Immunisation (flu)",
+        ]
         categories_with_errors = []
         categories_without_errors = []
         routine_measurements_categories_with_errors = []
-        annual_review_categories_with_errors = [] 
+        annual_review_categories_with_errors = []
         for category in visit_categories:
             if category["has_error"] == False:
                 categories_without_errors.append(category["category"])
             else:
                 categories_with_errors.append(category["category"])
                 if category["category"] in context["routine_measurements_categories"]:
-                    routine_measurements_categories_with_errors.append(category["category"])
+                    routine_measurements_categories_with_errors.append(
+                        category["category"]
+                    )
                 elif category["category"] in context["annual_review_categories"]:
                     annual_review_categories_with_errors.append(category["category"])
-        context["routine_measurements_categories_with_errors"] = routine_measurements_categories_with_errors
-        context["annual_review_categories_with_errors"] = annual_review_categories_with_errors
+        context["routine_measurements_categories_with_errors"] = (
+            routine_measurements_categories_with_errors
+        )
+        context["annual_review_categories_with_errors"] = (
+            annual_review_categories_with_errors
+        )
         context["categories_with_errors"] = categories_with_errors
         context["categories_without_errors"] = categories_without_errors
-        
+
         return context
 
     def get_success_url(self):
@@ -138,9 +162,7 @@ class VisitUpdateView(LoginAndOTPRequiredMixin, UpdateView):
         )
 
 
-class VisitDeleteView(
-    LoginAndOTPRequiredMixin, SuccessMessageMixin, DeleteView
-):
+class VisitDeleteView(LoginAndOTPRequiredMixin, SuccessMessageMixin, DeleteView):
     model = Visit
     success_url = reverse_lazy("patient_visits")
     success_message = "Visit removed successfully"

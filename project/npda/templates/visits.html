@@ -6,7 +6,7 @@
   <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
     <div class="inline-block min-w-full py-2 sm:px-6 lg:px-8">
         <div class="relative overflow-x-auto">
-        <strong>All Audit Visits for {{patient.nhs_number}} (NPDA ID-{{patient.pk}})</strong>
+        <strong>All {{active_cohort.audit_year}}({{active_cohort.quarter}}) Audit Visits for {{patient.nhs_number}} (NPDA ID-{{patient.pk}})</strong>
           
         {% if visits %}
           <table class="table-fixed w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
