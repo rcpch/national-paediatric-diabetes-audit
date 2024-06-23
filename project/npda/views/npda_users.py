@@ -31,16 +31,10 @@ from ..forms.npda_user_form import NPDAUserForm, CaptchaAuthenticationForm
 from ..general_functions import (
     construct_confirm_email,
     send_email_to_recipients,
-    construct_transfer_npda_site_email,
-    construct_transfer_npda_site_outcome_email,
     group_for_role,
     retrieve_pdu_from_organisation_ods_code,
-    retrieve_pdus,
 )
 from .mixins import LoginAndOTPRequiredMixin
-from django.utils.decorators import method_decorator
-from .decorators import login_and_otp_required
-from django.contrib.auth.decorators import login_required
 
 logger = logging.getLogger(__name__)
 
@@ -56,13 +50,7 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
         # scope the queryset to filter only those users in organisations in the same PDU. This is to prevent users from seeing all users in the system
         # The user's organisation, PDU and siblings are stored in the session when they log in
 
-        if self.request.user.view_preference == 0:
-            # organisation view
-            ods_code = self.request.session.get("ods_code")
-            return NPDAUser.objects.filter(organisation_employer=ods_code).order_by(
-                "surname"
-            )
-        elif self.request.user.view_preference == 1:
+        if self.request.user.view_preference == 1:
             # PDU view
             # create a list of sibling organisations' ODS codes who share the same PDU as the user
             siblings_ods_codes = [
@@ -72,9 +60,13 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
                 ]
             ]
             # get all users in the sibling organisations
-            return NPDAUser.objects.filter(
-                organisation_employer__in=siblings_ods_codes
-            ).order_by("surname")
+            return (
+                NPDAUser.objects.filter(
+                    organisation_employer__ods_code__in=siblings_ods_codes
+                )
+                .distinct()
+                .order_by("surname")
+            )
         elif self.request.user.view_preference == 2:
             return NPDAUser.objects.all().order_by("surname")
         else:
@@ -158,6 +150,7 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
                     "ods_code"
                 ]  # set the ods code to the first in the new list
                 self.request.session["ods_code"] = ods_code
+                self.request.session["pz_code"] = pz_code
             else:
                 pz_code = request.session.get("sibling_organisations").get("pz_code")
 
@@ -401,7 +394,9 @@ class RCPCHLoginView(TwoFactorLoginView):
             if user is not None:
                 login(request, user)
                 # successful login, get PDU and organisation details from user and store in session
-                current_user_ods_code = self.request.user.organisation_employer
+                current_user_ods_code = (
+                    self.request.user.organisation_employer.first().ods_code
+                )
                 if "sibling_organisations" not in self.request.session:
                     sibling_organisations = retrieve_pdu_from_organisation_ods_code(
                         current_user_ods_code

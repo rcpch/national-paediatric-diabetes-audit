@@ -37,7 +37,7 @@ class NPDAUserForm(forms.ModelForm):
             "is_rcpch_audit_team_member",
             "is_rcpch_staff",
             "role",
-            "organisation_employer",
+            # "organisation_employer",
         ]
         widgets = {
             "title": forms.Select(attrs={"class": SELECT}),
@@ -51,7 +51,7 @@ class NPDAUserForm(forms.ModelForm):
             ),
             "is_rcpch_staff": forms.CheckboxInput(attrs={"class": "accent-rcpch_pink"}),
             "role": forms.Select(attrs={"class": SELECT}),
-            "organisation_employer": forms.Select(attrs={"class": SELECT}),
+            # "organisation_employer": forms.Select(attrs={"class": SELECT}),
         }
 
     def __init__(self, *args, **kwargs) -> None:
@@ -65,22 +65,22 @@ class NPDAUserForm(forms.ModelForm):
         self.fields["email"].required = True
         self.fields["role"].required = True
         # retrieve all organisations from the RCPCH NHS Organisations API
-        if (
-            self.request.user.is_superuser
-            or self.request.user.is_rcpch_audit_team_member
-            or self.request.user.is_rcpch_staff
-        ):
-            # this is an ordered list of tuples from the API
-            self.fields["organisation_employer"].choices = get_all_nhs_organisations()
-        else:
-            # create list of choices from the session data
-            sibling_organisations = [
-                (sibling["ods_code"], sibling["name"])
-                for sibling in self.request.session.get("sibling_organisations")[
-                    "organisations"
-                ]
-            ]
-            self.fields["organisation_employer"].choices = sibling_organisations
+        # if (
+        #     self.request.user.is_superuser
+        #     or self.request.user.is_rcpch_audit_team_member
+        #     or self.request.user.is_rcpch_staff
+        # ):
+        #     # this is an ordered list of tuples from the API
+        #     # self.fields["organisation_employer"].choices = get_all_nhs_organisations()
+        # else:
+        #     # create list of choices from the session data
+        #     sibling_organisations = [
+        #         (sibling["ods_code"], sibling["name"])
+        #         for sibling in self.request.session.get("sibling_organisations")[
+        #             "organisations"
+        #         ]
+        #     ]
+        # self.fields["organisation_employer"].choices = sibling_organisations
 
 
 class NPDAUpdatePasswordForm(SetPasswordForm):

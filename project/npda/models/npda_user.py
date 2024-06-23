@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.gis.db import models
 from django.db.models.functions import Lower
 from django.contrib.gis.db.models import UniqueConstraint
+from .organisation_employer import OrganisationEmployer
 
 from ...constants import *
 from ..general_functions import *
@@ -100,19 +101,24 @@ class NPDAUserManager(BaseUserManager):
             if extra_fields.get("role") == 4:
                 extra_fields.setdefault("is_rcpch_staff", True)
                 extra_fields.setdefault("view_preference", 2)  # national scope
-                extra_fields.setdefault(
-                    "organisation_employer", "RJZ01"
-                )  # Default to King's College Hospital
+                organisation_employer, created = (
+                    OrganisationEmployer.objects.get_or_create(
+                        ods_code="8HV48",
+                        name="Royal College of Paediatrics and Child Health",
+                    )
+                )
             else:
                 extra_fields.setdefault("is_rcpch_staff", False)
                 extra_fields.setdefault("view_preference", 2)  # national scope
-                extra_fields.setdefault(
-                    "organisation_employer", "RJZ01"
-                )  # Default to King's College Hospital - superusers can change this later
+                organisation_employer, created = (
+                    OrganisationEmployer.objects.get_or_create(
+                        ods_code="RJZ01",
+                        name="King's College Hospital NHS Foundation Trust",
+                    )
+                )
 
         logged_in_user = self.create_user(email.lower(), password, **extra_fields)
-
-        print(logged_in_user)
+        logged_in_user.organisation_employer.add(organisation_employer)
 
         """
         Allocate Roles
@@ -120,6 +126,7 @@ class NPDAUserManager(BaseUserManager):
 
         group = group_for_role(logged_in_user.role)
         logged_in_user.groups.add(group)
+        return logged_in_user
 
 
 class NPDAUser(AbstractUser, PermissionsMixin):
@@ -183,12 +190,10 @@ class NPDAUser(AbstractUser, PermissionsMixin):
 
     objects = NPDAUserManager()
 
-    organisation_employer = models.CharField(
-        _("Employing organisation"),
+    organisation_employer = models.ManyToManyField(
+        to=OrganisationEmployer,
+        verbose_name=_("Employing organisation"),
         help_text=_("Enter your employing organisation"),
-        max_length=150,
-        null=True,
-        blank=True,
     )
 
     def get_full_name(self):
