@@ -64,25 +64,32 @@ class NPDAUserForm(forms.ModelForm):
         self.request = kwargs.pop("request", None)
 
         super().__init__(*args, **kwargs)
-        self.fields["title"].required = True
+        self.fields["title"].required = False
         self.fields["first_name"].required = True
         self.fields["surname"].required = True
         self.fields["email"].required = True
         self.fields["role"].required = True
+        self.fields["organisation_employer"].required = False
 
         if self.instance.pk:
             self.fields["organisation_employer"].initial = (
                 self.instance.organisation_employer.all()
             )
-            self.fields["organisation_employer"].queryset = (
-                OrganisationEmployer.objects.filter(npdauser=self.instance)
-            ).values_list("name", flat=True)
+            self.fields["organisation_employer"].choices = [
+                (obj.id, obj.name)
+                for obj in OrganisationEmployer.objects.filter(npdauser=self.instance)
+            ]
+
             self.fields["organisation_employer"].widget.attrs["size"] = "10"
+            print(self.fields["organisation_employer"].choices)
         else:
             # limit the queryset to the organisations the current user is associated with
-            self.fields["organisation_employer"].queryset = (
-                OrganisationEmployer.objects.filter(npdauser=self.request.user)
-            ).values_list("name", flat=True)
+            self.fields["organisation_employer"].choices = [
+                (obj.id, obj.name)
+                for obj in OrganisationEmployer.objects.filter(
+                    npdauser=self.request.user
+                )
+            ]
 
         # retrieve all organisations from the RCPCH NHS Organisations API if the user is an RCPCH staff member
         # if (
@@ -101,13 +108,6 @@ class NPDAUserForm(forms.ModelForm):
         #         ]
         #     ]
         #     self.fields["organisation_employer"].choices = sibling_organisations
-
-    def clean_organisation_employer(self) -> str:
-        print(self.cleaned_data["organisation_employer"])
-        organisation_employer = self.cleaned_data["organisation_employer"]
-        if organisation_employer:
-            return organisation_employer
-        return None
 
 
 class NPDAUpdatePasswordForm(SetPasswordForm):

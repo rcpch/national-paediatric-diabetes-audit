@@ -114,6 +114,7 @@ class NPDAUserManager(BaseUserManager):
                     OrganisationEmployer.objects.get_or_create(
                         ods_code="RJZ01",
                         name="King's College Hospital NHS Foundation Trust",
+                        pz_code="PZ215",
                     )
                 )
 

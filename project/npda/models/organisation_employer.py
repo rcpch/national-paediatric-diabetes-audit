@@ -17,6 +17,13 @@ class OrganisationEmployer(Model):
         null=True,
         blank=True,
     )
+    pz_code = CharField(
+        _("Paediatric Diabetes Unit code"),
+        help_text=_("Enter your employing organisation postcode"),
+        max_length=150,
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         verbose_name = "Organisation Employer"

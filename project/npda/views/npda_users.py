@@ -68,6 +68,7 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
                 .order_by("surname")
             )
         elif self.request.user.view_preference == 2:
+            # RCPCH user/national view - get all users
             return NPDAUser.objects.all().order_by("surname")
         else:
             raise ValueError("Invalid view preference")
@@ -288,9 +289,6 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateVi
         context["npda_user"] = NPDAUser.objects.get(pk=self.kwargs["pk"])
         return context
 
-    def is_valid(self):
-        return super(NPDAUserForm, self).is_valid()
-
     def post(self, request: HttpRequest, *args: str, **kwargs) -> HttpResponse:
         """
         Override POST method to resend email if recipient create account token has expired
@@ -397,7 +395,11 @@ class RCPCHLoginView(TwoFactorLoginView):
                 current_user_ods_code = (
                     self.request.user.organisation_employer.first().ods_code
                 )
+                current_user_pz_code = (
+                    self.request.user.organisation_employer.first().pz_code
+                )
                 if "sibling_organisations" not in self.request.session:
+                    # thisi s used to get all users in the same PDU in the PDUList view
                     sibling_organisations = retrieve_pdu_from_organisation_ods_code(
                         current_user_ods_code
                     )
@@ -406,8 +408,12 @@ class RCPCHLoginView(TwoFactorLoginView):
                         sibling_organisations
                     )
 
+                # store the users PDU and ODS code in session as these are used to scope the data the user can see
                 if "ods_code" not in self.request.session:
                     self.request.session["ods_code"] = current_user_ods_code
+
+                if "pz_code" not in self.request.session:
+                    self.request.session["pz_code"] = current_user_pz_code
 
                 if "organisation_choices" not in self.request.session:
                     # get all NHS organisations in user's PDU as list of tuples (ODS code, name)
@@ -417,6 +423,7 @@ class RCPCHLoginView(TwoFactorLoginView):
                     ]
 
                 if "pdu_choices" not in self.request.session:
+                    # this is a list of all pz_codes in the UK to populate the PDU selects
                     self.request.session["pdu_choices"] = retrieve_pdu_list()
                 return redirect("home")
 
@@ -430,16 +437,20 @@ class RCPCHLoginView(TwoFactorLoginView):
         response = super().done(form_list)
         response_url = getattr(response, "url")
         # successful login, get PDU, ODS and organisation details from user and store in session
-        current_user_ods_code = self.request.user.organisation_employer
+        current_user_ods_code = self.request.user.organisation_employer.first().ods_code
+        current_user_pz_code = self.request.user.organisation_employer.first().pz_code
         if "ods_code" not in self.request.session:
             self.request.session["ods_code"] = current_user_ods_code
 
-        if "sibling_organisations" not in self.request.session:
-            sibling_organisations = retrieve_pdu_from_organisation_ods_code(
-                current_user_ods_code
-            )
-            # store the results in session
-            self.request.session["sibling_organisations"] = sibling_organisations
+        if "pz_code" not in self.request.session:
+            self.request.session["pz_code"] = current_user_pz_code
+
+        # if "sibling_organisations" not in self.request.session:
+        #     sibling_organisations = retrieve_pdu_from_organisation_ods_code(
+        #         current_user_ods_code
+        #     )
+        #     # store the results in session
+        #     self.request.session["sibling_organisations"] = sibling_organisations
 
         # redirect to home page
         login_redirect_url = reverse(settings.LOGIN_REDIRECT_URL)
@@ -447,28 +458,6 @@ class RCPCHLoginView(TwoFactorLoginView):
         # Successful 2FA and login
         if response_url == login_redirect_url:
             user = self.get_user()
-            """
-            TODO - once organisations are implemented, this notifies the user on logging in that children have been transferred to their clinic
-            """
-            # if not user.organisation_employer:
-            #     org_id = 1
-            # else:
-            #     org_id = user.organisation_employer.id
-            #     # check for outstanding transfers in to this organisation
-            #     if Site.objects.filter(
-            #         active_transfer=True, organisation=user.organisation_employer
-            #     ).exists() and user.has_perm(
-            #         "epilepsy12.can_transfer_epilepsy12_lead_centre"
-            #     ):
-            #         # there is an outstanding request for transfer in to this user's organisation. User is a lead clinician and can act on this
-            #         transfers = Site.objects.filter(
-            #             active_transfer=True, organisation=user.organisation_employer
-            #         )
-            #         for transfer in transfers:
-            #             messages.info(
-            #                 self.request,
-            #                 f"{transfer.transfer_origin_organisation} have requested transfer of {transfer.case} to {user.organisation_employer} for their Epilepsy12 care. Please find {transfer.case} in the case table to accept or decline this transfer request.",
-            #             )
 
             # time since last set password
             delta = timezone.now() - user.password_last_set
