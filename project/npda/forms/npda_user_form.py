@@ -77,9 +77,12 @@ class NPDAUserForm(forms.ModelForm):
             self.fields["organisation_employer"].queryset = (
                 OrganisationEmployer.objects.filter(npdauser=self.instance)
             ).values_list("name", flat=True)
-            self.fields["organisation_employer"].widget.attrs[
-                "size"
-            ] = "10"  # Adjust the size as needed
+            self.fields["organisation_employer"].widget.attrs["size"] = "10"
+        else:
+            # limit the queryset to the organisations the current user is associated with
+            self.fields["organisation_employer"].queryset = (
+                OrganisationEmployer.objects.filter(npdauser=self.request.user)
+            ).values_list("name", flat=True)
 
         # retrieve all organisations from the RCPCH NHS Organisations API if the user is an RCPCH staff member
         # if (
