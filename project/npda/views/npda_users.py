@@ -34,6 +34,7 @@ from ..general_functions import (
     group_for_role,
     retrieve_pdu_from_organisation_ods_code,
 )
+from project.constants import VIEW_PREFERENCES
 from .mixins import LoginAndOTPRequiredMixin
 
 logger = logging.getLogger(__name__)
@@ -48,9 +49,15 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
 
     def get_queryset(self):
         # scope the queryset to filter only those users in organisations in the same PDU. This is to prevent users from seeing all users in the system
-        # The user's organisation, PDU and siblings are stored in the session when they log in
 
-        if self.request.user.view_preference == 1:
+        # Organisation level
+        if self.request.user.view_preference == VIEW_PREFERENCES[0][0]:
+            return NPDAUser.objects.filter(
+                organisation_employer__ods_code=self.request.session.get("ods_code")
+            ).order_by("surname")
+
+        # The user's organisation, PDU and siblings are stored in the session when they log in
+        elif self.request.user.view_preference == VIEW_PREFERENCES[1][0]:
             # PDU view
             # create a list of sibling organisations' ODS codes who share the same PDU as the user
             siblings_ods_codes = [
@@ -67,7 +74,7 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
                 .distinct()
                 .order_by("surname")
             )
-        elif self.request.user.view_preference == 2:
+        elif self.request.user.view_preference == VIEW_PREFERENCES[2][0]:
             # RCPCH user/national view - get all users
             return NPDAUser.objects.all().order_by("surname")
         else:
@@ -293,11 +300,13 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateVi
 
     def form_valid(self, form):
         instance = form.save(commit=False)
+
         organisation_employer = (
             form.cleaned_data["organisation_employer"][0]
             if form.cleaned_data["organisation_employer"]
             else None
         )
+
         if organisation_employer in instance.organisation_employer.all():
             # the employer has not changed
             instance.save()
@@ -334,6 +343,7 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateVi
                     instance.organisation_employer.add(new_employer)
 
         new_employer_ods_code = form.cleaned_data["add_employer"]
+
         if new_employer_ods_code:
             # a new employer has been added
             # fetch the organisation object from the API using the ODS code
@@ -349,6 +359,7 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateVi
                 ),
                 None,
             )
+
             if matching_organisation:
                 # creat or update  the OrganisationEmployer object
                 new_employer, created = OrganisationEmployer.objects.update_or_create(
