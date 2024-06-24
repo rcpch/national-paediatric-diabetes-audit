@@ -86,7 +86,6 @@ class NPDAUserForm(forms.ModelForm):
                 (obj.id, obj.name)
                 for obj in self.instance.get_all_employee_organisations()
             ]
-            print(self.instance.get_all_employee_organisations())
 
             self.fields["organisation_employer"].widget.attrs["size"] = "10"
         else:
