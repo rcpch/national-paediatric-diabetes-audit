@@ -26,7 +26,7 @@ from project.npda.general_functions.rcpch_nhs_organisations import (
 from project.npda.general_functions.retrieve_pdu import retrieve_pdu, retrieve_pdu_list
 
 
-from ..models import NPDAUser, VisitActivity
+from ..models import NPDAUser, VisitActivity, OrganisationEmployer
 from ..forms.npda_user_form import NPDAUserForm, CaptchaAuthenticationForm
 from ..general_functions import (
     construct_confirm_email,
@@ -186,6 +186,8 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
             )  # reloads the form to show the active steps
             return response
 
+        return super().post(request, *args, **kwargs)
+
 
 class NPDAUserCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateView):
     """
@@ -288,6 +290,78 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateVi
         context["form_method"] = "update"
         context["npda_user"] = NPDAUser.objects.get(pk=self.kwargs["pk"])
         return context
+
+    def form_valid(self, form):
+        instance = form.save(commit=False)
+        organisation_employer = (
+            form.cleaned_data["organisation_employer"][0]
+            if form.cleaned_data["organisation_employer"]
+            else None
+        )
+        if organisation_employer in instance.organisation_employer.all():
+            # the employer has not changed
+            instance.save()
+        else:
+            if organisation_employer:
+                # the employer has changed
+                instance.organisation_employer.clear()
+                instance.organisation_employer.add(organisation_employer)
+                instance.save()
+            else:
+                # there is no employer
+                organisation = retrieve_pdu_from_organisation_ods_code(
+                    self.request.session.get("ods_code")
+                )
+                # Get the name of the organistion from the API response
+                matching_organisation = next(
+                    (
+                        org
+                        for org in organisation["organisations"]
+                        if org["ods_code"] == self.request.session.get("ods_code")
+                    ),
+                    None,
+                )
+                if matching_organisation:
+                    # creat or update  the OrganisationEmployer object
+                    new_employer, created = (
+                        OrganisationEmployer.objects.update_or_create(
+                            pz_code=self.request.session["pz_code"],
+                            ods_code=self.request.session.get("ods_code"),
+                            name=matching_organisation["name"],
+                        )
+                    )
+                    # add the new employer to the user's employer list
+                    instance.organisation_employer.add(new_employer)
+
+        new_employer_ods_code = form.cleaned_data["add_employer"]
+        if new_employer_ods_code:
+            # a new employer has been added
+            # fetch the organisation object from the API using the ODS code
+            organisation = retrieve_pdu_from_organisation_ods_code(
+                new_employer_ods_code
+            )
+            # Get the name of the organistion from the API response
+            matching_organisation = next(
+                (
+                    org
+                    for org in organisation["organisations"]
+                    if org["ods_code"] == new_employer_ods_code
+                ),
+                None,
+            )
+            if matching_organisation:
+                # creat or update  the OrganisationEmployer object
+                new_employer, created = OrganisationEmployer.objects.update_or_create(
+                    pz_code=organisation["pz_code"],
+                    ods_code=new_employer_ods_code,
+                    name=matching_organisation["name"],
+                )
+                # add the new employer to the user's employer list
+                instance.organisation_employer.add(new_employer)
+
+        instance.save()
+
+        return super().form_valid(form)
 
     def post(self, request: HttpRequest, *args: str, **kwargs) -> HttpResponse:
         """

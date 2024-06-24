@@ -211,6 +211,9 @@ class NPDAUser(AbstractUser, PermissionsMixin):
     def get_short_name(self):
         return self.first_name
 
+    def get_all_employee_organisations(self):
+        return self.organisation_employer.all()
+
     def __unicode__(self):
         return self.email
 
@@ -220,7 +223,6 @@ class NPDAUser(AbstractUser, PermissionsMixin):
     def save(self, *args, **kwargs) -> None:
         if self.has_usable_password():
             self.email_confirmed = True
-
         return super().save(*args, **kwargs)
 
     class Meta:

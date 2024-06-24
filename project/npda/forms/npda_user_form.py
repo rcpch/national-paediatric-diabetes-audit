@@ -30,6 +30,12 @@ class NPDAUserForm(forms.ModelForm):
         widget=forms.SelectMultiple(attrs={"class": SELECT, "disabled": "disabled"}),
         required=False,  # Set to False since it's not editable
     )
+    add_employer = forms.ChoiceField(
+        choices=[],  # Initially empty, will be populated dynamically
+        required=False,
+        widget=forms.Select(attrs={"class": SELECT}),
+        label="Add Employer",
+    )
 
     class Meta:
         model = NPDAUser
@@ -70,18 +76,19 @@ class NPDAUserForm(forms.ModelForm):
         self.fields["email"].required = True
         self.fields["role"].required = True
         self.fields["organisation_employer"].required = False
+        self.fields["add_employer"].choices = [
+            ("", "Add organisation...")
+        ] + get_all_nhs_organisations()
+        self.fields["add_employer"].required = False
 
         if self.instance.pk:
-            self.fields["organisation_employer"].initial = (
-                self.instance.organisation_employer.all()
-            )
             self.fields["organisation_employer"].choices = [
                 (obj.id, obj.name)
-                for obj in OrganisationEmployer.objects.filter(npdauser=self.instance)
+                for obj in self.instance.get_all_employee_organisations()
             ]
+            print(self.instance.get_all_employee_organisations())
 
             self.fields["organisation_employer"].widget.attrs["size"] = "10"
-            print(self.fields["organisation_employer"].choices)
         else:
             # limit the queryset to the organisations the current user is associated with
             self.fields["organisation_employer"].choices = [
