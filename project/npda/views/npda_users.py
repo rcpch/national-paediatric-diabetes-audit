@@ -38,7 +38,7 @@ from ..general_functions import (
     retrieve_pdu_from_organisation_ods_code,
     retrieve_pdus,
 )
-from .mixins import LoginAndOTPRequiredMixin
+from .mixins import CheckPDUMixin, LoginAndOTPRequiredMixin
 from django.utils.decorators import method_decorator
 from .decorators import login_and_otp_required
 from django.contrib.auth.decorators import login_required
@@ -50,7 +50,7 @@ NPDAUser list and NPDAUser creation, deletion and update
 """
 
 
-class NPDAUserListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, ListView):
+class NPDAUserListView(LoginAndOTPRequiredMixin, CheckPDUMixin, PermissionRequiredMixin, ListView):
     permission_required = "npda.view_npdauser"
 
     template_name = "npda_users.html"

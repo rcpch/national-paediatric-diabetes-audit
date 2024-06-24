@@ -27,12 +27,12 @@ from project.npda.models import NPDAUser, AuditCohort
 # RCPCH imports
 from ..models import Patient
 from ..forms.patient_form import PatientForm
-from .mixins import LoginAndOTPRequiredMixin
+from .mixins import CheckPDUMixin, LoginAndOTPRequiredMixin
 
 logger = logging.getLogger(__name__)
 
 
-class PatientListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, ListView):
+class PatientListView(LoginAndOTPRequiredMixin, CheckPDUMixin, PermissionRequiredMixin, ListView):
     permission_required = 'npda.view_patient'
     model = Patient
     template_name = "patients.html"
