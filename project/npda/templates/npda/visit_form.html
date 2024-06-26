@@ -31,11 +31,11 @@
       <div role="tablist" class="tabs tabs-bordered">
         <input type="radio" name="my_tabs_1" role="tab" class="tab font-bold
           {% if routine_measurements_categories_with_errors and form_method == 'update' %} 
-            bg-rcpch_red 
+            bg-rcpch_red  !border-rcpch_red
           {% elif form_method == 'create' %} 
-            bg-white 
-          {% else %} 
-            bg-rcpch_pink
+            bg-white !text-black
+          {% elif not routine_measurements_categories_with_errors and form_method == 'update' %} 
+            bg-rcpch_pink !border-rcpch_pink
           {% endif %}" 
           aria-label="Routine&nbsp;Measurements" checked
         />
@@ -94,11 +94,11 @@
         
         <input type="radio" name="my_tabs_1" role="tab" class="tab rounded-none font-bold
           {% if annual_review_categories_with_errors %} 
-            bg-rcpch_red 
+            bg-rcpch_red !border-rcpch_red
           {% elif form_method == 'create' %} 
-            bg-white 
+            bg-white !text-black
           {% else %} 
-            bg-rcpch_pink
+            bg-rcpch_pink !border-rcpch_pink
           {% endif %}" 
           aria-label="Annual&nbsp;Review"
         />
@@ -108,11 +108,11 @@
             {% if field_category == "Foot Care" or field_category == "DECS" or field_category == "ACR" or field_category == "Cholesterol" or field_category == "Thyroid" or field_category == "Coeliac" or field_category == "Psychology" or field_category == "Smoking" or field_category == "Dietician" or field_category == "Sick Day Rules" or field_category == "Immunisation (flu)" %}
               <div class="collapse collapse-arrow my-2 bg-base-200 rounded-none 
                 {% if field_category in categories_with_errors %} 
-                  bg-rcpch_red 
+                  bg-rcpch_red
                 {% elif field_category in categories_without_errors %} 
                   bg-rcpch_pink 
                 {% else %} 
-                  bg-rcpch_dark_blue 
+                  bg-rcpch_dark_blue
                 {% endif %}
               ">
                 <input type="radio" name="my-accordion-3" checked="checked" /> 
@@ -121,11 +121,11 @@
                 </div>
                 <div class="collapse-content flex flex-col mb-6 text-lg 
                   {% if field_category in categories_with_errors %} 
-                    bg-rcpch_red 
+                    bg-rcpch_red
                   {% elif field_category in categories_without_errors %} 
-                    bg-rcpch_pink 
+                    bg-rcpch_pink
                   {% else %} 
-                    bg-rcpch_dark_blue 
+                    bg-rcpch_dark_blue
                   {% endif %}
                 ">
                   {% for field in form %}
@@ -172,9 +172,11 @@
 
         <input type="radio" name="my_tabs_1" role="tab" aria-label="Inpatient&nbsp;Entry" class="tab w font-bold
           {% if "Hospital Admission" in categories_with_errors %}
-            bg-rcpch_red
+            bg-rcpch_red !border-rcpch_red
           {% elif "Hospital Admission" in categories_without_errors %}
-            bg-rcpch_pink
+            bg-rcpch_pink !border-rcpch_pink
+          {% elif form_method == 'create' %} 
+            bg-white !text-black
           {% endif %}
         "/>
         <div role="tabpanel" class="
