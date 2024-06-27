@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timedelta
 import logging
 
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.utils import timezone
 from django.shortcuts import redirect, render
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
@@ -53,7 +53,7 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
         # Organisation level
         if self.request.user.view_preference == VIEW_PREFERENCES[0][0]:
             return NPDAUser.objects.filter(
-                organisation_employer__ods_code=self.request.session.get("ods_code")
+                organisation_employers__ods_code=self.request.session.get("ods_code")
             ).order_by("surname")
 
         # The user's organisation, PDU and siblings are stored in the session when they log in
@@ -67,13 +67,9 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
                 ]
             ]
             # get all users in the sibling organisations
-            return (
-                NPDAUser.objects.filter(
-                    organisation_employer__ods_code__in=siblings_ods_codes
-                )
-                .distinct()
-                .order_by("surname")
-            )
+            return NPDAUser.objects.filter(
+                organisation_employers__ods_code__in=siblings_ods_codes
+            ).order_by("surname")
         elif self.request.user.view_preference == VIEW_PREFERENCES[2][0]:
             # RCPCH user/national view - get all users
             return NPDAUser.objects.all().order_by("surname")
@@ -165,7 +161,7 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
             if view_preference:
                 user = NPDAUser.objects.get(pk=request.user.pk)
                 user.view_preference = view_preference
-                user.save()
+                user.save(update_fields=["view_preference"])
             else:
                 user = NPDAUser.objects.get(pk=request.user.pk)
 
@@ -299,48 +295,7 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateVi
         return context
 
     def form_valid(self, form):
-        instance = form.save(commit=False)
-
-        organisation_employer = (
-            form.cleaned_data["organisation_employer"][0]
-            if form.cleaned_data["organisation_employer"]
-            else None
-        )
-
-        if organisation_employer in instance.organisation_employer.all():
-            # the employer has not changed
-            instance.save()
-        else:
-            if organisation_employer:
-                # the employer has changed
-                instance.organisation_employer.clear()
-                instance.organisation_employer.add(organisation_employer)
-                instance.save()
-            else:
-                # there is no employer
-                organisation = retrieve_pdu_from_organisation_ods_code(
-                    self.request.session.get("ods_code")
-                )
-                # Get the name of the organistion from the API response
-                matching_organisation = next(
-                    (
-                        org
-                        for org in organisation["organisations"]
-                        if org["ods_code"] == self.request.session.get("ods_code")
-                    ),
-                    None,
-                )
-                if matching_organisation:
-                    # creat or update  the OrganisationEmployer object
-                    new_employer, created = (
-                        OrganisationEmployer.objects.update_or_create(
-                            pz_code=self.request.session["pz_code"],
-                            ods_code=self.request.session.get("ods_code"),
-                            name=matching_organisation["name"],
-                        )
-                    )
-                    # add the new employer to the user's employer list
-                    instance.organisation_employer.add(new_employer)
+        instance = form.save()
 
         new_employer_ods_code = form.cleaned_data["add_employer"]
 
@@ -363,14 +318,16 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateVi
             if matching_organisation:
                 # creat or update  the OrganisationEmployer object
                 new_employer, created = OrganisationEmployer.objects.update_or_create(
-                    pz_code=organisation["pz_code"],
                     ods_code=new_employer_ods_code,
-                    name=matching_organisation["name"],
+                    defaults=dict(
+                        pz_code=organisation["pz_code"],
+                        name=matching_organisation["name"],
+                    ),
                 )
                 # add the new employer to the user's employer list
-                instance.organisation_employer.add(new_employer)
-
-        instance.save()
+                instance.organisation_employers.add(new_employer)
+                instance.refresh_from_db()
+                return HttpResponseRedirect(self.get_success_url())
 
         return super().form_valid(form)
 
@@ -478,10 +435,10 @@ class RCPCHLoginView(TwoFactorLoginView):
                 login(request, user)
                 # successful login, get PDU and organisation details from user and store in session
                 current_user_ods_code = (
-                    self.request.user.organisation_employer.first().ods_code
+                    self.request.user.organisation_employers.first().ods_code
                 )
                 current_user_pz_code = (
-                    self.request.user.organisation_employer.first().pz_code
+                    self.request.user.organisation_employers.first().pz_code
                 )
                 if "sibling_organisations" not in self.request.session:
                     # thisi s used to get all users in the same PDU in the PDUList view
@@ -522,20 +479,22 @@ class RCPCHLoginView(TwoFactorLoginView):
         response = super().done(form_list)
         response_url = getattr(response, "url")
         # successful login, get PDU, ODS and organisation details from user and store in session
-        current_user_ods_code = self.request.user.organisation_employer.first().ods_code
-        current_user_pz_code = self.request.user.organisation_employer.first().pz_code
+        current_user_ods_code = (
+            self.request.user.organisation_employers.first().ods_code
+        )
+        current_user_pz_code = self.request.user.organisation_employers.first().pz_code
         if "ods_code" not in self.request.session:
             self.request.session["ods_code"] = current_user_ods_code
 
         if "pz_code" not in self.request.session:
             self.request.session["pz_code"] = current_user_pz_code
 
-        # if "sibling_organisations" not in self.request.session:
-        #     sibling_organisations = retrieve_pdu_from_organisation_ods_code(
-        #         current_user_ods_code
-        #     )
-        #     # store the results in session
-        #     self.request.session["sibling_organisations"] = sibling_organisations
+        if "sibling_organisations" not in self.request.session:
+            sibling_organisations = retrieve_pdu_from_organisation_ods_code(
+                current_user_ods_code
+            )
+            # store the results in session
+            self.request.session["sibling_organisations"] = sibling_organisations
 
         # redirect to home page
         login_redirect_url = reverse(settings.LOGIN_REDIRECT_URL)

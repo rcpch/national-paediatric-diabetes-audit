@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 class NPDAUserForm(forms.ModelForm):
 
     use_required_attribute = False
-    organisation_employer = forms.ModelMultipleChoiceField(
+    organisation_employers = forms.ModelMultipleChoiceField(
         queryset=OrganisationEmployer.objects.all(),
         widget=forms.SelectMultiple(attrs={"class": SELECT, "disabled": "disabled"}),
         required=False,  # Set to False since it's not editable
@@ -49,7 +49,7 @@ class NPDAUserForm(forms.ModelForm):
             "is_rcpch_audit_team_member",
             "is_rcpch_staff",
             "role",
-            "organisation_employer",
+            "organisation_employers",
         ]
         widgets = {
             "title": forms.Select(attrs={"class": SELECT}),
@@ -75,22 +75,21 @@ class NPDAUserForm(forms.ModelForm):
         self.fields["surname"].required = True
         self.fields["email"].required = True
         self.fields["role"].required = True
-        self.fields["organisation_employer"].required = False
+        self.fields["organisation_employers"].required = False
         self.fields["add_employer"].choices = [
             ("", "Add organisation...")
         ] + get_all_nhs_organisations()
         self.fields["add_employer"].required = False
 
         if self.instance.pk:
-            self.fields["organisation_employer"].choices = [
+            self.fields["organisation_employers"].choices = [
                 (obj.id, obj.name)
-                for obj in self.instance.get_all_employee_organisations()
+                for obj in self.instance.get_all_employer_organisations()
             ]
-
-            self.fields["organisation_employer"].widget.attrs["size"] = "10"
+            self.fields["organisation_employers"].widget.attrs["size"] = "10"
         else:
             # limit the queryset to the organisations the current user is associated with
-            self.fields["organisation_employer"].choices = [
+            self.fields["organisation_employers"].choices = [
                 (obj.id, obj.name)
                 for obj in OrganisationEmployer.objects.filter(
                     npdauser=self.request.user

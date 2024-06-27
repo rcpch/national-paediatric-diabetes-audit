@@ -92,7 +92,7 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
             .count()
         )
         context["pz_code"] = user_pz_code
-        context["ods_code"] = self.request.user.organisation_employer
+        context["ods_code"] = self.request.user.organisation_employers.first().ods_code
         context["total_valid_patients"] = total_valid_patients
         context["total_invalid_patients"] = (
             Patient.objects.filter(audit_cohorts__submission_active=True).count()

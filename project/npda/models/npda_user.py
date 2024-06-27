@@ -113,13 +113,13 @@ class NPDAUserManager(BaseUserManager):
                 organisation_employer, created = (
                     OrganisationEmployer.objects.get_or_create(
                         ods_code="RJZ01",
-                        name="King's College Hospital NHS Foundation Trust",
+                        name="KING'S COLLEGE HOSPITAL (DENMARK HILL)",
                         pz_code="PZ215",
                     )
                 )
 
         logged_in_user = self.create_user(email.lower(), password, **extra_fields)
-        logged_in_user.organisation_employer.add(organisation_employer)
+        logged_in_user.organisation_employers.add(organisation_employer)
 
         """
         Allocate Roles
@@ -191,10 +191,11 @@ class NPDAUser(AbstractUser, PermissionsMixin):
 
     objects = NPDAUserManager()
 
-    organisation_employer = models.ManyToManyField(
+    organisation_employers = models.ManyToManyField(
         to=OrganisationEmployer,
         verbose_name=_("Employing organisation"),
         help_text=_("Enter your employing organisation"),
+        related_name="organisation_employers",
     )
 
     def get_full_name(self):
@@ -211,8 +212,8 @@ class NPDAUser(AbstractUser, PermissionsMixin):
     def get_short_name(self):
         return self.first_name
 
-    def get_all_employee_organisations(self):
-        return self.organisation_employer.all()
+    def get_all_employer_organisations(self):
+        return self.organisation_employers.all()
 
     def __unicode__(self):
         return self.email
@@ -221,7 +222,7 @@ class NPDAUser(AbstractUser, PermissionsMixin):
         return True
 
     def save(self, *args, **kwargs) -> None:
-        if self.has_usable_password():
+        if self.has_usable_password() and not self.email_confirmed:
             self.email_confirmed = True
         return super().save(*args, **kwargs)
 
