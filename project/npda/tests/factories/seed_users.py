@@ -1,5 +1,5 @@
 """
-Seeds E12 Users in test db once per session.
+Seeds NPDA Users in test db once per session.
 """
 
 # Standard imports
@@ -8,13 +8,12 @@ import pytest
 # 3rd Party imports
 from django.contrib.auth.models import Group
 
-# E12 Imports
+# NPDA Imports
 from project.npda.tests.UserDataClasses import (
-    test_user_audit_centre_administrator_data,
-    test_user_audit_centre_clinician_data,
-    test_user_audit_centre_lead_clinician_data,
+    test_user_audit_centre_coordinator_data,
+    test_user_audit_centre_editor_data,
+    test_user_audit_centre_reader_data,
     test_user_rcpch_audit_team_data,
-    test_user_clinicial_audit_team_data,
 )
 from project.npda.models import (
     NPDAUser,
@@ -30,11 +29,10 @@ from project.constants.user import (
 @pytest.fixture(scope="session")
 def seed_users_fixture(django_db_setup, django_db_blocker):
     users = [
-        test_user_audit_centre_administrator_data,
-        test_user_audit_centre_clinician_data,
-        test_user_audit_centre_lead_clinician_data,
+        test_user_audit_centre_reader_data,
+        test_user_audit_centre_editor_data,
+        test_user_audit_centre_coordinator_data,
         test_user_rcpch_audit_team_data,
-        test_user_clinicial_audit_team_data,
     ]
 
     with django_db_blocker.unblock():
@@ -63,7 +61,7 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
                     is_rcpch_audit_team_member = True
                     first_name = "CLINICAL_AUDIT_TEAM"
 
-                E12UserFactory(
+                NPDAUserFactory(
                     first_name=first_name,
                     role=user.role,
                     # Assign flags based on user role
