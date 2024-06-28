@@ -4,9 +4,7 @@
 import os
 
 # LOGGING ENV VARS
-CONSOLE_LOG_LEVEL = (
-    "DEBUG"  # os.getenv("CONSOLE_LOG_LEVEL", "DEBUG")  # For npda specific logs
-)
+CONSOLE_LOG_LEVEL = os.getenv("CONSOLE_LOG_LEVEL", "DEBUG")  # For npda specific logs
 CONSOLE_DJANGO_LOG_LEVEL = os.getenv(
     "CONSOLE_DJANGO_LOG_LEVEL", "DEBUG"
 )  # For django logs
