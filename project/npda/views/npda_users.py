@@ -103,7 +103,6 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
             # filter the npdausers to only those in the same organisation as the user
             # trigger a GET request from the patient table to update the list of npdausers
             # by calling the get_queryset method again with the new ods_code/pz_code stored in session
-            logger.warning("HTMX request received")
             queryset = self.get_queryset()
             context = self.get_context_data()
             context["npdauser_list"] = queryset
