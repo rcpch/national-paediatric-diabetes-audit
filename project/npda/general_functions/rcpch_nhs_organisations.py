@@ -40,8 +40,32 @@ def get_all_nhs_organisations():
     These are typically used in Django forms as choices.
     """
 
-    url = f"https://rcpch-nhs-organisations.azurewebsites.net/organisations/limited"
+    url = f"{settings.RCPCH_NHS_ORGANISATIONS_API_URL}/organisations/limited"
 
+    try:
+        response = requests.get(
+            url=url,
+            timeout=10,  # times out after 10 seconds
+        )
+        response.raise_for_status()
+    except HTTPError as e:
+        print(e.response.text)
+        raise Exception("No NHS organisations found")
+
+    # convert the response to choices list
+    organisation_list = []
+    for organisation in response.json():
+        organisation_list.append(
+            (organisation.get("ods_code"), organisation.get("name"))
+        )
+    return organisation_list
+
+
+def get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit():
+    """
+    This function returns all NHS organisations from the RCPCH dataset that are affiliated with a paediatric diabetes unit.
+    """
+    url = f"{settings.RCPCH_NHS_ORGANISATIONS_API_URL}/organisations/paediatric-diabetes-units"
     try:
         response = requests.get(
             url=url,

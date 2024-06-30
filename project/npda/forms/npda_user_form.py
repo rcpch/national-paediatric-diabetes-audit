@@ -14,7 +14,9 @@ from captcha.fields import CaptchaField
 # RCPCH imports
 from ...constants.styles.form_styles import *
 from ..models import NPDAUser
-from project.npda.general_functions import get_all_nhs_organisations
+from project.npda.general_functions import (
+    get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit,
+)
 
 
 # Logging setup
@@ -71,7 +73,9 @@ class NPDAUserForm(forms.ModelForm):
             or self.request.user.is_rcpch_staff
         ):
             # this is an ordered list of tuples from the API
-            self.fields["organisation_employer"].choices = get_all_nhs_organisations()
+            self.fields["organisation_employer"].choices = (
+                get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit()
+            )
         else:
             # create list of choices from the session data
             sibling_organisations = [
