@@ -33,7 +33,7 @@ def retrieve_pdu_list():
     """
 
     url = settings.RCPCH_NHS_ORGANISATIONS_API_URL
-    request_url = f"{url}/paediatric_diabetes_units/extended"
+    request_url = f"{url}/paediatric_diabetes_units/extended/"
 
     try:
         response = requests.get(
@@ -80,7 +80,7 @@ def retrieve_pdu_from_organisation_ods_code(ods_code):
     ods_code = ods_code.upper()
 
     url = settings.RCPCH_NHS_ORGANISATIONS_API_URL
-    request_url = f"{url}/paediatric_diabetes_units/sibling-organisations/{ods_code}"
+    request_url = f"{url}/paediatric_diabetes_units/sibling-organisations/{ods_code}/"
 
     try:
         response = requests.get(
