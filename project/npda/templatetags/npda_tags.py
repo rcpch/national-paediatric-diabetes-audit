@@ -123,6 +123,10 @@ def is_textinput(widget):
 def is_checkbox(widget):
     return isinstance(widget, (forms.CheckboxInput))
 
+@register.filter
+def is_emailfield(widget):
+    return isinstance(widget, (forms.EmailField, forms.EmailInput))
+
 
 @register.filter
 def error_for_field(messages, field):

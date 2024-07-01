@@ -292,6 +292,8 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateVi
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["show_rcpch_team_box"] = self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member
+        context["show_rcpch_staff_box"] = self.request.user.is_superuser or self.request.user.is_rcpch_staff
         context["title"] = "Edit NPDA User Details"
         context["button_title"] = "Edit NPDA User Details"
         context["form_method"] = "update"
