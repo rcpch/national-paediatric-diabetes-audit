@@ -38,7 +38,7 @@ from ..general_functions import (
     retrieve_pdu_from_organisation_ods_code,
     retrieve_pdus,
 )
-from .mixins import CheckPDUMixin, LoginAndOTPRequiredMixin
+from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
 from django.utils.decorators import method_decorator
 from .decorators import login_and_otp_required
 from django.contrib.auth.decorators import login_required
@@ -50,7 +50,7 @@ NPDAUser list and NPDAUser creation, deletion and update
 """
 
 
-class NPDAUserListView(LoginAndOTPRequiredMixin, CheckPDUMixin, PermissionRequiredMixin, ListView):
+class NPDAUserListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, ListView):
     permission_required = "npda.view_npdauser"
 
     template_name = "npda_users.html"
@@ -277,8 +277,7 @@ class NPDAUserCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Succ
             # organisation_id=organisation_id,
         )
 
-# TODO add CheckPDUMixin here
-class NPDAUserUpdateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, UpdateView):
+class NPDAUserUpdateView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, PermissionRequiredMixin, SuccessMessageMixin, UpdateView):
     """
     Handle update of patient in audit
     """
@@ -337,7 +336,7 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Succ
             return super().post(request, *args, **kwargs)
 
 
-class NPDAUserDeleteView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, DeleteView):
+class NPDAUserDeleteView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, PermissionRequiredMixin, SuccessMessageMixin, DeleteView):
     """
     Handle deletion of user from audit
     """

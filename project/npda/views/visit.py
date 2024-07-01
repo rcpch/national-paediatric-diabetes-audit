@@ -16,10 +16,9 @@ from two_factor.views.mixins import OTPRequiredMixin
 from ..models import Visit, Patient
 from ..forms.visit_form import VisitForm
 from ..general_functions import get_visit_categories
-from .mixins import LoginAndOTPRequiredMixin
+from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
 
-
-class PatientVisitsListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, ListView):
+class PatientVisitsListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, ListView):
     permission_required = 'npda.view_visit'
     model = Visit
     template_name = "visits.html"
@@ -74,7 +73,7 @@ class VisitCreateView(
         return HttpResponseRedirect(self.get_success_url())
 
 
-class VisitUpdateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, UpdateView):
+class VisitUpdateView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, PermissionRequiredMixin, UpdateView):
     permission_required = 'npda.change_visit'
     model = Visit
     form_class = VisitForm
@@ -139,7 +138,7 @@ class VisitUpdateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, UpdateV
 
 
 class VisitDeleteView(
-    LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, DeleteView
+    LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, PermissionRequiredMixin, SuccessMessageMixin, DeleteView
 ):
     permission_required = "npda.delete_visit"
     model = Visit
