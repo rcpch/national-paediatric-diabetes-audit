@@ -2,6 +2,7 @@ import json
 from datetime import datetime, timedelta
 import logging
 
+from django.forms import BaseForm
 from django.http import HttpRequest, HttpResponse
 from django.utils import timezone
 from django.shortcuts import redirect, render
@@ -50,7 +51,9 @@ NPDAUser list and NPDAUser creation, deletion and update
 """
 
 
-class NPDAUserListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, ListView):
+class NPDAUserListView(
+    LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, ListView
+):
     permission_required = "npda.view_npdauser"
 
     template_name = "npda_users.html"
@@ -195,12 +198,14 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRe
             return response
 
 
-class NPDAUserCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, CreateView):
+class NPDAUserCreateView(
+    LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, CreateView
+):
     """
     Handle creation of new patient in audit
     """
 
-    permission_required = 'npda.add_npdauser'
+    permission_required = "npda.add_npdauser"
 
     model = NPDAUser
     form_class = NPDAUserForm
@@ -213,8 +218,13 @@ class NPDAUserCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Succ
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["show_rcpch_team_box"] = self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member
-        context["show_rcpch_staff_box"] = self.request.user.is_superuser or self.request.user.is_rcpch_staff
+        context["show_rcpch_team_box"] = (
+            self.request.user.is_superuser
+            or self.request.user.is_rcpch_audit_team_member
+        )
+        context["show_rcpch_staff_box"] = (
+            self.request.user.is_superuser or self.request.user.is_rcpch_staff
+        )
         context["title"] = "Add New NPDA User"
         context["button_title"] = "Add NPDA User"
         context["form_method"] = "create"
@@ -276,12 +286,19 @@ class NPDAUserCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Succ
             # organisation_id=organisation_id,
         )
 
-class NPDAUserUpdateView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, PermissionRequiredMixin, SuccessMessageMixin, UpdateView):
+
+class NPDAUserUpdateView(
+    LoginAndOTPRequiredMixin,
+    CheckPDUInstanceMixin,
+    PermissionRequiredMixin,
+    SuccessMessageMixin,
+    UpdateView,
+):
     """
     Handle update of patient in audit
     """
 
-    permission_required = 'npda.change_npdauser'
+    permission_required = "npda.change_npdauser"
 
     model = NPDAUser
     form_class = NPDAUserForm
@@ -296,16 +313,24 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, Permis
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["show_rcpch_team_box"] = self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member
-        context["show_rcpch_staff_box"] = self.request.user.is_superuser or self.request.user.is_rcpch_staff
+        context["show_rcpch_team_box"] = (
+            self.request.user.is_superuser
+            or self.request.user.is_rcpch_audit_team_member
+        )
+        context["show_rcpch_staff_box"] = (
+            self.request.user.is_superuser or self.request.user.is_rcpch_staff
+        )
         context["title"] = "Edit NPDA User Details"
         context["button_title"] = "Edit NPDA User Details"
         context["form_method"] = "update"
         context["npda_user"] = NPDAUser.objects.get(pk=self.kwargs["pk"])
         return context
 
-    def is_valid(self):
-        return super(NPDAUserForm, self).is_valid()
+    # def is_valid(self):
+    #     return super(NPDAUserForm, self).is_valid()
+    def form_valid(self, form: BaseForm) -> HttpResponse:
+        print(form.cleaned_data)
+        return super().form_valid(form)
 
     def post(self, request: HttpRequest, *args: str, **kwargs) -> HttpResponse:
         """
@@ -335,12 +360,18 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, Permis
             return super().post(request, *args, **kwargs)
 
 
-class NPDAUserDeleteView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, PermissionRequiredMixin, SuccessMessageMixin, DeleteView):
+class NPDAUserDeleteView(
+    LoginAndOTPRequiredMixin,
+    CheckPDUInstanceMixin,
+    PermissionRequiredMixin,
+    SuccessMessageMixin,
+    DeleteView,
+):
     """
     Handle deletion of user from audit
     """
 
-    permission_required = 'npda.delete_npdauser'
+    permission_required = "npda.delete_npdauser"
 
     model = NPDAUser
     success_message = "NPDA User removed from database"
