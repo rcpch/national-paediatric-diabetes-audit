@@ -4,15 +4,21 @@ This module contains functions that are used to extract NHS organisations from t
 
 # python imports
 import requests
+import logging
+from typing import Union, Dict, Any
 
 # django imports
 from django.conf import settings
 from requests.exceptions import HTTPError
 
 # RCPCH imports
+from project.constants.organisations_objects import OrganisationRCPCH
+
+# Logging
+logger = logging.getLogger(__name__)
 
 
-def get_nhs_organisation(ods_code: str):
+def get_nhs_organisation(ods_code: str) -> OrganisationRCPCH:
     """
     This function returns details of an NHS organisation against an ODS code from the RCPCH dataset.
     """
@@ -21,17 +27,42 @@ def get_nhs_organisation(ods_code: str):
         f"{settings.RCPCH_NHS_ORGANISATIONS_API_URL}/organisations/?ods_code={ods_code}"
     )
 
-    try:
-        response = requests.get(
-            url=url,
-            timeout=10,  # times out after 10 seconds
-        )
-        response.raise_for_status()
-    except HTTPError as e:
-        print(e.response.text)
-        raise Exception(f"{ods_code} not found")
+    organisation_details = _get_nhs_organisation_from_url(ods_code, url)
 
-    return response.json()[0]
+    return organisation_details
+
+
+def _get_nhs_organisation_from_url(
+    ods_code: str, url: str
+) -> Union[OrganisationRCPCH, Dict[str, Any]]:
+    """
+    Fetch NHS organisation details from the given URL using the provided ODS code.
+
+    Args:
+        ods_code (str): The ODS code of the NHS organisation.
+        url (str): The URL to fetch the NHS organisation details from.
+
+    Returns:
+        dict: The details of the NHS organisation if the request is successful,
+              or an error message if the request fails.
+    """
+    ERROR_STRING = "An error occurred while fetching NHS organisation details."
+    try:
+        response = requests.get(url=url, timeout=10)
+        response.raise_for_status()
+
+        # Convert response to OrganisationRCPCH object
+        return OrganisationRCPCH.from_json(response.json()[0])
+    except HTTPError as http_err:
+        logger.error(
+            f"HTTP error occurred fetching organisation details from {url=}: {http_err.response.text}"
+        )
+        return {"error": ERROR_STRING}
+    except Exception as err:
+        logger.error(
+            f"An error occurred fetching organisation details from {url=}: {err}"
+        )
+        return {"error": ERROR_STRING}
 
 
 def get_all_nhs_organisations():

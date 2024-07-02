@@ -1,6 +1,7 @@
 # Python imports
 from datetime import date
 from typing import Any, Iterable
+import logging
 
 # Django imports
 from django.apps import apps
@@ -15,6 +16,10 @@ from ..general_functions import csv_upload, csv_summarise
 from ..forms.upload import UploadFileForm
 from .decorators import login_and_otp_required
 
+
+# Logging
+logger = logging.getLogger(__name__)
+
 @login_and_otp_required()
 def home(request):
     """
@@ -22,13 +27,14 @@ def home(request):
     Only verified users can access this page.
     """
     file_uploaded = False
+    
 
     if request.method == "POST":
         form = UploadFileForm(request.POST, request.FILES)
         file = request.FILES["csv_upload"]
         pz_code = request.session.get("sibling_organisations").get("pz_code")
         summary = csv_summarise(csv_file=file)
-        file_uploaded = csv_upload(user=request.user, csv_file=file, organisation_ods_code=request.user.organisation_employer, pdu_pz_code=pz_code)
+        file_uploaded = csv_upload(user=request.user, csv_file=file, organisation_ods_code=request.user.organisation_employers, pdu_pz_code=pz_code)
         if file_uploaded["status"]==422 or file_uploaded["status"]==500:
             messages.error(request=request,message=f"{file_uploaded["errors"]}")
             return redirect('home')

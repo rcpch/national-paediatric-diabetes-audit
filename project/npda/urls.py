@@ -14,7 +14,7 @@ from project.npda.forms.npda_user_form import NPDAUpdatePasswordForm
 from .views import *
 
 urlpatterns = [
-    path("home", view=home, name="home"),
+    path("", view=home, name="home"),
     # Audit cohort views
     path(
         "audit_cohorts",
