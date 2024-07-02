@@ -15,6 +15,7 @@ from .views import *
 
 urlpatterns = [
     path("", view=home, name="home"),
+    path("home", view=home, name="home"),
     # Audit cohort views
     path(
         "audit_cohorts",
