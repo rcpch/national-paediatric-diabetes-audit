@@ -76,7 +76,7 @@ def get_all_nhs_organisations() -> List[Tuple[str, str]]:
     Returns:
         List[Tuple[str, str]]: A list of tuples containing the ODS code and name of NHS organisations.
     """
-    url = f"{settings.RCPCH_NHS_ORGANISATIONS_API_URL}/organisations/liited"
+    url = f"{settings.RCPCH_NHS_ORGANISATIONS_API_URL}/organisations/limited"
     ERROR_RESPONSE = [("999", "An error occurred while fetching NHS organisations.")]
 
     try:
@@ -86,7 +86,7 @@ def get_all_nhs_organisations() -> List[Tuple[str, str]]:
         # Convert the response to choices list
         organisation_list = [
             (organisation.get("ods_code"), organisation.get("name"))
-            for organisation in OrganisationRCPCH.from_json(response.json())
+            for organisation in response.json()
         ]
 
         return organisation_list

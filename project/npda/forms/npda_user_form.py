@@ -11,7 +11,7 @@ from django.utils.translation import gettext as _
 # third party imports
 from captcha.fields import CaptchaField
 
-from project.npda.general_functions import get_all_nhs_organisations
+from project.npda.general_functions import organisations_adapter
 
 # RCPCH imports
 from ...constants.styles.form_styles import *
@@ -78,7 +78,7 @@ class NPDAUserForm(forms.ModelForm):
         self.fields["organisation_employers"].required = False
         self.fields["add_employer"].choices = [
             ("", "Add organisation...")
-        ] + get_all_nhs_organisations()
+        ] + organisations_adapter.get_all_nhs_organisations()
         self.fields["add_employer"].required = False
 
         if self.instance.pk:
@@ -103,7 +103,7 @@ class NPDAUserForm(forms.ModelForm):
         #     or self.request.user.is_rcpch_staff
         # ):
         #     # this is an ordered list of tuples from the API
-        #     self.fields["organisation_employer"].choices = get_all_nhs_organisations()
+        #     self.fields["organisation_employer"].choices = organisations_adapter.get_all_nhs_organisations()
         # else:
         #     # create list of choices from the session data
         #     sibling_organisations = [
