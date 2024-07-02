@@ -5,7 +5,7 @@ This module contains functions that are used to extract NHS organisations from t
 # python imports
 import requests
 import logging
-from typing import Union, Dict, Any
+from typing import Union, Dict, Any, List, Tuple
 
 # django imports
 from django.conf import settings
@@ -18,7 +18,7 @@ from project.constants.organisations_objects import OrganisationRCPCH
 logger = logging.getLogger(__name__)
 
 
-def get_nhs_organisation(ods_code: str) -> OrganisationRCPCH:
+def get_nhs_organisation(ods_code: str) -> Union[OrganisationRCPCH, Dict[str, Any]]:
     """
     This function returns details of an NHS organisation against an ODS code from the RCPCH dataset.
     """
@@ -33,7 +33,7 @@ def get_nhs_organisation(ods_code: str) -> OrganisationRCPCH:
 
 
 def _get_nhs_organisation_from_url(
-    ods_code: str, url: str
+    url: str,
 ) -> Union[OrganisationRCPCH, Dict[str, Any]]:
     """
     Fetch NHS organisation details from the given URL using the provided ODS code.
@@ -65,31 +65,37 @@ def _get_nhs_organisation_from_url(
         return {"error": ERROR_STRING}
 
 
-def get_all_nhs_organisations():
+def get_all_nhs_organisations() -> List[Tuple[str, str]]:
     """
     This function returns all NHS organisations from the RCPCH dataset and returns them to the caller as a list of tuples.
     These are typically used in Django forms as choices.
-    """
 
-    url = f"https://rcpch-nhs-organisations.azurewebsites.net/organisations/limited"
+    If error reaching the API, it returns a list with a single tuple containing:
+        [("999", "An error occurred while fetching NHS organisations.")].
+
+    Returns:
+        List[Tuple[str, str]]: A list of tuples containing the ODS code and name of NHS organisations.
+    """
+    url = f"{settings.RCPCH_NHS_ORGANISATIONS_API_URL}/organisations/liited"
+    ERROR_RESPONSE = [("999", "An error occurred while fetching NHS organisations.")]
 
     try:
-        response = requests.get(
-            url=url,
-            timeout=10,  # times out after 10 seconds
-        )
+        response = requests.get(url=url, timeout=10)  # times out after 10 seconds
         response.raise_for_status()
-    except HTTPError as e:
-        print(e.response.text)
-        raise Exception("No NHS organisations found")
 
-    # convert the response to choices list
-    organisation_list = []
-    for organisation in response.json():
-        organisation_list.append(
+        # Convert the response to choices list
+        organisation_list = [
             (organisation.get("ods_code"), organisation.get("name"))
-        )
-    return organisation_list
+            for organisation in OrganisationRCPCH.from_json(response.json())
+        ]
+
+        return organisation_list
+    except HTTPError as e:
+        logger.error(f"HTTP error occurred: {e.response.text}")
+        return ERROR_RESPONSE
+    except Exception as e:
+        logger.error(f"An error occurred: {e}")
+        return ERROR_RESPONSE
 
 
 # [
