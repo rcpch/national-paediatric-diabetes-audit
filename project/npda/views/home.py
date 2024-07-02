@@ -34,7 +34,7 @@ def home(request):
         file = request.FILES["csv_upload"]
         pz_code = request.session.get("sibling_organisations").get("pz_code")
         summary = csv_summarise(csv_file=file)
-        file_uploaded = csv_upload(user=request.user, csv_file=file, organisation_ods_code=request.user.organisation_employers, pdu_pz_code=pz_code)
+        file_uploaded = csv_upload(user=request.user, csv_file=file, organisation_ods_code=request.user.organisation_employers.first().ods_code, pdu_pz_code=pz_code)
         if file_uploaded["status"]==422 or file_uploaded["status"]==500:
             messages.error(request=request,message=f"{file_uploaded["errors"]}")
             return redirect('home')
