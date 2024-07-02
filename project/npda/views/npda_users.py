@@ -20,10 +20,7 @@ from two_factor.views import LoginView as TwoFactorLoginView
 from django_htmx.http import trigger_client_event
 
 # RCPCH imports
-from project.npda.general_functions.rcpch_nhs_organisations import (
-    get_all_nhs_organisations,
-)
-from project.npda.general_functions.retrieve_pdu import retrieve_pdu, retrieve_pdu_list
+from project.npda.general_functions import organisations_adapter
 
 
 from ..models import NPDAUser, VisitActivity, OrganisationEmployer
@@ -32,7 +29,6 @@ from ..general_functions import (
     construct_confirm_email,
     send_email_to_recipients,
     group_for_role,
-    retrieve_pdu_from_organisation_ods_code,
 )
 from project.constants import VIEW_PREFERENCES
 from .mixins import LoginAndOTPRequiredMixin
@@ -95,6 +91,7 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
 
     def get(self, request, *args: str, **kwargs) -> HttpResponse:
         response = super().get(request, *args, **kwargs)
+
         if request.htmx:
             # filter the npdausers to only those in the same organisation as the user
             # trigger a GET request from the patient table to update the list of npdausers
@@ -123,9 +120,7 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
             if ods_code:
                 # call back from the organisation select
                 # retrieve the sibling organisations and store in session
-                sibling_organisations = retrieve_pdu_from_organisation_ods_code(
-                    ods_code=ods_code
-                )
+                sibling_organisations = get_single_pdu_from_ods_code(ods_code=ods_code)
                 # store the results in session
                 self.request.session["sibling_organisations"] = sibling_organisations
                 self.request.session["ods_code"] = ods_code
@@ -140,7 +135,9 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
             if pz_code:
                 # call back from the PDU select
                 # retrieve the sibling organisations and store in session
-                sibling_organisations = retrieve_pdu(pz_number=pz_code)
+                sibling_organisations = (
+                    organisations_adapter.get_single_pdu_from_pz_code(pz_number=pz_code)
+                )
                 # store the results in session
                 self.request.session["sibling_organisations"] = sibling_organisations
 
@@ -302,9 +299,7 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateVi
         if new_employer_ods_code:
             # a new employer has been added
             # fetch the organisation object from the API using the ODS code
-            organisation = retrieve_pdu_from_organisation_ods_code(
-                new_employer_ods_code
-            )
+            organisation = get_single_pdu_from_ods_code(new_employer_ods_code)
             # Get the name of the organistion from the API response
             matching_organisation = next(
                 (
@@ -442,7 +437,7 @@ class RCPCHLoginView(TwoFactorLoginView):
                 )
                 if "sibling_organisations" not in self.request.session:
                     # thisi s used to get all users in the same PDU in the PDUList view
-                    sibling_organisations = retrieve_pdu_from_organisation_ods_code(
+                    sibling_organisations = get_single_pdu_from_ods_code(
                         current_user_ods_code
                     )
                     # store the results in session
@@ -466,7 +461,9 @@ class RCPCHLoginView(TwoFactorLoginView):
 
                 if "pdu_choices" not in self.request.session:
                     # this is a list of all pz_codes in the UK to populate the PDU selects
-                    self.request.session["pdu_choices"] = retrieve_pdu_list()
+                    self.request.session["pdu_choices"] = (
+                        organisations_adapter.get_all_pdus_list_choices()
+                    )
                 return redirect("home")
 
         # Otherwise, continue with usual workflow
@@ -490,9 +487,7 @@ class RCPCHLoginView(TwoFactorLoginView):
             self.request.session["pz_code"] = current_user_pz_code
 
         if "sibling_organisations" not in self.request.session:
-            sibling_organisations = retrieve_pdu_from_organisation_ods_code(
-                current_user_ods_code
-            )
+            sibling_organisations = get_single_pdu_from_ods_code(current_user_ods_code)
             # store the results in session
             self.request.session["sibling_organisations"] = sibling_organisations
 
