@@ -3,7 +3,7 @@
 {% block content %}
 <div class="bg-rcpch_light_blue py-8">
   <div class="w-full max-w-3xl mx-auto px-2 py-4 m-2 shadow-md bg-white font-montserrat">
-    <strong>{{title}}{% if form_method == 'update' %} for {{npda_user.get_full_name}}{% endif %} {{ csrf_token }}</strong>
+    <strong>{{title}}{% if form_method == 'update' %} for {{npda_user.get_full_name}}{% endif %}</strong>
     <form id="update-form" method="post" action="">
       {% csrf_token %}
       {% for field in form %}
