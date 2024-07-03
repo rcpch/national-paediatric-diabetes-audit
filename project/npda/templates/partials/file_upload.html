@@ -43,10 +43,28 @@
 
         </div>
         {% csrf_token %}
-        <button class="w-full bg-gray-400 text-white font-montserrat py-2 px-4" type="submit" disabled
-            _="on click remove .hidden from #upload-spinner" id="submit-button">Submit data
-            <span class="loading loading-spinner loading-lg text-rcpch_pink hidden" id="upload-spinner"></span>
-        </button>
+
+
+        <div class="relative">
+            <button id="submit-button" class="w-full bg-gray-400 text-white font-montserrat py-2 px-4 tooltip-trigger"
+                type="submit" disabled _="on click remove .hidden from #upload-spinner">
+                Submit data
+                <span class="loading loading-spinner loading-lg text-rcpch_pink hidden" id="upload-spinner"></span>
+            </button>
+            <div class="tooltip-content absolute left-1/2 transform -translate-x-1/2 mt-2 w-48 bg-rcpch_pink text-white text-center rounded p-2 opacity-0 transition-opacity duration-300 pointer-events-none"
+                _="
+                    on mouseenter from #submit-button 
+                    if the #submit-button's disabled 
+                        add .opacity-100
+                    end
+                    on mouseleave from #submit-button 
+                    if the #submit-button's disabled 
+                        remove .opacity-100
+                    end
+                 ">
+                Upload your NPDA CSV file to submit data!
+            </div>
+        </div>
     </form>
     {% endif %}
 </div>
