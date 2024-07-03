@@ -3,6 +3,7 @@ Seeds NPDA Users in test db once per session.
 """
 
 # Standard imports
+from project.npda.general_functions.rcpch_nhs_organisations import get_nhs_organisation
 import pytest
 
 # 3rd Party imports
