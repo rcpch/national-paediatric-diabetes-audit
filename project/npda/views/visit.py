@@ -169,6 +169,7 @@ class VisitUpdateView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, Permissio
 class VisitDeleteView(
     LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, PermissionRequiredMixin, SuccessMessageMixin, DeleteView
 ):
+    permission_required = "npda.delete_visit"
     model = Visit
     success_url = reverse_lazy("patient_visits")
     success_message = "Visit removed successfully"
