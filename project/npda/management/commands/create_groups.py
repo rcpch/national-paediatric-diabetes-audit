@@ -53,6 +53,12 @@ def groups_seeder(
         {"codename": "delete_visit", "content_type": visitContentType},
 
         # site-related permissions = None
+
+        # NPDA-user related permissions
+        {"codename": "view_npdaUser", "content_type": npdaUserContentType},
+        {"codename": "change_npdaUser", "content_type": npdaUserContentType},
+        {"codename": "add_npdaUser", "content_type": npdaUserContentType},
+        {"codename": "delete_npdaUser", "content_type": npdaUserContentType},
     ]
 
     CLINICIAN_PERMISSIONS = [
@@ -79,6 +85,12 @@ def groups_seeder(
         {"codename": "view_visit", "content_type": visitContentType},
 
         # site-related permissions = None
+
+        # NPDA-user related permissions
+        {"codename": "view_npdaUser", "content_type": npdaUserContentType},
+        {"codename": "change_npdaUser", "content_type": npdaUserContentType},
+        {"codename": "add_npdaUser", "content_type": npdaUserContentType},
+        {"codename": "delete_npdaUser", "content_type": npdaUserContentType},
     ]
 
     RCPCH_AUDIT_TEAM_PERMISSIONS = [
@@ -99,7 +111,12 @@ def groups_seeder(
         {"codename": "change_site", "content_type": siteContentType},
         {"codename": "add_site", "content_type": siteContentType},
         {"codename": "delete_site", "content_type": siteContentType},
-        
+
+        # NPDA-user related permissions
+        {"codename": "view_npdaUser", "content_type": npdaUserContentType},
+        {"codename": "change_npdaUser", "content_type": npdaUserContentType},
+        {"codename": "add_npdaUser", "content_type": npdaUserContentType},
+        {"codename": "delete_npdaUser", "content_type": npdaUserContentType},
     ]
 
     PATIENT_PERMISSIONS = [
