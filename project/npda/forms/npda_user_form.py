@@ -85,7 +85,7 @@ class NPDAUserForm(forms.ModelForm):
             or self.request.user.is_rcpch_staff
         ):
             # this is an ordered list of tuples from the API
-            self.fields["organisation_employer"].choices = (
+            self.fields["organisation_employers"].choices = (
                 organisations_adapter.get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit()
             )
         else:

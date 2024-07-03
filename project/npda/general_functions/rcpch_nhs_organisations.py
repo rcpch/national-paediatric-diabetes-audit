@@ -99,28 +99,37 @@ def get_all_nhs_organisations() -> List[Tuple[str, str]]:
         return ERROR_RESPONSE
 
 
-def get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit():
+def get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit() -> (
+    List[Tuple[str, str]]
+):
     """
     This function returns all NHS organisations from the RCPCH dataset that are affiliated with a paediatric diabetes unit.
+    If an error occurs while fetching the data, it returns a list with a single tuple containing:
+        [("999", "An error occurred while fetching NHS organisations.")].
+
+    Returns:
+        List[Tuple[str, str]]: A list of tuples containing the ODS code and name of NHS organisations.
     """
     url = f"{settings.RCPCH_NHS_ORGANISATIONS_API_URL}/organisations/paediatric-diabetes-units"
-    try:
-        response = requests.get(
-            url=url,
-            timeout=10,  # times out after 10 seconds
-        )
-        response.raise_for_status()
-    except HTTPError as e:
-        print(e.response.text)
-        raise Exception("No NHS organisations found")
+    ERROR_RESPONSE = [("999", "An error occurred while fetching NHS organisations.")]
 
-    # convert the response to choices list
-    organisation_list = []
-    for organisation in response.json():
-        organisation_list.append(
+    try:
+        response = requests.get(url=url, timeout=10)  # times out after 10 seconds
+        response.raise_for_status()
+
+        # Convert the response to choices list
+        organisation_list = [
             (organisation.get("ods_code"), organisation.get("name"))
-        )
-    return organisation_list
+            for organisation in response.json()
+        ]
+
+        return organisation_list
+    except HTTPError as e:
+        logger.error(f"HTTP error occurred: {e.response.text}")
+        return ERROR_RESPONSE
+    except Exception as e:
+        logger.error(f"An error occurred: {e}")
+        return ERROR_RESPONSE
 
 
 # [
