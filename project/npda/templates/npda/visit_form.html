@@ -239,8 +239,8 @@
       <div class="flex justify-end">
         <button type="submit" value="Submit" class="btn rcpch-btn bg-rcpch_light_blue border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">{{button_title}}</button>
         <a class="btn rcpch-btn bg-rcpch_yellow_light_tint1 border border-rcpch_yellow_light_tint1 hover:bg-rcpch_yellow hover:border-rcpch_yellow" href="{% url 'patient_visits' patient_id=patient_id %}">Cancel</a>
-        {% if form_method == 'update' %}
-        <a class="btn rcpch-btn bg-rcpch_red text-white font-semibold hover:text-white py-2.5 px-3 border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint" href="{% url 'visit-delete' patient_id visit.pk %}">Delete</a>
+        {% if form_method == 'update' and perms.npda.delete_visit %}
+          <a class="btn rcpch-btn bg-rcpch_red text-white font-semibold hover:text-white py-2.5 px-3 border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint" href="{% url 'visit-delete' patient_id visit.pk %}">Delete</a>
         {% endif %}
       </div>
     </form>
