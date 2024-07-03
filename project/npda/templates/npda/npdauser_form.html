@@ -18,15 +18,17 @@
                   <option value="{{choice.0}}" {% if field.value == choice.0 %} selected="{{ field.value }}" {% endif %}>{{choice.1}}</option>
                   {% endfor %}
                 </select>
+              {% elif field.field.widget|is_emailfield %}
+                {{ field }}
               {% elif field.field.widget|is_textinput %}
                 <input type="text" id="{{ field.id_for_label }}" name="{{ field.html_name }}" {% if field.value %} value="{{ field.value }}" {% endif %} class="input rcpch-input-text">
-              {% elif field.field.widget|is_checkbox and request.user.is_superuser and field.id_for_label == 'id_is_superuser' or field.id_for_label == 'id_is_staff' %}
+              {% elif request.user.is_superuser and field.id_for_label == 'id_is_superuser' %}
                 {{ field }}
-              {% elif field.field.widget|is_checkbox and request.user.is_rcpch_staff and field.id_for_label == 'id_is_rcpch_staff' %}
+              {% elif field.id_for_label == 'id_is_staff' and request.user.is_superuser %}
                 {{ field }}
-              {% elif field.field.widget|is_checkbox and request.user.is_rcpch_audit_team_member and field.id_for_label == 'id_is_rcpch_audit_team_member' %}
+              {% elif show_rcpch_staff_box and field.id_for_label == 'id_is_rcpch_staff' %}
                 {{ field }}
-              {% else %}
+              {% elif show_rcpch_team_box and field.id_for_label == 'id_is_rcpch_audit_team_member' %}
                 {{ field }}
               {% endif %}
               {% for error in field.errors %}
