@@ -108,13 +108,20 @@ def site_contact_email():
 def is_select(widget):
     return isinstance(widget, (forms.Select, forms.SelectMultiple))
 
+
 @register.filter
 def is_dateinput(widget):
     return isinstance(widget, (forms.DateInput))
 
+
 @register.filter
 def is_textinput(widget):
     return isinstance(widget, (forms.CharField, forms.TextInput, forms.EmailField))
+
+
+@register.filter
+def is_checkbox(widget):
+    return isinstance(widget, (forms.CheckboxInput))
 
 
 @register.filter
