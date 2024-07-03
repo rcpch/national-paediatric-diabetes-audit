@@ -191,10 +191,12 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, CheckPDUMixin, PermissionRequir
         return super().post(request, *args, **kwargs)
 
 
-class NPDAUserCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateView):
+class NPDAUserCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, CreateView):
     """
     Handle creation of new patient in audit
     """
+
+    permission_required = 'npda.add_npdauser'
 
     model = NPDAUser
     form_class = NPDAUserForm
@@ -270,11 +272,13 @@ class NPDAUserCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateVi
             # organisation_id=organisation_id,
         )
 
-
-class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateView):
+# TODO add CheckPDUMixin here
+class NPDAUserUpdateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, UpdateView):
     """
     Handle update of patient in audit
     """
+
+    permission_required = 'npda.change_npdauser'
 
     model = NPDAUser
     form_class = NPDAUserForm
