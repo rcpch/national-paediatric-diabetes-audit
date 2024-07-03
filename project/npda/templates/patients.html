@@ -15,7 +15,9 @@
               {% include 'partials/patient_table.html' with patient_list=patient_list index_of_first_invalid_patient=index_of_first_invalid_patient total_invalid_patients=total_invalid_patients %}
             </div>
           </div>
-          <a href="{% url 'patient-add' %}" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 mt-40 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Add Child</a>
+          {% if perms.npda.add_patient %}
+            <a href="{% url 'patient-add' %}" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 mt-40 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Add Child</a>
+          {% endif %}
         </div>
     </div>
     <div class="font-montserrat font-semibold mt-10">
