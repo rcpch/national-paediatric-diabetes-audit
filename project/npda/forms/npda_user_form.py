@@ -78,6 +78,12 @@ class NPDAUserForm(forms.ModelForm):
         self.fields["surname"].required = True
         self.fields["email"].required = True
         self.fields["role"].required = True
+        self.fields["organisation_employers"].required = False
+        self.fields["add_employer"].choices = [
+            ("", "Add organisation...")
+        ] + organisations_adapter.get_all_nhs_organisations()
+        self.fields["add_employer"].required = False
+
         # retrieve all organisations from the RCPCH NHS Organisations API
         if (
             self.request.user.is_superuser

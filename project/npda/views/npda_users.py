@@ -298,7 +298,7 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateVi
         if new_employer_ods_code:
             # a new employer has been added
             # fetch the organisation object from the API using the ODS code
-            organisation = get_single_pdu_from_ods_code(new_employer_ods_code)
+            organisation = organisations_adapter.get_single_pdu_from_ods_code(new_employer_ods_code)
             # Get the name of the organistion from the API response
             matching_organisation = next(
                 (
@@ -308,6 +308,8 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateVi
                 ),
                 None,
             )
+            
+            logger.warning(f'{matching_organisation=} {organisation=}')
 
             if matching_organisation:
                 # creat or update  the OrganisationEmployer object
