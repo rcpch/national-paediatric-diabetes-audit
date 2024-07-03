@@ -298,18 +298,26 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateVi
         if new_employer_ods_code:
             # a new employer has been added
             # fetch the organisation object from the API using the ODS code
-            organisation = organisations_adapter.get_single_pdu_from_ods_code(new_employer_ods_code)
+            organisation = organisations_adapter.get_single_pdu_from_ods_code(
+                new_employer_ods_code
+            )
+
+            if "error" in organisation:
+                messages.error(
+                    self.request,
+                    f"Error: {organisation['error']}. Organisation not added. Please contact the NPDA team if this issue persists.",
+                )
+                return HttpResponseRedirect(self.get_success_url())
+
             # Get the name of the organistion from the API response
             matching_organisation = next(
                 (
                     org
-                    for org in organisation["organisations"]
+                    for org in organisation['organisations']
                     if org["ods_code"] == new_employer_ods_code
                 ),
                 None,
             )
-            
-            logger.warning(f'{matching_organisation=} {organisation=}')
 
             if matching_organisation:
                 # creat or update  the OrganisationEmployer object

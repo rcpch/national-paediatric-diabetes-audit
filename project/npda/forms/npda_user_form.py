@@ -69,9 +69,10 @@ class NPDAUserForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs) -> None:
+
         # get the request object from the kwargs
         self.request = kwargs.pop("request", None)
-
+        
         super().__init__(*args, **kwargs)
         self.fields["title"].required = False
         self.fields["first_name"].required = True
@@ -84,25 +85,39 @@ class NPDAUserForm(forms.ModelForm):
         ] + organisations_adapter.get_all_nhs_organisations()
         self.fields["add_employer"].required = False
 
+
         # retrieve all organisations from the RCPCH NHS Organisations API
-        if (
-            self.request.user.is_superuser
-            or self.request.user.is_rcpch_audit_team_member
-            or self.request.user.is_rcpch_staff
-        ):
-            # this is an ordered list of tuples from the API
-            self.fields["organisation_employers"].choices = (
-                organisations_adapter.get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit()
-            )
-        else:
-            # create list of choices from the session data
-            sibling_organisations = [
-                (sibling["ods_code"], sibling["name"])
-                for sibling in self.request.session.get("sibling_organisations")[
-                    "organisations"
+        if self.request:
+            if (
+                self.request.user.is_superuser
+                or self.request.user.is_rcpch_audit_team_member
+                or self.request.user.is_rcpch_staff
+            ):
+                self.fields["organisation_employers"].queryset = (
+                    OrganisationEmployer.objects.filter(
+                        ods_code__in=[
+                            org[0]
+                            for org in organisations_adapter.get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit()
+                        ]
+                    )
+                )
+            else:
+                sibling_organisations = [
+                    (sibling["ods_code"], sibling["name"])
+                    for sibling in self.request.session.get("sibling_organisations")[
+                        "organisations"
+                    ]
                 ]
-            ]
-            self.fields["organisation_employer"].choices = sibling_organisations
+                self.fields["organisation_employers"].queryset = (
+                    OrganisationEmployer.objects.filter(
+                        ods_code__in=[org[0] for org in sibling_organisations]
+                    )
+                )
+
+        logger.warning(f"Field type: {type(self.fields['organisation_employers'])}")
+        logger.warning(
+            f"Field queryset: {self.fields['organisation_employers'].queryset}"
+        )
 
         # retrieve all organisations from the RCPCH NHS Organisations API if the user is an RCPCH staff member
         # if (
