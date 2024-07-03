@@ -55,6 +55,7 @@ class NPDAUserListView(
     LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, ListView
 ):
     permission_required = "npda.view_npdauser"
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
 
     template_name = "npda_users.html"
 
@@ -206,6 +207,7 @@ class NPDAUserCreateView(
     """
 
     permission_required = "npda.add_npdauser"
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
 
     model = NPDAUser
     form_class = NPDAUserForm
@@ -299,6 +301,7 @@ class NPDAUserUpdateView(
     """
 
     permission_required = "npda.change_npdauser"
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
 
     model = NPDAUser
     form_class = NPDAUserForm
@@ -372,6 +375,7 @@ class NPDAUserDeleteView(
     """
 
     permission_required = "npda.delete_npdauser"
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
 
     model = NPDAUser
     success_message = "NPDA User removed from database"

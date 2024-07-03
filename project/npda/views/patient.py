@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 class PatientListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, ListView):
     permission_required = 'npda.view_patient'
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
     model = Patient
     template_name = "patients.html"
 
@@ -208,6 +209,7 @@ class PatientCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Succe
     Handle creation of new patient in audit
     """
     permission_required = 'npda.add_patient'
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
     model = Patient
     form_class = PatientForm
     success_message = "New child record created was created successfully"
@@ -252,6 +254,7 @@ class PatientUpdateView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, Permiss
     """
 
     permission_required = 'npda.change_patient'
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
     model = Patient
     form_class = PatientForm
     success_message = "New child record updated successfully"
@@ -280,6 +283,7 @@ class PatientDeleteView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, Permiss
     Handle deletion of child from audit
     """
     permission_required = 'npda.delete_patient'
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
     model = Patient
     success_message = "Child removed from database"
     success_url = reverse_lazy("patients")

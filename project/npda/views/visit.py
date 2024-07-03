@@ -20,6 +20,7 @@ from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequire
 
 class PatientVisitsListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, ListView):
     permission_required = 'npda.view_visit'
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
     model = Visit
     template_name = "visits.html"
 
@@ -43,6 +44,7 @@ class VisitCreateView(
     LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, CreateView
 ):
     permission_required = "npda.add_visit"
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
     model = Visit
     form_class = VisitForm
 
@@ -77,6 +79,7 @@ class VisitCreateView(
 
 class VisitUpdateView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, PermissionRequiredMixin, UpdateView):
     permission_required = 'npda.change_visit'
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
     model = Visit
     form_class = VisitForm
 
@@ -170,6 +173,7 @@ class VisitDeleteView(
     LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, PermissionRequiredMixin, SuccessMessageMixin, DeleteView
 ):
     permission_required = "npda.delete_visit"
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
     model = Visit
     success_url = reverse_lazy("patient_visits")
     success_message = "Visit removed successfully"
