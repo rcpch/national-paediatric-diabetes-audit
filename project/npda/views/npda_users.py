@@ -207,6 +207,8 @@ class NPDAUserCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateVi
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["show_rcpch_team_box"] = self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member
+        context["show_rcpch_staff_box"] = self.request.user.is_superuser or self.request.user.is_rcpch_staff
         context["title"] = "Add New NPDA User"
         context["button_title"] = "Add NPDA User"
         context["form_method"] = "create"
@@ -343,7 +345,7 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateVi
     def post(self, request: HttpRequest, *args: str, **kwargs) -> HttpResponse:
         """
         Override POST method to resend email if recipient create account token has expired
-        TODO: Only Superusers or Lead Clinicians can do this
+        TODO: Only Superusers or Coordinators can do this
         """
         if "resend_email" in request.POST:
             npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
@@ -368,10 +370,12 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateVi
             return super().post(request, *args, **kwargs)
 
 
-class NPDAUserDeleteView(LoginAndOTPRequiredMixin, SuccessMessageMixin, DeleteView):
+class NPDAUserDeleteView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, DeleteView):
     """
     Handle deletion of user from audit
     """
+
+    permission_required = 'npda.delete_npdauser'
 
     model = NPDAUser
     success_message = "NPDA User removed from database"
@@ -511,6 +515,28 @@ class RCPCHLoginView(TwoFactorLoginView):
         # Successful 2FA and login
         if response_url == login_redirect_url:
             user = self.get_user()
+            """
+            TODO - once organisations are implemented, this notifies the user on logging in that children have been transferred to their clinic
+            """
+            # if not user.organisation_employer:
+            #     org_id = 1
+            # else:
+            #     org_id = user.organisation_employer.id
+            #     # check for outstanding transfers in to this organisation
+            #     if Site.objects.filter(
+            #         active_transfer=True, organisation=user.organisation_employer
+            #     ).exists() and user.has_perm(
+            #         "epilepsy12.can_transfer_epilepsy12_lead_centre"
+            #     ):
+            #         # there is an outstanding request for transfer in to this user's organisation. User is a lead clinician (Coordinator) and can act on this
+            #         transfers = Site.objects.filter(
+            #             active_transfer=True, organisation=user.organisation_employer
+            #         )
+            #         for transfer in transfers:
+            #             messages.info(
+            #                 self.request,
+            #                 f"{transfer.transfer_origin_organisation} have requested transfer of {transfer.case} to {user.organisation_employer} for their Epilepsy12 care. Please find {transfer.case} in the case table to accept or decline this transfer request.",
+            #             )
 
             # time since last set password
             delta = timezone.now() - user.password_last_set
