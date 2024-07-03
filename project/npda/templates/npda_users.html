@@ -11,7 +11,9 @@
           <div class="relative overflow-x-auto" id="npda_user_table">
             {% include 'partials/npda_user_table.html' with npdauser_list=npdauser_list %}
           </div>
-            <a href="{% url 'npdauser-create' %}" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 mt-40 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Add NPDA User</a>
+            {% if perms.npda.add_npdauser %}
+              <a href="{% url 'npdauser-create' %}" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 mt-40 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Add NPDA User</a>
+            {% endif %}
             <a href="{% url 'home' %}" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 mt-40 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Home</a>
         </div>
     </div>
