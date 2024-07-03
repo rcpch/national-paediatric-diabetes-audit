@@ -10,7 +10,6 @@ from npda.tests.UserDataClasses import (
     test_user_audit_centre_editor_data,
     test_user_audit_centre_coordinator_data,
     test_user_rcpch_audit_team_data,
-    test_user_clinicial_audit_team_data,
 )
 
 from npda.models import Organisation
@@ -22,7 +21,6 @@ users = [
     test_user_audit_centre_editor_data,
     test_user_audit_centre_coordinator_data,
     test_user_rcpch_audit_team_data,
-    test_user_clinicial_audit_team_data,
 ]
 
 TEST_USER_ORGANISATION = Organisation.objects.get(
