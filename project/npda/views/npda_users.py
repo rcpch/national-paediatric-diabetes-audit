@@ -32,7 +32,7 @@ from ..general_functions import (
     group_for_role,
 )
 from project.constants import VIEW_PREFERENCES
-from .mixins import LoginAndOTPRequiredMixin
+from .mixins import CheckPDUMixin, LoginAndOTPRequiredMixin
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ NPDAUser list and NPDAUser creation, deletion and update
 """
 
 
-class NPDAUserListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, ListView):
+class NPDAUserListView(LoginAndOTPRequiredMixin, CheckPDUMixin, PermissionRequiredMixin, ListView):
     permission_required = "npda.view_npdauser"
 
     template_name = "npda_users.html"
