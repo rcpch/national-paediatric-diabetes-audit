@@ -4,3 +4,4 @@ from .seed_users import *
 from .NPDAUserFactory import *
 from .PatientFactory import *
 from .PatientVisitFactory import *
+from .SiteFactory import *

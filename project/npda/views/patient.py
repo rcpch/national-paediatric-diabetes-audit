@@ -5,6 +5,7 @@ import logging
 # Django imports
 from django.apps import apps
 from django.contrib.messages.views import SuccessMessageMixin
+from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.db.models import Count, Case, When, Max, Q, F
 from django.forms import BaseForm
 from django.http.response import HttpResponse
@@ -28,7 +29,8 @@ from .mixins import LoginAndOTPRequiredMixin
 logger = logging.getLogger(__name__)
 
 
-class PatientListView(LoginAndOTPRequiredMixin, ListView):
+class PatientListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, ListView):
+    permission_required = 'npda.view_patient'
     model = Patient
     template_name = "patients.html"
 
@@ -202,11 +204,11 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
             return response
 
 
-class PatientCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateView):
+class PatientCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, CreateView):
     """
     Handle creation of new patient in audit
     """
-
+    permision_required = 'npda.add_patient'
     model = Patient
     form_class = PatientForm
     success_message = "New child record created was created successfully"
@@ -245,11 +247,12 @@ class PatientCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateVie
         return super().form_valid(form)
 
 
-class PatientUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateView):
+class PatientUpdateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, UpdateView):
     """
     Handle update of patient in audit
     """
 
+    permission_required = 'npda.change_patient'
     model = Patient
     form_class = PatientForm
     success_message = "New child record updated successfully"
@@ -273,11 +276,11 @@ class PatientUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateVie
         return super().form_valid(form)
 
 
-class PatientDeleteView(LoginAndOTPRequiredMixin, SuccessMessageMixin, DeleteView):
+class PatientDeleteView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, DeleteView):
     """
     Handle deletion of child from audit
     """
-
+    permission_required = 'npda.delete_patient'
     model = Patient
     success_message = "Child removed from database"
     success_url = reverse_lazy("patients")
