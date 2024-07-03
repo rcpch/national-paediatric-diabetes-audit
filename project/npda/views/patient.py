@@ -24,12 +24,12 @@ from project.npda.models import NPDAUser, AuditCohort
 # RCPCH imports
 from ..models import Patient
 from ..forms.patient_form import PatientForm
-from .mixins import CheckPDUMixin, LoginAndOTPRequiredMixin
+from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
 
 logger = logging.getLogger(__name__)
 
 
-class PatientListView(LoginAndOTPRequiredMixin, CheckPDUMixin, PermissionRequiredMixin, ListView):
+class PatientListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, ListView):
     permission_required = 'npda.view_patient'
     model = Patient
     template_name = "patients.html"
@@ -247,7 +247,7 @@ class PatientCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Succe
         return super().form_valid(form)
 
 
-class PatientUpdateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, UpdateView):
+class PatientUpdateView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, PermissionRequiredMixin, SuccessMessageMixin, UpdateView):
     """
     Handle update of patient in audit
     """
@@ -276,7 +276,7 @@ class PatientUpdateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Succe
         return super().form_valid(form)
 
 
-class PatientDeleteView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, DeleteView):
+class PatientDeleteView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, PermissionRequiredMixin, SuccessMessageMixin, DeleteView):
     """
     Handle deletion of child from audit
     """

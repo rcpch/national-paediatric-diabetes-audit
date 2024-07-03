@@ -32,7 +32,7 @@ from ..general_functions import (
     group_for_role,
 )
 from project.constants import VIEW_PREFERENCES
-from .mixins import CheckPDUMixin, LoginAndOTPRequiredMixin
+from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ NPDAUser list and NPDAUser creation, deletion and update
 """
 
 
-class NPDAUserListView(LoginAndOTPRequiredMixin, CheckPDUMixin, PermissionRequiredMixin, ListView):
+class NPDAUserListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, ListView):
     permission_required = "npda.view_npdauser"
 
     template_name = "npda_users.html"
@@ -272,8 +272,7 @@ class NPDAUserCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Succ
             # organisation_id=organisation_id,
         )
 
-# TODO add CheckPDUMixin here
-class NPDAUserUpdateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, UpdateView):
+class NPDAUserUpdateView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, PermissionRequiredMixin, SuccessMessageMixin, UpdateView):
     """
     Handle update of patient in audit
     """
@@ -374,7 +373,7 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Succ
             return super().post(request, *args, **kwargs)
 
 
-class NPDAUserDeleteView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, DeleteView):
+class NPDAUserDeleteView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, PermissionRequiredMixin, SuccessMessageMixin, DeleteView):
     """
     Handle deletion of user from audit
     """
