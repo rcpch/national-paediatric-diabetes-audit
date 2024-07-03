@@ -17,10 +17,7 @@ from django.http import HttpResponse
 # Third party imports
 from django_htmx.http import trigger_client_event
 
-from project.npda.general_functions.retrieve_pdu import (
-    retrieve_pdu,
-    retrieve_pdu_from_organisation_ods_code,
-)
+from project.npda.general_functions import organisations_adapter
 from project.npda.models import NPDAUser, AuditCohort
 
 # RCPCH imports
@@ -92,7 +89,7 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
             .count()
         )
         context["pz_code"] = user_pz_code
-        context["ods_code"] = self.request.user.organisation_employer
+        context["ods_code"] = self.request.user.organisation_employers.first().ods_code
         context["total_valid_patients"] = total_valid_patients
         context["total_invalid_patients"] = (
             Patient.objects.filter(audit_cohorts__submission_active=True).count()
@@ -135,8 +132,10 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
             if ods_code:
                 # call back from the organisation select
                 # retrieve the sibling organisations and store in session
-                sibling_organisations = retrieve_pdu_from_organisation_ods_code(
-                    ods_code=ods_code
+                sibling_organisations = (
+                    organisations_adapter.get_single_pdu_from_ods_code(
+                        ods_code=ods_code
+                    )
                 )
                 # store the results in session
                 self.request.session["sibling_organisations"] = sibling_organisations
@@ -152,7 +151,9 @@ class PatientListView(LoginAndOTPRequiredMixin, ListView):
             if pz_code:
                 # call back from the PDU select
                 # retrieve the sibling organisations and store in session
-                sibling_organisations = retrieve_pdu(pz_number=pz_code)
+                sibling_organisations = organisations_adapter.get_single_pdu_from_pz_code(
+                    pz_number=pz_code
+                )
                 # store the results in session
                 self.request.session["sibling_organisations"] = sibling_organisations
 

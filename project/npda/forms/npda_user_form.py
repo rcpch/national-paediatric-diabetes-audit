@@ -11,11 +11,13 @@ from django.utils.translation import gettext as _
 # third party imports
 from captcha.fields import CaptchaField
 
+from project.npda.general_functions import organisations_adapter
+
 # RCPCH imports
 from ...constants.styles.form_styles import *
-from ..models import NPDAUser
+from ..models import NPDAUser, OrganisationEmployer
 from project.npda.general_functions import (
-    get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit,
+    organisations_adapter,
 )
 
 
@@ -26,6 +28,17 @@ logger = logging.getLogger(__name__)
 class NPDAUserForm(forms.ModelForm):
 
     use_required_attribute = False
+    organisation_employers = forms.ModelMultipleChoiceField(
+        queryset=OrganisationEmployer.objects.all(),
+        widget=forms.SelectMultiple(attrs={"class": SELECT, "disabled": "disabled"}),
+        required=False,  # Set to False since it's not editable
+    )
+    add_employer = forms.ChoiceField(
+        choices=[],  # Initially empty, will be populated dynamically
+        required=False,
+        widget=forms.Select(attrs={"class": SELECT}),
+        label="Add Employer",
+    )
 
     class Meta:
         model = NPDAUser
@@ -39,7 +52,7 @@ class NPDAUserForm(forms.ModelForm):
             "is_rcpch_audit_team_member",
             "is_rcpch_staff",
             "role",
-            "organisation_employer",
+            "organisation_employers",
         ]
         widgets = {
             "title": forms.Select(attrs={"class": SELECT}),
@@ -53,7 +66,6 @@ class NPDAUserForm(forms.ModelForm):
             ),
             "is_rcpch_staff": forms.CheckboxInput(attrs={"class": "accent-rcpch_pink"}),
             "role": forms.Select(attrs={"class": SELECT}),
-            "organisation_employer": forms.Select(attrs={"class": SELECT}),
         }
 
     def __init__(self, *args, **kwargs) -> None:
@@ -61,7 +73,7 @@ class NPDAUserForm(forms.ModelForm):
         self.request = kwargs.pop("request", None)
 
         super().__init__(*args, **kwargs)
-        self.fields["title"].required = True
+        self.fields["title"].required = False
         self.fields["first_name"].required = True
         self.fields["surname"].required = True
         self.fields["email"].required = True
@@ -74,7 +86,7 @@ class NPDAUserForm(forms.ModelForm):
         ):
             # this is an ordered list of tuples from the API
             self.fields["organisation_employer"].choices = (
-                get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit()
+                organisations_adapter.get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit()
             )
         else:
             # create list of choices from the session data
@@ -85,6 +97,24 @@ class NPDAUserForm(forms.ModelForm):
                 ]
             ]
             self.fields["organisation_employer"].choices = sibling_organisations
+
+        # retrieve all organisations from the RCPCH NHS Organisations API if the user is an RCPCH staff member
+        # if (
+        #     self.request.user.is_superuser
+        #     or self.request.user.is_rcpch_audit_team_member
+        #     or self.request.user.is_rcpch_staff
+        # ):
+        #     # this is an ordered list of tuples from the API
+        #     self.fields["organisation_employer"].choices = organisations_adapter.get_all_nhs_organisations()
+        # else:
+        #     # create list of choices from the session data
+        #     sibling_organisations = [
+        #         (sibling["ods_code"], sibling["name"])
+        #         for sibling in self.request.session.get("sibling_organisations")[
+        #             "organisations"
+        #         ]
+        #     ]
+        #     self.fields["organisation_employer"].choices = sibling_organisations
 
 
 class NPDAUpdatePasswordForm(SetPasswordForm):
