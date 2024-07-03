@@ -73,6 +73,9 @@ def groups_seeder(
         {"codename": "add_visit", "content_type": visitContentType},
 
         # site-related permissions = None
+
+        # npdaUser related permissions
+        {"codename": "view_npdaUser", "content_type": npdaUserContentType},
     ]
 
     ADMINISTRATOR_PERMISSIONS = [
