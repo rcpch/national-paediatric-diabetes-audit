@@ -7,7 +7,7 @@ from two_factor.utils import default_device
 
 # NPDA Imports
 from project.npda.general_functions import (
-    retrieve_pdu_from_organisation_ods_code,
+    get_single_pdu_from_ods_code,
     retrieve_pdu_list,
 )
 
@@ -30,7 +30,7 @@ def set_session_attributes_for_user(client, user):
     middleware.process_request(request)
     request.session.save()
 
-    sibling_organisations = retrieve_pdu_from_organisation_ods_code("RP401")
+    sibling_organisations = get_single_pdu_from_ods_code("RP401")
 
     request.session["ods_code"] = user.organisation_employer
     request.session["sibling_organisations"] = sibling_organisations
