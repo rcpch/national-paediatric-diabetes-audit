@@ -33,9 +33,6 @@ from ..general_functions import (
     group_for_role,
 )
 from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
-from django.utils.decorators import method_decorator
-from .decorators import login_and_otp_required
-from django.contrib.auth.decorators import login_required
 from project.constants import VIEW_PREFERENCES
 from .mixins import LoginAndOTPRequiredMixin
 
