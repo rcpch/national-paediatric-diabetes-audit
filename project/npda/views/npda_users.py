@@ -329,8 +329,6 @@ class NPDAUserUpdateView(
         context["npda_user"] = NPDAUser.objects.get(pk=self.kwargs["pk"])
         return context
 
-    # def is_valid(self):
-    #     return super(NPDAUserForm, self).is_valid()
     def form_valid(self, form: BaseForm) -> HttpResponse:
         print(form.cleaned_data)
         return super().form_valid(form)
