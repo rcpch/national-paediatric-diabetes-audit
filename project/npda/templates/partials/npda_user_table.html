@@ -21,7 +21,12 @@
                     </div>
                 </td>
                 <td class="text-left">
-                    {{npda_user.get_full_name}}
+                    <div class="tooltip tooltip-open" data-tip="hello">
+                        {{npda_user.get_full_name}}
+                    </div>
+                    {% for employer in npda_user.organisation_employers.all %}
+                        {{ employer.name }}
+                    {% endfor %}
                 </td>
                 <td>
                     <div class='relative has-tooltip items-center'>

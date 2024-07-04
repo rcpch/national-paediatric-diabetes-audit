@@ -2,8 +2,7 @@ import json
 from datetime import datetime, timedelta
 import logging
 
-from django.forms import BaseForm
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.utils import timezone
 from django.shortcuts import redirect, render
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
@@ -22,27 +21,22 @@ from two_factor.views import LoginView as TwoFactorLoginView
 from django_htmx.http import trigger_client_event
 
 # RCPCH imports
-from project.npda.general_functions.rcpch_nhs_organisations import (
-    get_all_nhs_organisations,
-)
-from project.npda.general_functions.retrieve_pdu import retrieve_pdu, retrieve_pdu_list
+from project.npda.general_functions import organisations_adapter
 
 
-from ..models import NPDAUser, VisitActivity
+from ..models import NPDAUser, VisitActivity, OrganisationEmployer
 from ..forms.npda_user_form import NPDAUserForm, CaptchaAuthenticationForm
 from ..general_functions import (
     construct_confirm_email,
     send_email_to_recipients,
-    construct_transfer_npda_site_email,
-    construct_transfer_npda_site_outcome_email,
     group_for_role,
-    retrieve_pdu_from_organisation_ods_code,
-    retrieve_pdus,
 )
 from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
 from django.utils.decorators import method_decorator
 from .decorators import login_and_otp_required
 from django.contrib.auth.decorators import login_required
+from project.constants import VIEW_PREFERENCES
+from .mixins import LoginAndOTPRequiredMixin
 
 logger = logging.getLogger(__name__)
 
@@ -61,15 +55,15 @@ class NPDAUserListView(
 
     def get_queryset(self):
         # scope the queryset to filter only those users in organisations in the same PDU. This is to prevent users from seeing all users in the system
-        # The user's organisation, PDU and siblings are stored in the session when they log in
 
-        if self.request.user.view_preference == 0:
-            # organisation view
-            ods_code = self.request.session.get("ods_code")
-            return NPDAUser.objects.filter(organisation_employer=ods_code).order_by(
-                "surname"
-            )
-        elif self.request.user.view_preference == 1:
+        # Organisation level
+        if self.request.user.view_preference == VIEW_PREFERENCES[0][0]:
+            return NPDAUser.objects.filter(
+                organisation_employers__ods_code=self.request.session.get("ods_code")
+            ).order_by("surname")
+
+        # The user's organisation, PDU and siblings are stored in the session when they log in
+        elif self.request.user.view_preference == VIEW_PREFERENCES[1][0]:
             # PDU view
             # create a list of sibling organisations' ODS codes who share the same PDU as the user
             siblings_ods_codes = [
@@ -80,9 +74,10 @@ class NPDAUserListView(
             ]
             # get all users in the sibling organisations
             return NPDAUser.objects.filter(
-                organisation_employer__in=siblings_ods_codes
+                organisation_employers__ods_code__in=siblings_ods_codes
             ).order_by("surname")
-        elif self.request.user.view_preference == 2:
+        elif self.request.user.view_preference == VIEW_PREFERENCES[2][0]:
+            # RCPCH user/national view - get all users
             return NPDAUser.objects.all().order_by("surname")
         else:
             raise ValueError("Invalid view preference")
@@ -106,6 +101,7 @@ class NPDAUserListView(
 
     def get(self, request, *args: str, **kwargs) -> HttpResponse:
         response = super().get(request, *args, **kwargs)
+
         if request.htmx:
             # filter the npdausers to only those in the same organisation as the user
             # trigger a GET request from the patient table to update the list of npdausers
@@ -133,9 +129,7 @@ class NPDAUserListView(
             if ods_code:
                 # call back from the organisation select
                 # retrieve the sibling organisations and store in session
-                sibling_organisations = retrieve_pdu_from_organisation_ods_code(
-                    ods_code=ods_code
-                )
+                sibling_organisations = get_single_pdu_from_ods_code(ods_code=ods_code)
                 # store the results in session
                 self.request.session["sibling_organisations"] = sibling_organisations
                 self.request.session["ods_code"] = ods_code
@@ -150,7 +144,9 @@ class NPDAUserListView(
             if pz_code:
                 # call back from the PDU select
                 # retrieve the sibling organisations and store in session
-                sibling_organisations = retrieve_pdu(pz_number=pz_code)
+                sibling_organisations = (
+                    organisations_adapter.get_single_pdu_from_pz_code(pz_number=pz_code)
+                )
                 # store the results in session
                 self.request.session["sibling_organisations"] = sibling_organisations
 
@@ -164,13 +160,14 @@ class NPDAUserListView(
                     "ods_code"
                 ]  # set the ods code to the first in the new list
                 self.request.session["ods_code"] = ods_code
+                self.request.session["pz_code"] = pz_code
             else:
                 pz_code = request.session.get("sibling_organisations").get("pz_code")
 
             if view_preference:
                 user = NPDAUser.objects.get(pk=request.user.pk)
                 user.view_preference = view_preference
-                user.save()
+                user.save(update_fields=["view_preference"])
             else:
                 user = NPDAUser.objects.get(pk=request.user.pk)
 
@@ -197,6 +194,8 @@ class NPDAUserListView(
                 response=response, name="npda_users", params={}
             )  # reloads the form to show the active steps
             return response
+
+        return super().post(request, *args, **kwargs)
 
 
 class NPDAUserCreateView(
@@ -329,8 +328,49 @@ class NPDAUserUpdateView(
         context["npda_user"] = NPDAUser.objects.get(pk=self.kwargs["pk"])
         return context
 
-    def form_valid(self, form: BaseForm) -> HttpResponse:
-        print(form.cleaned_data)
+    def form_valid(self, form):
+        instance = form.save()
+
+        new_employer_ods_code = form.cleaned_data["add_employer"]
+
+        if new_employer_ods_code:
+            # a new employer has been added
+            # fetch the organisation object from the API using the ODS code
+            organisation = organisations_adapter.get_single_pdu_from_ods_code(
+                new_employer_ods_code
+            )
+
+            if "error" in organisation:
+                messages.error(
+                    self.request,
+                    f"Error: {organisation['error']}. Organisation not added. Please contact the NPDA team if this issue persists.",
+                )
+                return HttpResponseRedirect(self.get_success_url())
+
+            # Get the name of the organistion from the API response
+            matching_organisation = next(
+                (
+                    org
+                    for org in organisation['organisations']
+                    if org["ods_code"] == new_employer_ods_code
+                ),
+                None,
+            )
+
+            if matching_organisation:
+                # creat or update  the OrganisationEmployer object
+                new_employer, created = OrganisationEmployer.objects.update_or_create(
+                    ods_code=new_employer_ods_code,
+                    defaults=dict(
+                        pz_code=organisation["pz_code"],
+                        name=matching_organisation["name"],
+                    ),
+                )
+                # add the new employer to the user's employer list
+                instance.organisation_employers.add(new_employer)
+                instance.refresh_from_db()
+                return HttpResponseRedirect(self.get_success_url())
+
         return super().form_valid(form)
 
     def post(self, request: HttpRequest, *args: str, **kwargs) -> HttpResponse:
@@ -445,9 +485,15 @@ class RCPCHLoginView(TwoFactorLoginView):
             if user is not None:
                 login(request, user)
                 # successful login, get PDU and organisation details from user and store in session
-                current_user_ods_code = self.request.user.organisation_employer
+                current_user_ods_code = (
+                    self.request.user.organisation_employers.first().ods_code
+                )
+                current_user_pz_code = (
+                    self.request.user.organisation_employers.first().pz_code
+                )
                 if "sibling_organisations" not in self.request.session:
-                    sibling_organisations = retrieve_pdu_from_organisation_ods_code(
+                    # thisi s used to get all users in the same PDU in the PDUList view
+                    sibling_organisations = get_single_pdu_from_ods_code(
                         current_user_ods_code
                     )
                     # store the results in session
@@ -455,8 +501,12 @@ class RCPCHLoginView(TwoFactorLoginView):
                         sibling_organisations
                     )
 
+                # store the users PDU and ODS code in session as these are used to scope the data the user can see
                 if "ods_code" not in self.request.session:
                     self.request.session["ods_code"] = current_user_ods_code
+
+                if "pz_code" not in self.request.session:
+                    self.request.session["pz_code"] = current_user_pz_code
 
                 if "organisation_choices" not in self.request.session:
                     # get all NHS organisations in user's PDU as list of tuples (ODS code, name)
@@ -466,7 +516,10 @@ class RCPCHLoginView(TwoFactorLoginView):
                     ]
 
                 if "pdu_choices" not in self.request.session:
-                    self.request.session["pdu_choices"] = retrieve_pdu_list()
+                    # this is a list of all pz_codes in the UK to populate the PDU selects
+                    self.request.session["pdu_choices"] = (
+                        organisations_adapter.get_all_pdus_list_choices()
+                    )
                 return redirect("home")
 
         # Otherwise, continue with usual workflow
@@ -479,14 +532,18 @@ class RCPCHLoginView(TwoFactorLoginView):
         response = super().done(form_list)
         response_url = getattr(response, "url")
         # successful login, get PDU, ODS and organisation details from user and store in session
-        current_user_ods_code = self.request.user.organisation_employer
+        current_user_ods_code = (
+            self.request.user.organisation_employers.first().ods_code
+        )
+        current_user_pz_code = self.request.user.organisation_employers.first().pz_code
         if "ods_code" not in self.request.session:
             self.request.session["ods_code"] = current_user_ods_code
 
+        if "pz_code" not in self.request.session:
+            self.request.session["pz_code"] = current_user_pz_code
+
         if "sibling_organisations" not in self.request.session:
-            sibling_organisations = retrieve_pdu_from_organisation_ods_code(
-                current_user_ods_code
-            )
+            sibling_organisations = get_single_pdu_from_ods_code(current_user_ods_code)
             # store the results in session
             self.request.session["sibling_organisations"] = sibling_organisations
 
@@ -496,28 +553,6 @@ class RCPCHLoginView(TwoFactorLoginView):
         # Successful 2FA and login
         if response_url == login_redirect_url:
             user = self.get_user()
-            """
-            TODO - once organisations are implemented, this notifies the user on logging in that children have been transferred to their clinic
-            """
-            # if not user.organisation_employer:
-            #     org_id = 1
-            # else:
-            #     org_id = user.organisation_employer.id
-            #     # check for outstanding transfers in to this organisation
-            #     if Site.objects.filter(
-            #         active_transfer=True, organisation=user.organisation_employer
-            #     ).exists() and user.has_perm(
-            #         "epilepsy12.can_transfer_epilepsy12_lead_centre"
-            #     ):
-            #         # there is an outstanding request for transfer in to this user's organisation. User is a lead clinician (Coordinator) and can act on this
-            #         transfers = Site.objects.filter(
-            #             active_transfer=True, organisation=user.organisation_employer
-            #         )
-            #         for transfer in transfers:
-            #             messages.info(
-            #                 self.request,
-            #                 f"{transfer.transfer_origin_organisation} have requested transfer of {transfer.case} to {user.organisation_employer} for their Epilepsy12 care. Please find {transfer.case} in the case table to accept or decline this transfer request.",
-            #             )
 
             # time since last set password
             delta = timezone.now() - user.password_last_set

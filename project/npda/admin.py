@@ -1,6 +1,11 @@
 from django.contrib import admin
 
-from .models import NPDAUser, Patient, Site, Visit, VisitActivity
+from .models import NPDAUser, OrganisationEmployer, Patient, Site, Visit, VisitActivity
+
+
+@admin.register(OrganisationEmployer)
+class OrganisationEmployerAdmin(admin.ModelAdmin):
+    search_fields = ("name", "pk", "ods_code", "pz_code")
 
 
 @admin.register(NPDAUser)

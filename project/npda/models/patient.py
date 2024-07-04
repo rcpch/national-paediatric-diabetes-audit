@@ -1,5 +1,6 @@
 # python imports
 from datetime import date
+import logging
 
 # django imports
 from django.apps import apps
@@ -27,6 +28,8 @@ from ..general_functions import (
     validate_postcode,
 )
 
+# Logging
+logger = logging.getLogger(__name__)
 
 class Patient(models.Model):
     """

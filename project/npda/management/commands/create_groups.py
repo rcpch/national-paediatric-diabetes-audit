@@ -100,9 +100,15 @@ def groups_seeder(
 
         # visit-related permissions
         {"codename": "view_visit", "content_type": visitContentType},
+
+        # visit-related permissions
+        {"codename": "view_visit", "content_type": visitContentType},
         {"codename": "change_visit", "content_type": visitContentType},
         {"codename": "add_visit", "content_type": visitContentType},
         {"codename": "delete_visit", "content_type": visitContentType},
+
+        # site-related permissions
+        {"codename": "view_site", "content_type": siteContentType},
 
         # site-related permissions
         {"codename": "view_site", "content_type": siteContentType},
@@ -150,6 +156,8 @@ def groups_seeder(
     """
     FULL_ACCESS_CUSTOM_PERMISSIONS = [
         # npda user
+    FULL_ACCESS_CUSTOM_PERMISSIONS = [
+        # npda user
         {
             "codename": CAN_DELETE_NPDA_LEAD_CENTRE[0],
             "content_type": siteContentType,
@@ -195,6 +203,7 @@ def groups_seeder(
             newGroup = Group.objects.filter(name=group).get()
 
             # NPDA_AUDIT_TEAM_FULL_ACCESS = RCPCH AUDIT TEAM
+            # NPDA_AUDIT_TEAM_FULL_ACCESS = RCPCH AUDIT TEAM
             if group == NPDA_AUDIT_TEAM_FULL_ACCESS:
                 # basic permissions
                 add_permissions_to_group(RCPCH_AUDIT_TEAM_PERMISSIONS, newGroup)
@@ -222,6 +231,7 @@ def groups_seeder(
                 # custom permissions
                 add_permissions_to_group(PATIENT_ACCESS_PERMISSIONS, newGroup)
                 # basic permissions
+                add_permissions_to_group(PATIENT_PERMISSIONS, newGroup)
                 add_permissions_to_group(PATIENT_PERMISSIONS, newGroup)
 
             else:
@@ -259,6 +269,7 @@ def groups_seeder(
                     print(f"...adding permissions to {group}...")
                 # add permissions to group
 
+                # NPDA_AUDIT_TEAM_FULL_ACCESS = RCPCH AUDIT TEAM
                 # NPDA_AUDIT_TEAM_FULL_ACCESS = RCPCH AUDIT TEAM
                 if group == NPDA_AUDIT_TEAM_FULL_ACCESS:
                     # basic permissions
