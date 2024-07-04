@@ -17,6 +17,7 @@ from django.utils.html import strip_tags
 from django.conf import settings
 
 # third party imports
+from project.npda.general_functions.pdus import get_single_pdu_from_ods_code
 from two_factor.views import LoginView as TwoFactorLoginView
 from django_htmx.http import trigger_client_event
 
@@ -492,7 +493,7 @@ class RCPCHLoginView(TwoFactorLoginView):
                     self.request.user.organisation_employers.first().pz_code
                 )
                 if "sibling_organisations" not in self.request.session:
-                    # thisi s used to get all users in the same PDU in the PDUList view
+                    # this is used to get all users in the same PDU in the PDUList view
                     sibling_organisations = get_single_pdu_from_ods_code(
                         current_user_ods_code
                     )

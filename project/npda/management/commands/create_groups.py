@@ -154,8 +154,7 @@ def groups_seeder(
     NOTE Additional constraints are applied in view decorators to prevent users accessing 
     records of users or children in organisations other than their own
     """
-    FULL_ACCESS_CUSTOM_PERMISSIONS = [
-        # npda user
+
     FULL_ACCESS_CUSTOM_PERMISSIONS = [
         # npda user
         {
