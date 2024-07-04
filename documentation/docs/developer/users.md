@@ -3,7 +3,6 @@ title: Users
 author: Dr Simon Chapman
 ---
 
-<!-- TODO UPDATE WITH NEW ROLES -->
 
 ### Users
 

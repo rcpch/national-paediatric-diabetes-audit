@@ -26,7 +26,6 @@ def group_for_role(role_key):
     """
     Allocate Groups - the groups already have permissions allocated
     """
-    # TODO change role keys
     if role_key == AUDIT_CENTRE_COORDINATOR:
         group = Group.objects.get(name=TRUST_AUDIT_TEAM_COORDINATOR_ACCESS)
     elif role_key == AUDIT_CENTRE_EDITOR:
