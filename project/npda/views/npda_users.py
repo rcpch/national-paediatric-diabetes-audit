@@ -12,10 +12,12 @@ from django.urls import reverse, reverse_lazy
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib import messages
 from django.contrib.auth import login, authenticate
+from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.utils.html import strip_tags
 from django.conf import settings
 
 # third party imports
+from project.npda.general_functions.pdus import get_single_pdu_from_ods_code
 from two_factor.views import LoginView as TwoFactorLoginView
 from django_htmx.http import trigger_client_event
 
@@ -30,6 +32,10 @@ from ..general_functions import (
     send_email_to_recipients,
     group_for_role,
 )
+from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
+from django.utils.decorators import method_decorator
+from .decorators import login_and_otp_required
+from django.contrib.auth.decorators import login_required
 from project.constants import VIEW_PREFERENCES
 from .mixins import LoginAndOTPRequiredMixin
 
@@ -40,7 +46,12 @@ NPDAUser list and NPDAUser creation, deletion and update
 """
 
 
-class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
+class NPDAUserListView(
+    LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, ListView
+):
+    permission_required = "npda.view_npdauser"
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
+
     template_name = "npda_users.html"
 
     def get_queryset(self):
@@ -188,10 +199,15 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
         return super().post(request, *args, **kwargs)
 
 
-class NPDAUserCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateView):
+class NPDAUserCreateView(
+    LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, CreateView
+):
     """
     Handle creation of new patient in audit
     """
+
+    permission_required = "npda.add_npdauser"
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
 
     model = NPDAUser
     form_class = NPDAUserForm
@@ -204,6 +220,13 @@ class NPDAUserCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateVi
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["show_rcpch_team"] = (
+            self.request.user.is_superuser
+            or self.request.user.is_rcpch_audit_team_member
+        )
+        context["show_rcpch_staff_box"] = (
+            self.request.user.is_superuser or self.request.user.is_rcpch_staff
+        )
         context["title"] = "Add New NPDA User"
         context["button_title"] = "Add NPDA User"
         context["form_method"] = "create"
@@ -266,10 +289,19 @@ class NPDAUserCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateVi
         )
 
 
-class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateView):
+class NPDAUserUpdateView(
+    LoginAndOTPRequiredMixin,
+    CheckPDUInstanceMixin,
+    PermissionRequiredMixin,
+    SuccessMessageMixin,
+    UpdateView,
+):
     """
     Handle update of patient in audit
     """
+
+    permission_required = "npda.change_npdauser"
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
 
     model = NPDAUser
     form_class = NPDAUserForm
@@ -284,6 +316,13 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateVi
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["show_rcpch_team"] = (
+            self.request.user.is_superuser
+            or self.request.user.is_rcpch_audit_team_member
+        )
+        context["show_rcpch_staff_box"] = (
+            self.request.user.is_superuser or self.request.user.is_rcpch_staff
+        )
         context["title"] = "Edit NPDA User Details"
         context["button_title"] = "Edit NPDA User Details"
         context["form_method"] = "update"
@@ -338,7 +377,7 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateVi
     def post(self, request: HttpRequest, *args: str, **kwargs) -> HttpResponse:
         """
         Override POST method to resend email if recipient create account token has expired
-        TODO: Only Superusers or Lead Clinicians can do this
+        TODO: Only Superusers or Coordinators can do this
         """
         if "resend_email" in request.POST:
             npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
@@ -363,10 +402,19 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateVi
             return super().post(request, *args, **kwargs)
 
 
-class NPDAUserDeleteView(LoginAndOTPRequiredMixin, SuccessMessageMixin, DeleteView):
+class NPDAUserDeleteView(
+    LoginAndOTPRequiredMixin,
+    CheckPDUInstanceMixin,
+    PermissionRequiredMixin,
+    SuccessMessageMixin,
+    DeleteView,
+):
     """
     Handle deletion of user from audit
     """
+
+    permission_required = "npda.delete_npdauser"
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
 
     model = NPDAUser
     success_message = "NPDA User removed from database"
@@ -445,7 +493,7 @@ class RCPCHLoginView(TwoFactorLoginView):
                     self.request.user.organisation_employers.first().pz_code
                 )
                 if "sibling_organisations" not in self.request.session:
-                    # thisi s used to get all users in the same PDU in the PDUList view
+                    # this is used to get all users in the same PDU in the PDUList view
                     sibling_organisations = get_single_pdu_from_ods_code(
                         current_user_ods_code
                     )

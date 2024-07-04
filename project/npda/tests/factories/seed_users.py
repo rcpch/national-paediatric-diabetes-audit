@@ -1,18 +1,18 @@
+"""
+Seeds NPDA Users in test db once per session.
+"""
+
+# Standard imports
+from project.npda.general_functions.rcpch_nhs_organisations import get_nhs_organisation
 import pytest
-from django.contrib.sessions.middleware import SessionMiddleware
-from django.test.client import RequestFactory
-from django.urls import reverse
-from project.npda.general_functions import (
-    retrieve_pdu_from_organisation_ods_code,
-    retrieve_pdu_list,
-    get_nhs_organisation,
-)
+
+
+# NPDA Imports
 from project.npda.tests.UserDataClasses import (
-    test_user_audit_centre_administrator_data,
-    test_user_audit_centre_clinician_data,
-    test_user_audit_centre_lead_clinician_data,
+    test_user_audit_centre_coordinator_data,
+    test_user_audit_centre_editor_data,
+    test_user_audit_centre_reader_data,
     test_user_rcpch_audit_team_data,
-    test_user_clinicial_audit_team_data,
 )
 from project.npda.models import NPDAUser
 from .NPDAUserFactory import NPDAUserFactory
@@ -27,11 +27,10 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
 
     # Define user data to seed
     users = [
-        test_user_audit_centre_administrator_data,
-        test_user_audit_centre_clinician_data,
-        test_user_audit_centre_lead_clinician_data,
+        test_user_audit_centre_reader_data,
+        test_user_audit_centre_editor_data,
+        test_user_audit_centre_coordinator_data,
         test_user_rcpch_audit_team_data,
-        test_user_clinicial_audit_team_data,
     ]
 
     with django_db_blocker.unblock():
@@ -48,10 +47,10 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
         is_rcpch_staff = False
 
         # First get GOSH Organisation details
-        GOSH_ORGANISATION_DETAILS = get_nhs_organisation(ods_code="RP401")
-        GOSH = GOSH_ORGANISATION_DETAILS["name"]
+        # GOSH_ORGANISATION_DETAILS = get_nhs_organisation(ods_code="RP401")
+        # GOSH = GOSH_ORGANISATION_DETAILS.name
 
-        logger.info(f"Seeding test users at {GOSH}.")
+        logger.info(f"Seeding test users at {'Great Ormond Street - PZ196, RP401'}.")
         # Seed a user of each type at GOSH
         for user in users:
             first_name = user.role_str
@@ -65,17 +64,16 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
                 is_rcpch_audit_team_member = True
                 first_name = "CLINICAL_AUDIT_TEAM"
 
-            NPDAUserFactory(
-                first_name=first_name,
-                role=user.role,
-                is_active=is_active,
-                is_staff=is_staff,
-                is_rcpch_audit_team_member=is_rcpch_audit_team_member,
-                is_rcpch_staff=is_rcpch_staff,
-                organisation_employer=GOSH,
-                groups=[user.group_name],
-            )
-
-            logger.info(f"Seeded {first_name} at {GOSH}.")
-
-
+                NPDAUserFactory(
+                    first_name=first_name,
+                    role=user.role,
+                    # Assign flags based on user role
+                    is_active=is_active,
+                    is_staff=is_staff,
+                    is_rcpch_audit_team_member=is_rcpch_audit_team_member,
+                    is_rcpch_staff=is_rcpch_staff,
+                    organisation_employers=["PZ196"],
+                    groups=[user.group_name],
+                )
+        else:
+            print("Test users already seeded. Skipping")

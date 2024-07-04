@@ -27,7 +27,7 @@ def get_nhs_organisation(ods_code: str) -> Union[OrganisationRCPCH, Dict[str, An
         f"{settings.RCPCH_NHS_ORGANISATIONS_API_URL}/organisations/?ods_code={ods_code}"
     )
 
-    organisation_details = _get_nhs_organisation_from_url(ods_code, url)
+    organisation_details = _get_nhs_organisation_from_url(url)
 
     return organisation_details
 
@@ -50,7 +50,6 @@ def _get_nhs_organisation_from_url(
     try:
         response = requests.get(url=url, timeout=10)
         response.raise_for_status()
-
         # Convert response to OrganisationRCPCH object
         return OrganisationRCPCH.from_json(response.json()[0])
     except HTTPError as http_err:

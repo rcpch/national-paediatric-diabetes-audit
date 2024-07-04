@@ -7,13 +7,13 @@ reviewers: Dr Marcus Baw, Dr Simon Chapman
 
 ### Making a new account
 
-Lead Clinicians from Trusts/Health Boards will need to contact the NPDA team to create their account.
+Coordinators from Trusts/Health Boards will need to contact the NPDA team to create their account.
 
-Clinicians and Administrators can ask their Lead to create an account for them. Alternatively, they can contact the NPDA team, who can create their account with written permission from the relevant Trust/Health Board Lead Clinician.
+Clinicians and Administrators can ask their Lead to create an account for them. Alternatively, they can contact the NPDA team, who can create their account with written permission from the relevant Trust/Health Board Coordinator.
 
 If you are a lead, you can make new accounts by navigating to `PDU User Management`,  and clicking the ‘Add new user’ button.
 
-If your Trust/Health Board does not have a lead registered to the audit already, you will need select a Lead clinician and we will require approval from the Trust/Health Board’s Caldicott Guardian. This is to ensure that we are only providing trusted individuals with access to the Epilepsy12 platform and the data hosted within the system.
+If your Trust/Health Board does not have a lead registered to the audit already, you will need select a Coordinator and we will require approval from the Trust/Health Board’s Caldicott Guardian. This is to ensure that we are only providing trusted individuals with access to the Epilepsy12 platform and the data hosted within the system.
 
 When your account is created, you’ll be emailed a link to set your password. This link expires after **72 hours**. If your link has expired, please contact the NPDA team or your Clinical Lead to send you a new link.
 

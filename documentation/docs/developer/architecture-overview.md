@@ -31,11 +31,11 @@ All the data in the live instance of the application is stored in the database. 
 
 Users authenticate with the application using an email address, and a password. The password is stored in the database, but is encrypted using a secure hashing algorithm, which performs a kind of one-way mathematical function on the password data. This means that even if the database is compromised, the passwords cannot be discovered. However the application can still check that someone has entered the right password by comparing the hash of the password they entered with the hash stored in the database.
 
-Accounts are created manually by RCPCH admin or organisation lead clinicians who first verify that the proposed new user has the right to access the application. The application does not allow users to create their own accounts, since our user base is very specifically defined as the contributors to the National Paediatric Diabetes audit.
+Accounts are created manually by RCPCH admin or organisation coordinators who first verify that the proposed new user has the right to access the application. The application does not allow users to create their own accounts, since our user base is very specifically defined as the contributors to the National Paediatric Diabetes audit.
 
 #### Workflow
 
-The lead clinician or RCPCH admin create an account in the user management area. This creates an account with the `email_confirmed` flag set to false, and generates an email to the new user with an individualised and hashed token in the URL. This remains valid for 72 hours, after which time admin can send a new email if the user requests one by emailing the admin team or lead clinician. The email link redirects the user to reset a password which on creation sets the `email_confirmed` flag to true. This is shown in the user management platform as a pink envelope with tick icon, along with any other badges to denote their status (RCPCH team, superuser etc).
+The organisation Coordinator or RCPCH admin create an account in the user management area. This creates an account with the `email_confirmed` flag set to false, and generates an email to the new user with an individualised and hashed token in the URL. This remains valid for 72 hours, after which time admin can send a new email if the user requests one by emailing the admin team or coordinator. The email link redirects the user to reset a password which on creation sets the `email_confirmed` flag to true. This is shown in the user management platform as a pink envelope with tick icon, along with any other badges to denote their status (RCPCH team, superuser etc).
 
 #### Password rules
 

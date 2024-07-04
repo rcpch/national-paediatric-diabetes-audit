@@ -24,13 +24,14 @@ from project.npda.models import NPDAUser, AuditCohort
 # RCPCH imports
 from ..models import Patient
 from ..forms.patient_form import PatientForm
-from .mixins import LoginAndOTPRequiredMixin
+from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
 
 logger = logging.getLogger(__name__)
 
 
-class PatientListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, ListView):
+class PatientListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, ListView):
     permission_required = 'npda.view_patient'
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
     model = Patient
     template_name = "patients.html"
 
@@ -208,7 +209,8 @@ class PatientCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Succe
     """
     Handle creation of new patient in audit
     """
-    permision_required = 'npda.add_patient'
+    permission_required = 'npda.add_patient'
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
     model = Patient
     form_class = PatientForm
     success_message = "New child record created was created successfully"
@@ -247,12 +249,13 @@ class PatientCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Succe
         return super().form_valid(form)
 
 
-class PatientUpdateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, UpdateView):
+class PatientUpdateView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, PermissionRequiredMixin, SuccessMessageMixin, UpdateView):
     """
     Handle update of patient in audit
     """
 
     permission_required = 'npda.change_patient'
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
     model = Patient
     form_class = PatientForm
     success_message = "New child record updated successfully"
@@ -276,11 +279,12 @@ class PatientUpdateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Succe
         return super().form_valid(form)
 
 
-class PatientDeleteView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, DeleteView):
+class PatientDeleteView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, PermissionRequiredMixin, SuccessMessageMixin, DeleteView):
     """
     Handle deletion of child from audit
     """
     permission_required = 'npda.delete_patient'
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
     model = Patient
     success_message = "Child removed from database"
     success_url = reverse_lazy("patients")

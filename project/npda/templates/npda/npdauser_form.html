@@ -15,12 +15,24 @@
               {% if field.field.widget|is_select %}
                 <select id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="select rcpch-select rounded-none">
                   {% for choice in field.field.choices %}
-                  <option value="{{choice.0}}" {% if field.value == choice.0 %} selected="{{ field.value }}" {% endif %}>{{choice.1}}</option>
+                    {% if not show_rcpch_team and choice.1 == "RCPCH Audit Team" %}
+                    <!-- Do nothing, hide Audit Team option if not already in audit team-->
+                    {% else %}
+                      <option value="{{choice.0}}" {% if field.value == choice.0 %} selected="{{ field.value }}" {% endif %}>{{choice.1}}</option>
+                    {% endif %}
                   {% endfor %}
                 </select>
+              {% elif field.field.widget|is_emailfield %}
+                {{ field }}
               {% elif field.field.widget|is_textinput %}
                 <input type="text" id="{{ field.id_for_label }}" name="{{ field.html_name }}" {% if field.value %} value="{{ field.value }}" {% endif %} class="input rcpch-input-text">
-              {% else %}
+              {% elif request.user.is_superuser and field.id_for_label == 'id_is_superuser' %}
+                {{ field }}
+              {% elif field.id_for_label == 'id_is_staff' and request.user.is_superuser %}
+                {{ field }}
+              {% elif show_rcpch_staff_box and field.id_for_label == 'id_is_rcpch_staff' %}
+                {{ field }}
+              {% elif show_rcpch_team and field.id_for_label == 'id_is_rcpch_audit_team_member' %}
                 {{ field }}
               {% endif %}
               {% for error in field.errors %}
