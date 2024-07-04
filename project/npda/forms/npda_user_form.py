@@ -28,14 +28,9 @@ logger = logging.getLogger(__name__)
 class NPDAUserForm(forms.ModelForm):
 
     use_required_attribute = False
-    organisation_employers = forms.ModelMultipleChoiceField(
-        queryset=OrganisationEmployer.objects.all(),
-        widget=forms.SelectMultiple(attrs={"class": SELECT, "disabled": "disabled"}),
-        required=False,  # Set to False since it's not editable
-    )
     add_employer = forms.ChoiceField(
         choices=[],  # Initially empty, will be populated dynamically
-        required=False,
+        required=True,
         widget=forms.Select(attrs={"class": SELECT}),
         label="Add Employer",
     )
@@ -52,7 +47,6 @@ class NPDAUserForm(forms.ModelForm):
             "is_rcpch_audit_team_member",
             "is_rcpch_staff",
             "role",
-            "organisation_employers",
         ]
         widgets = {
             "title": forms.Select(attrs={"class": SELECT}),
@@ -72,19 +66,17 @@ class NPDAUserForm(forms.ModelForm):
 
         # get the request object from the kwargs
         self.request = kwargs.pop("request", None)
-        
+
         super().__init__(*args, **kwargs)
         self.fields["title"].required = False
         self.fields["first_name"].required = True
         self.fields["surname"].required = True
         self.fields["email"].required = True
         self.fields["role"].required = True
-        self.fields["organisation_employers"].required = False
         self.fields["add_employer"].choices = [
             ("", "Add organisation...")
         ] + organisations_adapter.get_all_nhs_organisations()
-        self.fields["add_employer"].required = False
-
+        self.fields["add_employer"].required = True
 
         # retrieve all organisations from the RCPCH NHS Organisations API
         if self.request:
@@ -93,14 +85,11 @@ class NPDAUserForm(forms.ModelForm):
                 or self.request.user.is_rcpch_audit_team_member
                 or self.request.user.is_rcpch_staff
             ):
-                self.fields["organisation_employers"].queryset = (
-                    OrganisationEmployer.objects.filter(
-                        ods_code__in=[
-                            org[0]
-                            for org in organisations_adapter.get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit()
-                        ]
-                    )
+                self.fields["add_employer"].choices = (
+                    [("", "Add organisation...")]
+                    + organisations_adapter.get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit()
                 )
+
             else:
                 sibling_organisations = [
                     (sibling["ods_code"], sibling["name"])
@@ -108,34 +97,11 @@ class NPDAUserForm(forms.ModelForm):
                         "organisations"
                     ]
                 ]
-                self.fields["organisation_employers"].queryset = (
+                self.fields["add_employer"].choices = (
                     OrganisationEmployer.objects.filter(
                         ods_code__in=[org[0] for org in sibling_organisations]
                     )
                 )
-
-        logger.warning(f"Field type: {type(self.fields['organisation_employers'])}")
-        logger.warning(
-            f"Field queryset: {self.fields['organisation_employers'].queryset}"
-        )
-
-        # retrieve all organisations from the RCPCH NHS Organisations API if the user is an RCPCH staff member
-        # if (
-        #     self.request.user.is_superuser
-        #     or self.request.user.is_rcpch_audit_team_member
-        #     or self.request.user.is_rcpch_staff
-        # ):
-        #     # this is an ordered list of tuples from the API
-        #     self.fields["organisation_employer"].choices = organisations_adapter.get_all_nhs_organisations()
-        # else:
-        #     # create list of choices from the session data
-        #     sibling_organisations = [
-        #         (sibling["ods_code"], sibling["name"])
-        #         for sibling in self.request.session.get("sibling_organisations")[
-        #             "organisations"
-        #         ]
-        #     ]
-        #     self.fields["organisation_employer"].choices = sibling_organisations
 
 
 class NPDAUpdatePasswordForm(SetPasswordForm):
