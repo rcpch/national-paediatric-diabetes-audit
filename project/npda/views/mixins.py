@@ -54,7 +54,7 @@ class LoginAndOTPRequiredMixin(AccessMixin):
         return super().dispatch(request, *args, **kwargs)
 
 
-class CheckPDUListMixin:
+class CheckPDUListMixin(AccessMixin):
     '''
     A mixin that checks whether a user can access a specific list view for a PDU
     '''
@@ -74,7 +74,6 @@ class CheckPDUListMixin:
 
         # get PDU assigned to user
         user_pdu = retrieve_pdu_from_organisation_ods_code(request.user.organisation_employer)['pz_code']
-
 
         # get pdu that user is requesting access of
         requested_pdu = ""
@@ -98,12 +97,11 @@ class CheckPDUListMixin:
             raise PermissionDenied()
     
 
-class CheckPDUInstanceMixin():
+class CheckPDUInstanceMixin(AccessMixin):
     '''
     A mixin which checks whether an instance's PDU (be it Patient, NPDAUser, Visit) that is having access attempted matches that of the 
     active user, or the active user is superuser/rcpch audit team
     '''
-        
     def get_model(self):
         if hasattr(self, 'model') and self.model:
             return self.model
@@ -140,7 +138,7 @@ class CheckPDUInstanceMixin():
             return super().dispatch(request, *args, **kwargs)
         
         else:
-            logger.info(
+            logger.warning(
                     "User %s is unverified. Tried accessing %s but only has access to %s",
                     request.user,
                     requested_pdu,
