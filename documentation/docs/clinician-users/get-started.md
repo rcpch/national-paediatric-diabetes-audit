@@ -9,7 +9,7 @@ reviewers: Dr Marcus Baw, Dr Simon Chapman
 
 Coordinators from Trusts/Health Boards will need to contact the NPDA team to create their account.
 
-Clinicians and Administrators can ask their Lead to create an account for them. Alternatively, they can contact the NPDA team, who can create their account with written permission from the relevant Trust/Health Board Coordaintor.
+Clinicians and Administrators can ask their Lead to create an account for them. Alternatively, they can contact the NPDA team, who can create their account with written permission from the relevant Trust/Health Board Coordinator.
 
 If you are a lead, you can make new accounts by navigating to `PDU User Management`,  and clicking the ‘Add new user’ button.
 
