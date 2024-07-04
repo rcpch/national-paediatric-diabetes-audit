@@ -8,7 +8,7 @@ from two_factor.utils import default_device
 # NPDA Imports
 from project.npda.general_functions import (
     get_single_pdu_from_ods_code,
-    retrieve_pdu_list,
+    get_all_pdus_list_choices,
 )
 
 
@@ -38,7 +38,7 @@ def set_session_attributes_for_user(client, user):
         (choice["ods_code"], choice["name"])
         for choice in sibling_organisations["organisations"]
     ]
-    request.session["pdu_choices"] = retrieve_pdu_list()
+    request.session["pdu_choices"] = get_all_pdus_list_choices()
     request.session.save()
 
     client.cookies["sessionid"] = request.session.session_key
