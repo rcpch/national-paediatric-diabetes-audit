@@ -11,8 +11,6 @@ from project.npda.models.npda_user import NPDAUser
 from project.npda.models.patient import Patient
 
 
-from ..general_functions.retrieve_pdu import retrieve_pdu_from_organisation_ods_code
-
 logger = logging.getLogger(__name__)
 
 
@@ -32,7 +30,6 @@ class LoginAndOTPRequiredMixin(AccessMixin):
         # Check if the user is superuser and bypass 2FA in debug mode
         if settings.DEBUG and request.user.is_authenticated:
             logger.warning(
-                "User %s has bypassed 2FA for %s as settings.DEBUG is %s and user has role %s and is superuser status: %s",
                 "User %s has bypassed 2FA for %s as settings.DEBUG is %s and user has role %s and is superuser status: %s",
                 request.user,
                 self.__class__.__name__,
@@ -73,7 +70,8 @@ class CheckPDUListMixin(AccessMixin):
         model = self.get_model().__name__
 
         # get PDU assigned to user
-        user_pdu = retrieve_pdu_from_organisation_ods_code(request.user.organisation_employer)['pz_code']
+        user_pdus = request.user.organisation_employers.values_list("pz_code")
+        print(user_pdus)
 
         # get pdu that user is requesting access of
         requested_pdu = ""
@@ -84,7 +82,7 @@ class CheckPDUListMixin(AccessMixin):
         elif model == "NPDAUser" or model == "Patient":
             requested_pdu = request.session.get("sibling_organisations").get("pz_code")
 
-        if request.user.is_superuser or request.user.is_rcpch_audit_team_member or (requested_pdu == user_pdu):
+        if request.user.is_superuser or request.user.is_rcpch_audit_team_member or (requested_pdu in user_pdus):
             return super().dispatch(request, *args, **kwargs)
         
         else:
@@ -92,7 +90,7 @@ class CheckPDUListMixin(AccessMixin):
                     "User %s is unverified. Tried accessing %s but only has access to %s",
                     request.user,
                     requested_pdu,
-                    user_pdu
+                    user_pdus
                 )
             raise PermissionDenied()
     
@@ -117,14 +115,14 @@ class CheckPDUInstanceMixin(AccessMixin):
         model = self.get_model().__name__
 
         # get PDU assigned to user who is trying to access a view
-        user_pdu = retrieve_pdu_from_organisation_ods_code(request.user.organisation_employer)['pz_code']
+        user_pdu = request.user.organisation_employers.first().pz_code
 
         # get pdu that user is requesting access of
         requested_pdu = ""
 
         if model == "NPDAUser":
             requested_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
-            requested_pdu = retrieve_pdu_from_organisation_ods_code(requested_user.organisation_employer)['pz_code']
+            requested_pdu =  requested_user.organisation_employers.first().pz_code
         
         elif model == "Patient":
             requested_patient = Patient.objects.get(pk=self.kwargs["pk"])
