@@ -6,8 +6,6 @@ Seeds NPDA Users in test db once per session.
 from project.npda.general_functions.rcpch_nhs_organisations import get_nhs_organisation
 import pytest
 
-# 3rd Party imports
-from django.contrib.auth.models import Group
 
 # NPDA Imports
 from project.npda.tests.UserDataClasses import (
@@ -49,10 +47,10 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
         is_rcpch_staff = False
 
         # First get GOSH Organisation details
-        GOSH_ORGANISATION_DETAILS = get_nhs_organisation(ods_code="RP401")
-        GOSH = GOSH_ORGANISATION_DETAILS["name"]
+        # GOSH_ORGANISATION_DETAILS = get_nhs_organisation(ods_code="RP401")
+        # GOSH = GOSH_ORGANISATION_DETAILS.name
 
-        logger.info(f"Seeding test users at {GOSH}.")
+        logger.info(f"Seeding test users at {'Great Ormond Street - PZ196, RP401'}.")
         # Seed a user of each type at GOSH
         for user in users:
             first_name = user.role_str
@@ -74,7 +72,7 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
                     is_staff=is_staff,
                     is_rcpch_audit_team_member=is_rcpch_audit_team_member,
                     is_rcpch_staff=is_rcpch_staff,
-                    # organisation_employer=TEST_USER_ORGANISATION,
+                    organisation_employers=["PZ196"],
                     groups=[user.group_name],
                 )
         else:

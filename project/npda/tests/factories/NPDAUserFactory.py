@@ -4,8 +4,8 @@
 import factory
 
 # Project imports
-from project.npda.models import NPDAUser
-from project.npda.general_functions import get_nhs_organisation
+from project.npda.models import NPDAUser, OrganisationEmployer
+from project.npda.general_functions.rcpch_nhs_organisations import get_nhs_organisation
 
 
 class NPDAUserFactory(factory.django.DjangoModelFactory):
@@ -21,9 +21,6 @@ class NPDAUserFactory(factory.django.DjangoModelFactory):
     is_active = True
     is_superuser = False
     email_confirmed = True
-    organisation_employer = factory.LazyFunction(
-        lambda: get_nhs_organisation(ods_code="RP401")["name"]
-    )
 
     @factory.post_generation
     def groups(self, create, extracted, **kwargs):
@@ -39,3 +36,22 @@ class NPDAUserFactory(factory.django.DjangoModelFactory):
                 self.groups.add(group)
 
         self.save()
+
+
+@factory.post_generation
+def organisation_employers(self, create, extracted, **kwargs):
+    if not create:
+        return
+
+    # Add the extracted org ods_codes if provided
+    if extracted:
+        for org in extracted:
+            org_obj = get_nhs_organisation(ods_code=extracted)
+            org = OrganisationEmployer.objects.create(
+                name=org_obj["name"],
+                ods_code=org_obj["ods_code"],
+                pz_code=org_obj["paediatric_diabetes_unit"]["pz_code"],
+            )
+            self.organisation_employers.add(org)
+
+    self.save()
