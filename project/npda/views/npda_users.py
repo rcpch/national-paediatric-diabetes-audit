@@ -220,7 +220,7 @@ class NPDAUserCreateView(
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["show_rcpch_team_box"] = (
+        context["show_rcpch_team"] = (
             self.request.user.is_superuser
             or self.request.user.is_rcpch_audit_team_member
         )
@@ -316,7 +316,7 @@ class NPDAUserUpdateView(
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["show_rcpch_team_box"] = (
+        context["show_rcpch_team"] = (
             self.request.user.is_superuser
             or self.request.user.is_rcpch_audit_team_member
         )
