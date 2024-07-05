@@ -33,9 +33,6 @@ from ..general_functions import (
     group_for_role,
 )
 from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
-from django.utils.decorators import method_decorator
-from .decorators import login_and_otp_required
-from django.contrib.auth.decorators import login_required
 from project.constants import VIEW_PREFERENCES
 from .mixins import LoginAndOTPRequiredMixin
 
@@ -50,7 +47,7 @@ class NPDAUserListView(
     LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, ListView
 ):
     permission_required = "npda.view_npdauser"
-    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
+    permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
 
     template_name = "npda_users.html"
 
@@ -207,7 +204,7 @@ class NPDAUserCreateView(
     """
 
     permission_required = "npda.add_npdauser"
-    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
+    permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
 
     model = NPDAUser
     form_class = NPDAUserForm
@@ -247,11 +244,10 @@ class NPDAUserCreateView(
             )
             return redirect(
                 "npda_users",
-                # organisation_id=organisation_id,
             )
 
+        # add the user to the appropriate group
         new_group = group_for_role(new_user.role)
-
         try:
             new_user.groups.add(new_group)
         except Exception as error:
@@ -261,8 +257,46 @@ class NPDAUserCreateView(
             )
             return redirect(
                 "npda_users",
-                # organisation_id=organisation_id,
             )
+
+        # add the user to the appropriate organisation
+        new_employer_ods_code = form.cleaned_data["add_employer"]
+        if new_employer_ods_code:
+            # a new employer has been added
+            # fetch the organisation object from the API using the ODS code
+            organisation = organisations_adapter.get_single_pdu_from_ods_code(
+                new_employer_ods_code
+            )
+
+            if "error" in organisation:
+                messages.error(
+                    self.request,
+                    f"Error: {organisation['error']}. Organisation not added. Please contact the NPDA team if this issue persists.",
+                )
+                return HttpResponseRedirect(self.get_success_url())
+
+            # Get the name of the organistion from the API response
+            matching_organisation = next(
+                (
+                    org
+                    for org in organisation["organisations"]
+                    if org["ods_code"] == new_employer_ods_code
+                ),
+                None,
+            )
+
+            if matching_organisation:
+                # creat or update  the OrganisationEmployer object
+                new_employer, created = OrganisationEmployer.objects.update_or_create(
+                    ods_code=new_employer_ods_code,
+                    defaults=dict(
+                        pz_code=organisation["pz_code"],
+                        name=matching_organisation["name"],
+                    ),
+                )
+                # add the new employer to the user's employer list
+                new_user.organisation_employers.add(new_employer)
+                new_user.refresh_from_db()
 
         # user created - send email with reset link to new user
         subject = "Password Reset Requested"
@@ -277,10 +311,7 @@ class NPDAUserCreateView(
             f"Account created successfully. Confirmation email has been sent to {new_user.email}.",
         )
 
-        return redirect(
-            "npda_users",
-            # organisation_id=organisation_id,
-        )
+        return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self) -> str:
         return reverse(
@@ -301,7 +332,7 @@ class NPDAUserUpdateView(
     """
 
     permission_required = "npda.change_npdauser"
-    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
+    permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
 
     model = NPDAUser
     form_class = NPDAUserForm
@@ -352,7 +383,7 @@ class NPDAUserUpdateView(
             matching_organisation = next(
                 (
                     org
-                    for org in organisation['organisations']
+                    for org in organisation["organisations"]
                     if org["ods_code"] == new_employer_ods_code
                 ),
                 None,
@@ -414,7 +445,7 @@ class NPDAUserDeleteView(
     """
 
     permission_required = "npda.delete_npdauser"
-    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
+    permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
 
     model = NPDAUser
     success_message = "NPDA User removed from database"
