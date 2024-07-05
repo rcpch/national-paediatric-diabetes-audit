@@ -19,7 +19,7 @@ When adding a new environment variable (env var), please follow these steps:
 
 ### Pushing the env vars to GitHub for Actions to use it
 
-There is a script in the `s/` folder which uses the `gh` GitHub CLI tool to push the contents of your `envs/.env` file as a base64-encoded string to a *single* GitHub secret called ENVIRONMENT in the E12 repository. This is then used by the GitHub Actions to decode and supply the appropriate env vars to the software stack during automated tests. You **can** safely push confidential information to this secret, as it is only accessible to the E12 repository.
+There is a script in the `s/` folder which uses the `gh` GitHub CLI tool to push the contents of your `envs/.env` file as a base64-encoded string to a *single* GitHub secret called ENVIRONMENT in the NPDA repository. This is then used by the GitHub Actions to decode and supply the appropriate env vars to the software stack during automated tests. You **can** safely push confidential information to this secret, as it is only accessible to the NPDA repository.
 
 ### Pushing the env vars to our deployment environments
 

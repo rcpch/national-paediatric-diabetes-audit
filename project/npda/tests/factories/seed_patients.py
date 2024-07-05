@@ -7,7 +7,7 @@ import pytest
 
 # 3rd Party imports
 
-# E12 Imports
+# NPDA Imports
 from project.npda.models import Patient
 from .PatientFactory import PatientFactory
 

@@ -5,7 +5,7 @@ reviewers: Dr Marcus Baw, Dr Simon Chapman
 
 ## Introduction
 
-The RCPCH Audit Engine / Epilepsy12 documentation site is made with [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/), which is a framework, separate from Django, which takes Markdown source files from `documentation/docs` within the project and compiles them into a static HTML site. These static files are then served from our hosting resources.
+The RCPCH Audit Engine / NPDA documentation site is made with [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/), which is a framework, separate from Django, which takes Markdown source files from `documentation/docs` within the project and compiles them into a static HTML site. These static files are then served from our hosting resources.
 
 ## Docker development setup
 
@@ -17,8 +17,6 @@ By default this image is running in a container at `localhost:8007` when you run
     There are two ways to view the documentation site:
 
     <https://localhost:8007> is served from the `mkdocs serve` command and **has auto-reload**, so is much more convenient for local development, you can instantly see changes made to the Markdown files in `documentation/docs`.
-
-    <https://e12.localhost/docs> is the built static HTML files, served through Caddy. This reflects how the documentation site works in the VPS environments. **There is no auto-reload**, so you have to manually run `docker compose restart mkdocs` to rebuild the static HTML files after making changes to the Markdown files in `documentation/docs`.
 
 ## How to edit content
 
@@ -71,7 +69,7 @@ If you are not a member of the RCPCH Developer team, you many not have commit ri
 
 See [Deployment](./deployment.md) for details of how the documentation site is deployed.
 
-## NOT RECOMMENDED: Setting up a Python and Pyenv development environment for the E12 documentation site
+## NOT RECOMMENDED: Setting up a Python and Pyenv development environment for the NPDA documentation site
 
 !!! warning "Use the Dockerised development environment if you can"
     If you cannot use the Dockerised development environment, then you will need to set up a Python environment on your local machine to run the documentation site locally. We highly recommend using the Dockerised development environment if you can, as it is much easier to set up and use.

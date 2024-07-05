@@ -47,7 +47,7 @@ cp envs/env-template envs/.env
 ```
 
 !!! warning "Mac Users"
-    If using Mac and Safari, to access the Epilepsy 12 engine in your development, you must change the `SITE_DOMAIN` name in .env to 'localhost', and type this into your browser once you have executed `s/up` in the next step. This will load the E12 engine in your Safari browser.
+    If using Mac and Safari, to access the NPDA engine in your development, you must change the `SITE_DOMAIN` name in .env to 'localhost', and type this into your browser once you have executed `s/up` in the next step. This will load the NPDA engine in your Safari browser.
 
     However, for simplicity, we recommend using a different browser, such as Chrome, and leaving the .env file unaltered.
 
@@ -81,8 +81,8 @@ npda-web-1          | Starting development server at http://0.0.0.0:8008/
 npda-web-1          | Quit the server with CONTROL-C.
 ```
 
-!!! warning "<https://e12.localhost>, not <http://localhost:8008>"
-    **IMPORTANT: Because we are using the Caddy web server as a reverse proxy, the application should be accessed at <https://e12.localhost>, not <http://localhost:8008>, even though Django will still report that is the hostname and port it 'thinks' it is listening on.**
+!!! warning "<https://npda.localhost>, not <http://localhost:8008>"
+    **IMPORTANT: Because we are using the Caddy web server as a reverse proxy, the application should be accessed at <https://npda.localhost>, not <http://localhost:8008>, even though Django will still report that is the hostname and port it 'thinks' it is listening on.**
 
 Changes you make in your development folder are **automatically synced to inside the Docker container**, and will show up in the application right away, as long as your .env file is configured with `DJANGO_STARTUP_COMMAND="python manage.py runserver 0.0.0.0:8000"`. (We have other startup commands we use in production environments which don't have auto-reload)
 
@@ -99,7 +99,7 @@ This script automates all the setup steps including:
 
 The `django` container is built with the correct Python version, all development dependencies are automatically installed, the database connection is created, migrations applied and some seed data is added to the database.
 
-View the application in a browser at <e12.localhost>.
+View the application in a browser at <npda.localhost>.
 
 Changes you make in your development folder are automatically synced to inside the Docker container, and will show up in the application right away.
 
@@ -217,7 +217,7 @@ See the [Seeding the Database](../manual-setup/#seeding-the-database) section fo
 
 ### Reconnecting to containers which are already running
 
-If you run `docker ps` and it lists the full suite of running E12 containers, and you just want to reconnect to the scrolling log output in the current terminal window, you can just type `s/up` which will not restart anything if they are already running, it will just reconnect to the outputs of those containers so you can see the logs.
+If you run `docker ps` and it lists the full suite of running NPDA containers, and you just want to reconnect to the scrolling log output in the current terminal window, you can just type `s/up` which will not restart anything if they are already running, it will just reconnect to the outputs of those containers so you can see the logs.
 
 ### Even with Docker, there are a few external local dependencies
 

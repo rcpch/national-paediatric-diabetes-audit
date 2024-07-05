@@ -92,7 +92,7 @@ LOGGING = {
             "formatter": "simple_django",
             "filters": [],
         },
-        # e12 file logger, each file is 15MB max, with 10 historic versions when filled, post-fixed with .1, .2, ..., .10
+        # npda file logger, each file is 15MB max, with 10 historic versions when filled, post-fixed with .1, .2, ..., .10
         "npda_logfile": {
             "level": FILE_LOG_LEVEL,
             "class": "logging.handlers.RotatingFileHandler",
