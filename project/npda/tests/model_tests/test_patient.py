@@ -6,7 +6,7 @@ import logging
 
 # 3rd Party imports
 
-# E12 Imports
+# NPDA Imports
 from project.npda.tests.factories import PatientFactory
 from project.npda.general_functions import print_instance_field_attrs
 
