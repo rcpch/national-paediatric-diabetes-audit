@@ -44,19 +44,19 @@ Audit Centre Reader                 trust_audit_team_view_only
 RCPCH Audit Team                    npda_audit_team_full_access
 RCPCH Audit Children and Family     patient_access
 """
-# logged in user access all areas: can create/update/delete any audit data, logs, epilepsy key words and organisation trusts, groups and permissions
+# logged in user access all areas: can create/update/delete any audit data, logs, npda key words and organisation trusts, groups and permissions
 NPDA_AUDIT_TEAM_FULL_ACCESS = "npda_audit_team_full_access"
 
 # logged in user can view all data relating to their trust(s) but not logs
 TRUST_AUDIT_TEAM_VIEW_ONLY = "trust_audit_team_view_only"
 
-# logged in user can edit but not delete all data relating to their trust(s) but not view or edit logs, epilepsy key words and organisation trusts, groups and permissions
+# logged in user can edit but not delete all data relating to their trust(s) but not view or edit logs, npda key words and organisation trusts, groups and permissions
 TRUST_AUDIT_TEAM_EDIT_ACCESS = "trust_audit_team_edit_access"
 
-# logged in user can delete all data relating to their trust(s) but not view or edit logs, epilepsy key words and organisation trusts, groups and permissions
+# logged in user can delete all data relating to their trust(s) but not view or edit logs, npda key words and organisation trusts, groups and permissions
 TRUST_AUDIT_TEAM_COORDINATOR_ACCESS = "trust_audit_team_coordinator_access"
 
-# logged in user can view their own audit data, consent to participation and remove that consent/opt out. Opting out would delete all data relating to them, except the epilepsy12 unique identifier
+# logged in user can view their own audit data, consent to participation and remove that consent/opt out. Opting out would delete all data relating to them, except the npda unique identifier
 PATIENT_ACCESS = "patient_access"
 
 GROUPS = (
@@ -82,7 +82,7 @@ CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING = (
 )
 CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT = (
     "can_opt_out_child_from_inclusion_in_audit",
-    "Can sanction an opt out from participating in the audit. Note all the child's date except Epilepsy12 unique identifier are irretrievably deleted.",
+    "Can sanction an opt out from participating in the audit. Note all the child's date except NPDA unique identifier are irretrievably deleted.",
 )
 
 CAN_ALLOCATE_NPDA_LEAD_CENTRE = (

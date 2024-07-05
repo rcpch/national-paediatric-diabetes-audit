@@ -17,7 +17,7 @@ def npda_date_validator(
     earliest_allowable_date: date = None,
 ) -> bool:
     """
-    Validator for Epilepsy12 dates
+    Validator for NPDA dates
     Base validation is that:
     1. At least one date must be supplied
     2. No date may be in the future

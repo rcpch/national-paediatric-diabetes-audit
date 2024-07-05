@@ -257,7 +257,7 @@ class NPDAUserCreateView(
         except Exception as error:
             messages.error(
                 self.request,
-                f"Error: {error}. Account not created. Please contact Epilepsy12 if this issue persists.",
+                f"Error: {error}. Account not created. Please contact NPDA team if this issue persists.",
             )
             return redirect(
                 "npda_users",
