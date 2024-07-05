@@ -44,14 +44,11 @@ def groups_seeder(
         {"codename": "view_patient", "content_type": patientContentType},
         {"codename": "change_patient", "content_type": patientContentType},
         {"codename": "add_patient", "content_type": patientContentType},
-
         # visit-related permissions
         {"codename": "view_visit", "content_type": visitContentType},
         {"codename": "change_visit", "content_type": visitContentType},
         {"codename": "add_visit", "content_type": visitContentType},
-
         # site-related permissions = None
-
         # NPDA-user related permissions
         {"codename": "view_npdauser", "content_type": npdauserContentType},
         {"codename": "change_npdauser", "content_type": npdauserContentType},
@@ -62,13 +59,10 @@ def groups_seeder(
     READER_PERMISSIONS = [
         # patient-related permissions
         {"codename": "view_patient", "content_type": patientContentType},
-
         # visit-related permissions
         {"codename": "view_visit", "content_type": visitContentType},
-
         # site-related permissions
         {"codename": "view_site", "content_type": siteContentType},
-
         # NPDA-user related permissions
         {"codename": "view_npdauser", "content_type": npdauserContentType},
     ]
@@ -78,17 +72,13 @@ def groups_seeder(
         {"codename": "view_patient", "content_type": patientContentType},
         {"codename": "change_patient", "content_type": patientContentType},
         {"codename": "add_patient", "content_type": patientContentType},
-
         # visit-related permissions
         {"codename": "view_visit", "content_type": visitContentType},
         {"codename": "change_visit", "content_type": visitContentType},
         {"codename": "add_visit", "content_type": visitContentType},
-
         # site-related permissions = None
-
         # user-related permissions
         {"codename": "view_npdauser", "content_type": npdauserContentType},
-
     ]
 
     RCPCH_AUDIT_TEAM_PERMISSIONS = [
@@ -97,25 +87,20 @@ def groups_seeder(
         {"codename": "change_patient", "content_type": patientContentType},
         {"codename": "add_patient", "content_type": patientContentType},
         {"codename": "delete_patient", "content_type": patientContentType},
-
         # visit-related permissions
         {"codename": "view_visit", "content_type": visitContentType},
-
         # visit-related permissions
         {"codename": "view_visit", "content_type": visitContentType},
         {"codename": "change_visit", "content_type": visitContentType},
         {"codename": "add_visit", "content_type": visitContentType},
         {"codename": "delete_visit", "content_type": visitContentType},
-
         # site-related permissions
         {"codename": "view_site", "content_type": siteContentType},
-
         # site-related permissions
         {"codename": "view_site", "content_type": siteContentType},
         {"codename": "change_site", "content_type": siteContentType},
         {"codename": "add_site", "content_type": siteContentType},
         {"codename": "delete_site", "content_type": siteContentType},
-
         # NPDA-user related permissions
         {"codename": "view_npdauser", "content_type": npdauserContentType},
         {"codename": "change_npdauser", "content_type": npdauserContentType},
@@ -124,7 +109,7 @@ def groups_seeder(
     ]
 
     PATIENT_PERMISSIONS = [
-        {"codename": "view_patient", "content_type": patientContentType}, 
+        {"codename": "view_patient", "content_type": patientContentType},
     ]
 
     EDITOR_CUSTOM_PERMISSIONS = [
@@ -269,7 +254,6 @@ def groups_seeder(
                 # add permissions to group
 
                 # NPDA_AUDIT_TEAM_FULL_ACCESS = RCPCH AUDIT TEAM
-                # NPDA_AUDIT_TEAM_FULL_ACCESS = RCPCH AUDIT TEAM
                 if group == NPDA_AUDIT_TEAM_FULL_ACCESS:
                     # basic permissions
                     add_permissions_to_group(RCPCH_AUDIT_TEAM_PERMISSIONS, newGroup)
@@ -302,8 +286,6 @@ def groups_seeder(
                 else:
                     if verbose:
                         print("Error: group does not exist!")
-
-
 
         if not verbose:
             print("groups_seeder(verbose=False), no output, groups seeded.")

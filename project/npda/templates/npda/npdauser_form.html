@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
 {% load npda_tags %}
 {% block content %}
-<div class="bg-rcpch_light_blue py-8">
-  <div class="w-full max-w-3xl mx-auto px-2 py-4 m-2 shadow-md bg-white font-montserrat">
-    <strong>{{title}}{% if form_method == 'update' %} for {{npda_user.get_full_name}}{% endif %}</strong>
-    <form id="update-form" method="post" action="">
+
+  <div class="w-full max-w-3xl mx-auto bg-white font-montserrat border-rcpch_light_blue border-solid border-4 border-t-0">
+    <div class="text-center text-white bg-rcpch_strong_blue py-5 border-solid border-4 border-rcpch_strong_blue"><strong>{{title}}{% if form_method == 'update' %} for {{npda_user.get_full_name}}{% endif %}</strong></div>
+    <form id="update-form" method="post" action="" class="mt-5 px-5">
       {% csrf_token %}
       {% for field in form %}
 
@@ -59,7 +59,7 @@
         </div>
       {% endfor %}
         
-      <button type="submit" value="Submit" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 mt-20 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">{{button_title}}</button>
+      <button type="submit" value="Submit" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 mt-20 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue mb-5">{{button_title}}</button>
       <a class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 mt-20 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue" href="{% url 'npda_users' %}">Back to list</a>
       {% if form_method == 'update' %}
         {% if not npda_user.email_confirmed %}
@@ -69,5 +69,5 @@
       {% endif %}
     </form>
   </div>
-</div>
+
 {% endblock %}
