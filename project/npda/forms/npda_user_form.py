@@ -103,6 +103,9 @@ class NPDAUserForm(forms.ModelForm):
                     )
                 )
 
+            # set the default value to the current user's organisation
+            self.fields["add_employer"].initial = self.request.session.get("ods_code")
+
 
 class NPDAUpdatePasswordForm(SetPasswordForm):
     # form show when setting or resetting password
