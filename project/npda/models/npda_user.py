@@ -85,8 +85,8 @@ class NPDAUserManager(BaseUserManager):
         extra_fields.setdefault("is_rcpch_staff", False)
         extra_fields.setdefault("email_confirmed", True)
         extra_fields.setdefault("password_last_set", timezone.now())
-        # Organisation level preference
-        extra_fields.setdefault("view_preference", 0)
+        # PDU level preference
+        extra_fields.setdefault("view_preference", 1)
 
         if extra_fields.get("is_active") is not True:
             raise ValueError(_("Superuser must have is_active=True."))
