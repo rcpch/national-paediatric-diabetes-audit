@@ -23,6 +23,7 @@ services:
   django: &django
     <<: *global # this will inherit all the envs from x-global-environment
     build: .
+    image: npda-django:built # build image and save for use by other containers
     depends_on:
       - postgis
     volumes:
