@@ -146,9 +146,7 @@ class PatientListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionReq
             else:
                 ods_code = request.session.get("sibling_organisations")[
                     "organisations"
-                ][0][
-                    "ods_code"
-                ]  # set the ods code to the first in the list
+                ][0]["ods_code"] # set the ods code to the first in the list
                 self.request.session["ods_code"] = ods_code
 
             if pz_code:
@@ -161,14 +159,10 @@ class PatientListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionReq
                 self.request.session["sibling_organisations"] = sibling_organisations
 
                 self.request.session["organisation_choices"] = [
-                    (choice["ods_code"], choice["name"])
-                    for choice in sibling_organisations["organisations"]
+                    (choice.ods_code, choice.name)
+                    for choice in sibling_organisations.organisations
                 ]
-                ods_code = request.session.get("sibling_organisations")[
-                    "organisations"
-                ][0][
-                    "ods_code"
-                ]  # set the ods code to the first in the new list
+                ods_code = request.session.get("sibling_organisations").organisations[0].ods_code # set the ods code to the first in the new list
                 self.request.session["ods_code"] = ods_code
             else:
                 pz_code = request.session.get("sibling_organisations").get("pz_code")
@@ -183,15 +177,13 @@ class PatientListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionReq
             context = {
                 "view_preference": int(user.view_preference),
                 "ods_code": ods_code,
-                "pz_code": request.session.get("sibling_organisations").get("pz_code"),
+                "pz_code": request.session.get("sibling_organisations").pz_code,
                 "hx_post": reverse_lazy("patients"),
                 "organisation_choices": self.request.session.get(
                     "organisation_choices"
                 ),
                 "pdu_choices": self.request.session.get("pdu_choices"),
-                "chosen_pdu": request.session.get("sibling_organisations").get(
-                    "pz_code"
-                ),
+                "chosen_pdu": request.session.get("sibling_organisations").pz_code,
                 "ods_code_select_name": "patient_ods_code_select_name",
                 "pz_code_select_name": "patient_pz_code_select_name",
                 "hx_target": "#patient_view_preference",
@@ -220,7 +212,7 @@ class PatientCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Succe
         pz_code = self.request.session.get("sibling_organisations", {}).get(
             "pz_code", ""
         )
-        organisation_ods_code = self.request.user.organisation_employer
+        organisation_ods_code = self.request.user.organisation_employers.first().ods_code
         context = super().get_context_data(**kwargs)
         context["title"] = f"Add New Child to {organisation_ods_code} ({pz_code})"
         context["button_title"] = "Add New Child"
@@ -235,17 +227,17 @@ class PatientCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Succe
             paediatric_diabetes_unit_pz_code=self.request.session.get(
                 "sibling_organisations", {}
             ).get("pz_code"),
-            organisation_ods_code=self.request.user.organisation_employer,
+            organisation_ods_code=self.request.user.organisation_employers.first().ods_code,
             date_leaving_service=form.cleaned_data.get("date_leaving_service"),
             reason_leaving_service=form.cleaned_data.get("reason_leaving_service"),
         )
         patient.site = site
         patient.is_valid = True
+        patient.save()
         # add patient to the latest audit cohort
         if AuditCohort.objects.count() > 0:
             new_first = AuditCohort.objects.order_by("-submission_date").first()
             new_first.patients.add(patient)
-        patient.save()
         return super().form_valid(form)
 
 
