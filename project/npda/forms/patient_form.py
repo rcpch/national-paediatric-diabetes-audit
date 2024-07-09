@@ -2,7 +2,10 @@ from django import forms
 from django.core.exceptions import ValidationError
 from ..models import Patient
 from ...constants.styles.form_styles import *
-from ..general_functions import validate_postcode
+from ..general_functions import (
+    validate_postcode,
+    gp_practice_for_postcode
+)
 
 
 class DateInput(forms.DateInput):
@@ -98,5 +101,20 @@ class PatientForm(forms.ModelForm):
                     "GP Practice ODS code and GP Practice postcode cannot both be empty. At least one must be supplied."
                 ]
             })
+        
+        if not gp_practice_ods_code and gp_practice_postcode:
+            try:
+                ods_code = gp_practice_for_postcode(gp_practice_postcode)
+
+                if not ods_code:
+                    raise ValidationError("Could not find GP practice with that postcode")
+                else:
+                    cleaned_data["gp_practice_ods_code"] = ods_code
+            except Exception as error:
+                raise ValidationError({
+                    "gp_practice_postcode": [
+                        error
+                    ]
+                })
 
         return cleaned_data
