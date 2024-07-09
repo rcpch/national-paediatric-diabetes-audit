@@ -220,7 +220,7 @@ class PatientCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Succe
         pz_code = self.request.session.get("sibling_organisations", {}).get(
             "pz_code", ""
         )
-        organisation_ods_code = self.request.user.organisation_employer
+        organisation_ods_code = self.request.user.organisation_employers.first().ods_code
         context = super().get_context_data(**kwargs)
         context["title"] = f"Add New Child to {organisation_ods_code} ({pz_code})"
         context["button_title"] = "Add New Child"
@@ -235,17 +235,17 @@ class PatientCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Succe
             paediatric_diabetes_unit_pz_code=self.request.session.get(
                 "sibling_organisations", {}
             ).get("pz_code"),
-            organisation_ods_code=self.request.user.organisation_employer,
+            organisation_ods_code=self.request.user.organisation_employers.first().ods_code,
             date_leaving_service=form.cleaned_data.get("date_leaving_service"),
             reason_leaving_service=form.cleaned_data.get("reason_leaving_service"),
         )
         patient.site = site
         patient.is_valid = True
+        patient.save()
         # add patient to the latest audit cohort
         if AuditCohort.objects.count() > 0:
             new_first = AuditCohort.objects.order_by("-submission_date").first()
             new_first.patients.add(patient)
-        patient.save()
         return super().form_valid(form)
 
 
