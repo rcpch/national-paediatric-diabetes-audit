@@ -18,10 +18,20 @@
                 <option {% if field.value == choice.0 %} selected="{{ field.value }}" {% endif %} value="{{choice.0}}">{{choice.1}}</option>
                 {% endfor %}
               </select>
-            {% elif field.field.widget|is_dateinput %}
-              <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" {% if field.value %} value={{ field.value|date:"Y-m-d" }} {% endif %} class="input rcpch-input-text">
             {% else %}
-              <input type="text" id="{{ field.id_for_label }}" name="{{ field.html_name }}" {% if field.value %} value="{{ field.value }}" {% endif %} class="input rcpch-input-text">
+              <input
+                id="{{ field.id_for_label }}"
+                name="{{ field.html_name }}"
+                class="input rcpch-input-text"
+                {% if field.field.widget|is_dateinput %}
+                  type="date"
+                {% else %}
+                  type="text"
+                {% endif %}
+                {% if field.value %}
+                  value="{{ field.value }}"
+                {% endif %}
+              >
             {% endif %}
             {% for error in field.errors %}
               <div role="alert" class="alert alert-error py-1 my-0 rounded-none">
