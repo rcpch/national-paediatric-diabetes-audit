@@ -53,6 +53,8 @@ class PatientForm(forms.ModelForm):
         date_of_birth = cleaned_data.get("date_of_birth")
         diagnosis_date = cleaned_data.get("diagnosis_date")
         death_date = cleaned_data.get("death_date")
+        gp_practice_ods_code = cleaned_data.get("gp_practice_ods_code")
+        gp_practice_postcode = cleaned_data.get("gp_practice_postcode")
 
         if diagnosis_date is None:
             raise ValidationError(
@@ -89,5 +91,12 @@ class PatientForm(forms.ModelForm):
                         ]
                     }
                 )
+        
+        if gp_practice_ods_code is None and gp_practice_postcode is None:
+            raise ValidationError({
+                "gp_practice_ods_code": [
+                    "GP Practice ODS code and GP Practice postcode cannot both be empty. At least one must be supplied."
+                ]
+            })
 
         return cleaned_data
