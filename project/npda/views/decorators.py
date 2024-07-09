@@ -42,7 +42,7 @@ def login_and_otp_required():
                     view.__qualname__,
                 )
                 # raise PermissionDenied("Unverified user")
-                return redirect("two_factor:login")
+                return redirect("two_factor:setup")
 
             return view(request, *args, **kwargs)
 
