@@ -16,6 +16,7 @@ from project.npda.tests.utils import set_session_attributes_for_user
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.skip(reason="Test not yet implemented - just for setting things up")
 @pytest.mark.django_db
 def test_user_creation(
     seed_groups_fixture,
