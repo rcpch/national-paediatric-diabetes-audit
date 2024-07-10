@@ -50,6 +50,7 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
         is_rcpch_staff = False
 
         GOSH_ODS_CODE = 'RP401'
+        ALDER_HEY_ODS_CODE = "RBS25"
 
         logger.info(f"Seeding test users at {GOSH_ODS_CODE=}.")
         # Seed a user of each type at GOSH
@@ -63,7 +64,8 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
             if user.is_clinical_audit_team:
                 is_rcpch_audit_team_member = True
 
-            new_user = NPDAUserFactory(
+            # GOSH User
+            new_user_gosh = NPDAUserFactory(
                 first_name=first_name,
                 role=user.role,
                 # Assign flags based on user role
@@ -74,7 +76,19 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
                 groups=[user.group_name],
                 organisation_employers=[GOSH_ODS_CODE], # Factory handles creating and assigning OrganisationEmployer
             )
-              
             
-            logger.info(f'Seeded {new_user=}')
+            # Alder hey user
+            new_user_alder_hey = NPDAUserFactory(
+                first_name=first_name,
+                role=user.role,
+                # Assign flags based on user role
+                is_active=is_active,
+                is_staff=is_staff,
+                is_rcpch_audit_team_member=is_rcpch_audit_team_member,
+                is_rcpch_staff=is_rcpch_staff,
+                groups=[user.group_name],
+                organisation_employers=[ALDER_HEY_ODS_CODE], # Factory handles creating and assigning OrganisationEmployer
+            )
+            
+            logger.info(f'Seeded {new_user_gosh=} and {new_user_alder_hey=}')
         logger.info(f"All test users sucessfully seeded: {NPDAUser.objects.all()=}")
