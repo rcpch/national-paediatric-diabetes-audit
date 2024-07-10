@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.django_db
-def test_users_cannot_view_user_table_from_different_pdus(
+def test_npda_user_list_view_get_query_set_with_users_cannot_view_user_table_from_different_pdus(
     seed_groups_fixture,
     seed_users_fixture,
     seed_patients_fixture,
@@ -72,7 +72,7 @@ def test_users_cannot_view_user_table_from_different_pdus(
 
 
 @pytest.mark.django_db
-def test_rcpch_audit_team_can_view_all_npdausers(
+def test_npda_user_list_view_get_query_set_with_rcpch_audit_team_can_view_all_npdausers(
     seed_groups_fixture,
     seed_users_fixture,
     seed_patients_fixture,
@@ -106,9 +106,6 @@ def test_rcpch_audit_team_can_view_all_npdausers(
     view.request = response.wsgi_request
     view.request.user = test_user_rcpch_audit_team  # Explicitly set the user in the request
     queryset = view.get_queryset()
-    
-    for user in NPDAUser.objects.all():
-        print(f'{user.first_name} -> {user.view_preference=}')
 
     # Ensure the queryset contains all users
     assert (
