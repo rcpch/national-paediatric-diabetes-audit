@@ -83,18 +83,13 @@ class NPDAUserListView(
     def get_context_data(self, **kwargs):
         context = super(NPDAUserListView, self).get_context_data(**kwargs)
         context["title"] = "NPDA Users"
-        pz_code = self.request.session.get("sibling_organisations", {}).get(
-            "pz_code", None
-        )
-        context["pz_code"] = pz_code
+        context["pz_code"] = self.request.session.get("pz_code")
         context["ods_code"] = self.request.session.get("ods_code")
         context["organisation_choices"] = self.request.session.get(
             "organisation_choices"
         )
         context["pdu_choices"] = self.request.session.get("pdu_choices")
-        context["chosen_pdu"] = self.request.session.get("sibling_organisations").get(
-            "pz_code"
-        )
+        context["chosen_pdu"] = self.request.session.get("pz_code")
         return context
 
     def get(self, request, *args: str, **kwargs) -> HttpResponse:
@@ -160,7 +155,7 @@ class NPDAUserListView(
                 self.request.session["ods_code"] = ods_code
                 self.request.session["pz_code"] = pz_code
             else:
-                pz_code = request.session.get("sibling_organisations").get("pz_code")
+                pz_code = request.session.get("pz_code")
 
             if view_preference:
                 user = NPDAUser.objects.get(pk=request.user.pk)
@@ -172,15 +167,13 @@ class NPDAUserListView(
             context = {
                 "view_preference": int(user.view_preference),
                 "ods_code": ods_code,
-                "pz_code": request.session.get("sibling_organisations").get("pz_code"),
+                "pz_code": request.session.get("pz_code"),
                 "hx_post": reverse_lazy("npda_users"),
                 "organisation_choices": self.request.session.get(
                     "organisation_choices"
                 ),
                 "pdu_choices": self.request.session.get("pdu_choices"),
-                "chosen_pdu": request.session.get("sibling_organisations").get(
-                    "pz_code"
-                ),
+                "chosen_pdu": request.session.get("pz_code"),
                 "ods_code_select_name": "npdauser_ods_code_select_name",
                 "pz_code_select_name": "npdauser_pz_code_select_name",
                 "hx_target": "#npdauser_view_preference",
@@ -504,7 +497,6 @@ class RCPCHLoginView(TwoFactorLoginView):
         self.form_list["auth"] = CaptchaAuthenticationForm
 
     def post(self, *args, **kwargs):
-
         # In local development, override the token workflow, just sign in
         # the user without 2FA token
         if settings.DEBUG:

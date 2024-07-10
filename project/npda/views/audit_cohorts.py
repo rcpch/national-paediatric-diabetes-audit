@@ -37,9 +37,7 @@ class AuditCohortsListView(LoginAndOTPRequiredMixin, ListView):
         """
         queryset = (
             self.model.objects.filter(
-                pz_code=self.request.session.get("sibling_organisations").get(
-                    "pz_code"
-                ),
+                pz_code=self.request.session.get("pz_code"),
                 ods_code=self.request.session.get("ods_code"),
             )
             .values("submission_date", "pz_code", "ods_code", "quarter", "audit_year")
@@ -70,9 +68,7 @@ class AuditCohortsListView(LoginAndOTPRequiredMixin, ListView):
         :return: The context data for the view
         """
         context = super().get_context_data(**kwargs)
-        context["pz_code"] = self.request.session.get("sibling_organisations").get(
-            "pz_code"
-        )
+        context["pz_code"] = self.request.session.get("pz_code")
         return context
 
     def get(self, request, *args, **kwargs):
