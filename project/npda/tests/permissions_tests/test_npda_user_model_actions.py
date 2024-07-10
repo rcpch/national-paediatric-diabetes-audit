@@ -47,12 +47,10 @@ def test_npda_user_list_view_get_query_set_with_users_cannot_view_user_table_fro
     # For each user, ensure the queryset does not contain users from a PDU they are not part of Alder Hey (other seeded users are at GOSH).
     for test_user in test_users_ah:
 
-        client = set_session_attributes_for_signedin_user(
-            client=client, user=test_user
-        )
+        client = set_session_attributes_for_signedin_user(client=client, user=test_user)
 
         # Simulate a GET request to the NPDAUserListView
-        url = reverse("npda_users")  
+        url = reverse("npda_users")
         response = client.get(url)
 
         # Check that the response is successful
@@ -95,7 +93,7 @@ def test_npda_user_list_view_get_query_set_with_rcpch_audit_team_can_view_all_np
     )
 
     # Simulate a GET request to the NPDAUserListView
-    url = reverse("npda_users")  
+    url = reverse("npda_users")
     response = client.get(url)
 
     # Check that the response is successful
@@ -104,7 +102,9 @@ def test_npda_user_list_view_get_query_set_with_rcpch_audit_team_can_view_all_np
     # Extract the queryset from the context
     view = NPDAUserListView()
     view.request = response.wsgi_request
-    view.request.user = test_user_rcpch_audit_team  # Explicitly set the user in the request
+    view.request.user = (
+        test_user_rcpch_audit_team  # Explicitly set the user in the request
+    )
     queryset = view.get_queryset()
 
     # Ensure the queryset contains all users
