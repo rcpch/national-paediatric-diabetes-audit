@@ -18,14 +18,14 @@ The last group has no real implementation at the moment but in time it is hoped 
 
 #### Permissions
 
-### Coordinator
+### Reader
 
 | Model    | View | Change | Delete | Create | Custom |
 | -------- | ---- | ------ | ------ | ------ | ------ |
-| Patient  | ✔️   |    ✔️   |    -   |    ✔️   | CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING, CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT |
-| Visit    | ✔️   |    ✔️   |    -   |    ✔️   | ------- |
-| Site     | -    |    -   |    -   |    -   | ------ |
-| NPDAUser | ✔️   |    ✔️   |    ✔️   |    ✔️   | ------ |
+| Patient  | ✔️   |    -   |    -   |    -   | ------ |
+| Visit    | ✔️   |    -   |    -   |    -   | ------ |
+| Site     | ✔️   |    -   |    -   |    -   | ------ |
+| NPDAUser | ✔️   |    -   |    -   |    -   | ------ |
 
 ### Editor
 
@@ -36,14 +36,15 @@ The last group has no real implementation at the moment but in time it is hoped 
 | Site     | -    |    -   |    -   |    -   | ------ |
 | NPDAUser | ✔️   |    -   |    -   |    -   | ------ |
 
-### Reader
+### Coordinator
 
 | Model    | View | Change | Delete | Create | Custom |
 | -------- | ---- | ------ | ------ | ------ | ------ |
-| Patient  | ✔️   |    -   |    -   |    -   | ------ |
-| Visit    | ✔️   |    -   |    -   |    -   | ------ |
-| Site     | ✔️   |    -   |    -   |    -   | ------ |
-| NPDAUser | ✔️   |    -   |    -   |    -   | ------ |
+| Patient  | ✔️   |    ✔️   |    -   |    ✔️   | CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING, CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT |
+| Visit    | ✔️   |    ✔️   |    -   |    ✔️   | ------- |
+| Site     | -    |    -   |    -   |    -   | ------ |
+| NPDAUser | ✔️   |    ✔️   |    ✔️   |    ✔️   | ------ |
+
 
 ### RCPCH Audit Team
 
