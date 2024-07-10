@@ -124,54 +124,30 @@ class PatientListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionReq
         """
         if request.htmx:
             view_preference = request.POST.get("view_preference", None)
-            ods_code = request.POST.get("patient_ods_code_select_name", None)
-            pz_code = request.POST.get("patient_pz_code_select_name", None)
+            ods_code = request.POST.get("npdauser_ods_code_select_name", None)
+            pz_code = request.POST.get("npdauser_pz_code_select_name", None)
+
+            # TODO MRB: do we need to check you are allowed to see this org/PDU?
 
             if ods_code:
-                # call back from the organisation select
-                # retrieve the sibling organisations and store in session
-                sibling_organisations = (
-                    organisations_adapter.get_single_pdu_from_ods_code(
-                        ods_code=ods_code
-                    )
-                )
-                # store the results in session
-                self.request.session["sibling_organisations"] = sibling_organisations
-                self.request.session["ods_code"] = ods_code
-            else:
-                ods_code = request.session.get("sibling_organisations")[
-                    "organisations"
-                ][0][
-                    "ods_code"
-                ]  # set the ods code to the first in the list
-                self.request.session["ods_code"] = ods_code
-
-            if pz_code:
                 # call back from the PDU select
-                # retrieve the sibling organisations and store in session
-                sibling_organisations = organisations_adapter.get_single_pdu_from_pz_code(
-                    pz_number=pz_code
-                )
-                # store the results in session
-                self.request.session["sibling_organisations"] = sibling_organisations
-
-                self.request.session["organisation_choices"] = [
-                    (choice["ods_code"], choice["name"])
-                    for choice in sibling_organisations["organisations"]
-                ]
-                ods_code = request.session.get("sibling_organisations")[
-                    "organisations"
-                ][0][
-                    "ods_code"
-                ]  # set the ods code to the first in the new list
                 self.request.session["ods_code"] = ods_code
-            else:
-                pz_code = request.session.get("pz_code")
+                
+                pdu = organisations_adapter.get_single_pdu_from_ods_code(ods_code)
+                self.request.session["pz_code"] = pdu["pz_code"]
+
+            elif pz_code:
+                # call back from the PDU select
+                self.request.session["pz_code"] = pz_code
+
+                # set the ods code to the first org associated with the PDU
+                sibling_organisations = organisations_adapter.get_single_pdu_from_pz_code(pz_number=pz_code)
+                self.request.session["ods_code"] = sibling_organisations.organisations[0].ods_code
 
             if view_preference:
                 user = NPDAUser.objects.get(pk=request.user.pk)
                 user.view_preference = view_preference
-                user.save()
+                user.save(update_fields=["view_preference"])
             else:
                 user = NPDAUser.objects.get(pk=request.user.pk)
 

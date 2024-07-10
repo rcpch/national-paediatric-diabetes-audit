@@ -116,43 +116,22 @@ class NPDAUserListView(
             ods_code = request.POST.get("npdauser_ods_code_select_name", None)
             pz_code = request.POST.get("npdauser_pz_code_select_name", None)
 
+            # TODO MRB: do we need to check you are allowed to see this org/PDU?
+
             if ods_code:
-                # call back from the organisation select
-                # retrieve the sibling organisations and store in session
-                sibling_organisations = get_single_pdu_from_ods_code(ods_code=ods_code)
-                # store the results in session
-                self.request.session["sibling_organisations"] = sibling_organisations
-                self.request.session["ods_code"] = ods_code
-            else:
-                ods_code = request.session.get("sibling_organisations")[
-                    "organisations"
-                ][0][
-                    "ods_code"
-                ]  # set the ods code to the first in the list
-                self.request.session["ods_code"] = ods_code
-
-            if pz_code:
                 # call back from the PDU select
-                # retrieve the sibling organisations and store in session
-                sibling_organisations = (
-                    organisations_adapter.get_single_pdu_from_pz_code(pz_number=pz_code)
-                )
-                # store the results in session
-                self.request.session["sibling_organisations"] = sibling_organisations
-
-                self.request.session["organisation_choices"] = [
-                    (choice["ods_code"], choice["name"])
-                    for choice in sibling_organisations["organisations"]
-                ]
-                ods_code = request.session.get("sibling_organisations")[
-                    "organisations"
-                ][0][
-                    "ods_code"
-                ]  # set the ods code to the first in the new list
                 self.request.session["ods_code"] = ods_code
+                
+                pdu = organisations_adapter.get_single_pdu_from_ods_code(ods_code)
+                self.request.session["pz_code"] = pdu["pz_code"]
+
+            elif pz_code:
+                # call back from the PDU select
                 self.request.session["pz_code"] = pz_code
-            else:
-                pz_code = request.session.get("pz_code")
+
+                # set the ods code to the first org associated with the PDU
+                sibling_organisations = organisations_adapter.get_single_pdu_from_pz_code(pz_number=pz_code)
+                self.request.session["ods_code"] = sibling_organisations.organisations[0].ods_code
 
             if view_preference:
                 user = NPDAUser.objects.get(pk=request.user.pk)
@@ -512,15 +491,6 @@ class RCPCHLoginView(TwoFactorLoginView):
                 current_user_pz_code = (
                     self.request.user.organisation_employers.first().pz_code
                 )
-                if "sibling_organisations" not in self.request.session:
-                    # this is used to get all users in the same PDU in the PDUList view
-                    sibling_organisations = get_single_pdu_from_ods_code(
-                        current_user_ods_code
-                    )
-                    # store the results in session
-                    self.request.session["sibling_organisations"] = (
-                        sibling_organisations
-                    )
 
                 # store the users PDU and ODS code in session as these are used to scope the data the user can see
                 if "ods_code" not in self.request.session:
@@ -562,11 +532,6 @@ class RCPCHLoginView(TwoFactorLoginView):
 
         if "pz_code" not in self.request.session:
             self.request.session["pz_code"] = current_user_pz_code
-
-        if "sibling_organisations" not in self.request.session:
-            sibling_organisations = get_single_pdu_from_ods_code(current_user_ods_code)
-            # store the results in session
-            self.request.session["sibling_organisations"] = sibling_organisations
 
         # redirect to home page
         login_redirect_url = reverse(settings.LOGIN_REDIRECT_URL)

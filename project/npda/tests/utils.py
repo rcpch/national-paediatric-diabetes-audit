@@ -30,10 +30,7 @@ def set_session_attributes_for_user(client, user):
     middleware.process_request(request)
     request.session.save()
 
-    sibling_organisations = get_single_pdu_from_ods_code("RP401")
-
     request.session["ods_code"] = user.organisation_employer
-    request.session["sibling_organisations"] = sibling_organisations
     request.session["organisation_choices"] = [
         (choice["ods_code"], choice["name"])
         for choice in sibling_organisations["organisations"]
