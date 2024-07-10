@@ -19,41 +19,6 @@ from project.npda.views.npda_users import NPDAUserListView
 logger = logging.getLogger(__name__)
 
 
-def login_test_user(client: Client, user, password: str = "pw"):
-    """
-    Helper function to log in a test user using the custom RCPCHLoginView.
-    """
-    login_url = reverse(
-        "two_factor:login"
-    )  # Adjust the URL name based on your configuration
-
-    # Simulate login POST request
-    response = client.post(
-        login_url,
-        {
-            "auth-username": user.email,
-            "auth-password": password,
-            "auth-remember": "on",
-        },
-    )
-
-    # Check if login was successful
-    assert response.status_code == 302  # Redirect after successful login
-
-    # The user should now be logged in and session data should be set
-    session = client.session
-    current_user_ods_code = user.organisation_employers.first().ods_code
-    current_user_pz_code = user.organisation_employers.first().pz_code
-
-    assert session["ods_code"] == current_user_ods_code
-    assert session["pz_code"] == current_user_pz_code
-    assert "sibling_organisations" in session
-    assert "organisation_choices" in session
-    assert "pdu_choices" in session
-
-    return client
-
-
 @pytest.mark.django_db
 def test_users_cannot_view_user_table_from_different_pdus(
     seed_groups_fixture,
@@ -83,7 +48,7 @@ def test_users_cannot_view_user_table_from_different_pdus(
     for test_user in test_users_ah:
 
         client = set_session_attributes_for_signedin_user(
-            client=client, user=test_user, ods_code=ALDER_HEY_ODS_CODE
+            client=client, user=test_user
         )
 
         # Simulate a GET request to the NPDAUserListView
@@ -126,7 +91,7 @@ def test_rcpch_audit_team_can_view_all_npdausers(
 
     # Set the session for the RCPCH_AUDIT_TEAM user
     client = set_session_attributes_for_signedin_user(
-        client=client, user=test_user_rcpch_audit_team, ods_code="RP401"
+        client=client, user=test_user_rcpch_audit_team
     )
 
     # Simulate a GET request to the NPDAUserListView
