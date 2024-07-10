@@ -89,7 +89,7 @@ class PatientListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionReq
             .count()
         )
         context["pz_code"] = self.request.session.get("pz_code")
-        context["ods_code"] = self.request.user.organisation_employers.first().ods_code
+        context["ods_code"] = self.request.session.get("ods_code")
         context["total_valid_patients"] = total_valid_patients
         context["total_invalid_patients"] = (
             Patient.objects.filter(audit_cohorts__submission_active=True).count()
@@ -187,7 +187,7 @@ class PatientCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Succe
 
     def get_context_data(self, **kwargs):
         pz_code = self.request.session.get("pz_code")
-        organisation_ods_code = self.request.user.organisation_employers.first().ods_code
+        organisation_ods_code = self.request.session.get("ods_code")
         context = super().get_context_data(**kwargs)
         context["title"] = f"Add New Child to {organisation_ods_code} ({pz_code})"
         context["button_title"] = "Add New Child"
@@ -200,7 +200,7 @@ class PatientCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Succe
         # add the site to the patient record
         site = apps.get_model("npda", "Site").objects.create(
             paediatric_diabetes_unit_pz_code=self.request.session.get('pz_code'),
-            organisation_ods_code=self.request.user.organisation_employers.first().ods_code,
+            organisation_ods_code=self.request.session.get("ods_code"),
             date_leaving_service=form.cleaned_data.get("date_leaving_service"),
             reason_leaving_service=form.cleaned_data.get("reason_leaving_service"),
         )
