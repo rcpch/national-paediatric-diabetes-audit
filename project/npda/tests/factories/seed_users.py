@@ -20,6 +20,7 @@ from project.npda.models import (
 )
 from .NPDAUserFactory import NPDAUserFactory
 from project.constants.user import RCPCH_AUDIT_TEAM
+from project.constants import VIEW_PREFERENCES
 import logging
 
 logger = logging.getLogger(__name__)
@@ -49,7 +50,7 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
         is_rcpch_audit_team_member = False
         is_rcpch_staff = False
 
-        GOSH_ODS_CODE = 'RP401'
+        GOSH_ODS_CODE = "RP401"
         ALDER_HEY_ODS_CODE = "RBS25"
 
         logger.info(f"Seeding test users at {GOSH_ODS_CODE=}.")
@@ -74,9 +75,16 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
                 is_rcpch_audit_team_member=is_rcpch_audit_team_member,
                 is_rcpch_staff=is_rcpch_staff,
                 groups=[user.group_name],
-                organisation_employers=[GOSH_ODS_CODE], # Factory handles creating and assigning OrganisationEmployer
+                organisation_employers=[
+                    GOSH_ODS_CODE
+                ],  # Factory handles creating and assigning OrganisationEmployer
+                view_preference=(
+                    VIEW_PREFERENCES[2][0]
+                    if user.role == RCPCH_AUDIT_TEAM
+                    else VIEW_PREFERENCES[0][0]
+                ),
             )
-            
+
             # Alder hey user
             new_user_alder_hey = NPDAUserFactory(
                 first_name=first_name,
@@ -87,8 +95,10 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
                 is_rcpch_audit_team_member=is_rcpch_audit_team_member,
                 is_rcpch_staff=is_rcpch_staff,
                 groups=[user.group_name],
-                organisation_employers=[ALDER_HEY_ODS_CODE], # Factory handles creating and assigning OrganisationEmployer
+                organisation_employers=[
+                    ALDER_HEY_ODS_CODE
+                ],  # Factory handles creating and assigning OrganisationEmployer
             )
-            
-            logger.info(f'Seeded {new_user_gosh=} and {new_user_alder_hey=}')
+
+            logger.info(f"Seeded {new_user_gosh=} and {new_user_alder_hey=}")
         logger.info(f"All test users sucessfully seeded: {NPDAUser.objects.all()=}")

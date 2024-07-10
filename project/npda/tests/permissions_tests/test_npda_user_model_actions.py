@@ -142,7 +142,8 @@ def test_rcpch_audit_team_can_view_all_npdausers(
     view.request.user = test_user_rcpch_audit_team  # Explicitly set the user in the request
     queryset = view.get_queryset()
     
-    print(f"{view.request.user.view_preference=}")
+    for user in NPDAUser.objects.all():
+        print(f'{user.first_name} -> {user.view_preference=}')
 
     # Ensure the queryset contains all users
     assert (
