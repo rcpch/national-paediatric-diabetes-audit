@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from .models import NPDAUser, OrganisationEmployer, Patient, Site, Visit, VisitActivity
+from django.contrib.sessions.models import Session
 
 
 @admin.register(OrganisationEmployer)
@@ -31,6 +32,14 @@ class VisitAdmin(admin.ModelAdmin):
 @admin.register(VisitActivity)
 class VisitActivityAdmin(admin.ModelAdmin):
     search_fields = ("activity_datetime", "pk", "ip_address")
+
+@admin.register(Session)
+class SessionAdmin(admin.ModelAdmin):
+
+    def session_data(self, obj):
+        return obj.get_decoded()
+
+    session_data.short_description = 'Session Data'
 
 
 admin.site.site_header = "RCPCH National Paediatric Diabetes Audit Admin"
