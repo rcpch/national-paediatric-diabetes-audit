@@ -11,7 +11,6 @@ from project.constants.user import TITLES
 
 # E12 imports
 from project.npda.models import NPDAUser, OrganisationEmployer
-from project.npda.tests.utils import set_session_attributes_for_user
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +39,7 @@ def test_user_creation(
         }
 
         # Login and OTP ENABLE
-        client = set_session_attributes_for_user(client=client, user=test_user)
+        # client = set_session_attributes_for_user(client=client, user=test_user)
 
         url = reverse("npdauser-create")
 
