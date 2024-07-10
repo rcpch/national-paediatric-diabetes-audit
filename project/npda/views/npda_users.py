@@ -511,14 +511,14 @@ class RCPCHLoginView(TwoFactorLoginView):
         # In local development, override the token workflow, just sign in
         # the user without 2FA token
         if settings.DEBUG:
-            request = self.request
+
             user = authenticate(
-                request,
-                username=request.POST.get("auth-username"),
-                password=request.POST.get("auth-password"),
+                self.request,
+                username=self.request.POST.get("auth-username"),
+                password=self.request.POST.get("auth-password"),
             )
             if user is not None:
-                login(request, user)
+                login(self.request, user)
                 # successful login, get PDU and organisation details from user and store in session
 
                 # Get the organisation employer
@@ -529,7 +529,7 @@ class RCPCHLoginView(TwoFactorLoginView):
                 )
 
                 # Update the session with the new session object
-                request.session.update(new_session_object)
+                self.request.session.update(new_session_object)
 
                 # Override normal auth flow behaviour, redirect straight to home page
                 return redirect("home")
@@ -543,8 +543,7 @@ class RCPCHLoginView(TwoFactorLoginView):
         # this will not be called if debug=True
         response = super().done(form_list)
         response_url = getattr(response, "url")
-        request = self.request
-        
+
         # Update the session with the new session object
         # Get the organisation employer
         organisation_employer = user.organisation_employers.first()
@@ -553,7 +552,7 @@ class RCPCHLoginView(TwoFactorLoginView):
             organisation_employer
         )
 
-        request.session.update(new_session_object)
+        self.request.session.update(new_session_object)
 
         # redirect to home page
         login_redirect_url = reverse(settings.LOGIN_REDIRECT_URL)
