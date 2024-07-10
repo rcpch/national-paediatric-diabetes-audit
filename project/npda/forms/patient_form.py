@@ -44,6 +44,9 @@ class PatientForm(forms.ModelForm):
         }
 
     def clean_postcode(self):
+        if not self.cleaned_data["postcode"]:
+            raise ValidationError("This field is required")
+
         postcode = (
             self.cleaned_data["postcode"].upper().replace(" ", "").replace("-", "")
         )
