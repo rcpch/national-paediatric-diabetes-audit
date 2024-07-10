@@ -76,4 +76,4 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
                     groups=[user.group_name],
                 )
         else:
-            print("Test users already seeded. Skipping")
+            logger.info("Test users already seeded. Skipping")
