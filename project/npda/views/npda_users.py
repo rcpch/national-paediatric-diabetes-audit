@@ -17,6 +17,9 @@ from django.utils.html import strip_tags
 from django.conf import settings
 
 # third party imports
+from project.npda.general_functions.create_session import (
+    create_session_object_from_organisation_employer,
+)
 from project.npda.general_functions.pdus import get_single_pdu_from_ods_code
 from two_factor.views import LoginView as TwoFactorLoginView
 from django_htmx.http import trigger_client_event
@@ -517,41 +520,18 @@ class RCPCHLoginView(TwoFactorLoginView):
             if user is not None:
                 login(request, user)
                 # successful login, get PDU and organisation details from user and store in session
-                current_user_ods_code = (
-                    self.request.user.organisation_employers.first().ods_code
+
+                # Get the organisation employer
+                organisation_employer = user.organisation_employers.first()
+
+                new_session_object = create_session_object_from_organisation_employer(
+                    organisation_employer
                 )
-                current_user_pz_code = (
-                    self.request.user.organisation_employers.first().pz_code
-                )
-                if "sibling_organisations" not in self.request.session:
-                    # this is used to get all users in the same PDU in the PDUList view
-                    sibling_organisations = get_single_pdu_from_ods_code(
-                        current_user_ods_code
-                    )
-                    # store the results in session
-                    self.request.session["sibling_organisations"] = (
-                        sibling_organisations
-                    )
 
-                # store the users PDU and ODS code in session as these are used to scope the data the user can see
-                if "ods_code" not in self.request.session:
-                    self.request.session["ods_code"] = current_user_ods_code
+                # Update the session with the new session object
+                request.session.update(new_session_object)
 
-                if "pz_code" not in self.request.session:
-                    self.request.session["pz_code"] = current_user_pz_code
-
-                if "organisation_choices" not in self.request.session:
-                    # get all NHS organisations in user's PDU as list of tuples (ODS code, name)
-                    self.request.session["organisation_choices"] = [
-                        (choice["ods_code"], choice["name"])
-                        for choice in sibling_organisations["organisations"]
-                    ]
-
-                if "pdu_choices" not in self.request.session:
-                    # this is a list of all pz_codes in the UK to populate the PDU selects
-                    self.request.session["pdu_choices"] = (
-                        organisations_adapter.get_all_pdus_list_choices()
-                    )
+                # Override normal auth flow behaviour, redirect straight to home page
                 return redirect("home")
 
         # Otherwise, continue with usual workflow
@@ -563,21 +543,17 @@ class RCPCHLoginView(TwoFactorLoginView):
         # this will not be called if debug=True
         response = super().done(form_list)
         response_url = getattr(response, "url")
-        # successful login, get PDU, ODS and organisation details from user and store in session
-        current_user_ods_code = (
-            self.request.user.organisation_employers.first().ods_code
+        request = self.request
+        
+        # Update the session with the new session object
+        # Get the organisation employer
+        organisation_employer = user.organisation_employers.first()
+
+        new_session_object = create_session_object_from_organisation_employer(
+            organisation_employer
         )
-        current_user_pz_code = self.request.user.organisation_employers.first().pz_code
-        if "ods_code" not in self.request.session:
-            self.request.session["ods_code"] = current_user_ods_code
 
-        if "pz_code" not in self.request.session:
-            self.request.session["pz_code"] = current_user_pz_code
-
-        if "sibling_organisations" not in self.request.session:
-            sibling_organisations = get_single_pdu_from_ods_code(current_user_ods_code)
-            # store the results in session
-            self.request.session["sibling_organisations"] = sibling_organisations
+        request.session.update(new_session_object)
 
         # redirect to home page
         login_redirect_url = reverse(settings.LOGIN_REDIRECT_URL)
