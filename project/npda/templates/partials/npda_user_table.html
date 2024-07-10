@@ -16,12 +16,15 @@
         <tr
             class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white">
             <td class="text-left">
-                <div class='relative has-tooltip items-center'>
-                    <span
-                        class='absolute tooltip rounded shadow-lg px-2 py-2 bg-gray-500 text-white -mt-10 text-left'>NPDA
-                        User Unique ID</span>
+                <div class="relative has-tooltip items-center">
                     <a href="{% url 'npdauser-update' npda_user.pk %}"
-                        class="px-2 text-rcpch_pink hover:text-rcpch_dark_blue"><strong>{{ npda_user.pk }}</strong></a>
+                        class="px-2 text-rcpch_pink hover:text-rcpch_dark_blue">
+                        <strong>{{ npda_user.pk }}</strong>
+                        <span class="absolute tooltip rounded shadow-lg px-2 py-2 bg-gray-500 text-white text-left"
+                            style="top: -1.5rem; left: 50%; transform: translateX(-50%); z-index: 10;">
+                            NPDA User Unique ID
+                        </span>
+                    </a>
                 </div>
             </td>
             <td class="text-left">
