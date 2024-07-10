@@ -49,17 +49,9 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
         is_rcpch_audit_team_member = False
         is_rcpch_staff = False
 
-        # First get GOSH Organisation details
-        GOSH_ORGANISATION_DETAILS_OBJ = get_nhs_organisation(ods_code="RP401")
+        GOSH_ODS_CODE = 'RP401'
 
-        # Create GOSH OrganisationEmployer object
-        GOSH, created = OrganisationEmployer.objects.get_or_create(
-            name=GOSH_ORGANISATION_DETAILS_OBJ.name,
-            ods_code=GOSH_ORGANISATION_DETAILS_OBJ.ods_code,
-            pz_code=GOSH_ORGANISATION_DETAILS_OBJ.paediatric_diabetes_unit.pz_code,
-        )
-
-        logger.info(f"Seeding test users at {GOSH=}.")
+        logger.info(f"Seeding test users at {GOSH_ODS_CODE=}.")
         # Seed a user of each type at GOSH
         for user in users:
             first_name = user.role_str
@@ -80,10 +72,9 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
                 is_rcpch_audit_team_member=is_rcpch_audit_team_member,
                 is_rcpch_staff=is_rcpch_staff,
                 groups=[user.group_name],
+                organisation_employers=[GOSH_ODS_CODE], # Factory handles creating and assigning OrganisationEmployer
             )
-            
-            # Add organisation employer
-            new_user.organisation_employers.add(GOSH)    
+              
             
             logger.info(f'Seeded {new_user=}')
         logger.info(f"All test users sucessfully seeded: {NPDAUser.objects.all()=}")
