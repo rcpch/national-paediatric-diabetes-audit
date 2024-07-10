@@ -33,7 +33,10 @@ def gp_practice_for_postcode(postcode: str):
         print(e.response.text)
         raise Exception(f"{postcode} not found")
 
-    return response.json()["Organisations"][0]["OrgId"]
+    organisations = response.json()["Organisations"]
+
+    if len(organisations) > 0:
+        return organisations[0]["OrgId"]
 
 
 def gp_details_for_ods_code(ods_code: str):
