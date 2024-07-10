@@ -124,8 +124,8 @@ class PatientListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionReq
         """
         if request.htmx:
             view_preference = request.POST.get("view_preference", None)
-            ods_code = request.POST.get("npdauser_ods_code_select_name", None)
-            pz_code = request.POST.get("npdauser_pz_code_select_name", None)
+            ods_code = request.POST.get("patient_ods_code_select_name", None)
+            pz_code = request.POST.get("patient_pz_code_select_name", None)
 
             # TODO MRB: do we need to check you are allowed to see this org/PDU?
 
