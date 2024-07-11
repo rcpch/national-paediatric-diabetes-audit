@@ -1,3 +1,5 @@
+#!/bin/bash -e
+
 ENVIRONMENT=local
 
 while [[ $# -gt 0 ]]; do
