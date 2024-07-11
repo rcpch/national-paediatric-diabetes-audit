@@ -512,22 +512,22 @@ class RCPCHLoginView(TwoFactorLoginView):
         response = super().done(form_list)
         response_url = getattr(response, "url")
 
-        # Update the session with the new session object
-        # Get the organisation employer
-        organisation_employer = user.organisation_employers.first()
-
-        new_session_object = create_session_object_from_organisation_employer(
-            organisation_employer
-        )
-
-        self.request.session.update(new_session_object)
-
         # redirect to home page
         login_redirect_url = reverse(settings.LOGIN_REDIRECT_URL)
 
         # Successful 2FA and login
         if response_url == login_redirect_url:
             user = self.get_user()
+
+            # Update the session with the new session object
+            # Get the organisation employer
+            organisation_employer = user.organisation_employers.first()
+
+            new_session_object = create_session_object_from_organisation_employer(
+                organisation_employer
+            )
+
+            self.request.session.update(new_session_object)
 
             # time since last set password
             delta = timezone.now() - user.password_last_set
