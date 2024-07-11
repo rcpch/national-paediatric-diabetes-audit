@@ -4,4 +4,4 @@ python manage.py write_azure_pg_password_file
 python manage.py makemigrations
 python manage.py migrate
 python manage.py seed --mode=seed_groups_and_permissions
-gunicorn --bind=0.0.0.0:8000 --timeout 600 rcpch-audit-engine.wsgi
+gunicorn --bind=0.0.0.0:8000 --timeout 600 npda.wsgi
