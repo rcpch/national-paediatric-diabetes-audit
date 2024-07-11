@@ -67,12 +67,9 @@ class NPDAUserListView(
         elif self.request.user.view_preference == VIEW_PREFERENCES[1][0]:
             # PDU view
             # create a list of sibling organisations' ODS codes who share the same PDU as the user
-            siblings_ods_codes = [
-                sibling["ods_code"]
-                for sibling in self.request.session["sibling_organisations"][
-                    "organisations"
-                ]
-            ]
+            pz_code = self.request.session.get("pz_code")
+            sibling_organisations = organisations_adapter.get_single_pdu_from_pz_code(pz_number=pz_code)
+            siblings_ods_codes = [org.ods_code for org in sibling_organisations.organisations]
             # get all users in the sibling organisations
             return NPDAUser.objects.filter(
                 organisation_employers__ods_code__in=siblings_ods_codes
@@ -86,18 +83,13 @@ class NPDAUserListView(
     def get_context_data(self, **kwargs):
         context = super(NPDAUserListView, self).get_context_data(**kwargs)
         context["title"] = "NPDA Users"
-        pz_code = self.request.session.get("sibling_organisations", {}).get(
-            "pz_code", None
-        )
-        context["pz_code"] = pz_code
+        context["pz_code"] = self.request.session.get("pz_code")
         context["ods_code"] = self.request.session.get("ods_code")
         context["organisation_choices"] = self.request.session.get(
             "organisation_choices"
         )
         context["pdu_choices"] = self.request.session.get("pdu_choices")
-        context["chosen_pdu"] = self.request.session.get("sibling_organisations").get(
-            "pz_code"
-        )
+        context["chosen_pdu"] = self.request.session.get("pz_code")
         return context
 
     def get(self, request, *args: str, **kwargs) -> HttpResponse:
@@ -127,43 +119,22 @@ class NPDAUserListView(
             ods_code = request.POST.get("npdauser_ods_code_select_name", None)
             pz_code = request.POST.get("npdauser_pz_code_select_name", None)
 
+            # TODO MRB: do we need to check you are allowed to see this org/PDU?
+
             if ods_code:
-                # call back from the organisation select
-                # retrieve the sibling organisations and store in session
-                sibling_organisations = get_single_pdu_from_ods_code(ods_code=ods_code)
-                # store the results in session
-                self.request.session["sibling_organisations"] = sibling_organisations
-                self.request.session["ods_code"] = ods_code
-            else:
-                ods_code = request.session.get("sibling_organisations")[
-                    "organisations"
-                ][0][
-                    "ods_code"
-                ]  # set the ods code to the first in the list
-                self.request.session["ods_code"] = ods_code
-
-            if pz_code:
                 # call back from the PDU select
-                # retrieve the sibling organisations and store in session
-                sibling_organisations = (
-                    organisations_adapter.get_single_pdu_from_pz_code(pz_number=pz_code)
-                )
-                # store the results in session
-                self.request.session["sibling_organisations"] = sibling_organisations
-
-                self.request.session["organisation_choices"] = [
-                    (choice["ods_code"], choice["name"])
-                    for choice in sibling_organisations["organisations"]
-                ]
-                ods_code = request.session.get("sibling_organisations")[
-                    "organisations"
-                ][0][
-                    "ods_code"
-                ]  # set the ods code to the first in the new list
                 self.request.session["ods_code"] = ods_code
+                
+                pdu = organisations_adapter.get_single_pdu_from_ods_code(ods_code)
+                self.request.session["pz_code"] = pdu["pz_code"]
+
+            elif pz_code:
+                # call back from the PDU select
                 self.request.session["pz_code"] = pz_code
-            else:
-                pz_code = request.session.get("sibling_organisations").get("pz_code")
+
+                # set the ods code to the first org associated with the PDU
+                sibling_organisations = organisations_adapter.get_single_pdu_from_pz_code(pz_number=pz_code)
+                self.request.session["ods_code"] = sibling_organisations.organisations[0].ods_code
 
             if view_preference:
                 user = NPDAUser.objects.get(pk=request.user.pk)
@@ -175,15 +146,13 @@ class NPDAUserListView(
             context = {
                 "view_preference": int(user.view_preference),
                 "ods_code": ods_code,
-                "pz_code": request.session.get("sibling_organisations").get("pz_code"),
+                "pz_code": request.session.get("pz_code"),
                 "hx_post": reverse_lazy("npda_users"),
                 "organisation_choices": self.request.session.get(
                     "organisation_choices"
                 ),
                 "pdu_choices": self.request.session.get("pdu_choices"),
-                "chosen_pdu": request.session.get("sibling_organisations").get(
-                    "pz_code"
-                ),
+                "chosen_pdu": request.session.get("pz_code"),
                 "ods_code_select_name": "npdauser_ods_code_select_name",
                 "pz_code_select_name": "npdauser_pz_code_select_name",
                 "hx_target": "#npdauser_view_preference",
@@ -507,7 +476,6 @@ class RCPCHLoginView(TwoFactorLoginView):
         self.form_list["auth"] = CaptchaAuthenticationForm
 
     def post(self, *args, **kwargs):
-
         # In local development, override the token workflow, just sign in
         # the user without 2FA token
         if settings.DEBUG:

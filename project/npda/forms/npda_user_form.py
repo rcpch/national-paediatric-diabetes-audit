@@ -73,35 +73,19 @@ class NPDAUserForm(forms.ModelForm):
         self.fields["surname"].required = True
         self.fields["email"].required = True
         self.fields["role"].required = True
-        self.fields["add_employer"].choices = [
-            ("", "Add organisation...")
-        ] + organisations_adapter.get_all_nhs_organisations()
         self.fields["add_employer"].required = True
 
-        # retrieve all organisations from the RCPCH NHS Organisations API
         if self.request:
             if (
                 self.request.user.is_superuser
                 or self.request.user.is_rcpch_audit_team_member
                 or self.request.user.is_rcpch_staff
             ):
-                self.fields["add_employer"].choices = (
-                    [("", "Add organisation...")]
-                    + organisations_adapter.get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit()
-                )
-
+                self.fields["add_employer"].choices = organisations_adapter.get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit()
             else:
-                sibling_organisations = [
-                    (sibling["ods_code"], sibling["name"])
-                    for sibling in self.request.session.get("sibling_organisations")[
-                        "organisations"
-                    ]
-                ]
-                self.fields["add_employer"].choices = (
-                    OrganisationEmployer.objects.filter(
-                        ods_code__in=[org[0] for org in sibling_organisations]
-                    )
-                )
+                pz_code = self.request.session.get('pz_code')
+                sibling_organisations = organisations_adapter.get_single_pdu_from_pz_code(pz_number=pz_code).organisations
+                self.fields["add_employer"].choices = [(org.ods_code, org.name) for org in sibling_organisations]
 
             # set the default value to the current user's organisation
             self.fields["add_employer"].initial = self.request.session.get("ods_code")

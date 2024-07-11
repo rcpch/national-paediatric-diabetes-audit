@@ -36,7 +36,7 @@ class VisitActivityAdmin(admin.ModelAdmin):
 @admin.register(Session)
 class SessionAdmin(admin.ModelAdmin):
     
-    list_display = ['session_key', 'user_id', 'ods_code', 'pz_code', 'sibling_organisations', 'organisation_choices', 'pdu_choices', 'expire_date']
+    list_display = ['session_key', 'user_id', 'ods_code', 'pz_code', 'organisation_choices', 'pdu_choices', 'expire_date']
 
     def session_data(self, obj):
         return obj.get_decoded()
@@ -53,9 +53,6 @@ class SessionAdmin(admin.ModelAdmin):
     def pz_code(self, obj):
         return self.session_data(obj).get('pz_code', 'N/A')
 
-    def sibling_organisations(self, obj):
-        return self.session_data(obj).get('sibling_organisations', 'N/A')
-
     def organisation_choices(self, obj):
         return self.session_data(obj).get('organisation_choices', 'N/A')
 
@@ -65,7 +62,6 @@ class SessionAdmin(admin.ModelAdmin):
     user_id.short_description = 'User ID'
     ods_code.short_description = 'ODS Code'
     pz_code.short_description = 'PZ Code'
-    sibling_organisations.short_description = 'Sibling Organisations'
     organisation_choices.short_description = 'Organisation Choices'
     pdu_choices.short_description = 'PDU Choices'
 

@@ -80,7 +80,7 @@ class CheckPDUListMixin(AccessMixin):
             requested_pdu = requested_patient.site.paediatric_diabetes_unit_pz_code
 
         elif model == "NPDAUser" or model == "Patient":
-            requested_pdu = request.session.get("sibling_organisations").get("pz_code")
+            requested_pdu = request.session.get("pz_code")
 
         if (
             request.user.is_superuser
