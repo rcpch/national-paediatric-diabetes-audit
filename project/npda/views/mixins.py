@@ -71,7 +71,7 @@ class CheckPDUListMixin(AccessMixin):
         model = self.get_model().__name__
 
         # get PDU assigned to user
-        user_pdus = request.user.organisation_employers.values_list("pz_code")
+        user_pdus = request.user.organisation_employers.values_list("pz_code", flat=True)
 
         # get pdu that user is requesting access of
         requested_pdu = ""
