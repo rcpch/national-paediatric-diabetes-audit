@@ -2,36 +2,42 @@ import json
 from datetime import datetime, timedelta
 import logging
 
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.utils import timezone
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
 from django.contrib.auth.views import PasswordResetView
-from django.urls import reverse_lazy, reverse
+from django.urls import reverse, reverse_lazy
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib import messages
 from django.contrib.auth import login, authenticate
+from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.utils.html import strip_tags
 from django.conf import settings
+
+# third party imports
+from project.npda.general_functions.create_session import (
+    create_session_object_from_organisation_employer,
+)
+from project.npda.general_functions.pdus import get_single_pdu_from_ods_code
 from two_factor.views import LoginView as TwoFactorLoginView
+from django_htmx.http import trigger_client_event
+
+# RCPCH imports
+from project.npda.general_functions import organisations_adapter
 
 
-from ..models import NPDAUser, VisitActivity
+from ..models import NPDAUser, VisitActivity, OrganisationEmployer
 from ..forms.npda_user_form import NPDAUserForm, CaptchaAuthenticationForm
 from ..general_functions import (
     construct_confirm_email,
     send_email_to_recipients,
-    construct_transfer_npda_site_email,
-    construct_transfer_npda_site_outcome_email,
     group_for_role,
-    retrieve_pdu_from_organisation_ods_code,
-    retrieve_pdus,
 )
+from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
+from project.constants import VIEW_PREFERENCES
 from .mixins import LoginAndOTPRequiredMixin
-from django.utils.decorators import method_decorator
-from .decorators import login_and_otp_required
-from django.contrib.auth.decorators import login_required
 
 logger = logging.getLogger(__name__)
 
@@ -40,53 +46,137 @@ NPDAUser list and NPDAUser creation, deletion and update
 """
 
 
-class NPDAUserListView(LoginAndOTPRequiredMixin, ListView):
+class NPDAUserListView(
+    LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, ListView
+):
+    permission_required = "npda.view_npdauser"
+    permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
+
     template_name = "npda_users.html"
 
     def get_queryset(self):
         # scope the queryset to filter only those users in organisations in the same PDU. This is to prevent users from seeing all users in the system
+
+        # Organisation level
+        if self.request.user.view_preference == VIEW_PREFERENCES[0][0]:
+            return NPDAUser.objects.filter(
+                organisation_employers__ods_code=self.request.session.get("ods_code")
+            ).order_by("surname")
+
         # The user's organisation, PDU and siblings are stored in the session when they log in
-
-        # create a list of sibling organisations' ODS codes who share the same PDU as the user
-        siblings_ods_codes = [
-            sibling["ods_code"]
-            for sibling in self.request.session["sibling_organisations"][
-                "organisations"
-            ]
-        ]
-
-        # get all users in the sibling organisations
-        npda_users = NPDAUser.objects.filter(
-            organisation_employer__in=siblings_ods_codes
-        ).order_by("surname")
-
-        # add sibling organisation details to each user (PZ code, organisation name, parent name etc.)
-        for user in npda_users:
-            matching_sibling = next(
-                (
-                    sibling
-                    for sibling in self.request.session["sibling_organisations"][
-                        "organisations"
-                    ]
-                    if sibling["ods_code"] == user.organisation_employer
-                ),
-                None,
-            )
-            if matching_sibling is not None:
-                for key, value in matching_sibling.items():
-                    setattr(user, key, value)
-        return npda_users
+        elif self.request.user.view_preference == VIEW_PREFERENCES[1][0]:
+            # PDU view
+            # create a list of sibling organisations' ODS codes who share the same PDU as the user
+            pz_code = self.request.session.get("pz_code")
+            sibling_organisations = organisations_adapter.get_single_pdu_from_pz_code(pz_number=pz_code)
+            siblings_ods_codes = [org.ods_code for org in sibling_organisations.organisations]
+            # get all users in the sibling organisations
+            return NPDAUser.objects.filter(
+                organisation_employers__ods_code__in=siblings_ods_codes
+            ).order_by("surname")
+        elif self.request.user.view_preference == VIEW_PREFERENCES[2][0]:
+            # RCPCH user/national view - get all users
+            return NPDAUser.objects.all().order_by("surname")
+        else:
+            raise ValueError("Invalid view preference")
 
     def get_context_data(self, **kwargs):
         context = super(NPDAUserListView, self).get_context_data(**kwargs)
         context["title"] = "NPDA Users"
+        context["pz_code"] = self.request.session.get("pz_code")
+        context["ods_code"] = self.request.session.get("ods_code")
+        context["organisation_choices"] = self.request.session.get(
+            "organisation_choices"
+        )
+        context["pdu_choices"] = self.request.session.get("pdu_choices")
+        context["chosen_pdu"] = self.request.session.get("pz_code")
         return context
 
+    def get(self, request, *args: str, **kwargs) -> HttpResponse:
+        response = super().get(request, *args, **kwargs)
 
-class NPDAUserCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateView):
+        if request.htmx:
+            # filter the npdausers to only those in the same organisation as the user
+            # trigger a GET request from the patient table to update the list of npdausers
+            # by calling the get_queryset method again with the new ods_code/pz_code stored in session
+            queryset = self.get_queryset()
+            context = self.get_context_data()
+            context["npdauser_list"] = queryset
+
+            return render(
+                request,
+                "partials/npda_user_table.html",
+                context=self.get_context_data(),
+            )
+        return response
+
+    def post(self, request, *args: str, **kwargs) -> HttpResponse:
+        """
+        Override POST method to requery the database for the list of patients if  view preference changes
+        """
+        if request.htmx:
+            view_preference = request.POST.get("view_preference", None)
+            ods_code = request.POST.get("npdauser_ods_code_select_name", None)
+            pz_code = request.POST.get("npdauser_pz_code_select_name", None)
+
+            # TODO MRB: do we need to check you are allowed to see this org/PDU?
+
+            if ods_code:
+                # call back from the PDU select
+                self.request.session["ods_code"] = ods_code
+                
+                pdu = organisations_adapter.get_single_pdu_from_ods_code(ods_code)
+                self.request.session["pz_code"] = pdu["pz_code"]
+
+            elif pz_code:
+                # call back from the PDU select
+                self.request.session["pz_code"] = pz_code
+
+                # set the ods code to the first org associated with the PDU
+                sibling_organisations = organisations_adapter.get_single_pdu_from_pz_code(pz_number=pz_code)
+                self.request.session["ods_code"] = sibling_organisations.organisations[0].ods_code
+
+            if view_preference:
+                user = NPDAUser.objects.get(pk=request.user.pk)
+                user.view_preference = view_preference
+                user.save(update_fields=["view_preference"])
+            else:
+                user = NPDAUser.objects.get(pk=request.user.pk)
+
+            context = {
+                "view_preference": int(user.view_preference),
+                "ods_code": ods_code,
+                "pz_code": request.session.get("pz_code"),
+                "hx_post": reverse_lazy("npda_users"),
+                "organisation_choices": self.request.session.get(
+                    "organisation_choices"
+                ),
+                "pdu_choices": self.request.session.get("pdu_choices"),
+                "chosen_pdu": request.session.get("pz_code"),
+                "ods_code_select_name": "npdauser_ods_code_select_name",
+                "pz_code_select_name": "npdauser_pz_code_select_name",
+                "hx_target": "#npdauser_view_preference",
+            }
+
+            response = render(request, "partials/view_preference.html", context=context)
+
+            trigger_client_event(
+                response=response, name="npda_users", params={}
+            )  # reloads the form to show the active steps
+            return response
+
+        return super().post(request, *args, **kwargs)
+
+
+class NPDAUserCreateView(
+    LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, CreateView
+):
     """
     Handle creation of new patient in audit
     """
+
+    permission_required = "npda.add_npdauser"
+    permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
 
     model = NPDAUser
     form_class = NPDAUserForm
@@ -99,6 +189,13 @@ class NPDAUserCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateVi
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["show_rcpch_team"] = (
+            self.request.user.is_superuser
+            or self.request.user.is_rcpch_audit_team_member
+        )
+        context["show_rcpch_staff_box"] = (
+            self.request.user.is_superuser or self.request.user.is_rcpch_staff
+        )
         context["title"] = "Add New NPDA User"
         context["button_title"] = "Add NPDA User"
         context["form_method"] = "create"
@@ -119,22 +216,59 @@ class NPDAUserCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateVi
             )
             return redirect(
                 "npda_users",
-                # organisation_id=organisation_id,
             )
 
+        # add the user to the appropriate group
         new_group = group_for_role(new_user.role)
-
         try:
             new_user.groups.add(new_group)
         except Exception as error:
             messages.error(
                 self.request,
-                f"Error: {error}. Account not created. Please contact Epilepsy12 if this issue persists.",
+                f"Error: {error}. Account not created. Please contact NPDA team if this issue persists.",
             )
             return redirect(
                 "npda_users",
-                # organisation_id=organisation_id,
             )
+
+        # add the user to the appropriate organisation
+        new_employer_ods_code = form.cleaned_data["add_employer"]
+        if new_employer_ods_code:
+            # a new employer has been added
+            # fetch the organisation object from the API using the ODS code
+            organisation = organisations_adapter.get_single_pdu_from_ods_code(
+                new_employer_ods_code
+            )
+
+            if "error" in organisation:
+                messages.error(
+                    self.request,
+                    f"Error: {organisation['error']}. Organisation not added. Please contact the NPDA team if this issue persists.",
+                )
+                return HttpResponseRedirect(self.get_success_url())
+
+            # Get the name of the organistion from the API response
+            matching_organisation = next(
+                (
+                    org
+                    for org in organisation["organisations"]
+                    if org["ods_code"] == new_employer_ods_code
+                ),
+                None,
+            )
+
+            if matching_organisation:
+                # creat or update  the OrganisationEmployer object
+                new_employer, created = OrganisationEmployer.objects.update_or_create(
+                    ods_code=new_employer_ods_code,
+                    defaults=dict(
+                        pz_code=organisation["pz_code"],
+                        name=matching_organisation["name"],
+                    ),
+                )
+                # add the new employer to the user's employer list
+                new_user.organisation_employers.add(new_employer)
+                new_user.refresh_from_db()
 
         # user created - send email with reset link to new user
         subject = "Password Reset Requested"
@@ -149,10 +283,7 @@ class NPDAUserCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateVi
             f"Account created successfully. Confirmation email has been sent to {new_user.email}.",
         )
 
-        return redirect(
-            "npda_users",
-            # organisation_id=organisation_id,
-        )
+        return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self) -> str:
         return reverse(
@@ -161,10 +292,19 @@ class NPDAUserCreateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateVi
         )
 
 
-class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateView):
+class NPDAUserUpdateView(
+    LoginAndOTPRequiredMixin,
+    CheckPDUInstanceMixin,
+    PermissionRequiredMixin,
+    SuccessMessageMixin,
+    UpdateView,
+):
     """
     Handle update of patient in audit
     """
+
+    permission_required = "npda.change_npdauser"
+    permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
 
     model = NPDAUser
     form_class = NPDAUserForm
@@ -179,19 +319,68 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateVi
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["show_rcpch_team"] = (
+            self.request.user.is_superuser
+            or self.request.user.is_rcpch_audit_team_member
+        )
+        context["show_rcpch_staff_box"] = (
+            self.request.user.is_superuser or self.request.user.is_rcpch_staff
+        )
         context["title"] = "Edit NPDA User Details"
         context["button_title"] = "Edit NPDA User Details"
         context["form_method"] = "update"
         context["npda_user"] = NPDAUser.objects.get(pk=self.kwargs["pk"])
         return context
 
-    def is_valid(self):
-        return super(NPDAUserForm, self).is_valid()
+    def form_valid(self, form):
+        instance = form.save()
+
+        new_employer_ods_code = form.cleaned_data["add_employer"]
+
+        if new_employer_ods_code:
+            # a new employer has been added
+            # fetch the organisation object from the API using the ODS code
+            organisation = organisations_adapter.get_single_pdu_from_ods_code(
+                new_employer_ods_code
+            )
+
+            if "error" in organisation:
+                messages.error(
+                    self.request,
+                    f"Error: {organisation['error']}. Organisation not added. Please contact the NPDA team if this issue persists.",
+                )
+                return HttpResponseRedirect(self.get_success_url())
+
+            # Get the name of the organistion from the API response
+            matching_organisation = next(
+                (
+                    org
+                    for org in organisation["organisations"]
+                    if org["ods_code"] == new_employer_ods_code
+                ),
+                None,
+            )
+
+            if matching_organisation:
+                # creat or update  the OrganisationEmployer object
+                new_employer, created = OrganisationEmployer.objects.update_or_create(
+                    ods_code=new_employer_ods_code,
+                    defaults=dict(
+                        pz_code=organisation["pz_code"],
+                        name=matching_organisation["name"],
+                    ),
+                )
+                # add the new employer to the user's employer list
+                instance.organisation_employers.add(new_employer)
+                instance.refresh_from_db()
+                return HttpResponseRedirect(self.get_success_url())
+
+        return super().form_valid(form)
 
     def post(self, request: HttpRequest, *args: str, **kwargs) -> HttpResponse:
         """
         Override POST method to resend email if recipient create account token has expired
-        TODO: Only Superusers or Lead Clinicians can do this
+        TODO: Only Superusers or Coordinators can do this
         """
         if "resend_email" in request.POST:
             npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
@@ -216,10 +405,19 @@ class NPDAUserUpdateView(LoginAndOTPRequiredMixin, SuccessMessageMixin, UpdateVi
             return super().post(request, *args, **kwargs)
 
 
-class NPDAUserDeleteView(LoginAndOTPRequiredMixin, SuccessMessageMixin, DeleteView):
+class NPDAUserDeleteView(
+    LoginAndOTPRequiredMixin,
+    CheckPDUInstanceMixin,
+    PermissionRequiredMixin,
+    SuccessMessageMixin,
+    DeleteView,
+):
     """
-    Handle deletion of child from audit
+    Handle deletion of user from audit
     """
+
+    permission_required = "npda.delete_npdauser"
+    permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
 
     model = NPDAUser
     success_message = "NPDA User removed from database"
@@ -278,19 +476,30 @@ class RCPCHLoginView(TwoFactorLoginView):
         self.form_list["auth"] = CaptchaAuthenticationForm
 
     def post(self, *args, **kwargs):
-
         # In local development, override the token workflow, just sign in
         # the user without 2FA token
         if settings.DEBUG:
-            request = self.request
 
             user = authenticate(
-                request,
-                username=request.POST.get("auth-username"),
-                password=request.POST.get("auth-password"),
+                self.request,
+                username=self.request.POST.get("auth-username"),
+                password=self.request.POST.get("auth-password"),
             )
             if user is not None:
-                login(request, user)
+                login(self.request, user)
+                # successful login, get PDU and organisation details from user and store in session
+
+                # Get the organisation employer
+                organisation_employer = user.organisation_employers.first()
+
+                new_session_object = create_session_object_from_organisation_employer(
+                    organisation_employer
+                )
+
+                # Update the session with the new session object
+                self.request.session.update(new_session_object)
+
+                # Override normal auth flow behaviour, redirect straight to home page
                 return redirect("home")
 
         # Otherwise, continue with usual workflow
@@ -299,17 +508,19 @@ class RCPCHLoginView(TwoFactorLoginView):
 
     # Override successful login redirect to org summary page
     def done(self, form_list, **kwargs):
+        # this will not be called if debug=True
         response = super().done(form_list)
         response_url = getattr(response, "url")
 
-        # successful login, get PDU and organisation details from user and store in session
-        current_user_ods_code = self.request.user.organisation_employer
-        if "sibling_organisations" not in self.request.session:
-            sibling_organisations = retrieve_pdu_from_organisation_ods_code(
-                current_user_ods_code
-            )
-            # store the results in session
-            self.request.session["sibling_organisations"] = sibling_organisations
+        # Update the session with the new session object
+        # Get the organisation employer
+        organisation_employer = user.organisation_employers.first()
+
+        new_session_object = create_session_object_from_organisation_employer(
+            organisation_employer
+        )
+
+        self.request.session.update(new_session_object)
 
         # redirect to home page
         login_redirect_url = reverse(settings.LOGIN_REDIRECT_URL)
@@ -317,28 +528,6 @@ class RCPCHLoginView(TwoFactorLoginView):
         # Successful 2FA and login
         if response_url == login_redirect_url:
             user = self.get_user()
-            """
-            TODO - once organisations are implemented, this notifies the user on logging in that children have been transferred to their clinic
-            """
-            # if not user.organisation_employer:
-            #     org_id = 1
-            # else:
-            #     org_id = user.organisation_employer.id
-            #     # check for outstanding transfers in to this organisation
-            #     if Site.objects.filter(
-            #         active_transfer=True, organisation=user.organisation_employer
-            #     ).exists() and user.has_perm(
-            #         "epilepsy12.can_transfer_epilepsy12_lead_centre"
-            #     ):
-            #         # there is an outstanding request for transfer in to this user's organisation. User is a lead clinician and can act on this
-            #         transfers = Site.objects.filter(
-            #             active_transfer=True, organisation=user.organisation_employer
-            #         )
-            #         for transfer in transfers:
-            #             messages.info(
-            #                 self.request,
-            #                 f"{transfer.transfer_origin_organisation} have requested transfer of {transfer.case} to {user.organisation_employer} for their Epilepsy12 care. Please find {transfer.case} in the case table to accept or decline this transfer request.",
-            #             )
 
             # time since last set password
             delta = timezone.now() - user.password_last_set

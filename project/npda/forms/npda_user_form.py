@@ -11,10 +11,14 @@ from django.utils.translation import gettext as _
 # third party imports
 from captcha.fields import CaptchaField
 
+from project.npda.general_functions import organisations_adapter
+
 # RCPCH imports
 from ...constants.styles.form_styles import *
-from ..models import NPDAUser
-from project.npda.general_functions import get_all_nhs_organisations
+from ..models import NPDAUser, OrganisationEmployer
+from project.npda.general_functions import (
+    organisations_adapter,
+)
 
 
 # Logging setup
@@ -22,6 +26,14 @@ logger = logging.getLogger(__name__)
 
 
 class NPDAUserForm(forms.ModelForm):
+
+    use_required_attribute = False
+    add_employer = forms.ChoiceField(
+        choices=[],  # Initially empty, will be populated dynamically
+        required=True,
+        widget=forms.Select(attrs={"class": SELECT}),
+        label="Add Employer",
+    )
 
     class Meta:
         model = NPDAUser
@@ -35,7 +47,6 @@ class NPDAUserForm(forms.ModelForm):
             "is_rcpch_audit_team_member",
             "is_rcpch_staff",
             "role",
-            "organisation_employer",
         ]
         widgets = {
             "title": forms.Select(attrs={"class": SELECT}),
@@ -49,36 +60,35 @@ class NPDAUserForm(forms.ModelForm):
             ),
             "is_rcpch_staff": forms.CheckboxInput(attrs={"class": "accent-rcpch_pink"}),
             "role": forms.Select(attrs={"class": SELECT}),
-            "organisation_employer": forms.Select(attrs={"class": SELECT}),
         }
 
     def __init__(self, *args, **kwargs) -> None:
+
         # get the request object from the kwargs
         self.request = kwargs.pop("request", None)
 
         super().__init__(*args, **kwargs)
-        self.fields["title"].required = True
+        self.fields["title"].required = False
         self.fields["first_name"].required = True
         self.fields["surname"].required = True
         self.fields["email"].required = True
         self.fields["role"].required = True
-        # retrieve all organisations from the RCPCH NHS Organisations API
-        if (
-            self.request.user.is_superuser
-            or self.request.user.is_rcpch_audit_team_member
-            or self.request.user.is_rcpch_staff
-        ):
-            # this is an ordered list of tuples from the API
-            self.fields["organisation_employer"].choices = get_all_nhs_organisations()
-        else:
-            # create list of choices from the session data
-            sibling_organisations = [
-                (sibling["ods_code"], sibling["name"])
-                for sibling in self.request.session.get("sibling_organisations")[
-                    "organisations"
-                ]
-            ]
-            self.fields["organisation_employer"].choices = sibling_organisations
+        self.fields["add_employer"].required = True
+
+        if self.request:
+            if (
+                self.request.user.is_superuser
+                or self.request.user.is_rcpch_audit_team_member
+                or self.request.user.is_rcpch_staff
+            ):
+                self.fields["add_employer"].choices = organisations_adapter.get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit()
+            else:
+                pz_code = self.request.session.get('pz_code')
+                sibling_organisations = organisations_adapter.get_single_pdu_from_pz_code(pz_number=pz_code).organisations
+                self.fields["add_employer"].choices = [(org.ods_code, org.name) for org in sibling_organisations]
+
+            # set the default value to the current user's organisation
+            self.fields["add_employer"].initial = self.request.session.get("ods_code")
 
 
 class NPDAUpdatePasswordForm(SetPasswordForm):
@@ -120,7 +130,7 @@ class NPDAUpdatePasswordForm(SetPasswordForm):
 class DebugCaptchaField(CaptchaField):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.widget.widgets[-1].attrs["value"] = "PASSED"
+        self.widget.widgets[-1].attrs["value"] = "DEBUGMODE"
 
 
 class CaptchaAuthenticationForm(AuthenticationForm):
@@ -131,6 +141,21 @@ class CaptchaAuthenticationForm(AuthenticationForm):
         self.fields["username"].widget.attrs.update({"class": TEXT_INPUT})
         self.fields["password"].widget.attrs.update({"class": TEXT_INPUT})
         self.fields["captcha"].widget.attrs.update({"class": TEXT_INPUT})
+
+        # If in DEBUG -> don't require captch, pre fill fields
+        if settings.DEBUG:
+            logger.warning(
+                f"IN LOCAL DEVELOPMENT, BYPASSING LOGIN BY PREFILLING FIELDS"
+            )
+            self.fields["username"].widget.attrs["value"] = (
+                settings.LOCAL_DEV_ADMIN_EMAIL
+                or "SET LOCAL DEV ADMIN EMAIL IN ENVIRONMENT VARIABLES"
+            )
+            self.fields["password"].widget.attrs["value"] = (
+                settings.LOCAL_DEV_ADMIN_PASSWORD
+                or "SET LOCAL DEV ADMIN PASSWORD IN ENVIRONMENT VARIABLES"
+            )
+            self.fields["captcha"].required = False
 
     def clean_username(self) -> dict[str]:
         email = super().clean()["username"]

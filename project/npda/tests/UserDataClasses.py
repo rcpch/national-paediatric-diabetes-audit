@@ -1,5 +1,5 @@
 """
-Set up dataclasses for E12 User Test Fixtures
+Set up dataclasses for NPDA User Test Fixtures
 """
 
 # Standard Imports
@@ -8,13 +8,13 @@ from project.npda.general_functions import group_for_role
 
 # RCPCH Imports
 from project.constants.user import (
-    AUDIT_CENTRE_ADMINISTRATOR,
-    AUDIT_CENTRE_CLINICIAN,
-    AUDIT_CENTRE_LEAD_CLINICIAN,
+    AUDIT_CENTRE_READER,
+    AUDIT_CENTRE_EDITOR,
+    AUDIT_CENTRE_COORDINATOR,
     RCPCH_AUDIT_TEAM,
     TRUST_AUDIT_TEAM_VIEW_ONLY,
     TRUST_AUDIT_TEAM_EDIT_ACCESS,
-    TRUST_AUDIT_TEAM_FULL_ACCESS,
+    TRUST_AUDIT_TEAM_COORDINATOR_ACCESS,
     NPDA_AUDIT_TEAM_FULL_ACCESS,
 )
 
@@ -34,40 +34,30 @@ class TestUser:
         return group_for_role(self.role)
 
 
-test_user_audit_centre_administrator_data = TestUser(
-    role=AUDIT_CENTRE_ADMINISTRATOR,
+test_user_audit_centre_reader_data = TestUser(
+    role=AUDIT_CENTRE_READER,
     is_active=True,
     is_staff=False,
-    role_str="AUDIT_CENTRE_ADMINISTRATOR",
+    role_str="AUDIT_CENTRE_READER",
     is_rcpch_audit_team_member=False,
     is_rcpch_staff=False,
 )
 
-test_user_audit_centre_clinician_data = TestUser(
-    role=AUDIT_CENTRE_CLINICIAN,
-    role_str="AUDIT_CENTRE_CLINICIAN",
-    is_active=True,
-    is_staff=False,
-    is_rcpch_audit_team_member=False,
-    is_rcpch_staff=False,
-)
-
-test_user_audit_centre_lead_clinician_data = TestUser(
-    role=AUDIT_CENTRE_LEAD_CLINICIAN,
-    role_str="AUDIT_CENTRE_LEAD_CLINICIAN",
+test_user_audit_centre_editor_data = TestUser(
+    role=AUDIT_CENTRE_EDITOR,
+    role_str="AUDIT_CENTRE_EDITOR",
     is_active=True,
     is_staff=False,
     is_rcpch_audit_team_member=False,
     is_rcpch_staff=False,
 )
 
-test_user_clinicial_audit_team_data = TestUser(
-    role=AUDIT_CENTRE_LEAD_CLINICIAN,
-    role_str="CLINICAL_AUDIT_TEAM",
+test_user_audit_centre_coordinator_data = TestUser(
+    role=AUDIT_CENTRE_COORDINATOR,
+    role_str="AUDIT_CENTRE_COORDINATOR",
     is_active=True,
     is_staff=False,
-    is_clinical_audit_team=True,
-    is_rcpch_audit_team_member=True,
+    is_rcpch_audit_team_member=False,
     is_rcpch_staff=False,
 )
 

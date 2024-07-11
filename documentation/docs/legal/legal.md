@@ -25,8 +25,8 @@ A Privacy Impact Assessment has been conducted and is available on request.
 
 ## Clinical Safety
 
-The Epilepsy12 audit engine does not have any role in the clinical management of patients, it is solely for recording the milestones in childrens' care for the purposes of national audit. It does not require a clinical safety case.
+The NPDA audit engine does not have any role in the clinical management of patients, it is solely for recording the milestones in childrens' care for the purposes of national audit. It does not require a clinical safety case.
 
 ## Medical Device Registration
 
-The Epilepsy12 audit engine does not have any role in the clinical management of patients, it is solely for recording the milestones in childrens' care for the purposes of national audit. It is not a medical device.
+The NPDA audit engine does not have any role in the clinical management of patients, it is solely for recording the milestones in childrens' care for the purposes of national audit. It is not a medical device.

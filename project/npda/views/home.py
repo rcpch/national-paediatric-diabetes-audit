@@ -1,12 +1,24 @@
-from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
-from django.contrib import messages
+# Python imports
+from datetime import date
+from typing import Any, Iterable
+import logging
 
-from ..general_functions import csv_upload
+# Django imports
+from django.apps import apps
+from django.contrib import messages
+from django.db.models import Count, F
+from django.shortcuts import redirect, render
+from django.urls import reverse
+from django.views.generic import ListView
+
+# RCPCH imports
+from ..general_functions import csv_upload, csv_summarise
 from ..forms.upload import UploadFileForm
-from ..models import Patient, Visit
 from .decorators import login_and_otp_required
 
+
+# Logging
+logger = logging.getLogger(__name__)
 
 @login_and_otp_required()
 def home(request):
@@ -15,23 +27,23 @@ def home(request):
     Only verified users can access this page.
     """
     file_uploaded = False
-    if request.user.is_verified():
-        if request.method == "POST":
-            form = UploadFileForm(request.POST, request.FILES)
-            file = request.FILES["csv_upload"]
-            pz_code = request.session.get("sibling_organisations", {}).get("pz_code", "")
-            file_uploaded = csv_upload(csv_file=file, organisation_ods_code=request.user.organisation_employer, pdu_pz_code=pz_code)
-            if file_uploaded["status"]==500:
-                messages.error(request=request,message=f"{file_uploaded["errors"]}")
-                return redirect('home')
-        else:
-            form = UploadFileForm()
-        context = {"file_uploaded": file_uploaded, "form": form}
-        template = "home.html"
-        return render(request=request, template_name=template, context=context)
+    
 
+    if request.method == "POST":
+        form = UploadFileForm(request.POST, request.FILES)
+        file = request.FILES["csv_upload"]
+        pz_code = request.session.get("pz_code")
+        summary = csv_summarise(csv_file=file)
+        file_uploaded = csv_upload(user=request.user, csv_file=file, organisation_ods_code=request.user.organisation_employers.first().ods_code, pdu_pz_code=pz_code)
+        if file_uploaded["status"]==422 or file_uploaded["status"]==500:
+            messages.error(request=request,message=f"{file_uploaded["errors"]}")
+            return redirect('home')
+        else:
+            messages.success(request=request, message="File uploaded successfully")
+            return render(request=request,template_name="home.html", context={"file_uploaded": file_uploaded, "summary": summary, "form": form})
     else:
         form = UploadFileForm()
+    
     context = {"file_uploaded": file_uploaded, "form": form}
     template = "home.html"
     return render(request=request, template_name=template, context=context)

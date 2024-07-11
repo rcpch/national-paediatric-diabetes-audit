@@ -42,7 +42,7 @@ Full details of fair processing documentation for the collection of patient iden
 
 NPDA data may also be linked to data from the Hospital Episode Statistics (HES), Patient Episode Database for Wales (PEDW) and the Office for National Statistics (ONS). NHS Digital and the NHS Wales Informatics Service may provide HES, PEDW and ONS data to NPDA in an anonymous format. The linked data would then be analysed by the NPDA project team at the RCPCH to further help to measure standards of care.  
 
-**If patients or their parents do not wish to have their data submitted to the audit by their hospital, they should instruct their paediatric epilepsy hospital team to not include their data in their annual submission to the NPDA team. Clinics in England should apply the NHS opt out process and not submit data from patients who have opted out.**
+**If patients or their parents do not wish to have their data submitted to the audit by their hospital, they should instruct their paediatric diabetes hospital team to not include their data in their annual submission to the NPDA team. Clinics in England should apply the NHS opt out process and not submit data from patients who have opted out.**
 
 ## References
 

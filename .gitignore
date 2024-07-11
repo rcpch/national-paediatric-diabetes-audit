@@ -1,12 +1,14 @@
 envs/.env
+envs/github.env
 staticdocs
 staticfiles
 logs/npda.log
 npda.log.*
-
 
 __pycache__
 .DS_Store
 /.cache
 
 *.code-workspace
+
+node_modules

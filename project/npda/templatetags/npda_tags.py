@@ -47,7 +47,7 @@ def colour_for_category(category):
     # returns a colour for a given category
     colours = [
         {"category": VisitCategories.HBA1, "colour": "rcpch_red_light_tint2"},
-        {"category": VisitCategories.MEASUREMENT, "colour": "rcpch_red"},
+        {"category": VisitCategories.MEASUREMENT, "colour": "rcpch_vivid_green"},
         {"category": VisitCategories.TREATMENT, "colour": "rcpch_orange"},
         {"category": VisitCategories.CGM, "colour": "rcpch_orange_light_tint2"},
         {"category": VisitCategories.BP, "colour": "rcpch_yellow"},
@@ -110,6 +110,25 @@ def is_select(widget):
 
 
 @register.filter
+def is_dateinput(widget):
+    return isinstance(widget, (forms.DateInput))
+
+
+@register.filter
+def is_textinput(widget):
+    return isinstance(widget, (forms.CharField, forms.TextInput, forms.EmailField))
+
+
+@register.filter
+def is_checkbox(widget):
+    return isinstance(widget, (forms.CheckboxInput))
+
+@register.filter
+def is_emailfield(widget):
+    return isinstance(widget, (forms.EmailField, forms.EmailInput))
+
+
+@register.filter
 def error_for_field(messages, field):
     """
     Returns all errors for a given field
@@ -148,11 +167,6 @@ def errors_for_category(category, error_list):
                 if error["field"] in error_field_list:
                     final_string += f"{error['message']}\n"
     return final_string
-
-
-@register.filter
-def is_dateinput(widget):
-    return isinstance(widget, (forms.DateInput))
 
 
 @register.simple_tag

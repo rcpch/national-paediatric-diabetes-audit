@@ -36,14 +36,8 @@ There are some many to many relationships. Django normally handles this for you,
 
 These classes are used as look up tables throughout the NPDA application. They are seeded in the first migrations, either pulling content from the the ```constants``` folder, or from SNOMED CT. Note that the RCPCH NHS Organisation repository maintains the primary source list and these models are kept up to date against this periodically.
 
-- **Organisation**: This model stores information about each Organisation in England, Scotland and Wales. It is used as a lookup for clinicians as well as children in Epilepsy12. It has a many to many relationship with Case and a many to one relationship with Epilepsy12User. It is seeded from the ```constants``` folder with a ```JSON`` list of hospital trusts.
 - **NPDAUser**: The User base model in Django is too basic for the requirements of NPDA and therefore a custom class has been created to describe the different users who either administer or deliver the audit, either on behalf of RCPCH, or the hospital trusts.
-- **Group**: Not strictly an Epilepsy12 model, but a Django model tied to the User class. There are 6 custom groups (3 RCPCH, 3 hospital trust) with differing levels of access depending on status. The permissions, which are granular and relate to the individual model fields, can then be allocated to groups, allowing admin staff to ensure that permissions are granted in a systematic way.
-- **IntegratedCareBoard**: Seeded from ```constants``` provides a list of Integrated Care Boards and identifiers
-- **OpenUKNetwork**: Seeded from ```constants``` provides a list of OPENUK Networks and identifiers
-- **LocalHealthBoard**: Seeded from ```constants``` provides a list of Local Health Boards in Wales and identifiers
-- **NHSEnglandRegion**: Seeded from ```constants``` provides a list of NHS England regions and identifiers
-- **Country**: Seeded from ```constants``` provides a list of country identifiers
+
 
 #### Boundary files and geography extension pack
 

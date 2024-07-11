@@ -9,7 +9,7 @@ The RCPCH Audit Engine is a [Django](https://www.djangoproject.com/) 5.0 project
 
 ## Python and Django
 
-The RCPCH chose to use Python for developing the Digital Growth Charts and the Epilepsy12 platform, this was because it is an accessible yet trusted language, with an established reputation and userbase.
+The RCPCH chose to use Python for developing the Digital Growth Charts, Epilepsy12, and NPDA platforms, this was because it is an accessible yet trusted language, with an established reputation and userbase.
 
 Django is a web framework for Python, which helps with developing a database-backed web application such as the E12 or NPDA platforms, providing structure, security features, and numerous prebuilt features and functionality which save time and reduce errors when developing.
 

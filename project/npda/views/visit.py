@@ -1,6 +1,6 @@
 # Django imports
 from django.contrib.messages.views import SuccessMessageMixin
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.contrib import messages
 from django.forms import BaseModelForm
 from django.http import HttpResponse, HttpResponseRedirect
@@ -16,10 +16,11 @@ from two_factor.views.mixins import OTPRequiredMixin
 from ..models import Visit, Patient
 from ..forms.visit_form import VisitForm
 from ..general_functions import get_visit_categories
-from .mixins import LoginAndOTPRequiredMixin
+from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
 
-
-class PatientVisitsListView(LoginAndOTPRequiredMixin, ListView):
+class PatientVisitsListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, ListView):
+    permission_required = 'npda.view_visit'
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
     model = Visit
     template_name = "visits.html"
 
@@ -27,6 +28,7 @@ class PatientVisitsListView(LoginAndOTPRequiredMixin, ListView):
         patient_id = self.kwargs.get("patient_id")
         context = super(PatientVisitsListView, self).get_context_data(**kwargs)
         patient = Patient.objects.get(pk=patient_id)
+        active_cohort = patient.audit_cohorts.filter(submission_active=True).first()
         visits = Visit.objects.filter(patient=patient).order_by("is_valid", "id")
         calculated_visits = []
         for visit in visits:
@@ -34,12 +36,15 @@ class PatientVisitsListView(LoginAndOTPRequiredMixin, ListView):
             calculated_visits.append({"visit": visit, "categories": visit_categories})
         context["visits"] = calculated_visits
         context["patient"] = patient
+        context["active_cohort"] = active_cohort
         return context
 
 
 class VisitCreateView(
-    LoginAndOTPRequiredMixin, SuccessMessageMixin, CreateView
+    LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, CreateView
 ):
+    permission_required = "npda.add_visit"
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
     model = Visit
     form_class = VisitForm
 
@@ -72,28 +77,68 @@ class VisitCreateView(
         return HttpResponseRedirect(self.get_success_url())
 
 
-class VisitUpdateView(LoginAndOTPRequiredMixin, UpdateView):
+class VisitUpdateView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, PermissionRequiredMixin, UpdateView):
+    permission_required = 'npda.change_visit'
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
     model = Visit
     form_class = VisitForm
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        visit_instance = Visit.objects.get(pk=self.kwargs["pk"])
+        visit_categories = get_visit_categories(visit_instance)
+        context["visit_instance"] = visit_instance
+        context["visit_errors"] = [visit_instance.errors]
         context["patient_id"] = self.kwargs["patient_id"]
+        context["visit_id"] = self.kwargs["pk"]
         context["title"] = "Edit Visit Details"
         context["button_title"] = "Edit Visit Details"
         context["form_method"] = "update"
-        visit_instance = Visit.objects.get(pk=self.kwargs["pk"])
-        visit_categories = get_visit_categories(visit_instance)
         context["visit_categories"] = visit_categories
+        context["routine_measurements_categories"] = [
+            "Measurements",
+            "HBA1c",
+            "Treatment",
+            "CGM",
+            "BP",
+        ]
+        context["annual_review_categories"] = [
+            "Foot Care",
+            "DECS",
+            "ACR",
+            "Cholesterol",
+            "Thyroid",
+            "Coeliac",
+            "Psychology",
+            "Smoking",
+            "Dietician",
+            "Sick Day Rules",
+            "Immunisation (flu)",
+        ]
         categories_with_errors = []
         categories_without_errors = []
+        routine_measurements_categories_with_errors = []
+        annual_review_categories_with_errors = []
         for category in visit_categories:
             if category["has_error"] == False:
                 categories_without_errors.append(category["category"])
             else:
                 categories_with_errors.append(category["category"])
+                if category["category"] in context["routine_measurements_categories"]:
+                    routine_measurements_categories_with_errors.append(
+                        category["category"]
+                    )
+                elif category["category"] in context["annual_review_categories"]:
+                    annual_review_categories_with_errors.append(category["category"])
+        context["routine_measurements_categories_with_errors"] = (
+            routine_measurements_categories_with_errors
+        )
+        context["annual_review_categories_with_errors"] = (
+            annual_review_categories_with_errors
+        )
         context["categories_with_errors"] = categories_with_errors
         context["categories_without_errors"] = categories_without_errors
+
         return context
 
     def get_success_url(self):
@@ -125,8 +170,10 @@ class VisitUpdateView(LoginAndOTPRequiredMixin, UpdateView):
 
 
 class VisitDeleteView(
-    LoginAndOTPRequiredMixin, SuccessMessageMixin, DeleteView
+    LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, PermissionRequiredMixin, SuccessMessageMixin, DeleteView
 ):
+    permission_required = "npda.delete_visit"
+    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
     model = Visit
     success_url = reverse_lazy("patient_visits")
     success_message = "Visit removed successfully"

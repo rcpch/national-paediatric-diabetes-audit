@@ -15,3 +15,35 @@
     border-color: white;
     border-width: 5px;
   }
+
+  input[type="radio"]:checked {
+    background-color: #e00087 !important;
+    color: white !important;
+    border-color: #e00087 !important;
+}
+
+/* htmx animation */
+/* spinner */
+
+.loading.loading-spinner.loading-lg.htmx-indicator {
+  display: none;
+}
+
+.htmx-request .loading.loading-spinner.loading-lg.htmx-indicator {
+  display: inline;
+}
+
+
+.fade-out.htmx-swapping {
+  opacity: 0;
+  transition: opacity 500ms ease-out;
+}
+
+.fade-in.htmx-added {
+  opacity: 0;
+}
+
+.fade-in {
+  opacity: 1;
+  transition: opacity 500ms ease-out;
+}

@@ -14,6 +14,8 @@ from pathlib import Path
 import os
 import logging
 
+from dotenv import load_dotenv
+
 #  django imports
 from django.core.management.utils import get_random_secret_key
 
@@ -23,6 +25,8 @@ from .logging_settings import (
 )  # no it is not an unused import, it pulls LOGGING into the settings file
 
 logger = logging.getLogger(__name__)
+
+load_dotenv('envs/.env')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -43,16 +47,13 @@ CSRF_TRUSTED_ORIGINS = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") +
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", get_random_secret_key())
+SECRET_KEY = os.getenv("NPDA_DJANGO_SECRET", get_random_secret_key())
 
 # This is the token required for getting deprivation quintiles from the RCPCH Census Platform
 RCPCH_CENSUS_PLATFORM_URL = os.getenv("RCPCH_CENSUS_PLATFORM_URL")
 RCPCH_CENSUS_PLATFORM_TOKEN = os.getenv("RCPCH_CENSUS_PLATFORM_TOKEN")
 # TODO #83  - Fix the broken env in Azure and remove hardcoded URL
-RCPCH_NHS_ORGANISATIONS_API_URL = os.getenv(
-    "RCPCH_NHS_ORGANISATIONS_API_URL",
-    "https://rcpch-nhs-organisations.azurewebsites.net",
-)
+RCPCH_NHS_ORGANISATIONS_API_URL = os.getenv("RCPCH_NHS_ORGANISATIONS_API_URL")
 RCPCH_NHS_ORGANISATIONS_API_URL = "https://rcpch-nhs-organisations.azurewebsites.net"
 
 # This is the NHS Spine services - it does not require authentication
@@ -68,12 +69,12 @@ POSTCODE_API_BASE_URL = os.getenv("POSTCODE_API_BASE_URL")
 DEBUG = os.getenv("DEBUG", "False") == "True"
 if DEBUG is True:
     CAPTCHA_TEST_MODE = True  # if in debug mode, can just type 'PASSED' and captcha validates. Default value is False
+    LOCAL_DEV_ADMIN_EMAIL = os.getenv("LOCAL_DEV_ADMIN_EMAIL")
+    LOCAL_DEV_ADMIN_PASSWORD = os.getenv("LOCAL_DEV_ADMIN_PASSWORD")
 
 # GENERAL CAPTCHA SETTINGS
 CAPTCHA_IMAGE_SIZE = (200, 50)
 CAPTCHA_FONT_SIZE = 40
-
-ALLOWED_HOSTS = []
 
 
 # Application definition
@@ -88,6 +89,8 @@ INSTALLED_APPS = [
     # "django.forms",
     "rest_framework",
     "drf_spectacular",
+    # django htmx
+    "django_htmx",
     # 2fa
     "django_otp",
     "django_otp.plugins.otp_static",
@@ -109,6 +112,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django_htmx.middleware.HtmxMiddleware",
     #  2 factor authentication
     "django_otp.middleware.OTPMiddleware",
 ]
@@ -145,15 +149,25 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # session expires on browser close
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.contrib.gis.db.backends.postgis",
-        "NAME": os.environ.get("NPDA_POSTGRES_DB_NAME"),
-        "USER": os.environ.get("NPDA_POSTGRES_DB_USER"),
-        "PASSWORD": os.environ.get("NPDA_POSTGRES_DB_PASSWORD"),
-        "HOST": os.environ.get("NPDA_POSTGRES_DB_HOST"),
-        "PORT": os.environ.get("NPDA_POSTGRES_DB_PORT"),
+database_config = {
+    "ENGINE": "django.contrib.gis.db.backends.postgis",
+    "NAME": os.environ.get("NPDA_POSTGRES_DB_NAME"),
+    "USER": os.environ.get("NPDA_POSTGRES_DB_USER"),
+    "HOST": os.environ.get("NPDA_POSTGRES_DB_HOST"),
+    "PORT": os.environ.get("NPDA_POSTGRES_DB_PORT"),
+}
+
+password_file = os.environ.get("NPDA_POSTGRES_DB_PASSWORD_FILE")
+
+if password_file:
+    database_config["OPTIONS"] = {
+        "passfile": password_file
     }
+else:
+    database_config["PASSWORD"] = os.environ.get("NPDA_POSTGRES_DB_PASSWORD")
+
+DATABASES = {
+    "default": database_config
 }
 
 # rest framework settings

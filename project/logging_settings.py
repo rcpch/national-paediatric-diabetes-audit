@@ -4,11 +4,11 @@
 import os
 
 # LOGGING ENV VARS
-CONSOLE_LOG_LEVEL = os.getenv("CONSOLE_LOG_LEVEL", "DEBUG")  # For npda specific logs
+CONSOLE_LOG_LEVEL = os.getenv("CONSOLE_LOG_LEVEL", "INFO")  # For npda specific logs
 CONSOLE_DJANGO_LOG_LEVEL = os.getenv(
-    "CONSOLE_DJANGO_LOG_LEVEL", "DEBUG"
-)  # For django logs
-FILE_LOG_LEVEL = os.getenv("FILE_LOG_LEVEL", "DEBUG")
+    "CONSOLE_DJANGO_LOG_LEVEL", "INFO"
+)
+FILE_LOG_LEVEL = os.getenv("FILE_LOG_LEVEL", "INFO")
 
 
 # Define the default django logger settings
@@ -91,7 +91,7 @@ LOGGING = {
             "formatter": "simple_django",
             "filters": [],
         },
-        # e12 file logger, each file is 15MB max, with 10 historic versions when filled, post-fixed with .1, .2, ..., .10
+        # npda file logger, each file is 15MB max, with 10 historic versions when filled, post-fixed with .1, .2, ..., .10
         "npda_logfile": {
             "level": FILE_LOG_LEVEL,
             "class": "logging.handlers.RotatingFileHandler",

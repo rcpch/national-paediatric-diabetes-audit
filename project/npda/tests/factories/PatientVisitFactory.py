@@ -12,7 +12,7 @@ from project.npda.models import Patient, Visit
 
 
 class PatientVisitFactory(factory.django.DjangoModelFactory):
-    """Dependency factory for creating a minimum viable E12Management.
+    """Dependency factory for creating a minimum viable NPDAManagement.
 
     This Factory is generated AFTER a Patient has been generated.
     """
