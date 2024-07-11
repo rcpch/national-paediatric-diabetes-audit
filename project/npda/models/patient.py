@@ -166,20 +166,4 @@ class Patient(models.Model):
                         )
                         pass
 
-        if self.gp_practice_ods_code is None and self.gp_practice_postcode is None:
-            raise ValidationError(
-                "GP Practice ODS code and GP Practice postcode cannot both be empty. At least one must be supplied."
-            )
-
-        if not self.gp_practice_ods_code and self.gp_practice_postcode:
-            """
-            calculate the GP Practice ODS Code from the GP practice postcode
-            """
-            try:
-                ods_code = gp_practice_for_postcode(self.gp_practice_postcode)
-            except Exception as error:
-                raise ValidationError(error)
-
-            self.gp_practice_ods_code = ods_code
-
         return super().save(*args, **kwargs)

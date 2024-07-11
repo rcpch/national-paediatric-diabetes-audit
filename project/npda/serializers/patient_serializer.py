@@ -55,7 +55,8 @@ class PatientSerializer(serializers.HyperlinkedModelSerializer):
 
         if data["gp_practice_postcode"] is not None:
             try:
-                gp_practice_for_postcode(data["gp_practice_postcode"])
+                if not gp_practice_for_postcode(data["gp_practice_postcode"]):
+                    raise serializers.ValidationError("Could not find GP practice with that postcode")
             except Exception as error:
                 raise serializers.ValidationError(error)
 

@@ -38,20 +38,22 @@ class NPDAUserFactory(factory.django.DjangoModelFactory):
         self.save()
 
 
-@factory.post_generation
-def organisation_employers(self, create, extracted, **kwargs):
-    if not create:
-        return
+    @factory.post_generation
+    def organisation_employers(self, create, extracted, **kwargs):
+        if not create:
+            return
 
-    # Add the extracted org ods_codes if provided
-    if extracted:
-        for org in extracted:
-            org_obj = get_nhs_organisation(ods_code=extracted)
-            org = OrganisationEmployer.objects.create(
-                name=org_obj["name"],
-                ods_code=org_obj["ods_code"],
-                pz_code=org_obj["paediatric_diabetes_unit"]["pz_code"],
-            )
-            self.organisation_employers.add(org)
+        # Add the extracted org ods_codes if provided
+        if extracted:
+            orgs = []
+            for ods_code in extracted:
+                org_obj = get_nhs_organisation(ods_code=ods_code)
+                org, created = OrganisationEmployer.objects.get_or_create(
+                    name=org_obj.name,
+                    ods_code=org_obj.ods_code,
+                    pz_code=org_obj.paediatric_diabetes_unit.pz_code,
+                )
+                orgs.append(org)
+            self.organisation_employers.set(orgs)
 
-    self.save()
+        self.save()

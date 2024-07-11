@@ -14,9 +14,13 @@ from project.npda.tests.UserDataClasses import (
     test_user_audit_centre_reader_data,
     test_user_rcpch_audit_team_data,
 )
-from project.npda.models import NPDAUser
+from project.npda.models import (
+    NPDAUser,
+    OrganisationEmployer,
+)
 from .NPDAUserFactory import NPDAUserFactory
 from project.constants.user import RCPCH_AUDIT_TEAM
+from project.constants import VIEW_PREFERENCES
 import logging
 
 logger = logging.getLogger(__name__)
@@ -46,34 +50,55 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
         is_rcpch_audit_team_member = False
         is_rcpch_staff = False
 
-        # First get GOSH Organisation details
-        # GOSH_ORGANISATION_DETAILS = get_nhs_organisation(ods_code="RP401")
-        # GOSH = GOSH_ORGANISATION_DETAILS.name
+        GOSH_ODS_CODE = "RP401"
+        ALDER_HEY_ODS_CODE = "RBS25"
 
-        logger.info(f"Seeding test users at {'Great Ormond Street - PZ196, RP401'}.")
+        logger.info(f"Seeding test users at {GOSH_ODS_CODE=}.")
         # Seed a user of each type at GOSH
         for user in users:
             first_name = user.role_str
 
-            # set RCPCH AUDIT TEAM MEMBER ATTRIBUTE
             if user.role == RCPCH_AUDIT_TEAM:
                 is_rcpch_audit_team_member = True
                 is_rcpch_staff = True
 
             if user.is_clinical_audit_team:
                 is_rcpch_audit_team_member = True
-                first_name = "CLINICAL_AUDIT_TEAM"
 
-                NPDAUserFactory(
-                    first_name=first_name,
-                    role=user.role,
-                    # Assign flags based on user role
-                    is_active=is_active,
-                    is_staff=is_staff,
-                    is_rcpch_audit_team_member=is_rcpch_audit_team_member,
-                    is_rcpch_staff=is_rcpch_staff,
-                    organisation_employers=["PZ196"],
-                    groups=[user.group_name],
-                )
-        else:
-            print("Test users already seeded. Skipping")
+            # GOSH User
+            new_user_gosh = NPDAUserFactory(
+                first_name=first_name,
+                role=user.role,
+                # Assign flags based on user role
+                is_active=is_active,
+                is_staff=is_staff,
+                is_rcpch_audit_team_member=is_rcpch_audit_team_member,
+                is_rcpch_staff=is_rcpch_staff,
+                groups=[user.group_name],
+                organisation_employers=[
+                    GOSH_ODS_CODE
+                ],  # Factory handles creating and assigning OrganisationEmployer
+                view_preference=(
+                    VIEW_PREFERENCES[2][0]
+                    if user.role == RCPCH_AUDIT_TEAM
+                    else VIEW_PREFERENCES[0][0]
+                ),
+            )
+
+            # Alder hey user
+            new_user_alder_hey = NPDAUserFactory(
+                first_name=first_name,
+                role=user.role,
+                # Assign flags based on user role
+                is_active=is_active,
+                is_staff=is_staff,
+                is_rcpch_audit_team_member=is_rcpch_audit_team_member,
+                is_rcpch_staff=is_rcpch_staff,
+                groups=[user.group_name],
+                organisation_employers=[
+                    ALDER_HEY_ODS_CODE
+                ],  # Factory handles creating and assigning OrganisationEmployer
+            )
+
+            logger.info(f"Seeded {new_user_gosh=} and {new_user_alder_hey=}")
+        logger.info(f"All test users sucessfully seeded: {NPDAUser.objects.all()=}")

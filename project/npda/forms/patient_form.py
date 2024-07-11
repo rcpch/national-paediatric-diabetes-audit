@@ -2,7 +2,10 @@ from django import forms
 from django.core.exceptions import ValidationError
 from ..models import Patient
 from ...constants.styles.form_styles import *
-from ..general_functions import validate_postcode
+from ..general_functions import (
+    validate_postcode,
+    gp_practice_for_postcode
+)
 
 
 class DateInput(forms.DateInput):
@@ -41,6 +44,9 @@ class PatientForm(forms.ModelForm):
         }
 
     def clean_postcode(self):
+        if not self.cleaned_data["postcode"]:
+            raise ValidationError("This field is required")
+
         postcode = (
             self.cleaned_data["postcode"].upper().replace(" ", "").replace("-", "")
         )
@@ -53,6 +59,8 @@ class PatientForm(forms.ModelForm):
         date_of_birth = cleaned_data.get("date_of_birth")
         diagnosis_date = cleaned_data.get("diagnosis_date")
         death_date = cleaned_data.get("death_date")
+        gp_practice_ods_code = cleaned_data.get("gp_practice_ods_code")
+        gp_practice_postcode = cleaned_data.get("gp_practice_postcode")
 
         if diagnosis_date is None:
             raise ValidationError(
@@ -89,5 +97,27 @@ class PatientForm(forms.ModelForm):
                         ]
                     }
                 )
+        
+        if gp_practice_ods_code is None and gp_practice_postcode is None:
+            raise ValidationError({
+                "gp_practice_ods_code": [
+                    "GP Practice ODS code and GP Practice postcode cannot both be empty. At least one must be supplied."
+                ]
+            })
+        
+        if not gp_practice_ods_code and gp_practice_postcode:
+            try:
+                ods_code = gp_practice_for_postcode(gp_practice_postcode)
+
+                if not ods_code:
+                    raise ValidationError("Could not find GP practice with that postcode")
+                else:
+                    cleaned_data["gp_practice_ods_code"] = ods_code
+            except Exception as error:
+                raise ValidationError({
+                    "gp_practice_postcode": [
+                        error
+                    ]
+                })
 
         return cleaned_data

@@ -14,6 +14,8 @@ from pathlib import Path
 import os
 import logging
 
+from dotenv import load_dotenv
+
 #  django imports
 from django.core.management.utils import get_random_secret_key
 
@@ -23,6 +25,8 @@ from .logging_settings import (
 )  # no it is not an unused import, it pulls LOGGING into the settings file
 
 logger = logging.getLogger(__name__)
+
+load_dotenv('envs/.env')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -145,15 +149,25 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # session expires on browser close
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.contrib.gis.db.backends.postgis",
-        "NAME": os.environ.get("NPDA_POSTGRES_DB_NAME"),
-        "USER": os.environ.get("NPDA_POSTGRES_DB_USER"),
-        "PASSWORD": os.environ.get("NPDA_POSTGRES_DB_PASSWORD"),
-        "HOST": os.environ.get("NPDA_POSTGRES_DB_HOST"),
-        "PORT": os.environ.get("NPDA_POSTGRES_DB_PORT"),
+database_config = {
+    "ENGINE": "django.contrib.gis.db.backends.postgis",
+    "NAME": os.environ.get("NPDA_POSTGRES_DB_NAME"),
+    "USER": os.environ.get("NPDA_POSTGRES_DB_USER"),
+    "HOST": os.environ.get("NPDA_POSTGRES_DB_HOST"),
+    "PORT": os.environ.get("NPDA_POSTGRES_DB_PORT"),
+}
+
+password_file = os.environ.get("NPDA_POSTGRES_DB_PASSWORD_FILE")
+
+if password_file:
+    database_config["OPTIONS"] = {
+        "passfile": password_file
     }
+else:
+    database_config["PASSWORD"] = os.environ.get("NPDA_POSTGRES_DB_PASSWORD")
+
+DATABASES = {
+    "default": database_config
 }
 
 # rest framework settings
