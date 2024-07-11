@@ -18,7 +18,6 @@ def create_session_object_from_organisation_employer(
     session = {
         "ods_code": ods_code,
         "pz_code": pz_code,
-        "sibling_organisations": sibling_organisations,
         "organisation_choices": [
             (choice["ods_code"], choice["name"])
             for choice in sibling_organisations["organisations"]
