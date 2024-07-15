@@ -17,7 +17,7 @@ from django.utils.html import strip_tags
 from django.conf import settings
 
 # third party imports
-from project.npda.general_functions.create_session import (
+from project.npda.general_functions.session import (
     create_session_object,
 )
 from project.npda.general_functions.pdus import get_single_pdu_from_ods_code
