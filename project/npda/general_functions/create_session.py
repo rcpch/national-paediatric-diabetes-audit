@@ -6,13 +6,15 @@ from project.npda.general_functions import (
 from project.npda.models.organisation_employer import OrganisationEmployer
 
 
-def create_session_object_from_organisation_employer(
-    organisation_employer: OrganisationEmployer,
-) -> dict:
+def create_session_object_from_organisation_employers(
+    organisation_employers
+):
     """Helper function to create a session object from an organisation employer isntance."""
+    organisation_employer = organisation_employers.first()
 
     ods_code = organisation_employer.ods_code
     pz_code = organisation_employer.pz_code
+
     sibling_organisations = get_single_pdu_from_ods_code(ods_code)
 
     session = {
