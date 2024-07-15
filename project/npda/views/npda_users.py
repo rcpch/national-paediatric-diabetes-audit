@@ -18,7 +18,7 @@ from django.conf import settings
 
 # third party imports
 from project.npda.general_functions.create_session import (
-    create_session_object_from_organisation_employer,
+    create_session_object,
 )
 from project.npda.general_functions.pdus import get_single_pdu_from_ods_code
 from two_factor.views import LoginView as TwoFactorLoginView
@@ -489,12 +489,7 @@ class RCPCHLoginView(TwoFactorLoginView):
                 login(self.request, user)
                 # successful login, get PDU and organisation details from user and store in session
 
-                # Get the organisation employer
-                organisation_employer = user.organisation_employers.first()
-
-                new_session_object = create_session_object_from_organisation_employer(
-                    organisation_employer
-                )
+                new_session_object = create_session_object(user)
 
                 # Update the session with the new session object
                 self.request.session.update(new_session_object)
@@ -519,14 +514,7 @@ class RCPCHLoginView(TwoFactorLoginView):
         if response_url == login_redirect_url:
             user = self.get_user()
 
-            # Update the session with the new session object
-            # Get the organisation employer
-            organisation_employer = user.organisation_employers.first()
-
-            new_session_object = create_session_object_from_organisation_employer(
-                organisation_employer
-            )
-
+            new_session_object = create_session_object(user.organisation_employers)
             self.request.session.update(new_session_object)
 
             # time since last set password
