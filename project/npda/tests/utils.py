@@ -8,7 +8,7 @@ from two_factor.utils import default_device
 from project.npda.general_functions import (
     get_single_pdu_from_ods_code,
     get_all_pdus_list_choices,
-    create_session_object_from_organisation_employers,
+    create_session_object,
 )
 from project.npda.models.organisation_employer import OrganisationEmployer
 
@@ -36,9 +36,7 @@ def set_session_attributes_for_signedin_user(client, user):
     request.session.save()
 
     # Update session data
-    session_data = create_session_object_from_organisation_employers(
-        user.organisation_employers
-    )
+    session_data = create_session_object(user)
     request.session.update(session_data)
     request.session.save()
 
