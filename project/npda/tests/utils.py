@@ -22,7 +22,7 @@ def twofactor_signin(client, test_user) -> None:
     session.save()
 
 
-def set_session_attributes_for_signedin_user(client, user, organisation_employer=None):
+def set_session_attributes_for_signedin_user(client, user):
     """Helper function to set session attributes for a signed-in user, as done during login."""
     # Log in the user
     client.login(username=user.email, password="pw")
@@ -38,8 +38,6 @@ def set_session_attributes_for_signedin_user(client, user, organisation_employer
     # Update session data
     session_data = create_session_object_from_organisation_employer(
         user.organisation_employers.first()
-        if organisation_employer == None
-        else organisation_employer
     )
     request.session.update(session_data)
     request.session.save()
