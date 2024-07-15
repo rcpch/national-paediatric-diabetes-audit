@@ -21,9 +21,11 @@ def create_session_object(
         for choice in sibling_organisations["organisations"]
     ]
 
+    can_see_all_pdus = user.is_superuser or user.is_rcpch_audit_team_member
+
     pdu_choices = [
         choice for choice in get_all_pdus_list_choices()
-            if choice[0] in pz_codes
+            if can_see_all_pdus or choice[0] in pz_codes
     ]
 
     session = {
