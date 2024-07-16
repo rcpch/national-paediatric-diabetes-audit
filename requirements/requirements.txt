@@ -41,6 +41,7 @@ black>=24.3.0
 coverage==7.4.3
 pytest-django==4.8.0
 pytest-factoryboy==2.7.0
+pytest-playwright==0.5.1
 
 # versioning
 bump2version

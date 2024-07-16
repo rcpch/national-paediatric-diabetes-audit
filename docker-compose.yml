@@ -47,6 +47,21 @@ services:
       sh -c "mkdocs build --config-file documentation/mkdocs.yml &&
         mkdocs serve --config-file documentation/mkdocs.yml"
     restart: always
+  
+  # E2E tests with Playwright so we don't need to install browsers in the main app container
+  e2e:
+    <<: *global # this will inherit all the envs from x-global-environment
+    build:
+      dockerfile_inline: |
+        FROM npda-django:built
+        RUN playwright install --with-deps chromium
+    depends_on:
+      - django
+    volumes:
+      - .:/app/
+    command: >
+      sh -c "PWDEBUG=1 pytest -s"
+    
 
 volumes:
   npda-caddy-data:
