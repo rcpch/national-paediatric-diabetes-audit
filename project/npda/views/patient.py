@@ -18,7 +18,11 @@ from django.http import HttpResponse
 # Third party imports
 from django_htmx.http import trigger_client_event
 
-from project.npda.general_functions import organisations_adapter
+from project.npda.general_functions import (
+    organisations_adapter,
+    get_new_session_fields,
+    get_or_update_view_preference
+)
 from project.npda.models import NPDAUser, AuditCohort
 
 # RCPCH imports
@@ -127,32 +131,13 @@ class PatientListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionReq
             ods_code = request.POST.get("patient_ods_code_select_name", None)
             pz_code = request.POST.get("patient_pz_code_select_name", None)
 
-            # TODO MRB: do we need to check you are allowed to see this org/PDU?
+            new_session_fields = get_new_session_fields(self.request.user, ods_code, pz_code)
+            self.request.session.update(new_session_fields)
 
-            if ods_code:
-                # call back from the PDU select
-                self.request.session["ods_code"] = ods_code
-                
-                pdu = organisations_adapter.get_single_pdu_from_ods_code(ods_code)
-                self.request.session["pz_code"] = pdu["pz_code"]
-
-            elif pz_code:
-                # call back from the PDU select
-                self.request.session["pz_code"] = pz_code
-
-                # set the ods code to the first org associated with the PDU
-                sibling_organisations = organisations_adapter.get_single_pdu_from_pz_code(pz_number=pz_code)
-                self.request.session["ods_code"] = sibling_organisations.organisations[0].ods_code
-
-            if view_preference:
-                user = NPDAUser.objects.get(pk=request.user.pk)
-                user.view_preference = view_preference
-                user.save(update_fields=["view_preference"])
-            else:
-                user = NPDAUser.objects.get(pk=request.user.pk)
+            view_preference = get_or_update_view_preference(self.request.user, view_preference)
 
             context = {
-                "view_preference": int(user.view_preference),
+                "view_preference": int(view_preference),
                 "ods_code": ods_code,
                 "pz_code": request.session.get("pz_code"),
                 "hx_post": reverse_lazy("patients"),
