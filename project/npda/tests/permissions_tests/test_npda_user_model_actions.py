@@ -21,6 +21,16 @@ logger = logging.getLogger(__name__)
 ALDER_HEY_PZ_CODE = "PZ074"
 ALDER_HEY_ODS_CODE = "RBS25"
 
+GOSH_PZ_CODE = "PZ196"
+GOSH_ODS_CODE = "RP401"
+
+
+def check_all_users_in_pdu(user, users, pz_code):
+    for user in users:
+        pz_codes = [org['pz_code'] for org in user.organisation_employers.values()]
+
+        if not pz_code in pz_codes:
+            pytest.fail(f"{user} in {pz_code} should not be able to see {user} in {pz_codes}")
 
 @pytest.mark.django_db
 def test_npda_user_list_view_users_can_only_see_users_from_their_pdu(
@@ -46,12 +56,7 @@ def test_npda_user_list_view_users_can_only_see_users_from_their_pdu(
     assert response.status_code == HTTPStatus.OK
 
     users = response.context_data['object_list']
-
-    for user in users:
-        pz_codes = [org['pz_code'] for org in user.organisation_employers.values()]
-
-        if not ALDER_HEY_PZ_CODE in pz_codes:
-            pytest.fail(f"{ah_user} in {ALDER_HEY_PZ_CODE} should not be able to see {user} in {pz_codes}")
+    check_all_users_in_pdu(ah_user, users, ALDER_HEY_PZ_CODE)
 
 
 @pytest.mark.django_db
@@ -92,3 +97,84 @@ def test_npda_user_list_view_rcpch_audit_team_can_view_all_users(
 
     users = response.context_data['object_list']
     assert(users.count() > ah_users.count())
+
+@pytest.mark.django_db
+def test_npda_user_list_view_users_cannot_switch_outside_their_organisation(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_patients_fixture,
+    client,
+):
+    ah_user = NPDAUser.objects.filter(organisation_employers__pz_code=ALDER_HEY_PZ_CODE).first()
+    client = login_and_verify_user(client, ah_user)
+
+    url = reverse("npda_users")
+
+    set_view_preference_response = client.post(url, {
+        "npdauser_ods_code_select_name": GOSH_ODS_CODE
+    }, headers = {
+        "HX-Request": "true"
+    })
+
+    assert set_view_preference_response.status_code == HTTPStatus.FORBIDDEN
+
+    # Check the session isn't modified anyway
+    response = client.get(url)
+    assert response.status_code == HTTPStatus.OK
+
+    users = response.context_data['object_list']
+    check_all_users_in_pdu(ah_user, users, ALDER_HEY_PZ_CODE)
+
+@pytest.mark.django_db
+def test_npda_user_list_view_users_cannot_switch_outside_their_pdu(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_patients_fixture,
+    client,
+):
+    ah_user = NPDAUser.objects.filter(organisation_employers__pz_code=ALDER_HEY_PZ_CODE).first()
+    client = login_and_verify_user(client, ah_user)
+
+    url = reverse("npda_users")
+
+    set_view_preference_response = client.post(url, {
+        "npdauser_pz_code_select_name": GOSH_PZ_CODE
+    }, headers = {
+        "HX-Request": "true"
+    })
+
+    assert set_view_preference_response.status_code == HTTPStatus.FORBIDDEN
+
+    # Check the session isn't modified anyway
+    response = client.get(url)
+    assert response.status_code == HTTPStatus.OK
+
+    users = response.context_data['object_list']
+    check_all_users_in_pdu(ah_user, users, ALDER_HEY_PZ_CODE)
+
+@pytest.mark.django_db # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/189
+def test_npda_user_list_view_normal_users_cannot_set_their_view_preference_to_national(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_patients_fixture,
+    client,
+):
+    ah_user = NPDAUser.objects.filter(organisation_employers__pz_code=ALDER_HEY_PZ_CODE).first()
+    client = login_and_verify_user(client, ah_user)
+
+    url = reverse("npda_users")
+
+    set_view_preference_response = client.post(url, {
+        "view_preference": 2
+    }, headers = {
+        "HX-Request": "true"
+    })
+
+    assert set_view_preference_response.status_code == HTTPStatus.FORBIDDEN
+
+    # Check the session isn't modified anyway
+    response = client.get(url)
+    assert response.status_code == HTTPStatus.OK
+
+    users = response.context_data['object_list']
+    check_all_users_in_pdu(ah_user, users, ALDER_HEY_PZ_CODE)
