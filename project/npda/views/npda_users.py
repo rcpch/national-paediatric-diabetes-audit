@@ -489,11 +489,6 @@ class RCPCHLoginView(TwoFactorLoginView):
                 login(self.request, user)
                 # successful login, get PDU and organisation details from user and store in session
 
-                new_session_object = create_session_object(user)
-
-                # Update the session with the new session object
-                self.request.session.update(new_session_object)
-
                 # Override normal auth flow behaviour, redirect straight to home page
                 return redirect("home")
 
@@ -513,9 +508,6 @@ class RCPCHLoginView(TwoFactorLoginView):
         # Successful 2FA and login
         if response_url == login_redirect_url:
             user = self.get_user()
-
-            new_session_object = create_session_object(user.organisation_employers)
-            self.request.session.update(new_session_object)
 
             # time since last set password
             delta = timezone.now() - user.password_last_set

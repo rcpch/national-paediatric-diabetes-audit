@@ -22,28 +22,12 @@ def twofactor_signin(client, test_user) -> None:
     session.save()
 
 
-def set_session_attributes_for_signedin_user(client, user):
+def login_and_verify_user(client, user):
     """Helper function to set session attributes for a signed-in user, as done during login."""
     # Log in the user
     client.login(username=user.email, password="pw")
 
-    # Create a request to initiate the session
-    request = RequestFactory().get("/")
-
-    # Add the session middleware to process the request
-    middleware = SessionMiddleware(lambda request: None)
-    middleware.process_request(request)
-    request.session.save()
-
-    # Update session data
-    session_data = create_session_object(user)
-    request.session.update(session_data)
-    request.session.save()
-
-    # Update the client cookies to use the new session
-    client.cookies["sessionid"] = request.session.session_key
-
-    # OTP Log in (assumed to be a custom function)
+    # # OTP Log in (assumed to be a custom function)
     twofactor_signin(client, user)
 
     return client

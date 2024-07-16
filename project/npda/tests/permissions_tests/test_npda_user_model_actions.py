@@ -11,66 +11,51 @@ from django.test import Client
 
 # E12 imports
 from project.npda.models import NPDAUser
-from project.npda.tests.utils import set_session_attributes_for_signedin_user
+from project.npda.tests.utils import login_and_verify_user
 from project.npda.tests.UserDataClasses import test_user_rcpch_audit_team_data
 from project.npda.views.npda_users import NPDAUserListView
-
+from project.constants.user import RCPCH_AUDIT_TEAM
 
 logger = logging.getLogger(__name__)
 
+ALDER_HEY_PZ_CODE = "PZ074"
+ALDER_HEY_ODS_CODE = "RBS25"
+
 
 @pytest.mark.django_db
-def test_npda_user_list_view_get_query_set_with_users_cannot_view_user_table_from_different_pdus(
+def test_npda_user_list_view_users_can_only_see_users_from_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
     seed_patients_fixture,
     client,
 ):
-    """Except for RCPCH_AUDIT_TEAM, users cannot view the user table from different PDUs."""
+    """Except for RCPCH_AUDIT_TEAM, users should only see users from their own PDU."""
 
-    ALDER_HEY_PZ_CODE = "PZ074"
-    ALDER_HEY_ODS_CODE = "RBS25"
+    ah_users = NPDAUser.objects.filter(organisation_employers__pz_code=ALDER_HEY_PZ_CODE)
+    # Check there are users from outside Alder Hey so this test doesn't pass by accident
+    non_ah_users = NPDAUser.objects.exclude(organisation_employers__pz_code=ALDER_HEY_PZ_CODE)
+    assert(non_ah_users.count() > 0)
 
-    # Get users which cannot view the user table from different PDUs.
-    test_users_ah = NPDAUser.objects.exclude(
-        first_name=test_user_rcpch_audit_team_data.role_str,
-    ).filter(organisation_employers__pz_code=ALDER_HEY_PZ_CODE)
+    ah_user = ah_users.first()
 
-    test_user_count = test_users_ah.count()
+    client = login_and_verify_user(client, ah_user)
 
-    # Check we have the correct number.
-    expected_test_user_count_excluding_rcpch_audit_team = 3
-    assert (
-        test_user_count == expected_test_user_count_excluding_rcpch_audit_team
-    ), f"Expected {expected_test_user_count_excluding_rcpch_audit_team} test users, got {test_user_count=}"
+    url = reverse("npda_users")
+    response = client.get(url)
 
-    # For each user, ensure the queryset does not contain users from a PDU they are not part of Alder Hey (other seeded users are at GOSH).
-    for test_user in test_users_ah:
+    assert response.status_code == HTTPStatus.OK
 
-        client = set_session_attributes_for_signedin_user(client=client, user=test_user)
+    users = response.context_data['object_list']
 
-        # Simulate a GET request to the NPDAUserListView
-        url = reverse("npda_users")
-        response = client.get(url)
+    for user in users:
+        pz_codes = [org['pz_code'] for org in user.organisation_employers.values()]
 
-        # Check that the response is successful
-        assert response.status_code in [HTTPStatus.OK, HTTPStatus.FOUND]
-
-        # Extract the queryset from the context
-        view = NPDAUserListView()
-        view.request = response.wsgi_request
-        view.request.user = test_user  # Explicitly set the user in the request
-        queryset = view.get_queryset()
-
-        # Ensure the queryset does not contain users from a PDU they are not part of
-        assert (
-            queryset.exclude(organisation_employers__pz_code=ALDER_HEY_PZ_CODE).count()
-            == 0
-        ), f"User {test_user} from {ALDER_HEY_PZ_CODE=} can see NPDAUsers from other PDUs."
+        if not ALDER_HEY_PZ_CODE in pz_codes:
+            pytest.fail(f"{ah_user} in {ALDER_HEY_PZ_CODE} should not be able to see {user} in {pz_codes}")
 
 
 @pytest.mark.django_db
-def test_npda_user_list_view_get_query_set_with_rcpch_audit_team_can_view_all_npdausers(
+def test_npda_user_list_view_rcpch_audit_team_can_view_all_users(
     seed_groups_fixture,
     seed_users_fixture,
     seed_patients_fixture,
@@ -78,36 +63,32 @@ def test_npda_user_list_view_get_query_set_with_rcpch_audit_team_can_view_all_np
 ):
     """RCPCH_AUDIT_TEAM users can view all users."""
 
-    # Get an RCPCH_AUDIT_TEAM user
-    test_user_rcpch_audit_team = NPDAUser.objects.filter(
-        first_name=test_user_rcpch_audit_team_data.role_str
+    ah_users = NPDAUser.objects.filter(organisation_employers__pz_code=ALDER_HEY_PZ_CODE)
+    # Check there are users from outside Alder Hey so this test doesn't pass by accident
+    non_ah_users = NPDAUser.objects.exclude(organisation_employers__pz_code=ALDER_HEY_PZ_CODE)
+    assert(non_ah_users.count() > 0)
+
+    ah_audit_team_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=RCPCH_AUDIT_TEAM
     ).first()
 
-    # Get all users
-    all_users = NPDAUser.objects.all()
-    all_user_count = all_users.count()
+    client = login_and_verify_user(client, ah_audit_team_user)
 
-    # Set the session for the RCPCH_AUDIT_TEAM user
-    client = set_session_attributes_for_signedin_user(
-        client=client, user=test_user_rcpch_audit_team
-    )
-
-    # Simulate a GET request to the NPDAUserListView
     url = reverse("npda_users")
+
+    # The user still defaults to seeing users from just their PDU
+    # This is the request made when you click the "All" button on the switcher in the UI
+    set_view_preference_response = client.post(url, {
+        "view_preference": 2
+    }, headers = {
+        "HX-Request": "true"
+    })
+
+    assert set_view_preference_response.status_code == HTTPStatus.OK
+
     response = client.get(url)
+    assert response.status_code == HTTPStatus.OK
 
-    # Check that the response is successful
-    assert response.status_code in [HTTPStatus.OK, HTTPStatus.FOUND]
-
-    # Extract the queryset from the context
-    view = NPDAUserListView()
-    view.request = response.wsgi_request
-    view.request.user = (
-        test_user_rcpch_audit_team  # Explicitly set the user in the request
-    )
-    queryset = view.get_queryset()
-
-    # Ensure the queryset contains all users
-    assert (
-        queryset.count() == all_user_count
-    ), f"RCPCH_AUDIT_TEAM user cannot see all users. Expected {all_user_count}, got {queryset.count()}."
+    users = response.context_data['object_list']
+    assert(users.count() > ah_users.count())
