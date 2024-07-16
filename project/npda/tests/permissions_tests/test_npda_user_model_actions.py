@@ -81,15 +81,14 @@ def test_npda_user_list_view_rcpch_audit_team_can_view_all_users(
     # This is the request made when you click the "All" button on the switcher in the UI
     set_view_preference_response = client.post(url, {
         "view_preference": 2
+    }, headers = {
+        "HX-Request": "true"
     })
 
     assert set_view_preference_response.status_code == HTTPStatus.OK
 
     response = client.get(url)
-
     assert response.status_code == HTTPStatus.OK
 
     users = response.context_data['object_list']
-    print(f"!! {users}")
-    
     assert(users.count() > ah_users.count())
