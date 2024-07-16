@@ -11,7 +11,7 @@ from django.test import Client
 
 # E12 imports
 from project.npda.models import NPDAUser
-from project.npda.tests.utils import set_session_attributes_for_signedin_user
+from project.npda.tests.utils import login_and_verify_user
 from project.npda.tests.UserDataClasses import test_user_rcpch_audit_team_data
 from project.npda.views.npda_users import NPDAUserListView
 
@@ -46,15 +46,14 @@ def test_npda_user_list_view_get_query_set_with_users_cannot_view_user_table_fro
 
     # For each user, ensure the queryset does not contain users from a PDU they are not part of Alder Hey (other seeded users are at GOSH).
     for test_user in test_users_ah:
-
-        client = set_session_attributes_for_signedin_user(client=client, user=test_user)
+        client = login_and_verify_user(client=client, user=test_user)
 
         # Simulate a GET request to the NPDAUserListView
         url = reverse("npda_users")
         response = client.get(url)
 
         # Check that the response is successful
-        assert response.status_code in [HTTPStatus.OK, HTTPStatus.FOUND]
+        assert response.status_code == HTTPStatus.OK, HTTPStatus.FOUND
 
         # Extract the queryset from the context
         view = NPDAUserListView()
@@ -88,7 +87,7 @@ def test_npda_user_list_view_get_query_set_with_rcpch_audit_team_can_view_all_np
     all_user_count = all_users.count()
 
     # Set the session for the RCPCH_AUDIT_TEAM user
-    client = set_session_attributes_for_signedin_user(
+    client = login_and_verify_user(
         client=client, user=test_user_rcpch_audit_team
     )
 
@@ -97,7 +96,7 @@ def test_npda_user_list_view_get_query_set_with_rcpch_audit_team_can_view_all_np
     response = client.get(url)
 
     # Check that the response is successful
-    assert response.status_code in [HTTPStatus.OK, HTTPStatus.FOUND]
+    assert response.status_code == HTTPStatus.OK
 
     # Extract the queryset from the context
     view = NPDAUserListView()

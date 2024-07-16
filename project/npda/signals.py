@@ -11,6 +11,9 @@ from django.dispatch import receiver
 
 # RCPCH
 from .models import VisitActivity, NPDAUser
+from .general_functions.create_session import (
+    create_session_object
+)
 
 # Logging setup
 logger = logging.getLogger(__name__)
@@ -18,7 +21,12 @@ logger = logging.getLogger(__name__)
 
 @receiver(user_logged_in)
 def log_user_login(sender, request, user, **kwargs):
-    logger.info(f"{user} ({user.email}) logged in from {get_client_ip(request)}.")
+    # Set up the session data so that views are filtered correctly (eg by PDU)
+    new_session_object = create_session_object(user)
+    request.session.update(new_session_object)
+
+    logger.info(f"{user} ({user.email}) logged in from {get_client_ip(request)}. ods_code: {new_session_object['ods_code']}. pz_code: {new_session_object['pz_code']}.")
+
     VisitActivity.objects.create(
         activity=1, ip_address=get_client_ip(request), npdauser=user
     )
