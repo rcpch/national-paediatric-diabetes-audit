@@ -44,7 +44,7 @@ def get_new_session_fields(user, ods_code, pz_code):
     ret = {}
 
     if ods_code:
-        can_see_organisations = user.organisation_employers.filter(ods_code=ods_code).exists()
+        can_see_organisations = user.is_rcpch_audit_team_member or user.organisation_employers.filter(ods_code=ods_code).exists()
 
         if not can_see_organisations:
             logger.warning(f"User {user} requested organisation {ods_code} they cannot see")
@@ -55,7 +55,7 @@ def get_new_session_fields(user, ods_code, pz_code):
         pdu = organisations_adapter.get_single_pdu_from_ods_code(ods_code)
         ret["pz_code"] = pdu["pz_code"]
     elif pz_code:
-        can_see_pdu = user.organisation_employers.filter(pz_code=pz_code).exists()
+        can_see_pdu = user.is_rcpch_audit_team_member or user.organisation_employers.filter(pz_code=pz_code).exists()
 
         if not can_see_pdu:
             logger.warning(f"User {user} requested PDU {pz_code} they cannot see")
