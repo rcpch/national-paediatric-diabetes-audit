@@ -17,9 +17,6 @@ from django.utils.html import strip_tags
 from django.conf import settings
 
 # third party imports
-from project.npda.general_functions.create_session import (
-    create_session_object,
-)
 from project.npda.general_functions.pdus import get_single_pdu_from_ods_code
 from two_factor.views import LoginView as TwoFactorLoginView
 from django_htmx.http import trigger_client_event
