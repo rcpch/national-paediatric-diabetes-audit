@@ -36,7 +36,7 @@
                   type="text"
                 {% endif %}
                 {% if field.value %}
-                  value="{{ field.value }}"
+                  value="{{ field.value|stringformat:'s' }}"
                 {% endif %}
               >
             {% endif %}
