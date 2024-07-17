@@ -16,7 +16,6 @@ from ...constants import (
     ETHNICITIES,
     DIABETES_TYPES,
     SEX_TYPE,
-    UNKNOWN_POSTCODES_NO_SPACES,
     CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING,
     CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING,
     CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
@@ -145,17 +144,7 @@ class Patient(models.Model):
 
     def save(self, *args, **kwargs) -> None:
         # calculate the index of multiple deprivation quintile if the postcode is present
-        # Skips the calculation if the postcode is on the 'unknown' list
         if self.postcode:
-            try:
-                self.index_of_multiple_deprivation_quintile = imd_for_postcode(
-                    self.postcode
-                )
-            except Exception as error:
-                # Deprivation score not persisted if deprivation score server down
-                self.index_of_multiple_deprivation_quintile = None
-                print(
-                    f"Cannot calculate deprivation score for {self.postcode}: {error}"
-                )   
+            self.index_of_multiple_deprivation_quintile = imd_for_postcode(self.postcode) 
 
         return super().save(*args, **kwargs)
