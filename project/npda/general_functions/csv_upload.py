@@ -74,10 +74,6 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         submission_by=user,
     )
 
-    csv_file = os.path.join(
-        settings.BASE_DIR, "project", "npda", "dummy_sheets", "dummy_sheet_invalid.csv"
-    )
-
     try:
         dataframe = pd.read_csv(
             csv_file, parse_dates=ALL_DATES, dayfirst=True, date_format="%d/%m/%Y"

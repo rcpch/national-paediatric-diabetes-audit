@@ -33,8 +33,14 @@ def home(request):
         form = UploadFileForm(request.POST, request.FILES)
         file = request.FILES["csv_upload"]
         pz_code = request.session.get("pz_code")
+        
         summary = csv_summarise(csv_file=file)
+
+        # You can't read the same file twice without resetting it
+        file.seek(0)
+        
         file_uploaded = csv_upload(user=request.user, csv_file=file, organisation_ods_code=request.user.organisation_employers.first().ods_code, pdu_pz_code=pz_code)
+
         if file_uploaded["status"]==422 or file_uploaded["status"]==500:
             messages.error(request=request,message=f"{file_uploaded["errors"]}")
             return redirect('home')
