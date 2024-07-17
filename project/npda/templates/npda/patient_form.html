@@ -17,7 +17,7 @@
                 {% for choice in field.field.choices %}
                   <option
                     value="{{choice.0}}"
-                    {% if field.value == choice.0|stringformat:'s' %}
+                    {% if field.value|stringformat:'s' == choice.0|stringformat:'s' %}
                       selected="true"
                     {% endif %}
                   >
@@ -36,7 +36,7 @@
                   type="text"
                 {% endif %}
                 {% if field.value %}
-                  value="{{ field.value }}"
+                  value="{{ field.value|stringformat:'s' }}"
                 {% endif %}
               >
             {% endif %}
