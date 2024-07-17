@@ -141,10 +141,3 @@ class Patient(models.Model):
         Today's date is optional and defaults to date.today()
         """
         return stringify_time_elapsed(self.date_of_birth, today_date)
-
-    def save(self, *args, **kwargs) -> None:
-        # calculate the index of multiple deprivation quintile if the postcode is present
-        if self.postcode:
-            self.index_of_multiple_deprivation_quintile = imd_for_postcode(self.postcode) 
-
-        return super().save(*args, **kwargs)

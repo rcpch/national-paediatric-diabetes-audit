@@ -38,6 +38,7 @@ from ...constants import (
 from .validate_postcode import validate_postcode
 from .nhs_ods_requests import gp_details_for_ods_code
 from .quarter_for_date import retrieve_quarter_for_date
+from .index_multiple_deprivation import imd_for_postcode
 
 # Logging setup
 logger = logging.getLogger(__name__)
@@ -820,12 +821,19 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
 
         nhs_number = row["NHS Number"].replace(" ", "")
 
+        postcode = row["Postcode of usual address"]
+        
+        index_of_multiple_deprivation_quintile = None
+        if postcode:
+            index_of_multiple_deprivation_quintile = imd_for_postcode(postcode)
+
         try:
             patient = Patient.objects.create(
                 nhs_number=nhs_number,
                 site=site,
                 date_of_birth=row["Date of Birth"],
-                postcode=row["Postcode of usual address"],
+                postcode=postcode,
+                index_of_multiple_deprivation_quintile=index_of_multiple_deprivation_quintile,
                 sex=row["Stated gender"],
                 ethnicity=row["Ethnic Category"],
                 diabetes_type=row["Diabetes Type"],

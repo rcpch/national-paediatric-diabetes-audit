@@ -18,7 +18,7 @@ from django.http import HttpResponse
 # Third party imports
 from django_htmx.http import trigger_client_event
 
-from project.npda.general_functions import organisations_adapter
+from project.npda.general_functions import organisations_adapter, imd_for_postcode
 from project.npda.models import NPDAUser, AuditCohort
 
 # RCPCH imports
@@ -206,6 +206,10 @@ class PatientCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Succe
         )
         patient.site = site
         patient.is_valid = True
+
+        if patient.postcode:
+            patient.index_of_multiple_deprivation_quintile = imd_for_postcode(patient.postcode)
+
         patient.save()
         # add patient to the latest audit cohort
         if AuditCohort.objects.count() > 0:
@@ -240,6 +244,12 @@ class PatientUpdateView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, Permiss
     def form_valid(self, form: BaseForm) -> HttpResponse:
         patient = form.save(commit=False)
         patient.is_valid = True
+
+        if patient.postcode:
+            imd = imd_for_postcode(patient.postcode)
+            if imd:
+                patient.index_of_multiple_deprivation_quintile = imd
+
         patient.save()
         return super().form_valid(form)
 
