@@ -147,23 +147,15 @@ class Patient(models.Model):
         # calculate the index of multiple deprivation quintile if the postcode is present
         # Skips the calculation if the postcode is on the 'unknown' list
         if self.postcode:
-            if str(self.postcode).replace(" ", "") not in UNKNOWN_POSTCODES_NO_SPACES:
-                validated = validate_postcode(self.postcode)
-                if not validated:
-                    raise ValidationError(
-                        _("Postcode is not valid. Please enter a valid postcode.")
-                    )
-                else:
-                    try:
-                        self.index_of_multiple_deprivation_quintile = imd_for_postcode(
-                            self.postcode
-                        )
-                    except Exception as error:
-                        # Deprivation score not persisted if deprivation score server down
-                        self.index_of_multiple_deprivation_quintile = None
-                        print(
-                            f"Cannot calculate deprivation score for {self.postcode}: {error}"
-                        )
-                        pass
+            try:
+                self.index_of_multiple_deprivation_quintile = imd_for_postcode(
+                    self.postcode
+                )
+            except Exception as error:
+                # Deprivation score not persisted if deprivation score server down
+                self.index_of_multiple_deprivation_quintile = None
+                print(
+                    f"Cannot calculate deprivation score for {self.postcode}: {error}"
+                )   
 
         return super().save(*args, **kwargs)
