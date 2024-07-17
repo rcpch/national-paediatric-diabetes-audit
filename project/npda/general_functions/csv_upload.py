@@ -3,12 +3,15 @@ from datetime import date
 import time
 import logging
 import os
+import asyncio
 from typing import Literal
 
 # django imports
 from django.apps import apps
 from django.conf import settings
 from django.utils import timezone
+
+from asgiref.sync import async_to_sync, sync_to_async
 
 # third part imports
 import pandas as pd
@@ -35,16 +38,16 @@ from ...constants import (
     DKA_ADDITIONAL_THERAPIES,
 )
 
-from .validate_postcode import validate_postcode
+from .validate_postcode import avalidate_postcode
 from .nhs_ods_requests import gp_details_for_ods_code
 from .quarter_for_date import retrieve_quarter_for_date
-from .index_multiple_deprivation import imd_for_postcode
+from .index_multiple_deprivation import aimd_for_postcode
 
 # Logging setup
 logger = logging.getLogger(__name__)
 
 
-def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
+async def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
     """
     Processes standardised NPDA csv file and persists results in NPDA tables
 
@@ -58,15 +61,15 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
     AuditCohort = apps.get_model("npda", "AuditCohort")
 
     # set previous quarter to inactive
-    AuditCohort.objects.filter(
+    await AuditCohort.objects.filter(
         pz_code=pdu_pz_code,
         ods_code=organisation_ods_code,
         audit_year=date.today().year,
         quarter=retrieve_quarter_for_date(date_instance=date.today()),
-    ).update(submission_active=False)
+    ).aupdate(submission_active=False)
 
     # create new quarter
-    new_cohort = AuditCohort.objects.create(
+    new_cohort = await AuditCohort.objects.acreate(
         pz_code=pdu_pz_code,
         ods_code=organisation_ods_code,
         audit_year=date.today().year,
@@ -82,7 +85,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
     except ValueError as error:
         return {"status": 500, "errors": f"Invalid file: {error}"}
 
-    def validate_row(row):
+    async def validate_row(row):
         """
         Validate each row
 
@@ -94,6 +97,8 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         """ 
         get all the data for this row
         """
+        print(f"!! validate_row: {row}")
+
         # Patient fields
         row_number = row["NHS Number"].replace(" ", "")
         date_of_birth = row["Date of Birth"]
@@ -676,7 +681,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             error = {"field": "nhs_number", "message": "NHS Number invalid."}
             patient_errors.append(error)
 
-        if validate_postcode(postcode=postcode):
+        if await avalidate_postcode(postcode=postcode):
             pass
         else:
             error = {"field": "postcode", "message": "Postcode invalid."}
@@ -784,7 +789,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         )
 
     # private method - saves the csv row in the model as a record
-    def save_row(row, timestamp, cohort_id):
+    async def save_row(row, timestamp, cohort_id):
         """
         Save each row as a record
         First validate the values in the row, then create a Patient instance - if contains invalid items, set is_valid to False, with the error messages
@@ -797,12 +802,12 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             visit_errors,
             site_is_valid,
             site_errors,
-        ) = validate_row(row)
+        ) = await validate_row(row)
 
         # save the site
         try:
             # save site
-            site, created = Site.objects.update_or_create(
+            site, created = await Site.objects.aupdate_or_create(
                 date_leaving_service=(
                     row["Date of leaving service"]
                     if not pd.isnull(row["Date of leaving service"])
@@ -825,10 +830,10 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         
         index_of_multiple_deprivation_quintile = None
         if postcode:
-            index_of_multiple_deprivation_quintile = imd_for_postcode(postcode)
+            index_of_multiple_deprivation_quintile = await aimd_for_postcode(postcode)
 
         try:
-            patient = Patient.objects.create(
+            patient = await Patient.objects.acreate(
                 nhs_number=nhs_number,
                 site=site,
                 date_of_birth=row["Date of Birth"],
@@ -1060,7 +1065,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
                 "is_valid": visit_is_valid,
                 "errors": (visit_errors if visit_errors is not None else None),
             }
-            Visit.objects.create(**obj)
+            await Visit.objects.acreate(**obj)
         except Exception as error:
             # called if database error or similar and database could not save instances.
             # Otherwise data, even if invalid, is saved
@@ -1071,7 +1076,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
 
         audit_cohort.timestamp = timestamp
         audit_cohort.patients.add(patient)
-        audit_cohort.save()
+        await audit_cohort.asave()
 
         return {"status": 200, "errors": None}
 
@@ -1080,18 +1085,19 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
     # by passing this in we can use the same timestamp for all records
     timestamp = timezone.now()
 
-    try:
-        dataframe.apply(
-            lambda row: save_row(row, timestamp=timestamp, cohort_id=new_cohort.pk),
-            axis=1,
-        )
-    except Exception as error:
-        # There was an error saving one or more records - this is likely not a problem with the data passed in
-        return {"status": 500, "errors": error}
+    # try:
+    # TODO MRB: This will fail any pending tasks if one of them throws an exception
+    #           Is this what we want?
+    async with asyncio.TaskGroup() as tg:
+        for _, row in dataframe.iterrows():
+            tg.create_task(save_row(row, timestamp=timestamp, cohort_id=new_cohort.pk))
+    # except Exception as error:
+    #     # There was an error saving one or more records - this is likely not a problem with the data passed in
+        # return {"status": 500, "errors": error}
 
     return {"status": 200, "errors": None}
 
-
+@sync_to_async
 def csv_summarise(csv_file):
     """
     This function takes a csv file and processes the file to create a summary of the data

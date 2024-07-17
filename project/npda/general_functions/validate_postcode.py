@@ -9,8 +9,10 @@ from requests.exceptions import HTTPError
 # npda imports
 from django.conf import settings
 
+from asgiref.sync import async_to_sync
 
-def validate_postcode(postcode):
+
+async def avalidate_postcode(postcode):
     """
     Tests if postcode is valid
     Returns boolean
@@ -29,3 +31,6 @@ def validate_postcode(postcode):
         return False
 
     return True
+
+
+validate_postcode = async_to_sync(avalidate_postcode)

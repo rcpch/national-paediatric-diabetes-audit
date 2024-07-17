@@ -9,6 +9,8 @@ import requests
 # Third party imports
 from django.conf import settings
 
+from asgiref.sync import async_to_sync
+
 # RCPCH imports
 from ...constants import UNKNOWN_POSTCODES_NO_SPACES
 
@@ -16,7 +18,7 @@ from ...constants import UNKNOWN_POSTCODES_NO_SPACES
 logger = logging.getLogger(__name__)
 
 
-def imd_for_postcode(user_postcode: str) -> int:
+async def aimd_for_postcode(user_postcode: str) -> int:
     """
     Makes an API call to the RCPCH Census Platform with postcode and quantile_type
     Postcode - can have spaces or not - this is processed by the API
@@ -42,3 +44,6 @@ def imd_for_postcode(user_postcode: str) -> int:
             return None
 
         return response.json()["result"]["data_quantile"]
+
+
+imd_for_postcode = async_to_sync(aimd_for_postcode)
