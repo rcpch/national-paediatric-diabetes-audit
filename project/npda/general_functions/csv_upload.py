@@ -46,6 +46,16 @@ from .index_multiple_deprivation import aimd_for_postcode
 # Logging setup
 logger = logging.getLogger(__name__)
 
+# Has to standalone as it creates a transaction which doesn't work async
+@sync_to_async
+def add_patient_to_cohort(cohort_id, patient, timestamp):
+    AuditCohort = apps.get_model("npda", "AuditCohort")
+    
+    audit_cohort = AuditCohort.objects.get(pk=cohort_id)
+
+    audit_cohort.timestamp = timestamp
+    audit_cohort.patients.add(patient)
+    audit_cohort.save()
 
 async def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
     """
@@ -1071,12 +1081,7 @@ async def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_cod
             # Otherwise data, even if invalid, is saved
             return {"status": 422, "errors": f"Could not save visit {obj}: {error}"}
 
-        # create a new quarter
-        audit_cohort = AuditCohort.objects.get(pk=cohort_id)
-
-        audit_cohort.timestamp = timestamp
-        audit_cohort.patients.add(patient)
-        await audit_cohort.asave()
+        await add_patient_to_cohort(cohort_id, patient, timestamp)
 
         return {"status": 200, "errors": None}
 
