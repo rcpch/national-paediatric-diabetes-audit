@@ -221,8 +221,8 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             """
             # Convert allowed_list to a dictionary if it's not already one
             allowed_dict = {choice[0]: choice[1] for choice in allowed_list}
-            # Check if list_item is in the dictionary
-            item_match = list_item in allowed_dict
+            # Check if list_item is in the dictionary. We check for mandatory fields elsewhere
+            item_match = list_item in allowed_dict or pd.isnull(list_item)
 
             if item_match:
                 # all items are valid, no errors
