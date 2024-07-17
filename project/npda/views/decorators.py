@@ -39,7 +39,9 @@ def login_and_otp_required():
                 logger.info(
                     "User %s is unverified. Tried accessing %s",
                     npda_user,
-                    view.__qualname__,
+                    # TODO MRB: work out how to put this back since view is the async wrapper decorator
+                    "TODO MRB: fix"
+                    # view['__qualname__'],
                 )
                 # raise PermissionDenied("Unverified user")
                 return redirect("two_factor:setup")
