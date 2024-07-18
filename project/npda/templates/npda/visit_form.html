@@ -15,7 +15,7 @@
             </div>
             <div class="flex space-between md:w-2/3">
               {% if field.id_for_label == "id_visit_date" %}
-                <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text" {% if field.value %} value={{ field.value|date:"Y-m-d" }} {% endif %}>
+                <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text" {% if field.value %} value={{ field.value|stringformat:'s' }} {% endif %}>
                 <button type='button' _="on click set #{{ field.id_for_label}}'s value to '{% today_date %}'" class="btn rcpch-btn bg-rcpch_light_blue border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Today</button>
               {% endif %}
               {% for error in field.errors %}
@@ -65,7 +65,7 @@
                             {% endfor %}
                           </select>
                       {% elif field.field.widget|is_dateinput %}
-                        <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text" {% if field.value %} value={{ field.value|date:"Y-m-d" }} {% endif %}>
+                        <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text" {% if field.value %} value={{ field.value|stringformat:'s' }} {% endif %}>
                         <button type='button' _="on click set #{{ field.id_for_label}}'s value to '{% today_date %}'" class="btn rcpch-btn bg-rcpch_light_blue border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Today</button>
                         <button type='button' _="on click set #{{ field.id_for_label}}'s value to #id_visit_date.value" class="btn rcpch-btn bg-rcpch_light_blue border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Fill with Visit Date</button>
                       {% else %}
@@ -142,7 +142,7 @@
                             {% endfor %}
                           </select>
                       {% elif field.field.widget|is_dateinput %}
-                          <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text" {% if field.value %} value={{ field.value|date:"Y-m-d" }} {% endif %}>
+                          <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text" {% if field.value %} value={{ field.value|stringformat:'s' }} {% endif %}>
                           <button type='button' _="on click set #{{ field.id_for_label}}'s value to '{% today_date %}'" class="btn rcpch-btn bg-rcpch_light_blue border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Today</button>
                           <button type='button' _="on click set #{{ field.id_for_label}}'s value to #id_visit_date.value" class="btn rcpch-btn bg-rcpch_light_blue border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Fill with Visit Date</button>
                       {% else %}
@@ -204,7 +204,7 @@
                             {% endfor %}
                           </select>
                       {% elif field.field.widget|is_dateinput %}
-                          <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text" {% if field.value %} value={{ field.value|date:"Y-m-d" }} {% endif %}>
+                          <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text" {% if field.value %} value={{ field.value|stringformat:'s' }} {% endif %}>
                           <button type='button' _="on click set #{{ field.id_for_label}}'s value to '{% today_date %}'" class="btn rcpch-btn bg-rcpch_light_blue border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Today</button>
                           <button type='button' _="on click set #{{ field.id_for_label}}'s value to #id_visit_date.value" class="btn rcpch-btn bg-rcpch_light_blue border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">Fill with Visit Date</button>
                       {% else %}
