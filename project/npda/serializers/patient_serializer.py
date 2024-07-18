@@ -69,7 +69,6 @@ class PatientSerializer(serializers.HyperlinkedModelSerializer):
             raise serializers.ValidationError("Invalid NHS Number")
 
     def validate_postcode(self, value):
-        print(f"!! patient_serializer.validate_postcode {value}")
         if validate_postcode(value):
             return value
         raise serializers.ValidationError("Invalid postcode.")

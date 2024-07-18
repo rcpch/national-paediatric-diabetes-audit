@@ -108,7 +108,6 @@ async def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_cod
         """ 
         get all the data for this row
         """
-        print(f"!! validate_row: {row}")
 
         # Patient fields
         row_number = row["NHS Number"].replace(" ", "")
