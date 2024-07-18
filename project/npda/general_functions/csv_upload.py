@@ -1090,16 +1090,17 @@ async def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_cod
     # by passing this in we can use the same timestamp for all records
     timestamp = timezone.now()
 
-    # try:
-    # TODO MRB: This will fail any pending tasks if one of them throws an exception
-    #           Is this what we want?
-    async with httpx.AsyncClient() as client:
-        async with asyncio.TaskGroup() as tg:
-                for _, row in dataframe.iterrows():
-                    tg.create_task(save_row(row, timestamp, new_cohort.pk, client))
-    # except Exception as error:
-    #     # There was an error saving one or more records - this is likely not a problem with the data passed in
-        # return {"status": 500, "errors": error}
+    try:
+        # TODO MRB: This will fail any pending tasks if one of them throws an exception
+        #           Is this what we want?
+        async with httpx.AsyncClient() as client:
+            async with asyncio.TaskGroup() as tg:
+                    for _, row in dataframe.iterrows():
+                        tg.create_task(save_row(row, timestamp, new_cohort.pk, client))
+    except Exception as error:
+        # There was an error saving one or more records - this is likely not a problem with the data passed in
+        logger.error(f"Error during csv upload {error}")
+        return {"status": 500, "errors": error}
 
     return {"status": 200, "errors": None}
 
