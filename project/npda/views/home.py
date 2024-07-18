@@ -23,9 +23,7 @@ from .decorators import login_and_otp_required
 logger = logging.getLogger(__name__)
 
 
-@sync_to_async
 @login_and_otp_required()
-@async_to_sync
 async def home(request):
     """
     Home page view - contains the upload form.
