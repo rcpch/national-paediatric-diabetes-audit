@@ -4,7 +4,7 @@ Calculates the index of multiple deprivation for a given postcode
 
 # Standard imports
 import logging
-import requests
+import httpx
 
 # Third party imports
 from django.conf import settings
@@ -18,7 +18,7 @@ from ...constants import UNKNOWN_POSTCODES_NO_SPACES
 logger = logging.getLogger(__name__)
 
 
-async def aimd_for_postcode(user_postcode: str) -> int:
+async def aimd_for_postcode(user_postcode: str, async_client: httpx.AsyncClient) -> int:
     """
     Makes an API call to the RCPCH Census Platform with postcode and quantile_type
     Postcode - can have spaces or not - this is processed by the API
@@ -28,7 +28,7 @@ async def aimd_for_postcode(user_postcode: str) -> int:
     # Skips the calculation if the postcode is on the 'unknown' list
     if user_postcode.replace(" ", "") not in UNKNOWN_POSTCODES_NO_SPACES:
         try:
-            response = requests.get(
+            response = await async_client.get(
                 url=f"{settings.RCPCH_CENSUS_PLATFORM_URL}/index_of_multiple_deprivation_quantile?postcode={user_postcode}&quantile=5",
                 headers={"Subscription-Key": f"{settings.RCPCH_CENSUS_PLATFORM_TOKEN}"},
                 timeout=10,  # times out after 10 seconds
@@ -45,5 +45,9 @@ async def aimd_for_postcode(user_postcode: str) -> int:
 
         return response.json()["result"]["data_quantile"]
 
-
-imd_for_postcode = async_to_sync(aimd_for_postcode)
+def imd_for_postcode(postcode):
+    async def wrapper():
+        async with httpx.AsyncClient() as client:
+            return aimd_for_postcode(postcode, client)
+    
+    return async_to_sync(wrapper)()

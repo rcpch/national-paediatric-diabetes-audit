@@ -16,6 +16,7 @@ from asgiref.sync import async_to_sync, sync_to_async
 # third part imports
 import pandas as pd
 import nhs_number
+import httpx
 
 # RCPCH imports
 from ...constants import (
@@ -95,7 +96,7 @@ async def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_cod
     except ValueError as error:
         return {"status": 500, "errors": f"Invalid file: {error}"}
 
-    async def validate_row(row):
+    async def validate_row(row, async_client):
         """
         Validate each row
 
@@ -691,7 +692,7 @@ async def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_cod
             error = {"field": "nhs_number", "message": "NHS Number invalid."}
             patient_errors.append(error)
 
-        if await avalidate_postcode(postcode=postcode):
+        if await avalidate_postcode(postcode, async_client):
             pass
         else:
             error = {"field": "postcode", "message": "Postcode invalid."}
@@ -799,7 +800,7 @@ async def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_cod
         )
 
     # private method - saves the csv row in the model as a record
-    async def save_row(row, timestamp, cohort_id):
+    async def save_row(row, timestamp, cohort_id, async_client):
         """
         Save each row as a record
         First validate the values in the row, then create a Patient instance - if contains invalid items, set is_valid to False, with the error messages
@@ -812,7 +813,7 @@ async def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_cod
             visit_errors,
             site_is_valid,
             site_errors,
-        ) = await validate_row(row)
+        ) = await validate_row(row, async_client)
 
         # save the site
         try:
@@ -840,7 +841,7 @@ async def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_cod
         
         index_of_multiple_deprivation_quintile = None
         if postcode:
-            index_of_multiple_deprivation_quintile = await aimd_for_postcode(postcode)
+            index_of_multiple_deprivation_quintile = await aimd_for_postcode(postcode, async_client)
 
         try:
             patient = await Patient.objects.acreate(
@@ -1093,9 +1094,10 @@ async def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_cod
     # try:
     # TODO MRB: This will fail any pending tasks if one of them throws an exception
     #           Is this what we want?
-    async with asyncio.TaskGroup() as tg:
-        for _, row in dataframe.iterrows():
-            tg.create_task(save_row(row, timestamp=timestamp, cohort_id=new_cohort.pk))
+    async with httpx.AsyncClient() as client:
+        async with asyncio.TaskGroup() as tg:
+                for _, row in dataframe.iterrows():
+                    tg.create_task(save_row(row, timestamp, new_cohort.pk, client))
     # except Exception as error:
     #     # There was an error saving one or more records - this is likely not a problem with the data passed in
         # return {"status": 500, "errors": error}
