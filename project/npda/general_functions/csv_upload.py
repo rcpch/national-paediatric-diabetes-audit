@@ -1046,9 +1046,16 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
                     )
                     else None
                 ),
-                "hospital_admission_other": row[
-                    "Only complete if OTHER selected: Reason for admission (free text)"
-                ],
+                "hospital_admission_other": (
+                    row[
+                        "Only complete if OTHER selected: Reason for admission (free text)"
+                    ]
+                    if not pd.isnull(
+                        row[
+                            "Only complete if OTHER selected: Reason for admission (free text)"
+                        ]
+                    ) else None
+                ),
                 "is_valid": visit_is_valid,
                 "errors": (visit_errors if visit_errors is not None else None),
             }
