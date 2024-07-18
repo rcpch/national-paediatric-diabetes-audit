@@ -61,7 +61,7 @@
                       {% if field.field.widget|is_select %}
                           <select id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="select rcpch-select rounded-none">
                             {% for choice in field.field.choices %}
-                            <option value="{{choice.0}}" {% if field.value == choice.0 %} selected="{{ field.value }}" {% endif %}>{{choice.1}}</option>
+                            <option value="{{choice.0}}" {% if field.value|stringformat:'s' == choice.0|stringformat:'s' %} selected="{{ field.value }}" {% endif %}>{{choice.1}}</option>
                             {% endfor %}
                           </select>
                       {% elif field.field.widget|is_dateinput %}
@@ -138,7 +138,7 @@
                       {% if field.field.widget|is_select %}
                           <select id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="select rcpch-select rounded-none">
                             {% for choice in field.field.choices %}
-                            <option value="{{choice.0}}" {% if field.value == choice.0 %} selected="{{ field.value }}" {% endif %}>{{choice.1}}</option>
+                            <option value="{{choice.0}}" {% if field.value|stringformat:'s' == choice.0|stringformat:'s' %} selected="{{ field.value }}" {% endif %}>{{choice.1}}</option>
                             {% endfor %}
                           </select>
                       {% elif field.field.widget|is_dateinput %}
@@ -200,7 +200,7 @@
                       {% if field.field.widget|is_select %}
                           <select id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="select rcpch-select rounded-none">
                             {% for choice in field.field.choices %}
-                            <option value="{{choice.0}}" {% if field.value == choice.0 %} selected="{{ field.value }}" {% endif %}>{{choice.1}}</option>
+                            <option value="{{choice.0}}" {% if field.value|stringformat:'s' == choice.0|stringformat:'s' %} selected="{{ field.value }}" {% endif %}>{{choice.1}}</option>
                             {% endfor %}
                           </select>
                       {% elif field.field.widget|is_dateinput %}
