@@ -43,3 +43,18 @@ def test_get_audit_period_for_date_returns_correct_start_and_end_date_bounds(
     input_date, expected_date_bounds
 ):
     assert get_audit_period_for_date(input_date) == expected_date_bounds
+
+
+def test_ensure_error_raised_for_date_outside_audit_period():
+    """
+    Test that a ValueError is raised when a date outside the audit period is passed to the function:
+
+    - date(2024, 3, 31) is before
+    - date(2027, 4, 1) is after
+    """
+
+    with pytest.raises(ValueError):
+        get_audit_period_for_date(date(2024, 3, 31))
+
+    with pytest.raises(ValueError):
+        get_audit_period_for_date(date(2028, 4, 1))
