@@ -8,6 +8,7 @@ from project.npda.views import (
     PatientListView,
     PatientVisitsListView,
     AuditCohortsListView,
+    KPIAggregationForPDU
 )
 from project.npda.forms.npda_user_form import NPDAUpdatePasswordForm
 
@@ -94,4 +95,10 @@ urlpatterns = [
         ),
         name="password_reset_confirm",
     ),
+    # KPI views
+    path(
+        "kpis/aggregation/pdu/<str:pz_code>",
+        view=KPIAggregationForPDU.as_view(),
+        name='aggregation-pdu'
+    )
 ]
