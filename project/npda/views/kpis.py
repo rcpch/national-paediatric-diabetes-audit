@@ -34,7 +34,7 @@ class CalculateKPIS:
         )
 
         # Sets the KPI attribute names map
-        self.kpis = self._get_kpi_attribute_names()
+        self.kpis_names_map = self._get_kpi_attribute_names()
 
         # Sets relevant patients for this PZ code
         self.patients = Patient.objects.filter(
@@ -136,7 +136,7 @@ class CalculateKPIS:
 
         # Calculate KPIs 1 - 12, used as denominators for subsequent KPIs
         for i in range(1, 2):
-            kpi_method_name = self.kpis[i]
+            kpi_method_name = self.kpis_names_map[i]
             kpi_method = getattr(self, f"calculate_{kpi_method_name}")
             calculated_kpis[kpi_method_name] = kpi_method()
 
