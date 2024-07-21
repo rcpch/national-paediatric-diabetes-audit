@@ -125,7 +125,7 @@ class CalculateKPIS:
         """Calculate KPIs for given self.pz_code and cohort range
         (self.audit_start_date and self.audit_end_date).
 
-        We dynamically set these attributes using names set in self.kpis using
+        We dynamically set these attributes using names set in self.kpis, done in
         the self._get_kpi_attribute_names method during object init.
 
         Incrementally build the query, which will be executed in a single
@@ -183,7 +183,7 @@ class KPIAggregationForPDU(TemplateView):
 
     def get(self, request, *args, **kwargs):
 
-        pz_code = kwargs.get("pz_code", None) 
+        pz_code = kwargs.get("pz_code", None)
 
         aggregated_data = CalculateKPIS(pz_code=pz_code).calculate_kpis_for_patients()
 
