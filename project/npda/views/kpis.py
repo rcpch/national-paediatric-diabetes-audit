@@ -146,7 +146,17 @@ class CalculateKPIS:
         #     kpi_method = getattr(self, f"calculate_{kpi_method_name}")
         #     calculated_kpis[kpi_method_name] = kpi_method(calculated_kpis)
 
-        return calculated_kpis
+        # Add in used attributes for calculations
+        return_obj = {}
+        return_obj["pz_code"] = self.pz_code
+        return_obj["calculation_date"] = self.calculation_date
+        return_obj["audit_start_date"] = self.audit_start_date
+        return_obj["audit_end_date"] = self.audit_end_date
+        
+        # Finally, add in the kpis
+        return_obj['calculated_kpi_values'] = calculated_kpis
+
+        return return_obj
 
     def calculate_kpi_1_total_eligible(self) -> dict:
         """Calculates KPI 1: Total number of eligible patients
