@@ -821,22 +821,35 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         nhs_number = row["NHS Number"].replace(" ", "")
 
         try:
-            patient = Patient.objects.create(
-                nhs_number=nhs_number,
-                site=site,
-                date_of_birth=row["Date of Birth"],
-                postcode=row["Postcode of usual address"],
-                sex=row["Stated gender"],
-                ethnicity=row["Ethnic Category"],
-                diabetes_type=row["Diabetes Type"],
-                diagnosis_date=row["Date of Diabetes Diagnosis"],
-                death_date=(
+            audit_cohort = AuditCohort.objects.get(pk=cohort_id)
+
+            patient_fields = {
+                "site": site,
+                "date_of_birth": row["Date of Birth"],
+                "postcode": row["Postcode of usual address"],
+                "sex": row["Stated gender"],
+                "ethnicity": row["Ethnic Category"],
+                "diabetes_type": row["Diabetes Type"],
+                "diagnosis_date": row["Date of Diabetes Diagnosis"],
+                "death_date": (
                     row["Death Date"] if not pd.isnull(row["Death Date"]) else None
                 ),
-                gp_practice_ods_code=row["GP Practice Code"],
-                is_valid=patient_is_valid,
-                errors=(patient_errors if patient_errors is not None else None),
-            )
+                "gp_practice_ods_code": row["GP Practice Code"],
+                "is_valid": patient_is_valid,
+                "errors": (patient_errors if patient_errors is not None else None)
+            }
+
+            # We can't use update_or_create as we need to ask AuditCohort if there is already a patient
+            existing_patient = audit_cohort.patients.filter(nhs_number = nhs_number)
+
+            if existing_patient.count() == 0:
+                patient = Patient.objects.create(**patient_fields | {
+                    "nhs_number": nhs_number
+                })
+            else:
+                # You can't update a single Django model with kwargs (https://code.djangoproject.com/ticket/3182)
+                existing_patient.update(**patient_fields)
+                patient = existing_patient.first()
         except Exception as error:
             raise Exception(f"Could not save patient: {error}")
 
