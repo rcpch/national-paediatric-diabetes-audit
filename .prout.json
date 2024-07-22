@@ -1,0 +1,5 @@
+{
+    "checkpoints": {
+      "STAGING": { "url": "https://npda-staging.rcpch.tech", "overdue": "15M" }
+    }
+  }
