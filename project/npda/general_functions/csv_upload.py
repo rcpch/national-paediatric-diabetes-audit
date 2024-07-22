@@ -783,7 +783,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         )
 
     # private method - saves the csv row in the model as a record
-    def save_row(row, timestamp, cohort_id):
+    def save_row(row, timestamp, new_cohort):
         """
         Save each row as a record
         First validate the values in the row, then create a Patient instance - if contains invalid items, set is_valid to False, with the error messages
@@ -821,8 +821,6 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         nhs_number = row["NHS Number"].replace(" ", "")
 
         try:
-            audit_cohort = AuditCohort.objects.get(pk=cohort_id)
-
             patient_fields = {
                 "site": site,
                 "date_of_birth": row["Date of Birth"],
@@ -840,7 +838,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             }
 
             # We can't use update_or_create as we need to ask AuditCohort if there is already a patient
-            existing_patient = audit_cohort.patients.filter(nhs_number = nhs_number)
+            existing_patient = new_cohort.patients.filter(nhs_number = nhs_number)
 
             if existing_patient.count() == 0:
                 patient = Patient.objects.create(**patient_fields | {
@@ -1078,12 +1076,9 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             # Otherwise data, even if invalid, is saved
             return {"status": 422, "errors": f"Could not save visit {obj}: {error}"}
 
-        # create a new quarter
-        audit_cohort = AuditCohort.objects.get(pk=cohort_id)
-
-        audit_cohort.timestamp = timestamp
-        audit_cohort.patients.add(patient)
-        audit_cohort.save()
+        new_cohort.timestamp = timestamp
+        new_cohort.patients.add(patient)
+        new_cohort.save()
 
         return {"status": 200, "errors": None}
 
@@ -1094,7 +1089,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
 
     try:
         dataframe.apply(
-            lambda row: save_row(row, timestamp=timestamp, cohort_id=new_cohort.pk),
+            lambda row: save_row(row, timestamp=timestamp, new_cohort=new_cohort),
             axis=1,
         )
     except Exception as error:
