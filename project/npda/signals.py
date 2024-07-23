@@ -11,7 +11,7 @@ from django.dispatch import receiver
 
 # RCPCH
 from .models import VisitActivity, NPDAUser
-from .general_functions.create_session import (
+from .general_functions.session import (
     create_session_object
 )
 
