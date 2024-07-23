@@ -1067,7 +1067,8 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
     # by passing this in we can use the same timestamp for all records
     timestamp = timezone.now()
 
-    for (_, rows) in dataframe.groupby("NHS Number"):
+    # sort = False preserves the original order of rows
+    for (_, rows) in dataframe.groupby("NHS Number", sort = False):
         save_rows(rows, timestamp, new_cohort)
 
     return {"status": 200, "errors": None}
