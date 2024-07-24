@@ -134,6 +134,9 @@ def error_for_field(errors_by_field, field):
     """
     Returns all errors for a given field
     """
+    if errors_by_field is None:
+        return ""
+
     concatenated_fields = ""
 
     if field in VISIT_FIELD_FLAT_LIST:
