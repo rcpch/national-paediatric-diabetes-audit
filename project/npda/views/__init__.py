@@ -1,4 +1,4 @@
-from .audit_cohorts import *
+from .submissions import *
 from .home import *
 from .patient import *
 from .visit import *

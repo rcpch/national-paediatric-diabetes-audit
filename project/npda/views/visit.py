@@ -18,9 +18,12 @@ from ..forms.visit_form import VisitForm
 from ..general_functions import get_visit_categories
 from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
 
-class PatientVisitsListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, ListView):
-    permission_required = 'npda.view_visit'
-    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
+
+class PatientVisitsListView(
+    LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, ListView
+):
+    permission_required = "npda.view_visit"
+    permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
     model = Visit
     template_name = "visits.html"
 
@@ -28,7 +31,7 @@ class PatientVisitsListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, Permiss
         patient_id = self.kwargs.get("patient_id")
         context = super(PatientVisitsListView, self).get_context_data(**kwargs)
         patient = Patient.objects.get(pk=patient_id)
-        active_cohort = patient.audit_cohorts.filter(submission_active=True).first()
+        active_cohort = patient.submissions.filter(submission_active=True).first()
         visits = Visit.objects.filter(patient=patient).order_by("is_valid", "id")
         calculated_visits = []
         for visit in visits:
@@ -44,7 +47,7 @@ class VisitCreateView(
     LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, CreateView
 ):
     permission_required = "npda.add_visit"
-    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
+    permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
     model = Visit
     form_class = VisitForm
 
@@ -77,9 +80,11 @@ class VisitCreateView(
         return HttpResponseRedirect(self.get_success_url())
 
 
-class VisitUpdateView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, PermissionRequiredMixin, UpdateView):
-    permission_required = 'npda.change_visit'
-    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
+class VisitUpdateView(
+    LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, PermissionRequiredMixin, UpdateView
+):
+    permission_required = "npda.change_visit"
+    permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
     model = Visit
     form_class = VisitForm
 
@@ -170,10 +175,14 @@ class VisitUpdateView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, Permissio
 
 
 class VisitDeleteView(
-    LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, PermissionRequiredMixin, SuccessMessageMixin, DeleteView
+    LoginAndOTPRequiredMixin,
+    CheckPDUInstanceMixin,
+    PermissionRequiredMixin,
+    SuccessMessageMixin,
+    DeleteView,
 ):
     permission_required = "npda.delete_visit"
-    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
+    permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
     model = Visit
     success_url = reverse_lazy("patient_visits")
     success_message = "Visit removed successfully"

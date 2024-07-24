@@ -54,10 +54,10 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
     Patient = apps.get_model("npda", "Patient")
     Site = apps.get_model("npda", "Site")
     Visit = apps.get_model("npda", "Visit")
-    AuditCohort = apps.get_model("npda", "AuditCohort")
+    Submission = apps.get_model("npda", "Submission")
 
     # set previous quarter to inactive
-    AuditCohort.objects.filter(
+    Submission.objects.filter(
         pz_code=pdu_pz_code,
         ods_code=organisation_ods_code,
         audit_year=date.today().year,
@@ -65,7 +65,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
     ).update(submission_active=False)
 
     # create new quarter
-    new_cohort = AuditCohort.objects.create(
+    new_cohort = Submission.objects.create(
         pz_code=pdu_pz_code,
         ods_code=organisation_ods_code,
         audit_year=date.today().year,
@@ -784,21 +784,21 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
 
     # private method - saves the csv rows for a given patient
     def save_rows(rows, timestamp, new_cohort):
-        rows["validation_result"] = rows.apply(validate_row, axis = 1)
+        rows["validation_result"] = rows.apply(validate_row, axis=1)
 
         first_row = rows.iloc[0]
 
         site = save_site(first_row)
         patient = save_patient(site, first_row)
-        
+
         new_cohort.timestamp = timestamp
         new_cohort.patients.add(patient)
         new_cohort.save()
 
-        rows.apply(lambda row: save_visit(patient, row), axis = 1)
-        
+        rows.apply(lambda row: save_visit(patient, row), axis=1)
+
     def save_site(row):
-         # TODO MRB: do something with site_errors
+        # TODO MRB: do something with site_errors
         site, created = Site.objects.update_or_create(
             date_leaving_service=(
                 row["Date of leaving service"]
@@ -815,7 +815,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         )
 
         return site
-    
+
     def save_patient(site, row):
         (patient_is_valid, patient_errors, *_) = row["validation_result"]
 
@@ -835,7 +835,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             ),
             "gp_practice_ods_code": row["GP Practice Code"],
             "is_valid": patient_is_valid,
-            "errors": (patient_errors if patient_errors is not None else None)
+            "errors": (patient_errors if patient_errors is not None else None),
         }
 
         return Patient.objects.create(**patient_fields)
@@ -988,9 +988,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             ),
             "dietician_additional_appointment_date": (
                 row["Date of additional appointment with dietitian"]
-                if not pd.isnull(
-                    row["Date of additional appointment with dietitian"]
-                )
+                if not pd.isnull(row["Date of additional appointment with dietitian"])
                 else None
             ),
             "ketone_meter_training": (
@@ -1049,26 +1047,25 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
                 else None
             ),
             "hospital_admission_other": (
-                row[
-                    "Only complete if OTHER selected: Reason for admission (free text)"
-                ]
+                row["Only complete if OTHER selected: Reason for admission (free text)"]
                 if not pd.isnull(
                     row[
                         "Only complete if OTHER selected: Reason for admission (free text)"
                     ]
-                ) else None
+                )
+                else None
             ),
             "is_valid": visit_is_valid,
             "errors": (visit_errors if visit_errors is not None else None),
         }
-        
+
         Visit.objects.create(**obj)
 
     # by passing this in we can use the same timestamp for all records
     timestamp = timezone.now()
 
     # sort = False preserves the original order of rows
-    for (_, rows) in dataframe.groupby("NHS Number", sort = False):
+    for _, rows in dataframe.groupby("NHS Number", sort=False):
         save_rows(rows, timestamp, new_cohort)
 
     return {"status": 200, "errors": None}
@@ -1100,9 +1097,9 @@ def csv_summarise(csv_file):
     count_of_records_per_nhs_number = dataframe["NHS Number"].value_counts()
     matching_patients_in_current_quarter = Patient.objects.filter(
         nhs_number__in=list(unique_nhs_numbers_no_spaces),
-        audit_cohorts__submission_active=True,
-        audit_cohorts__audit_year=date.today().year,
-        audit_cohorts__quarter=retrieve_quarter_for_date(date_instance=date.today()),
+        submissions__submission_active=True,
+        submissions__audit_year=date.today().year,
+        submissions__quarter=retrieve_quarter_for_date(date_instance=date.today()),
     ).count()
 
     summary = {
