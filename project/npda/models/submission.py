@@ -5,11 +5,13 @@ from django.db import models
 from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
 
 
-class AuditCohort(models.Model):
+class Submission(models.Model):
     """
-    The AuditCohort class.
+    The Submission class.
 
-    This class is used to define the cohort of patients that are being audited. The cohort tracks the progress of the audit
+    This class is used to define the audit submission of patients that are being audited. The model tracks which audit year and quarter the submission relates to
+    and the PZ code of the Paediatric Diabetes Unit that is conducting the audit.
+    Each submission comprises  a list of unique patients and their visits as well as the csv file as a BinaryField.
     """
 
     audit_year = models.IntegerField(
@@ -58,12 +60,6 @@ class AuditCohort(models.Model):
         to="npda.NPDAUser",
     )
 
-    submission_approved = models.BooleanField(
-        "Submission approved",
-        default=False,
-        help_text="Submission has been approved for inclusion in the audit",
-    )
-
     patients = models.ManyToManyField(to="npda.Patient", related_name="audit_cohorts")
 
     def __str__(self) -> str:
@@ -75,6 +71,6 @@ class AuditCohort(models.Model):
         super().save(*args, **kwargs)
 
     class Meta:
-        verbose_name = "Audit Cohort"
-        verbose_name_plural = "Audit Cohorts"
+        verbose_name = "Submission"
+        verbose_name_plural = "Submissions"
         ordering = ("audit_year", "quarter")
