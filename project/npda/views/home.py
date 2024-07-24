@@ -12,7 +12,7 @@ from django.urls import reverse
 from django.views.generic import ListView
 
 # RCPCH imports
-from ..general_functions import csv_upload, csv_summarise
+from ..general_functions.csv_upload import csv_upload, csv_summarise
 from ..forms.upload import UploadFileForm
 from .decorators import login_and_otp_required
 

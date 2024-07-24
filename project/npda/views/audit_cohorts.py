@@ -13,7 +13,6 @@ from django.urls import reverse
 from django.views.generic import ListView
 
 # RCPCH imports
-from ..general_functions import csv_upload, csv_summarise
 from .mixins import LoginAndOTPRequiredMixin
 from ..models import AuditCohort, Patient
 
