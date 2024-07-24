@@ -60,7 +60,7 @@ class Submission(models.Model):
         to="npda.NPDAUser",
     )
 
-    patients = models.ManyToManyField(to="npda.Patient", related_name="audit_cohorts")
+    patients = models.ManyToManyField(to="npda.Patient", related_name="submissions")
 
     def __str__(self) -> str:
         return f"{self.audit_year} ({self.quarter}), {self.patients.count()} patients"

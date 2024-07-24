@@ -3,17 +3,16 @@ from datetime import date
 import logging
 
 # Django imports
-from django.apps import apps
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.db.models import Count, Case, When, Max, Q, F
 from django.forms import BaseForm
 from django.http.response import HttpResponse
 from django.shortcuts import render
-from django.urls import reverse_lazy
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
 from django.http import HttpResponse
+from django.urls import reverse_lazy
 
 # Third party imports
 from django_htmx.http import trigger_client_event
@@ -21,9 +20,9 @@ from django_htmx.http import trigger_client_event
 from project.npda.general_functions import (
     organisations_adapter,
     get_new_session_fields,
-    get_or_update_view_preference
+    get_or_update_view_preference,
 )
-from project.npda.models import NPDAUser, AuditCohort
+from project.npda.models import NPDAUser, Submission
 
 # RCPCH imports
 from ..models import Patient
@@ -33,9 +32,11 @@ from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequire
 logger = logging.getLogger(__name__)
 
 
-class PatientListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, ListView):
-    permission_required = 'npda.view_patient'
-    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
+class PatientListView(
+    LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, ListView
+):
+    permission_required = "npda.view_patient"
+    permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
     model = Patient
     template_name = "patients.html"
 
@@ -64,16 +65,16 @@ class PatientListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionReq
             raise ValueError("Invalid view preference")
 
         patient_queryset = Patient.objects.filter(
-            audit_cohorts__submission_active=True,
+            submissions__submission_active=True,
         )
         if filtered_patients is not None:
             patient_queryset = patient_queryset.filter(filtered_patients)
 
         return patient_queryset.annotate(
-            audit_year=F("audit_cohorts__audit_year"),
-            quarter=F("audit_cohorts__quarter"),
+            audit_year=F("submissions__audit_year"),
+            quarter=F("submissions__quarter"),
             visit_error_count=Count(Case(When(visit__is_valid=False, then=1))),
-            last_upload_date=Max("audit_cohorts__submission_date"),
+            last_upload_date=Max("submissions__submission_date"),
         ).order_by("is_valid", "visit_error_count", "pk")
 
     def get_context_data(self, **kwargs):
@@ -84,7 +85,7 @@ class PatientListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionReq
         """
         context = super().get_context_data(**kwargs)
         total_valid_patients = (
-            Patient.objects.filter(audit_cohorts__submission_active=True)
+            Patient.objects.filter(submissions__submission_active=True)
             .annotate(
                 visit_error_count=Count(Case(When(visit__is_valid=False, then=1))),
             )
@@ -96,7 +97,7 @@ class PatientListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionReq
         context["ods_code"] = self.request.session.get("ods_code")
         context["total_valid_patients"] = total_valid_patients
         context["total_invalid_patients"] = (
-            Patient.objects.filter(audit_cohorts__submission_active=True).count()
+            Patient.objects.filter(submissions__submission_active=True).count()
             - total_valid_patients
         )
         context["index_of_first_invalid_patient"] = total_valid_patients + 1
@@ -131,10 +132,14 @@ class PatientListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionReq
             ods_code = request.POST.get("patient_ods_code_select_name", None)
             pz_code = request.POST.get("patient_pz_code_select_name", None)
 
-            new_session_fields = get_new_session_fields(self.request.user, ods_code, pz_code)
+            new_session_fields = get_new_session_fields(
+                self.request.user, ods_code, pz_code
+            )
             self.request.session.update(new_session_fields)
 
-            view_preference = get_or_update_view_preference(self.request.user, view_preference)
+            view_preference = get_or_update_view_preference(
+                self.request.user, view_preference
+            )
 
             context = {
                 "view_preference": int(view_preference),
@@ -159,12 +164,15 @@ class PatientListView(LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionReq
             return response
 
 
-class PatientCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, CreateView):
+class PatientCreateView(
+    LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, CreateView
+):
     """
     Handle creation of new patient in audit
     """
-    permission_required = 'npda.add_patient'
-    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
+
+    permission_required = "npda.add_patient"
+    permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
     model = Patient
     form_class = PatientForm
     success_message = "New child record created was created successfully"
@@ -184,7 +192,7 @@ class PatientCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Succe
         patient = form.save(commit=False)
         # add the site to the patient record
         site = apps.get_model("npda", "Site").objects.create(
-            paediatric_diabetes_unit_pz_code=self.request.session.get('pz_code'),
+            paediatric_diabetes_unit_pz_code=self.request.session.get("pz_code"),
             organisation_ods_code=self.request.session.get("ods_code"),
             date_leaving_service=form.cleaned_data.get("date_leaving_service"),
             reason_leaving_service=form.cleaned_data.get("reason_leaving_service"),
@@ -194,19 +202,25 @@ class PatientCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Succe
         patient.errors = None
         patient.save()
         # add patient to the latest audit cohort
-        if AuditCohort.objects.count() > 0:
-            new_first = AuditCohort.objects.order_by("-submission_date").first()
+        if Submission.objects.count() > 0:
+            new_first = Submission.objects.order_by("-submission_date").first()
             new_first.patients.add(patient)
         return super().form_valid(form)
 
 
-class PatientUpdateView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, PermissionRequiredMixin, SuccessMessageMixin, UpdateView):
+class PatientUpdateView(
+    LoginAndOTPRequiredMixin,
+    CheckPDUInstanceMixin,
+    PermissionRequiredMixin,
+    SuccessMessageMixin,
+    UpdateView,
+):
     """
     Handle update of patient in audit
     """
 
-    permission_required = 'npda.change_patient'
-    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
+    permission_required = "npda.change_patient"
+    permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
     model = Patient
     form_class = PatientForm
     success_message = "New child record updated successfully"
@@ -231,12 +245,19 @@ class PatientUpdateView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, Permiss
         return super().form_valid(form)
 
 
-class PatientDeleteView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, PermissionRequiredMixin, SuccessMessageMixin, DeleteView):
+class PatientDeleteView(
+    LoginAndOTPRequiredMixin,
+    CheckPDUInstanceMixin,
+    PermissionRequiredMixin,
+    SuccessMessageMixin,
+    DeleteView,
+):
     """
     Handle deletion of child from audit
     """
-    permission_required = 'npda.delete_patient'
-    permission_denied_message = 'You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance.'
+
+    permission_required = "npda.delete_patient"
+    permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
     model = Patient
     success_message = "Child removed from database"
     success_url = reverse_lazy("patients")

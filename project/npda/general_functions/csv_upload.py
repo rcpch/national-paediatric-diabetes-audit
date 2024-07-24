@@ -311,9 +311,9 @@ def csv_summarise(csv_file):
     count_of_records_per_nhs_number = dataframe["NHS Number"].value_counts()
     matching_patients_in_current_quarter = Patient.objects.filter(
         nhs_number__in=list(unique_nhs_numbers_no_spaces),
-        audit_cohorts__submission_active=True,
-        audit_cohorts__audit_year=date.today().year,
-        audit_cohorts__quarter=retrieve_quarter_for_date(date_instance=date.today()),
+        submissions__submission_active=True,
+        submissions__audit_year=date.today().year,
+        submissions__quarter=retrieve_quarter_for_date(date_instance=date.today()),
     ).count()
 
     summary = {

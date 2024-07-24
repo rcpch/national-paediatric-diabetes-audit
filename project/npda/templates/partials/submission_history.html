@@ -1,32 +1,32 @@
 {% load static %}
-{% if auditcohorts %}
+{% if submissions %}
             <table class="table table-md w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
                 <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">
                     <tr>
                         <th>Submission Date</th>
                         <th>Submission By</th>
-                        <th>Audit Year (Quarterly Cohort)</th>
+                        <th>Audit Year (Quarter)</th>
                         <th>Patient Number</th>
                         <th>Active</th>
                         <th>Download</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for audit in auditcohorts %}
+                    {% for submission in submissions %}
                     {% if forloop.first %}
                     <tr class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white">
                     {% else %}
                     <tr class="border-b bg-rcpch_lightest_grey text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_mid_grey hover:text-white">
                     {% endif %}
-                            <td>{{ audit.submission_date|date:"d/m/Y H:i s" }} secs</td>
-                            <td>{{audit.submission_by}}</td>
-                            <td>{{audit.audit_year}} ({{audit.quarter}})</td>
-                            <td>{{audit.patient_count}}</td>
-                            <td>{{audit.submission_active}}</td>
+                            <td>{{  submission.submission_date|date:"d/m/Y H:i s" }} secs</td>
+                            <td>{{ submission.submission_by}}</td>
+                            <td>{{ submission.audit_year}} ({{submission.quarter}})</td>
+                            <td>{{ submission.patient_count}}</td>
+                            <td>{{ submission.submission_active}}</td>
                             <td class="flex flex-row">
-                                <form method="post" action="{% url 'audit_cohorts' %}" class="join">
+                                <form method="post" action="{% url 'submissions' %}" class="join">
                                     {% csrf_token %}
-                                    <input type="hidden" name="audit_id" value="{{audit.pk}}">
+                                    <input type="hidden" name="audit_id" value="{{submission.pk}}">
                                     <button name="submit-data" value="download-data" type="submit" class="join-item bg-rcpch_light_blue text-white font-semibold hover:text-white py-1 px-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue btn-sm rounded-none">Download</button>
                                     <button name="submit-data" value="delete-data"  type="submit" class="join-item bg-rcpch_red text-white font-semibold hover:text-white py-1 px-2 border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint btn-sm rounded-none">Delete</button>
                                 </form>
@@ -60,7 +60,7 @@
     
 
     <h3>Upload History</h3>
-    <p>No audit files uploaded yet for {{request.session.pz_code}}.</p>
+    <p>No submissions uploaded yet for {{request.session.pz_code}}.</p>
 
     
 {% endif %}

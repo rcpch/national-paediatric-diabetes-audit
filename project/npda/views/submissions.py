@@ -1,5 +1,4 @@
 # Python imports
-from datetime import date
 from typing import Any, Iterable
 
 # Django imports
@@ -8,25 +7,24 @@ from django.contrib import messages
 from django.db.models import Count, F, Value
 from django.db.models.functions import Concat
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
+from django.shortcuts import render
 from django.views.generic import ListView
 
 # RCPCH imports
 from .mixins import LoginAndOTPRequiredMixin
-from ..models import AuditCohort, Patient
+from ..models import Submission
 
 
-class AuditCohortsListView(LoginAndOTPRequiredMixin, ListView):
+class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
     """
-    The AuditCohortsListView class.
+    The SubmissionsListView class.
 
-    This class is used to display a list of audit cohorts.
+    This class is used to display a list of submissions.
     """
 
-    model = apps.get_model(app_label="npda", model_name="AuditCohort")
-    template_name = "audit_cohort_list.html"
-    context_object_name = "auditcohorts"
+    model = apps.get_model(app_label="npda", model_name="Submission")
+    template_name = "submissions_list.html"
+    context_object_name = "Submissions"
 
     def get_queryset(self) -> Iterable[Any]:
         """
@@ -94,15 +92,15 @@ class AuditCohortsListView(LoginAndOTPRequiredMixin, ListView):
         if button_name == "delete-data":
 
             # delete the cohort submission patients
-            audit_cohort = AuditCohort.objects.filter(
+            submission = Submission.objects.filter(
                 pk=request.POST.get("audit_id")
             ).get()
-            audit_cohort.patients.all().delete()
+            submission.patients.all().delete()
             # then delete the cohort submission itself
-            audit_cohort.delete()
+            submission.delete()
             # set the submission_active flag to True for the most recent submission
-            if AuditCohort.objects.count() > 0:
-                new_first = AuditCohort.objects.order_by("-submission_date").first()
+            if Submission.objects.count() > 0:
+                new_first = Submission.objects.order_by("-submission_date").first()
                 new_first.submission_active = True
                 new_first.save()
             messages.success(request, "Cohort submission deleted successfully")
