@@ -7,8 +7,7 @@ from two_factor.utils import default_device
 # NPDA Imports
 from project.npda.general_functions import (
     get_single_pdu_from_ods_code,
-    get_all_pdus_list_choices,
-    create_session_object,
+    get_all_pdus_list_choices
 )
 from project.npda.models.organisation_employer import OrganisationEmployer
 
