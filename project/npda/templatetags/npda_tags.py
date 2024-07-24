@@ -136,18 +136,14 @@ def error_for_field(errors_by_field, field):
     """
     concatenated_fields = ""
 
-    if errors_by_field is None:
-        errors = []
-    elif field in VISIT_FIELD_FLAT_LIST:
+    if field in VISIT_FIELD_FLAT_LIST:
         return "There are errors associated with one or more of this child's visits."
-    else:
-        errors = errors_by_field[field]
 
-    if len(errors) > 0:
-        for error in errors:
-            concatenated_fields += f"{error['message']},\n"
-    
-    return concatenated_fields if len(concatenated_fields) > 0 else []
+    errors = errors_by_field[field] if field in errors_by_field else []
+
+    error_messages = [error["message"] for error in errors]
+
+    return "\n".join(error_messages)
 
 
 @register.filter
