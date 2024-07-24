@@ -102,32 +102,8 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
     def save_rows(rows, timestamp, new_cohort):
         first_row = rows.iloc[0]
 
-        patient_fields = row_to_dict(first_row, {
-            "nhs_number": "NHS Number",
-            "date_of_birth": "Date of Birth",
-            "postcode": "Postcode of usual address",
-            "sex": "Stated gender",
-            "ethnicity": "Ethnic Category",
-            "diabetes_type": "Diabetes Type",
-            "gp_practice_ods_code": "GP Practice Code",
-            "diagnosis_date": "Date of Diabetes Diagnosis",
-            "death_date": "Death Date"
-        })
-
-        patient_fields["nhs_number"] = patient_fields["nhs_number"].replace(" ", "")
-
-        patient_form = PatientForm(patient_fields)
-
-        # TODO MRB: validate postcode
-        # TODO MRB: Validate gp practice ods code
-        patient_fields["is_valid"] = patient_form.is_valid()
-        patient_fields["errors"] = patient_form.errors.as_json(escape_html = True)
-
-        # TODO MRB: site errors
-        patient_fields["site"] = save_site(first_row)
-
         site = save_site(first_row)
-        patient = Patient.objects.create(**patient_fields)
+        patient = save_patient(site, first_row)
         
         new_cohort.timestamp = timestamp
         new_cohort.patients.add(patient)
@@ -174,11 +150,11 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         # TODO MRB: validate postcode
         # TODO MRB: Validate gp practice ods code
         fields["is_valid"] = form.is_valid()
-        fields["errors"] = form.errors.as_json(escape_html = True)
+        fields["errors"] = None if form.is_valid() else form.errors.get_json_data(escape_html = True)
 
         fields["site"] = site
 
-        patient = Patient.objects.create(**patient_fields)
+        return Patient.objects.create(**fields)
 
     def save_visit(patient, row):
         fields = row_to_dict(row, {
@@ -230,7 +206,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         })
 
         fields["is_valid"] = form.is_valid()
-        fields["errors"] = form.errors.as_json(escape_html = True)
+        fields["errors"] = None if form.is_valid() else form.errors.get_json_data(escape_html = True)
 
         Visit.objects.create(**fields)
 

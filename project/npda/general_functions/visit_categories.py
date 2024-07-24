@@ -15,10 +15,8 @@ def get_visit_categories(visit_instance):
                     category_present = True
                     errors = visit_instance.errors
                     if errors:
-                        for error in errors:
-                            if error is not None:
-                                if error["field"] == field:
-                                    category_error_present = True
+                        if field in errors:
+                            category_error_present = True
         categories.append(
             {
                 "category": category[0].value,

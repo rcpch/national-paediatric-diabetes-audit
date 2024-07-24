@@ -1,5 +1,6 @@
 import re
 import json
+import itertools
 from django import template, forms
 from django.utils.safestring import mark_safe
 from django.conf import settings
@@ -129,44 +130,48 @@ def is_emailfield(widget):
 
 
 @register.filter
-def error_for_field(messages, field):
+def error_for_field(errors_by_field, field):
     """
     Returns all errors for a given field
     """
     concatenated_fields = ""
-    if messages is None:
-        messages = []
-    if field in VISIT_FIELD_FLAT_LIST:
+
+    if errors_by_field is None:
+        errors = []
+    elif field in VISIT_FIELD_FLAT_LIST:
         return "There are errors associated with one or more of this child's visits."
-    if len(messages) > 0:
-        for message in messages:
-            if field == message["field"]:
-                concatenated_fields += f"{message['message']},\n"
+    else:
+        errors = errors_by_field[field]
+
+    if len(errors) > 0:
+        for error in errors:
+            concatenated_fields += f"{error['message']},\n"
+    
     return concatenated_fields if len(concatenated_fields) > 0 else []
 
 
 @register.filter
-def errors_for_category(category, error_list):
+def errors_for_category(selected_category, errors_by_field):
     """
     Returns all error messages for a given category
     """
-    selected_category = None
-    for visit_category in VisitCategories:
-        if visit_category.value == category:
-            selected_category = visit_category
+    
+    # VISIT_FIELDS: (VisitCategory -> [string])
+    # Get the first or default to the empty list
+    fields_in_category = next(
+        (fields for (category, fields) in VISIT_FIELDS
+            if category.value == selected_category), [])
 
-    final_string = ""
-    for error in error_list:
-        if error:
-            error_field_list = []
+    # errors_by_field: { [string] -> [{ message: string }]}
+    errors = [errors for (field, errors) in errors_by_field.items()
+        if field in fields_in_category]
 
-            for visit_field in VISIT_FIELDS:
-                if visit_field[0] == selected_category:
-                    error_field_list = visit_field[1]
-            if len(error_field_list) > 0:
-                if error["field"] in error_field_list:
-                    final_string += f"{error['message']}\n"
-    return final_string
+    # flatten
+    errors = itertools.chain(*errors)
+
+    error_messages = [error["message"] for error in errors]
+
+    return "\n".join(error_messages)
 
 
 @register.simple_tag
