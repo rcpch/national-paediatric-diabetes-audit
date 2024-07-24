@@ -12,3 +12,5 @@ __pycache__
 *.code-workspace
 
 node_modules
+
+build_info.json
