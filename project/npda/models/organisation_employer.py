@@ -1,23 +1,17 @@
-from django.contrib.gis.db.models import Model, CharField
+from django.contrib.gis.db.models import Model, BooleanField, CASCADE, ForeignKey
 from django.utils.translation import gettext_lazy as _
 
 
 class OrganisationEmployer(Model):
-    ods_code = CharField(
-        _("Employing organisation"),
-        help_text=_("Enter your employing organisation"),
-        max_length=150,
-        unique=True,
-    )
-    name = CharField(
-        _("Employing organisation name"),
-        help_text=_("Enter your employing organisation name"),
-        max_length=150,
-    )
-    pz_code = CharField(
-        _("Paediatric Diabetes Unit code"),
-        help_text=_("Enter your employing organisation postcode"),
-        max_length=150,
+    """
+    This model is the link table between the NPDAUser and the PaediatricDiabetesUnit models
+    Rather than having a many-to-many relationship between the two models, we have a link table as we need to store
+    information about the user's role within the unit
+    """
+
+    is_primary_employer = BooleanField(
+        default=True,
+        help_text="Is this the user's primary employer?",
     )
 
     class Meta:
@@ -26,3 +20,15 @@ class OrganisationEmployer(Model):
 
     def __str__(self):
         return self.name
+
+    paediatric_diabetes_unit = ForeignKey(
+        "PaediatricDiabetesUnit",
+        on_delete=CASCADE,
+        related_name="npda_users",
+    )
+
+    npda_user = ForeignKey(
+        "NPDAUser",
+        on_delete=CASCADE,
+        related_name="paediatric_diabetes_units",
+    )
