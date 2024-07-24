@@ -9,10 +9,9 @@ import httpx
 # Third party imports
 from django.conf import settings
 
-from asgiref.sync import async_to_sync
-
 # RCPCH imports
 from ...constants import UNKNOWN_POSTCODES_NO_SPACES
+from ...general_functions.async_helpers import httpx_async_to_sync
 
 # Logging setup
 logger = logging.getLogger(__name__)
@@ -45,9 +44,4 @@ async def aimd_for_postcode(user_postcode: str, async_client: httpx.AsyncClient)
 
         return response.json()["result"]["data_quantile"]
 
-def imd_for_postcode(postcode):
-    async def wrapper():
-        async with httpx.AsyncClient() as client:
-            return aimd_for_postcode(postcode, client)
-    
-    return async_to_sync(wrapper)()
+imd_for_postcode = httpx_async_to_sync(aimd_for_postcode)

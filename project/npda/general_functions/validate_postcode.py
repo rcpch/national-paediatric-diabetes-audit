@@ -3,12 +3,10 @@
 # django
 
 # third party libraries
-import httpx
 
 # npda imports
 from django.conf import settings
-
-from asgiref.sync import async_to_sync
+from ...general_functions.async_helpers import httpx_async_to_sync
 
 
 async def avalidate_postcode(postcode, async_client):
@@ -31,9 +29,4 @@ async def avalidate_postcode(postcode, async_client):
 
     return True
 
-def validate_postcode(postcode):
-    async def wrapper():
-        async with httpx.AsyncClient() as client:
-            return avalidate_postcode(postcode, client)
-    
-    return async_to_sync(wrapper)()
+validate_postcode = httpx_async_to_sync(avalidate_postcode)

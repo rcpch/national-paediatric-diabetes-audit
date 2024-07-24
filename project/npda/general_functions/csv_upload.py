@@ -11,7 +11,7 @@ from django.apps import apps
 from django.conf import settings
 from django.utils import timezone
 
-from asgiref.sync import async_to_sync, sync_to_async
+from asgiref.sync import sync_to_async
 
 # third part imports
 import pandas as pd
@@ -40,23 +40,12 @@ from ...constants import (
 )
 
 from .validate_postcode import avalidate_postcode
-from .nhs_ods_requests import gp_details_for_ods_code
+from .nhs_ods_requests import agp_details_for_ods_code
 from .quarter_for_date import retrieve_quarter_for_date
 from .index_multiple_deprivation import aimd_for_postcode
 
 # Logging setup
 logger = logging.getLogger(__name__)
-
-# Has to standalone as it creates a transaction which doesn't work async
-@sync_to_async
-def add_patient_to_cohort(cohort_id, patient, timestamp):
-    AuditCohort = apps.get_model("npda", "AuditCohort")
-    
-    audit_cohort = AuditCohort.objects.get(pk=cohort_id)
-
-    audit_cohort.timestamp = timestamp
-    audit_cohort.patients.add(patient)
-    audit_cohort.save()
 
 async def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
     """
@@ -117,7 +106,6 @@ async def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_cod
         ethnicity = row["Ethnic Category"]
         diabetes_type = row["Diabetes Type"]
         gp_practice_ods_code = row["GP Practice Code"]
-        practice_validation = gp_details_for_ods_code(ods_code=gp_practice_ods_code)
         diagnosis_date = row["Date of Diabetes Diagnosis"]
         death_date = row["Death Date"]
         # Site fields
@@ -696,6 +684,8 @@ async def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_cod
         else:
             error = {"field": "postcode", "message": "Postcode invalid."}
             patient_errors.append(error)
+
+        practice_validation = await agp_details_for_ods_code(ods_code=gp_practice_ods_code)
 
         if hasattr(practice_validation, "error"):
             error = {
