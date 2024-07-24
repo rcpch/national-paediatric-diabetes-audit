@@ -84,17 +84,25 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
     except ValueError as error:
         return {"status": 500, "errors": f"Invalid file: {error}"}
 
-    def csv_value_to_model_value(value):
+    def csv_value_to_model_value(model_field, value):
         if pd.isnull(value):
             return None
-        elif hasattr(value, 'to_pydatetime'):
+        
+        # Pandas will convert an integer column to float if it contains missing values
+        # http://pandas.pydata.org/pandas-docs/stable/user_guide/gotchas.html#missing-value-representation-for-numpy-types
+        if pd.api.types.is_float(value) and model_field.choices:
+            return int(value)
+
+        if isinstance(value, pd.Timestamp):
             return value.to_pydatetime().date()
         
         return value
 
-    def row_to_dict(row, mapping):
+    def row_to_dict(row, model, mapping):
         return {
-            model_field: csv_value_to_model_value(row[csv_field])
+            model_field: csv_value_to_model_value(
+                model._meta.get_field(model_field), row[csv_field]
+            )
                 for model_field, csv_field in mapping.items()
         }
 
@@ -131,7 +139,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         return site
 
     def save_patient(site, row):
-        fields = row_to_dict(row, {
+        fields = row_to_dict(row, Patient, {
             "nhs_number": "NHS Number",
             "date_of_birth": "Date of Birth",
             "postcode": "Postcode of usual address",
@@ -157,7 +165,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         return Patient.objects.create(**fields)
 
     def save_visit(patient, row):
-        fields = row_to_dict(row, {
+        fields = row_to_dict(row, Visit, {
             "visit_date": "Visit/Appointment Date",
             "height": "Patient Height (cm)",
             "weight": "Patient Weight (kg)",
