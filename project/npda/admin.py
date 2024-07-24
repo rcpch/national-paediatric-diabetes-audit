@@ -46,10 +46,6 @@ class VisitAdmin(admin.ModelAdmin):
 class VisitActivityAdmin(admin.ModelAdmin):
     search_fields = ("activity_datetime", "pk", "ip_address")
 
-@admin.register(AuditCohort)
-class AuditCohortAdmin(admin.ModelAdmin):
-    search_fields = ["pk"]
-
 
 @admin.register(Session)
 class SessionAdmin(admin.ModelAdmin):
