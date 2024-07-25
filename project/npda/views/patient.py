@@ -191,6 +191,7 @@ class PatientCreateView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Succe
         )
         patient.site = site
         patient.is_valid = True
+        patient.errors = None
         patient.save()
         # add patient to the latest audit cohort
         if AuditCohort.objects.count() > 0:
@@ -225,6 +226,7 @@ class PatientUpdateView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, Permiss
     def form_valid(self, form: BaseForm) -> HttpResponse:
         patient = form.save(commit=False)
         patient.is_valid = True
+        patient.errors = None
         patient.save()
         return super().form_valid(form)
 
