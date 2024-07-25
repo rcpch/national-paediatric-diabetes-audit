@@ -15,7 +15,10 @@ class DateInput(forms.DateInput):
 class NHSNumberField(forms.CharField):
     def to_python(self, value):
         number = super().to_python(value)
-        return nhs_number.normalise_number(number)
+        normalised = nhs_number.normalise_number(number)
+
+        # For some combinations we get back an empty string (eg '719-573 0220')
+        return normalised or value
     
     def validate(self, value):
         if not nhs_number.is_valid(value):

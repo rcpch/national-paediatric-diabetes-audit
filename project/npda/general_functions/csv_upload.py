@@ -87,11 +87,6 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             )
                 for model_field, csv_field in mapping.items()
         }
-    
-    def attach_errors_to_model(form):
-        model = form.instance
-        model.is_valid = form.is_valid()
-        model.errors = None if form.is_valid() else form.errors.get_json_data(escape_html = True)
   
     def validate_site(row):
         # TODO MRB: do something with site_errors
@@ -116,13 +111,9 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             "death_date": "Death Date"
         })
 
-        form = PatientForm(fields)
-        attach_errors_to_model(form)
-
         # TODO MRB: check we validate postcode
         # TODO MRB: check we Validate gp practice ods code
-
-        return form
+        return PatientForm(fields)
 
     def validate_visit_using_form(patient, row):
         fields = row_to_dict(row, Visit, {
@@ -167,13 +158,9 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             "hospital_admission_other": "Only complete if OTHER selected: Reason for admission (free text)"
         })
 
-        form = VisitForm(fields, initial = {
+        return VisitForm(fields, initial = {
             "patient": patient
         })
-
-        attach_errors_to_model(form)
-
-        return form
 
     def validate_rows(rows):
         first_row = rows.iloc[0]
@@ -196,6 +183,17 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
 
         if to_raise:
             raise ValidationError(to_raise)
+
+    def create_instance(model, form):
+        # We want to retain fields even if they're invalid so that we can edit them in the UI
+        # Use the field value from cleaned_data, falling back to data if it's not there
+        data = form.data | form.cleaned_data
+        instance = model(**data)
+        
+        instance.is_valid = form.is_valid()
+        instance.errors = None if form.is_valid() else form.errors.get_json_data(escape_html = True)
+
+        return instance
 
     # We only one to create one patient per NHS number
     visits_by_patient = dataframe.groupby("NHS Number", sort = False, dropna = False)
@@ -233,7 +231,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
     for (patient_form, site_fields, visits) in validated_data:
         site = Site.objects.create(**site_fields)
         
-        patient = patient_form.instance
+        patient = create_instance(Patient, patient_form)
 
         patient.site = site
         patient.save()
@@ -241,8 +239,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         new_cohort.patients.add(patient)
 
         for visit_form in visits:
-            visit = visit_form.instance
-
+            visit = create_instance(Visit, visit_form)
             visit.patient = patient
             visit.save()
     
