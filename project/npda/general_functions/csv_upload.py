@@ -60,24 +60,6 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
     Visit = apps.get_model("npda", "Visit")
     AuditCohort = apps.get_model("npda", "AuditCohort")
 
-    # set previous quarter to inactive
-    AuditCohort.objects.filter(
-        pz_code=pdu_pz_code,
-        ods_code=organisation_ods_code,
-        audit_year=date.today().year,
-        quarter=retrieve_quarter_for_date(date_instance=date.today()),
-    ).update(submission_active=False)
-
-    # create new quarter
-    new_cohort = AuditCohort.objects.create(
-        pz_code=pdu_pz_code,
-        ods_code=organisation_ods_code,
-        audit_year=date.today().year,
-        quarter=retrieve_quarter_for_date(date_instance=date.today()),
-        submission_date=timezone.now(),
-        submission_by=user,
-    )
-
     try:
         dataframe = pd.read_csv(
             csv_file, parse_dates=ALL_DATES, dayfirst=True, date_format="%d/%m/%Y"
@@ -106,40 +88,18 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             )
                 for model_field, csv_field in mapping.items()
         }
+  
+    def validate_site(row):
+        # TODO MRB: do something with site_errors
+        return row_to_dict(row, Site, {
+            "date_leaving_service": "Date of leaving service",
+            "reason_leaving_service": "Reason for leaving service"
+        }) | {
+            "paediatric_diabetes_unit_pz_code": pdu_pz_code,
+            "organisation_ods_code": organisation_ods_code
+        }
 
-    # private method - saves the csv rows for a given patient
-    def save_rows(rows, timestamp, new_cohort):
-        first_row = rows.iloc[0]
-
-        site = save_site(first_row)
-        patient = save_patient(site, first_row)
-        
-        new_cohort.timestamp = timestamp
-        new_cohort.patients.add(patient)
-        new_cohort.save()
-
-        rows.apply(lambda row: save_visit(patient, row), axis = 1)
-        
-    def save_site(row):
-         # TODO MRB: do something with site_errors
-        site, created = Site.objects.update_or_create(
-            date_leaving_service=(
-                row["Date of leaving service"]
-                if not pd.isnull(row["Date of leaving service"])
-                else None
-            ),
-            reason_leaving_service=(
-                row["Reason for leaving service"]
-                if not pd.isnull(row["Reason for leaving service"])
-                else None
-            ),
-            paediatric_diabetes_unit_pz_code=pdu_pz_code,
-            organisation_ods_code=organisation_ods_code,
-        )
-
-        return site
-
-    def save_patient(site, row):
+    def validate_patient_using_form(row):
         fields = row_to_dict(row, Patient, {
             "nhs_number": "NHS Number",
             "date_of_birth": "Date of Birth",
@@ -152,23 +112,16 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             "death_date": "Death Date"
         })
 
-        if not fields["nhs_number"]:
-            raise ValidationError("Missing NHS number")
-
         fields["nhs_number"] = fields["nhs_number"].replace(" ", "")
 
         form = PatientForm(fields)
 
-        # TODO MRB: validate postcode
-        # TODO MRB: Validate gp practice ods code
-        fields["is_valid"] = form.is_valid()
-        fields["errors"] = None if form.is_valid() else form.errors.get_json_data(escape_html = True)
+        # TODO MRB: check we validate postcode
+        # TODO MRB: check we Validate gp practice ods code
 
-        fields["site"] = site
+        return form
 
-        return Patient.objects.create(**fields)
-
-    def save_visit(patient, row):
+    def validate_visit_using_form(patient, row):
         fields = row_to_dict(row, Visit, {
             "visit_date": "Visit/Appointment Date",
             "height": "Patient Height (cm)",
@@ -211,23 +164,71 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             "hospital_admission_other": "Only complete if OTHER selected: Reason for admission (free text)"
         })
 
-        fields["patient"] = patient
-
         form = VisitForm(fields, initial = {
             "patient": patient
         })
 
-        fields["is_valid"] = form.is_valid()
-        fields["errors"] = None if form.is_valid() else form.errors.get_json_data(escape_html = True)
+        return form
 
-        Visit.objects.create(**fields)
+    def validate_rows(rows):
+        first_row = rows.iloc[0]
 
-    # by passing this in we can use the same timestamp for all records
-    timestamp = timezone.now()
+        site_fields = validate_site(first_row)
+        patient_form = validate_patient_using_form(first_row)
 
-    # sort = False preserves the original order of rows
-    for (_, rows) in dataframe.groupby("NHS Number", sort = False, dropna = False):
-        save_rows(rows, timestamp, new_cohort)
+        visits = rows.apply(lambda row: validate_visit_using_form(patient_form.instance, row), axis = 1)
+
+        return (patient_form, site_fields, visits)
+
+    # We only one to create one patient per NHS number
+    visits_by_patient = dataframe.groupby("NHS Number", sort = False, dropna = False)
+
+    # Validate the data using the same forms we use for the main UI
+    validated_data = [validate_rows(rows) for _, rows in visits_by_patient]
+
+    # If any of the errors would lead to a failure to save, exit immediately without saving anything
+    # TODO MRB: capture validation errors that would lead to a failure to save
+
+    # Set previous quarter to inactive
+    AuditCohort.objects.filter(
+        pz_code=pdu_pz_code,
+        ods_code=organisation_ods_code,
+        audit_year=date.today().year,
+        quarter=retrieve_quarter_for_date(date_instance=date.today()),
+    ).update(submission_active=False)
+
+    # Create new quarter
+    new_cohort = AuditCohort.objects.create(
+        pz_code=pdu_pz_code,
+        ods_code=organisation_ods_code,
+        audit_year=date.today().year,
+        quarter=retrieve_quarter_for_date(date_instance=date.today()),
+        submission_date=timezone.now(),
+        submission_by=user
+    )
+
+    for (patient_form, site_fields, visits) in validated_data:
+        site = Site.objects.create(**site_fields)
+        
+        patient = patient_form.instance
+        patient.is_valid = patient_form.is_valid()
+        patient.errors = None if patient_form.is_valid() else patient_form.errors.get_json_data(escape_html = True)
+        patient.site = site
+
+        patient.save()
+
+        new_cohort.patients.add(patient)
+
+        for visit_form in visits:
+            visit = visit_form.instance
+
+            visit.patient = patient
+            visit.is_valid = visit_form.is_valid()
+            visit.errors = None if visit_form.is_valid() else visit_form.errors.get_json_data(escape_html = True)
+
+            visit.save()
+    
+    new_cohort.save()
 
     return {"status": 200, "errors": None}
 
