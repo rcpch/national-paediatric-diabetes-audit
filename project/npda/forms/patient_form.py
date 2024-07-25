@@ -65,16 +65,6 @@ class PatientForm(forms.ModelForm):
         gp_practice_ods_code = cleaned_data.get("gp_practice_ods_code")
         gp_practice_postcode = cleaned_data.get("gp_practice_postcode")
 
-        if diagnosis_date is None:
-            raise ValidationError(
-                {"diagnosis_date": ["'Date of Diabetes Diagnosis' cannot be empty"]}
-            )
-
-        if date_of_birth is None:
-            raise ValidationError(
-                {"date_of_birth": ["'Date of Birth' cannot be empty"]}
-            )
-
         if diagnosis_date is not None and date_of_birth is not None:
             if diagnosis_date < date_of_birth:
                 raise ValidationError(

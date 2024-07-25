@@ -186,14 +186,32 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
 
         return (patient_form, site_fields, visits)
 
+    def raise_validation_errors_that_would_fail_save(form):
+        to_raise = {}
+
+        for field, errors in form.errors.as_data().items():
+            required_error = next((error for error in errors if error.code == 'required'), None)
+
+            if required_error:
+                to_raise[field] = required_error
+
+        if to_raise:
+            raise ValidationError(to_raise)
+
     # We only one to create one patient per NHS number
     visits_by_patient = dataframe.groupby("NHS Number", sort = False, dropna = False)
 
     # Validate the data using the same forms we use for the main UI
+    # TODO MRB: don't hold all validation errors in memory
+    #           stream it all through and then toggle submission_active at the end
     validated_data = [validate_rows(rows) for _, rows in visits_by_patient]
 
     # If any of the errors would lead to a failure to save, exit immediately without saving anything
-    # TODO MRB: capture validation errors that would lead to a failure to save
+    for (patient_form, _, visits) in validated_data:
+        raise_validation_errors_that_would_fail_save(patient_form)
+
+        for visit_form in visits:
+            raise_validation_errors_that_would_fail_save(visit_form)
 
     # Set previous quarter to inactive
     AuditCohort.objects.filter(
