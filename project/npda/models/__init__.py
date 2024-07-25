@@ -1,6 +1,7 @@
 from .help_text_mixin import *
 from .npda_user import *
 from .organisation_employer import *
+from .paediatric_diabetes_unit import *
 from .patient import *
 from .transfer import *
 from .submission import *
