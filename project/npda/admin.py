@@ -4,7 +4,7 @@ from .models import (
     NPDAUser,
     OrganisationEmployer,
     Patient,
-    Site,
+    Transfer,
     Visit,
     VisitActivity,
     Submission,
@@ -27,9 +27,9 @@ class PatientAdmin(admin.ModelAdmin):
     search_fields = ("nhs_number_icontains", "pk")
 
 
-@admin.register(Site)
-class SiteAdmin(admin.ModelAdmin):
-    search_fields = ("organisation", "pk")
+@admin.register(Transfer)
+class TransferAdmin(admin.ModelAdmin):
+    search_fields = ("paediatric_diabetes_unit", "patient", "pk")
 
 
 @admin.register(Visit)

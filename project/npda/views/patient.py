@@ -3,6 +3,7 @@ from datetime import date
 import logging
 
 # Django imports
+from django.apps import apps
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.db.models import Count, Case, When, Max, Q, F
@@ -53,11 +54,11 @@ class PatientListView(
         if self.request.user.view_preference == 0:
             # organisation view
             filtered_patients = Q(
-                site__organisation_ods_code=ods_code,
+                paediatric_diabetes_units__ods_code=ods_code,
             )
         elif self.request.user.view_preference == 1:
             # PDU view
-            filtered_patients = Q(site__paediatric_diabetes_unit_pz_code=pz_code)
+            filtered_patients = Q(paediatric_diabetes_units__pz_code=pz_code)
         elif self.request.user.view_preference == 2:
             # National view - no filter
             pass
@@ -190,17 +191,40 @@ class PatientCreateView(
     def form_valid(self, form: BaseForm) -> HttpResponse:
         # the Patient record is therefore valid
         patient = form.save(commit=False)
-        # add the site to the patient record
-        site = apps.get_model("npda", "Site").objects.create(
-            paediatric_diabetes_unit_pz_code=self.request.session.get("pz_code"),
-            organisation_ods_code=self.request.session.get("ods_code"),
-            date_leaving_service=form.cleaned_data.get("date_leaving_service"),
-            reason_leaving_service=form.cleaned_data.get("reason_leaving_service"),
-        )
-        patient.site = site
         patient.is_valid = True
         patient.errors = None
         patient.save()
+
+        # add the PDU to the patient record
+        # get or create the paediatric diabetes unit object
+        paediatric_diabetes_unit = apps.get_model(
+            "npda", "PaediatricDiabetesUnit"
+        ).objects.get_or_create(
+            pz_code=self.request.session.get("pz_code"),
+            ods_code=self.request.session.get("ods_code"),
+        )
+
+        Transfer = apps.get_model("npda", "Transfer")
+        if Transfer.objects.filter(patient=patient).exists():
+            # the patient is being transferred from another PDU. Update the previous_pz_code field
+            transfer = Transfer.objects.get(patient=patient)
+            transfer.previous_pz_code = transfer.paediatric_diabetes_unit.pz_code
+            transfer.paediatric_diabetes_unit = paediatric_diabetes_unit
+            transfer.date_leaving_service = (
+                form.cleaned_data.get("date_leaving_service"),
+            )
+            transfer.reason_leaving_service = (
+                form.cleaned_data.get("reason_leaving_service"),
+            )
+            transfer.save()
+        else:
+            Transfer.objects.create(
+                paediatric_diabetes_unit=paediatric_diabetes_unit,
+                patient=patient,
+                date_leaving_service=None,
+                reason_leaving_service=None,
+            )
+
         # add patient to the latest audit cohort
         if Submission.objects.count() > 0:
             new_first = Submission.objects.order_by("-submission_date").first()
@@ -228,8 +252,8 @@ class PatientUpdateView(
 
     def get_context_data(self, **kwargs):
         patient = Patient.objects.get(pk=self.kwargs["pk"])
-        pz_code = patient.site.paediatric_diabetes_unit_pz_code
-        ods_code = patient.site.organisation_ods_code
+        pz_code = patient.transfer.pz_code
+        ods_code = patient.transfer.ods_code
         context = super().get_context_data(**kwargs)
         context["title"] = f"Edit Child Details in {ods_code}({pz_code})"
         context["button_title"] = "Edit Child Details"

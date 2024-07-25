@@ -24,12 +24,11 @@ from ...constants import (
 from ..general_functions import (
     stringify_time_elapsed,
     imd_for_postcode,
-    gp_practice_for_postcode,
-    validate_postcode,
 )
 
 # Logging
 logger = logging.getLogger(__name__)
+
 
 class Patient(models.Model):
     """
@@ -108,14 +107,6 @@ class Patient(models.Model):
             CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
         ]
 
-    # relationships
-    site = models.ForeignKey(
-        to="npda.Site",
-        on_delete=models.CASCADE,
-        related_name="patients",
-        verbose_name="Sites",
-    )
-
     def __str__(self) -> str:
         return f"ID: {self.pk}, {self.nhs_number}"
 
@@ -155,6 +146,6 @@ class Patient(models.Model):
                 self.index_of_multiple_deprivation_quintile = None
                 print(
                     f"Cannot calculate deprivation score for {self.postcode}: {error}"
-                )   
+                )
 
         return super().save(*args, **kwargs)
