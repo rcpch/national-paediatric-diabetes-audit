@@ -9,6 +9,7 @@ from typing import Literal
 from django.apps import apps
 from django.conf import settings
 from django.utils import timezone
+from django.core.exceptions import ValidationError
 
 # third part imports
 import pandas as pd
@@ -151,6 +152,9 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             "death_date": "Death Date"
         })
 
+        if not fields["nhs_number"]:
+            raise ValidationError("Missing NHS number")
+
         fields["nhs_number"] = fields["nhs_number"].replace(" ", "")
 
         form = PatientForm(fields)
@@ -222,7 +226,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
     timestamp = timezone.now()
 
     # sort = False preserves the original order of rows
-    for (_, rows) in dataframe.groupby("NHS Number", sort = False):
+    for (_, rows) in dataframe.groupby("NHS Number", sort = False, dropna = False):
         save_rows(rows, timestamp, new_cohort)
 
     return {"status": 200, "errors": None}
@@ -249,7 +253,7 @@ def csv_summarise(csv_file):
     total_records = len(dataframe)
     number_unique_nhs_numbers = dataframe["NHS Number"].nunique()
     unique_nhs_numbers_no_spaces = (
-        dataframe["NHS Number"].apply(lambda x: x.replace(" ", "")).unique()
+        dataframe["NHS Number"].fillna('').apply(lambda x: x.replace(" ", "")).unique()
     )
     count_of_records_per_nhs_number = dataframe["NHS Number"].value_counts()
     matching_patients_in_current_quarter = Patient.objects.filter(
