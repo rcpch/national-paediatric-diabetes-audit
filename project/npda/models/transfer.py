@@ -42,13 +42,13 @@ class Transfer(models.Model):
 
     # relationships
     paediatric_diabetes_unit = models.ForeignKey(
-        "PaediatricDiabetesUnit",
+        to="npda.PaediatricDiabetesUnit",
         on_delete=models.CASCADE,
         related_name="patients",
     )
 
     patient = models.ForeignKey(
-        "Patient",
+        to="npda.Patient",
         on_delete=models.CASCADE,
         related_name="paediatric_diabetes_units",
     )

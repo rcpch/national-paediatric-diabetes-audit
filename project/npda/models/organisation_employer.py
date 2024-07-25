@@ -22,13 +22,13 @@ class OrganisationEmployer(Model):
         return self.name
 
     paediatric_diabetes_unit = ForeignKey(
-        "PaediatricDiabetesUnit",
+        to="npda.PaediatricDiabetesUnit",
         on_delete=CASCADE,
         related_name="npda_users",
     )
 
     npda_user = ForeignKey(
-        "NPDAUser",
+        to="npda.NPDAUser",
         on_delete=CASCADE,
         related_name="paediatric_diabetes_units",
     )
