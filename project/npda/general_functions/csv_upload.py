@@ -88,6 +88,11 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             )
                 for model_field, csv_field in mapping.items()
         }
+    
+    def attach_errors_to_model(form):
+        model = form.instance
+        model.is_valid = form.is_valid()
+        model.errors = None if form.is_valid() else form.errors.get_json_data(escape_html = True)
   
     def validate_site(row):
         # TODO MRB: do something with site_errors
@@ -115,6 +120,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         fields["nhs_number"] = fields["nhs_number"].replace(" ", "")
 
         form = PatientForm(fields)
+        attach_errors_to_model(form)
 
         # TODO MRB: check we validate postcode
         # TODO MRB: check we Validate gp practice ods code
@@ -168,6 +174,8 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             "patient": patient
         })
 
+        attach_errors_to_model(form)
+
         return form
 
     def validate_rows(rows):
@@ -211,10 +219,8 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         site = Site.objects.create(**site_fields)
         
         patient = patient_form.instance
-        patient.is_valid = patient_form.is_valid()
-        patient.errors = None if patient_form.is_valid() else patient_form.errors.get_json_data(escape_html = True)
+        
         patient.site = site
-
         patient.save()
 
         new_cohort.patients.add(patient)
@@ -223,9 +229,6 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             visit = visit_form.instance
 
             visit.patient = patient
-            visit.is_valid = visit_form.is_valid()
-            visit.errors = None if visit_form.is_valid() else visit_form.errors.get_json_data(escape_html = True)
-
             visit.save()
     
     new_cohort.save()
