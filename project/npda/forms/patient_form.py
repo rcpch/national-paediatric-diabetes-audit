@@ -43,6 +43,9 @@ class PatientForm(forms.ModelForm):
             "gp_practice_postcode": forms.TextInput(attrs={"class": TEXT_INPUT}),
         }
 
+    def clean_nhs_number(self):
+        return self.cleaned_data["nhs_number"].replace(" ", "")
+
     def clean_postcode(self):
         if not self.cleaned_data["postcode"]:
             raise ValidationError("This field is required")

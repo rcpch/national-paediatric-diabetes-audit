@@ -117,8 +117,6 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             "death_date": "Death Date"
         })
 
-        fields["nhs_number"] = fields["nhs_number"].replace(" ", "")
-
         form = PatientForm(fields)
         attach_errors_to_model(form)
 
@@ -219,7 +217,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         site = Site.objects.create(**site_fields)
         
         patient = patient_form.instance
-        
+
         patient.site = site
         patient.save()
 
