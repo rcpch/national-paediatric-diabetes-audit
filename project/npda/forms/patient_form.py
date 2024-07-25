@@ -67,50 +67,43 @@ class PatientForm(forms.ModelForm):
 
         if diagnosis_date is not None and date_of_birth is not None:
             if diagnosis_date < date_of_birth:
-                raise ValidationError(
-                    {
-                        "diagnosis_date": [
-                            "'Date of Diabetes Diagnosis' cannot be before 'Date of Birth'"
-                        ]
-                    }
+                self.add_error(
+                    "diagnosis_date",
+                    ValidationError("'Date of Diabetes Diagnosis' cannot be before 'Date of Birth'")
                 )
 
         if death_date is not None and date_of_birth is not None:
             if death_date < date_of_birth:
-                raise ValidationError(
-                    {"death_date": ["'Death Date' cannot be before 'Date of Birth'"]}
+                self.add_error(
+                    "death_date", 
+                    ValidationError("'Death Date' cannot be before 'Date of Birth'")
                 )
 
         if death_date is not None and diagnosis_date is not None:
             if death_date < diagnosis_date:
-                raise ValidationError(
-                    {
-                        "death_date": [
-                            "'Death Date' cannot be before 'Date of Diabetes Diagnosis'"
-                        ]
-                    }
+                self.add_error(
+                    "death_date",
+                    ValidationError("'Death Date' cannot be before 'Date of Diabetes Diagnosis'")
                 )
         
         if gp_practice_ods_code is None and gp_practice_postcode is None:
-            raise ValidationError({
-                "gp_practice_ods_code": [
-                    "GP Practice ODS code and GP Practice postcode cannot both be empty. At least one must be supplied."
-                ]
-            })
+            self.add_error(
+                "gp_practice_ods_code",
+                ValidationError("GP Practice ODS code and GP Practice postcode cannot both be empty. At least one must be supplied.")
+            )
         
         if not gp_practice_ods_code and gp_practice_postcode:
             try:
                 ods_code = gp_practice_for_postcode(gp_practice_postcode)
 
                 if not ods_code:
-                    raise ValidationError("Could not find GP practice with that postcode")
+                    self.add_error(
+                        "gp_practice_postcode",
+                        ValidationError("Could not find GP practice with that postcode")
+                    )
                 else:
                     cleaned_data["gp_practice_ods_code"] = ods_code
             except Exception as error:
-                raise ValidationError({
-                    "gp_practice_postcode": [
-                        error
-                    ]
-                })
+                self.add_error("gp_practice_postcode", ValidationError(error))
 
         return cleaned_data
