@@ -13,6 +13,7 @@ from django.core.exceptions import ValidationError
 
 # third part imports
 import pandas as pd
+import numpy as np
 
 # RCPCH imports
 from ...constants import (
@@ -59,12 +60,27 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
     Visit = apps.get_model("npda", "Visit")
     AuditCohort = apps.get_model("npda", "AuditCohort")
 
-    try:
-        dataframe = pd.read_csv(
-            csv_file, parse_dates=ALL_DATES, dayfirst=True, date_format="%d/%m/%Y"
-        )
-    except ValueError as error:
-        return {"status": 500, "errors": f"Invalid file: {error}"}
+    dataframe = pd.read_csv(
+        csv_file, parse_dates=ALL_DATES, dayfirst=True, date_format="%d/%m/%Y"
+    )
+
+    # Set previous quarter to inactive
+    AuditCohort.objects.filter(
+        pz_code=pdu_pz_code,
+        ods_code=organisation_ods_code,
+        audit_year=date.today().year,
+        quarter=retrieve_quarter_for_date(date_instance=date.today()),
+    ).update(submission_active=False)
+
+    # Create new quarter
+    new_cohort = AuditCohort.objects.create(
+        pz_code=pdu_pz_code,
+        ods_code=organisation_ods_code,
+        audit_year=date.today().year,
+        quarter=retrieve_quarter_for_date(date_instance=date.today()),
+        submission_date=timezone.now(),
+        submission_by=user
+    )
 
     def csv_value_to_model_value(model_field, value):
         if pd.isnull(value):
@@ -162,9 +178,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             "patient": patient
         })
 
-    def validate_rows(rows):
-        first_row = rows.iloc[0]
-
+    def validate_rows(first_row, rows):
         site_fields = validate_site(first_row)
         patient_form = validate_patient_using_form(first_row)
 
@@ -172,17 +186,29 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
 
         return (patient_form, site_fields, visits)
 
-    def raise_validation_errors_that_would_fail_save(form):
-        to_raise = {}
+    def gather_errors(form, original_row_index):
+        ret = {}
 
         for field, errors in form.errors.as_data().items():
-            required_error = next((error for error in errors if error.code == 'required'), None)
+            for error in errors:
+                errors_for_field = []
 
-            if required_error:
-                to_raise[field] = required_error
+                if field in ret:
+                    errors_for_field = ret[field]
 
-        if to_raise:
-            raise ValidationError(to_raise)
+                error.original_row_index = original_row_index
+
+                errors_for_field.append(error)
+
+                ret[field] = errors_for_field
+        
+        return ret
+    
+    def has_error_that_would_fail_save(errors):
+        for _, errors in errors.items():
+            for error in errors:
+                if error.code == 'required':
+                    return True
 
     def create_instance(model, form):
         # We want to retain fields even if they're invalid so that we can edit them in the UI
@@ -196,56 +222,43 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         return instance
 
     # We only one to create one patient per NHS number
+    # Remember the original row number to help users find where the problem was in the CSV
+    dataframe["row_index"] = np.arange(dataframe.shape[0])
+
     visits_by_patient = dataframe.groupby("NHS Number", sort = False, dropna = False)
 
-    # Validate the data using the same forms we use for the main UI
-    # TODO MRB: don't hold all validation errors in memory
-    #           stream it all through and then toggle submission_active at the end
-    validated_data = [validate_rows(rows) for _, rows in visits_by_patient]
+    errors_to_return = {}
 
-    # If any of the errors would lead to a failure to save, exit immediately without saving anything
-    for (patient_form, _, visits) in validated_data:
-        raise_validation_errors_that_would_fail_save(patient_form)
+    for _, rows in visits_by_patient:
+        first_row = rows.iloc[0]
+        original_row_index = first_row["row_index"]
 
-        for visit_form in visits:
-            raise_validation_errors_that_would_fail_save(visit_form)
+        (patient_form, site_fields, visits) = validate_rows(first_row, rows)
 
-    # Set previous quarter to inactive
-    AuditCohort.objects.filter(
-        pz_code=pdu_pz_code,
-        ods_code=organisation_ods_code,
-        audit_year=date.today().year,
-        quarter=retrieve_quarter_for_date(date_instance=date.today()),
-    ).update(submission_active=False)
-
-    # Create new quarter
-    new_cohort = AuditCohort.objects.create(
-        pz_code=pdu_pz_code,
-        ods_code=organisation_ods_code,
-        audit_year=date.today().year,
-        quarter=retrieve_quarter_for_date(date_instance=date.today()),
-        submission_date=timezone.now(),
-        submission_by=user
-    )
-
-    for (patient_form, site_fields, visits) in validated_data:
-        site = Site.objects.create(**site_fields)
+        errors_to_return = errors_to_return | gather_errors(patient_form, original_row_index)
         
-        patient = create_instance(Patient, patient_form)
-
-        patient.site = site
-        patient.save()
-
-        new_cohort.patients.add(patient)
-
         for visit_form in visits:
-            visit = create_instance(Visit, visit_form)
-            visit.patient = patient
-            visit.save()
+            errors_to_return = errors_to_return | gather_errors(visit_form, original_row_index)
+        
+        if not has_error_that_would_fail_save(errors_to_return):
+            site = Site.objects.create(**site_fields)
+            
+            patient = create_instance(Patient, patient_form)
+
+            patient.site = site
+            patient.save()
+
+            new_cohort.patients.add(patient)
+
+            for visit_form in visits:
+                visit = create_instance(Visit, visit_form)
+                visit.patient = patient
+                visit.save()
     
     new_cohort.save()
 
-    return {"status": 200, "errors": None}
+    if errors_to_return:
+        raise ValidationError(errors_to_return)
 
 
 def csv_summarise(csv_file):
@@ -254,17 +267,10 @@ def csv_summarise(csv_file):
     It returns a dictionary with the status of the operation and the summary data
     """
     Patient = apps.get_model("npda", "Patient")
-    # read the csv file
-    try:
-        dataframe = pd.read_csv(
-            csv_file, parse_dates=ALL_DATES, dayfirst=True, date_format="%d/%m/%Y"
-        )
-    except Exception as error:
-        return {
-            "status": 422,
-            "errors": f"Could not read csv file: {error}",
-            "summary": None,
-        }
+    
+    dataframe = pd.read_csv(
+        csv_file, parse_dates=ALL_DATES, dayfirst=True, date_format="%d/%m/%Y"
+    )
 
     total_records = len(dataframe)
     number_unique_nhs_numbers = dataframe["NHS Number"].nunique()
