@@ -1,5 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
+import nhs_number
 from ..models import Patient
 from ...constants.styles.form_styles import *
 from ..general_functions import (
@@ -10,6 +11,15 @@ from ..general_functions import (
 
 class DateInput(forms.DateInput):
     input_type = "date"
+
+class NHSNumberField(forms.CharField):
+    def to_python(self, value):
+        number = super().to_python(value)
+        return nhs_number.normalise_number(number)
+    
+    def validate(self, value):
+        if not nhs_number.is_valid(value):
+            raise ValidationError("Invalid NHS number")
 
 
 class PatientForm(forms.ModelForm):
@@ -28,6 +38,9 @@ class PatientForm(forms.ModelForm):
             "gp_practice_ods_code",
             "gp_practice_postcode",
         ]
+        field_classes = {
+            "nhs_number": NHSNumberField
+        }
         widgets = {
             "nhs_number": forms.TextInput(
                 attrs={"class": TEXT_INPUT},
@@ -43,9 +56,6 @@ class PatientForm(forms.ModelForm):
             "gp_practice_postcode": forms.TextInput(attrs={"class": TEXT_INPUT}),
         }
 
-    def clean_nhs_number(self):
-        return self.cleaned_data["nhs_number"].replace(" ", "")
-
     def clean_postcode(self):
         if not self.cleaned_data["postcode"]:
             raise ValidationError("This field is required")
@@ -59,15 +69,11 @@ class PatientForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        nhs_number = cleaned_data.get("nhs_number")
         date_of_birth = cleaned_data.get("date_of_birth")
         diagnosis_date = cleaned_data.get("diagnosis_date")
         death_date = cleaned_data.get("death_date")
         gp_practice_ods_code = cleaned_data.get("gp_practice_ods_code")
         gp_practice_postcode = cleaned_data.get("gp_practice_postcode")
-
-        if not nhs_number:
-            self.add_error("nhs_number", ValidationError("NHS number is required"))
 
         if diagnosis_date is not None and date_of_birth is not None:
             if diagnosis_date < date_of_birth:

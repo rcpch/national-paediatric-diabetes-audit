@@ -13,7 +13,6 @@ from django.core.exceptions import ValidationError
 
 # third part imports
 import pandas as pd
-import nhs_number
 
 # RCPCH imports
 from ...constants import (
