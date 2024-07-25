@@ -59,11 +59,15 @@ class PatientForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        nhs_number = cleaned_data.get("nhs_number")
         date_of_birth = cleaned_data.get("date_of_birth")
         diagnosis_date = cleaned_data.get("diagnosis_date")
         death_date = cleaned_data.get("death_date")
         gp_practice_ods_code = cleaned_data.get("gp_practice_ods_code")
         gp_practice_postcode = cleaned_data.get("gp_practice_postcode")
+
+        if not nhs_number:
+            self.add_error("nhs_number", ValidationError("NHS number is required"))
 
         if diagnosis_date is not None and date_of_birth is not None:
             if diagnosis_date < date_of_birth:
