@@ -127,9 +127,12 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             "death_date": "Death Date"
         })
 
-        # TODO MRB: check we validate postcode
         # TODO MRB: check we Validate gp practice ods code
-        return PatientForm(fields)
+        form = PatientForm(fields)
+
+        assign_original_row_indices_to_errors(form, row)
+
+        return form
 
     def validate_visit_using_form(patient, row):
         fields = row_to_dict(row, Visit, {
@@ -174,11 +177,22 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             "hospital_admission_other": "Only complete if OTHER selected: Reason for admission (free text)"
         })
 
-        return VisitForm(fields, initial = {
+        form = VisitForm(fields, initial = {
             "patient": patient
         })
 
-    def validate_rows(first_row, rows):
+        assign_original_row_indices_to_errors(form, row)
+
+        return form
+
+    def assign_original_row_indices_to_errors(form, row):
+        for _, errors in form.errors.as_data().items():
+            for error in errors:
+                error.original_row_index = row["row_index"]
+
+    def validate_rows(rows):
+        first_row = rows.iloc[0]
+
         site_fields = validate_site(first_row)
         patient_form = validate_patient_using_form(first_row)
 
@@ -186,7 +200,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
 
         return (patient_form, site_fields, visits)
 
-    def gather_errors(form, original_row_index):
+    def gather_errors(form):
         ret = {}
 
         for field, errors in form.errors.as_data().items():
@@ -195,8 +209,6 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
 
                 if field in ret:
                     errors_for_field = ret[field]
-
-                error.original_row_index = original_row_index
 
                 errors_for_field.append(error)
 
@@ -230,15 +242,12 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
     errors_to_return = {}
 
     for _, rows in visits_by_patient:
-        first_row = rows.iloc[0]
-        original_row_index = first_row["row_index"]
+        (patient_form, site_fields, visits) = validate_rows(rows)
 
-        (patient_form, site_fields, visits) = validate_rows(first_row, rows)
-
-        errors_to_return = errors_to_return | gather_errors(patient_form, original_row_index)
+        errors_to_return = errors_to_return | gather_errors(patient_form)
         
         for visit_form in visits:
-            errors_to_return = errors_to_return | gather_errors(visit_form, original_row_index)
+            errors_to_return = errors_to_return | gather_errors(visit_form)
         
         if not has_error_that_would_fail_save(errors_to_return):
             site = Site.objects.create(**site_fields)
