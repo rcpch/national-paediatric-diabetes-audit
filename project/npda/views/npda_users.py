@@ -381,22 +381,16 @@ class NPDAUserUpdateView(
                         pz_code=organisation["pz_code"],
                     )
                 )
-                if not OrganisationEmployer.objects.filter(
-                    npda_user=instance,
+                # set all employers to False
+                OrganisationEmployer.objects.filter(npda_user=instance).update(
+                    is_primary_employer=False
+                )
+                # createt the new employer as the primary employer
+                OrganisationEmployer.objects.create(
                     paediatric_diabetes_unit=paediatric_diabetes_unit,
-                ).exists():
-                    # if the user has no employers, set the new employer as the primary employer
-                    OrganisationEmployer.objects.create(
-                        paediatric_diabetes_unit=paediatric_diabetes_unit,
-                        npda_user=instance,
-                        is_primary_employer=True,
-                    )
-                else:
-                    OrganisationEmployer.objects.filter(
-                        npda_user=instance,
-                        paediatric_diabetes_unit=paediatric_diabetes_unit,
-                    ).update(is_primary_employer=True)
-                # add the new employer to the user's employer list
+                    npda_user=instance,
+                    is_primary_employer=True,
+                )
                 instance.refresh_from_db()
 
                 return HttpResponseRedirect(self.get_success_url())
