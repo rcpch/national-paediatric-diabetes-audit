@@ -336,9 +336,11 @@ class NPDAUserUpdateView(
         context["button_title"] = "Edit NPDA User Details"
         context["form_method"] = "update"
         context["npda_user"] = NPDAUser.objects.get(pk=self.kwargs["pk"])
-        context["organisation_employers"] = OrganisationEmployer.objects.filter(
-            npda_user=context["npda_user"]
-        ).all()
+        context["organisation_employers"] = (
+            OrganisationEmployer.objects.filter(npda_user=context["npda_user"])
+            .all()
+            .order_by("-is_primary_employer")
+        )
         return context
 
     def form_valid(self, form):
@@ -406,6 +408,30 @@ class NPDAUserUpdateView(
         Override POST method to resend email if recipient create account token has expired
         TODO: Only Superusers or Coordinators can do this
         """
+        if request.htmx:
+            print("I am HTMX")
+            # set all employers to False
+            npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
+            OrganisationEmployer.objects.filter(npda_user=npda_user).update(
+                is_primary_employer=False
+            )
+            # set the selected employer to True
+            OrganisationEmployer.objects.filter(
+                pk=request.POST.get("organisation_employer_id")
+            ).update(is_primary_employer=True)
+
+            return render(
+                request=request,
+                template_name="partials/employers.html",
+                context={
+                    "npda_user": npda_user,
+                    "organisation_employers": OrganisationEmployer.objects.filter(
+                        npda_user=npda_user
+                    )
+                    .all()
+                    .order_by("-is_primary_employer"),
+                },
+            )
         if "resend_email" in request.POST:
             npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
             subject = "Password Reset Requested"
