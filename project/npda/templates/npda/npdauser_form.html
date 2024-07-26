@@ -12,11 +12,17 @@
           {% if field.id_for_label == 'id_add_employer' %}
             {% if npda_user.organisation_employers %}
               <strong class="font-montserrat font-bold md:w-1/3 text-right pr-2 mb-2">Employer(s)</strong>
-              {% for employer in npda_user.organisation_employers.all %}
-                    <div class="text-left md:w-2/3 mb-2">
-                      {{ employer }}
-                    </div>
-              {% endfor %}       
+              <div class="text-left md:w-2/3 mb-2">
+                 {% for pdu in organisation_employers %}
+                      <p>
+                        {% if pdu.is_primary_employer %}
+                          <strong>{{ pdu.paediatric_diabetes_unit }} Primary Employer</strong>
+                        {% else %}
+                          {{ pdu.paediatric_diabetes_unit }}
+                        {% endif %}
+                      </p>
+                  {% endfor %}       
+              </div>
             {% endif %}
           {% endif %}
         </div>
