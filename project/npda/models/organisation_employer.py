@@ -1,3 +1,4 @@
+from typing import Iterable
 from django.contrib.gis.db.models import Model, BooleanField, CASCADE, ForeignKey
 from django.utils.translation import gettext_lazy as _
 
