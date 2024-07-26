@@ -409,16 +409,32 @@ class NPDAUserUpdateView(
         TODO: Only Superusers or Coordinators can do this
         """
         if request.htmx:
-            print("I am HTMX")
-            # set all employers to False
             npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
-            OrganisationEmployer.objects.filter(npda_user=npda_user).update(
-                is_primary_employer=False
-            )
-            # set the selected employer to True
-            OrganisationEmployer.objects.filter(
-                pk=request.POST.get("organisation_employer_id")
-            ).update(is_primary_employer=True)
+            if request.POST.get("update") == "delete":
+                OrganisationEmployer.objects.filter(
+                    pk=request.POST.get("organisation_employer_id")
+                ).delete()
+                return render(
+                    request=request,
+                    template_name="partials/employers.html",
+                    context={
+                        "npda_user": npda_user,
+                        "organisation_employers": OrganisationEmployer.objects.filter(
+                            npda_user=npda_user
+                        )
+                        .all()
+                        .order_by("-is_primary_employer"),
+                    },
+                )
+            elif request.POST.get("update") == "update":
+                # set all employers to False
+                OrganisationEmployer.objects.filter(npda_user=npda_user).update(
+                    is_primary_employer=False
+                )
+                # set the selected employer to True
+                OrganisationEmployer.objects.filter(
+                    pk=request.POST.get("organisation_employer_id")
+                ).update(is_primary_employer=True)
 
             return render(
                 request=request,
