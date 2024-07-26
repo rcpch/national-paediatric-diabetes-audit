@@ -336,6 +336,9 @@ class NPDAUserUpdateView(
         context["button_title"] = "Edit NPDA User Details"
         context["form_method"] = "update"
         context["npda_user"] = NPDAUser.objects.get(pk=self.kwargs["pk"])
+        context["organisation_employers"] = OrganisationEmployer.objects.filter(
+            npda_user=context["npda_user"]
+        ).all()
         return context
 
     def form_valid(self, form):

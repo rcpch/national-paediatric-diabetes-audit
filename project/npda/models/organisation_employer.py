@@ -19,7 +19,7 @@ class OrganisationEmployer(Model):
         verbose_name_plural = "Organisation Employers"
 
     def __str__(self):
-        return self.name
+        return f"{self.paediatric_diabetes_unit} for {self.npda_user}"
 
     paediatric_diabetes_unit = ForeignKey(
         to="npda.PaediatricDiabetesUnit",

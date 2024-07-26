@@ -98,13 +98,6 @@ class NPDAUserForm(forms.ModelForm):
                     ).organisations
                 )
 
-                print(
-                    "hello",
-                    OrganisationEmployer.objects.filter(
-                        npda_user=self.instance
-                    ).values_list("paediatric_diabetes_unit__ods_code", flat=True),
-                )
-
                 # filter out organisations that the user is already affiliated with
                 self.fields["add_employer"].choices = [
                     (org.ods_code, org.name)
