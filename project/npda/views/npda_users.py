@@ -1,7 +1,7 @@
-import json
 from datetime import datetime, timedelta
 import logging
 
+from django.apps import apps
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.utils import timezone
 from django.shortcuts import redirect, render
@@ -17,12 +17,15 @@ from django.utils.html import strip_tags
 from django.conf import settings
 
 # third party imports
-from project.npda.general_functions.pdus import get_single_pdu_from_ods_code
 from two_factor.views import LoginView as TwoFactorLoginView
 from django_htmx.http import trigger_client_event
 
 # RCPCH imports
-from ..models import NPDAUser, VisitActivity, OrganisationEmployer
+from ..models import (
+    NPDAUser,
+    VisitActivity,
+    OrganisationEmployer,
+)
 from ..forms.npda_user_form import NPDAUserForm, CaptchaAuthenticationForm
 from ..general_functions import (
     construct_confirm_email,
@@ -30,7 +33,7 @@ from ..general_functions import (
     group_for_role,
     organisations_adapter,
     get_new_session_fields,
-    get_or_update_view_preference
+    get_or_update_view_preference,
 )
 from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
 from project.constants import VIEW_PREFERENCES
@@ -65,8 +68,12 @@ class NPDAUserListView(
             # PDU view
             # create a list of sibling organisations' ODS codes who share the same PDU as the user
             pz_code = self.request.session.get("pz_code")
-            sibling_organisations = organisations_adapter.get_single_pdu_from_pz_code(pz_number=pz_code)
-            siblings_ods_codes = [org.ods_code for org in sibling_organisations.organisations]
+            sibling_organisations = organisations_adapter.get_single_pdu_from_pz_code(
+                pz_number=pz_code
+            )
+            siblings_ods_codes = [
+                org.ods_code for org in sibling_organisations.organisations
+            ]
             # get all users in the sibling organisations
             return NPDAUser.objects.filter(
                 organisation_employers__ods_code__in=siblings_ods_codes
@@ -116,10 +123,14 @@ class NPDAUserListView(
             ods_code = request.POST.get("npdauser_ods_code_select_name", None)
             pz_code = request.POST.get("npdauser_pz_code_select_name", None)
 
-            new_session_fields = get_new_session_fields(self.request.user, ods_code, pz_code)
+            new_session_fields = get_new_session_fields(
+                self.request.user, ods_code, pz_code
+            )
             self.request.session.update(new_session_fields)
 
-            view_preference = get_or_update_view_preference(self.request.user, view_preference)
+            view_preference = get_or_update_view_preference(
+                self.request.user, view_preference
+            )
 
             context = {
                 "view_preference": int(view_preference),
@@ -185,29 +196,7 @@ class NPDAUserCreateView(
         new_user.is_active = True
         new_user.email_confirmed = False
         new_user.view_preference = 0
-        try:
-            new_user.save()
-        except Exception as error:
-            messages.error(
-                self.request,
-                f"Error: {error}. Account not created. Please contact the NPDA team if this issue persists.",
-            )
-            return redirect(
-                "npda_users",
-            )
-
-        # add the user to the appropriate group
-        new_group = group_for_role(new_user.role)
-        try:
-            new_user.groups.add(new_group)
-        except Exception as error:
-            messages.error(
-                self.request,
-                f"Error: {error}. Account not created. Please contact NPDA team if this issue persists.",
-            )
-            return redirect(
-                "npda_users",
-            )
+        new_user.save()
 
         # add the user to the appropriate organisation
         new_employer_ods_code = form.cleaned_data["add_employer"]
@@ -237,16 +226,55 @@ class NPDAUserCreateView(
 
             if matching_organisation:
                 # creat or update  the OrganisationEmployer object
-                new_employer, created = OrganisationEmployer.objects.update_or_create(
-                    ods_code=new_employer_ods_code,
-                    defaults=dict(
-                        pz_code=organisation["pz_code"],
-                        name=matching_organisation["name"],
-                    ),
+                PaediatricDiabetesUnit = apps.get_model(
+                    "npda", "PaediatricDiabetesUnit"
                 )
-                # add the new employer to the user's employer list
-                new_user.organisation_employers.add(new_employer)
-                new_user.refresh_from_db()
+                paediatric_diabetes_unit, created = (
+                    PaediatricDiabetesUnit.objects.update_or_create(
+                        ods_code=new_employer_ods_code,
+                        pz_code=organisation["pz_code"],
+                    )
+                )
+                if new_user.organisation_employers.count() == 0:
+                    # if the user has no employers, set the new employer as the primary employer
+                    OrganisationEmployer.objects.update_or_create(
+                        paediatric_diabetes_unit=paediatric_diabetes_unit,
+                        npda_user=new_user,
+                        is_primary_employer=True,
+                    )
+                    new_user.refresh_from_db()
+                else:
+                    # add the new employer to the user's employer list
+                    OrganisationEmployer.objects.update_or_create(
+                        paediatric_diabetes_unit=paediatric_diabetes_unit,
+                        npda_user=new_user,
+                        is_primary_employer=False,
+                    )
+                    new_user.refresh_from_db()
+
+        try:
+            new_user.save()
+        except Exception as error:
+            messages.error(
+                self.request,
+                f"Error: {error}. Account not created. Please contact the NPDA team if this issue persists.",
+            )
+            return redirect(
+                "npda_users",
+            )
+
+        # add the user to the appropriate group
+        new_group = group_for_role(new_user.role)
+        try:
+            new_user.groups.add(new_group)
+        except Exception as error:
+            messages.error(
+                self.request,
+                f"Error: {error}. Account not created. Please contact NPDA team if this issue persists.",
+            )
+            return redirect(
+                "npda_users",
+            )
 
         # user created - send email with reset link to new user
         subject = "Password Reset Requested"
@@ -308,9 +336,15 @@ class NPDAUserUpdateView(
         context["button_title"] = "Edit NPDA User Details"
         context["form_method"] = "update"
         context["npda_user"] = NPDAUser.objects.get(pk=self.kwargs["pk"])
+        context["organisation_employers"] = (
+            OrganisationEmployer.objects.filter(npda_user=context["npda_user"])
+            .all()
+            .order_by("-is_primary_employer")
+        )
         return context
 
     def form_valid(self, form):
+        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
         instance = form.save()
 
         new_employer_ods_code = form.cleaned_data["add_employer"]
@@ -341,16 +375,24 @@ class NPDAUserUpdateView(
 
             if matching_organisation:
                 # creat or update  the OrganisationEmployer object
-                new_employer, created = OrganisationEmployer.objects.update_or_create(
-                    ods_code=new_employer_ods_code,
-                    defaults=dict(
+                paediatric_diabetes_unit, created = (
+                    PaediatricDiabetesUnit.objects.update_or_create(
+                        ods_code=new_employer_ods_code,
                         pz_code=organisation["pz_code"],
-                        name=matching_organisation["name"],
-                    ),
+                    )
                 )
-                # add the new employer to the user's employer list
-                instance.organisation_employers.add(new_employer)
+                # set all employers to False
+                OrganisationEmployer.objects.filter(npda_user=instance).update(
+                    is_primary_employer=False
+                )
+                # createt the new employer as the primary employer
+                OrganisationEmployer.objects.create(
+                    paediatric_diabetes_unit=paediatric_diabetes_unit,
+                    npda_user=instance,
+                    is_primary_employer=True,
+                )
                 instance.refresh_from_db()
+
                 return HttpResponseRedirect(self.get_success_url())
 
         return super().form_valid(form)
@@ -360,6 +402,46 @@ class NPDAUserUpdateView(
         Override POST method to resend email if recipient create account token has expired
         TODO: Only Superusers or Coordinators can do this
         """
+        if request.htmx:
+            npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
+            if request.POST.get("update") == "delete":
+                OrganisationEmployer.objects.filter(
+                    pk=request.POST.get("organisation_employer_id")
+                ).delete()
+                return render(
+                    request=request,
+                    template_name="partials/employers.html",
+                    context={
+                        "npda_user": npda_user,
+                        "organisation_employers": OrganisationEmployer.objects.filter(
+                            npda_user=npda_user
+                        )
+                        .all()
+                        .order_by("-is_primary_employer"),
+                    },
+                )
+            elif request.POST.get("update") == "update":
+                # set all employers to False
+                OrganisationEmployer.objects.filter(npda_user=npda_user).update(
+                    is_primary_employer=False
+                )
+                # set the selected employer to True
+                OrganisationEmployer.objects.filter(
+                    pk=request.POST.get("organisation_employer_id")
+                ).update(is_primary_employer=True)
+
+            return render(
+                request=request,
+                template_name="partials/employers.html",
+                context={
+                    "npda_user": npda_user,
+                    "organisation_employers": OrganisationEmployer.objects.filter(
+                        npda_user=npda_user
+                    )
+                    .all()
+                    .order_by("-is_primary_employer"),
+                },
+            )
         if "resend_email" in request.POST:
             npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
             subject = "Password Reset Requested"

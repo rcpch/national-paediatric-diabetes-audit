@@ -20,7 +20,7 @@ from ....constants import (
     CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
     CAN_PUBLISH_NPDA_DATA,
 )
-from ...models import NPDAUser, Patient, Visit, Site
+from ...models import NPDAUser, Patient, Visit, Transfer
 
 
 def groups_seeder(
@@ -29,7 +29,7 @@ def groups_seeder(
     patientContentType = ContentType.objects.get_for_model(Patient)
     visitContentType = ContentType.objects.get_for_model(Visit)
     npdauserContentType = ContentType.objects.get_for_model(NPDAUser)
-    siteContentType = ContentType.objects.get_for_model(Site)
+    transferContentType = ContentType.objects.get_for_model(Transfer)
 
     """
     Note view permissions include viewing users, but not creating, updating or deleting them
@@ -48,7 +48,7 @@ def groups_seeder(
         {"codename": "view_visit", "content_type": visitContentType},
         {"codename": "change_visit", "content_type": visitContentType},
         {"codename": "add_visit", "content_type": visitContentType},
-        # site-related permissions = None
+        # transfer-related permissions = None
         # NPDA-user related permissions
         {"codename": "view_npdauser", "content_type": npdauserContentType},
         {"codename": "change_npdauser", "content_type": npdauserContentType},
@@ -61,8 +61,8 @@ def groups_seeder(
         {"codename": "view_patient", "content_type": patientContentType},
         # visit-related permissions
         {"codename": "view_visit", "content_type": visitContentType},
-        # site-related permissions
-        {"codename": "view_site", "content_type": siteContentType},
+        # transfer-related permissions
+        {"codename": "view_transfer", "content_type": transferContentType},
         # NPDA-user related permissions
         {"codename": "view_npdauser", "content_type": npdauserContentType},
     ]
@@ -76,7 +76,7 @@ def groups_seeder(
         {"codename": "view_visit", "content_type": visitContentType},
         {"codename": "change_visit", "content_type": visitContentType},
         {"codename": "add_visit", "content_type": visitContentType},
-        # site-related permissions = None
+        # transfer-related permissions = None
         # user-related permissions
         {"codename": "view_npdauser", "content_type": npdauserContentType},
     ]
@@ -94,13 +94,13 @@ def groups_seeder(
         {"codename": "change_visit", "content_type": visitContentType},
         {"codename": "add_visit", "content_type": visitContentType},
         {"codename": "delete_visit", "content_type": visitContentType},
-        # site-related permissions
-        {"codename": "view_site", "content_type": siteContentType},
-        # site-related permissions
-        {"codename": "view_site", "content_type": siteContentType},
-        {"codename": "change_site", "content_type": siteContentType},
-        {"codename": "add_site", "content_type": siteContentType},
-        {"codename": "delete_site", "content_type": siteContentType},
+        # transfer-related permissions
+        {"codename": "view_transfer", "content_type": transferContentType},
+        # transfer-related permissions
+        {"codename": "view_transfer", "content_type": transferContentType},
+        {"codename": "change_transfer", "content_type": transferContentType},
+        {"codename": "add_transfer", "content_type": transferContentType},
+        {"codename": "delete_transfer", "content_type": transferContentType},
         # NPDA-user related permissions
         {"codename": "view_npdauser", "content_type": npdauserContentType},
         {"codename": "change_npdauser", "content_type": npdauserContentType},
@@ -128,7 +128,7 @@ def groups_seeder(
         },
         {
             "codename": CAN_ALLOCATE_NPDA_LEAD_CENTRE[0],
-            "content_type": siteContentType,
+            "content_type": transferContentType,
         },
     ]
 
@@ -144,15 +144,15 @@ def groups_seeder(
         # npda user
         {
             "codename": CAN_DELETE_NPDA_LEAD_CENTRE[0],
-            "content_type": siteContentType,
+            "content_type": transferContentType,
         },
         {
             "codename": CAN_EDIT_NPDA_LEAD_CENTRE[0],
-            "content_type": siteContentType,
+            "content_type": transferContentType,
         },
         {
             "codename": CAN_TRANSFER_NPDA_LEAD_CENTRE[0],
-            "content_type": siteContentType,
+            "content_type": transferContentType,
         },
     ]
 
