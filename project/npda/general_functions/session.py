@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 def create_session_object(user):
     organisation_employer = user.organisation_employers.first()
-    print(organisation_employer)
 
     ods_code = organisation_employer.ods_code
     pz_codes = [org["pz_code"] for org in user.organisation_employers.values()]
