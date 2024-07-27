@@ -47,3 +47,7 @@
   opacity: 1;
   transition: opacity 500ms ease-out;
 }
+
+.hidden {
+  display: none;
+}
