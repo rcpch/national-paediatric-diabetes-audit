@@ -73,7 +73,7 @@ class NPDAUserForm(forms.ModelForm):
         self.fields["surname"].required = True
         self.fields["email"].required = True
         self.fields["role"].required = True
-        self.fields["add_employer"].required = True
+        self.fields["add_employer"].required = False
 
         if self.request:
             if (
@@ -107,9 +107,6 @@ class NPDAUserForm(forms.ModelForm):
                         npda_user=self.instance
                     ).values_list("paediatric_diabetes_unit__ods_code", flat=True)
                 ]
-
-            # set the default value to the current user's organisation
-            self.fields["add_employer"].initial = self.request.session.get("ods_code")
 
 
 class NPDAUpdatePasswordForm(SetPasswordForm):
