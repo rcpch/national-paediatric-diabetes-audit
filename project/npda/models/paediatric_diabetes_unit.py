@@ -9,17 +9,16 @@ class PaediatricDiabetesUnit(Model):
     pz_code = CharField(
         max_length=10,
         help_text="Enter the paediatric diabetes unit PZ code",
-        unique=True,
     )
     ods_code = CharField(
         max_length=10,
         help_text="Enter the organisation ODS code",
-        unique=True,
     )
 
     class Meta:
         verbose_name = "Paediatric Diabetes Unit"
         verbose_name_plural = "Paediatric Diabetes Units"
+        unique_together = ('pz_code', 'ods_code')
 
     def __str__(self):
         return self.pz_code
