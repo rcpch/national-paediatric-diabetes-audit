@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import logging
 
 from django.apps import apps
+from django.forms import BaseModelForm
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.utils import timezone
 from django.shortcuts import redirect, render
@@ -304,7 +305,6 @@ class NPDAUserCreateView(
     def get_success_url(self) -> str:
         return reverse(
             "npda_users",
-            # organisation_id=organisation_id,
         )
 
 
