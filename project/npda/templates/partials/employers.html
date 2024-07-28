@@ -3,7 +3,7 @@
         <div><strong>{{ organisation_employer.paediatric_diabetes_unit }} Primary Employer</strong></div>
     {% else %}
         <div>
-            {{ organisation_employer.paediatric_diabetes_unit }} {{field.id_for_label}}
+            {{ organisation_employer.paediatric_diabetes_unit }}
             <button class="bg-rcpch_light_blue text-white font-semibold hover:text-white border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue p-1 m-1" hx-post="{% url 'npdauser-update' npda_user.pk %}" hx-target="#primary_pdu" hx-swap="innerHTML" hx-vals='{"organisation_employer_id":"{{organisation_employer.pk}}", "update":"update" }'>Set Primary</button>
             <button class="bg-rcpch_red text-white font-semibold hover:text-white border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint p-1 m-1" hx-post="{% url 'npdauser-update' npda_user.pk %}" hx-target="#primary_pdu" hx-swap="innerHTML" hx-vals='{"organisation_employer_id":"{{organisation_employer.pk}}", "update":"delete" }'>Delete</button>
         </div>
@@ -22,16 +22,7 @@
     </div>
     
     <div class="flex flex-row">
-        <select id="id_add_employer" name="{{ field.html_name }}" class="select rcpch-select rounded-none hidden">
-            {% for choice in organisation_choices %}
-                {% if not show_rcpch_team and choice.1 == "RCPCH Audit Team" %}
-                <!-- Do nothing, hide Audit Team option if not already in audit team-->
-                {% else %}
-                <option value="{{choice.0}}" {% if field.value == choice.0 %} selected="{{ field.value }}" {% endif %}>{{choice.1}}</option>
-                {% endif %}
-            {% endfor %}
-        </select>
-        
+        {% include 'partials/rcpch_organisation_select.html' with organisation_choices=organisation_choices selected_organisation=field.value hidden_on_load=True %}
             <button 
                 id="add_submit_button" 
                 class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue mb-2 text-xs hidden"

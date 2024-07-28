@@ -77,11 +77,19 @@ class NPDAUserForm(forms.ModelForm):
         self.fields["role"].required = True
         self.fields["add_employer"].required = False
 
-        # populate the add_employer choices with organisations that the user is not already affiliated with, based on user permissions
-        if self.request:
+        # this user is being updated
+        if self.instance.pk is not None:
+            # populate the add_employer choices with organisations that the user is not already affiliated with, based on user permissions
             self.organisation_choices = (
                 organisations_adapter.organisations_to_populate_select_field(
                     request=self.request, user_instance=self.instance
+                )
+            )
+        else:
+            # this user is being created - therefore need the organisation_choices to be populated with all organisations
+            self.organisation_choices = (
+                organisations_adapter.organisations_to_populate_select_field(
+                    request=self.request, user_instance=None
                 )
             )
 
