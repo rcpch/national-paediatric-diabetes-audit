@@ -34,7 +34,7 @@
               {% if field.field.widget|is_select %}
                   {% if field.id_for_label != 'id_add_employer' %}
                   <!-- include all selects except the rpch employers select which is used in the partial employers.html -->
-                  <select id="{{ field.id_for_label }}" name="add_employer" class="select rcpch-select rounded-none {% if field.id_for_label == 'id_add_employer' %} hidden {% endif %}">
+                  <select id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="select rcpch-select rounded-none {% if field.id_for_label == 'id_add_employer' %} hidden {% endif %}">
                     {% for choice in field.field.choices %}
                         {% if not show_rcpch_team and choice.1 == "RCPCH Audit Team" %}
                         <!-- Do nothing, hide Audit Team option if not already in audit team-->
