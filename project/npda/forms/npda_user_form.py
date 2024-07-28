@@ -27,13 +27,14 @@ logger = logging.getLogger(__name__)
 
 class NPDAUserForm(forms.ModelForm):
 
-    use_required_attribute = False
     add_employer = forms.ChoiceField(
         choices=[],  # Initially empty, will be populated dynamically
-        required=True,
+        required=False,
         widget=forms.Select(attrs={"class": SELECT}),
         label="Add Employer",
     )
+
+    organisation_choices = []
 
     class Meta:
         model = NPDAUser
@@ -60,6 +61,7 @@ class NPDAUserForm(forms.ModelForm):
             ),
             "is_rcpch_staff": forms.CheckboxInput(attrs={"class": "accent-rcpch_pink"}),
             "role": forms.Select(attrs={"class": SELECT}),
+            "add_employer": forms.Select(attrs={"class": SELECT}),
         }
 
     def __init__(self, *args, **kwargs) -> None:
@@ -75,38 +77,13 @@ class NPDAUserForm(forms.ModelForm):
         self.fields["role"].required = True
         self.fields["add_employer"].required = False
 
+        # populate the add_employer choices with organisations that the user is not already affiliated with, based on user permissions
         if self.request:
-            if (
-                self.request.user.is_superuser
-                or self.request.user.is_rcpch_audit_team_member
-                or self.request.user.is_rcpch_staff
-            ):
-                # populate the add_employer field with organisations that the user is not already affiliated with
-                self.fields["add_employer"].choices = (
-                    (item[0], item[1])
-                    for item in organisations_adapter.get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit()
-                    if item[0]
-                    not in OrganisationEmployer.objects.filter(
-                        npda_user=self.instance
-                    ).values_list("paediatric_diabetes_unit__ods_code", flat=True)
+            self.organisation_choices = (
+                organisations_adapter.organisations_to_populate_select_field(
+                    request=self.request, user_instance=self.instance
                 )
-            else:
-                pz_code = self.request.session.get("pz_code")
-                sibling_organisations = (
-                    organisations_adapter.get_single_pdu_from_pz_code(
-                        pz_number=pz_code
-                    ).organisations
-                )
-
-                # filter out organisations that the user is already affiliated with
-                self.fields["add_employer"].choices = [
-                    (org.ods_code, org.name)
-                    for org in sibling_organisations
-                    if org.ods_code
-                    not in OrganisationEmployer.objects.filter(
-                        npda_user=self.instance
-                    ).values_list("paediatric_diabetes_unit__ods_code", flat=True)
-                ]
+            )
 
 
 class NPDAUpdatePasswordForm(SetPasswordForm):

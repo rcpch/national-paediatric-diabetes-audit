@@ -341,43 +341,12 @@ class NPDAUserUpdateView(
             .all()
             .order_by("-is_primary_employer")
         )
-        return context
-
-    def get_form(self, form_class=None):
-        # populate the add_employer field with organisations that the user is not already affiliated with
-        form = super().get_form(form_class)
-        instance = self.get_object()
-
-        if (
-            self.request.user.is_superuser
-            or self.request.user.is_rcpch_audit_team_member
-            or self.request.user.is_rcpch_staff
-        ):
-            # populate the add_employer field with organisations that the user is not already affiliated with
-            form.fields["add_employer"].choices = (
-                (item[0], item[1])
-                for item in organisations_adapter.get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit()
-                if item[0]
-                not in OrganisationEmployer.objects.filter(
-                    npda_user=instance
-                ).values_list("paediatric_diabetes_unit__ods_code", flat=True)
+        context["organisation_choices"] = (
+            organisations_adapter.organisations_to_populate_select_field(
+                request=self.request, user_instance=context["npda_user"]
             )
-        else:
-            pz_code = self.request.session.get("pz_code")
-            sibling_organisations = organisations_adapter.get_single_pdu_from_pz_code(
-                pz_number=pz_code
-            ).organisations
-
-            # filter out organisations that the user is already affiliated with
-            form.fields["add_employer"].choices = [
-                (org.ods_code, org.name)
-                for org in sibling_organisations
-                if org.ods_code
-                not in OrganisationEmployer.objects.filter(
-                    npda_user=instance
-                ).values_list("paediatric_diabetes_unit__ods_code", flat=True)
-            ]
-        return form
+        )
+        return context
 
     def post(self, request: HttpRequest, *args: str, **kwargs) -> HttpResponse:
         """
@@ -394,21 +363,8 @@ class NPDAUserUpdateView(
                 OrganisationEmployer.objects.filter(
                     pk=request.POST.get("organisation_employer_id")
                 ).delete()
-                return render(
-                    request=request,
-                    template_name="partials/employers.html",
-                    context={
-                        "npda_user": npda_user,
-                        "organisation_employers": OrganisationEmployer.objects.filter(
-                            npda_user=npda_user
-                        )
-                        .all()
-                        .order_by("-is_primary_employer"),
-                    },
-                )
             elif request.POST.get("update") == "update":
                 # set the selected employer as the primary employer. Reset all other employers to False before setting the selected employer to True since only one employer can be primary
-
                 # set all employers to False
                 OrganisationEmployer.objects.filter(npda_user=npda_user).update(
                     is_primary_employer=False
@@ -417,6 +373,7 @@ class NPDAUserUpdateView(
                 OrganisationEmployer.objects.filter(
                     pk=request.POST.get("organisation_employer_id")
                 ).update(is_primary_employer=True)
+
             elif request.POST.get("add_employer"):
                 # add to new employer to the employer list
 
@@ -476,7 +433,16 @@ class NPDAUserUpdateView(
 
             # return the partial view of the employers list
             # if the a new employer has been added to the user, the new employer needs to be removed from the add_employer select list
-            self.get_form()
+            # the add_employer select list is repopulated with the remaining organisations - this happens by calling the get_form method
+
+            # get the user being edited
+            user_instance = self.get_object()
+
+            organisation_choices = (
+                organisations_adapter.organisations_to_populate_select_field(
+                    request=self.request, user_instance=user_instance
+                )
+            )
 
             return render(
                 request=request,
@@ -488,6 +454,7 @@ class NPDAUserUpdateView(
                     )
                     .all()
                     .order_by("-is_primary_employer"),
+                    "organisation_choices": organisation_choices,
                 },
             )
         if "resend_email" in request.POST:

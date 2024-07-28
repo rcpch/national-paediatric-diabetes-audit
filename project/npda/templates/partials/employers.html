@@ -3,9 +3,42 @@
         <div><strong>{{ organisation_employer.paediatric_diabetes_unit }} Primary Employer</strong></div>
     {% else %}
         <div>
-            {{ organisation_employer.paediatric_diabetes_unit }} 
+            {{ organisation_employer.paediatric_diabetes_unit }} {{field.id_for_label}}
             <button class="bg-rcpch_light_blue text-white font-semibold hover:text-white border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue p-1 m-1" hx-post="{% url 'npdauser-update' npda_user.pk %}" hx-target="#primary_pdu" hx-swap="innerHTML" hx-vals='{"organisation_employer_id":"{{organisation_employer.pk}}", "update":"update" }'>Set Primary</button>
             <button class="bg-rcpch_red text-white font-semibold hover:text-white border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint p-1 m-1" hx-post="{% url 'npdauser-update' npda_user.pk %}" hx-target="#primary_pdu" hx-swap="innerHTML" hx-vals='{"organisation_employer_id":"{{organisation_employer.pk}}", "update":"delete" }'>Delete</button>
         </div>
     {% endif %}                      
 {% endfor %}
+<div id="rcpch_organisation_select">
+    <div id="add_organisation_button">
+        <button type="button" class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-1.5 px-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue mb-2 text-xs" 
+            _="on click 
+                toggle .hidden on #id_add_employer 
+                then toggle .hidden on #add_submit_button 
+                then if my innerHTML is 'Add Employer' 
+                    set my innerHTML to 'Hide Employers' 
+                else 
+                    set my innerHTML to 'Add Employer'">Add Employer</button>
+    </div>
+    
+    <div class="flex flex-row">
+        <select id="id_add_employer" name="{{ field.html_name }}" class="select rcpch-select rounded-none hidden">
+            {% for choice in organisation_choices %}
+                {% if not show_rcpch_team and choice.1 == "RCPCH Audit Team" %}
+                <!-- Do nothing, hide Audit Team option if not already in audit team-->
+                {% else %}
+                <option value="{{choice.0}}" {% if field.value == choice.0 %} selected="{{ field.value }}" {% endif %}>{{choice.1}}</option>
+                {% endif %}
+            {% endfor %}
+        </select>
+        
+            <button 
+                id="add_submit_button" 
+                class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue mb-2 text-xs hidden"
+                hx-post="{% url 'npdauser-update' npda_user.pk %}"
+                hx-swap="innerHTML"
+                hx-target="#primary_pdu"
+            >Add</button>
+            
+    </div>
+  </div>
