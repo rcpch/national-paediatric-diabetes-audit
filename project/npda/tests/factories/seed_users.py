@@ -6,6 +6,8 @@ Seeds NPDA Users in test db once per session.
 from project.npda.general_functions.rcpch_nhs_organisations import get_nhs_organisation
 import pytest
 
+from django.apps import apps
+
 
 # NPDA Imports
 from project.npda.tests.UserDataClasses import (
@@ -14,10 +16,7 @@ from project.npda.tests.UserDataClasses import (
     test_user_audit_centre_reader_data,
     test_user_rcpch_audit_team_data,
 )
-from project.npda.models import (
-    NPDAUser,
-    OrganisationEmployer,
-)
+from project.npda.models import NPDAUser, OrganisationEmployer
 from .NPDAUserFactory import NPDAUserFactory
 from project.constants.user import RCPCH_AUDIT_TEAM
 from project.constants import VIEW_PREFERENCES
@@ -51,7 +50,9 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
         is_rcpch_staff = False
 
         GOSH_ODS_CODE = "RP401"
+        GOSH_PZ_CODE = "PZ196"
         ALDER_HEY_ODS_CODE = "RBS25"
+        ALDER_HEY_PZ_CODE = "PZ074"
 
         logger.info(f"Seeding test users at {GOSH_ODS_CODE=}.")
         # Seed a user of each type at GOSH
@@ -65,6 +66,13 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
             if user.is_clinical_audit_team:
                 is_rcpch_audit_team_member = True
 
+            # Create a PaediatricDiabetesCentre
+            PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+
+            pdu = PaediatricDiabetesUnit.objects.create(
+                ods_code=GOSH_ODS_CODE, pz_code=GOSH_PZ_CODE
+            )
+
             # GOSH User
             new_user_gosh = NPDAUserFactory(
                 first_name=first_name,
@@ -75,14 +83,21 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
                 is_rcpch_audit_team_member=is_rcpch_audit_team_member,
                 is_rcpch_staff=is_rcpch_staff,
                 groups=[user.group_name],
-                organisation_employers=[
-                    GOSH_ODS_CODE
-                ],  # Factory handles creating and assigning OrganisationEmployer
                 view_preference=(
                     VIEW_PREFERENCES[2][0]
                     if user.role == RCPCH_AUDIT_TEAM
                     else VIEW_PREFERENCES[0][0]
                 ),
+            )
+
+            OrganisationEmployer.objects.create(
+                paediatric_diabetes_unit=pdu,
+                npda_user=new_user_gosh,
+                is_primary_employer=True,
+            )
+
+            alderhey_pdu = PaediatricDiabetesUnit.objects.create(
+                ods_code=ALDER_HEY_ODS_CODE, pz_code=ALDER_HEY_PZ_CODE
             )
 
             # Alder hey user
@@ -95,9 +110,12 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
                 is_rcpch_audit_team_member=is_rcpch_audit_team_member,
                 is_rcpch_staff=is_rcpch_staff,
                 groups=[user.group_name],
-                organisation_employers=[
-                    ALDER_HEY_ODS_CODE
-                ],  # Factory handles creating and assigning OrganisationEmployer
+            )
+
+            OrganisationEmployer.objects.create(
+                paediatric_diabetes_unit=alderhey_pdu,
+                npda_user=new_user_alder_hey,
+                is_primary_employer=True,
             )
 
             logger.info(f"Seeded {new_user_gosh=} and {new_user_alder_hey=}")

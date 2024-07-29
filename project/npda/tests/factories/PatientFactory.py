@@ -10,8 +10,8 @@ import factory
 import nhs_number
 
 # rcpch imports
-from project.npda.models import Patient, Site
-from .SiteFactory import SiteFactory
+from project.npda.models import Patient
+from .TransferFactory import TransferFactory
 from project.constants import (
     ETHNICITIES,
     DIABETES_TYPES,
@@ -65,6 +65,6 @@ class PatientFactory(factory.django.DjangoModelFactory):
 
     gp_practice_ods_code = "RP401"
 
-    site = factory.SubFactory(
-        SiteFactory,
+    transfer = factory.SubFactory(
+        TransferFactory,
     )
