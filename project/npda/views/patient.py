@@ -268,11 +268,16 @@ class PatientUpdateView(
     success_url = reverse_lazy("patients")
 
     def get_context_data(self, **kwargs):
+        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+        Transfer = apps.get_model("npda", "Transfer")
         patient = Patient.objects.get(pk=self.kwargs["pk"])
-        pz_code = patient.transfer.pz_code
-        ods_code = patient.transfer.ods_code
+
+        transfer = Transfer.objects.get(patient=patient)
+
         context = super().get_context_data(**kwargs)
-        context["title"] = f"Edit Child Details in {ods_code}({pz_code})"
+        context["title"] = (
+            f"Edit Child Details in {transfer.paediatric_diabetes_unit.ods_code}({transfer.paediatric_diabetes_unit.pz_code})"
+        )
         context["button_title"] = "Edit Child Details"
         context["form_method"] = "update"
         context["patient_id"] = self.kwargs["pk"]
