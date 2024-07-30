@@ -4,6 +4,7 @@ import logging
 
 # Django imports
 from django.apps import apps
+from django.utils import timezone
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.db.models import Count, Case, When, Max, Q, F
@@ -54,12 +55,13 @@ class PatientListView(
         # filter patients to the view preference of the user
         if self.request.user.view_preference == 0:
             # organisation view
-            filtered_patients = Q(
-                paediatric_diabetes_units__ods_code=ods_code,
-            )
+            # this has been deprecated
+            pass
         elif self.request.user.view_preference == 1:
             # PDU view
-            filtered_patients = Q()
+            filtered_patients = Q(
+                submissions__paediatric_diabetes_unit__pz_code=pz_code,
+            )
         elif self.request.user.view_preference == 2:
             # National view - no filter
             pass
@@ -67,7 +69,7 @@ class PatientListView(
             raise ValueError("Invalid view preference")
 
         patient_queryset = Patient.objects.filter(
-            # submissions__submission_active=True,
+            submissions__submission_active=True,
         )
         if filtered_patients is not None:
             patient_queryset = patient_queryset.filter(filtered_patients)
@@ -230,15 +232,18 @@ class PatientCreateView(
         # add patient to the latest audit year, current quarter, and the logged in user's PDU
         quarter = retrieve_quarter_for_date(date.today())
         Submission = apps.get_model("npda", "Submission")
-        submission, created = Submission.objects.get_or_create(
+        submission, created = Submission.objects.update_or_create(
             audit_year=date.today().year,
             quarter=quarter,
             paediatric_diabetes_unit=paediatric_diabetes_unit,
-            submisson_active=True,
+            submission_active=True,
+            defaults={
+                "submission_by": NPDAUser.objects.get(pk=self.request.user.pk),
+                "submission_by": NPDAUser.objects.get(pk=self.request.user.pk),
+                "submission_date": timezone.now(),
+            },
         )
         submission.patients.add(patient)
-        submission.submission_by = NPDAUser.objects.get(pk=self.request.user.pk)
-        submission.submission_date = date.today()
         submission.save()
 
         return super().form_valid(form)

@@ -55,11 +55,6 @@ class Submission(models.Model):
     def __str__(self) -> str:
         return f"{self.audit_year} ({self.quarter}), {self.patients.count()} patients"
 
-    def save(self, *args, **kwargs) -> None:
-        self.audit_year = int(self.submission_date.year)
-        self.quarter = retrieve_quarter_for_date(self.submission_date.date())
-        super().save(*args, **kwargs)
-
     class Meta:
         verbose_name = "Submission"
         verbose_name_plural = "Submissions"
