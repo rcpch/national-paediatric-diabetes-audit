@@ -32,12 +32,16 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
 
         :return: The queryset for the view
         """
+        PaediatricDiabetesUnit = apps.get_model(
+            app_label="npda", model_name="PaediatricDiabetesUnit"
+        )
+        pdu, created = PaediatricDiabetesUnit.objects.get_or_create(
+            pz_code=self.request.session.get("pz_code"),
+            ods_code=self.request.session.get("ods_code"),
+        )
         queryset = (
-            self.model.objects.filter(
-                pz_code=self.request.session.get("pz_code"),
-                ods_code=self.request.session.get("ods_code"),
-            )
-            .values("submission_date", "pz_code", "ods_code", "quarter", "audit_year")
+            self.model.objects.filter(paediatric_diabetes_unit=pdu)
+            .values("submission_date", "quarter", "audit_year")
             .annotate(
                 patient_count=Count("patients"),
                 submission_active=F("submission_active"),
@@ -48,8 +52,6 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
             )
             .order_by(
                 "-submission_date",
-                "pz_code",
-                "ods_code",
                 "audit_year",
                 "quarter",
                 "submission_active",
@@ -67,17 +69,6 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context["pz_code"] = self.request.session.get("pz_code")
         return context
-
-    def get(self, request, *args, **kwargs):
-        """
-        Handle the GET request.
-
-        :param request: The request
-        :param args: The arguments
-        :param kwargs: The keyword arguments
-        :return: The response
-        """
-        return super().get(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
         """
