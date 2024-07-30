@@ -23,6 +23,7 @@ from project.npda.general_functions import (
     get_new_session_fields,
     get_or_update_view_preference,
 )
+from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
 from project.npda.models import NPDAUser, Submission
 
 # RCPCH imports
@@ -45,7 +46,7 @@ class PatientListView(
         """
         Return all patients with the number of errors in their visits
         Order by valid patients first, then by number of errors in visits, then by primary key
-        Scope to patient only in the same organisation as the user
+        Scope to patient only in the same organisation as the user and current audit year
         """
         pz_code = self.request.session.get("pz_code")
         ods_code = self.request.session.get("ods_code")
@@ -58,7 +59,7 @@ class PatientListView(
             )
         elif self.request.user.view_preference == 1:
             # PDU view
-            filtered_patients = Q(paediatric_diabetes_units__pz_code=pz_code)
+            filtered_patients = Q()
         elif self.request.user.view_preference == 2:
             # National view - no filter
             pass
@@ -66,7 +67,7 @@ class PatientListView(
             raise ValueError("Invalid view preference")
 
         patient_queryset = Patient.objects.filter(
-            submissions__submission_active=True,
+            # submissions__submission_active=True,
         )
         if filtered_patients is not None:
             patient_queryset = patient_queryset.filter(filtered_patients)
@@ -169,7 +170,7 @@ class PatientCreateView(
     LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, CreateView
 ):
     """
-    Handle creation of new patient in audit
+    Handle creation of new patient in audit - should link the patient to the current audit year and quarter, and the logged in user's PDU
     """
 
     permission_required = "npda.add_patient"
@@ -196,11 +197,12 @@ class PatientCreateView(
 
         # add the PDU to the patient record
         # get or create the paediatric diabetes unit object
-        paediatric_diabetes_unit = apps.get_model(
-            "npda", "PaediatricDiabetesUnit"
-        ).objects.get_or_create(
-            pz_code=self.request.session.get("pz_code"),
-            ods_code=self.request.session.get("ods_code"),
+        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+        paediatric_diabetes_unit, created = (
+            PaediatricDiabetesUnit.objects.get_or_create(
+                pz_code=self.request.session.get("pz_code"),
+                ods_code=self.request.session.get("ods_code"),
+            )
         )
 
         Transfer = apps.get_model("npda", "Transfer")
@@ -224,10 +226,20 @@ class PatientCreateView(
                 reason_leaving_service=None,
             )
 
-        # add patient to the latest audit cohort
-        if Submission.objects.count() > 0:
-            new_first = Submission.objects.order_by("-submission_date").first()
-            new_first.patients.add(patient)
+        # add patient to the latest audit year, current quarter, and the logged in user's PDU
+        quarter = retrieve_quarter_for_date(date.today())
+        Submission = apps.get_model("npda", "Submission")
+        submission, created = Submission.objects.get_or_create(
+            audit_year=date.today().year,
+            quarter=quarter,
+            paediatric_diabetes_unit=paediatric_diabetes_unit,
+            submisson_active=True,
+        )
+        submission.patients.add(patient)
+        submission.submission_by = NPDAUser.objects.get(pk=self.request.user.pk)
+        submission.submission_date = date.today()
+        submission.save()
+
         return super().form_valid(form)
 
 
