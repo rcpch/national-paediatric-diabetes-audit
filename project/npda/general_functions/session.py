@@ -18,10 +18,12 @@ def create_session_object(user):
     pz_codes = [org["pz_code"] for org in user.organisation_employers.values()]
 
     sibling_organisations = get_single_pdu_from_ods_code(ods_code)
+    
+    logger.warning(f"User {user} has organisations {sibling_organisations}")
 
     organisation_choices = [
-        (choice["ods_code"], choice["name"])
-        for choice in sibling_organisations["organisations"]
+        (choice.ods_code, choice.name)
+        for choice in sibling_organisations.organisations
     ]
 
     can_see_all_pdus = user.is_superuser or user.is_rcpch_audit_team_member
