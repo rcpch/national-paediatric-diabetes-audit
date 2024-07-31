@@ -11,7 +11,7 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
 
         # Grab environment variables
-        LOCAL_DEV_ADMIN_EMAIL = os.environ.get("LOCAL_DEV_ADMIN_PASSWORD", None)
+        LOCAL_DEV_ADMIN_EMAIL = os.environ.get("LOCAL_DEV_ADMIN_EMAIL", None)
         LOCAL_DEV_ADMIN_PASSWORD = os.environ.get("LOCAL_DEV_ADMIN_PASSWORD", None)
 
         # Set default values if environment variables are not set
