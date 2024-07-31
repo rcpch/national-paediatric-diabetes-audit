@@ -8,7 +8,7 @@ from django.apps import apps
 import factory
 
 # rcpch imports
-from project.npda.models import PaediatricDiabetesUnit
+from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 
 
 class PaediatricsDiabetesUnitFactory(factory.django.DjangoModelFactory):

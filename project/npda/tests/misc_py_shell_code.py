@@ -11,7 +11,7 @@ from project.npda.tests.UserDataClasses import (
 )
 from project.npda.general_functions.rcpch_nhs_organisations import get_nhs_organisation
 from project.npda.models import OrganisationEmployer
-from project.npda.tests.factories.NPDAUserFactory import NPDAUserFactory
+from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
 from project.constants.user import RCPCH_AUDIT_TEAM
 
 users = [

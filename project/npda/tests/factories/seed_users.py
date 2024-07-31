@@ -3,7 +3,6 @@ Seeds NPDA Users in test db once per session.
 """
 
 # Standard imports
-from project.npda.general_functions.rcpch_nhs_organisations import get_nhs_organisation
 import pytest
 
 from django.apps import apps
@@ -16,8 +15,8 @@ from project.npda.tests.UserDataClasses import (
     test_user_audit_centre_reader_data,
     test_user_rcpch_audit_team_data,
 )
-from project.npda.models import NPDAUser, OrganisationEmployer
-from project.npda.tests.factories import NPDAUserFactory
+from project.npda.models import NPDAUser
+from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
 from project.constants.user import RCPCH_AUDIT_TEAM
 from project.constants import VIEW_PREFERENCES
 import logging
@@ -25,8 +24,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+
+
 @pytest.fixture(scope="session")
 def seed_users_fixture(django_db_setup, django_db_blocker):
+
 
     # Define user data to seed
     users = [
@@ -38,10 +40,9 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
 
     with django_db_blocker.unblock():
 
-        # Don't repeat seed if users already exist.
         if NPDAUser.objects.exists():
-            logger.info("Test users already seeded. Skipping")
-            return
+            logger.info("Test users already seeded. Deleting all users.")
+            NPDAUser.objects.all().delete()
 
         # Otherwise, seed the users
         is_active = True
@@ -49,12 +50,10 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
         is_rcpch_audit_team_member = False
         is_rcpch_staff = False
 
-        GOSH_ODS_CODE = "RP401"
         GOSH_PZ_CODE = "PZ196"
-        ALDER_HEY_ODS_CODE = "RBS25"
         ALDER_HEY_PZ_CODE = "PZ074"
 
-        logger.info(f"Seeding test users at {GOSH_ODS_CODE=}.")
+        logger.info(f"Seeding test users at {GOSH_PZ_CODE=} and {ALDER_HEY_PZ_CODE=}.")
         # Seed a user of each type at GOSH
         for user in users:
             first_name = user.role_str
@@ -97,5 +96,6 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
                 organisation_employers=[ALDER_HEY_PZ_CODE],
             )
 
-            logger.info(f"Seeded {new_user_gosh=} and {new_user_alder_hey=}")
-        logger.info(f"All test users sucessfully seeded: {NPDAUser.objects.all()=}")
+            logger.info(f"Seeded users: \n{new_user_gosh=} and \n{new_user_alder_hey=}")
+
+        assert NPDAUser.objects.count() == len(users) * 2
