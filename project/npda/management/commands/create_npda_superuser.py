@@ -2,7 +2,6 @@ import os
 
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
-from project.npda.models import NPDAUser
 
 
 class Command(BaseCommand):
@@ -28,8 +27,9 @@ class Command(BaseCommand):
             LOCAL_DEV_ADMIN_PASSWORD = DEFAULT_VALUE_LOCAL_DEV_ADMIN_PASSWORD
 
         # Create superuser if it doesn't already exist
-        if not NPDAUser.objects.filter(email=LOCAL_DEV_ADMIN_EMAIL).exists():
-            NPDAUser.objects.create_superuser(
+        admin_user_model = get_user_model()
+        if not admin_user_model.objects.filter(email=LOCAL_DEV_ADMIN_EMAIL).exists():
+            admin_user_model.objects.create_superuser(
                 first_name="SuperuserAda",
                 last_name="Lovelace",
                 email=LOCAL_DEV_ADMIN_EMAIL,
