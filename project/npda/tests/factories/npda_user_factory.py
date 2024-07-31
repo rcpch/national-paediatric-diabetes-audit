@@ -2,17 +2,23 @@
 
 # Standard imports
 import factory
+import logging
 
 # Project imports
 from project.npda.general_functions.pdus import (
     PDUWithOrganisations,
     get_single_pdu_from_pz_code,
 )
-from project.npda.models import NPDAUser, PaediatricDiabetesUnit
-from project.npda.tests.factories import (
+from project.npda.models import NPDAUser
+from project.npda.tests.factories.organisation_employer_factory import (
     OrganisationEmployerFactory,
+)
+from project.npda.tests.factories.paediatrics_diabetes_unit_factory import (
     PaediatricsDiabetesUnitFactory,
 )
+
+# Logging
+logger = logging.getLogger(__name__)
 
 
 class NPDAUserFactory(factory.django.DjangoModelFactory):
@@ -51,6 +57,7 @@ class NPDAUserFactory(factory.django.DjangoModelFactory):
     @factory.post_generation
     def organisation_employers(self, create, extracted, **kwargs):
         if not create:
+            logger.info("Not creating OrganisationEmployer instances.")
             return
 
         # Initialize the list to hold PaediatricDiabetesUnit instances
@@ -59,28 +66,25 @@ class NPDAUserFactory(factory.django.DjangoModelFactory):
         # If no pz_codes are provided, create a default PaediatricsDiabetesUnit and OrganisationEmployer
         if not extracted:
             default_pdu = PaediatricsDiabetesUnitFactory()
-            OrganisationEmployerFactory(
+            OrganisationEmployerFactory.create(
                 npda_user=self, paediatric_diabetes_unit=default_pdu
             )
             pdus.append(default_pdu)
         else:
             # If pz_codes are provided, create OrganisationEmployer for each pz_code
             for pz_code in extracted:
-                pdu_data: PDUWithOrganisations = get_single_pdu_from_pz_code(
-                    pz_code=pz_code
-                )
+                pdu_data = get_single_pdu_from_pz_code(pz_number=pz_code)
 
                 # Raise error if not a PDU object
                 if not isinstance(pdu_data, PDUWithOrganisations):
                     raise ValueError(f"Invalid PDU object {pdu_data=}")
 
-                pdu, _ = PaediatricDiabetesUnit.objects.get_or_create(
+                pdu = PaediatricsDiabetesUnitFactory(
                     pz_code=pz_code,
-                    ods_code=pdu_data.ods_code,
-                    defaults={"name": pdu_data.name},
+                    ods_code=pdu_data.organisations[0].ods_code,
                 )
 
-                OrganisationEmployerFactory(
+                OrganisationEmployerFactory.create(
                     npda_user=self, paediatric_diabetes_unit=pdu
                 )
                 pdus.append(pdu)

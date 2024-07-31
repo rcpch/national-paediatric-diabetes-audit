@@ -9,7 +9,6 @@ import pytest
 
 # NPDA Imports
 from project.npda.models import Patient
-from .PatientFactory import PatientFactory
 
 
 @pytest.fixture(scope="session")

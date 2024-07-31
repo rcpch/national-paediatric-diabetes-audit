@@ -10,7 +10,7 @@ import factory
 
 # rcpch imports
 from project.npda.models import Transfer
-from .PaediatricsDiabetesUnitFactory import PaediatricsDiabetesUnitFactory
+from project.npda.tests.factories import PaediatricsDiabetesUnitFactory
 
 
 class TransferFactory(factory.django.DjangoModelFactory):
