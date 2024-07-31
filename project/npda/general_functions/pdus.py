@@ -152,7 +152,6 @@ def get_single_pdu_from_ods_code(
         response = requests.get(request_url, timeout=10)  # times out after 10 seconds
         response.raise_for_status()
         data = response.json()[0]
-        logger.warning(f"Data: {data}")
         return PDUWithOrganisations(
             pz_code=data["pz_code"],
             organisations=[
