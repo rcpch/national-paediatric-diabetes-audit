@@ -1,10 +1,18 @@
-from django import forms
+# python imports
+from datetime import date
+
+# django imports
+from django.apps import apps
 from django.core.exceptions import ValidationError
+from django import forms
+
+# project imports
 from ..models import Patient
 from ...constants.styles.form_styles import *
 from ..general_functions import (
     validate_postcode,
-    gp_practice_for_postcode
+    gp_practice_for_postcode,
+    retrieve_quarter_for_date,
 )
 
 
@@ -13,6 +21,18 @@ class DateInput(forms.DateInput):
 
 
 class PatientForm(forms.ModelForm):
+
+    quarter = forms.ChoiceField(
+        choices=[
+            (1, 1),
+            (2, 2),
+            (3, 3),
+            (4, 4),
+        ],  # Initially empty, will be populated dynamically
+        required=True,
+        widget=forms.Select(attrs={"class": SELECT}),
+        label="Audit Year Quarter",
+    )
 
     class Meta:
         model = Patient
@@ -27,6 +47,7 @@ class PatientForm(forms.ModelForm):
             "death_date",
             "gp_practice_ods_code",
             "gp_practice_postcode",
+            "quarter",
         ]
         widgets = {
             "nhs_number": forms.TextInput(
@@ -41,7 +62,22 @@ class PatientForm(forms.ModelForm):
             "death_date": DateInput(),
             "gp_practice_ods_code": forms.TextInput(attrs={"class": TEXT_INPUT}),
             "gp_practice_postcode": forms.TextInput(attrs={"class": TEXT_INPUT}),
+            "quarter": forms.Select(),
         }
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        if self.instance.pk:
+            # this is a bound form, so we need to get the quarter from the submission related to the instance
+            Submission = apps.get_model("npda", "Submission")
+            self.initial["quarter"] = Submission.objects.get(
+                patients=self.instance
+            ).quarter
+        else:
+            # this is an unbound form, so we need to set the quarter to current quarter
+            self.initial["quarter"] = retrieve_quarter_for_date(
+                date_instance=date.today()
+            )
 
     def clean_postcode(self):
         if not self.cleaned_data["postcode"]:
@@ -97,27 +133,27 @@ class PatientForm(forms.ModelForm):
                         ]
                     }
                 )
-        
+
         if gp_practice_ods_code is None and gp_practice_postcode is None:
-            raise ValidationError({
-                "gp_practice_ods_code": [
-                    "GP Practice ODS code and GP Practice postcode cannot both be empty. At least one must be supplied."
-                ]
-            })
-        
+            raise ValidationError(
+                {
+                    "gp_practice_ods_code": [
+                        "GP Practice ODS code and GP Practice postcode cannot both be empty. At least one must be supplied."
+                    ]
+                }
+            )
+
         if not gp_practice_ods_code and gp_practice_postcode:
             try:
                 ods_code = gp_practice_for_postcode(gp_practice_postcode)
 
                 if not ods_code:
-                    raise ValidationError("Could not find GP practice with that postcode")
+                    raise ValidationError(
+                        "Could not find GP practice with that postcode"
+                    )
                 else:
                     cleaned_data["gp_practice_ods_code"] = ods_code
             except Exception as error:
-                raise ValidationError({
-                    "gp_practice_postcode": [
-                        error
-                    ]
-                })
+                raise ValidationError({"gp_practice_postcode": [error]})
 
         return cleaned_data
