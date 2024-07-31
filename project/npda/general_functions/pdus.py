@@ -152,7 +152,14 @@ def get_single_pdu_from_ods_code(
         response = requests.get(request_url, timeout=10)  # times out after 10 seconds
         response.raise_for_status()
         data = response.json()[0]
-        return data
+        logger.warning(f"Data: {data}")
+        return PDUWithOrganisations(
+            pz_code=data["pz_code"],
+            organisations=[
+                OrganisationODSAndName(name=org["name"], ods_code=org["ods_code"])
+                for org in data["organisations"]
+            ],
+        )
     except HTTPError as http_err:
         logger.error(f"HTTP error occurred: {http_err.response.text}")
     except Exception as err:
