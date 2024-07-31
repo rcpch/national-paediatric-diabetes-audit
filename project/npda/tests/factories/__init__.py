@@ -6,3 +6,4 @@ from .PatientFactory import *
 from .PatientVisitFactory import *
 from .TransferFactory import *
 from .PaediatricsDiabetesUnitFactory import *
+from .OrganisationEmployerFactory import *

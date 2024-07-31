@@ -17,7 +17,7 @@ from project.npda.tests.UserDataClasses import (
     test_user_rcpch_audit_team_data,
 )
 from project.npda.models import NPDAUser, OrganisationEmployer
-from .NPDAUserFactory import NPDAUserFactory
+from project.npda.tests.factories import NPDAUserFactory
 from project.constants.user import RCPCH_AUDIT_TEAM
 from project.constants import VIEW_PREFERENCES
 import logging
@@ -66,13 +66,6 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
             if user.is_clinical_audit_team:
                 is_rcpch_audit_team_member = True
 
-            # Create a PaediatricDiabetesCentre
-            PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-
-            pdu = PaediatricDiabetesUnit.objects.create(
-                ods_code=GOSH_ODS_CODE, pz_code=GOSH_PZ_CODE
-            )
-
             # GOSH User
             new_user_gosh = NPDAUserFactory(
                 first_name=first_name,
@@ -88,16 +81,7 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
                     if user.role == RCPCH_AUDIT_TEAM
                     else VIEW_PREFERENCES[0][0]
                 ),
-            )
-
-            OrganisationEmployer.objects.create(
-                paediatric_diabetes_unit=pdu,
-                npda_user=new_user_gosh,
-                is_primary_employer=True,
-            )
-
-            alderhey_pdu = PaediatricDiabetesUnit.objects.create(
-                ods_code=ALDER_HEY_ODS_CODE, pz_code=ALDER_HEY_PZ_CODE
+                organisation_employers=[GOSH_PZ_CODE],
             )
 
             # Alder hey user
@@ -110,12 +94,7 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
                 is_rcpch_audit_team_member=is_rcpch_audit_team_member,
                 is_rcpch_staff=is_rcpch_staff,
                 groups=[user.group_name],
-            )
-
-            OrganisationEmployer.objects.create(
-                paediatric_diabetes_unit=alderhey_pdu,
-                npda_user=new_user_alder_hey,
-                is_primary_employer=True,
+                organisation_employers=[ALDER_HEY_PZ_CODE],
             )
 
             logger.info(f"Seeded {new_user_gosh=} and {new_user_alder_hey=}")
