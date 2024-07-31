@@ -17,8 +17,10 @@ from project.npda.tests.factories import (
     PatientFactory,
     PatientVisitFactory,
     NPDAUserFactory,
+    OrganisationEmployerFactory,
+    PaediatricsDiabetesUnitFactory,
+    TransferFactory,
 )
-from project.npda.models import Patient
 
 
 # register factories to be used across test directory
@@ -27,3 +29,6 @@ from project.npda.models import Patient
 register(PatientFactory)  # => patient_factory
 register(PatientVisitFactory)  # => patient_visit_factory
 register(NPDAUserFactory)  # => npdauser_factory
+register(OrganisationEmployerFactory)  # => npdauser_factory
+register(PaediatricsDiabetesUnitFactory)  # => npdauser_factory
+register(TransferFactory)  # => npdauser_factory

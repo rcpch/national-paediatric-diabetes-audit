@@ -34,6 +34,7 @@ class PatientFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = Patient
+        skip_postgeneration_save=True
 
     @factory.lazy_attribute
     def nhs_number(self):
