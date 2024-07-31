@@ -132,7 +132,7 @@ def get_single_pdu_from_pz_code(pz_number: str) -> Union[PDUWithOrganisations, d
 # TODO MRB: this should return dataclasses too
 def get_single_pdu_from_ods_code(
     ods_code: str,
-) -> Union[PDUWithOrganisations, Dict[str, str]]:
+) -> PDUWithOrganisations:
     """
     Fetches a specific Paediatric Diabetes Unit (PDU) with its associated organisations from the RCPCH NHS Organisations API using the ODS code.
 
@@ -140,8 +140,7 @@ def get_single_pdu_from_ods_code(
         ods_code (str): The ODS code of the Paediatric Diabetes Unit.
 
     Returns:
-        Union[Dict, Dict[str, str]]: A dictionary with the PDU details if the request is successful,
-                                     or a dictionary indicating an error.
+        list[PDUWithOrganisations]: A list of PDUWithOrganisations objects. Error values if PDUs are not found.
     """
     # Ensure the ODS code is uppercase
     ods_code = ods_code.upper()
@@ -157,7 +156,10 @@ def get_single_pdu_from_ods_code(
     except HTTPError as http_err:
         logger.error(f"HTTP error occurred: {http_err.response.text}")
     except Exception as err:
-        logger.error(f"An error occurred: {err}")
+        logger.error(f"An error occurred: {err}\n{ods_code=}{response.json()=}")
 
     # Return an error value in the same format
-    return {"error": f"ODS code {ods_code} not found"}
+    return PDUWithOrganisations(
+        pz_code="error",
+        organisations=[OrganisationODSAndName(ods_code="error", name="PDUs not found")],
+    )
