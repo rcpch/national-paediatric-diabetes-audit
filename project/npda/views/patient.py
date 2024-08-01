@@ -228,8 +228,9 @@ class PatientCreateView(
                 reason_leaving_service=None,
             )
 
-        # add patient to the latest audit year, current quarter, and the logged in user's PDU
-        quarter = retrieve_quarter_for_date(date.today())
+        # add patient to the latest audit year, and user selected quarter, and the logged in user's PDU
+        # the form is initialised with the current audit year and quarter
+        quarter = form.cleaned_data["quarter"]
         Submission = apps.get_model("npda", "Submission")
         submission, created = Submission.objects.update_or_create(
             audit_year=date.today().year,
@@ -265,6 +266,7 @@ class PatientUpdateView(
     form_class = PatientForm
     success_message = "New child record updated successfully"
     success_url = reverse_lazy("patients")
+    Submission = apps.get_model("npda", "Submission")
 
     def get_context_data(self, **kwargs):
         Transfer = apps.get_model("npda", "Transfer")
@@ -283,8 +285,13 @@ class PatientUpdateView(
 
     def form_valid(self, form: BaseForm) -> HttpResponse:
         patient = form.save(commit=False)
+        quarter = form.cleaned_data["quarter"]
         patient.is_valid = True
         patient.save()
+        # update the quarter for the patient in the submission
+        Submission.objects.filter(patients=patient, submission_active=True).update(
+            quarter=quarter
+        )
         return super().form_valid(form)
 
 
