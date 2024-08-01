@@ -1,6 +1,8 @@
 # Python imports
 import logging
 from typing import Tuple, List, Union
+from dataclasses import dataclass
+from typing import List
 
 # third party libraries
 import requests
@@ -8,13 +10,10 @@ from requests.exceptions import HTTPError
 
 # npda imports
 from django.conf import settings
+from project.constants import DummyPZCodes
 
 # Logging
 logger = logging.getLogger(__name__)
-
-# Define custom return types
-from dataclasses import dataclass
-from typing import List, Dict
 
 
 @dataclass
@@ -93,10 +92,10 @@ def get_all_pdus_list_choices() -> List[Tuple[str, str]]:
         logger.error(f"An error occurred: {err}")
 
     # Return an error value in the same format
-    return [("error", "PDUs not found")]
+    return [(DummyPZCodes.NOT_FOUND.value, DummyPZCodes.NOT_FOUND.name)]
 
 
-def get_single_pdu_from_pz_code(pz_number: str) -> Union[PDUWithOrganisations, dict]:
+def get_single_pdu_from_pz_code(pz_number: str) -> PDUWithOrganisations:
     """
     Fetches a specific Paediatric Diabetes Unit (PDU) with its associated organisations from the RCPCH NHS Organisations API.
 
@@ -126,12 +125,11 @@ def get_single_pdu_from_pz_code(pz_number: str) -> Union[PDUWithOrganisations, d
 
     # Return an error value in the same format
     return PDUWithOrganisations(
-        pz_code="error",
+        pz_code=DummyPZCodes.NOT_FOUND.value,
         organisations=[OrganisationODSAndName(ods_code="error", name="PDUs not found")],
     )
 
 
-# TODO MRB: this should return dataclasses too
 def get_single_pdu_from_ods_code(
     ods_code: str,
 ) -> PDUWithOrganisations:
@@ -168,6 +166,6 @@ def get_single_pdu_from_ods_code(
 
     # Return an error value in the same format
     return PDUWithOrganisations(
-        pz_code="error",
+        pz_code=DummyPZCodes.NOT_FOUND.value,
         organisations=[OrganisationODSAndName(ods_code="error", name="PDUs not found")],
     )
