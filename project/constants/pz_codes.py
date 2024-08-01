@@ -1,3 +1,16 @@
+from dataclasses import dataclass
+from enum import Enum
+
+@dataclass
+class PZCode:
+    pz_code: str
+    name: str
+
+class DummyPZCodes(Enum):
+    RCPCH = PZCode(pz_code="PZ999", name="RCPCH")
+    NOT_FOUND = PZCode(pz_code="PZ998", name="NOT_FOUND")
+
+
 pzs = [
     "RM102",
     "RXF05",
