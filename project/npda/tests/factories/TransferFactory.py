@@ -10,12 +10,11 @@ import factory
 
 # rcpch imports
 from project.npda.models import Transfer
-
-PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+from project.npda.tests.factories import PaediatricsDiabetesUnitFactory
 
 
 class TransferFactory(factory.django.DjangoModelFactory):
-    """Dependency factory for creating a minimum viable NPDAManagement.
+    """Dependency factory for creating a minimum viable NPDA Patient.
 
     This Factory is generated AFTER a Patient has been generated.
     """
@@ -23,12 +22,7 @@ class TransferFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Transfer
 
-    # alderhey_pdu = PaediatricDiabetesUnit.objects.create(
-    #     ods_code="RP426", pz_code="PZ130"
-    # )
-
-    # paediatric_diabetes_unit = alderhey_pdu
-
-    # date_leaving_service = date(2021, 1, 1)
-    # reason_leaving_service = None
-    # previous_pz_code = "PZ215"
+    # Relationships
+    paediatric_diabetes_unit = factory.SubFactory(PaediatricsDiabetesUnitFactory)
+    # Once a PatientFactory instance is created, it will attach here
+    patient = None

@@ -34,6 +34,7 @@ class PatientFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = Patient
+        skip_postgeneration_save=True
 
     @factory.lazy_attribute
     def nhs_number(self):
@@ -65,6 +66,8 @@ class PatientFactory(factory.django.DjangoModelFactory):
 
     gp_practice_ods_code = "RP401"
 
-    transfer = factory.SubFactory(
+    # Once a Patient is created, we must create a Transfer object
+    transfer = factory.RelatedFactory(
         TransferFactory,
+        factory_related_name='patient'
     )
