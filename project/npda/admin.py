@@ -1,3 +1,4 @@
+from django.apps import apps
 from django.contrib import admin
 
 from .models import (
@@ -10,6 +11,8 @@ from .models import (
     Submission,
 )
 from django.contrib.sessions.models import Session
+
+PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
 
 
 @admin.register(OrganisationEmployer)
@@ -25,6 +28,11 @@ class NPDAUserAdmin(admin.ModelAdmin):
 @admin.register(Patient)
 class PatientAdmin(admin.ModelAdmin):
     search_fields = ("nhs_number_icontains", "pk")
+
+
+@admin.register(PaediatricDiabetesUnit)
+class PaediatricDiabetesUnitAdmin(admin.ModelAdmin):
+    search_fields = ("pk", "ods_code", "pz_code")
 
 
 @admin.register(Transfer)

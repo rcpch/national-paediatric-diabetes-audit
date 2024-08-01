@@ -15,29 +15,27 @@ Database structure has few tables. The models are as follows:
 
 - **Patient**: There is one record for each child in the audit
 - **Visit**: There are multiple records for each patient. In NPDA, children are seen 4 times a year in clinic and have additional contacts. During these visits details regarding care processes and diabetes management are captured.
-- **Site**: There is only one active site at any one time, but more than one site might be responsible for the care of a patient over the audit year.
 
 ### Reporting tables
 
 Tables also track the progress of each child through the audit, as well how they are scoring with regard to their key performance indicators (KPIs). These KPIs are aggregated periodically to feed reports on KPIs at different levels of abstractions (organisational, trust-level or health board, integrated care board, NHS England region and country level)
 
-- **AuditProgress**: Has a one to one relationship with Registration. Stores information on how many fields in each form have been completed.
 - **KPI**: scores each individual child against the national KPI standards. It stores information on whether a given measure has been passed, failed, has yet to be completed, or whether the child in not eligible to be scored.
 - **KPIAggregation**: This base model stores results of aggregations of each measure. The base model is subclassed for models representing each geographical level of abstraction. Aggregations are run at scheduled intervals asynchronously and pulled into the dashboards.
+- **OrganisationEmployer**: This model serves the middle model between NPDAUser and PaediatricDiabetesUnit. It tracks the number of organisations/PDUs a user is a member of and which is the primary organisation.
+- **Submission**: This tracks all csv upload submissions and allocates them to audit years and quarters thereof. Only one active submission at a time can exist. New ones will overwrite the previous ones.
+- **Transfer**: This tracks any transfers between paediatric diabetes units. It stores the reason for transferring and the date of transfer. It provide the middle table between Patient and Paediatric Diabetes Unit
 - **VisitActivity**: Stores user access/visit activity, including number of login attempts and ISP address as well as timestamp
-
-### Link Tables
-
-There are some many to many relationships. Django normally handles this for you, but the development team chose to implement the link tables in these cases separately to be able to store information about the relationship between the tables.
-
-- **Site**: The relationships here are complicated since one child may have their diabetes care  in different Organisations across a year, though only one centre can be active in the care of a child at any one time. Each Case therefore can have a many to many relationship with the Organisation trust model (since one Organisation can have multiple Cases and one Case can have multiple Organisations). The Site model therefore is a link model between the two. It is used in this way, rather than relying on the Django built-in many-to-many solution, because additional information relating to the organisation can be stored per Case, for example whether the site is actively involved in diabetes care.
 
 ### Lookup Tables
 
-These classes are used as look up tables throughout the NPDA application. They are seeded in the first migrations, either pulling content from the the ```constants``` folder, or from SNOMED CT. Note that the RCPCH NHS Organisation repository maintains the primary source list and these models are kept up to date against this periodically.
+The RCPCH NHS Organisation repository maintains the primary source list and these models are kept up to date against this periodically.
 
 - **NPDAUser**: The User base model in Django is too basic for the requirements of NPDA and therefore a custom class has been created to describe the different users who either administer or deliver the audit, either on behalf of RCPCH, or the hospital trusts.
 
+### Schema / ERD
+
+<div style="width: 640px; height: 480px; margin: 10px; position: relative;"><iframe allowfullscreen frameborder="0" style="width:640px; height:480px" src="https://lucid.app/documents/embedded/c09d5aa7-3b32-49b0-a704-ede60f8141f7" id="DJQYgxoCtQxo"></iframe></div>
 
 #### Boundary files and geography extension pack
 

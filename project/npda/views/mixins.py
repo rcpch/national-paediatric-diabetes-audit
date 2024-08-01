@@ -2,6 +2,7 @@
 
 import logging
 
+from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.mixins import AccessMixin
@@ -121,6 +122,8 @@ class CheckPDUInstanceMixin(AccessMixin):
 
         model = self.get_model().__name__
 
+        Transfer = apps.get_model("npda", "Transfer")
+
         # get PDU assigned to user who is trying to access a view
         user_pdu = request.user.organisation_employers.first().pz_code
 
@@ -133,7 +136,8 @@ class CheckPDUInstanceMixin(AccessMixin):
 
         elif model == "Patient":
             requested_patient = Patient.objects.get(pk=self.kwargs["pk"])
-            requested_pdu = requested_patient.transfer.paediatric_diabetes_unit.pz_code
+            transfer = Transfer.objects.get(patient=requested_patient)
+            requested_pdu = transfer.paediatric_diabetes_unit.pz_code
 
         elif model == "Visit":
             requested_patient = Patient.objects.get(pk=self.kwargs["patient_id"])

@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 
 def get_or_update_view_preference(user, new_view_preference):
     new_view_preference = int(new_view_preference) if new_view_preference else None
+    NPDAUser = apps.get_model("npda", "NPDAUser")
 
     if new_view_preference == 2 and not user.is_rcpch_audit_team_member:  # national
         logger.warning(
@@ -14,7 +15,6 @@ def get_or_update_view_preference(user, new_view_preference):
         )
         raise PermissionDenied()
     elif new_view_preference:
-        NPDAUser = apps.get_model("npda", "NPDAUser")
         user = NPDAUser.objects.get(pk=user.pk)
         user.view_preference = new_view_preference
         user.save(update_fields=["view_preference"])

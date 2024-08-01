@@ -4,6 +4,7 @@
 <div class="flex flex-col justify-center px-10" hx-get="/npda_users" hx-trigger="npda_users from:body" hx-target="#npda_user_table">
     <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
       <div class="inline-block min-w-full py-2 sm:px-6 lg:px-8">
+        <h1 class="text-3xl font-montserrat font-semibold text-rcpch_dark_blue">NPDA Users at {{chosen_pdu}}</h1>
           {% url 'npda_users' as hx_post %}
             <div id="npdauser_view_preference" class="mb-5">
               {% include 'partials/view_preference.html'  with view_preference=request.user.view_preference hx_post=hx_post organisation_choices=organisation_choices ods_code_select_name="npdauser_ods_code_select_name" pz_code_select_name="npdauser_pz_code_select_name" ods_code=ods_code pdu_choices=pdu_choices chosen_pdu=chosen_pdu hx_target="#npdauser_view_preference" %}

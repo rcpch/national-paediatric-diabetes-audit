@@ -10,8 +10,8 @@ import factory
 import nhs_number
 
 # rcpch imports
-from project.npda.models import Patient, Site
-from .SiteFactory import SiteFactory
+from project.npda.models import Patient
+from .TransferFactory import TransferFactory
 from project.constants import (
     ETHNICITIES,
     DIABETES_TYPES,
@@ -34,6 +34,7 @@ class PatientFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = Patient
+        skip_postgeneration_save=True
 
     @factory.lazy_attribute
     def nhs_number(self):
@@ -65,6 +66,8 @@ class PatientFactory(factory.django.DjangoModelFactory):
 
     gp_practice_ods_code = "RP401"
 
-    site = factory.SubFactory(
-        SiteFactory,
+    # Once a Patient is created, we must create a Transfer object
+    transfer = factory.RelatedFactory(
+        TransferFactory,
+        factory_related_name='patient'
     )

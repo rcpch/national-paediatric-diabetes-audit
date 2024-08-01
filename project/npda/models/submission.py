@@ -28,22 +28,6 @@ class Submission(models.Model):
         help_text="The quarter in the audit year of the patient",
     )
 
-    pz_code = models.CharField(
-        "PZ code",
-        max_length=10,
-        blank=False,
-        null=False,
-        help_text="The PZ code of the Paediatric Diabetes Unit",
-    )
-
-    ods_code = models.CharField(
-        "PZ code",
-        max_length=10,
-        blank=False,
-        null=False,
-        help_text="The ODS code of the Organisation",
-    )
-
     submission_date = models.DateTimeField(
         "Submission date",
         help_text="Date the submission was created",
@@ -62,13 +46,14 @@ class Submission(models.Model):
 
     patients = models.ManyToManyField(to="npda.Patient", related_name="submissions")
 
+    paediatric_diabetes_unit = models.ForeignKey(
+        on_delete=models.CASCADE,
+        to="npda.PaediatricDiabetesUnit",
+        related_name="pdu_submissions",
+    )
+
     def __str__(self) -> str:
         return f"{self.audit_year} ({self.quarter}), {self.patients.count()} patients"
-
-    def save(self, *args, **kwargs) -> None:
-        self.audit_year = int(self.submission_date.year)
-        self.quarter = retrieve_quarter_for_date(self.submission_date.date())
-        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = "Submission"

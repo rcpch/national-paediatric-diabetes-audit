@@ -4,6 +4,7 @@ import logging
 
 # Django imports
 from django.apps import apps
+from django.utils import timezone
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.db.models import Count, Case, When, Max, Q, F
@@ -23,6 +24,7 @@ from project.npda.general_functions import (
     get_new_session_fields,
     get_or_update_view_preference,
 )
+from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
 from project.npda.models import NPDAUser, Submission
 
 # RCPCH imports
@@ -45,7 +47,7 @@ class PatientListView(
         """
         Return all patients with the number of errors in their visits
         Order by valid patients first, then by number of errors in visits, then by primary key
-        Scope to patient only in the same organisation as the user
+        Scope to patient only in the same organisation as the user and current audit year
         """
         pz_code = self.request.session.get("pz_code")
         ods_code = self.request.session.get("ods_code")
@@ -53,12 +55,13 @@ class PatientListView(
         # filter patients to the view preference of the user
         if self.request.user.view_preference == 0:
             # organisation view
-            filtered_patients = Q(
-                paediatric_diabetes_units__ods_code=ods_code,
-            )
+            # this has been deprecated
+            pass
         elif self.request.user.view_preference == 1:
             # PDU view
-            filtered_patients = Q(paediatric_diabetes_units__pz_code=pz_code)
+            filtered_patients = Q(
+                submissions__paediatric_diabetes_unit__pz_code=pz_code,
+            )
         elif self.request.user.view_preference == 2:
             # National view - no filter
             pass
@@ -169,7 +172,7 @@ class PatientCreateView(
     LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, CreateView
 ):
     """
-    Handle creation of new patient in audit
+    Handle creation of new patient in audit - should link the patient to the current audit year and quarter, and the logged in user's PDU
     """
 
     permission_required = "npda.add_patient"
@@ -196,11 +199,12 @@ class PatientCreateView(
 
         # add the PDU to the patient record
         # get or create the paediatric diabetes unit object
-        paediatric_diabetes_unit = apps.get_model(
-            "npda", "PaediatricDiabetesUnit"
-        ).objects.get_or_create(
-            pz_code=self.request.session.get("pz_code"),
-            ods_code=self.request.session.get("ods_code"),
+        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+        paediatric_diabetes_unit, created = (
+            PaediatricDiabetesUnit.objects.get_or_create(
+                pz_code=self.request.session.get("pz_code"),
+                ods_code=self.request.session.get("ods_code"),
+            )
         )
 
         Transfer = apps.get_model("npda", "Transfer")
@@ -224,10 +228,24 @@ class PatientCreateView(
                 reason_leaving_service=None,
             )
 
-        # add patient to the latest audit cohort
-        if Submission.objects.count() > 0:
-            new_first = Submission.objects.order_by("-submission_date").first()
-            new_first.patients.add(patient)
+        # add patient to the latest audit year, and user selected quarter, and the logged in user's PDU
+        # the form is initialised with the current audit year and quarter
+        quarter = form.cleaned_data["quarter"]
+        Submission = apps.get_model("npda", "Submission")
+        submission, created = Submission.objects.update_or_create(
+            audit_year=date.today().year,
+            quarter=quarter,
+            paediatric_diabetes_unit=paediatric_diabetes_unit,
+            submission_active=True,
+            defaults={
+                "submission_by": NPDAUser.objects.get(pk=self.request.user.pk),
+                "submission_by": NPDAUser.objects.get(pk=self.request.user.pk),
+                "submission_date": timezone.now(),
+            },
+        )
+        submission.patients.add(patient)
+        submission.save()
+
         return super().form_valid(form)
 
 
@@ -248,13 +266,18 @@ class PatientUpdateView(
     form_class = PatientForm
     success_message = "New child record updated successfully"
     success_url = reverse_lazy("patients")
+    Submission = apps.get_model("npda", "Submission")
 
     def get_context_data(self, **kwargs):
+        Transfer = apps.get_model("npda", "Transfer")
         patient = Patient.objects.get(pk=self.kwargs["pk"])
-        pz_code = patient.transfer.pz_code
-        ods_code = patient.transfer.ods_code
+
+        transfer = Transfer.objects.get(patient=patient)
+
         context = super().get_context_data(**kwargs)
-        context["title"] = f"Edit Child Details in {ods_code}({pz_code})"
+        context["title"] = (
+            f"Edit Child Details in {transfer.paediatric_diabetes_unit.ods_code}({transfer.paediatric_diabetes_unit.pz_code})"
+        )
         context["button_title"] = "Edit Child Details"
         context["form_method"] = "update"
         context["patient_id"] = self.kwargs["pk"]
@@ -262,8 +285,13 @@ class PatientUpdateView(
 
     def form_valid(self, form: BaseForm) -> HttpResponse:
         patient = form.save(commit=False)
+        quarter = form.cleaned_data["quarter"]
         patient.is_valid = True
         patient.save()
+        # update the quarter for the patient in the submission
+        Submission.objects.filter(patients=patient, submission_active=True).update(
+            quarter=quarter
+        )
         return super().form_valid(form)
 
 
