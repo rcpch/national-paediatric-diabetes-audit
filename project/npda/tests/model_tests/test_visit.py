@@ -123,6 +123,65 @@ Suggested tests for the Visit model:
 - A visit cannot be created if a valid smoking_cessation_referral_date is supplied but after the patient's date of death.
 - A visit can be created if a valid smoking_cessation_referral_date is supplied and a valid smoking_status is supplied (correct key) but no date is supplied if an error is stored in the errors field.
 - A visit cannot be created if a valid smoking_cessation_referral_date is supplied and a valid smoking_status is supplied (correct key) but no date is supplied if an error is NOT stored in the errors field.
+- A vist can be created if a valid carbohydrate_counting_level_three_education_date is supplied.
+- A visit cannot be created if a valid carbohydrate_counting_level_three_education_date is supplied but not in the correct format (a date).
+- A visit cannot be created if a valid carbohydrate_counting_level_three_education_date is supplied but in the future.
+- A visit cannot be created if a valid carbohydrate_counting_level_three_education_date is supplied but before the patient's date of birth.
+- A visit cannot be created if a valid carbohydrate_counting_level_three_education_date is supplied but after the patient's date of death.
+- A visit can be created if a valid carbohydrate_counting_level_three_education_date is supplied and is different to the visit date.
+ - A visit can be created if a valid dietician_additional_appointment_offered is supplied (correct key) and a valid dietician_additional_appointment_date.
+- A visit cannot be created if a valid dietician_additional_appointment_offered is supplied but not in the correct format (an incorrect key).
+- A visit can be created if a valid dietician_additional_appointment_date is supplied and is different to the visit date.
+- A visit cannot be created if a valid dietician_additional_appointment_date is supplied but not in the correct format (a date).
+- A visit cannot be created if a valid dietician_additional_appointment_date is supplied but in the future.
+- A visit cannot be created if a valid dietician_additional_appointment_date is supplied but before the patient's date of birth.
+- A visit cannot be created if a valid dietician_additional_appointment_date is supplied but after the patient's date of death.
+- A visit can be created if a valid dietician_additional_appointment_date is supplied and a valid dietician_additional_appointment_offered is supplied (correct key) but no date is supplied if an error is stored in the errors field.
+- A visit cannot be created if a valid dietician_additional_appointment_date is supplied and a valid dietician_additional_appointment_offered is supplied (correct key) but no date is supplied if an error is NOT stored in the errors field.
+- A visit can be created if a valid flu_immunisation_recommended_date is supplied.
+- A visit cannot be created if a valid flu_immunisation_recommended_date is supplied but not in the correct format (a date).
+- A visit cannot be created if a valid flu_immunisation_recommended_date is supplied but in the future.
+- A visit cannot be created if a valid flu_immunisation_recommended_date is supplied but before the patient's date of birth.
+- A visit cannot be created if a valid flu_immunisation_recommended_date is supplied but after the patient's date of death.
+- A visit can be created if a valid flu_immunisation_recommended_date is supplied and is different to the visit date.
+- A visit can be created if a valid ketone_meter_training entry is supplied (correct key).
+- A visit cannot be created if an invalid ketone_meter_training entry is supplied (incorrect key).
+- A visit can be created if a valid sick_day_rules_training_date is supplied.
+- A visit cannot be created if a valid sick_day_rules_training_date is supplied but not in the correct format (a date).
+- A visit cannot be created if a valid sick_day_rules_training_date is supplied but in the future.
+- A visit cannot be created if a valid sick_day_rules_training_date is supplied but before the patient's date of birth.
+- A visit cannot be created if a valid sick_day_rules_training_date is supplied but after the patient's date of death.
+- A visit can be created if a valid sick_day_rules_training_date is supplied and is different to the visit date.
+- A visit can be created if a valid hospital_admission_date and a valid hospital_admission_reason (correct key) and a valid hospital_admission_discharge_date are supplied.
+- A visit cannot be created if a valid hospital_admission_date is supplied but not in the correct format (a date).
+- A visit cannot be created if a valid hospital_admission_date is supplied but in the future.
+- A visit cannot be created if a valid hospital_admission_date is supplied but before the patient's date of birth.
+- A visit cannot be created if a valid hospital_admission_date is supplied but after the patient's date of death.
+- A visit cannot be created if a valid hospital_admission_date is supplied but before the patient's date of diagnosis.
+- A visit cannot be created if a hospital_admission_reason is supplied but not in the correct format (an incorrect key).
+- A visit can be created if a valid hospital_admission_discharge_date is supplied and is different to the visit date.
+- A visit cannot be created if a valid hospital_admission_discharge_date is supplied but not in the correct format (a date).
+- A visit cannot be created if a valid hospital_admission_discharge_date is supplied but in the future.
+- A visit cannot be created if a valid hospital_admission_discharge_date is supplied but before the patient's date of birth.
+- A visit cannot be created if a valid hospital_admission_discharge_date is supplied but after the patient's date of death.
+- A visit cannot be created if a valid hospital_admission_discharge_date is supplied but before the patient's date of diagnosis.
+- A visit can be created if a valid hospital_admission_discharge_date is supplied and a valid hospital_admission_date is also supplied but no hospital_admission_reason if an error is stored in the errors field.
+- A visit can be created if a valid hospital_admission_discharge_date is supplied and a valid hospital_admission_reason is also supplied but no hospital_admission_date if an error is stored in the errors field.
+- A visit can be created if a valid hospital_admission_date is supplied and a valid hospital_admission_reason is also supplied but no hospital_admission_discharge_date if an error is stored in the errors field.
+- A visit cannot be created if a valid hospital_admission_date is supplied but no hospital_admission_reason and no hospital_admission_discharge_date if an error is NOT stored in the errors field.
+- A visit cannot be created if a valid hospital_admission_reason is supplied but no hospital_admission_date and no hospital_admission_discharge_date if an error is NOT stored in the errors field.
+- A visit cannot be created if a valid hospital_admission_discharge_date is supplied but no hospital_admission_date and no hospital_admission_reason if an error is NOT stored in the errors field.
+- A visit can be created if a valid hospital_admission_date is supplied and is different to the visit date.
+- A visit can be created if a valid hospital_admission_reason is supplied and is in the correct format (a correct key).
+- A visit can be created if a valid hospital_admission_discharge_date is supplied and is different to the visit date.
+- A visit can be created if a valid dka_additional_therapies is supplied (correct key) and a value of 2 ('DKA') for hospital_admission_reason has been supplied.
+- A visit cannot be created if an invalid dka_additional_therapies is supplied (incorrect key) and a value of 2 ('DKA') for hospital_admission_reason has been supplied.
+- A visit cannot be created if a valid dka_additional_therapies is supplied (correct key) and a value of 2 ('DKA') for hospital_admission_reason has not been supplied if an error is NOT stored in the errors field. 
+- A visit can be created if a a valid dka_additional_therapies is supplied (correct key) and a value of 2 ('DKA') for hospital_admission_reason has not been supplied if an error is stored in the errors field.
+- A visit can be created if a valid hospital_admission_other is supplied and a value of 6 ('Other causes') for hospital_admission_reason has been supplied.
+- A visit cannot be created if a valid hospital_admission_other is supplied and a value of 6 ('Other causes') for hospital_admission_reason has not been supplied if an error is NOT stored in the errors field.
+- A visit can be created if a valid hospital_admission_other is supplied and a value of 6 ('Other causes') for hospital_admission_reason has not been supplied if an error is stored in the errors field.
+- A visit can be created if a valid hospital_admission_other is supplied and is in the correct format (correct key).
 - A visit can be created if a patient has a visit and a visit has a patient.
 - A visit can be created if a patient has multiple visits.
 - A visit cannot be created if it is associated with more than one patient.
