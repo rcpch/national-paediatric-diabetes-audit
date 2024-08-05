@@ -58,7 +58,7 @@ def csv_upload(
     return True if successful, False with error message if not
     """
     Patient = apps.get_model("npda", "Patient")
-    Site = apps.get_model("npda", "Site")
+    Transfer = apps.get_model("npda", "Transfer")
     Visit = apps.get_model("npda", "Visit")
     Submission = apps.get_model("npda", "Submission")
     PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
@@ -115,19 +115,16 @@ def csv_upload(
             for model_field, csv_field in mapping.items()
         }
 
-    def validate_site(row):
-        # TODO MRB: do something with site_errors
+    def validate_transfer(row):
+        # TODO MRB: do something with transfer_errors
         return row_to_dict(
             row,
-            Site,
+            Transfer,
             {
                 "date_leaving_service": "Date of leaving service",
                 "reason_leaving_service": "Reason for leaving service",
             },
-        ) | {
-            "paediatric_diabetes_unit_pz_code": pdu_pz_code,
-            "organisation_ods_code": organisation_ods_code,
-        }
+        ) | {"paediatric_diabetes_unit": pdu}
 
     def validate_patient_using_form(row):
         fields = row_to_dict(
@@ -214,14 +211,14 @@ def csv_upload(
     def validate_rows(rows):
         first_row = rows.iloc[0]
 
-        site_fields = validate_site(first_row)
+        transfer_fields = validate_transfer(first_row)
         patient_form = validate_patient_using_form(first_row)
 
         visits = rows.apply(
             lambda row: validate_visit_using_form(patient_form.instance, row), axis=1
         )
 
-        return (patient_form, site_fields, visits)
+        return (patient_form, transfer_fields, visits)
 
     def gather_errors(form):
         ret = {}
@@ -267,7 +264,7 @@ def csv_upload(
     errors_to_return = {}
 
     for _, rows in visits_by_patient:
-        (patient_form, site_fields, visits) = validate_rows(rows)
+        (patient_form, transfer_fields, visits) = validate_rows(rows)
 
         errors_to_return = errors_to_return | gather_errors(patient_form)
 
@@ -275,11 +272,11 @@ def csv_upload(
             errors_to_return = errors_to_return | gather_errors(visit_form)
 
         if not has_error_that_would_fail_save(errors_to_return):
-            site = Site.objects.create(**site_fields)
+            transfer = Transfer.objects.create(**transfer_fields)
 
             patient = create_instance(Patient, patient_form)
 
-            patient.site = site
+            patient.transfer = transfer
             patient.save()
 
             new_cohort.patients.add(patient)
