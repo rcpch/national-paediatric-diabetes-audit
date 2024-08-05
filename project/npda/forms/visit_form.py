@@ -1,24 +1,26 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from ...constants.styles import *
+from ...constants import *
 from ..general_functions.validate_dates import validate_date
 from ..models import Visit
 
+
 class DateInput(forms.DateInput):
-    input_type='date'
+    input_type = "date"
+
 
 class VisitForm(forms.ModelForm):
 
     patient = None
 
     def __init__(self, *args, **kwargs):
-        self.patient = kwargs['initial'].get('patient')
+        self.patient = kwargs["initial"].get("patient")
         super(VisitForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
             model_field = Visit._meta.get_field(field_name)
-            if hasattr(model_field, 'category'):
+            if hasattr(model_field, "category"):
                 field.category = model_field.category
-
 
     class Meta:
         model = Visit
@@ -92,15 +94,11 @@ class VisitForm(forms.ModelForm):
             "coeliac_screen_date": DateInput(),
             "gluten_free_diet": forms.Select(),
             "psychological_screening_assessment_date": DateInput(),
-            "psychological_additional_support_status": forms.Select(
-                
-            ),
+            "psychological_additional_support_status": forms.Select(),
             "smoking_status": forms.Select(),
             "smoking_cessation_referral_date": DateInput(),
             "carbohydrate_counting_level_three_education_date": DateInput(),
-            "dietician_additional_appointment_offered": forms.Select(
-                
-            ),
+            "dietician_additional_appointment_offered": forms.Select(),
             "dietician_additional_appointment_date": DateInput(),
             "flu_immunisation_recommended_date": DateInput(),
             "ketone_meter_training": forms.Select(),
@@ -113,13 +111,13 @@ class VisitForm(forms.ModelForm):
         }
 
     categories = [
-        "Measurements", 
-        "HBA1c", 
-        "Treatment", 
-        "CGM", 
-        "BP", 
-        "Foot Care", 
-        "DECS", 
+        "Measurements",
+        "HBA1c",
+        "Treatment",
+        "CGM",
+        "BP",
+        "Foot Care",
+        "DECS",
         "ACR",
         "Cholesterol",
         "Thyroid",
@@ -129,350 +127,604 @@ class VisitForm(forms.ModelForm):
         "Dietician",
         "Sick Day Rules",
         "Immunisation (flu)",
-        "Hospital Admission"
+        "Hospital Admission",
     ]
+
+    """
+    Custom clean method for all fields requiring choices
+    """
+
+    def clean_albuminuria_stage(self):
+        data = self.cleaned_data["albuminuria_stage"]
+        # Convert the list of tuples to a dictionary
+        albuminuria_stage_dict = dict(ALBUMINURIA_STAGES)
+
+        if data in albuminuria_stage_dict:
+            return data
+        else:
+            options = (
+                str(ALBUMINURIA_STAGES).strip("[]").replace(")", "").replace("(", "")
+            )
+            raise ValidationError(
+                f"Invalid value for 'Albuminuria Stage'. Please select one of {options}."
+            )
+
+    def clean_psychological_additional_support_status(self):
+        data = self.cleaned_data["psychological_additional_support_status"]
+        # Convert the list of tuples to a dictionary
+        psychological_additional_support_status_dict = dict(YES_NO_UNKNOWN)
+
+        if data in psychological_additional_support_status_dict:
+            return data
+        else:
+            options = str(YES_NO_UNKNOWN).strip("[]").replace(")", "").replace("(", "")
+            raise ValidationError(
+                f"Invalid value for 'Psychological Additional Support Status'. Please select one of {options}."
+            )
+
+    def clean_smoking_status(self):
+        data = self.cleaned_data["smoking_status"]
+        # Convert the list of tuples to a dictionary
+        smoking_status_dict = dict(SMOKING_STATUS)
+
+        if data in smoking_status_dict:
+            return data
+        else:
+            options = str(SMOKING_STATUS).strip("[]").replace(")", "").replace("(", "")
+            raise ValidationError(
+                f"Invalid value for 'Smoking Status'. Please select one of {options}."
+            )
+
+    def clean_dietian_additional_appointment_offered(self):
+        data = self.cleaned_data["dietician_additional_appointment_offered"]
+        # Convert the list of tuples to a dictionary
+        dietitian_additional_appointment_offered_dict = dict(YES_NO_UNKNOWN)
+
+        if data in dietitian_additional_appointment_offered_dict:
+            return data
+        else:
+            options = str(YES_NO_UNKNOWN).strip("[]").replace(")", "").replace("(", "")
+            raise ValidationError(
+                f"Invalid value for 'Dietician Additional Appointment Offered'. Please select one of {options}."
+            )
+
+    def clean_ketone_meter_training(self):
+        data = self.cleaned_data["ketone_meter_training"]
+        # Convert the list of tuples to a dictionary
+        ketone_meter_training_dict = dict(YES_NO_UNKNOWN)
+
+        if data in ketone_meter_training_dict:
+            return data
+        else:
+            options = str(YES_NO_UNKNOWN).strip("[]").replace(")", "").replace("(", "")
+            raise ValidationError(
+                f"Invalid value for 'Ketone Meter Training'. Please select one of {options}."
+            )
+
+    def clean_hospital_admission_reason(self):
+        data = self.cleaned_data["hospital_admission_reason"]
+        # Convert the list of tuples to a dictionary
+        hospital_admission_reason_dict = dict(HOSPITAL_ADMISSION_REASONS)
+
+        if data in hospital_admission_reason_dict:
+            return data
+        else:
+            options = (
+                str(HOSPITAL_ADMISSION_REASONS)
+                .strip("[]")
+                .replace(")", "")
+                .replace("(", "")
+            )
+            raise ValidationError(
+                f"Invalid value for 'Hospital Admission Reason'. Please select one of {options}."
+            )
+
+    def clean_dka_additional_therapies(self):
+        data = self.cleaned_data["dka_additional_therapies"]
+        # Convert the list of tuples to a dictionary
+        dka_additional_therapies_dict = dict(DKA_ADDITIONAL_THERAPIES)
+
+        if data in dka_additional_therapies_dict:
+            return data
+        else:
+            options = (
+                str(DKA_ADDITIONAL_THERAPIES)
+                .strip("[]")
+                .replace(")", "")
+                .replace("(", "")
+            )
+            raise ValidationError(
+                f"Invalid value for 'DKA Additional Therapies'. Please select one of {options}."
+            )
+
+    def clean_gluten_free_diet(self):
+        data = self.cleaned_data["gluten_free_diet"]
+        # Convert the list of tuples to a dictionary
+        gluten_free_diet_dict = dict(YES_NO_UNKNOWN)
+
+        if data in gluten_free_diet_dict:
+            return data
+        else:
+            options = str(YES_NO_UNKNOWN).strip("[]").replace(")", "").replace("(", "")
+            raise ValidationError(
+                f"Invalid value for 'Gluten Free Diet'. Please select one of {options}."
+            )
+
+    def clean_hba1c_format(self):
+        data = self.cleaned_data["hba1c_format"]
+        # Convert the list of tuples to a dictionary
+        hba1c_format_dict = dict(HBA1C_FORMATS)
+
+        if data in hba1c_format_dict:
+            return data
+        else:
+            options = str(HBA1C_FORMATS).strip("[]").replace(")", "").replace("(", "")
+            raise ValidationError(
+                f"Invalid value for 'Hba1c Format'. Please select one of {options}."
+            )
+
+    def clean_retinal_screening_result(self):
+        data = self.cleaned_data["retinal_screening_result"]
+        # Convert the list of tuples to a dictionary
+        retinal_screening_result_dict = dict(RETINAL_SCREENING_RESULTS)
+
+        if data in retinal_screening_result_dict:
+            return data
+        else:
+            options = (
+                str(RETINAL_SCREENING_RESULTS)
+                .strip("[]")
+                .replace(")", "")
+                .replace("(", "")
+            )
+            raise ValidationError(
+                f"Invalid value for 'Retinal Screening Result'. Please select one of {options}."
+            )
+
+    def clean_treatment(self):
+        data = self.cleaned_data["treatment"]
+        # Convert the list of tuples to a dictionary
+        treatment_dict = dict(TREATMENT_TYPES)
+
+        if data in treatment_dict:
+            return data
+        else:
+            options = str(TREATMENT_TYPES).strip("[]").replace(")", "").replace("(", "")
+            raise ValidationError(
+                f"Invalid value for 'Treatment'. Please select one of {options}."
+            )
+
+    def clean_closed_loop_system(self):
+        data = self.cleaned_data["closed_loop_system"]
+        # Convert the list of tuples to a dictionary
+        closed_loop_system_dict = dict(CLOSED_LOOP_TYPES)
+
+        if data in closed_loop_system_dict:
+            return data
+        else:
+            options = (
+                str(CLOSED_LOOP_TYPES).strip("[]").replace(")", "").replace("(", "")
+            )
+            raise ValidationError(
+                f"Invalid value for 'Closed Loop System'. Please select one of {options}."
+            )
+
+    def clean_thyroid_treatment_status(self):
+        data = self.cleaned_data["thyroid_treatment_status"]
+        # Convert the list of tuples to a dictionary
+        thyroid_treatment_dict = dict(THYROID_TREATMENT_STATUS)
+
+        if data in thyroid_treatment_dict:
+            return data
+        else:
+            options = (
+                str(THYROID_TREATMENT_STATUS)
+                .strip("[]")
+                .replace(")", "")
+                .replace("(", "")
+            )
+            raise ValidationError(
+                f"Invalid value for 'Thyroid Treatment Status'. Please select one of {options}."
+            )
+
+    def clean_glucose_monitoring(self):
+        data = self.cleaned_data["glucose_monitoring"]
+        # Convert the list of tuples to a dictionary
+        glucose_monitoring_dict = dict(GLUCOSE_MONITORING_TYPES)
+
+        if data in glucose_monitoring_dict:
+            return data
+        else:
+            options = (
+                str(GLUCOSE_MONITORING_TYPES)
+                .strip("[]")
+                .replace(")", "")
+                .replace("(", "")
+            )
+            raise ValidationError(
+                f"Invalid value for 'Glucose Monitoring'. Please select one of {options}."
+            )
+
+    """
+    Custom clean methods for all fields requiring numbers
+    """
 
     def clean_height(self):
         data = self.cleaned_data["height"]
         if data is not None:
             if data < 40:
-                raise ValidationError("Please enter a valid height. Cannot be less than 40cm")
+                raise ValidationError(
+                    "Please enter a valid height. Cannot be less than 40cm"
+                )
             if data > 240:
-                raise ValidationError("Please enter a valid height. Cannot be greater than 240cm")
+                raise ValidationError(
+                    "Please enter a valid height. Cannot be greater than 240cm"
+                )
         return data
-    
+
     def clean_weight(self):
         data = self.cleaned_data["height"]
         if data is not None:
             if data < 1:
-                raise ValidationError("Patient Weight (kg)' invalid. Cannot be below 1kg")
+                raise ValidationError(
+                    "Patient Weight (kg)' invalid. Cannot be below 1kg"
+                )
             if data > 200:
-                raise ValidationError("Patient Weight (kg)' invalid. Cannot be above 200kg")
+                raise ValidationError(
+                    "Patient Weight (kg)' invalid. Cannot be above 200kg"
+                )
         return data
-    
-    def clean_visit_date(self):
-        data = self.cleaned_data['visit_date']
-        valid, error = validate_date(
-            date_under_examination_field_name='visit_date',
-            date_under_examination_label_name='Visit/Appointment Date',
-            date_under_examination=data,
-            date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=self.patient.diagnosis_date,
-            date_of_death=self.patient.death_date
-        )
-        if valid==False:
-            raise ValidationError(error)
-        
-        return self.cleaned_data['visit_date']
-    
-
-    def clean_height_weight_observation_date(self):
-        data = self.cleaned_data['height_weight_observation_date']
-        valid, error = validate_date(
-            date_under_examination_field_name='height_weight_observation_date',
-            date_under_examination_label_name='Observation Date (Height and weight)',
-            date_under_examination=data,
-            date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=self.patient.diagnosis_date,
-            date_of_death=self.patient.death_date
-        )
-        if valid==False:
-            raise ValidationError(error)
-        
-        return self.cleaned_data['height_weight_observation_date']
-
-    def clean_hba1c_date(self):
-        data = self.cleaned_data['hba1c_date']
-        valid, error = validate_date(
-            date_under_examination_field_name='hba1c_date',
-            date_under_examination_label_name='Observation Date: Hba1c Value',
-            date_under_examination=data,
-            date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=self.patient.diagnosis_date,
-            date_of_death=self.patient.death_date
-        )
-        if valid==False:
-            raise ValidationError(error)
-        
-        return self.cleaned_data['hba1c_date']
 
     def clean_systolic_blood_pressure(self):
-        systolic_blood_pressure = self.cleaned_data['systolic_blood_pressure']
+        systolic_blood_pressure = self.cleaned_data["systolic_blood_pressure"]
 
         if systolic_blood_pressure:
             if systolic_blood_pressure < 80:
-                raise ValidationError("Systolic Blood Pressure out of range. Cannot be below 80")
+                raise ValidationError(
+                    "Systolic Blood Pressure out of range. Cannot be below 80"
+                )
             elif systolic_blood_pressure > 240:
-                raise ValidationError("Systolic Blood Pressure out of range. Cannot be above 240")
+                raise ValidationError(
+                    "Systolic Blood Pressure out of range. Cannot be above 240"
+                )
 
     def clean_diastolic_blood_pressure(self):
-        diastolic_blood_pressure = self.cleaned_data['diastolic_blood_pressure']
+        diastolic_blood_pressure = self.cleaned_data["diastolic_blood_pressure"]
 
         if diastolic_blood_pressure:
             if diastolic_blood_pressure < 20:
-                raise ValidationError("Diastolic Blood pressure out of range. Cannot be below 20")
+                raise ValidationError(
+                    "Diastolic Blood pressure out of range. Cannot be below 20"
+                )
             elif diastolic_blood_pressure > 120:
-                raise ValidationError("Diastolic Blood pressure out of range. Cannot be above 120")
-    
+                raise ValidationError(
+                    "Diastolic Blood pressure out of range. Cannot be above 120"
+                )
+
     def clean_albumin_creatinine_ratio(self):
-        albumin_creatinine_ratio = self.cleaned_data['albumin_creatinine_ratio']
+        albumin_creatinine_ratio = self.cleaned_data["albumin_creatinine_ratio"]
 
         if albumin_creatinine_ratio:
             if albumin_creatinine_ratio < 20:
-                raise ValidationError("Urinary Albumin Level (ACR) out of range. Cannot be below 0")
+                raise ValidationError(
+                    "Urinary Albumin Level (ACR) out of range. Cannot be below 0"
+                )
             elif albumin_creatinine_ratio > 50:
-                raise ValidationError("Urinary Albumin Level (ACR) out of range. Cannot be above 50")
+                raise ValidationError(
+                    "Urinary Albumin Level (ACR) out of range. Cannot be above 50"
+                )
 
     def clean_total_cholesterol(self):
-        total_cholesterol = self.cleaned_data['total_cholesterol']
+        total_cholesterol = self.cleaned_data["total_cholesterol"]
 
         if total_cholesterol:
             if total_cholesterol < 2:
-                raise ValidationError("Total Cholesterol Level (mmol/l) out of range. Cannot be below 2")
+                raise ValidationError(
+                    "Total Cholesterol Level (mmol/l) out of range. Cannot be below 2"
+                )
             elif total_cholesterol > 12:
-                raise ValidationError("Total Cholesterol Level (mmol/l) out of range. Cannot be above 12")
+                raise ValidationError(
+                    "Total Cholesterol Level (mmol/l) out of range. Cannot be above 12"
+                )
+
+    """
+    Custom clean methods for all fields requiring dates
+    """
+
+    def clean_visit_date(self):
+        data = self.cleaned_data["visit_date"]
+        valid, error = validate_date(
+            date_under_examination_field_name="visit_date",
+            date_under_examination_label_name="Visit/Appointment Date",
+            date_under_examination=data,
+            date_of_birth=self.patient.date_of_birth,
+            date_of_diagnosis=self.patient.diagnosis_date,
+            date_of_death=self.patient.death_date,
+        )
+        if valid == False:
+            raise ValidationError(error)
+
+        return self.cleaned_data["visit_date"]
+
+    def clean_height_weight_observation_date(self):
+        data = self.cleaned_data["height_weight_observation_date"]
+        valid, error = validate_date(
+            date_under_examination_field_name="height_weight_observation_date",
+            date_under_examination_label_name="Observation Date (Height and weight)",
+            date_under_examination=data,
+            date_of_birth=self.patient.date_of_birth,
+            date_of_diagnosis=self.patient.diagnosis_date,
+            date_of_death=self.patient.death_date,
+        )
+        if valid == False:
+            raise ValidationError(error)
+
+        return self.cleaned_data["height_weight_observation_date"]
+
+    def clean_hba1c_date(self):
+        data = self.cleaned_data["hba1c_date"]
+        valid, error = validate_date(
+            date_under_examination_field_name="hba1c_date",
+            date_under_examination_label_name="Observation Date: Hba1c Value",
+            date_under_examination=data,
+            date_of_birth=self.patient.date_of_birth,
+            date_of_diagnosis=self.patient.diagnosis_date,
+            date_of_death=self.patient.death_date,
+        )
+        if valid == False:
+            raise ValidationError(error)
+
+        return self.cleaned_data["hba1c_date"]
 
     def clean_blood_pressure_observation_date(self):
-        data = self.cleaned_data['blood_pressure_observation_date']
+        data = self.cleaned_data["blood_pressure_observation_date"]
         valid, error = validate_date(
-            date_under_examination_field_name='blood_pressure_observation_date',
-            date_under_examination_label_name='Observation Date (Blood Pressure)',
+            date_under_examination_field_name="blood_pressure_observation_date",
+            date_under_examination_label_name="Observation Date (Blood Pressure)",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
-            date_of_death=self.patient.death_date
+            date_of_death=self.patient.death_date,
         )
-        if valid==False:
+        if valid == False:
             raise ValidationError(error)
-        
-        return self.cleaned_data['blood_pressure_observation_date']
+
+        return self.cleaned_data["blood_pressure_observation_date"]
 
     def clean_foot_examination_observation_date(self):
-        data = self.cleaned_data['foot_examination_observation_date']
+        data = self.cleaned_data["foot_examination_observation_date"]
         valid, error = validate_date(
-            date_under_examination_field_name='foot_examination_observation_date',
-            date_under_examination_label_name='Foot Assessment / Examination Date',
+            date_under_examination_field_name="foot_examination_observation_date",
+            date_under_examination_label_name="Foot Assessment / Examination Date",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
-            date_of_death=self.patient.death_date
+            date_of_death=self.patient.death_date,
         )
-        if valid==False:
+        if valid == False:
             raise ValidationError(error)
-        
-        return self.cleaned_data['foot_examination_observation_date']
+
+        return self.cleaned_data["foot_examination_observation_date"]
 
     def clean_retinal_screening_observation_date(self):
-        data = self.cleaned_data['retinal_screening_observation_date']
+        data = self.cleaned_data["retinal_screening_observation_date"]
         valid, error = validate_date(
-            date_under_examination_field_name='retinal_screening_observation_date',
+            date_under_examination_field_name="retinal_screening_observation_date",
             date_under_examination=data,
-            date_under_examination_label_name='Retinal Screening date',
+            date_under_examination_label_name="Retinal Screening date",
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
-            date_of_death=self.patient.death_date
+            date_of_death=self.patient.death_date,
         )
-        if valid==False:
+        if valid == False:
             raise ValidationError(error)
-        
-        return self.cleaned_data['retinal_screening_observation_date']
+
+        return self.cleaned_data["retinal_screening_observation_date"]
 
     def clean_albumin_creatinine_ratio_date(self):
-        data = self.cleaned_data['albumin_creatinine_ratio_date']
+        data = self.cleaned_data["albumin_creatinine_ratio_date"]
         valid, error = validate_date(
-            date_under_examination_field_name='albumin_creatinine_ratio_date',
-            date_under_examination_label_name='Observation Date: Urinary Albumin Level',
+            date_under_examination_field_name="albumin_creatinine_ratio_date",
+            date_under_examination_label_name="Observation Date: Urinary Albumin Level",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
-            date_of_death=self.patient.death_date
+            date_of_death=self.patient.death_date,
         )
-        if valid==False:
+        if valid == False:
             raise ValidationError(error)
-        
-        return self.cleaned_data['albumin_creatinine_ratio_date']
+
+        return self.cleaned_data["albumin_creatinine_ratio_date"]
 
     def clean_total_cholesterol_date(self):
-        data = self.cleaned_data['total_cholesterol_date']
+        data = self.cleaned_data["total_cholesterol_date"]
         valid, error = validate_date(
-            date_under_examination_field_name='total_cholesterol_date',
-            date_under_examination_label_name='Observation Date: Total Cholesterol Level',
+            date_under_examination_field_name="total_cholesterol_date",
+            date_under_examination_label_name="Observation Date: Total Cholesterol Level",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
-            date_of_death=self.patient.death_date
+            date_of_death=self.patient.death_date,
         )
-        if valid==False:
+        if valid == False:
             raise ValidationError(error)
-        
-        return self.cleaned_data['total_cholesterol_date']
+
+        return self.cleaned_data["total_cholesterol_date"]
 
     def clean_thyroid_function_date(self):
-        data = self.cleaned_data['thyroid_function_date']
+        data = self.cleaned_data["thyroid_function_date"]
         valid, error = validate_date(
-            date_under_examination_field_name='thyroid_function_date',
-            date_under_examination_label_name='Observation Date: Thyroid Function',
+            date_under_examination_field_name="thyroid_function_date",
+            date_under_examination_label_name="Observation Date: Thyroid Function",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
-            date_of_death=self.patient.death_date
+            date_of_death=self.patient.death_date,
         )
-        if valid==False:
+        if valid == False:
             raise ValidationError(error)
-        
-        return self.cleaned_data['thyroid_function_date']
+
+        return self.cleaned_data["thyroid_function_date"]
 
     def clean_coeliac_screen_date(self):
-        data = self.cleaned_data['coeliac_screen_date']
+        data = self.cleaned_data["coeliac_screen_date"]
         valid, error = validate_date(
-            date_under_examination_field_name='coeliac_screen_date',
-            date_under_examination_label_name='Observation Date: Coeliac Disease Screening',
+            date_under_examination_field_name="coeliac_screen_date",
+            date_under_examination_label_name="Observation Date: Coeliac Disease Screening",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
-            date_of_death=self.patient.death_date
+            date_of_death=self.patient.death_date,
         )
-        if valid==False:
+        if valid == False:
             raise ValidationError(error)
-        
-        return self.cleaned_data['coeliac_screen_date']
+
+        return self.cleaned_data["coeliac_screen_date"]
 
     def clean_psychological_screening_assessment_date(self):
-        data = self.cleaned_data['psychological_screening_assessment_date']
+        data = self.cleaned_data["psychological_screening_assessment_date"]
         valid, error = validate_date(
-            date_under_examination_field_name='psychological_screening_assessment_date',
-            date_under_examination_label_name='Observation Date - Psychological Screening Assessment',
+            date_under_examination_field_name="psychological_screening_assessment_date",
+            date_under_examination_label_name="Observation Date - Psychological Screening Assessment",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
-            date_of_death=self.patient.death_date
+            date_of_death=self.patient.death_date,
         )
-        if valid==False:
+        if valid == False:
             raise ValidationError(error)
-        
-        return self.cleaned_data['psychological_screening_assessment_date']
+
+        return self.cleaned_data["psychological_screening_assessment_date"]
 
     def clean_smoking_cessation_referral_date(self):
-        data = self.cleaned_data['smoking_cessation_referral_date']
+        data = self.cleaned_data["smoking_cessation_referral_date"]
         valid, error = validate_date(
-            date_under_examination_field_name='smoking_cessation_referral_date',
-            date_under_examination_label_name='Date of offer of referral to smoking cessation service (if patient is a current smoker)',
+            date_under_examination_field_name="smoking_cessation_referral_date",
+            date_under_examination_label_name="Date of offer of referral to smoking cessation service (if patient is a current smoker)",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
-            date_of_death=self.patient.death_date
+            date_of_death=self.patient.death_date,
         )
-        if valid==False:
+        if valid == False:
             raise ValidationError(error)
-        
-        return self.cleaned_data['smoking_cessation_referral_date']
+
+        return self.cleaned_data["smoking_cessation_referral_date"]
 
     def clean_carbohydrate_counting_level_three_education_date(self):
-        data = self.cleaned_data['carbohydrate_counting_level_three_education_date']
+        data = self.cleaned_data["carbohydrate_counting_level_three_education_date"]
         valid, error = validate_date(
-            date_under_examination_field_name='carbohydrate_counting_level_three_education_date',
-            date_under_examination_label_name='Date of Level 3 carbohydrate counting education received',
+            date_under_examination_field_name="carbohydrate_counting_level_three_education_date",
+            date_under_examination_label_name="Date of Level 3 carbohydrate counting education received",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
-            date_of_death=self.patient.death_date
+            date_of_death=self.patient.death_date,
         )
-        if valid==False:
+        if valid == False:
             raise ValidationError(error)
-        
-        return self.cleaned_data['carbohydrate_counting_level_three_education_date']
+
+        return self.cleaned_data["carbohydrate_counting_level_three_education_date"]
 
     def clean_dietician_additional_appointment_date(self):
-        data = self.cleaned_data['dietician_additional_appointment_date']
+        data = self.cleaned_data["dietician_additional_appointment_date"]
         valid, error = validate_date(
-            date_under_examination_field_name='dietician_additional_appointment_date',
-            date_under_examination_label_name='Date of additional appointment with dietitian',
+            date_under_examination_field_name="dietician_additional_appointment_date",
+            date_under_examination_label_name="Date of additional appointment with dietitian",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
-            date_of_death=self.patient.death_date
+            date_of_death=self.patient.death_date,
         )
-        if valid==False:
+        if valid == False:
             raise ValidationError(error)
-        
-        return self.cleaned_data['dietician_additional_appointment_date']
+
+        return self.cleaned_data["dietician_additional_appointment_date"]
 
     def clean_flu_immunisation_recommended_date(self):
-        data = self.cleaned_data['flu_immunisation_recommended_date']
+        data = self.cleaned_data["flu_immunisation_recommended_date"]
         valid, error = validate_date(
-            date_under_examination_field_name='flu_immunisation_recommended_date',
-            date_under_examination_label_name='Date that influenza immunisation was recommended',
+            date_under_examination_field_name="flu_immunisation_recommended_date",
+            date_under_examination_label_name="Date that influenza immunisation was recommended",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
-            date_of_death=self.patient.death_date
+            date_of_death=self.patient.death_date,
         )
-        if valid==False:
+        if valid == False:
             raise ValidationError(error)
-        
-        return self.cleaned_data['flu_immunisation_recommended_date']
+
+        return self.cleaned_data["flu_immunisation_recommended_date"]
 
     def clean_sick_day_rules_training_date(self):
-        data = self.cleaned_data['sick_day_rules_training_date']
+        data = self.cleaned_data["sick_day_rules_training_date"]
         valid, error = validate_date(
-            date_under_examination_field_name='sick_day_rules_training_date',
+            date_under_examination_field_name="sick_day_rules_training_date",
             date_under_examination_label_name="Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
-            date_of_death=self.patient.death_date
+            date_of_death=self.patient.death_date,
         )
-        if valid==False:
+        if valid == False:
             raise ValidationError(error)
-        
-        return self.cleaned_data['sick_day_rules_training_date']
+
+        return self.cleaned_data["sick_day_rules_training_date"]
 
     def clean_hospital_admission_date(self):
-        data = self.cleaned_data['hospital_admission_date']
+        data = self.cleaned_data["hospital_admission_date"]
         valid, error = validate_date(
-            date_under_examination_field_name='hospital_admission_date',
-            date_under_examination_label_name='Start date (Hospital Provider Spell)',
+            date_under_examination_field_name="hospital_admission_date",
+            date_under_examination_label_name="Start date (Hospital Provider Spell)",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
-            date_of_death=self.patient.death_date
+            date_of_death=self.patient.death_date,
         )
-        if valid==False:
+        if valid == False:
             raise ValidationError(error)
-        
-        return self.cleaned_data['hospital_admission_date']
+
+        return self.cleaned_data["hospital_admission_date"]
 
     def clean_hospital_discharge_date(self):
-        data = self.cleaned_data['hospital_discharge_date']
+        data = self.cleaned_data["hospital_discharge_date"]
         valid, error = validate_date(
-            date_under_examination_field_name='hospital_discharge_date',
-            date_under_examination_label_name='Discharge date (Hospital provider spell',
+            date_under_examination_field_name="hospital_discharge_date",
+            date_under_examination_label_name="Discharge date (Hospital provider spell",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
-            date_of_death=self.patient.death_date
+            date_of_death=self.patient.death_date,
         )
-        if valid==False:
+        if valid == False:
             raise ValidationError(error)
-        
-        return self.cleaned_data['hospital_discharge_date']
+
+        return self.cleaned_data["hospital_discharge_date"]
 
     def clean(self):
         cleaned_data = super().clean()
 
-        hba1c_value = cleaned_data['hba1c']
-        hba1c_format = cleaned_data['hba1c_format']
+        hba1c_value = cleaned_data["hba1c"]
+        hba1c_format = cleaned_data["hba1c_format"]
 
         if hba1c_value:
             if hba1c_format == 1:
                 # mmol/mol
                 if hba1c_value < 20:
-                    raise ValidationError("Hba1c Value out of range (mmol/mol). Cannot be below 20")
+                    raise ValidationError(
+                        "Hba1c Value out of range (mmol/mol). Cannot be below 20"
+                    )
                 elif hba1c_value > 195:
-                    raise ValidationError("Hba1c Value out of range (mmol/mol). Cannot be above 195")
+                    raise ValidationError(
+                        "Hba1c Value out of range (mmol/mol). Cannot be above 195"
+                    )
             elif hba1c_format == 2:
                 # %
                 if hba1c_value < 3:
-                    raise ValidationError("Hba1c Value out of range (%). Cannot be below 3")
+                    raise ValidationError(
+                        "Hba1c Value out of range (%). Cannot be below 3"
+                    )
                 elif hba1c_value > 20:
-                    raise ValidationError("Hba1c Value out of range (%). Cannot be above 20")
+                    raise ValidationError(
+                        "Hba1c Value out of range (%). Cannot be above 20"
+                    )
