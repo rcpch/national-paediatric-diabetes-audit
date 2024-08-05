@@ -139,11 +139,12 @@ class PatientForm(forms.ModelForm):
                 )
 
         if gp_practice_ods_code is None and gp_practice_postcode is None:
-            self.add_error(
-                "gp_practice_ods_code",
-                ValidationError(
-                    "GP Practice ODS code and GP Practice postcode cannot both be empty. At least one must be supplied."
-                ),
+            raise ValidationError(
+                {
+                    "gp_practice_ods_code": [
+                        "GP Practice ODS code and GP Practice postcode cannot both be empty. At least one must be supplied."
+                    ]
+                }
             )
 
         if not gp_practice_ods_code and gp_practice_postcode:
@@ -151,15 +152,12 @@ class PatientForm(forms.ModelForm):
                 ods_code = gp_practice_for_postcode(gp_practice_postcode)
 
                 if not ods_code:
-                    self.add_error(
-                        "gp_practice_postcode",
-                        ValidationError(
-                            "Could not find GP practice with that postcode"
-                        ),
+                    raise ValidationError(
+                        "Could not find GP practice with that postcode"
                     )
                 else:
                     cleaned_data["gp_practice_ods_code"] = ods_code
             except Exception as error:
-                self.add_error("gp_practice_postcode", ValidationError(error))
+                raise ValidationError({"gp_practice_postcode": [error]})
 
         return cleaned_data
