@@ -141,6 +141,14 @@ class VisitForm(forms.ModelForm):
                 raise ValidationError("Please enter a valid height. Cannot be greater than 240cm")
         return data
     
+    def clean_weight(self):
+        data = self.cleaned_data["height"]
+        if data is not None:
+            if data < 1:
+                raise ValidationError("Patient Weight (kg)' invalid. Cannot be below 1kg")
+            if data > 200:
+                raise ValidationError("Patient Weight (kg)' invalid. Cannot be above 200kg")
+        return data
     
     def clean_visit_date(self):
         data = self.cleaned_data['visit_date']
@@ -187,6 +195,42 @@ class VisitForm(forms.ModelForm):
             raise ValidationError(error)
         
         return self.cleaned_data['hba1c_date']
+
+    def clean_systolic_blood_pressure(self):
+        systolic_blood_pressure = self.cleaned_data['systolic_blood_pressure']
+
+        if systolic_blood_pressure:
+            if systolic_blood_pressure < 80:
+                raise ValidationError("Systolic Blood Pressure out of range. Cannot be below 80")
+            elif systolic_blood_pressure > 240:
+                raise ValidationError("Systolic Blood Pressure out of range. Cannot be above 240")
+
+    def clean_diastolic_blood_pressure(self):
+        diastolic_blood_pressure = self.cleaned_data['diastolic_blood_pressure']
+
+        if diastolic_blood_pressure:
+            if diastolic_blood_pressure < 20:
+                raise ValidationError("Diastolic Blood pressure out of range. Cannot be below 20")
+            elif diastolic_blood_pressure > 120:
+                raise ValidationError("Diastolic Blood pressure out of range. Cannot be above 120")
+    
+    def clean_albumin_creatinine_ratio(self):
+        albumin_creatinine_ratio = self.cleaned_data['albumin_creatinine_ratio']
+
+        if albumin_creatinine_ratio:
+            if albumin_creatinine_ratio < 20:
+                raise ValidationError("Urinary Albumin Level (ACR) out of range. Cannot be below 0")
+            elif albumin_creatinine_ratio > 50:
+                raise ValidationError("Urinary Albumin Level (ACR) out of range. Cannot be above 50")
+
+    def clean_total_cholesterol(self):
+        total_cholesterol = self.cleaned_data['total_cholesterol']
+
+        if total_cholesterol:
+            if total_cholesterol < 2:
+                raise ValidationError("Total Cholesterol Level (mmol/l) out of range. Cannot be below 2")
+            elif total_cholesterol > 12:
+                raise ValidationError("Total Cholesterol Level (mmol/l) out of range. Cannot be above 12")
 
     def clean_blood_pressure_observation_date(self):
         data = self.cleaned_data['blood_pressure_observation_date']
@@ -412,3 +456,23 @@ class VisitForm(forms.ModelForm):
             raise ValidationError(error)
         
         return self.cleaned_data['hospital_discharge_date']
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        hba1c_value = cleaned_data['hba1c']
+        hba1c_format = cleaned_data['hba1c_format']
+
+        if hba1c_value:
+            if hba1c_format == 1:
+                # mmol/mol
+                if hba1c_value < 20:
+                    raise ValidationError("Hba1c Value out of range (mmol/mol). Cannot be below 20")
+                elif hba1c_value > 195:
+                    raise ValidationError("Hba1c Value out of range (mmol/mol). Cannot be above 195")
+            elif hba1c_format == 2:
+                # %
+                if hba1c_value < 3:
+                    raise ValidationError("Hba1c Value out of range (%). Cannot be below 3")
+                elif hba1c_value > 20:
+                    raise ValidationError("Hba1c Value out of range (%). Cannot be above 20")

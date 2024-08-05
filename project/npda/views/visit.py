@@ -162,7 +162,7 @@ class VisitUpdateView(
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
         visit = form.save(commit=True)
-        visit.errors = []
+        visit.errors = None
         visit.is_valid = True
         visit.save(update_fields=["errors", "is_valid"])
         context = {"patient_id": self.kwargs["patient_id"]}

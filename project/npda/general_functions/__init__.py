@@ -1,5 +1,4 @@
 from .quarter_for_date import *
-from .csv_upload import *
 from .email import *
 from .group_for_group import *
 from .index_multiple_deprivation import *

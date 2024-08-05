@@ -195,6 +195,7 @@ class PatientCreateView(
         # the Patient record is therefore valid
         patient = form.save(commit=False)
         patient.is_valid = True
+        patient.errors = None
         patient.save()
 
         # add the PDU to the patient record
@@ -287,6 +288,7 @@ class PatientUpdateView(
         patient = form.save(commit=False)
         quarter = form.cleaned_data["quarter"]
         patient.is_valid = True
+        patient.errors = None
         patient.save()
         # update the quarter for the patient in the submission
         Submission.objects.filter(patients=patient, submission_active=True).update(
