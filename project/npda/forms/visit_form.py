@@ -14,14 +14,6 @@ class VisitForm(forms.ModelForm):
 
     patient = None
 
-    def __init__(self, *args, **kwargs):
-        self.patient = kwargs["initial"].get("patient")
-        super(VisitForm, self).__init__(*args, **kwargs)
-        for field_name, field in self.fields.items():
-            model_field = Visit._meta.get_field(field_name)
-            if hasattr(model_field, "category"):
-                field.category = model_field.category
-
     class Meta:
         model = Visit
         fields = [
@@ -130,9 +122,82 @@ class VisitForm(forms.ModelForm):
         "Hospital Admission",
     ]
 
+    def __init__(self, *args, **kwargs):
+        self.patient = kwargs["initial"].get("patient")
+        super(VisitForm, self).__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            model_field = Visit._meta.get_field(field_name)
+            if hasattr(model_field, "category"):
+                field.category = model_field.category
+
     """
     Custom clean method for all fields requiring choices
     """
+
+    def clean_thyroid_treatment_status(self):
+        data = self.cleaned_data["thyroid_treatment_status"]
+
+        # Convert the list of tuples to a dictionary
+        thyroid_treatment_dict = dict(THYROID_TREATMENT_STATUS)
+
+        if data in thyroid_treatment_dict:
+            return data
+        else:
+            options = (
+                str(THYROID_TREATMENT_STATUS)
+                .strip("[]")
+                .replace(")", "")
+                .replace("(", "")
+            )
+            raise ValidationError(
+                f"Invalid value for 'Thyroid Treatment Status'. Please select one of {options}."
+            )
+
+    def clean_closed_loop_system(self):
+        data = self.cleaned_data["closed_loop_system"]
+        # Convert the list of tuples to a dictionary
+        closed_loop_system_dict = dict(CLOSED_LOOP_TYPES)
+
+        if data in closed_loop_system_dict:
+            return data
+        else:
+            options = (
+                str(CLOSED_LOOP_TYPES).strip("[]").replace(")", "").replace("(", "")
+            )
+            raise ValidationError(
+                f"Invalid value for 'Closed Loop System'. Please select one of {options}."
+            )
+
+    def clean_hospital_admission_reason(self):
+        data = self.cleaned_data["hospital_admission_reason"]
+        # Convert the list of tuples to a dictionary
+        hospital_admission_reason_dict = dict(HOSPITAL_ADMISSION_REASONS)
+
+        if data in hospital_admission_reason_dict:
+            return data
+        else:
+            options = (
+                str(HOSPITAL_ADMISSION_REASONS)
+                .strip("[]")
+                .replace(")", "")
+                .replace("(", "")
+            )
+            raise ValidationError(
+                f"Invalid value for 'Hospital Admission Reason'. Please select one of {options}."
+            )
+
+    def clean_smoking_status(self):
+        data = self.cleaned_data["smoking_status"]
+        # Convert the list of tuples to a dictionary
+        smoking_status_dict = dict(SMOKING_STATUS)
+
+        if data in smoking_status_dict:
+            return data
+        else:
+            options = str(SMOKING_STATUS).strip("[]").replace(")", "").replace("(", "")
+            raise ValidationError(
+                f"Invalid value for 'Smoking Status'. Please select one of {options}."
+            )
 
     def clean_albuminuria_stage(self):
         data = self.cleaned_data["albuminuria_stage"]
@@ -162,19 +227,6 @@ class VisitForm(forms.ModelForm):
                 f"Invalid value for 'Psychological Additional Support Status'. Please select one of {options}."
             )
 
-    def clean_smoking_status(self):
-        data = self.cleaned_data["smoking_status"]
-        # Convert the list of tuples to a dictionary
-        smoking_status_dict = dict(SMOKING_STATUS)
-
-        if data in smoking_status_dict:
-            return data
-        else:
-            options = str(SMOKING_STATUS).strip("[]").replace(")", "").replace("(", "")
-            raise ValidationError(
-                f"Invalid value for 'Smoking Status'. Please select one of {options}."
-            )
-
     def clean_dietian_additional_appointment_offered(self):
         data = self.cleaned_data["dietician_additional_appointment_offered"]
         # Convert the list of tuples to a dictionary
@@ -199,24 +251,6 @@ class VisitForm(forms.ModelForm):
             options = str(YES_NO_UNKNOWN).strip("[]").replace(")", "").replace("(", "")
             raise ValidationError(
                 f"Invalid value for 'Ketone Meter Training'. Please select one of {options}."
-            )
-
-    def clean_hospital_admission_reason(self):
-        data = self.cleaned_data["hospital_admission_reason"]
-        # Convert the list of tuples to a dictionary
-        hospital_admission_reason_dict = dict(HOSPITAL_ADMISSION_REASONS)
-
-        if data in hospital_admission_reason_dict:
-            return data
-        else:
-            options = (
-                str(HOSPITAL_ADMISSION_REASONS)
-                .strip("[]")
-                .replace(")", "")
-                .replace("(", "")
-            )
-            raise ValidationError(
-                f"Invalid value for 'Hospital Admission Reason'. Please select one of {options}."
             )
 
     def clean_dka_additional_therapies(self):
@@ -292,39 +326,6 @@ class VisitForm(forms.ModelForm):
             options = str(TREATMENT_TYPES).strip("[]").replace(")", "").replace("(", "")
             raise ValidationError(
                 f"Invalid value for 'Treatment'. Please select one of {options}."
-            )
-
-    def clean_closed_loop_system(self):
-        data = self.cleaned_data["closed_loop_system"]
-        # Convert the list of tuples to a dictionary
-        closed_loop_system_dict = dict(CLOSED_LOOP_TYPES)
-
-        if data in closed_loop_system_dict:
-            return data
-        else:
-            options = (
-                str(CLOSED_LOOP_TYPES).strip("[]").replace(")", "").replace("(", "")
-            )
-            raise ValidationError(
-                f"Invalid value for 'Closed Loop System'. Please select one of {options}."
-            )
-
-    def clean_thyroid_treatment_status(self):
-        data = self.cleaned_data["thyroid_treatment_status"]
-        # Convert the list of tuples to a dictionary
-        thyroid_treatment_dict = dict(THYROID_TREATMENT_STATUS)
-
-        if data in thyroid_treatment_dict:
-            return data
-        else:
-            options = (
-                str(THYROID_TREATMENT_STATUS)
-                .strip("[]")
-                .replace(")", "")
-                .replace("(", "")
-            )
-            raise ValidationError(
-                f"Invalid value for 'Thyroid Treatment Status'. Please select one of {options}."
             )
 
     def clean_glucose_monitoring(self):
@@ -728,3 +729,5 @@ class VisitForm(forms.ModelForm):
                     raise ValidationError(
                         "Hba1c Value out of range (%). Cannot be above 20"
                     )
+
+        return cleaned_data

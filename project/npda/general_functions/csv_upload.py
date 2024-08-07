@@ -256,12 +256,14 @@ def csv_upload(
             errors_to_return = errors_to_return | gather_errors(visit_form)
 
         if not has_error_that_would_fail_save(errors_to_return):
-            transfer = Transfer.objects.create(**transfer_fields)
 
             patient = create_instance(Patient, patient_form)
-
-            patient.transfer = transfer
             patient.save()
+
+            # add the patient to a new Transfer instance
+            transfer_fields["paediatric_diabetes_unit"] = pdu
+            transfer_fields["patient"] = patient
+            Transfer.objects.create(**transfer_fields)
 
             new_cohort.patients.add(patient)
 
