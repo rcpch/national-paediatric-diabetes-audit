@@ -69,7 +69,7 @@ def csv_upload(
 
     # Create new submission for the quarter - not it is not possible to have more than one submission per quarter.
     # It is not possble to create submissions in years other than the current year
-    new_cohort = Submission.objects.create(
+    new_submission = Submission.objects.create(
         paediatric_diabetes_unit=pdu,
         audit_year=date.today().year,
         quarter=quarter,
@@ -126,12 +126,9 @@ def csv_upload(
                 "death_date": "Death Date",
             },
         )
-
         # TODO MRB: check we Validate gp practice ods code
-        form = PatientForm(fields)
-
+        form = PatientForm(fields, initial={"quarter": quarter})
         assign_original_row_indices_to_errors(form, row)
-
         return form
 
     def validate_visit_using_form(patient, row):
@@ -229,10 +226,13 @@ def csv_upload(
     def create_instance(model, form):
         # We want to retain fields even if they're invalid so that we can edit them in the UI
         # Use the field value from cleaned_data, falling back to data if it's not there
-        data = form.data | form.cleaned_data
+        if form.is_valid():
+            data = form.cleaned_data
+        else:
+            data = form.data
         instance = model(**data)
-
         instance.is_valid = form.is_valid()
+        # test if field in errors relates to quarter
         instance.errors = (
             None if form.is_valid() else form.errors.get_json_data(escape_html=True)
         )
@@ -251,12 +251,14 @@ def csv_upload(
         (patient_form, transfer_fields, visits) = validate_rows(rows)
 
         errors_to_return = errors_to_return | gather_errors(patient_form)
+        # remove the quarter from errors as it is not a field in the Patient model
+        if "quarter" in errors_to_return:
+            errors_to_return.pop("quarter")
 
         for visit_form in visits:
             errors_to_return = errors_to_return | gather_errors(visit_form)
 
         if not has_error_that_would_fail_save(errors_to_return):
-
             patient = create_instance(Patient, patient_form)
             patient.save()
 
@@ -265,14 +267,15 @@ def csv_upload(
             transfer_fields["patient"] = patient
             Transfer.objects.create(**transfer_fields)
 
-            new_cohort.patients.add(patient)
+            new_submission.patients.add(patient)
 
             for visit_form in visits:
+                print("visit_form")
                 visit = create_instance(Visit, visit_form)
                 visit.patient = patient
                 visit.save()
 
-    new_cohort.save()
+    new_submission.save()
 
     if errors_to_return:
         raise ValidationError(errors_to_return)
