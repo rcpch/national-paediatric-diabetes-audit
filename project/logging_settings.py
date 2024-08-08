@@ -117,3 +117,7 @@ LOGGING = {
         },
     },
 }
+
+# Using print statements to show the logging settings
+print(f"Console Log Level: {CONSOLE_LOG_LEVEL}")
+print(f"File Log Level: {FILE_LOG_LEVEL}")
