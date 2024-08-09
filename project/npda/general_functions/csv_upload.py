@@ -89,6 +89,10 @@ def csv_upload(
         if isinstance(value, pd.Timestamp):
             return value.to_pydatetime().date()
 
+        if model_field.choices:
+            # If the model field has choices, we need to convert the value to the correct type otherwise 1, 2 will be saved as booleans
+            return model_field.to_python(value)
+
         return value
 
     def row_to_dict(row, model, mapping):
@@ -178,7 +182,9 @@ def csv_upload(
             },
         )
 
-        form = VisitForm(fields, initial={"patient": patient})
+        fields["patient"] = patient
+
+        form = VisitForm(data=fields, initial=fields)
 
         assign_original_row_indices_to_errors(form, row)
 
@@ -196,7 +202,8 @@ def csv_upload(
         patient_form = validate_patient_using_form(first_row)
 
         visits = rows.apply(
-            lambda row: validate_visit_using_form(patient_form.instance, row), axis=1
+            lambda row: validate_visit_using_form(patient_form.instance, row),
+            axis=1,
         )
 
         return (patient_form, transfer_fields, visits)
@@ -270,7 +277,6 @@ def csv_upload(
             new_submission.patients.add(patient)
 
             for visit_form in visits:
-                print("visit_form")
                 visit = create_instance(Visit, visit_form)
                 visit.patient = patient
                 visit.save()

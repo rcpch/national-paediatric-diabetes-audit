@@ -134,9 +134,21 @@ class VisitForm(forms.ModelForm):
     Custom clean method for all fields requiring choices
     """
 
+    def clean_smoking_status(self):
+        data = self.cleaned_data["smoking_status"]
+        # Convert the list of tuples to a dictionary
+        smoking_status_dict = dict(SMOKING_STATUS)
+
+        if data in smoking_status_dict:
+            return data
+        else:
+            options = str(SMOKING_STATUS).strip("[]").replace(")", "").replace("(", "")
+            raise ValidationError(
+                f"Invalid value for 'Smoking Status'. Please select one of {options}."
+            )
+
     def clean_thyroid_treatment_status(self):
         data = self.cleaned_data["thyroid_treatment_status"]
-
         # Convert the list of tuples to a dictionary
         thyroid_treatment_dict = dict(THYROID_TREATMENT_STATUS)
 
@@ -184,19 +196,6 @@ class VisitForm(forms.ModelForm):
             )
             raise ValidationError(
                 f"Invalid value for 'Hospital Admission Reason'. Please select one of {options}."
-            )
-
-    def clean_smoking_status(self):
-        data = self.cleaned_data["smoking_status"]
-        # Convert the list of tuples to a dictionary
-        smoking_status_dict = dict(SMOKING_STATUS)
-
-        if data in smoking_status_dict:
-            return data
-        else:
-            options = str(SMOKING_STATUS).strip("[]").replace(")", "").replace("(", "")
-            raise ValidationError(
-                f"Invalid value for 'Smoking Status'. Please select one of {options}."
             )
 
     def clean_albuminuria_stage(self):
