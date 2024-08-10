@@ -74,11 +74,26 @@ class PatientListView(
         if filtered_patients is not None:
             patient_queryset = patient_queryset.filter(filtered_patients)
 
-        return patient_queryset.annotate(
+        patient_queryset = patient_queryset.annotate(
             audit_year=F("submissions__audit_year"),
             visit_error_count=Count(Case(When(visit__is_valid=False, then=1))),
             last_upload_date=Max("submissions__submission_date"),
+            most_recent_visit_date=Max("visit__visit_date"),
         ).order_by("is_valid", "visit_error_count", "pk")
+
+        # add another annotation to the queryset to signpost the latest quarter
+        # This does involve iterating over the queryset, but it is necessary to add the latest_quarter attribute to each object
+        # as django does not support annotations with custom functions, at least, not without rewriting it in SQL or using the Func class
+        # and the queryset is not large
+        for obj in patient_queryset:
+            if obj.most_recent_visit_date is not None:
+                obj.latest_quarter = retrieve_quarter_for_date(
+                    obj.most_recent_visit_date
+                )
+            else:
+                obj.latest_quarter = None
+
+        return patient_queryset
 
     def get_context_data(self, **kwargs):
         """
