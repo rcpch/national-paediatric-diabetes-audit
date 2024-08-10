@@ -36,18 +36,6 @@ class NHSNumberField(forms.CharField):
 
 class PatientForm(forms.ModelForm):
 
-    quarter = forms.ChoiceField(
-        choices=[
-            (1, 1),
-            (2, 2),
-            (3, 3),
-            (4, 4),
-        ],  # Initially empty, will be populated dynamically
-        required=True,
-        widget=forms.Select(attrs={"class": SELECT}),
-        label="Audit Year Quarter",
-    )
-
     class Meta:
         model = Patient
         fields = [
@@ -61,7 +49,6 @@ class PatientForm(forms.ModelForm):
             "death_date",
             "gp_practice_ods_code",
             "gp_practice_postcode",
-            "quarter",
         ]
         field_classes = {"nhs_number": NHSNumberField}
         widgets = {
@@ -77,22 +64,7 @@ class PatientForm(forms.ModelForm):
             "death_date": DateInput(),
             "gp_practice_ods_code": forms.TextInput(attrs={"class": TEXT_INPUT}),
             "gp_practice_postcode": forms.TextInput(attrs={"class": TEXT_INPUT}),
-            "quarter": forms.Select(),
         }
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        if self.instance.pk:
-            # this is a bound form, so we need to get the quarter from the submission related to the instance
-            Submission = apps.get_model("npda", "Submission")
-            self.initial["quarter"] = Submission.objects.get(
-                patients=self.instance
-            ).quarter
-        else:
-            # this is an unbound form, so we need to set the quarter to current quarter
-            self.initial["quarter"] = retrieve_quarter_for_date(
-                date_instance=date.today()
-            )
 
     def clean_postcode(self):
         if not self.cleaned_data["postcode"]:
