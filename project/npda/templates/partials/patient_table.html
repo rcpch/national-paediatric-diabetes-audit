@@ -13,6 +13,7 @@
                 <th scope="col" class="px-2 py-3 text-center">Diagnosis Date</th>
                 <th scope="col" class="px-2 py-3 text-center">Date Uploaded</th>
                 <th scope="col" class="px-2 py-3 text-center">Audit Year</th>
+                <th scope="col" class="px-2 py-3 text-center">Latest Quarter</th>
                 <th scope="col"></th>
             </tr>
         </thead>
@@ -21,7 +22,7 @@
                 {% if patient.is_valid and patient.visit_error_count < 1 and forloop.counter0 == 0 %}
                 <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_strong_blue text-white">
                     <tr>
-                        <th colspan="11" class="px-6 py-3">Patients where all records have been validated: {{total_valid_patients}}</th>
+                        <th colspan="12" class="px-6 py-3">Patients where all records have been validated: {{total_valid_patients}}</th>
                     </tr>
                 </thead>
                 {% else %}
@@ -109,6 +110,8 @@
                     <td class="px-6 py-4 text-center">
                             {{patient.audit_year}}
                     </td>
+                    <td class="px-6 py-4 text-center">
+                            {{ patient.latest_quarter|default:'-' }}</td>
                     <td class="px-2 text-right w-80 relative group">
                         <!-- <div class="has-tooltip"> -->
                         <a 
@@ -156,7 +159,7 @@
             </tbody>
             <tfoot>
                 <tr class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white py-5">
-                    <th colspan="11" class="px-2">
+                    <th colspan="12" class="px-2">
                         <strong>
                         Total: {{patient_list.count}} patients
                         </strong>
