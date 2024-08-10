@@ -12,7 +12,7 @@
                 <th scope="col" class="px-2 py-3 text-center">Diabetes Type</th>
                 <th scope="col" class="px-2 py-3 text-center">Diagnosis Date</th>
                 <th scope="col" class="px-2 py-3 text-center">Date Uploaded</th>
-                <th scope="col" class="px-2 py-3 text-center">Audit Year (Quarterly Cohort)</th>
+                <th scope="col" class="px-2 py-3 text-center">Audit Year</th>
                 <th scope="col"></th>
             </tr>
         </thead>
@@ -107,7 +107,7 @@
                             {{patient.last_upload_date|date:"d/m/Y H:m:s"}}
                     </td>
                     <td class="px-6 py-4 text-center">
-                            {{patient.audit_year}} ({{patient.quarter}})
+                            {{patient.audit_year}}
                     </td>
                     <td class="px-2 text-right w-80 relative group">
                         <!-- <div class="has-tooltip"> -->
