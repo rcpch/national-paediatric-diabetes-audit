@@ -1,8 +1,6 @@
 <header>
     <nav class="bg-white border-gray-50 px-4 lg:px-6 py-2.5">
         <div>
-
-
             <div class="lg:flex lg:w-auto lg:order-1" id="mobile-menu-2">
                 <ul class="w-full block flex flex-row items-center">
                     <a href="{% url 'home' %}" class="flex flex-row">
@@ -19,28 +17,28 @@
                             User Guide</a>
                     </li>
                     {% if user.is_authenticated %}
-                    <li class="mr-2">
-                        <a href="{% url 'submissions' %}"
-                            class="text-xs block font-montserrat font-semibold py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-5 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue"
-                            aria-current="page">Submissions</a>
-                    </li>
-                    <li class="mr-2">
-                        <a href="{% url 'patients' %}"
-                            class="text-xs block font-montserrat font-semibold py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-5 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue"
-                            aria-current="page">Patients</a>
-                    </li>
-                    <li class="mr-2">
-                        <a href="{% url 'npda_users' %}"
-                            class="text-xs block font-montserrat font-semibold py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-5 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue">
-                            Users</a>
-                    </li>
-                    {% if user.is_superuser %}
-                    <li class="mr-2">
-                        <a href="{% url 'admin:index' %}"
-                            class="text-xs block font-montserrat font-semibold py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-5 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue">Admin</a>
-                    </li>
+                        <li class="mr-2">
+                            <a href="{% url 'submissions' %}"
+                                class="text-xs block font-montserrat font-semibold py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-5 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue"
+                                aria-current="page">Submissions</a>
+                        </li>
+                        <li class="mr-2">
+                            <a href="{% url 'patients' %}"
+                                class="text-xs block font-montserrat font-semibold py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-5 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue"
+                                aria-current="page">Patients</a>
+                        </li>
+                        <li class="mr-2">
+                            <a href="{% url 'npda_users' %}"
+                                class="text-xs block font-montserrat font-semibold py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-5 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue">
+                                Users</a>
+                        </li>
                     {% endif %}
-
+                    {% if user.is_superuser %}
+                        <li class="mr-2">
+                            <a href="{% url 'admin:index' %}"
+                                class="text-xs block font-montserrat font-semibold py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-5 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue">Admin</a>
+                        </li>
+                    {% endif %}
                 </ul>
 
                 <ul class="flex justify-end">
@@ -78,36 +76,35 @@
                     </li>
                 </ul>
 
-                {% else %}
+                {% if not user.is_authenticated %}
+                    </ul>
+                    <ul class="flex justify-end">
 
-                </ul>
-                <ul class="flex justify-end">
+                        <li>
 
-                    <li>
+                            <div class="dropdown inline-block relative">
+                                <button
+                                    class="bg-white text-gray-700 font-semibold py-2 px-4 rounded inline-flex items-center">
+                                    <span class=block
+                                        class="py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-5 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue font-montserrat font-semibold">Account</span>
+                                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
+                                        viewBox="0 0 20 20">
+                                        <path
+                                            d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                                    </svg>
+                                </button>
+                                <ul class="dropdown-menu absolute hidden text-gray-700 pt-1">
+                                    <li class=""><a href="{% url 'two_factor:login' %}"
+                                            class="block py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-1 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue"><small>Sign
+                                                in</small></a></li>
+                                    <li class=""><a href="#"
+                                            class="block py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-1 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue"><small>Request
+                                                account</small></a></li>
+                                </ul>
+                            </div>
 
-                        <div class="dropdown inline-block relative">
-                            <button
-                                class="bg-white text-gray-700 font-semibold py-2 px-4 rounded inline-flex items-center">
-                                <span class=block
-                                    class="py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-5 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue font-montserrat font-semibold">Account</span>
-                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
-                                    viewBox="0 0 20 20">
-                                    <path
-                                        d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                                </svg>
-                            </button>
-                            <ul class="dropdown-menu absolute hidden text-gray-700 pt-1">
-                                <li class=""><a href="{% url 'two_factor:login' %}"
-                                        class="block py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-1 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue"><small>Sign
-                                            in</small></a></li>
-                                <li class=""><a href="#"
-                                        class="block py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:border-b-4 hover:border-rcpch_light_blue lg:border-0 lg:hover:text-primary-700 px-0 lg:px-1 py-2 lg:py-2.5 mr-2 text-gray-400 lg:hover:text-rcpch_light_blue hover:bg-rcpch_light_blue hover:text-rcpch_light_blue lg:hover:bg-transparent border-rcpch_light_blue"><small>Request
-                                            account</small></a></li>
-                            </ul>
-                        </div>
-
-                    </li>
-                </ul>
+                        </li>
+                    </ul>
                 {% endif %}
 
 
