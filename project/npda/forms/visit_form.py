@@ -139,12 +139,12 @@ class VisitForm(forms.ModelForm):
         # Convert the list of tuples to a dictionary
         smoking_status_dict = dict(SMOKING_STATUS)
 
-        if data in smoking_status_dict:
+        if data is None or data in smoking_status_dict:
             return data
         else:
             options = str(SMOKING_STATUS).strip("[]").replace(")", "").replace("(", "")
             raise ValidationError(
-                f"Invalid value for 'Smoking Status'. Please select one of {options}."
+                f"'{data}' is not a value for 'Smoking Status'. Please select one of {options}."
             )
 
     def clean_thyroid_treatment_status(self):
@@ -152,7 +152,7 @@ class VisitForm(forms.ModelForm):
         # Convert the list of tuples to a dictionary
         thyroid_treatment_dict = dict(THYROID_TREATMENT_STATUS)
 
-        if data in thyroid_treatment_dict:
+        if data is None or data in thyroid_treatment_dict:
             return data
         else:
             options = (
@@ -162,7 +162,7 @@ class VisitForm(forms.ModelForm):
                 .replace("(", "")
             )
             raise ValidationError(
-                f"Invalid value for 'Thyroid Treatment Status'. Please select one of {options}."
+                f"'{data}' is not a value for 'Thyroid Treatment Status'. Please select one of {options}."
             )
 
     def clean_closed_loop_system(self):
@@ -170,14 +170,14 @@ class VisitForm(forms.ModelForm):
         # Convert the list of tuples to a dictionary
         closed_loop_system_dict = dict(CLOSED_LOOP_TYPES)
 
-        if data in closed_loop_system_dict:
+        if data is None or data in closed_loop_system_dict:
             return data
         else:
             options = (
                 str(CLOSED_LOOP_TYPES).strip("[]").replace(")", "").replace("(", "")
             )
             raise ValidationError(
-                f"Invalid value for 'Closed Loop System'. Please select one of {options}."
+                f"'{data}' is not a value for 'Closed Loop System'. Please select one of {options}."
             )
 
     def clean_hospital_admission_reason(self):
@@ -185,7 +185,7 @@ class VisitForm(forms.ModelForm):
         # Convert the list of tuples to a dictionary
         hospital_admission_reason_dict = dict(HOSPITAL_ADMISSION_REASONS)
 
-        if data in hospital_admission_reason_dict:
+        if data is None or data in hospital_admission_reason_dict:
             return data
         else:
             options = (
@@ -195,7 +195,7 @@ class VisitForm(forms.ModelForm):
                 .replace("(", "")
             )
             raise ValidationError(
-                f"Invalid value for 'Hospital Admission Reason'. Please select one of {options}."
+                f"'{data}' is not a value for 'Hospital Admission Reason'. Please select one of {options}."
             )
 
     def clean_albuminuria_stage(self):
@@ -203,14 +203,14 @@ class VisitForm(forms.ModelForm):
         # Convert the list of tuples to a dictionary
         albuminuria_stage_dict = dict(ALBUMINURIA_STAGES)
 
-        if data in albuminuria_stage_dict:
+        if data is None or data in albuminuria_stage_dict:
             return data
         else:
             options = (
                 str(ALBUMINURIA_STAGES).strip("[]").replace(")", "").replace("(", "")
             )
             raise ValidationError(
-                f"Invalid value for 'Albuminuria Stage'. Please select one of {options}."
+                f"'{data}' is not a value for 'Albuminuria Stage'. Please select one of {options}."
             )
 
     def clean_psychological_additional_support_status(self):
@@ -218,12 +218,12 @@ class VisitForm(forms.ModelForm):
         # Convert the list of tuples to a dictionary
         psychological_additional_support_status_dict = dict(YES_NO_UNKNOWN)
 
-        if data in psychological_additional_support_status_dict:
+        if data is None or data in psychological_additional_support_status_dict:
             return data
         else:
             options = str(YES_NO_UNKNOWN).strip("[]").replace(")", "").replace("(", "")
             raise ValidationError(
-                f"Invalid value for 'Psychological Additional Support Status'. Please select one of {options}."
+                f"'{data}' is not a value for 'Psychological Additional Support Status'. Please select one of {options}."
             )
 
     def clean_dietian_additional_appointment_offered(self):
@@ -231,12 +231,12 @@ class VisitForm(forms.ModelForm):
         # Convert the list of tuples to a dictionary
         dietitian_additional_appointment_offered_dict = dict(YES_NO_UNKNOWN)
 
-        if data in dietitian_additional_appointment_offered_dict:
+        if data is None or data in dietitian_additional_appointment_offered_dict:
             return data
         else:
             options = str(YES_NO_UNKNOWN).strip("[]").replace(")", "").replace("(", "")
             raise ValidationError(
-                f"Invalid value for 'Dietician Additional Appointment Offered'. Please select one of {options}."
+                f"'{data}' is not a value for 'Dietician Additional Appointment Offered'. Please select one of {options}."
             )
 
     def clean_ketone_meter_training(self):
@@ -244,12 +244,12 @@ class VisitForm(forms.ModelForm):
         # Convert the list of tuples to a dictionary
         ketone_meter_training_dict = dict(YES_NO_UNKNOWN)
 
-        if data in ketone_meter_training_dict:
+        if data is None or data in ketone_meter_training_dict:
             return data
         else:
             options = str(YES_NO_UNKNOWN).strip("[]").replace(")", "").replace("(", "")
             raise ValidationError(
-                f"Invalid value for 'Ketone Meter Training'. Please select one of {options}."
+                f"'{data}' is not a value for 'Ketone Meter Training'. Please select one of {options}."
             )
 
     def clean_dka_additional_therapies(self):
@@ -257,7 +257,7 @@ class VisitForm(forms.ModelForm):
         # Convert the list of tuples to a dictionary
         dka_additional_therapies_dict = dict(DKA_ADDITIONAL_THERAPIES)
 
-        if data in dka_additional_therapies_dict:
+        if data is None or data in dka_additional_therapies_dict:
             return data
         else:
             options = (
@@ -267,7 +267,7 @@ class VisitForm(forms.ModelForm):
                 .replace("(", "")
             )
             raise ValidationError(
-                f"Invalid value for 'DKA Additional Therapies'. Please select one of {options}."
+                f"'{data}' is not a value for 'DKA Additional Therapies'. Please select one of {options}."
             )
 
     def clean_gluten_free_diet(self):
@@ -275,12 +275,12 @@ class VisitForm(forms.ModelForm):
         # Convert the list of tuples to a dictionary
         gluten_free_diet_dict = dict(YES_NO_UNKNOWN)
 
-        if data in gluten_free_diet_dict:
+        if data is None or data in gluten_free_diet_dict:
             return data
         else:
             options = str(YES_NO_UNKNOWN).strip("[]").replace(")", "").replace("(", "")
             raise ValidationError(
-                f"Invalid value for 'Gluten Free Diet'. Please select one of {options}."
+                f"'{data}' is not a value for 'Gluten Free Diet'. Please select one of {options}."
             )
 
     def clean_hba1c_format(self):
@@ -288,12 +288,12 @@ class VisitForm(forms.ModelForm):
         # Convert the list of tuples to a dictionary
         hba1c_format_dict = dict(HBA1C_FORMATS)
 
-        if data in hba1c_format_dict:
+        if data is None or data in hba1c_format_dict:
             return data
         else:
             options = str(HBA1C_FORMATS).strip("[]").replace(")", "").replace("(", "")
             raise ValidationError(
-                f"Invalid value for 'Hba1c Format'. Please select one of {options}."
+                f"'{data}' is not a value for 'Hba1c Format'. Please select one of {options}."
             )
 
     def clean_retinal_screening_result(self):
@@ -301,7 +301,7 @@ class VisitForm(forms.ModelForm):
         # Convert the list of tuples to a dictionary
         retinal_screening_result_dict = dict(RETINAL_SCREENING_RESULTS)
 
-        if data in retinal_screening_result_dict:
+        if data is None or data in retinal_screening_result_dict:
             return data
         else:
             options = (
@@ -311,7 +311,7 @@ class VisitForm(forms.ModelForm):
                 .replace("(", "")
             )
             raise ValidationError(
-                f"Invalid value for 'Retinal Screening Result'. Please select one of {options}."
+                f"'{data}' is not a value for 'Retinal Screening Result'. Please select one of {options}."
             )
 
     def clean_treatment(self):
@@ -319,12 +319,12 @@ class VisitForm(forms.ModelForm):
         # Convert the list of tuples to a dictionary
         treatment_dict = dict(TREATMENT_TYPES)
 
-        if data in treatment_dict:
+        if data is None or data in treatment_dict:
             return data
         else:
             options = str(TREATMENT_TYPES).strip("[]").replace(")", "").replace("(", "")
             raise ValidationError(
-                f"Invalid value for 'Treatment'. Please select one of {options}."
+                f"'{data}' is not a value for 'Treatment'. Please select one of {options}."
             )
 
     def clean_glucose_monitoring(self):
@@ -332,7 +332,7 @@ class VisitForm(forms.ModelForm):
         # Convert the list of tuples to a dictionary
         glucose_monitoring_dict = dict(GLUCOSE_MONITORING_TYPES)
 
-        if data in glucose_monitoring_dict:
+        if data is None or data in glucose_monitoring_dict:
             return data
         else:
             options = (
@@ -342,7 +342,7 @@ class VisitForm(forms.ModelForm):
                 .replace("(", "")
             )
             raise ValidationError(
-                f"Invalid value for 'Glucose Monitoring'. Please select one of {options}."
+                f"'{data}' is not a value for 'Glucose Monitoring'. Please select one of {options}."
             )
 
     """
