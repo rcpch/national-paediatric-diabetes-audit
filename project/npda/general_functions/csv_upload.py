@@ -177,8 +177,6 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
 
         fields["patient"] = patient
 
-        print(fields)
-
         form = VisitForm(data=fields, initial=fields)
 
         assign_original_row_indices_to_errors(form, row)
