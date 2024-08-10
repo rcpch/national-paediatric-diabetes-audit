@@ -5,7 +5,7 @@
                     <tr>
                         <th>Submission Date</th>
                         <th>Submission By</th>
-                        <th>Audit Year (Quarter)</th>
+                        <th>Audit Year</th>
                         <th>Patient Number</th>
                         <th>Active</th>
                         <th>Download</th>
@@ -20,7 +20,7 @@
                     {% endif %}
                             <td>{{  submission.submission_date|date:"d/m/Y H:i s" }} secs</td>
                             <td>{{ submission.submission_by}}</td>
-                            <td>{{ submission.audit_year}} ({{submission.quarter}})</td>
+                            <td>{{ submission.audit_year}}</td>
                             <td>{{ submission.patient_count}}</td>
                             <td>{{ submission.submission_active}}</td>
                             <td class="flex flex-row">

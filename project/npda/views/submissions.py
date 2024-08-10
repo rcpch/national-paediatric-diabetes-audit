@@ -41,7 +41,7 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
         )
         queryset = (
             self.model.objects.filter(paediatric_diabetes_unit=pdu)
-            .values("submission_date", "quarter", "audit_year")
+            .values("submission_date", "audit_year")
             .annotate(
                 patient_count=Count("patients"),
                 submission_active=F("submission_active"),
@@ -53,7 +53,6 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
             .order_by(
                 "-submission_date",
                 "audit_year",
-                "quarter",
                 "submission_active",
             )
         )

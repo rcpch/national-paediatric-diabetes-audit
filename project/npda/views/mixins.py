@@ -80,7 +80,9 @@ class CheckPDUListMixin(AccessMixin):
         requested_pdu = ""
         if model == "Visit":
             requested_patient = Patient.objects.get(pk=self.kwargs["patient_id"])
-            requested_pdu = requested_patient.transfer.paediatric_diabetes_unit.pz_code
+            Transfer = apps.get_model("npda", "Transfer")
+            transfer = Transfer.objects.get(patient=requested_patient)
+            requested_pdu = transfer.paediatric_diabetes_unit.pz_code
 
         elif model == "NPDAUser" or model == "Patient":
             requested_pdu = request.session.get("pz_code")
@@ -141,7 +143,8 @@ class CheckPDUInstanceMixin(AccessMixin):
 
         elif model == "Visit":
             requested_patient = Patient.objects.get(pk=self.kwargs["patient_id"])
-            requested_pdu = requested_patient.transfer.paediatric_diabetes_unit.pz_code
+            transfer = Transfer.objects.get(patient=requested_patient)
+            requested_pdu = transfer.paediatric_diabetes_unit.pz_code
 
         if (
             request.user.is_superuser
