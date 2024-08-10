@@ -31,9 +31,7 @@ from ..forms.visit_form import VisitForm
 logger = logging.getLogger(__name__)
 
 
-def csv_upload(
-    user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None, quarter=None
-):
+def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
     """
     Processes standardised NPDA csv file and persists results in NPDA tables
 
@@ -51,9 +49,8 @@ def csv_upload(
         csv_file, parse_dates=ALL_DATES, dayfirst=True, date_format="%d/%m/%Y"
     )
 
-    if quarter is None:
-        # quarter can be passed in as a parameter. if not, retrieve the current quarter
-        quarter = retrieve_quarter_for_date(date_instance=date.today())
+    # Get the quarter for the current date
+    quarter = retrieve_quarter_for_date(date_instance=date.today())
 
     # get the PDU object
     pdu, created = PaediatricDiabetesUnit.objects.get_or_create(
@@ -64,17 +61,16 @@ def csv_upload(
     Submission.objects.filter(
         paediatric_diabetes_unit__pz_code=pdu.pz_code,
         audit_year=date.today().year,
-        quarter=quarter,
     ).update(submission_active=False)
 
-    # Create new submission for the quarter - not it is not possible to have more than one submission per quarter.
+    # Create new submission for the audit year
     # It is not possble to create submissions in years other than the current year
     new_submission = Submission.objects.create(
         paediatric_diabetes_unit=pdu,
         audit_year=date.today().year,
-        quarter=quarter,
         submission_date=timezone.now(),
         submission_by=user,  # user is the user who is logged in. Passed in as a parameter
+        submission_active=True,
     )
 
     def csv_value_to_model_value(model_field, value):
@@ -283,6 +279,13 @@ def csv_upload(
 
     new_submission.save()
 
+    # delete the previous submission
+    Submission.objects.filter(
+        paediatric_diabetes_unit__pz_code=pdu.pz_code,
+        audit_year=date.today().year,
+        submission_active=False,
+    ).delete()
+
     if errors_to_return:
         raise ValidationError(errors_to_return)
 
@@ -304,11 +307,10 @@ def csv_summarise(csv_file):
         dataframe["NHS Number"].fillna("").apply(lambda x: x.replace(" ", "")).unique()
     )
     count_of_records_per_nhs_number = dataframe["NHS Number"].value_counts()
-    matching_patients_in_current_quarter = Patient.objects.filter(
+    matching_patients_in_current_audit_year = Patient.objects.filter(
         nhs_number__in=list(unique_nhs_numbers_no_spaces),
         submissions__submission_active=True,
         submissions__audit_year=date.today().year,
-        submissions__quarter=retrieve_quarter_for_date(date_instance=date.today()),
     ).count()
 
     summary = {
@@ -317,7 +319,7 @@ def csv_summarise(csv_file):
         "count_of_records_per_nhs_number": list(
             count_of_records_per_nhs_number.items()
         ),
-        "matching_patients_in_current_quarter": matching_patients_in_current_quarter,
+        "matching_patients_in_current_audit_year": matching_patients_in_current_audit_year,
     }
 
     return summary

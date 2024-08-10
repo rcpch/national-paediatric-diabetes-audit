@@ -76,7 +76,7 @@ class PatientListView(
 
         return patient_queryset.annotate(
             audit_year=F("submissions__audit_year"),
-            quarter=F("submissions__quarter"),
+            # quarter=F("submissions__quarter"),
             visit_error_count=Count(Case(When(visit__is_valid=False, then=1))),
             last_upload_date=Max("submissions__submission_date"),
         ).order_by("is_valid", "visit_error_count", "pk")
