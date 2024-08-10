@@ -49,15 +49,12 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         csv_file, parse_dates=ALL_DATES, dayfirst=True, date_format="%d/%m/%Y"
     )
 
-    # Get the quarter for the current date
-    quarter = retrieve_quarter_for_date(date_instance=date.today())
-
     # get the PDU object
     pdu, created = PaediatricDiabetesUnit.objects.get_or_create(
         pz_code=pdu_pz_code, ods_code=organisation_ods_code
     )
 
-    # Set previous quarter to inactive
+    # Set previous submission to inactive
     Submission.objects.filter(
         paediatric_diabetes_unit__pz_code=pdu.pz_code,
         audit_year=date.today().year,
@@ -127,7 +124,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             },
         )
         # TODO MRB: check we Validate gp practice ods code
-        form = PatientForm(fields, initial={"quarter": quarter})
+        form = PatientForm(fields)
         assign_original_row_indices_to_errors(form, row)
         return form
 
@@ -235,7 +232,6 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             data = form.data
         instance = model(**data)
         instance.is_valid = form.is_valid()
-        # test if field in errors relates to quarter
         instance.errors = (
             None if form.is_valid() else form.errors.get_json_data(escape_html=True)
         )
@@ -254,9 +250,6 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         (patient_form, transfer_fields, visits) = validate_rows(rows)
 
         errors_to_return = errors_to_return | gather_errors(patient_form)
-        # remove the quarter from errors as it is not a field in the Patient model
-        if "quarter" in errors_to_return:
-            errors_to_return.pop("quarter")
 
         for visit_form in visits:
             errors_to_return = errors_to_return | gather_errors(visit_form)
