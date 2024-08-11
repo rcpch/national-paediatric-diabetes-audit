@@ -8,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 def validate_nhs_number(value):
     """Validate the NHS number using the nhs_number package."""
-    logger.debug(f"Validating NHS number: {value}")
     if not nhs_number.is_valid(value):
         raise ValidationError(
             f"{value} is not a valid NHS number.",

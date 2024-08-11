@@ -150,4 +150,5 @@ class Patient(models.Model):
                     f"Cannot calculate deprivation score for {self.postcode}: {error}"
                 )
 
+        self.full_clean()  # Trigger validation
         return super().save(*args, **kwargs)
