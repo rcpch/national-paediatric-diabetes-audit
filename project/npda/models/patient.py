@@ -115,24 +115,31 @@ class Patient(models.Model):
     def get_absolute_url(self):
         return reverse("patient-detail", kwargs={"pk": self.pk})
 
+    def get_todays_date(self) -> date:
+        """Simply returns today's date. Used to enable testing of the age methods"""
+        return date.today()
+
     # class methods
-    def age_days(self, today_date=date.today()):
+    def age_days(self, today_date=None):
         """
         Returns the age of the patient in years, months and days
         This is a calculated field
         Date of birth is required
-        Today's date is optional and defaults to date.today()
+        Today's date is optional and defaults to self.get_todays_date()):
         """
-        # return stringify_time_elapsed(self.date_of_birth, today_date)
+        if today_date is None:
+            today_date = self.get_todays_date()
         return (today_date - self.date_of_birth).days
 
-    def age(self, today_date=date.today()):
+    def age(self, today_date=None):
         """
         Returns the age of the patient in years, months and days
         This is a calculated field
         Date of birth is required
-        Today's date is optional and defaults to date.today()
+        Today's date is optional and defaults to self.get_todays_date()):
         """
+        if today_date is None:
+            today_date = self.get_todays_date()
         return stringify_time_elapsed(self.date_of_birth, today_date)
 
     def save(self, *args, **kwargs) -> None:
