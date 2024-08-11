@@ -20,7 +20,7 @@ from ....constants import (
     CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
     CAN_PUBLISH_NPDA_DATA,
 )
-from ...models import NPDAUser, Patient, Visit, Transfer
+from project.npda.models import NPDAUser, Patient, Visit, Transfer
 
 
 def groups_seeder(
