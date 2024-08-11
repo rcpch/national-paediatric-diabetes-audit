@@ -21,13 +21,6 @@ class Submission(models.Model):
         help_text="Year the audit is being conducted",
     )
 
-    quarter = models.IntegerField(
-        "Quarter",
-        blank=False,
-        null=False,
-        help_text="The quarter in the audit year of the patient",
-    )
-
     submission_date = models.DateTimeField(
         "Submission date",
         help_text="Date the submission was created",
@@ -53,9 +46,9 @@ class Submission(models.Model):
     )
 
     def __str__(self) -> str:
-        return f"{self.audit_year} ({self.quarter}), {self.patients.count()} patients"
+        return f"{self.audit_year}, {self.patients.count()} patients"
 
     class Meta:
         verbose_name = "Submission"
         verbose_name_plural = "Submissions"
-        ordering = ("audit_year", "quarter")
+        ordering = ("audit_year",)
