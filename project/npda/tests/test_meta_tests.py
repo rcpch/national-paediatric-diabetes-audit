@@ -6,14 +6,18 @@ import logging
 import os
 
 from django.contrib.auth.models import Group
+from django.db.models import F, Value
 
-from project.npda.models import NPDAUser, OrganisationEmployer
+from project.npda.models import NPDAUser, OrganisationEmployer, Patient
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
 from project.npda.tests.UserDataClasses import (
     test_user_audit_centre_reader_data,
 )
 from project.constants import VIEW_PREFERENCES
+from project.npda.tests.factories.paediatrics_diabetes_unit_factory import (
+    PaediatricsDiabetesUnitFactory,
+)
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.general_functions import print_instance_field_attrs
 from project.settings import LOGGING
@@ -65,6 +69,7 @@ def test__multiple_PaediatricsDiabetesUnitFactory_instances_not_created(
     # GOSH User
     user_data = test_user_audit_centre_reader_data
     GOSH_PZ_CODE = "PZ196"
+    GOSH_ODS_CODE = "RP416"
 
     for _ in range(2):
 
@@ -81,6 +86,9 @@ def test__multiple_PaediatricsDiabetesUnitFactory_instances_not_created(
             view_preference=(VIEW_PREFERENCES[0][0]),
         )
 
+        # Patient with default PDU
+        new_patient = PatientFactory()
+
         # User factory with organisation employer specified
         new_user_gosh = NPDAUserFactory(
             first_name="test",
@@ -92,12 +100,29 @@ def test__multiple_PaediatricsDiabetesUnitFactory_instances_not_created(
             is_rcpch_staff=user_data.is_rcpch_staff,
             groups=[user_data.group_name],
             view_preference=(VIEW_PREFERENCES[0][0]),
+            # Assign to PDU via organisation employer by passing in list of pz_codes
             organisation_employers=[GOSH_PZ_CODE],
         )
 
-        # Patient factory (creates a Transfer automatically -> gets or creates a PDU)
-        new_patient = PatientFactory()
-        # print_instance_field_attrs(new_patient)
-        logger.debug(f'{new_patient.paediatric_diabetes_units.pz_code}')
+        # Patient with specified PDU
+        # First create the specific PDU
+        gosh_pdu = PaediatricsDiabetesUnitFactory(
+            pz_code=GOSH_PZ_CODE, ods_code=GOSH_ODS_CODE
+        )
+        # Then assign a Patient with to this PDU using the TransferFactory
+        patient_with_custom_pdu = PatientFactory(
+            transfer__paediatric_diabetes_unit=gosh_pdu
+        )
 
-        assert PaediatricDiabetesUnit.objects.filter(pz_code=GOSH_PZ_CODE).count() == 1
+    # Check that only one PDU exists in the db for the default PDU user and new patient
+    #     (default defined in PaediatricsDiabetesUnitFactory in pz_code="PZ130", ods_code="RQM01")
+    assert (
+        PaediatricDiabetesUnit.objects.filter(pz_code="PZ130", ods_code="RQM01").count()
+        == 1
+    )
+
+    # For the specified PDU user at GOSH
+    gosh_pdus_filterset = PaediatricDiabetesUnit.objects.filter(
+        pz_code=GOSH_PZ_CODE, ods_code=GOSH_ODS_CODE
+    )
+    assert gosh_pdus_filterset.count() == 1

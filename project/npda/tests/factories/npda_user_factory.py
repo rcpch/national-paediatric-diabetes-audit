@@ -88,7 +88,7 @@ class NPDAUserFactory(factory.django.DjangoModelFactory):
                     npda_user=self, paediatric_diabetes_unit=pdu
                 )
                 pdus.append(pdu)
-
+                
         # Set the organisation_employers field with the created PaediatricsDiabetesUnit instances
         self.organisation_employers.set(pdus)
         self.save()
