@@ -11,6 +11,8 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 
+from project.npda.models.custom_validators import validate_nhs_number
+
 # npda imports
 from ...constants import (
     ETHNICITIES,
@@ -41,7 +43,7 @@ class Patient(models.Model):
     """
 
     nhs_number = CharField(  # the NHS number for England and Wales
-        "NHS Number"
+        "NHS Number", unique=True, validators=[validate_nhs_number]
     )
 
     sex = models.IntegerField("Stated gender", choices=SEX_TYPE, blank=True, null=True)
