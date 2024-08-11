@@ -1,40 +1,8 @@
-"""Tests for the Patient model."""
+"""Tests for the Patient model.
 
-# Standard imports
-import pytest
-import logging
-
-# 3rd Party imports
-
-# NPDA Imports
-from project.npda.tests.factories import PatientFactory
-from project.npda.general_functions import print_instance_field_attrs
-
-# Logging
-logger = logging.getLogger(__name__)
-
-
-@pytest.mark.django_db
-def test_patient_creation(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_patients_fixture,
-):
-    """Test Patient creation."""
-
-    new_patient = PatientFactory()
-    print_instance_field_attrs(new_patient)
-
-    assert new_patient is not None
-
-
-"""
 Suggested tests for the Patient model:
 
-- A patient can be created if a valid NHS number, date of birth, diabetes type, date of diagnosis is provided
-- A patient cannot be created without an NHS number
-- A patient cannot be created with an invalid NHS number
-- A patient cannot be created with a duplicate NHS number
+
 - A patient cannot be created without a date of birth
 - A patient cannot be created with an invalid date of birth (e.g. in the future or in the wrong format or over or equal to 19 years old)
 - A patient cannot be created without a diabetes type
@@ -56,3 +24,28 @@ Suggested tests for the Patient model:
 - A patient can be created if a Paediatric Diabetes Unit instance is associated with it (via the Transfer model) if a valid NHS number, date of birth, diabetes type, date of diagnosis are also provided
 - A patient cannot be created if a Paediatric Diabetes Unit instance is not associated with it (via the Transfer model) if a valid NHS number, date of birth, diabetes type, date of diagnosis are also provided
 """
+
+# Standard imports
+import pytest
+import logging
+
+# 3rd Party imports
+
+# NPDA Imports
+from project.npda.tests.factories import PatientFactory
+from project.npda.general_functions import print_instance_field_attrs
+
+# Logging
+logger = logging.getLogger(__name__)
+
+
+@pytest.mark.django_db
+def test_patient_nhs_number_validations(
+):
+    
+    # A patient cannot be created without an NHS number
+    PatientFactory(nhs_number=None)
+    
+    
+# - A patient cannot be created with an invalid NHS number
+# - A patient cannot be created with a duplicate NHS number

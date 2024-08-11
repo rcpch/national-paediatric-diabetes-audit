@@ -55,6 +55,20 @@ def test__seed_test_db(
 
 
 @pytest.mark.django_db
+def test_patient_creation(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_patients_fixture,
+):
+    """Test Patient Factory creation."""
+
+    new_patient = PatientFactory()
+    print_instance_field_attrs(new_patient)
+
+    assert new_patient is not None
+
+
+@pytest.mark.django_db
 def test__multiple_PaediatricsDiabetesUnitFactory_instances_not_created(
     seed_groups_fixture,
     seed_users_fixture,
