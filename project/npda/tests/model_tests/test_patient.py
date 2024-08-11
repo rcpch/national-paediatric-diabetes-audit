@@ -2,6 +2,7 @@
 from datetime import date, timedelta
 import pytest
 import logging
+from unittest.mock import patch
 
 # 3rd Party imports
 from django.core.exceptions import ValidationError
@@ -13,11 +14,83 @@ from project.constants import (
     DIABETES_TYPES,
     SEX_TYPE,
 )
+from project.npda.models import Patient
 
 # Logging
 logger = logging.getLogger(__name__)
 
 
+# Custom class method tests
+DATE_OF_BIRTH = date(2024, 1, 1)
+
+
+@pytest.mark.django_db
+@patch.object(
+    Patient, "get_todays_date", return_value=DATE_OF_BIRTH - timedelta(days=10)
+)
+def test_age_days_before_birth(mock_get_todays_date):
+    """Test .age_days() method when the current date is before the date of birth."""
+    # Create a patient instance with a specific date of birth
+    patient = Patient(date_of_birth=DATE_OF_BIRTH)
+
+    # Call the method and assert the expected result
+    expected_days = (mock_get_todays_date.return_value - patient.date_of_birth).days
+    assert patient.age_days() == expected_days
+
+
+@pytest.mark.django_db
+@patch.object(Patient, "get_todays_date", return_value=DATE_OF_BIRTH)
+def test_age_days_on_birth_date(mock_get_todays_date):
+    """Test .age_days() method when the current date is the date of birth."""
+    # Create a patient instance with a specific date of birth
+    patient = Patient(date_of_birth=DATE_OF_BIRTH)
+
+    # Call the method and assert the expected result
+    expected_days = 0
+    assert patient.age_days() == expected_days
+
+
+@pytest.mark.django_db
+@patch.object(
+    Patient, "get_todays_date", return_value=DATE_OF_BIRTH + timedelta(days=365)
+)
+def test_age_days_after_birth(mock_get_todays_date):
+    """Test .age_days() method when the current date is after the date of birth."""
+    # Create a patient instance with a specific date of birth
+    patient = Patient(date_of_birth=DATE_OF_BIRTH)
+
+    # Call the method and assert the expected result
+    expected_days = 365
+    assert patient.age_days() == expected_days
+
+
+@pytest.mark.django_db
+@patch.object(Patient, "get_todays_date", return_value=date(2021, 2, 28))
+def test_age_days_on_leap_year(mock_get_todays_date):
+    """Test .age_days() method for a leap year scenario."""
+    # Create a patient instance with a specific date of birth
+    leap_birth_date = date(2020, 2, 29)
+    patient = Patient(date_of_birth=leap_birth_date)
+
+    # Call the method and assert the expected result
+    expected_days = (mock_get_todays_date.return_value - patient.date_of_birth).days
+    assert patient.age_days() == expected_days
+
+
+@pytest.mark.django_db
+@patch.object(Patient, "get_todays_date", return_value=date(2024, 2, 29))
+def test_age_days_on_next_leap_year(mock_get_todays_date):
+    """Test .age_days() method for a leap year scenario, crossing into a new leap year."""
+    # Create a patient instance with a specific date of birth
+    leap_birth_date = date(2020, 2, 29)
+    patient = Patient(date_of_birth=leap_birth_date)
+
+    # Call the method and assert the expected result
+    expected_days = (mock_get_todays_date.return_value - patient.date_of_birth).days
+    assert patient.age_days() == expected_days
+
+
+# NHS NUMBER TESTS
 @pytest.fixture
 def valid_nhs_number():
     """Provide a valid NHS number using the factory."""
