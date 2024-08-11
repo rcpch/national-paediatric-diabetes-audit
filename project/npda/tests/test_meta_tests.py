@@ -97,6 +97,7 @@ def test__multiple_PaediatricsDiabetesUnitFactory_instances_not_created(
 
         # Patient factory (creates a Transfer automatically -> gets or creates a PDU)
         new_patient = PatientFactory()
-        print_instance_field_attrs(new_patient)
+        # print_instance_field_attrs(new_patient)
+        logger.debug(f'{new_patient.paediatric_diabetes_units.pz_code}')
 
         assert PaediatricDiabetesUnit.objects.filter(pz_code=GOSH_PZ_CODE).count() == 1
