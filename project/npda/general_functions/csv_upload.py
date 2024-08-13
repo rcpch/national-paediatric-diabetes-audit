@@ -74,6 +74,10 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         if pd.isnull(value):
             return None
 
+        # Pandas is returning 0 for empty cells in integer columns
+        if value == 0:
+            return None
+
         # Pandas will convert an integer column to float if it contains missing values
         # http://pandas.pydata.org/pandas-docs/stable/user_guide/gotchas.html#missing-value-representation-for-numpy-types
         if pd.api.types.is_float(value) and model_field.choices:
@@ -175,12 +179,8 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
             },
         )
 
-        fields["patient"] = patient
-
-        form = VisitForm(data=fields, initial=fields)
-
+        form = VisitForm(data=fields, initial={"patient": patient})
         assign_original_row_indices_to_errors(form, row)
-
         return form
 
     def assign_original_row_indices_to_errors(form, row):
