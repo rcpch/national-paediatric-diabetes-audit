@@ -22,7 +22,19 @@
                             <td>{{ submission.submission_by}}</td>
                             <td>{{ submission.audit_year}}</td>
                             <td>{{ submission.patient_count}}</td>
-                            <td>{{ submission.submission_active}}</td>
+                            <td>
+                                {% if submission.submission_active %}
+                                    <span class="bg-rcpch_pink px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white">
+                                        <small>ACTIVE</small>
+                                    </span>
+                                {% else %}
+                                    <span class="bg-rcpch_dark_blue px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white">
+                                        <small>INACTIVE</small>
+                                    </span>
+                                    <span class="bg-rcpch_dark_blue px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white">
+                                        <small>INACTIVE</small>
+                                {% endif %}
+                            </td>
                             <td class="flex flex-row">
                                 <form method="post" action="{% url 'submissions' %}" class="join">
                                     {% csrf_token %}
