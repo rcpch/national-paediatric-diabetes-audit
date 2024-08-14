@@ -1,8 +1,5 @@
-from datetime import date
-from typing import Any, Iterable
 from django.db import models
-
-from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
+from django.core.exceptions import ValidationError
 
 
 class Submission(models.Model):
@@ -52,3 +49,8 @@ class Submission(models.Model):
         verbose_name = "Submission"
         verbose_name_plural = "Submissions"
         ordering = ("audit_year",)
+
+    def delete(self, *args, **kwargs):
+        if self.submission_active:
+            raise ValidationError("Cannot delete an active submission.")
+        super().delete(*args, **kwargs)
