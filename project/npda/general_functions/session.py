@@ -7,6 +7,7 @@ from project.npda.general_functions import (
     get_all_pdus_list_choices,
     organisations_adapter,
 )
+from project.constants import DummyPZCodes
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,12 @@ def create_session_object(user):
         for choice in get_all_pdus_list_choices()
         if can_see_all_pdus or choice[0] in pz_codes
     ]
+
+    # The dummy RCPCH PZ code exists only within the app so inject it
+    rcpch_pdu = DummyPZCodes.RCPCH.value
+
+    if can_see_all_pdus or rcpch_pdu.pz_code in pz_codes:
+        pdu_choices.append((rcpch_pdu.pz_code, rcpch_pdu.pz_code))
 
     session = {
         "ods_code": ods_code,
