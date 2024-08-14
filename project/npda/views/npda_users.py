@@ -64,20 +64,11 @@ class NPDAUserListView(
                 organisation_employers__ods_code=self.request.session.get("ods_code")
             ).order_by("surname")
 
-        # The user's organisation, PDU and siblings are stored in the session when they log in
+        # PDU level
         elif self.request.user.view_preference == VIEW_PREFERENCES[1][0]:
-            # PDU view
-            # create a list of sibling organisations' ODS codes who share the same PDU as the user
             pz_code = self.request.session.get("pz_code")
-            sibling_organisations = organisations_adapter.get_single_pdu_from_pz_code(
-                pz_number=pz_code
-            )
-            siblings_ods_codes = [
-                org.ods_code for org in sibling_organisations.organisations
-            ]
-            # get all users in the sibling organisations
             return NPDAUser.objects.filter(
-                organisation_employers__ods_code__in=siblings_ods_codes
+                organisation_employers__pz_code__exact=pz_code
             ).order_by("surname")
         elif self.request.user.view_preference == VIEW_PREFERENCES[2][0]:
             # RCPCH user/national view - get all users
