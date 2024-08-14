@@ -180,16 +180,7 @@ class NPDAUserCreateView(
         context["title"] = "Add New NPDA User"
         context["button_title"] = "Add NPDA User"
         context["form_method"] = "create"
-        # populate the add_employer field with organisations that the user is affilitated with unless the user is a superuser or RCPCH audit team member
-        # in which case all organisations are shown
-        context["organisation_choices"] = (
-            organisations_adapter.get_all_nhs_organisations()
-            if (
-                self.request.user.is_superuser
-                or self.request.user.is_rcpch_audit_team_member
-            )
-            else organisations_adapter.get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit()
-        )
+        context["organisation_choices"] = organisations_adapter.organisations_to_populate_select_field(self.request)
         return context
 
     def form_valid(self, form):
