@@ -47,7 +47,6 @@ def home(request):
 
         # You can't read the same file twice without resetting it
         file.seek(0)
-        print(file.name, file.size)
         errors = []
 
         try:
