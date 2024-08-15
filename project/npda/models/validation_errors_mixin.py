@@ -43,13 +43,22 @@ class ValidationErrorsMixin:
     def full_clean(self, *args, **kwargs):
         """
         Override full_clean method to include custom validation.
+        
+        We capture specified ValidationErrors and store them in the 'errors' field.
+        
+        ValidationErrors not specified in `get_fields_with_custom_choice_handling` will still raise a ValidationError.
         """
-        # First, let Django handle the built-in validation 
-        # (e.g., field constraints, unique constraints)
-        super().full_clean(*args, **kwargs)
-
-        # Then perform custom validation to add errors to the 'errors' field
-        self.validate_fields()
+        try:
+            # Perform the standard validation first
+            super().full_clean(*args, **kwargs)
+        except ValidationError as e:
+            # Capture and handle validation errors
+            for field, error_messages in e.message_dict.items():
+                if field in self.get_fields_with_custom_choice_handling():
+                    self.handle_invalid_choice(field, error_messages)
+                else:
+                    # Re-raise the error for critical fields
+                    raise e
 
     def save(self, *args, **kwargs):
         # Reset errors field before saving
@@ -66,3 +75,10 @@ class ValidationErrorsMixin:
         self.is_valid = not bool(self.errors)
 
         return super().save(*args, **kwargs)
+
+    def get_fields_with_custom_choice_handling(self):
+        """
+        Return a list of fields that should have custom choice handling.
+        Default implementation returns an empty list, meaning no custom handling.
+        """
+        return []
