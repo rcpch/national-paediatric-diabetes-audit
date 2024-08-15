@@ -41,6 +41,7 @@ class PatientError(Enum):
     INVALID_POSTCODE = "Postcode is invalid."
     DEPRIVATION_CALCULATION_FAILED = "Cannot calculate deprivation score."
     INVALID_DIABETES_TYPE = "Diabetes type is invalid."
+    DIAGNOSIS_DATE_BEFORE_DOB = "Diagnosis date is before date of birth."
 
 
 class Patient(ValidationErrorsMixin, models.Model):
@@ -96,8 +97,13 @@ class Patient(ValidationErrorsMixin, models.Model):
         null=True,
     )
 
+    # Separately define the diabetes type choices to allow for custom
+    # handling of invalid choices
+    DIABETES_TYPES = DIABETES_TYPES
     diabetes_type = PositiveSmallIntegerField(
-        verbose_name="Diabetes Type", choices=DIABETES_TYPES
+        verbose_name="Diabetes Type", 
+        blank=True,
+        null=True,
     )
 
     diagnosis_date = DateField(verbose_name="Date of Diabetes Diagnosis")
@@ -179,12 +185,24 @@ class Patient(ValidationErrorsMixin, models.Model):
             # patient is > than 19 years old
             if self.age_days(TODAY) > 19 * 365:
                 self.add_error('date_of_birth', PatientError.PT_OLDER_THAN_19yo)
+                
         
 
-        # Custom validation for postcode
+        # == `postcode` ==
         if self.postcode:
             if self.postcode in UNKNOWN_POSTCODES_NO_SPACES:
                 self.add_error('postcode', PatientError.INVALID_POSTCODE)
+        
+        # == `date_of_diagnosis` ==
+        if self.diagnosis_date:
+            # diagnosis date can't be before dob
+            if self.diagnosis_date < self.date_of_birth:
+                self.add_error('diagnosis_date', PatientError.DIAGNOSIS_DATE_BEFORE_DOB)
+        
+        # == `diabetes_type` ==
+        if self.diabetes_type not in self.DIABETES_TYPES:
+            self.add_error('diabetes_type', PatientError.INVALID_DIABETES_TYPE)
+            
     
     def save(self, *args, **kwargs):
         # Custom logic to calculate deprivation score
@@ -198,16 +216,17 @@ class Patient(ValidationErrorsMixin, models.Model):
         # Call the save method in the mixin
         return super().save(*args, **kwargs)
 
+    # Custom handling for methods from ValidationErrorsMixin
     def get_fields_with_custom_choice_handling(self):
         return ['diabetes_type']
     
-    def handle_invalid_choice(self, field_name, error_message):
-        """
-        Custom handling for the diabetes_type field.
-        """
-        if field_name == 'diabetes_type':
-            # Add the INVALID_DIABETES_TYPE error
-            self.add_error(field_name, PatientError.INVALID_DIABETES_TYPE)
-        else:
-            # For other fields, use the default behavior
-            super().handle_invalid_choice(field_name, error_message)
+    # def handle_invalid_choice(self, field_name, error_message):
+    #     """
+    #     Custom handling for the choice fields.
+    #     """
+    #     if field_name == 'diabetes_type':
+    #         # Add the INVALID_DIABETES_TYPE error
+    #         self.add_error(field_name, PatientError.INVALID_DIABETES_TYPE)
+    #     else:
+    #         # For other fields, use the default behavior
+    #         super().handle_invalid_choice(field_name, error_message)

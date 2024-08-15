@@ -168,7 +168,7 @@ def test_patient_creation_without_date_of_birth_raises_error():
 
 
 @pytest.mark.django_db
-def test_patient_creation_with_future_date_of_birth_raises_error():
+def test_patient_creation_with_future_date_of_birth_stores_error():
     """Test creating a Patient with a future date of birth creates an error item."""
     future_date = TODAY + timedelta(days=1)
     new_patient = PatientFactory(date_of_birth=future_date)
@@ -177,7 +177,7 @@ def test_patient_creation_with_future_date_of_birth_raises_error():
 
 
 @pytest.mark.django_db
-def test_patient_creation_with_over_19_years_old_date_of_birth_raises_error():
+def test_patient_creation_with_over_19_years_old_date_of_birth_stores_error():
     """Test creating a Patient with a date of birth over or equal to 19 years old creates an error item."""
     # 1 day over 19
     over_19_years_date = TODAY - timedelta(days=(1 + (365 * 19)))
@@ -189,13 +189,14 @@ def test_patient_creation_with_over_19_years_old_date_of_birth_raises_error():
 
 
 @pytest.mark.django_db
-def test_patient_creation_without_diabetes_type_raises_error():
+def test_patient_creation_without_diabetes_type_stores_error():
     """Test creating a Patient without a diabetes type creates an error item."""
-    with pytest.raises(ValidationError):
-        PatientFactory(diabetes_type=None)
+    new_patient = PatientFactory(diabetes_type=None)
+    
+    assert check_error_field_has_errors(new_patient, 'diabetes_type', [PatientError.INVALID_DIABETES_TYPE.name]), "Error not raised for missing diabetes type"
 
 @pytest.mark.django_db
-def test_patient_creation_with_invalid_diabetes_type_raises_error():
+def test_patient_creation_with_invalid_diabetes_type_stores_error():
     """Test creating a Patient with an invalid diabetes type creates an error item."""
     
     new_patient = PatientFactory(diabetes_type=DIABETES_TYPE_INVALID)
@@ -205,7 +206,7 @@ def test_patient_creation_with_invalid_diabetes_type_raises_error():
 
 @pytest.mark.django_db
 def test_patient_creation_without_date_of_diagnosis_raises_error():
-    """Test creating a Patient without a date of diagnosis creates an error item."""
+    """Test creating a Patient without a date of diagnosis raises ValidationError."""
     with pytest.raises(ValidationError):
         PatientFactory(diagnosis_date=None)
 
@@ -221,16 +222,15 @@ def test_patient_creation_with_future_date_of_diagnosis_raises_error():
         PatientFactory(diagnosis_date=future_date)
 
 
-@pytest.mark.skip(
-    reason="Need to discuss model-level validation for diagnosis date vs birth date"
-)
 @pytest.mark.django_db
-def test_patient_creation_with_date_of_diagnosis_before_date_of_birth_raises_error():
+def test_patient_creation_with_date_of_diagnosis_before_date_of_birth_stores_error():
     """Test creating a Patient with a date of diagnosis before the date of birth creates an error item."""
     birth_date = date(2005, 1, 1)
     diagnosis_date = date(2004, 12, 31)
-    with pytest.raises(ValidationError):
-        PatientFactory(date_of_birth=birth_date, diagnosis_date=diagnosis_date)
+    new_patient = PatientFactory(date_of_birth=birth_date, diagnosis_date=diagnosis_date)
+    
+    assert check_error_field_has_errors(new_patient, 'diagnosis_date', [PatientError.DIAGNOSIS_DATE_BEFORE_DOB.name]), "Error not raised for diagnosis date before date of birth"
+    
 
 
 @pytest.mark.skip(reason="Need to discuss model-level validation for postcode format")
