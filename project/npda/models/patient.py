@@ -12,6 +12,7 @@ from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 
 from project.npda.models.custom_validators import validate_nhs_number
+from project.npda.models.validation_errors_mixin import ValidationErrorsMixin
 
 # npda imports
 from ...constants import (
@@ -31,19 +32,46 @@ from ..general_functions import (
 # Logging
 logger = logging.getLogger(__name__)
 
+from enum import Enum
 
-class Patient(models.Model):
+class PatientError(Enum):
+    """NOT including nhs number as that error should prevent saving"""
+    DOB_IN_FUTURE = "Date of birth cannot be in the future."
+    PT_OLDER_THAN_19yo = "Patient is too old for the NPDA."
+    INVALID_POSTCODE = "Postcode is invalid."
+    DEPRIVATION_CALCULATION_FAILED = "Cannot calculate deprivation score."
+    INVALID_DIABETES_TYPE = "Diabetes type is invalid."
+
+
+class Patient(ValidationErrorsMixin, models.Model):
     """
     The Patient class.
 
     The index of multiple deprivation is calculated in the save() method using the postcode supplied and the
     RCPCH Census Platform
 
-    Custom methods age and age_days, returns the age
+    Custom methods age and age_days, returns the age.
+    
+    Uses the ValidationErrorsMixin to handle custom validation errors and update the 'errors' field.
     """
-
-    nhs_number = CharField(  # the NHS number for England and Wales
-        "NHS Number", unique=True, validators=[validate_nhs_number]
+    class Meta:
+        verbose_name = "Patient"
+        verbose_name_plural = "Patients"
+        ordering = (
+            "pk",
+            "nhs_number",
+        )
+        permissions = [
+            CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING,
+            CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING,
+            CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
+        ]
+        
+    # the NHS number for England and Wales
+    nhs_number = CharField(  
+        "NHS Number", 
+        unique=True, 
+        validators=[validate_nhs_number], # Raise ValidationError & prevent saving
     )
 
     sex = models.IntegerField("Stated gender", choices=SEX_TYPE, blank=True, null=True)
@@ -92,22 +120,13 @@ class Patient(models.Model):
         verbose_name="Record is valid", blank=False, null=False, default=False
     )
 
+    # Custom field to store validation errors
+    # This field is populated by the ValidationErrorsMixin
+    # JSON field of structure {field_name: [PatientError1 name, PatientError2 name, ...], ...}
     errors = models.JSONField(
         verbose_name="Validation errors", blank=True, null=True, default=None
     )
 
-    class Meta:
-        verbose_name = "Patient"
-        verbose_name_plural = "Patients"
-        ordering = (
-            "pk",
-            "nhs_number",
-        )
-        permissions = [
-            CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING,
-            CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING,
-            CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
-        ]
 
     def __str__(self) -> str:
         return f"ID: {self.pk}, {self.nhs_number}"
@@ -141,21 +160,40 @@ class Patient(models.Model):
         if today_date is None:
             today_date = self.get_todays_date()
         return stringify_time_elapsed(self.date_of_birth, today_date)
+        
+    # Custom validation methods using ValidationErrorsMixin
+    def validate_fields(self):
+        """
+        Can add custom validation logic here using PatientError.
+        
+        """
+        
+        TODAY = self.get_todays_date()
+        
+        # == `date_of_birth` ==
+        if self.date_of_birth:
+            # dob can't be in the future
+            if self.date_of_birth > date.today():
+                self.add_error('date_of_birth', PatientError.DOB_IN_FUTURE)
+            
+            # patient is > than 19 years old
+            if self.age_days(TODAY) > 19 * 365:
+                self.add_error('date_of_birth', PatientError.PT_OLDER_THAN_19yo)
+        
 
-    def save(self, *args, **kwargs) -> None:
-        # calculate the index of multiple deprivation quintile if the postcode is present
-        # Skips the calculation if the postcode is on the 'unknown' list
+        # Custom validation for postcode
+        if self.postcode:
+            if self.postcode in UNKNOWN_POSTCODES_NO_SPACES:
+                self.add_error('postcode', PatientError.INVALID_POSTCODE)
+    
+    def save(self, *args, **kwargs):
+        # Custom logic to calculate deprivation score
         if self.postcode:
             try:
-                self.index_of_multiple_deprivation_quintile = imd_for_postcode(
-                    self.postcode
-                )
+                self.index_of_multiple_deprivation_quintile = imd_for_postcode(self.postcode)
             except Exception as error:
-                # Deprivation score not persisted if deprivation score server down
                 self.index_of_multiple_deprivation_quintile = None
-                print(
-                    f"Cannot calculate deprivation score for {self.postcode}: {error}"
-                )
+                self.add_error('postcode', PatientError.DEPRIVATION_CALCULATION_FAILED)
 
-        self.full_clean()  # Trigger validation
+        # Call the save method in the mixin
         return super().save(*args, **kwargs)
