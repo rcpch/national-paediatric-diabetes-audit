@@ -197,3 +197,17 @@ class Patient(ValidationErrorsMixin, models.Model):
 
         # Call the save method in the mixin
         return super().save(*args, **kwargs)
+
+    def get_fields_with_custom_choice_handling(self):
+        return ['diabetes_type']
+    
+    def handle_invalid_choice(self, field_name, error_message):
+        """
+        Custom handling for the diabetes_type field.
+        """
+        if field_name == 'diabetes_type':
+            # Add the INVALID_DIABETES_TYPE error
+            self.add_error(field_name, PatientError.INVALID_DIABETES_TYPE)
+        else:
+            # For other fields, use the default behavior
+            super().handle_invalid_choice(field_name, error_message)

@@ -194,7 +194,6 @@ def test_patient_creation_without_diabetes_type_raises_error():
     with pytest.raises(ValidationError):
         PatientFactory(diabetes_type=None)
 
-@pytest.mark.skip(reason='WIP')
 @pytest.mark.django_db
 def test_patient_creation_with_invalid_diabetes_type_raises_error():
     """Test creating a Patient with an invalid diabetes type creates an error item."""

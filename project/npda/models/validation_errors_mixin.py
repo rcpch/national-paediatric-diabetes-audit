@@ -1,5 +1,6 @@
 from enum import Enum
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 
 class ValidationErrorsMixin:
     """
@@ -51,14 +52,14 @@ class ValidationErrorsMixin:
         """
         Override full_clean method to include custom validation.
         
-        We capture specified ValidationErrors and store them in the 'errors' field.
+        We capture specified Errors and store them in the 'errors' field.
         
-        ValidationErrors not specified in `get_fields_with_custom_choice_handling` will still raise a ValidationError.
+        Errors not specified in `get_fields_with_custom_choice_handling` will still raise an Error.
         """
         try:
             # Perform the standard validation first
             super().full_clean(*args, **kwargs)
-        except ValidationError as e:
+        except IntegrityError as e:
             # Capture and handle validation errors for those specified
             for field, error_messages in e.message_dict.items():
                 if field in self.get_fields_with_custom_choice_handling():
