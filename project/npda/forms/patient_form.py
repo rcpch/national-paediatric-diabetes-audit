@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django import forms
 
 # project imports
+import nhs_number
 from ..models import Patient
 from ...constants.styles.form_styles import *
 from ..general_functions import (
@@ -20,19 +21,20 @@ class DateInput(forms.DateInput):
     input_type = "date"
 
 
-class PatientForm(forms.ModelForm):
+class NHSNumberField(forms.CharField):
+    def to_python(self, value):
+        number = super().to_python(value)
+        normalised = nhs_number.normalise_number(number)
 
-    quarter = forms.ChoiceField(
-        choices=[
-            (1, 1),
-            (2, 2),
-            (3, 3),
-            (4, 4),
-        ],  # Initially empty, will be populated dynamically
-        required=True,
-        widget=forms.Select(attrs={"class": SELECT}),
-        label="Audit Year Quarter",
-    )
+        # For some combinations we get back an empty string (eg '719-573 0220')
+        return normalised or value
+
+    def validate(self, value):
+        if not nhs_number.is_valid(value):
+            raise ValidationError("Invalid NHS number")
+
+
+class PatientForm(forms.ModelForm):
 
     class Meta:
         model = Patient
@@ -47,8 +49,8 @@ class PatientForm(forms.ModelForm):
             "death_date",
             "gp_practice_ods_code",
             "gp_practice_postcode",
-            "quarter",
         ]
+        field_classes = {"nhs_number": NHSNumberField}
         widgets = {
             "nhs_number": forms.TextInput(
                 attrs={"class": TEXT_INPUT},
@@ -62,22 +64,7 @@ class PatientForm(forms.ModelForm):
             "death_date": DateInput(),
             "gp_practice_ods_code": forms.TextInput(attrs={"class": TEXT_INPUT}),
             "gp_practice_postcode": forms.TextInput(attrs={"class": TEXT_INPUT}),
-            "quarter": forms.Select(),
         }
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        if self.instance.pk:
-            # this is a bound form, so we need to get the quarter from the submission related to the instance
-            Submission = apps.get_model("npda", "Submission")
-            self.initial["quarter"] = Submission.objects.get(
-                patients=self.instance
-            ).quarter
-        else:
-            # this is an unbound form, so we need to set the quarter to current quarter
-            self.initial["quarter"] = retrieve_quarter_for_date(
-                date_instance=date.today()
-            )
 
     def clean_postcode(self):
         if not self.cleaned_data["postcode"]:
@@ -98,40 +85,29 @@ class PatientForm(forms.ModelForm):
         gp_practice_ods_code = cleaned_data.get("gp_practice_ods_code")
         gp_practice_postcode = cleaned_data.get("gp_practice_postcode")
 
-        if diagnosis_date is None:
-            raise ValidationError(
-                {"diagnosis_date": ["'Date of Diabetes Diagnosis' cannot be empty"]}
-            )
-
-        if date_of_birth is None:
-            raise ValidationError(
-                {"date_of_birth": ["'Date of Birth' cannot be empty"]}
-            )
-
         if diagnosis_date is not None and date_of_birth is not None:
             if diagnosis_date < date_of_birth:
-                raise ValidationError(
-                    {
-                        "diagnosis_date": [
-                            "'Date of Diabetes Diagnosis' cannot be before 'Date of Birth'"
-                        ]
-                    }
+                self.add_error(
+                    "diagnosis_date",
+                    ValidationError(
+                        "'Date of Diabetes Diagnosis' cannot be before 'Date of Birth'"
+                    ),
                 )
 
         if death_date is not None and date_of_birth is not None:
             if death_date < date_of_birth:
-                raise ValidationError(
-                    {"death_date": ["'Death Date' cannot be before 'Date of Birth'"]}
+                self.add_error(
+                    "death_date",
+                    ValidationError("'Death Date' cannot be before 'Date of Birth'"),
                 )
 
         if death_date is not None and diagnosis_date is not None:
             if death_date < diagnosis_date:
-                raise ValidationError(
-                    {
-                        "death_date": [
-                            "'Death Date' cannot be before 'Date of Diabetes Diagnosis'"
-                        ]
-                    }
+                self.add_error(
+                    "death_date",
+                    ValidationError(
+                        "'Death Date' cannot be before 'Date of Diabetes Diagnosis'"
+                    ),
                 )
 
         if gp_practice_ods_code is None and gp_practice_postcode is None:
