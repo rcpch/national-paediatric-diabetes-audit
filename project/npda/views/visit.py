@@ -10,7 +10,6 @@ from django.views.generic import ListView
 from django.urls import reverse_lazy, reverse
 
 # Third party imports
-from two_factor.views.mixins import OTPRequiredMixin
 
 # RCPCH imports
 from ..models import Visit, Patient

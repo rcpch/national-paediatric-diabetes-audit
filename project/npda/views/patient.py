@@ -20,7 +20,6 @@ from django.urls import reverse_lazy
 from django_htmx.http import trigger_client_event
 
 from project.npda.general_functions import (
-    organisations_adapter,
     get_new_session_fields,
     get_or_update_view_preference,
 )
@@ -50,7 +49,6 @@ class PatientListView(
         Scope to patient only in the same organisation as the user and current audit year
         """
         pz_code = self.request.session.get("pz_code")
-        ods_code = self.request.session.get("ods_code")
         filtered_patients = None
         # filter patients to the view preference of the user
         if self.request.user.view_preference == 0:
@@ -118,7 +116,7 @@ class PatientListView(
             Patient.objects.filter(submissions__submission_active=True).count()
             - total_valid_patients
         )
-        context["index_of_first_invalid_patient"] = total_valid_patients + 1
+        context["index_of_first_invalid_patient"] = total_valid_patients
         context["organisation_choices"] = self.request.session.get(
             "organisation_choices"
         )

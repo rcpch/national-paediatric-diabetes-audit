@@ -433,6 +433,7 @@ class VisitForm(forms.ModelForm):
 
     def clean_visit_date(self):
         data = self.cleaned_data["visit_date"]
+        print(f"cleaning visit_date: {data} death_date: {self.patient.death_date}")
         valid, error = validate_date(
             date_under_examination_field_name="visit_date",
             date_under_examination_label_name="Visit/Appointment Date",
@@ -707,7 +708,7 @@ class VisitForm(forms.ModelForm):
         hba1c_value = cleaned_data["hba1c"]
         hba1c_format = cleaned_data["hba1c_format"]
 
-        if hba1c_value:
+        if hba1c_value is not None:
             if hba1c_format == 1:
                 # mmol/mol
                 if hba1c_value < 20:
