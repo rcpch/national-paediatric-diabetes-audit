@@ -40,6 +40,13 @@ class ValidationErrorsMixin:
         """
         raise NotImplementedError("Subclasses must implement validate_fields method.")
 
+    def handle_invalid_choice(self, field_name, error_message):
+        """
+        Handle invalid choices for specific fields. Can be overridden in models.
+        By default, it adds the error to the errors field.
+        """
+        self.add_error(field_name, error_message)
+    
     def full_clean(self, *args, **kwargs):
         """
         Override full_clean method to include custom validation.
@@ -52,13 +59,16 @@ class ValidationErrorsMixin:
             # Perform the standard validation first
             super().full_clean(*args, **kwargs)
         except ValidationError as e:
-            # Capture and handle validation errors
+            # Capture and handle validation errors for those specified
             for field, error_messages in e.message_dict.items():
                 if field in self.get_fields_with_custom_choice_handling():
                     self.handle_invalid_choice(field, error_messages)
                 else:
                     # Re-raise the error for critical fields
                     raise e
+        
+        # Call the model-specific validation logic
+        self.validate_fields()
 
     def save(self, *args, **kwargs):
         # Reset errors field before saving
