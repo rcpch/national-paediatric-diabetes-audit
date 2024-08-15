@@ -211,15 +211,14 @@ def test_patient_creation_without_date_of_diagnosis_raises_error():
         PatientFactory(diagnosis_date=None)
 
 
-@pytest.mark.skip(
-    reason="Need to discuss model-level validation for future diagnosis dates"
-)
+
 @pytest.mark.django_db
-def test_patient_creation_with_future_date_of_diagnosis_raises_error():
+def test_patient_creation_with_future_date_of_diagnosis_stores_error():
     """Test creating a Patient with a future date of diagnosis creates an error item."""
     future_date = TODAY + timedelta(days=1)
-    with pytest.raises(ValidationError):
-        PatientFactory(diagnosis_date=future_date)
+    new_patient = PatientFactory(diagnosis_date=future_date)
+    
+    assert check_error_field_has_errors(new_patient, 'diagnosis_date', [PatientError.DIAGNOSIS_DATE_IN_FUTURE.name]), "Error not raised for future date of diagnosis"
 
 
 @pytest.mark.django_db
@@ -233,12 +232,12 @@ def test_patient_creation_with_date_of_diagnosis_before_date_of_birth_stores_err
     
 
 
-@pytest.mark.skip(reason="Need to discuss model-level validation for postcode format")
 @pytest.mark.django_db
-def test_patient_creation_with_invalid_postcode_raises_error():
+def test_patient_creation_with_invalid_postcode_stores_error():
     """Test creating a Patient with an invalid postcode creates an error item."""
-    with pytest.raises(ValidationError):
-        PatientFactory(postcode=INVALID_POSTCODE)
+    new_patient = PatientFactory(postcode=INVALID_POSTCODE)
+    
+    assert check_error_field_has_errors(new_patient, 'postcode', [PatientError.INVALID_POSTCODE.name]), "Error not raised for invalid postcode"
 
 
 @pytest.mark.django_db

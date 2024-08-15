@@ -11,6 +11,7 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 
+from project.npda.general_functions import validate_postcode
 from project.npda.models.custom_validators import validate_nhs_number
 from project.npda.models.validation_errors_mixin import ValidationErrorsMixin
 
@@ -42,6 +43,7 @@ class PatientError(Enum):
     DEPRIVATION_CALCULATION_FAILED = "Cannot calculate deprivation score."
     INVALID_DIABETES_TYPE = "Diabetes type is invalid."
     DIAGNOSIS_DATE_BEFORE_DOB = "Diagnosis date is before date of birth."
+    DIAGNOSIS_DATE_IN_FUTURE = "Diagnosis date cannot be in the future."
 
 
 class Patient(ValidationErrorsMixin, models.Model):
@@ -190,7 +192,9 @@ class Patient(ValidationErrorsMixin, models.Model):
 
         # == `postcode` ==
         if self.postcode:
-            if self.postcode in UNKNOWN_POSTCODES_NO_SPACES:
+            
+            # Invalid postcode
+            if not validate_postcode(self.postcode) or self.postcode.upper().replace(" ", "").replace("-", "") in UNKNOWN_POSTCODES_NO_SPACES:
                 self.add_error('postcode', PatientError.INVALID_POSTCODE)
         
         # == `date_of_diagnosis` ==
@@ -198,6 +202,10 @@ class Patient(ValidationErrorsMixin, models.Model):
             # diagnosis date can't be before dob
             if self.diagnosis_date < self.date_of_birth:
                 self.add_error('diagnosis_date', PatientError.DIAGNOSIS_DATE_BEFORE_DOB)
+            
+            # diagnosis date can't be in the future
+            if self.diagnosis_date > TODAY:
+                self.add_error('diagnosis_date', PatientError.DIAGNOSIS_DATE_IN_FUTURE)
         
         # == `diabetes_type` ==
         if self.diabetes_type not in self.DIABETES_TYPES:
@@ -211,7 +219,7 @@ class Patient(ValidationErrorsMixin, models.Model):
                 self.index_of_multiple_deprivation_quintile = imd_for_postcode(self.postcode)
             except Exception as error:
                 self.index_of_multiple_deprivation_quintile = None
-                self.add_error('postcode', PatientError.DEPRIVATION_CALCULATION_FAILED)
+                self.add_error('index_of_multiple_deprivation_quintile', PatientError.DEPRIVATION_CALCULATION_FAILED)
 
         # Call the save method in the mixin
         return super().save(*args, **kwargs)
