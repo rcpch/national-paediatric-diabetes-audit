@@ -184,3 +184,8 @@ def patient_valid(patient):
         return False
     else:
         return True
+
+# Used to keep text highlighted in navbar for the tab that has been selected
+@register.simple_tag
+def active_navbar_tab(request, url_name):
+    return 'text-rcpch_light_blue' if request.resolver_match.url_name == url_name else 'text-gray-700'
