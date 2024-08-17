@@ -63,15 +63,14 @@
                         </ul>
                     </div>
                 {% else %}
-                    <li>
-                        <details>
-                            <summary class="px-1 font-semibold text-sm flex flex-row justify-center">{{ user.get_full_name }}</summary>
-                            <ul class="bg-base-100 rounded-t-none p-2">
-                                <li><a>Link 1</a></li>
-                                <li><a>Link 2</a></li>
-                            </ul>
-                        </details>
-                    </li>
+                    <ul class="flex justify-end">
+                        <li>
+                            <a href="{% url 'two_factor:login' %}"
+                            class="text-xs block font-montserrat font-semibold py-2 pr-4 pl-3 text-gray-700 lg:border-0 lg:hover:text-primary-700 px-0 lg:px-5 py-2 lg:py-2.5 mr-2 text-gray-400 hover:text-rcpch_light_blue hover:bg-transparent">
+                            Sign In
+                            </a>
+                        </li>
+                    </ul>
                 {% endif %}
             </ul>
         </div>
