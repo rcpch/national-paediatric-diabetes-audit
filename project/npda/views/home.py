@@ -8,6 +8,8 @@ from django.core.exceptions import ValidationError
 
 # RCPCH imports
 from ..general_functions.csv_upload import csv_upload, csv_summarise
+from ..general_functions.session import update_session_object
+from ..general_functions.view_preference import get_or_update_view_preference
 from ..forms.upload import UploadFileForm
 from .decorators import login_and_otp_required
 
@@ -75,3 +77,30 @@ def home(request):
     context = {"file_uploaded": False, "form": form}
     template = "home.html"
     return render(request=request, template_name=template, context=context)
+
+
+def view_preference(request):
+    """
+    HTMX callback from the button press in the view_preference.html template.
+    """
+
+    view_preference_selection = request.POST.get("view_preference", None)
+    view_preference = get_or_update_view_preference(
+        request.user, view_preference_selection
+    )
+    pz_code = request.POST.get("pz_code_select_name", None)
+    if pz_code is not None:
+        new_session = update_session_object(request=request, pz_code=pz_code)
+    else:
+        new_session = request.session
+        pz_code = new_session["pz_code"]
+
+    context = {
+        "view_preference": view_preference,
+        "chosen_pdu": pz_code,
+        "pdu_choices": new_session["pdu_choices"],
+    }
+
+    return render(
+        request, template_name="partials/view_preference.html", context=context
+    )

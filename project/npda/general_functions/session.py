@@ -33,6 +33,17 @@ def create_session_object(request, user):
     return session
 
 
+def update_session_object(request, pz_code):
+    """
+    Update the session object for the user, based on their permissions.
+    This is called when the user changes their organisation.
+    """
+
+    request.session["pz_code"] = pz_code
+
+    return request.session
+
+
 def get_new_session_fields(user, pz_code):
     ret = {}
 

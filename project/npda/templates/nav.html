@@ -78,7 +78,7 @@
     {% if user.is_authenticated %}
         <div class="navbar bg-base-100 flex justify-end py-0">
             <div id="global_view_preference">
-                {% include 'partials/view_preference.html'  with view_preference=request.user.view_preference hx_post=hx_post pdu_choices=request.session.pdu_choices chosen_pdu=request.session.pz_code hx_target="#global_view_preference" %}
+                {% include 'partials/view_preference.html'  with view_preference=request.user.view_preference pdu_choices=request.session.pdu_choices chosen_pdu=request.session.pz_code hx_target="#global_view_preference" %}
             </div>
         </div>
     {% endif %}
