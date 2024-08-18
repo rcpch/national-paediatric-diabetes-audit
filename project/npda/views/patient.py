@@ -22,6 +22,7 @@ from django_htmx.http import trigger_client_event
 from project.npda.general_functions import (
     get_new_session_fields,
     get_or_update_view_preference,
+    organisations_adapter,
 )
 from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
 from project.npda.models import NPDAUser, Submission
@@ -110,17 +111,17 @@ class PatientListView(
             .count()
         )
         context["pz_code"] = self.request.session.get("pz_code")
-        context["ods_code"] = self.request.session.get("ods_code")
         context["total_valid_patients"] = total_valid_patients
         context["total_invalid_patients"] = (
             Patient.objects.filter(submissions__submission_active=True).count()
             - total_valid_patients
         )
         context["index_of_first_invalid_patient"] = total_valid_patients
-        context["organisation_choices"] = self.request.session.get(
-            "organisation_choices"
+        context["pdu_choices"] = (
+            organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
+                request=self.request, user_instance=self.request.user
+            )
         )
-        context["pdu_choices"] = self.request.session.get("pdu_choices")
         context["chosen_pdu"] = self.request.session.get("pz_code")
         return context
 
@@ -145,12 +146,9 @@ class PatientListView(
         """
         if request.htmx:
             view_preference = request.POST.get("view_preference", None)
-            ods_code = request.POST.get("patient_ods_code_select_name", None)
             pz_code = request.POST.get("patient_pz_code_select_name", None)
 
-            new_session_fields = get_new_session_fields(
-                self.request.user, ods_code, pz_code
-            )
+            new_session_fields = get_new_session_fields(self.request.user, pz_code)
             self.request.session.update(new_session_fields)
 
             view_preference = get_or_update_view_preference(
@@ -159,15 +157,12 @@ class PatientListView(
 
             context = {
                 "view_preference": int(view_preference),
-                "ods_code": ods_code,
                 "pz_code": request.session.get("pz_code"),
                 "hx_post": reverse_lazy("patients"),
-                "organisation_choices": self.request.session.get(
-                    "organisation_choices"
+                "pdu_choices": organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
+                    request=request, user_instance=self.request.user
                 ),
-                "pdu_choices": self.request.session.get("pdu_choices"),
                 "chosen_pdu": request.session.get("pz_code"),
-                "ods_code_select_name": "patient_ods_code_select_name",
                 "pz_code_select_name": "patient_pz_code_select_name",
                 "hx_target": "#patient_view_preference",
             }

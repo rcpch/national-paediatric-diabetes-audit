@@ -119,12 +119,9 @@ class NPDAUserListView(
         """
         if request.htmx:
             view_preference = request.POST.get("view_preference", None)
-            ods_code = request.POST.get("npdauser_ods_code_select_name", None)
             pz_code = request.POST.get("npdauser_pz_code_select_name", None)
 
-            new_session_fields = get_new_session_fields(
-                self.request.user, ods_code, pz_code
-            )
+            new_session_fields = get_new_session_fields(self.request.user, pz_code)
             self.request.session.update(new_session_fields)
 
             view_preference = get_or_update_view_preference(
@@ -133,7 +130,6 @@ class NPDAUserListView(
 
             context = {
                 "view_preference": int(view_preference),
-                "ods_code": ods_code,
                 "pz_code": request.session.get("pz_code"),
                 "hx_post": reverse_lazy("npda_users"),
                 "organisation_choices": self.request.session.get(
@@ -143,7 +139,6 @@ class NPDAUserListView(
                     request=self.request, user_instance=self.request.user
                 ),
                 "chosen_pdu": request.session.get("pz_code"),
-                "ods_code_select_name": "npdauser_ods_code_select_name",
                 "pz_code_select_name": "npdauser_pz_code_select_name",
                 "hx_target": "#npdauser_view_preference",
             }
