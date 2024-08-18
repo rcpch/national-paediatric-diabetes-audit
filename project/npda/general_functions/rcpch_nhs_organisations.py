@@ -8,8 +8,10 @@ import logging
 from typing import Union, Dict, Any, List, Tuple
 
 # django imports
+from django.apps import apps
 from django.conf import settings
 from django.db import DatabaseError
+from django.forms.models import model_to_dict
 from requests.exceptions import HTTPError
 
 # RCPCH imports
@@ -181,47 +183,54 @@ def get_all_pz_codes_with_their_trust_and_primary_organisation(
         return ERROR_RESPONSE
 
 
-def rcpch_nhs_organisations_match_locally_stored_pz_codes():
+def maintain_paediatric_diabetes_unit_records_against_rcpch_nhs_organisations_API():
     """
     This function checks if the NHS organisations in the RCPCH dataset match the locally stored PZ codes.
     If there are any mismatches, it logs the mismatch and updates the local database with the correct data.
     """
-    from project.npda.models import PaediatricDiabetesUnit
+    PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
 
     # Get all PZ codes with their trust and primary organisation
     pdus = get_all_pz_codes_with_their_trust_and_primary_organisation(seed=True)
 
     # Check if the NHS organisations in the RCPCH dataset match the locally stored PZ codes
     for pdu in pdus:
+        logger.info(f"Checking PaediatricDiabetesUnit: {pdu['pz_code']}...")
 
         # Check if the PZ code exists in the local database
         pdu_obj = None
         if PaediatricDiabetesUnit.objects.filter(pz_code=pdu["pz_code"]).exists():
             pdu_obj = PaediatricDiabetesUnit.objects.get(pz_code=pdu["pz_code"])
+
+        # update or create the PaediatricDiabetesUnit
+        parent_ods_code = (pdu.get("parent") or {}).get("ods_code")
+        parent_name = (pdu.get("parent") or {}).get("name")
+
         try:
             new_pdu, created = PaediatricDiabetesUnit.objects.update_or_create(
                 pz_code=pdu["pz_code"],
                 defaults={
-                    "organisation_ods_code": pdu["trust_ods_code"],
-                    "organisation_name": pdu["trust_name"],
-                    "parent_ods_code": pdu["primary_organisation_ods_code"],
-                    "parent_name": pdu["primary_organisation_name"],
+                    "organisation_ods_code": pdu["primary_organisation"]["ods_code"],
+                    "organisation_name": pdu["primary_organisation"]["name"],
+                    "parent_ods_code": parent_ods_code,
+                    "parent_name": parent_name,
                 },
             )
-            if created:
-                logger.info(
-                    f"Created PaediatricDiabetesUnit: {new_pdu.pz_code} ({new_pdu.organisation_name})"
-                )
-            else:
-                if pdu_obj:
-                    if pdu_obj.dict() != new_pdu.dict():
-                        logger.info(
-                            f"{new_pdu.pz_code} ({new_pdu.organisation_name}) was updated."
-                        )
+        except Exception as e:
+            logger.error(f"Error creating PaediatricDiabetesUnit: {e}")
+            pass
+
+        if created:
+            logger.info(
+                f"Created PaediatricDiabetesUnit: {new_pdu.pz_code} ({new_pdu.organisation_name})"
+            )
+        else:
+            if pdu_obj is not None:
+                if model_to_dict(pdu_obj) != model_to_dict(new_pdu):
+                    logger.info(
+                        f"{new_pdu.pz_code} ({new_pdu.organisation_name}) was updated."
+                    )
                 else:
                     logger.info(
                         f"PaediatricDiabetesUnit: {new_pdu.pz_code} ({new_pdu.organisation_name}) matches the RCPCH dataset."
                     )
-        except DatabaseError as e:
-            logger.error(f"Error creating PaediatricDiabetesUnit: {e}")
-            pass
