@@ -352,7 +352,7 @@ class NPDAUserUpdateView(
             .order_by("-is_primary_employer")
         )
         context["organisation_choices"] = (
-            organisations_adapter.organisations_to_populate_select_field(
+            organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
                 request=self.request, user_instance=context["npda_user"]
             )
         )
@@ -366,7 +366,7 @@ class NPDAUserUpdateView(
         if request.htmx:
             # these are HTMX post requests from the edit user form
             # the return value is a partial view of the employers list, with the select, delete and set primary employer buttons
-            npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
+            selected_npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
             if request.POST.get("update") == "delete":
                 # delete the selected employer
                 # cannot delete the primary employer but can set another employer as primary first and then delete the employer
@@ -376,70 +376,37 @@ class NPDAUserUpdateView(
             elif request.POST.get("update") == "update":
                 # set the selected employer as the primary employer. Reset all other employers to False before setting the selected employer to True since only one employer can be primary
                 # set all employers to False
-                OrganisationEmployer.objects.filter(npda_user=npda_user).update(
-                    is_primary_employer=False
-                )
+                OrganisationEmployer.objects.filter(
+                    npda_user=selected_npda_user
+                ).update(is_primary_employer=False)
                 # set the selected employer to True
                 OrganisationEmployer.objects.filter(
                     pk=request.POST.get("organisation_employer_id")
                 ).update(is_primary_employer=True)
 
             elif request.POST.get("add_employer"):
-                # add to new employer to the employer list
-
+                PaediatricDiabetesUnit = apps.get_model(
+                    "npda", "PaediatricDiabetesUnit"
+                )
+                # add to new employer to the users employer list after setting any existing employers is_primary_employer to False
+                OrganisationEmployer.objects.filter(
+                    npda_user=selected_npda_user
+                ).update(is_primary_employer=False)
                 # add the user to the appropriate organisation
-                new_employer_ods_code = request.POST.get("add_employer")
-                if new_employer_ods_code:
+                new_employer_pz_code = request.POST.get("add_employer")
+                if new_employer_pz_code:
                     # a new employer has been added
-                    # fetch the organisation object from the API using the ODS code
-                    organisation = organisations_adapter.get_single_pdu_from_ods_code(
-                        new_employer_ods_code
+                    # fetch the object from the API using the PZ code
+                    selected_pdu = PaediatricDiabetesUnit.objects.get(
+                        pz_code=new_employer_pz_code
+                    )
+                    OrganisationEmployer.objects.update_or_create(
+                        paediatric_diabetes_unit=selected_pdu,
+                        npda_user=selected_npda_user,
+                        is_primary_employer=True,
                     )
 
-                    if "error" in organisation:
-                        messages.error(
-                            self.request,
-                            f"Error: {organisation['error']}. Organisation not added. Please contact the NPDA team if this issue persists.",
-                        )
-                        return HttpResponseRedirect(self.get_success_url())
-
-                    # Get the name of the organistion from the API response
-                    matching_organisation = next(
-                        (
-                            org
-                            for org in organisation["organisations"]
-                            if org["ods_code"] == new_employer_ods_code
-                        ),
-                        None,
-                    )
-
-                    if matching_organisation:
-                        # create or update  the OrganisationEmployer object
-                        PaediatricDiabetesUnit = apps.get_model(
-                            "npda", "PaediatricDiabetesUnit"
-                        )
-                        paediatric_diabetes_unit, created = (
-                            PaediatricDiabetesUnit.objects.update_or_create(
-                                organisation_ods_code=new_employer_ods_code,
-                                pz_code=organisation["pz_code"],
-                            )
-                        )
-                        if npda_user.organisation_employers.count() == 0:
-                            # if the user has no employers, set the new employer as the primary employer
-                            OrganisationEmployer.objects.update_or_create(
-                                paediatric_diabetes_unit=paediatric_diabetes_unit,
-                                npda_user=npda_user,
-                                is_primary_employer=True,
-                            )
-                            npda_user.refresh_from_db()
-                        else:
-                            # add the new employer to the user's employer list
-                            OrganisationEmployer.objects.update_or_create(
-                                paediatric_diabetes_unit=paediatric_diabetes_unit,
-                                npda_user=npda_user,
-                                is_primary_employer=False,
-                            )
-                            npda_user.refresh_from_db()
+                    selected_npda_user.refresh_from_db()
 
             # return the partial view of the employers list
             # if the a new employer has been added to the user, the new employer needs to be removed from the add_employer select list
@@ -448,19 +415,17 @@ class NPDAUserUpdateView(
             # get the user being edited
             user_instance = self.get_object()
 
-            organisation_choices = (
-                organisations_adapter.organisations_to_populate_select_field(
-                    request=self.request, user_instance=user_instance
-                )
+            organisation_choices = organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
+                request=self.request, user_instance=user_instance
             )
 
             return render(
                 request=request,
                 template_name="partials/employers.html",
                 context={
-                    "npda_user": npda_user,
+                    "npda_user": selected_npda_user,
                     "organisation_employers": OrganisationEmployer.objects.filter(
-                        npda_user=npda_user
+                        npda_user=selected_npda_user
                     )
                     .all()
                     .order_by("-is_primary_employer"),
