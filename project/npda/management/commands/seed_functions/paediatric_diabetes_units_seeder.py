@@ -17,6 +17,10 @@ def paediatric_diabetes_units_seeder():
 
     # Get all PZ codes with their trust and primary organisation
     # seed = True means that we are fetching the data from the RCPCH API as JSON rather than as a list of choices
+    if PaediatricDiabetesUnit.objects.count() > 0:
+        logger.info("PaediatricDiabetesUnit records already exist in the database")
+        return
+
     pdus = get_all_pz_codes_with_their_trust_and_primary_organisation(seed=True)
 
     for pdu in pdus:

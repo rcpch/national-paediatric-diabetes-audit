@@ -1,5 +1,6 @@
 import logging
 from django.core.exceptions import PermissionDenied
+from django.apps import apps
 
 # NPDA Imports
 from project.npda.general_functions import (
@@ -12,16 +13,17 @@ logger = logging.getLogger(__name__)
 
 
 def create_session_object(user):
-    organisation_employer = user.organisation_employers.first()
+    OrganisationEmployer = apps.get_model("npda", "OrganisationEmployer")
+    organisation_employers = OrganisationEmployer.objects.filter(npda_user=user)
 
-    ods_code = organisation_employer.organisation_ods_code
+    # ods_code = organisation_employer.organisation_ods_code
     pz_codes = [org["pz_code"] for org in user.organisation_employers.values()]
 
-    sibling_organisations = get_single_pdu_from_ods_code(ods_code)
+    # sibling_organisations = get_single_pdu_from_ods_code(ods_code)
 
-    organisation_choices = [
-        (choice.ods_code, choice.name) for choice in sibling_organisations.organisations
-    ]
+    # organisation_choices = [
+    #     (choice.ods_code, choice.name) for choice in sibling_organisations.organisations
+    # ]
 
     can_see_all_pdus = user.is_superuser or user.is_rcpch_audit_team_member
 
@@ -32,9 +34,9 @@ def create_session_object(user):
     ]
 
     session = {
-        "ods_code": ods_code,
+        # "ods_code": ods_code,
         "pz_code": pz_codes[0],
-        "organisation_choices": organisation_choices,
+        # "organisation_choices": organisation_choices,
         "pdu_choices": pdu_choices,
     }
 
