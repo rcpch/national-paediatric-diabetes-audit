@@ -1,6 +1,6 @@
 {% load static %}
 <div class="flex flex-col">
-    <div class="join join-horizontal lg:join-horizontal rounded-none pt-2" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    <div class="join join-horizontal lg:join-horizontal rounded-none pt-0" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
         <span class="loading loading-spinner loading-lg text-rcpch_pink htmx-indicator" id="spinner"></span>
         <!-- <input class="join-item btn bg-rcpch_light_blue hover:bg-rcpch_dark_blue text-white font-montserrat focus:bg-rcpch_pink border-rcpch_light_blue" hx-post="{{hx_post}}" hx-target="{{hx_target}}" hx-trigger="click" hx-swap="innerHTML"  type="radio" name="view_preference" value="0" aria-label="Organisation - {{ods_code}}" {% if view_preference == 0 %} checked {% endif %} hx-indicator="#spinner" /> -->
         <input hx-post="{{hx_post}}" hx-target="{{hx_target}}" hx-trigger="click" hx-swap="innerHTML" class="join-item btn bg-rcpch_light_blue hover:bg-rcpch_dark_blue text-white font-montserrat focus:bg-rcpch_pink border-rcpch_light_blue text-xs" type="radio" name="view_preference" value="1" aria-label="Paediatric Diabetes Unit - {{pz_code}}" {% if view_preference == 1 %} checked {% endif %} />
