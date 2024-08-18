@@ -7,7 +7,7 @@
         {% if view_preference == 1 %}
                 <select name="{{ pz_code_select_name }}" class="select rcpch-select rounded-none w-full text-xs" hx-post="{{hx_post}}" hx-trigger="change" hx-target="{{hx_target}}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
                     {% for pdu_choice in pdu_choices %}
-                    <option value="{{pdu_choice.1}}" {% if chosen_pdu == pdu_choice.1 %} selected="{{ chosen_pdu }}" {% endif %}>{{pdu_choice.1}}</option>
+                    <option value="{{pdu_choice.0}}" {% if chosen_pdu == pdu_choice.1 %} selected="{{ chosen_pdu }}" {% endif %}>{{pdu_choice.1}}</option>
                     {% endfor %}
                 </select>
         {% endif %}

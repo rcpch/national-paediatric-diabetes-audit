@@ -35,9 +35,8 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
         PaediatricDiabetesUnit = apps.get_model(
             app_label="npda", model_name="PaediatricDiabetesUnit"
         )
-        pdu, created = PaediatricDiabetesUnit.objects.get_or_create(
+        pdu = PaediatricDiabetesUnit.objects.get(
             pz_code=self.request.session.get("pz_code"),
-            ods_code=self.request.session.get("ods_code"),
         )
         queryset = (
             self.model.objects.filter(paediatric_diabetes_unit=pdu)

@@ -52,7 +52,6 @@ class NPDAUserListView(
 ):
     permission_required = "npda.view_npdauser"
     permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
-
     template_name = "npda_users.html"
 
     def get_queryset(self):
@@ -60,10 +59,9 @@ class NPDAUserListView(
 
         # Organisation level
         if self.request.user.view_preference == VIEW_PREFERENCES[0][0]:
+            # Organisation view - this is now deprecated
             return NPDAUser.objects.filter(
-                organisation_employers__organisation_ods_code=self.request.session.get(
-                    "ods_code"
-                )
+                organisation_employers__pz_code=self.request.session.get("pz_code")
             ).order_by("surname")
 
         # The user's organisation, PDU and siblings are stored in the session when they log in
@@ -71,15 +69,8 @@ class NPDAUserListView(
             # PDU view
             # create a list of sibling organisations' ODS codes who share the same PDU as the user
             pz_code = self.request.session.get("pz_code")
-            sibling_organisations = organisations_adapter.get_single_pdu_from_pz_code(
-                pz_number=pz_code
-            )
-            siblings_ods_codes = [
-                org.ods_code for org in sibling_organisations.organisations
-            ]
-            # get all users in the sibling organisations
             return NPDAUser.objects.filter(
-                organisation_employers__organisation_ods_code__in=siblings_ods_codes
+                organisation_employers__pz_code=pz_code
             ).order_by("surname")
         elif self.request.user.view_preference == VIEW_PREFERENCES[2][0]:
             # RCPCH user/national view - get all users
@@ -91,11 +82,16 @@ class NPDAUserListView(
         context = super(NPDAUserListView, self).get_context_data(**kwargs)
         context["title"] = "NPDA Users"
         context["pz_code"] = self.request.session.get("pz_code")
-        context["ods_code"] = self.request.session.get("ods_code")
-        context["organisation_choices"] = self.request.session.get(
-            "organisation_choices"
+        context["organisation_choices"] = (
+            organisations_adapter.paediatric_diabetes_units_to_populate_select_field(  # this is used to populate the add_employer field in the user form
+                request=self.request, user_instance=self.request.user
+            )
         )
-        context["pdu_choices"] = self.request.session.get("pdu_choices")
+        context["pdu_choices"] = (
+            organisations_adapter.paediatric_diabetes_units_to_populate_select_field(  # This is used to populate the select field in view preference form
+                request=self.request, user_instance=self.request.user
+            )
+        )
         context["chosen_pdu"] = self.request.session.get("pz_code")
         return context
 
@@ -143,7 +139,9 @@ class NPDAUserListView(
                 "organisation_choices": self.request.session.get(
                     "organisation_choices"
                 ),
-                "pdu_choices": self.request.session.get("pdu_choices"),
+                "pdu_choices": organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
+                    request=self.request, user_instance=self.request.user
+                ),
                 "chosen_pdu": request.session.get("pz_code"),
                 "ods_code_select_name": "npdauser_ods_code_select_name",
                 "pz_code_select_name": "npdauser_pz_code_select_name",
