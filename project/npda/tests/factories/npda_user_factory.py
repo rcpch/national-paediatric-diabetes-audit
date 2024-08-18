@@ -81,7 +81,7 @@ class NPDAUserFactory(factory.django.DjangoModelFactory):
 
                 pdu = PaediatricsDiabetesUnitFactory(
                     pz_code=pz_code,
-                    ods_code=pdu_data.organisations[0].ods_code,
+                    organisation_ods_code=pdu_data.organisations[0].ods_code,
                 )
 
                 OrganisationEmployerFactory.create(

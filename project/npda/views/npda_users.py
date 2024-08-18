@@ -61,7 +61,9 @@ class NPDAUserListView(
         # Organisation level
         if self.request.user.view_preference == VIEW_PREFERENCES[0][0]:
             return NPDAUser.objects.filter(
-                organisation_employers__ods_code=self.request.session.get("ods_code")
+                organisation_employers__organisation_ods_code=self.request.session.get(
+                    "ods_code"
+                )
             ).order_by("surname")
 
         # The user's organisation, PDU and siblings are stored in the session when they log in
@@ -77,7 +79,7 @@ class NPDAUserListView(
             ]
             # get all users in the sibling organisations
             return NPDAUser.objects.filter(
-                organisation_employers__ods_code__in=siblings_ods_codes
+                organisation_employers__organisation_ods_code__in=siblings_ods_codes
             ).order_by("surname")
         elif self.request.user.view_preference == VIEW_PREFERENCES[2][0]:
             # RCPCH user/national view - get all users
@@ -242,7 +244,7 @@ class NPDAUserCreateView(
                 )
                 paediatric_diabetes_unit, created = (
                     PaediatricDiabetesUnit.objects.update_or_create(
-                        ods_code=new_employer_ods_code,
+                        organisation_ods_code=new_employer_ods_code,
                         pz_code=organisation["pz_code"],
                     )
                 )
@@ -420,7 +422,7 @@ class NPDAUserUpdateView(
                         )
                         paediatric_diabetes_unit, created = (
                             PaediatricDiabetesUnit.objects.update_or_create(
-                                ods_code=new_employer_ods_code,
+                                organisation_ods_code=new_employer_ods_code,
                                 pz_code=organisation["pz_code"],
                             )
                         )

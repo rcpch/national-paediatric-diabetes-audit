@@ -50,9 +50,8 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
     )
 
     # get the PDU object
-    pdu, created = PaediatricDiabetesUnit.objects.get_or_create(
-        pz_code=pdu_pz_code, ods_code=organisation_ods_code
-    )
+    # TODO #249 MRB: handle case where PDU does not exist
+    pdu = PaediatricDiabetesUnit.objects.get(pz_code=pdu_pz_code)
 
     # Set previous submission to inactive
     Submission.objects.filter(

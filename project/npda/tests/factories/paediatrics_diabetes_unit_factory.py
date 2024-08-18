@@ -22,7 +22,10 @@ class PaediatricsDiabetesUnitFactory(factory.django.DjangoModelFactory):
 
     # Chelsea Westminster Hospital default
     pz_code = "PZ130"
-    ods_code = "RQM01"
+    organisation_ods_code = "RQM01"
+    organisation_name = "CHELSEA & WESTMINSTER HOSPITAL"
+    parent_ods_code = "RQM"
+    parent_name = "CHELSEA AND WESTMINSTER HOSPITAL NHS FOUNDATION TRUST"
 
     @classmethod
     def _create(cls, model_class, *args, **kwargs):
@@ -33,12 +36,18 @@ class PaediatricsDiabetesUnitFactory(factory.django.DjangoModelFactory):
         a get or create operation every time a new PDUFactory instance is created.
         """
         pz_code = kwargs.pop("pz_code", None)
-        ods_code = kwargs.pop("ods_code", None)
+        parent_name = kwargs.pop("parent_name", None)
+        parent_ods_code = kwargs.pop("parent_ods_code", None)
+        organisation_name = kwargs.pop("organisation_name", None)
+        organisation_ods_code = kwargs.pop("organisation_ods_code", None)
 
-        if pz_code and ods_code:
+        if pz_code and organisation_ods_code:
             pdu, created = PaediatricDiabetesUnit.objects.get_or_create(
                 pz_code=pz_code,
-                ods_code=ods_code,
+                organisation_ods_code=organisation_ods_code,
+                organisation_name=organisation_name,
+                parent_ods_code=parent_ods_code,
+                parent_name=parent_name,
             )
             return pdu
 

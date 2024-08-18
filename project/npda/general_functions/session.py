@@ -14,14 +14,13 @@ logger = logging.getLogger(__name__)
 def create_session_object(user):
     organisation_employer = user.organisation_employers.first()
 
-    ods_code = organisation_employer.ods_code
+    ods_code = organisation_employer.organisation_ods_code
     pz_codes = [org["pz_code"] for org in user.organisation_employers.values()]
 
     sibling_organisations = get_single_pdu_from_ods_code(ods_code)
 
     organisation_choices = [
-        (choice.ods_code, choice.name)
-        for choice in sibling_organisations.organisations
+        (choice.ods_code, choice.name) for choice in sibling_organisations.organisations
     ]
 
     can_see_all_pdus = user.is_superuser or user.is_rcpch_audit_team_member
@@ -48,7 +47,9 @@ def get_new_session_fields(user, ods_code, pz_code):
     if ods_code:
         can_see_organisations = (
             user.is_rcpch_audit_team_member
-            or user.organisation_employers.filter(ods_code=ods_code).exists()
+            or user.organisation_employers.filter(
+                organisation_ods_code=ods_code
+            ).exists()
         )
 
         if not can_see_organisations:
