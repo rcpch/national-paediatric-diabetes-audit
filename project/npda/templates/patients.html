@@ -9,7 +9,7 @@
             <h1 class="text-3xl font-montserrat font-semibold text-rcpch_dark_blue">Patients under the care of {{pz_code}}</h1>
             {% url 'patients' as hx_post %}
             <div id="patient_view_preference" class="mb-5">
-              {% include 'partials/view_preference.html'  with view_preference=request.user.view_preference hx_post=hx_post organisation_choices=organisation_choices ods_code_select_name="patient_ods_code_select_name" pz_code_select_name="patient_pz_code_select_name" ods_code=ods_code pdu_choices=pdu_choices chosen_pdu=chosen_pdu hx_target="#patient_view_preference" %}
+              {% include 'partials/view_preference.html' with view_preference=request.user.view_preference hx_post=hx_post organisation_choices=organisation_choices ods_code_select_name="patient_ods_code_select_name" pz_code_select_name="patient_pz_code_select_name" ods_code=ods_code pdu_choices=pdu_choices chosen_pdu=chosen_pdu hx_target="#patient_view_preference" %}
             </div>
             <div id="patient_table">
               {% include 'partials/patient_table.html' with patient_list=patient_list index_of_first_invalid_patient=index_of_first_invalid_patient total_invalid_patients=total_invalid_patients %}
