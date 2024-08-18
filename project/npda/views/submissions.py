@@ -41,7 +41,7 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
         )
         queryset = (
             self.model.objects.filter(paediatric_diabetes_unit=pdu)
-            .values("submission_date", "quarter", "audit_year")
+            .values("submission_date", "audit_year")
             .annotate(
                 patient_count=Count("patients"),
                 submission_active=F("submission_active"),
@@ -53,7 +53,6 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
             .order_by(
                 "-submission_date",
                 "audit_year",
-                "quarter",
                 "submission_active",
             )
         )
@@ -82,13 +81,26 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
         button_name = request.POST.get("submit-data")
         if button_name == "delete-data":
 
-            # delete the cohort submission patients
+            # retrieve the  submission instance
             submission = Submission.objects.filter(
                 pk=request.POST.get("audit_id")
             ).get()
+
+            # check if the submission is active - if so, do not allow deletion, and return an error message
+            if submission.submission_active:
+                self.object_list = self.get_queryset()
+                context = self.get_context_data(object_list=self.object_list)
+                messages.error(
+                    request,
+                    "Cannot delete an active submission. Please make another submission active before deleting this one",
+                )
+                return render(request, self.template_name, context=context)
+
+            # delete the patients associated with the submission
             submission.patients.all().delete()
-            # then delete the cohort submission itself
+            # then delete the submission itself
             submission.delete()
+
             # set the submission_active flag to True for the most recent submission
             if Submission.objects.count() > 0:
                 new_first = Submission.objects.order_by("-submission_date").first()

@@ -10,7 +10,6 @@ from django.views.generic import ListView
 from django.urls import reverse_lazy, reverse
 
 # Third party imports
-from two_factor.views.mixins import OTPRequiredMixin
 
 # RCPCH imports
 from ..models import Visit, Patient
@@ -31,7 +30,7 @@ class PatientVisitsListView(
         patient_id = self.kwargs.get("patient_id")
         context = super(PatientVisitsListView, self).get_context_data(**kwargs)
         patient = Patient.objects.get(pk=patient_id)
-        active_cohort = patient.submissions.filter(submission_active=True).first()
+        submission = patient.submissions.filter(submission_active=True).first()
         visits = Visit.objects.filter(patient=patient).order_by("is_valid", "id")
         calculated_visits = []
         for visit in visits:
@@ -39,7 +38,7 @@ class PatientVisitsListView(
             calculated_visits.append({"visit": visit, "categories": visit_categories})
         context["visits"] = calculated_visits
         context["patient"] = patient
-        context["active_cohort"] = active_cohort
+        context["submission"] = submission
         return context
 
 

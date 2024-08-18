@@ -1,8 +1,5 @@
-from datetime import date
-from typing import Any, Iterable
 from django.db import models
-
-from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
+from django.core.exceptions import ValidationError
 
 
 class Submission(models.Model):
@@ -19,13 +16,6 @@ class Submission(models.Model):
         blank=False,
         null=False,
         help_text="Year the audit is being conducted",
-    )
-
-    quarter = models.IntegerField(
-        "Quarter",
-        blank=False,
-        null=False,
-        help_text="The quarter in the audit year of the patient",
     )
 
     submission_date = models.DateTimeField(
@@ -53,9 +43,14 @@ class Submission(models.Model):
     )
 
     def __str__(self) -> str:
-        return f"{self.audit_year} ({self.quarter}), {self.patients.count()} patients"
+        return f"{self.audit_year}, {self.patients.count()} patients"
 
     class Meta:
         verbose_name = "Submission"
         verbose_name_plural = "Submissions"
-        ordering = ("audit_year", "quarter")
+        ordering = ("audit_year",)
+
+    def delete(self, *args, **kwargs):
+        if self.submission_active:
+            raise ValidationError("Cannot delete an active submission.")
+        super().delete(*args, **kwargs)

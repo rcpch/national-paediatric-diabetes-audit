@@ -20,7 +20,6 @@ from django.urls import reverse_lazy
 from django_htmx.http import trigger_client_event
 
 from project.npda.general_functions import (
-    organisations_adapter,
     get_new_session_fields,
     get_or_update_view_preference,
 )
@@ -50,7 +49,6 @@ class PatientListView(
         Scope to patient only in the same organisation as the user and current audit year
         """
         pz_code = self.request.session.get("pz_code")
-        ods_code = self.request.session.get("ods_code")
         filtered_patients = None
         # filter patients to the view preference of the user
         if self.request.user.view_preference == 0:
@@ -74,12 +72,26 @@ class PatientListView(
         if filtered_patients is not None:
             patient_queryset = patient_queryset.filter(filtered_patients)
 
-        return patient_queryset.annotate(
+        patient_queryset = patient_queryset.annotate(
             audit_year=F("submissions__audit_year"),
-            quarter=F("submissions__quarter"),
             visit_error_count=Count(Case(When(visit__is_valid=False, then=1))),
             last_upload_date=Max("submissions__submission_date"),
+            most_recent_visit_date=Max("visit__visit_date"),
         ).order_by("is_valid", "visit_error_count", "pk")
+
+        # add another annotation to the queryset to signpost the latest quarter
+        # This does involve iterating over the queryset, but it is necessary to add the latest_quarter attribute to each object
+        # as django does not support annotations with custom functions, at least, not without rewriting it in SQL or using the Func class
+        # and the queryset is not large
+        for obj in patient_queryset:
+            if obj.most_recent_visit_date is not None:
+                obj.latest_quarter = retrieve_quarter_for_date(
+                    obj.most_recent_visit_date
+                )
+            else:
+                obj.latest_quarter = None
+
+        return patient_queryset
 
     def get_context_data(self, **kwargs):
         """
@@ -104,7 +116,7 @@ class PatientListView(
             Patient.objects.filter(submissions__submission_active=True).count()
             - total_valid_patients
         )
-        context["index_of_first_invalid_patient"] = total_valid_patients + 1
+        context["index_of_first_invalid_patient"] = total_valid_patients
         context["organisation_choices"] = self.request.session.get(
             "organisation_choices"
         )
@@ -172,7 +184,7 @@ class PatientCreateView(
     LoginAndOTPRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, CreateView
 ):
     """
-    Handle creation of new patient in audit - should link the patient to the current audit year and quarter, and the logged in user's PDU
+    Handle creation of new patient in audit - should link the patient to the current audit year and the logged in user's PDU
     """
 
     permission_required = "npda.add_patient"
@@ -229,13 +241,11 @@ class PatientCreateView(
                 reason_leaving_service=None,
             )
 
-        # add patient to the latest audit year, and user selected quarter, and the logged in user's PDU
-        # the form is initialised with the current audit year and quarter
-        quarter = form.cleaned_data["quarter"]
+        # add patient to the latest audit year and the logged in user's PDU
+        # the form is initialised with the current audit year
         Submission = apps.get_model("npda", "Submission")
         submission, created = Submission.objects.update_or_create(
             audit_year=date.today().year,
-            quarter=quarter,
             paediatric_diabetes_unit=paediatric_diabetes_unit,
             submission_active=True,
             defaults={
@@ -286,14 +296,9 @@ class PatientUpdateView(
 
     def form_valid(self, form: BaseForm) -> HttpResponse:
         patient = form.save(commit=False)
-        quarter = form.cleaned_data["quarter"]
         patient.is_valid = True
         patient.errors = None
         patient.save()
-        # update the quarter for the patient in the submission
-        Submission.objects.filter(patients=patient, submission_active=True).update(
-            quarter=quarter
-        )
         return super().form_valid(form)
 
 

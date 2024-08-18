@@ -17,23 +17,7 @@ import numpy as np
 
 # RCPCH imports
 from ...constants import (
-    CSV_HEADINGS,
     ALL_DATES,
-    SEX_TYPE,
-    ETHNICITIES,
-    DIABETES_TYPES,
-    LEAVE_PDU_REASONS,
-    HOSPITAL_ADMISSION_REASONS,
-    TREATMENT_TYPES,
-    CLOSED_LOOP_TYPES,
-    GLUCOSE_MONITORING_TYPES,
-    HBA1C_FORMATS,
-    ALBUMINURIA_STAGES,
-    RETINAL_SCREENING_RESULTS,
-    THYROID_TREATMENT_STATUS,
-    SMOKING_STATUS,
-    YES_NO_UNKNOWN,
-    DKA_ADDITIONAL_THERAPIES,
 )
 
 from .validate_postcode import validate_postcode
@@ -47,9 +31,7 @@ from ..forms.visit_form import VisitForm
 logger = logging.getLogger(__name__)
 
 
-def csv_upload(
-    user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None, quarter=None
-):
+def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
     """
     Processes standardised NPDA csv file and persists results in NPDA tables
 
@@ -67,34 +49,33 @@ def csv_upload(
         csv_file, parse_dates=ALL_DATES, dayfirst=True, date_format="%d/%m/%Y"
     )
 
-    if quarter is None:
-        # quarter can be passed in as a parameter. if not, retrieve the current quarter
-        quarter = retrieve_quarter_for_date(date_instance=date.today())
-
     # get the PDU object
     pdu, created = PaediatricDiabetesUnit.objects.get_or_create(
         pz_code=pdu_pz_code, ods_code=organisation_ods_code
     )
 
-    # Set previous quarter to inactive
+    # Set previous submission to inactive
     Submission.objects.filter(
         paediatric_diabetes_unit__pz_code=pdu.pz_code,
         audit_year=date.today().year,
-        quarter=quarter,
     ).update(submission_active=False)
 
-    # Create new submission for the quarter - not it is not possible to have more than one submission per quarter.
+    # Create new submission for the audit year
     # It is not possble to create submissions in years other than the current year
-    new_cohort = Submission.objects.create(
+    new_submission = Submission.objects.create(
         paediatric_diabetes_unit=pdu,
         audit_year=date.today().year,
-        quarter=quarter,
         submission_date=timezone.now(),
         submission_by=user,  # user is the user who is logged in. Passed in as a parameter
+        submission_active=True,
     )
 
     def csv_value_to_model_value(model_field, value):
         if pd.isnull(value):
+            return None
+
+        # Pandas is returning 0 for empty cells in integer columns
+        if value == 0:
             return None
 
         # Pandas will convert an integer column to float if it contains missing values
@@ -104,6 +85,10 @@ def csv_upload(
 
         if isinstance(value, pd.Timestamp):
             return value.to_pydatetime().date()
+
+        if model_field.choices:
+            # If the model field has choices, we need to convert the value to the correct type otherwise 1, 2 will be saved as booleans
+            return model_field.to_python(value)
 
         return value
 
@@ -142,12 +127,9 @@ def csv_upload(
                 "death_date": "Death Date",
             },
         )
-
         # TODO MRB: check we Validate gp practice ods code
         form = PatientForm(fields)
-
         assign_original_row_indices_to_errors(form, row)
-
         return form
 
     def validate_visit_using_form(patient, row):
@@ -197,10 +179,8 @@ def csv_upload(
             },
         )
 
-        form = VisitForm(fields, initial={"patient": patient})
-
+        form = VisitForm(data=fields, initial={"patient": patient})
         assign_original_row_indices_to_errors(form, row)
-
         return form
 
     def assign_original_row_indices_to_errors(form, row):
@@ -215,7 +195,8 @@ def csv_upload(
         patient_form = validate_patient_using_form(first_row)
 
         visits = rows.apply(
-            lambda row: validate_visit_using_form(patient_form.instance, row), axis=1
+            lambda row: validate_visit_using_form(patient_form.instance, row),
+            axis=1,
         )
 
         return (patient_form, transfer_fields, visits)
@@ -245,9 +226,11 @@ def csv_upload(
     def create_instance(model, form):
         # We want to retain fields even if they're invalid so that we can edit them in the UI
         # Use the field value from cleaned_data, falling back to data if it's not there
-        data = form.data | form.cleaned_data
+        if form.is_valid():
+            data = form.cleaned_data
+        else:
+            data = form.data
         instance = model(**data)
-
         instance.is_valid = form.is_valid()
         instance.errors = (
             None if form.is_valid() else form.errors.get_json_data(escape_html=True)
@@ -272,21 +255,29 @@ def csv_upload(
             errors_to_return = errors_to_return | gather_errors(visit_form)
 
         if not has_error_that_would_fail_save(errors_to_return):
-            transfer = Transfer.objects.create(**transfer_fields)
-
             patient = create_instance(Patient, patient_form)
-
-            patient.transfer = transfer
             patient.save()
 
-            new_cohort.patients.add(patient)
+            # add the patient to a new Transfer instance
+            transfer_fields["paediatric_diabetes_unit"] = pdu
+            transfer_fields["patient"] = patient
+            Transfer.objects.create(**transfer_fields)
+
+            new_submission.patients.add(patient)
 
             for visit_form in visits:
                 visit = create_instance(Visit, visit_form)
                 visit.patient = patient
                 visit.save()
 
-    new_cohort.save()
+    new_submission.save()
+
+    # delete the previous submission
+    Submission.objects.filter(
+        paediatric_diabetes_unit__pz_code=pdu.pz_code,
+        audit_year=date.today().year,
+        submission_active=False,
+    ).delete()
 
     if errors_to_return:
         raise ValidationError(errors_to_return)
@@ -309,11 +300,10 @@ def csv_summarise(csv_file):
         dataframe["NHS Number"].fillna("").apply(lambda x: x.replace(" ", "")).unique()
     )
     count_of_records_per_nhs_number = dataframe["NHS Number"].value_counts()
-    matching_patients_in_current_quarter = Patient.objects.filter(
+    matching_patients_in_current_audit_year = Patient.objects.filter(
         nhs_number__in=list(unique_nhs_numbers_no_spaces),
         submissions__submission_active=True,
         submissions__audit_year=date.today().year,
-        submissions__quarter=retrieve_quarter_for_date(date_instance=date.today()),
     ).count()
 
     summary = {
@@ -322,7 +312,7 @@ def csv_summarise(csv_file):
         "count_of_records_per_nhs_number": list(
             count_of_records_per_nhs_number.items()
         ),
-        "matching_patients_in_current_quarter": matching_patients_in_current_quarter,
+        "matching_patients_in_current_audit_year": matching_patients_in_current_audit_year,
     }
 
     return summary

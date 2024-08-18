@@ -135,7 +135,7 @@ class NPDAUserForm(forms.ModelForm):
                         ods_code
                     )
                     pdu, created = PaediatricDiabetesUnit.objects.update_or_create(
-                        ods_code=ods_code, pz_code=pdu_object["pz_code"]
+                        ods_code=ods_code, pz_code=pdu_object.pz_code
                     )
                     npda_user = self.instance
                     npda_user.save()

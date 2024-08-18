@@ -1,8 +1,6 @@
 import re
-import json
 import itertools
 from django import template, forms
-from django.utils.safestring import mark_safe
 from django.conf import settings
 from ..general_functions import get_visit_category_for_field
 from ...constants import VisitCategories, VISIT_FIELD_FLAT_LIST, VISIT_FIELDS
@@ -124,6 +122,7 @@ def is_textinput(widget):
 def is_checkbox(widget):
     return isinstance(widget, (forms.CheckboxInput))
 
+
 @register.filter
 def is_emailfield(widget):
     return isinstance(widget, (forms.EmailField, forms.EmailInput))
@@ -154,16 +153,24 @@ def errors_for_category(selected_category, errors_by_field):
     """
     Returns all error messages for a given category
     """
-    
+
     # VISIT_FIELDS: (VisitCategory -> [string])
     # Get the first or default to the empty list
     fields_in_category = next(
-        (fields for (category, fields) in VISIT_FIELDS
-            if category.value == selected_category), [])
+        (
+            fields
+            for (category, fields) in VISIT_FIELDS
+            if category.value == selected_category
+        ),
+        [],
+    )
 
     # errors_by_field: { [string] -> [{ message: string }]}
-    errors = [errors for (field, errors) in errors_by_field.items()
-        if field in fields_in_category]
+    errors = [
+        errors
+        for (field, errors) in errors_by_field.items()
+        if field in fields_in_category
+    ]
 
     # flatten
     errors = itertools.chain(*errors)
