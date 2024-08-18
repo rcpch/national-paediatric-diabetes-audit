@@ -53,7 +53,6 @@ def home(request):
             csv_upload(
                 user=request.user,
                 csv_file=file,
-                organisation_ods_code=request.user.organisation_employers.first().ods_code,
                 pdu_pz_code=pz_code,
             )
             messages.success(request=request, message="File uploaded successfully")

@@ -31,7 +31,7 @@ from ..forms.visit_form import VisitForm
 logger = logging.getLogger(__name__)
 
 
-def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
+def csv_upload(user, csv_file=None, pdu_pz_code=None):
     """
     Processes standardised NPDA csv file and persists results in NPDA tables
 
