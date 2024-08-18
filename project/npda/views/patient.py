@@ -25,7 +25,7 @@ from project.npda.general_functions import (
     organisations_adapter,
 )
 from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
-from project.npda.models import NPDAUser, Submission
+from project.npda.models import NPDAUser
 
 # RCPCH imports
 from ..models import Patient
