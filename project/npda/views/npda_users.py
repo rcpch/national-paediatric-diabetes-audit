@@ -296,6 +296,11 @@ class NPDAUserUpdateView(
         # add the request object to the form kwargs
         kwargs = super().get_form_kwargs()
         kwargs["request"] = self.request
+        kwargs["employer_choices"] = (
+            organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
+                request=self.request, user_instance=self.get_object()
+            )
+        )
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -315,11 +320,6 @@ class NPDAUserUpdateView(
             OrganisationEmployer.objects.filter(npda_user=context["npda_user"])
             .all()
             .order_by("-is_primary_employer")
-        )
-        context["organisation_choices"] = (
-            organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
-                request=self.request, user_instance=context["npda_user"]
-            )
         )
         return context
 
