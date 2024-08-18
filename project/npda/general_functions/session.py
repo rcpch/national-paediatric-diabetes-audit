@@ -4,25 +4,31 @@ from django.apps import apps
 
 # NPDA Imports
 from project.npda.general_functions import (
-    get_single_pdu_from_ods_code,
-    get_all_pdus_list_choices,
     organisations_adapter,
 )
 
 logger = logging.getLogger(__name__)
 
 
-def create_session_object(user):
+def create_session_object(request, user):
     """
     Create a session object for the user, based on their permissions.
     This is called on login, and is used to filter the data the user can see.
     """
 
-    pz_codes = [org["pz_code"] for org in user.organisation_employers.values()]
+    OrganisationEmployer = apps.get_model("npda", "OrganisationEmployer")
+    primary_organisation = OrganisationEmployer.objects.filter(
+        npda_user=user, is_primary_employer=True
+    ).get()
 
-    session = {
-        "pz_code": pz_codes[0],
-    }
+    pz_code = primary_organisation.paediatric_diabetes_unit.pz_code
+    pdu_choices = (
+        organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
+            request=request, user_instance=None
+        )
+    )
+
+    session = {"pz_code": pz_code, "pdu_choices": list(pdu_choices)}
 
     return session
 

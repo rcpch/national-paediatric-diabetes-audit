@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 @receiver(user_logged_in)
 def log_user_login(sender, request, user, **kwargs):
     # Set up the session data so that views are filtered correctly (eg by PDU)
-    new_session_object = create_session_object(user)
+    new_session_object = create_session_object(request, user)
     request.session.update(new_session_object)
 
     logger.info(

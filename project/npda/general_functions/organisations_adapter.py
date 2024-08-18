@@ -126,25 +126,26 @@ def paediatric_diabetes_units_to_populate_select_field(request, user_instance=No
             )
         else:
             # return only those paediatric diabetes units that a user is already affiliated with
-            PaediatricDiabetesUnit.objects.filter(npdauser=request.user).order_by(
-                "organisation_name"
-            ).annotate(
-                paediatric_diabetes_unit_name=Concat(
-                    F("organisation_name"),
-                    Case(
-                        When(
-                            parent_name__isnull=False,
-                            then=Concat(Value(" - "), F("parent_name")),
+            return (
+                PaediatricDiabetesUnit.objects.filter(npdauser=request.user)
+                .order_by("organisation_name")
+                .annotate(
+                    paediatric_diabetes_unit_name=Concat(
+                        F("organisation_name"),
+                        Case(
+                            When(
+                                parent_name__isnull=False,
+                                then=Concat(Value(" - "), F("parent_name")),
+                            ),
+                            default=Value(""),
+                            output_field=CharField(),
                         ),
-                        default=Value(""),
-                        output_field=CharField(),
-                    ),
+                    )
                 )
-            ).values_list(
-                "pz_code", "paediatric_diabetes_unit_name"
+                .values_list("pz_code", "paediatric_diabetes_unit_name")
             )
     else:
-        # this user is being created - therefore need the organisation_choices to be populated with all organisations based on requesting user permissions
+        # no user instance is provided - therefore need the organisation_choices to be populated with all organisations based on requesting user permissions
         if (
             request.user.is_superuser
             or request.user.is_rcpch_audit_team_member
@@ -171,20 +172,21 @@ def paediatric_diabetes_units_to_populate_select_field(request, user_instance=No
             )
         else:
             # return all organisations that are associated with the same paediatric diabetes unit as the request user
-            PaediatricDiabetesUnit.objects.filter(npdateuser=request.user).order_by(
-                "organisation_name"
-            ).annotate(
-                paediatric_diabetes_unit_name=Concat(
-                    F("organisation_name"),
-                    Case(
-                        When(
-                            parent_name__isnull=False,
-                            then=Concat(Value(" - "), F("parent_name")),
+            return (
+                PaediatricDiabetesUnit.objects.filter(npdateuser=request.user)
+                .order_by("organisation_name")
+                .annotate(
+                    paediatric_diabetes_unit_name=Concat(
+                        F("organisation_name"),
+                        Case(
+                            When(
+                                parent_name__isnull=False,
+                                then=Concat(Value(" - "), F("parent_name")),
+                            ),
+                            default=Value(""),
+                            output_field=CharField(),
                         ),
-                        default=Value(""),
-                        output_field=CharField(),
-                    ),
+                    )
                 )
-            ).values_list(
-                "pz_code", "paediatric_diabetes_unit_name"
+                .values_list("pz_code", "paediatric_diabetes_unit_name")
             )
