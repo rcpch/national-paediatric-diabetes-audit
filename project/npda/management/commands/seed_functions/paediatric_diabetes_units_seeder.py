@@ -23,16 +23,15 @@ def paediatric_diabetes_units_seeder():
         try:
             parent_ods_code = (pdu.get("parent") or {}).get("ods_code")
             parent_name = (pdu.get("parent") or {}).get("name")
-            print(len(pdu["primary_organisation"]["name"]) >= 75)
-            # PaediatricDiabetesUnit.objects.update_or_create(
-            #     pz_code=pdu["pz_code"],
-            #     defaults={
-            #         "organisation_ods_code": pdu["primary_organisation"]["ods_code"],
-            #         "organisation_name": pdu["primary_organisation"]["name"],
-            #         "parent_ods_code": parent_ods_code,
-            #         "parent_name": parent_name,
-            #     },
-            # )
+            PaediatricDiabetesUnit.objects.update_or_create(
+                pz_code=pdu["pz_code"],
+                defaults={
+                    "organisation_ods_code": pdu["primary_organisation"]["ods_code"],
+                    "organisation_name": pdu["primary_organisation"]["name"],
+                    "parent_ods_code": parent_ods_code,
+                    "parent_name": parent_name,
+                },
+            )
         except DatabaseError as e:
             logger.error(f"Error creating PaediatricDiabetesUnit: {e}")
             continue
