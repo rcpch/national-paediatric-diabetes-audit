@@ -35,8 +35,6 @@ class NPDAUserForm(forms.ModelForm):
         label="Add Employer",
     )
 
-    organisation_choices = []
-
     class Meta:
         model = NPDAUser
         fields = [
@@ -76,7 +74,7 @@ class NPDAUserForm(forms.ModelForm):
     def __init__(self, *args, **kwargs) -> None:
         # get the request object from the kwargs
         self.request = kwargs.pop("request", None)
-
+        employer_choices = kwargs.pop("employer_choices", [])
         super().__init__(*args, **kwargs)
         self.fields["title"].required = False
         self.fields["first_name"].required = True
@@ -84,6 +82,8 @@ class NPDAUserForm(forms.ModelForm):
         self.fields["email"].required = True
         self.fields["role"].required = True
         self.fields["add_employer"].required = False
+        self.fields["add_employer"].choices = employer_choices
+        self.employer_choices = employer_choices
 
         # only if the form is bound - this user is being updated
         if self.instance.pk is not None:
@@ -93,16 +93,6 @@ class NPDAUserForm(forms.ModelForm):
             # the add employer work flow happens via htmx and not form submission
             self.data = self.data.copy()
             self.data.pop("add_employer", None)
-
-        else:
-            # this means the form is unbound and this user is being created - therefore need the organisation_choices to be populated with all organisations
-            # but only on form instantiation, not on form submission
-            if self.request.method == "POST":
-                # this is a POST request - the form is being submitted
-                # we need to remove the selection from the add_employer field and use this to create the employer relationship
-                # as it is immutable we need to copy it first
-                self.data = self.data.copy()
-                self.data.pop("add_employer", None)
 
 
 class NPDAUpdatePasswordForm(SetPasswordForm):

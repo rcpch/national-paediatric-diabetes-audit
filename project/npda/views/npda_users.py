@@ -175,6 +175,11 @@ class NPDAUserCreateView(
         # add the request object to the form kwargs
         kwargs = super().get_form_kwargs()
         kwargs["request"] = self.request
+        kwargs["employer_choices"] = (
+            organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
+                request=self.request, user_instance=None
+            )
+        )
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -191,17 +196,11 @@ class NPDAUserCreateView(
         context["form_method"] = "create"
         # populate the add_employer field with organisations that the user is affilitated with unless the user is a superuser or RCPCH audit team member
         # in which case all organisations are shown
-        context["organisation_choices"] = (
-            organisations_adapter.get_all_nhs_organisations()
-            if (
-                self.request.user.is_superuser
-                or self.request.user.is_rcpch_audit_team_member
-            )
-            else organisations_adapter.get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit()
-        )
         return context
 
     def form_valid(self, form):
+        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+
         new_user = form.save(commit=False)
         new_user.set_unusable_password()
         new_user.is_active = True
@@ -210,59 +209,25 @@ class NPDAUserCreateView(
         new_user.save()
 
         # add the user to the appropriate organisation
-        new_employer_ods_code = form.cleaned_data["add_employer"]
-        if new_employer_ods_code:
+        new_employer_pz_code = form.cleaned_data["add_employer"]
+        if new_employer_pz_code:
             # a new employer has been added
-            # fetch the organisation object from the API using the ODS code
-            organisation = organisations_adapter.get_single_pdu_from_ods_code(
-                new_employer_ods_code
+            pdu = PaediatricDiabetesUnit.objects.get(pz_code=new_employer_pz_code)
+            OrganisationEmployer.objects.create(
+                paediatric_diabetes_unit=pdu,
+                npda_user=new_user,
+                is_primary_employer=True,
             )
-
-            if "error" in organisation:
-                messages.error(
-                    self.request,
-                    f"Error: {organisation['error']}. Organisation not added. Please contact the NPDA team if this issue persists.",
-                )
-                return HttpResponseRedirect(self.get_success_url())
-
-            # Get the name of the organistion from the API response
-            matching_organisation = next(
-                (
-                    org
-                    for org in organisation["organisations"]
-                    if org["ods_code"] == new_employer_ods_code
+            new_user.refresh_from_db()
+        else:
+            # create the new users using the pz_code stored in the session
+            OrganisationEmployer.objects.create(
+                paediatric_diabetes_unit=PaediatricDiabetesUnit.objects.get(
+                    pz_code=self.request.session.get("pz_code")
                 ),
-                None,
+                npda_user=new_user,
+                is_primary_employer=True,
             )
-
-            if matching_organisation:
-                # creat or update  the OrganisationEmployer object
-                PaediatricDiabetesUnit = apps.get_model(
-                    "npda", "PaediatricDiabetesUnit"
-                )
-                paediatric_diabetes_unit, created = (
-                    PaediatricDiabetesUnit.objects.update_or_create(
-                        organisation_ods_code=new_employer_ods_code,
-                        pz_code=organisation["pz_code"],
-                    )
-                )
-                if new_user.organisation_employers.count() == 0:
-                    # if the user has no employers, set the new employer as the primary employer
-                    OrganisationEmployer.objects.update_or_create(
-                        paediatric_diabetes_unit=paediatric_diabetes_unit,
-                        npda_user=new_user,
-                        is_primary_employer=True,
-                    )
-                    new_user.refresh_from_db()
-                else:
-                    # add the new employer to the user's employer list
-                    OrganisationEmployer.objects.update_or_create(
-                        paediatric_diabetes_unit=paediatric_diabetes_unit,
-                        npda_user=new_user,
-                        is_primary_employer=False,
-                    )
-                    new_user.refresh_from_db()
-
         try:
             new_user.save()
         except Exception as error:

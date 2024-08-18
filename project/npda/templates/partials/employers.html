@@ -22,7 +22,7 @@
     </div>
     
     <div class="flex flex-row">
-        {% include 'partials/rcpch_organisation_select.html' with organisation_choices=organisation_choices selected_organisation=field.value hidden_on_load=True %}
+        {% include 'partials/rcpch_organisation_select.html' with employer_choices=employer_choices selected_organisation=field.value hidden_on_load=True %}
             <button 
                 id="add_submit_button" 
                 class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue mb-2 text-xs hidden"

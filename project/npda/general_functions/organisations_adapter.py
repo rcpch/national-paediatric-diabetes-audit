@@ -1,7 +1,7 @@
 # python imports
 from django.apps import apps
-from django.db.models import F, Value
-from django.db.models.functions import Concat, Coalesce
+from django.db.models import F, Value, Case, When, CharField
+from django.db.models.functions import Concat
 from .rcpch_nhs_organisations import (
     get_nhs_organisation,
     get_all_nhs_organisations,
@@ -110,9 +110,16 @@ def paediatric_diabetes_units_to_populate_select_field(request, user_instance=No
                 .exclude(npdauser=request.user)
                 .order_by("organisation_name")
                 .annotate(
-                    paediatric_diabetes_unit_name=Coalesce(
-                        Concat(F("organisation_name"), Value(" - "), F("parent_name")),
+                    paediatric_diabetes_unit_name=Concat(
                         F("organisation_name"),
+                        Case(
+                            When(
+                                parent_name__isnull=False,
+                                then=Concat(Value(" - "), F("parent_name")),
+                            ),
+                            default=Value(""),
+                            output_field=CharField(),
+                        ),
                     )
                 )
                 .values_list("pz_code", "paediatric_diabetes_unit_name")
@@ -122,9 +129,16 @@ def paediatric_diabetes_units_to_populate_select_field(request, user_instance=No
             PaediatricDiabetesUnit.objects.filter(npdauser=request.user).order_by(
                 "organisation_name"
             ).annotate(
-                paediatric_diabetes_unit_name=Coalesce(
-                    Concat(F("organisation_name"), Value(" - "), F("parent_name")),
+                paediatric_diabetes_unit_name=Concat(
                     F("organisation_name"),
+                    Case(
+                        When(
+                            parent_name__isnull=False,
+                            then=Concat(Value(" - "), F("parent_name")),
+                        ),
+                        default=Value(""),
+                        output_field=CharField(),
+                    ),
                 )
             ).values_list(
                 "pz_code", "paediatric_diabetes_unit_name"
@@ -141,9 +155,16 @@ def paediatric_diabetes_units_to_populate_select_field(request, user_instance=No
                 PaediatricDiabetesUnit.objects.all()
                 .order_by("organisation_name")
                 .annotate(
-                    paediatric_diabetes_unit_name=Coalesce(
-                        Concat(F("organisation_name"), Value(" - "), F("parent_name")),
+                    paediatric_diabetes_unit_name=Concat(
                         F("organisation_name"),
+                        Case(
+                            When(
+                                parent_name__isnull=False,
+                                then=Concat(Value(" - "), F("parent_name")),
+                            ),
+                            default=Value(""),
+                            output_field=CharField(),
+                        ),
                     )
                 )
                 .values_list("pz_code", "paediatric_diabetes_unit_name")
@@ -153,9 +174,16 @@ def paediatric_diabetes_units_to_populate_select_field(request, user_instance=No
             PaediatricDiabetesUnit.objects.filter(npdateuser=request.user).order_by(
                 "organisation_name"
             ).annotate(
-                paediatric_diabetes_unit_name=Coalesce(
-                    Concat(F("organisation_name"), Value(" - "), F("parent_name")),
+                paediatric_diabetes_unit_name=Concat(
                     F("organisation_name"),
+                    Case(
+                        When(
+                            parent_name__isnull=False,
+                            then=Concat(Value(" - "), F("parent_name")),
+                        ),
+                        default=Value(""),
+                        output_field=CharField(),
+                    ),
                 )
             ).values_list(
                 "pz_code", "paediatric_diabetes_unit_name"
