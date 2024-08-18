@@ -190,10 +190,14 @@ class PatientCreateView(
     success_url = reverse_lazy("patients")
 
     def get_context_data(self, **kwargs):
+        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+
         pz_code = self.request.session.get("pz_code")
-        organisation_ods_code = self.request.session.get("ods_code")
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
         context = super().get_context_data(**kwargs)
-        context["title"] = f"Add New Child to {organisation_ods_code} ({pz_code})"
+        context["title"] = (
+            f"Add New Child to {pdu.organisation_name} - {pdu.parent_name} ({pz_code})"
+        )
         context["button_title"] = "Add New Child"
         context["form_method"] = "create"
         return context
@@ -208,11 +212,8 @@ class PatientCreateView(
         # add the PDU to the patient record
         # get or create the paediatric diabetes unit object
         PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-        paediatric_diabetes_unit, created = (
-            PaediatricDiabetesUnit.objects.get_or_create(
-                pz_code=self.request.session.get("pz_code"),
-                ods_code=self.request.session.get("ods_code"),
-            )
+        paediatric_diabetes_unit = PaediatricDiabetesUnit.objects.get(
+            pz_code=self.request.session.get("pz_code"),
         )
 
         Transfer = apps.get_model("npda", "Transfer")
@@ -282,7 +283,7 @@ class PatientUpdateView(
 
         context = super().get_context_data(**kwargs)
         context["title"] = (
-            f"Edit Child Details in {transfer.paediatric_diabetes_unit.ods_code}({transfer.paediatric_diabetes_unit.pz_code})"
+            f"Edit Child Details in {transfer.paediatric_diabetes_unit.organisation_name} - {transfer.paediatric_diabetes_unit.parent_name} ({transfer.paediatric_diabetes_unit.pz_code})"
         )
         context["button_title"] = "Edit Child Details"
         context["form_method"] = "update"
