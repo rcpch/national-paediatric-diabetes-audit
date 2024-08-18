@@ -9,10 +9,12 @@ from typing import Union, Dict, Any, List, Tuple
 
 # django imports
 from django.conf import settings
+from django.db import DatabaseError
 from requests.exceptions import HTTPError
 
 # RCPCH imports
 from project.constants.organisations_objects import OrganisationRCPCH
+
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -131,11 +133,14 @@ def get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit() -> (
         return ERROR_RESPONSE
 
 
-def get_all_pz_codes_with_their_trust_and_primary_organisation() -> (
-    List[Tuple[str, str]]
-):
+def get_all_pz_codes_with_their_trust_and_primary_organisation(
+    seed=False,
+) -> List[Tuple[str, str]]:
     """
     This function returns all NHS organisations from the RCPCH dataset that are affiliated with a paediatric diabetes unit.
+    Accepts a seed parameter - if True, it will seed the database with the data.
+    If False, it will return the data as a list of tuples.
+
     If an error occurs while fetching the data, it returns a list with a single tuple containing:
         [("999", "An error occurred while fetching NHS organisations.")].
 
@@ -148,6 +153,9 @@ def get_all_pz_codes_with_their_trust_and_primary_organisation() -> (
     try:
         response = requests.get(url=url, timeout=10)  # times out after 10 seconds
         response.raise_for_status()
+
+        if seed:
+            return response.json()
 
         # Convert the response to choices list
         organisation_list = []
@@ -173,116 +181,47 @@ def get_all_pz_codes_with_their_trust_and_primary_organisation() -> (
         return ERROR_RESPONSE
 
 
-# [
-#   {
-#     "ods_code": "RGT01",
-#     "name": "ADDENBROOKE'S HOSPITAL",
-#     "website": "https://www.cuh.nhs.uk/",
-#     "address1": "HILLS ROAD",
-#     "address2": "",
-#     "address3": "",
-#     "telephone": "01223 245151",
-#     "city": "CAMBRIDGE",
-#     "county": "CAMBRIDGESHIRE",
-#     "latitude": 52.17513275,
-#     "longitude": 0.140753239,
-#     "postcode": "CB2 0QQ",
-#     "geocode_coordinates": "SRID=27700;POINT (0.140753239 52.17513275)",
-#     "active": true,
-#     "published_at": null,
-#     "paediatric_diabetes_unit": {
-#       "pz_code": "PZ041"
-#     },
-#     "trust": {
-#       "ods_code": "RGT",
-#       "name": "CAMBRIDGE UNIVERSITY HOSPITALS NHS FOUNDATION TRUST",
-#       "address_line_1": "CAMBRIDGE BIOMEDICAL CAMPUS",
-#       "address_line_2": "HILLS ROAD",
-#       "town": "CAMBRIDGE",
-#       "postcode": "CB2 0QQ",
-#       "country": "ENGLAND",
-#       "telephone": null,
-#       "website": null,
-#       "active": true,
-#       "published_at": null
-#     },
-#     "local_health_board": null,
-#     "integrated_care_board": {
-#       "boundary_identifier": "E54000056",
-#       "name": "NHS Cambridgeshire and Peterborough Integrated Care Board",
-#       "ods_code": "QUE"
-#     },
-#     "nhs_england_region": {
-#       "region_code": "Y61",
-#       "publication_date": "2022-07-30",
-#       "boundary_identifier": "E40000007",
-#       "name": "East of England"
-#     },
-#     "openuk_network": {
-#       "name": "Eastern Paediatric Epilepsy Network",
-#       "boundary_identifier": "EPEN",
-#       "country": "England",
-#       "publication_date": "2022-12-08"
-#     },
-#     "london_borough": null,
-#     "country": {
-#       "boundary_identifier": "E92000001",
-#       "name": "England"
-#     }
-#   },
-#   {
-#     "ods_code": "RCF22",
-#     "name": "AIREDALE GENERAL HOSPITAL",
-#     "website": "https://www.airedaletrust.nhs.uk/",
-#     "address1": "SKIPTON ROAD",
-#     "address2": "STEETON",
-#     "address3": "",
-#     "telephone": "",
-#     "city": "KEIGHLEY",
-#     "county": "WEST YORKSHIRE",
-#     "latitude": 53.8979454,
-#     "longitude": -1.962710142,
-#     "postcode": "BD20 6TD",
-#     "geocode_coordinates": "SRID=27700;POINT (-1.962710142 53.8979454)",
-#     "active": true,
-#     "published_at": null,
-#     "paediatric_diabetes_unit": {
-#       "pz_code": "PZ047"
-#     },
-#     "trust": {
-#       "ods_code": "RCF",
-#       "name": "AIREDALE NHS FOUNDATION TRUST",
-#       "address_line_1": "AIREDALE GENERAL HOSPITAL",
-#       "address_line_2": "SKIPTON ROAD",
-#       "town": "KEIGHLEY",
-#       "postcode": "BD20 6TD",
-#       "country": "ENGLAND",
-#       "telephone": null,
-#       "website": null,
-#       "active": true,
-#       "published_at": null
-#     },
-#     "local_health_board": null,
-#     "integrated_care_board": {
-#       "boundary_identifier": "E54000054",
-#       "name": "NHS West Yorkshire Integrated Care Board",
-#       "ods_code": "QWO"
-#     },
-#     "nhs_england_region": {
-#       "region_code": "Y63",
-#       "publication_date": "2022-07-30",
-#       "boundary_identifier": "E40000012",
-#       "name": "North East and Yorkshire"
-#     },
-#     "openuk_network": {
-#       "name": "Yorkshire Paediatric Neurology Network",
-#       "boundary_identifier": "YPEN",
-#       "country": "England",
-#       "publication_date": "2022-12-08"
-#     },
-#     "london_borough": null,
-#     "country": {
-#       "boundary_identifier": "E92000001",
-#       "name": "England"
-#     }
-#   },
+def rcpch_nhs_organisations_match_locally_stored_pz_codes():
+    """
+    This function checks if the NHS organisations in the RCPCH dataset match the locally stored PZ codes.
+    If there are any mismatches, it logs the mismatch and updates the local database with the correct data.
+    """
+    from project.npda.models import PaediatricDiabetesUnit
+
+    # Get all PZ codes with their trust and primary organisation
+    pdus = get_all_pz_codes_with_their_trust_and_primary_organisation(seed=True)
+
+    # Check if the NHS organisations in the RCPCH dataset match the locally stored PZ codes
+    for pdu in pdus:
+
+        # Check if the PZ code exists in the local database
+        pdu_obj = None
+        if PaediatricDiabetesUnit.objects.filter(pz_code=pdu["pz_code"]).exists():
+            pdu_obj = PaediatricDiabetesUnit.objects.get(pz_code=pdu["pz_code"])
+        try:
+            new_pdu, created = PaediatricDiabetesUnit.objects.update_or_create(
+                pz_code=pdu["pz_code"],
+                defaults={
+                    "organisation_ods_code": pdu["trust_ods_code"],
+                    "organisation_name": pdu["trust_name"],
+                    "parent_ods_code": pdu["primary_organisation_ods_code"],
+                    "parent_name": pdu["primary_organisation_name"],
+                },
+            )
+            if created:
+                logger.info(
+                    f"Created PaediatricDiabetesUnit: {new_pdu.pz_code} ({new_pdu.organisation_name})"
+                )
+            else:
+                if pdu_obj:
+                    if pdu_obj.dict() != new_pdu.dict():
+                        logger.info(
+                            f"{new_pdu.pz_code} ({new_pdu.organisation_name}) was updated."
+                        )
+                else:
+                    logger.info(
+                        f"PaediatricDiabetesUnit: {new_pdu.pz_code} ({new_pdu.organisation_name}) matches the RCPCH dataset."
+                    )
+        except DatabaseError as e:
+            logger.error(f"Error creating PaediatricDiabetesUnit: {e}")
+            pass
