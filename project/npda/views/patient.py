@@ -196,7 +196,7 @@ class PatientCreateView(
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
         context = super().get_context_data(**kwargs)
         context["title"] = (
-            f"Add New Child to {pdu.organisation_name} - {pdu.parent_name} ({pz_code})"
+            f"Add New Child to {pdu.lead_organisation_name} - {pdu.parent_name} ({pz_code})"
         )
         context["button_title"] = "Add New Child"
         context["form_method"] = "create"
@@ -283,7 +283,7 @@ class PatientUpdateView(
 
         context = super().get_context_data(**kwargs)
         context["title"] = (
-            f"Edit Child Details in {transfer.paediatric_diabetes_unit.organisation_name} - {transfer.paediatric_diabetes_unit.parent_name} ({transfer.paediatric_diabetes_unit.pz_code})"
+            f"Edit Child Details in {transfer.paediatric_diabetes_unit.lead_organisation_name} - {transfer.paediatric_diabetes_unit.parent_name} ({transfer.paediatric_diabetes_unit.pz_code})"
         )
         context["button_title"] = "Edit Child Details"
         context["form_method"] = "update"

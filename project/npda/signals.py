@@ -8,6 +8,7 @@ from django.contrib.auth.signals import (
     user_login_failed,
 )
 from django.dispatch import receiver
+from django.apps import apps
 
 # RCPCH
 from .models import VisitActivity, NPDAUser
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 @receiver(user_logged_in)
 def log_user_login(sender, request, user, **kwargs):
     # Set up the session data so that views are filtered correctly (eg by PDU)
+    # Default is to show all PDUs that the user has access to, including the PDU that the user is affiliated with
     new_session_object = create_session_object(request, user)
     request.session.update(new_session_object)
 

@@ -17,7 +17,7 @@ PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
 
 @admin.register(OrganisationEmployer)
 class OrganisationEmployerAdmin(admin.ModelAdmin):
-    search_fields = ("name", "pk", "organisation_ods_code", "pz_code")
+    search_fields = ("name", "pk", "lead_organisation_ods_code", "pz_code")
 
 
 @admin.register(NPDAUser)
@@ -32,7 +32,13 @@ class PatientAdmin(admin.ModelAdmin):
 
 @admin.register(PaediatricDiabetesUnit)
 class PaediatricDiabetesUnitAdmin(admin.ModelAdmin):
-    search_fields = ("pk", "organisation_ods_code", "pz_code")
+    search_fields = ("pk", "pz_code")
+    list_display = (
+        "pz_code",
+        "lead_organisation_ods_code",
+        "lead_organisation_name",
+    )
+    ordering = ("lead_organisation_name",)
 
 
 @admin.register(Transfer)

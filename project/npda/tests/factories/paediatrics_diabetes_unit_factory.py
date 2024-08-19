@@ -22,8 +22,8 @@ class PaediatricsDiabetesUnitFactory(factory.django.DjangoModelFactory):
 
     # Chelsea Westminster Hospital default
     pz_code = "PZ130"
-    organisation_ods_code = "RQM01"
-    organisation_name = "CHELSEA & WESTMINSTER HOSPITAL"
+    lead_organisation_ods_code = "RQM01"
+    lead_organisation_name = "CHELSEA & WESTMINSTER HOSPITAL"
     parent_ods_code = "RQM"
     parent_name = "CHELSEA AND WESTMINSTER HOSPITAL NHS FOUNDATION TRUST"
 
@@ -38,14 +38,14 @@ class PaediatricsDiabetesUnitFactory(factory.django.DjangoModelFactory):
         pz_code = kwargs.pop("pz_code", None)
         parent_name = kwargs.pop("parent_name", None)
         parent_ods_code = kwargs.pop("parent_ods_code", None)
-        organisation_name = kwargs.pop("organisation_name", None)
-        organisation_ods_code = kwargs.pop("organisation_ods_code", None)
+        lead_organisation_name = kwargs.pop("lead_organisation_name", None)
+        lead_organisation_ods_code = kwargs.pop("lead_organisation_ods_code", None)
 
-        if pz_code and organisation_ods_code:
+        if pz_code and lead_organisation_ods_code:
             pdu, created = PaediatricDiabetesUnit.objects.get_or_create(
                 pz_code=pz_code,
-                organisation_ods_code=organisation_ods_code,
-                organisation_name=organisation_name,
+                lead_organisation_ods_code=lead_organisation_ods_code,
+                lead_organisation_name=lead_organisation_name,
                 parent_ods_code=parent_ods_code,
                 parent_name=parent_name,
             )

@@ -210,8 +210,10 @@ def maintain_paediatric_diabetes_unit_records_against_rcpch_nhs_organisations_AP
             new_pdu, created = PaediatricDiabetesUnit.objects.update_or_create(
                 pz_code=pdu["pz_code"],
                 defaults={
-                    "organisation_ods_code": pdu["primary_organisation"]["ods_code"],
-                    "organisation_name": pdu["primary_organisation"]["name"],
+                    "lead_organisation_ods_code": pdu["primary_organisation"][
+                        "ods_code"
+                    ],
+                    "lead_organisation_name": pdu["primary_organisation"]["name"],
                     "parent_ods_code": parent_ods_code,
                     "parent_name": parent_name,
                 },
@@ -222,15 +224,15 @@ def maintain_paediatric_diabetes_unit_records_against_rcpch_nhs_organisations_AP
 
         if created:
             logger.info(
-                f"Created PaediatricDiabetesUnit: {new_pdu.pz_code} ({new_pdu.organisation_name})"
+                f"Created PaediatricDiabetesUnit: {new_pdu.pz_code} ({new_pdu.lead_organisation_name})"
             )
         else:
             if pdu_obj is not None:
                 if model_to_dict(pdu_obj) != model_to_dict(new_pdu):
                     logger.info(
-                        f"{new_pdu.pz_code} ({new_pdu.organisation_name}) was updated."
+                        f"{new_pdu.pz_code} ({new_pdu.lead_organisation_name}) was updated."
                     )
                 else:
                     logger.info(
-                        f"PaediatricDiabetesUnit: {new_pdu.pz_code} ({new_pdu.organisation_name}) matches the RCPCH dataset."
+                        f"PaediatricDiabetesUnit: {new_pdu.pz_code} ({new_pdu.lead_organisation_name}) matches the RCPCH dataset."
                     )

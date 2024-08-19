@@ -30,8 +30,10 @@ def paediatric_diabetes_units_seeder():
             PaediatricDiabetesUnit.objects.update_or_create(
                 pz_code=pdu["pz_code"],
                 defaults={
-                    "organisation_ods_code": pdu["primary_organisation"]["ods_code"],
-                    "organisation_name": pdu["primary_organisation"]["name"],
+                    "lead_organisation_ods_code": pdu["primary_organisation"][
+                        "ods_code"
+                    ],
+                    "lead_organisation_name": pdu["primary_organisation"]["name"],
                     "parent_ods_code": parent_ods_code,
                     "parent_name": parent_name,
                 },

@@ -20,7 +20,6 @@ def create_session_object(request, user):
     primary_organisation = OrganisationEmployer.objects.filter(
         npda_user=user, is_primary_employer=True
     ).get()
-
     pz_code = primary_organisation.paediatric_diabetes_unit.pz_code
     pdu_choices = (
         organisations_adapter.paediatric_diabetes_units_to_populate_select_field(

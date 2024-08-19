@@ -10,11 +10,11 @@ class PaediatricDiabetesUnit(Model):
         max_length=10,
         help_text="Enter the paediatric diabetes unit PZ code",
     )
-    organisation_ods_code = CharField(
+    lead_organisation_ods_code = CharField(
         max_length=10,
         help_text="Enter the organisation ODS code",
     )
-    organisation_name = CharField(
+    lead_organisation_name = CharField(
         max_length=75,
         help_text="Enter the organisation name",
         blank=True,

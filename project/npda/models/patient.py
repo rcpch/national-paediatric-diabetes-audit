@@ -3,11 +3,8 @@ from datetime import date
 import logging
 
 # django imports
-from django.apps import apps
 from django.contrib.gis.db import models
 from django.contrib.gis.db.models import CharField, DateField, PositiveSmallIntegerField
-from django.contrib.postgres.fields import ArrayField
-from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 
@@ -16,7 +13,6 @@ from ...constants import (
     ETHNICITIES,
     DIABETES_TYPES,
     SEX_TYPE,
-    UNKNOWN_POSTCODES_NO_SPACES,
     CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING,
     CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING,
     CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
@@ -40,9 +36,7 @@ class Patient(models.Model):
     Custom methods age and age_days, returns the age
     """
 
-    nhs_number = CharField(  # the NHS number for England and Wales
-        "NHS Number"
-    )
+    nhs_number = CharField("NHS Number")  # the NHS number for England and Wales
 
     sex = models.IntegerField("Stated gender", choices=SEX_TYPE, blank=True, null=True)
 

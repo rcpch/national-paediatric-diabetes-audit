@@ -3,8 +3,6 @@ from django.apps import apps
 from django.db.models import F, Value, Case, When, CharField
 from django.db.models.functions import Concat
 from .rcpch_nhs_organisations import (
-    get_nhs_organisation,
-    get_all_nhs_organisations,
     get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit,
 )
 
@@ -45,7 +43,7 @@ def organisations_to_populate_select_field(request, user_instance=None):
                 not in OrganisationEmployer.objects.filter(
                     npda_user=user_instance
                 ).values_list(
-                    "paediatric_diabetes_unit__organisation_ods_code", flat=True
+                    "paediatric_diabetes_unit__lead_organisation_ods_code", flat=True
                 )
             )
         else:
@@ -62,7 +60,7 @@ def organisations_to_populate_select_field(request, user_instance=None):
                 not in OrganisationEmployer.objects.filter(
                     npda_user=user_instance
                 ).values_list(
-                    "paediatric_diabetes_unit__organisation_ods_code", flat=True
+                    "paediatric_diabetes_unit__lead_organisation_ods_code", flat=True
                 )
             ]
     else:
@@ -92,13 +90,15 @@ def organisations_to_populate_select_field(request, user_instance=None):
 
 def paediatric_diabetes_units_to_populate_select_field(request, user_instance=None):
     """
-    This function is used to populate the add_employer field with paediatric diabetes units that the user_instance is NOT already affiliated with, based on request user permissions.
-    If no user_instance is provided (as the user form is being created), the function will populate the add_employer field with all paediatric diabetes units that the request user has access to.
+    This function is used to populate any select field with paediatric diabetes units: their PZ code and name, based on request user permissions.
+    The user instance is used to filter out paediatric diabetes units that the user is already affiliated with, if it is used for selects in forms.
+    If no user_instance is provided, the function will return all paediatric diabetes units that the request user has access to, irrespective of affiliation.
     """
 
     PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
 
     if user_instance:
+        # populate the select field with paediatric diabetes units that the user is not already affiliated with
         if (
             request.user.is_superuser
             or request.user.is_rcpch_audit_team_member
@@ -108,10 +108,10 @@ def paediatric_diabetes_units_to_populate_select_field(request, user_instance=No
             return (
                 PaediatricDiabetesUnit.objects.all()
                 .exclude(npdauser=request.user)
-                .order_by("organisation_name")
+                .order_by("lead_organisation_name")
                 .annotate(
                     paediatric_diabetes_unit_name=Concat(
-                        F("organisation_name"),
+                        F("lead_organisation_name"),
                         Case(
                             When(
                                 parent_name__isnull=False,
@@ -128,10 +128,10 @@ def paediatric_diabetes_units_to_populate_select_field(request, user_instance=No
             # return only those paediatric diabetes units that a user is already affiliated with
             return (
                 PaediatricDiabetesUnit.objects.filter(npdauser=request.user)
-                .order_by("organisation_name")
+                .order_by("lead_organisation_name")
                 .annotate(
                     paediatric_diabetes_unit_name=Concat(
-                        F("organisation_name"),
+                        F("lead_organisation_name"),
                         Case(
                             When(
                                 parent_name__isnull=False,
@@ -154,10 +154,10 @@ def paediatric_diabetes_units_to_populate_select_field(request, user_instance=No
             # return all paediatric diabetes units
             return (
                 PaediatricDiabetesUnit.objects.all()
-                .order_by("organisation_name")
+                .order_by("lead_organisation_name")
                 .annotate(
                     paediatric_diabetes_unit_name=Concat(
-                        F("organisation_name"),
+                        F("lead_organisation_name"),
                         Case(
                             When(
                                 parent_name__isnull=False,
@@ -174,10 +174,10 @@ def paediatric_diabetes_units_to_populate_select_field(request, user_instance=No
             # return all organisations that are associated with the same paediatric diabetes unit as the request user
             return (
                 PaediatricDiabetesUnit.objects.filter(npdateuser=request.user)
-                .order_by("organisation_name")
+                .order_by("lead_organisation_name")
                 .annotate(
                     paediatric_diabetes_unit_name=Concat(
-                        F("organisation_name"),
+                        F("lead_organisation_name"),
                         Case(
                             When(
                                 parent_name__isnull=False,

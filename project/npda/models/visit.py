@@ -2,14 +2,6 @@
 
 # django imports
 from django.contrib.gis.db import models
-from django.contrib.gis.db.models import (
-    CharField,
-    DateField,
-    DecimalField,
-    PositiveSmallIntegerField,
-    IntegerField,
-)
-from django.contrib.postgres.fields import ArrayField
 
 # npda imports
 from .help_text_mixin import HelpTextMixin
@@ -52,7 +44,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Measurements"
+        category="Measurements",
     )
 
     weight = CategorisedDecimalField(
@@ -66,7 +58,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Measurements"
+        category="Measurements",
     )
 
     height_weight_observation_date = CategorisedDateField(
@@ -78,7 +70,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Measurements"
+        category="Measurements",
     )
 
     hba1c = CategorisedDecimalField(
@@ -92,7 +84,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="HBA1c"
+        category="HBA1c",
     )
 
     hba1c_format = CategorisedPositiveSmallIntegerField(
@@ -105,7 +97,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="HBA1c"
+        category="HBA1c",
     )
 
     hba1c_date = CategorisedDateField(
@@ -117,7 +109,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="HBA1c"
+        category="HBA1c",
     )
 
     treatment = CategorisedPositiveSmallIntegerField(
@@ -130,7 +122,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Treatment"
+        category="Treatment",
     )
 
     closed_loop_system = CategorisedPositiveSmallIntegerField(
@@ -143,7 +135,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Treatment"
+        category="Treatment",
     )
 
     glucose_monitoring = CategorisedPositiveSmallIntegerField(
@@ -156,7 +148,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="CGM"
+        category="CGM",
     )
 
     systolic_blood_pressure = CategorisedIntegerField(
@@ -168,7 +160,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="BP"
+        category="BP",
     )
 
     diastolic_blood_pressure = CategorisedIntegerField(
@@ -180,7 +172,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="BP"
+        category="BP",
     )
 
     blood_pressure_observation_date = CategorisedDateField(
@@ -192,7 +184,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="BP"
+        category="BP",
     )
 
     foot_examination_observation_date = CategorisedDateField(
@@ -204,7 +196,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Foot Care"
+        category="Foot Care",
     )
 
     retinal_screening_observation_date = CategorisedDateField(
@@ -216,7 +208,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="DECS"
+        category="DECS",
     )
 
     retinal_screening_result = CategorisedPositiveSmallIntegerField(
@@ -229,7 +221,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="DECS"
+        category="DECS",
     )
 
     albumin_creatinine_ratio = CategorisedDecimalField(
@@ -243,7 +235,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="ACR"
+        category="ACR",
     )
 
     albumin_creatinine_ratio_date = CategorisedDateField(
@@ -255,7 +247,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="ACR"
+        category="ACR",
     )
 
     albuminuria_stage = CategorisedPositiveSmallIntegerField(
@@ -268,7 +260,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="ACR"
+        category="ACR",
     )
 
     total_cholesterol = CategorisedDecimalField(
@@ -282,7 +274,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Cholesterol"
+        category="Cholesterol",
     )
 
     total_cholesterol_date = CategorisedDateField(
@@ -294,7 +286,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Cholesterol"
+        category="Cholesterol",
     )
 
     thyroid_function_date = CategorisedDateField(
@@ -306,7 +298,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Thyroid"
+        category="Thyroid",
     )
 
     thyroid_treatment_status = CategorisedPositiveSmallIntegerField(
@@ -319,7 +311,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Thyroid"
+        category="Thyroid",
     )
 
     coeliac_screen_date = CategorisedDateField(
@@ -331,7 +323,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Coeliac"
+        category="Coeliac",
     )
 
     gluten_free_diet = CategorisedPositiveSmallIntegerField(
@@ -344,7 +336,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Coeliac"
+        category="Coeliac",
     )
 
     psychological_screening_assessment_date = CategorisedDateField(
@@ -356,7 +348,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Psychology"
+        category="Psychology",
     )
 
     psychological_additional_support_status = CategorisedPositiveSmallIntegerField(
@@ -369,7 +361,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Psychology"
+        category="Psychology",
     )
 
     smoking_status = CategorisedPositiveSmallIntegerField(
@@ -382,7 +374,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Smoking"
+        category="Smoking",
     )
 
     smoking_cessation_referral_date = CategorisedDateField(
@@ -394,7 +386,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Smoking"
+        category="Smoking",
     )
 
     carbohydrate_counting_level_three_education_date = CategorisedDateField(
@@ -406,7 +398,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Dietician"
+        category="Dietician",
     )
 
     dietician_additional_appointment_offered = CategorisedPositiveSmallIntegerField(
@@ -419,7 +411,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Dietician"
+        category="Dietician",
     )
 
     dietician_additional_appointment_date = CategorisedDateField(
@@ -428,7 +420,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Dietician"
+        category="Dietician",
     )
 
     flu_immunisation_recommended_date = CategorisedDateField(
@@ -440,7 +432,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Immunisation (flu)"
+        category="Immunisation (flu)",
     )
 
     ketone_meter_training = CategorisedPositiveSmallIntegerField(
@@ -453,7 +445,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Sick Day Rules"
+        category="Sick Day Rules",
     )
 
     sick_day_rules_training_date = CategorisedDateField(
@@ -465,7 +457,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Sick Day Rules"
+        category="Sick Day Rules",
     )
 
     hospital_admission_date = CategorisedDateField(
@@ -477,7 +469,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Hospital Admission"
+        category="Hospital Admission",
     )
 
     hospital_discharge_date = CategorisedDateField(
@@ -486,7 +478,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Hospital Admission"
+        category="Hospital Admission",
     )
 
     hospital_admission_reason = CategorisedPositiveSmallIntegerField(
@@ -499,7 +491,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Hospital Admission"
+        category="Hospital Admission",
     )
 
     dka_additional_therapies = CategorisedPositiveSmallIntegerField(
@@ -512,7 +504,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Hospital Admission"
+        category="Hospital Admission",
     )
 
     hospital_admission_other = CategorisedCharField(
@@ -525,7 +517,7 @@ class Visit(models.Model, HelpTextMixin):
         null=True,
         blank=True,
         default=None,
-        category="Hospital Admission"
+        category="Hospital Admission",
     )
 
     is_valid = models.BooleanField(
