@@ -17,7 +17,7 @@ from django.http import HttpResponse
 from django.urls import reverse_lazy
 
 # Third party imports
-from django_htmx.http import trigger_client_event
+
 
 from project.npda.general_functions import (
     get_new_session_fields,
@@ -128,6 +128,7 @@ class PatientListView(
     def get(self, request, *args: str, **kwargs) -> HttpResponse:
         response = super().get(request, *args, **kwargs)
         if request.htmx:
+            print("htmx request")
             # filter the patients to only those in the same organisation as the user
             # trigger a GET request from the patient table to update the list of patients
             # by calling the get_queryset method again with the new ods_code/pz_code stored in session
@@ -135,44 +136,8 @@ class PatientListView(
             context = self.get_context_data()
             context["patient_list"] = queryset
 
-            return render(
-                request, "partials/patient_table.html", context=self.get_context_data()
-            )
+            return render(request, "partials/patient_table.html", context=context)
         return response
-
-    def post(self, request, *args: str, **kwargs) -> HttpResponse:
-        """
-        Override POST method to requery the database for the list of patients if  view preference changes
-        """
-        if request.htmx:
-            view_preference = request.POST.get("view_preference", None)
-            pz_code = request.POST.get("patient_pz_code_select_name", None)
-
-            new_session_fields = get_new_session_fields(self.request.user, pz_code)
-            self.request.session.update(new_session_fields)
-
-            view_preference = get_or_update_view_preference(
-                self.request.user, view_preference
-            )
-
-            context = {
-                "view_preference": int(view_preference),
-                "pz_code": request.session.get("pz_code"),
-                "hx_post": reverse_lazy("patients"),
-                "pdu_choices": organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
-                    request=request, user_instance=self.request.user
-                ),
-                "chosen_pdu": request.session.get("pz_code"),
-                "pz_code_select_name": "patient_pz_code_select_name",
-                "hx_target": "#patient_view_preference",
-            }
-
-            response = render(request, "partials/view_preference.html", context=context)
-
-            trigger_client_event(
-                response=response, name="patients", params={}
-            )  # reloads the form to show the active steps
-            return response
 
 
 class PatientCreateView(

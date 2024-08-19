@@ -2,9 +2,13 @@
 import logging
 
 # Django imports
+from django.urls import reverse
 from django.contrib import messages
 from django.shortcuts import render
 from django.core.exceptions import ValidationError
+
+# HTMX imports
+from django_htmx.http import trigger_client_event
 
 # RCPCH imports
 from ..general_functions.csv_upload import csv_upload, csv_summarise
@@ -101,6 +105,15 @@ def view_preference(request):
         "pdu_choices": new_session["pdu_choices"],
     }
 
-    return render(
+    response = render(
         request, template_name="partials/view_preference.html", context=context
     )
+
+    patients_list_view_url = reverse("patients")
+
+    trigger_client_event(
+        response=response,
+        name="patients",
+        params={"method": "GET", "url": patients_list_view_url},
+    )  # reloads the patients table
+    return response
