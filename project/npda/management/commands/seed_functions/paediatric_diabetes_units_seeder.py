@@ -21,7 +21,7 @@ def paediatric_diabetes_units_seeder():
         logger.info("PaediatricDiabetesUnit records already exist in the database")
         return
 
-    pdus = get_all_pz_codes_with_their_trust_and_primary_organisation(seed=True)
+    pdus = get_all_pz_codes_with_their_trust_and_primary_organisation()
 
     for pdu in pdus:
         try:

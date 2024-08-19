@@ -135,9 +135,9 @@ def get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit() -> (
         return ERROR_RESPONSE
 
 
-def get_all_pz_codes_with_their_trust_and_primary_organisation(
-    seed=False,
-) -> List[Tuple[str, str]]:
+def get_all_pz_codes_with_their_trust_and_primary_organisation() -> (
+    List[Tuple[str, str]]
+):
     """
     This function returns all NHS organisations from the RCPCH dataset that are affiliated with a paediatric diabetes unit.
     Accepts a seed parameter - if True, it will seed the database with the data.
@@ -156,25 +156,8 @@ def get_all_pz_codes_with_their_trust_and_primary_organisation(
         response = requests.get(url=url, timeout=10)  # times out after 10 seconds
         response.raise_for_status()
 
-        if seed:
-            return response.json()
+        return response.json()
 
-        # Convert the response to choices list
-        organisation_list = []
-        for organisation in response.json():
-            pz_code = organisation.get("pz_code")
-            parent_name = (organisation.get("parent") or {}).get("name")
-            primary_org_name = (organisation.get("primary_organisation") or {}).get(
-                "name"
-            )
-            if parent_name:
-                organisation_list.append(
-                    (pz_code, f"{parent_name} ({primary_org_name})")
-                )
-            else:
-                organisation_list.append((pz_code, primary_org_name))
-
-        return organisation_list
     except HTTPError as e:
         logger.error(f"HTTP error occurred: {e.response.text}")
         return ERROR_RESPONSE
@@ -191,7 +174,7 @@ def maintain_paediatric_diabetes_unit_records_against_rcpch_nhs_organisations_AP
     PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
 
     # Get all PZ codes with their trust and primary organisation
-    pdus = get_all_pz_codes_with_their_trust_and_primary_organisation(seed=True)
+    pdus = get_all_pz_codes_with_their_trust_and_primary_organisation()
 
     # Check if the NHS organisations in the RCPCH dataset match the locally stored PZ codes
     logger.info(
