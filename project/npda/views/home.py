@@ -110,6 +110,13 @@ def view_preference(request):
     )
 
     patients_list_view_url = reverse("patients")
+    npdauser_list_view_url = reverse("npda_users")
+
+    trigger_client_event(
+        response=response,
+        name="npda_users",
+        params={"method": "GET", "url": npdauser_list_view_url},
+    )  # reloads the npdauser table
 
     trigger_client_event(
         response=response,

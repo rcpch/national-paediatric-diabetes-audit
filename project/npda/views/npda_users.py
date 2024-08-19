@@ -82,11 +82,6 @@ class NPDAUserListView(
         context = super(NPDAUserListView, self).get_context_data(**kwargs)
         context["title"] = "NPDA Users"
         context["pz_code"] = self.request.session.get("pz_code")
-        context["organisation_choices"] = (
-            organisations_adapter.paediatric_diabetes_units_to_populate_select_field(  # this is used to populate the add_employer field in the user form
-                request=self.request, user_instance=self.request.user
-            )
-        )
         context["pdu_choices"] = (
             organisations_adapter.paediatric_diabetes_units_to_populate_select_field(  # This is used to populate the select field in view preference form
                 request=self.request, user_instance=self.request.user
