@@ -155,13 +155,15 @@ class PatientCreateView(
 
     def get_context_data(self, **kwargs):
         PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-
         pz_code = self.request.session.get("pz_code")
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
         context = super().get_context_data(**kwargs)
-        context["title"] = (
-            f"Add New Child to {pdu.lead_organisation_name} - {pdu.parent_name} ({pz_code})"
-        )
+        title = f"Add New Child to {pdu.lead_organisation_name}  ({pz_code})"
+        if (
+            pdu.parent_name is not None
+        ):  # if the PDU has a parent, include the parent name in the title
+            title = f"Add New Child to {pdu.lead_organisation_name} - {pdu.parent_name} ({pz_code})"
+        context["title"] = title
         context["button_title"] = "Add New Child"
         context["form_method"] = "create"
         return context
@@ -241,14 +243,16 @@ class PatientUpdateView(
 
     def get_context_data(self, **kwargs):
         Transfer = apps.get_model("npda", "Transfer")
+        pz_code = self.request.session.get("pz_code")
         patient = Patient.objects.get(pk=self.kwargs["pk"])
-
         transfer = Transfer.objects.get(patient=patient)
-
         context = super().get_context_data(**kwargs)
-        context["title"] = (
-            f"Edit Child Details in {transfer.paediatric_diabetes_unit.lead_organisation_name} - {transfer.paediatric_diabetes_unit.parent_name} ({transfer.paediatric_diabetes_unit.pz_code})"
-        )
+        title = f"Edit Child Details in {pdu.lead_organisation_name}  ({pz_code})"
+        if (
+            transfer.paediatric_diabetes_unit.parent_name is not None
+        ):  # if the PDU has a parent, include the parent name in the title
+            title = f"Add New Child to {transfer.paediatric_diabetes_unit.lead_organisation_name} - {transfer.paediatric_diabetes_unit.parent_name} ({pz_code})"
+        context["title"] = title
         context["button_title"] = "Edit Child Details"
         context["form_method"] = "update"
         context["patient_id"] = self.kwargs["pk"]

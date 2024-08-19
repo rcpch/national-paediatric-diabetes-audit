@@ -3,7 +3,7 @@
 {% block content %}
 
   <div class="w-full max-w-3xl mx-auto bg-white font-montserrat border-rcpch_light_blue border-solid border-4 border-t-0">
-    <div class="text-center text-white bg-rcpch_strong_blue py-5 border-solid border-4 border-rcpch_strong_blue"><strong>{{title}}{% if form_method == 'update' %} for {{npda_user.get_full_name}}{% endif %}</strong></div>
+    <div class="text-center text-white bg-rcpch_strong_blue py-5 border-solid border-4 border-rcpch_strong_blue mt-5"><strong>{{title}}{% if form_method == 'update' %} for {{npda_user.get_full_name}}{% endif %}</strong></div>
     <form id="update-form" method="post" action="" class="mt-5 px-5">
       {% csrf_token %}
       {% for field in form %}
