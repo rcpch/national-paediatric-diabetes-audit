@@ -128,7 +128,6 @@ class PatientListView(
     def get(self, request, *args: str, **kwargs) -> HttpResponse:
         response = super().get(request, *args, **kwargs)
         if request.htmx:
-            print("htmx request")
             # filter the patients to only those in the same organisation as the user
             # trigger a GET request from the patient table to update the list of patients
             # by calling the get_queryset method again with the new ods_code/pz_code stored in session
