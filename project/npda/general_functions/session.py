@@ -23,7 +23,7 @@ def create_session_object(request, user):
     pz_code = primary_organisation.paediatric_diabetes_unit.pz_code
     pdu_choices = (
         organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
-            request=request, user_instance=None
+            requesting_user=request.user, user_instance=None
         )
     )
 

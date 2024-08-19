@@ -84,7 +84,7 @@ class NPDAUserListView(
         context["pz_code"] = self.request.session.get("pz_code")
         context["pdu_choices"] = (
             organisations_adapter.paediatric_diabetes_units_to_populate_select_field(  # This is used to populate the select field in view preference form
-                request=self.request, user_instance=self.request.user
+                requesting_user=self.request.user, user_instance=self.request.user
             )
         )
         context["chosen_pdu"] = self.request.session.get("pz_code")
@@ -131,7 +131,7 @@ class NPDAUserListView(
                     "organisation_choices"
                 ),
                 "pdu_choices": organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
-                    request=self.request, user_instance=self.request.user
+                    requesting_user=self.request.user, user_instance=self.request.user
                 ),
                 "chosen_pdu": request.session.get("pz_code"),
                 "pz_code_select_name": "npdauser_pz_code_select_name",
@@ -167,7 +167,7 @@ class NPDAUserCreateView(
         kwargs["request"] = self.request
         kwargs["employer_choices"] = (
             organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
-                request=self.request, user_instance=None
+                requesting_user=self.request.user, user_instance=None
             )
         )
         return kwargs
@@ -288,7 +288,7 @@ class NPDAUserUpdateView(
         kwargs["employer_choices"] = (
             organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
                 # remove the edited users current employer from the list of employers in the drop down
-                request=self.request,
+                requesting_user=self.request.user,
                 user_instance=self.get_object(),
             )
         )
@@ -372,7 +372,7 @@ class NPDAUserUpdateView(
             user_instance = self.get_object()
 
             organisation_choices = organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
-                request=self.request, user_instance=user_instance
+                requesting_user=self.request.user, user_instance=user_instance
             )
 
             return render(

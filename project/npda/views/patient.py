@@ -119,7 +119,7 @@ class PatientListView(
         context["index_of_first_invalid_patient"] = total_valid_patients
         context["pdu_choices"] = (
             organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
-                request=self.request, user_instance=self.request.user
+                requesting_user=self.request.user, user_instance=self.request.user
             )
         )
         context["chosen_pdu"] = self.request.session.get("pz_code")
