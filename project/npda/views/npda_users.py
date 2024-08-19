@@ -184,8 +184,7 @@ class NPDAUserCreateView(
         context["title"] = "Add New NPDA User"
         context["button_title"] = "Add NPDA User"
         context["form_method"] = "create"
-        # populate the add_employer field with organisations that the user is affilitated with unless the user is a superuser or RCPCH audit team member
-        # in which case all organisations are shown
+        context["selected_pdu"] = self.request.session.get("pz_code")
         return context
 
     def form_valid(self, form):
@@ -288,7 +287,9 @@ class NPDAUserUpdateView(
         kwargs["request"] = self.request
         kwargs["employer_choices"] = (
             organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
-                request=self.request, user_instance=self.get_object()
+                # remove the edited users current employer from the list of employers in the drop down
+                request=self.request,
+                user_instance=self.get_object(),
             )
         )
         return kwargs

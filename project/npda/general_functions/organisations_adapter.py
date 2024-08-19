@@ -41,11 +41,13 @@ def paediatric_diabetes_units_to_populate_select_field(request, user_instance=No
         ):
             # return all paediatric diabetes units excluding those were the user is employed
             filtered_pdus = PaediatricDiabetesUnit.objects.all().exclude(
-                npdauser=request.user
+                npda_users__npda_user=user_instance
             )
         else:
             # return only those paediatric diabetes units that a user is already affiliated with
-            filtered_pdus = PaediatricDiabetesUnit.objects.filter(npdauser=request.user)
+            filtered_pdus = PaediatricDiabetesUnit.objects.filter(
+                npda_users__npda_user=user_instance
+            )
     else:
         # no user instance is provided - therefore need the organisation_choices to be populated with all organisations based on requesting user permissions
         if (
@@ -59,23 +61,23 @@ def paediatric_diabetes_units_to_populate_select_field(request, user_instance=No
         else:
             # return all organisations that are associated with the same paediatric diabetes unit as the request user
             filtered_pdus = PaediatricDiabetesUnit.objects.filter(
-                npdateuser=request.user
+                npda_users__npda_user=request.user
             )
 
-        return (
-            filtered_pdus.order_by("lead_organisation_name")
-            .annotate(
-                paediatric_diabetes_unit_name=Concat(
-                    F("lead_organisation_name"),
-                    Case(
-                        When(
-                            parent_name__isnull=False,
-                            then=Concat(Value(" - "), F("parent_name")),
-                        ),
-                        default=Value(""),
-                        output_field=CharField(),
+    return (
+        filtered_pdus.order_by("lead_organisation_name")
+        .annotate(
+            paediatric_diabetes_unit_name=Concat(
+                F("lead_organisation_name"),
+                Case(
+                    When(
+                        parent_name__isnull=False,
+                        then=Concat(Value(" - "), F("parent_name")),
                     ),
-                )
+                    default=Value(""),
+                    output_field=CharField(),
+                ),
             )
-            .values_list("pz_code", "paediatric_diabetes_unit_name")
         )
+        .values_list("pz_code", "paediatric_diabetes_unit_name")
+    )
