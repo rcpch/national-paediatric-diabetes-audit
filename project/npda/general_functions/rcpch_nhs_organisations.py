@@ -194,8 +194,10 @@ def maintain_paediatric_diabetes_unit_records_against_rcpch_nhs_organisations_AP
     pdus = get_all_pz_codes_with_their_trust_and_primary_organisation(seed=True)
 
     # Check if the NHS organisations in the RCPCH dataset match the locally stored PZ codes
+    logger.info(
+        f"Checking PaediatricDiabetesUnit list against RCPCH NHS Organisations API..."
+    )
     for pdu in pdus:
-        logger.info(f"Checking PaediatricDiabetesUnit: {pdu['pz_code']}...")
 
         # Check if the PZ code exists in the local database
         pdu_obj = None
@@ -231,8 +233,4 @@ def maintain_paediatric_diabetes_unit_records_against_rcpch_nhs_organisations_AP
                 if model_to_dict(pdu_obj) != model_to_dict(new_pdu):
                     logger.info(
                         f"{new_pdu.pz_code} ({new_pdu.lead_organisation_name}) was updated."
-                    )
-                else:
-                    logger.info(
-                        f"PaediatricDiabetesUnit: {new_pdu.pz_code} ({new_pdu.lead_organisation_name}) matches the RCPCH dataset."
                     )
