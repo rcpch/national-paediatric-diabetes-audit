@@ -114,7 +114,7 @@ class PatientListView(
             Patient.objects.filter(submissions__submission_active=True).count()
             - total_valid_patients
         )
-        context["index_of_first_invalid_patient"] = total_valid_patients
+        context["index_of_first_invalid_patient"] = total_valid_patients + 1
         context["pdu_choices"] = (
             organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
                 requesting_user=self.request.user, user_instance=self.request.user
