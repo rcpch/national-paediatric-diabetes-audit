@@ -59,5 +59,10 @@ def get_new_session_fields(user, pz_code):
             raise PermissionDenied()
 
         ret["pz_code"] = pz_code
+        ret["pdu_choices"] = list(
+            organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
+                requesting_user=user, user_instance=None
+            )
+        )
 
     return ret

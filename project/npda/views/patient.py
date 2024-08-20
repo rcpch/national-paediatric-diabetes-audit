@@ -20,8 +20,6 @@ from django.urls import reverse_lazy
 
 
 from project.npda.general_functions import (
-    get_new_session_fields,
-    get_or_update_view_preference,
     organisations_adapter,
 )
 from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
