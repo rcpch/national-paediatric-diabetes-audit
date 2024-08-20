@@ -3,16 +3,45 @@
     <div class="join join-horizontal lg:join-horizontal rounded-none pt-0" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
         <span class="loading loading-spinner loading-lg text-rcpch_pink htmx-indicator" id="spinner"></span>
         <!-- <input class="join-item btn bg-rcpch_light_blue hover:bg-rcpch_dark_blue text-white font-montserrat focus:bg-rcpch_pink border-rcpch_light_blue" hx-post="{{hx_post}}" hx-target="{{hx_target}}" hx-trigger="click" hx-swap="innerHTML"  type="radio" name="view_preference" value="0" aria-label="Organisation - {{ods_code}}" {% if view_preference == 0 %} checked {% endif %} hx-indicator="#spinner" /> -->
-        <input hx-post="{{hx_post}}" hx-target="{{hx_target}}" hx-trigger="click" hx-swap="innerHTML" class="join-item btn bg-rcpch_light_blue hover:bg-rcpch_dark_blue text-white font-montserrat focus:bg-rcpch_pink border-rcpch_light_blue text-xs" type="radio" name="view_preference" value="1" aria-label="Paediatric Diabetes Unit - {{pz_code}}" {% if view_preference == 1 %} checked {% endif %} />
+        <input 
+            hx-post="{% url 'view_preference' %}" 
+            hx-target="#global_view_preference" 
+            hx-trigger="click" 
+            hx-swap="innerHTML" 
+            class="join-item btn bg-rcpch_light_blue hover:bg-rcpch_dark_blue text-white font-montserrat focus:bg-rcpch_pink border-rcpch_light_blue text-xs" 
+            type="radio" 
+            name="view_preference" 
+            value="1" 
+            aria-label="Paediatric Diabetes Unit - {{chosen_pdu}}" 
+            {% if view_preference == 1 %} checked {% endif %} 
+            hx-include="[name='view_preference'], [name='pz_code_select_name']"/>
         {% if view_preference == 1 %}
-                <select name="{{ pz_code_select_name }}" class="select rcpch-select rounded-none w-full text-xs" hx-post="{{hx_post}}" hx-trigger="change" hx-target="{{hx_target}}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+                <select 
+                    name="pz_code_select_name" 
+                    class="select rcpch-select rounded-none w-full text-xs" 
+                    hx-post="{% url 'view_preference' %}" 
+                    hx-target="#global_view_preference" 
+                    hx-trigger="change" 
+                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'  
+                    hx-include="[name='view_preference'], [name='pz_code_select_name']">
                     {% for pdu_choice in pdu_choices %}
-                    <option value="{{pdu_choice.1}}" {% if chosen_pdu == pdu_choice.1 %} selected="{{ chosen_pdu }}" {% endif %}>{{pdu_choice.1}}</option>
+                    <option value="{{pdu_choice.0}}" {% if chosen_pdu == pdu_choice.0 %} selected="{{ chosen_pdu }}" {% endif %}>{{pdu_choice.1}}</option>
                     {% endfor %}
                 </select>
         {% endif %}
         {% if request.user.is_superuser or request.user.is_rcpch_audit_team_member or request.user.is_rcpch_staff %}
-            <input hx-post="{{hx_post}}" hx-target="{{hx_target}}" hx-trigger="click" hx-swap="innerHTML" class="join-item btn bg-rcpch_light_blue hover:bg-rcpch_dark_blue text-white font-montserrat focus:bg-rcpch_pink border-rcpch_light_blue text-xs" type="radio" name="view_preference" value="2" aria-label="All" {% if view_preference == 2 %} checked {% endif %} />
+            <input 
+                hx-post="{% url 'view_preference' %}" 
+                hx-target="#global_view_preference" 
+                hx-trigger="click" 
+                hx-swap="innerHTML" 
+                class="join-item btn bg-rcpch_light_blue hover:bg-rcpch_dark_blue text-white font-montserrat focus:bg-rcpch_pink border-rcpch_light_blue text-xs" 
+                type="radio" 
+                name="view_preference" 
+                value="2" 
+                aria-label="All" 
+                {% if view_preference == 2 %} checked {% endif %} 
+                hx-include="[name='view_preference'], [name='pz_code_select_name']"/>
         {% endif %}
     </div>
 </div>

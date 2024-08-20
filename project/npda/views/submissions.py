@@ -35,9 +35,8 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
         PaediatricDiabetesUnit = apps.get_model(
             app_label="npda", model_name="PaediatricDiabetesUnit"
         )
-        pdu, created = PaediatricDiabetesUnit.objects.get_or_create(
+        pdu = PaediatricDiabetesUnit.objects.get(
             pz_code=self.request.session.get("pz_code"),
-            ods_code=self.request.session.get("ods_code"),
         )
         queryset = (
             self.model.objects.filter(paediatric_diabetes_unit=pdu)
@@ -69,9 +68,21 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
         context["pz_code"] = self.request.session.get("pz_code")
         return context
 
+    def get(self, request, *args, **kwargs):
+        """
+        Handle the HTMX GET request.
+        """
+        self.object_list = self.get_queryset()
+        context = self.get_context_data(object_list=self.object_list)
+        template = self.template_name
+        if request.htmx:
+            # If the request is an HTMX request from the PDU selector, returns the partial template
+            template = "partials/submission_history.html"
+        return render(request=request, template_name=template, context=context)
+
     def post(self, request, *args, **kwargs):
         """
-        Handle the POST request.
+        Handle the HTMX POST request.
 
         :param request: The request
         :param args: The arguments

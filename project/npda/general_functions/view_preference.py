@@ -8,7 +8,6 @@ logger = logging.getLogger(__name__)
 def get_or_update_view_preference(user, new_view_preference):
     new_view_preference = int(new_view_preference) if new_view_preference else None
     NPDAUser = apps.get_model("npda", "NPDAUser")
-
     if new_view_preference == 2 and not user.is_rcpch_audit_team_member:  # national
         logger.warning(
             f"User {user} requested national view preference but they are not a member of the audit team"
