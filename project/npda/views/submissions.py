@@ -13,6 +13,7 @@ from django.views.generic import ListView
 # RCPCH imports
 from .mixins import LoginAndOTPRequiredMixin
 from ..models import Submission
+from ..general_functions import download_csv
 
 
 class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
@@ -83,15 +84,12 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
     def post(self, request, *args, **kwargs):
         """
         Handle the HTMX POST request.
-
-        :param request: The request
-        :param args: The arguments
-        :param kwargs: The keyword arguments
-        :return: the updated table data
+        The button name "submit-data" is used to determine the action to be taken.
+        If the value of "submit-data" is "delete-data", the submission is deleted.
+        If the value of "submit-data" is "download-data", the original csv is downloaded.
         """
         button_name = request.POST.get("submit-data")
         if button_name == "delete-data":
-
             # retrieve the  submission instance
             submission = Submission.objects.filter(
                 pk=request.POST.get("audit_id")
@@ -118,6 +116,13 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
                 new_first.submission_active = True
                 new_first.save()
             messages.success(request, "Cohort submission deleted successfully")
+
+        if button_name == "download-data":
+            submission = Submission.objects.filter(
+                pk=request.POST.get("audit_id")
+            ).get()
+            return download_csv(request, submission.id)
+
         # POST is not supported for this view
         # Must therefore return the queryset as an obect_list and context
         self.object_list = self.get_queryset()

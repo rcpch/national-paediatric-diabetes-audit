@@ -269,6 +269,8 @@ def csv_upload(user, csv_file=None, pdu_pz_code=None):
                 visit.patient = patient
                 visit.save()
 
+    # save the csv file
+    new_submission.csv_file = csv_file
     new_submission.save()
 
     # delete the previous submission
