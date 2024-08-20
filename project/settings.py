@@ -26,7 +26,7 @@ from .logging_settings import (
 
 logger = logging.getLogger(__name__)
 
-load_dotenv('envs/.env')
+load_dotenv("envs/.env")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -123,6 +123,10 @@ MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
 
 ROOT_URLCONF = "project.urls"
 
+# This directory is used to store the .csv files that are uploaded by the user
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -134,7 +138,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "project.npda.build_info.get_build_info"
+                "project.npda.build_info.get_build_info",
             ],
         },
     },
@@ -163,15 +167,11 @@ database_config = {
 password_file = os.environ.get("NPDA_POSTGRES_DB_PASSWORD_FILE")
 
 if password_file:
-    database_config["OPTIONS"] = {
-        "passfile": password_file
-    }
+    database_config["OPTIONS"] = {"passfile": password_file}
 else:
     database_config["PASSWORD"] = os.environ.get("NPDA_POSTGRES_DB_PASSWORD")
 
-DATABASES = {
-    "default": database_config
-}
+DATABASES = {"default": database_config}
 
 # rest framework settings
 REST_FRAMEWORK = {
