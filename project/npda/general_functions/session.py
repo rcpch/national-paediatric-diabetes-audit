@@ -10,7 +10,7 @@ from project.npda.general_functions import (
 logger = logging.getLogger(__name__)
 
 
-def create_session_object(request, user):
+def create_session_object(user):
     """
     Create a session object for the user, based on their permissions.
     This is called on login, and is used to filter the data the user can see.
@@ -23,7 +23,7 @@ def create_session_object(request, user):
     pz_code = primary_organisation.paediatric_diabetes_unit.pz_code
     pdu_choices = (
         organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
-            requesting_user=request.user, user_instance=None
+            requesting_user=user, user_instance=None
         )
     )
 
