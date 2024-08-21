@@ -1,0 +1,26 @@
+<h5 class="text-lg font-bold text-gray-900">Data Quality Report</h5>
+<div class="overflow-x-auto">
+    <table class="table">
+        <thead>
+            <tr>
+                <th class="text-rcpch_dark_blue">NHS Number</th>
+                <th class="text-rcpch_dark_blue">Total Visits</th>
+                <th class="text-rcpch_dark_blue">Visits with Errors</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for patient in patients %}
+                <tr>
+                    <td class="text-rcpch_dark_blue">{{patient.nhs_number}}</td>
+                    <td class="text-rcpch_dark_blue">{{patient.visit_count}}</td>
+                    <td class="text-rcpch_dark_blue">{{patient.visit_error_count}}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="100%" class="text-gray-900">This table shows the number of visits for each patient and the number of visits with errors for the current active submission.</td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
