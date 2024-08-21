@@ -1,6 +1,6 @@
 # National Paediatric Diabetes Audit (NPDA)
 
-A django rest framework project containing all the measures for the NPDA
+A Django project to upload data for the NPDA
 
 It needs some environment variables stored in ```envs/.env``` to work (see example.env)
 
