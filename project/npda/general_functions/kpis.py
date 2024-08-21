@@ -14,6 +14,10 @@ from django.db.models import QuerySet
 from project.npda.models import Site, Patient, Visit, AuditCohort
 from project.npda.views.mixins import CheckPDUListMixin, LoginAndOTPRequiredMixin
 from project.npda.general_functions import get_audit_period_for_date
+from project.npda.general_functions.kpis import kpi_1_total_eligible
+from project.npda.general_functions.kpis import kpi_2_total_new_diagnoses
+from project.npda.general_functions.kpis import kpi_3_total_t1dm
+from project.npda.general_functions.kpis import kpi_4_total_t1dm_gte_12yo
 
 
 class CalculateKPIS:
@@ -152,13 +156,13 @@ class CalculateKPIS:
         return_obj["calculation_date"] = self.calculation_date
         return_obj["audit_start_date"] = self.audit_start_date
         return_obj["audit_end_date"] = self.audit_end_date
-        
+
         # Finally, add in the kpis
-        return_obj['calculated_kpi_values'] = calculated_kpis
+        return_obj["calculated_kpi_values"] = calculated_kpis
 
         return return_obj
 
-    def calculate_kpi_1_total_eligible(self) -> dict:
+    def calculate_kpi_1(self) -> dict:
         """Calculates KPI 1: Total number of eligible patients
         Total number of patients with:
             * a valid NHS number
@@ -168,24 +172,45 @@ class CalculateKPIS:
             * Below the age of 25 at the start of the audit period
         """
 
-        eligible_patients = self.patients.filter(
-            # Valid attributes
-            Q(nhs_number__isnull=False)
-            & Q(date_of_birth__isnull=False)
-            # NOTE: should be already filtered out when setting
-            # self.patients in init method, but adding for clarity
-            & Q(site__paediatric_diabetes_unit_pz_code__isnull=False)
-            # Visit / admisison date within audit period
-            & Q(visit__visit_date__range=(self.audit_start_date, self.audit_end_date))
-            # Below the age of 25 at the start of the audit period
-            & Q(
-                date_of_birth__gt=self.audit_start_date.replace(
-                    year=self.audit_start_date.year - 25
-                )
-            )
-        ).distinct()
+        return kpi_1_total_eligible(
+            patients=self.patients,
+            audit_start_date=self.audit_start_date,
+            audit_end_date=self.audit_end_date,
+        )
 
-        return eligible_patients.count()
+    def calculate_kpi_2(self) -> dict:
+        """Calculates KPI 2: Total number of new diagnoses
+        Total number of patients with:
+            * a diagnosis date within the audit period
+        """
+        return kpi_2_total_new_diagnoses(
+            patients=self.patients,
+            audit_start_date=self.audit_start_date,
+            audit_end_date=self.audit_end_date,
+        )
+
+    def calculate_kpi_3(self) -> dict:
+        """Calculates KPI 3: Total number of patients with T1DM
+        Total number of patients with:
+            * T1DM
+        """
+        return kpi_3_total_t1dm(
+            patients=self.patients,
+            audit_start_date=self.audit_start_date,
+            audit_end_date=self.audit_end_date,
+        )
+
+    def calculate_kpi_4(self) -> dict:
+        """Calculates KPI 4: Total number of patients with T1DM aged 12 or older
+        Total number of patients with:
+            * T1DM
+            * aged 12 or older
+        """
+        return kpi_4_total_t1dm_gte_12yo(
+            patients=self.patients,
+            audit_start_date=self.audit_start_date,
+            audit_end_date=self.audit_end_date,
+        )
 
 
 # WIP simply return KPI Agg result for given PDU
