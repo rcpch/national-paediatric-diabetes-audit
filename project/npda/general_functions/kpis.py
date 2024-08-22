@@ -225,7 +225,11 @@ class CalculateKPIS:
 
         return return_obj
 
-    def calculate_kpi_1(self) -> dict:
+    """
+    These next methods 1-49 calculate the numerators for each KPI
+    """
+
+    def calculate_kpi_numerator_1(self) -> dict:
         """
         Calculates KPI 1: Total number of eligible patients
         """
@@ -236,7 +240,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_2(self) -> dict:
+    def calculate_kpi_numerator_2(self) -> dict:
         """
         Calculates KPI 2: Total number of new diagnoses
         """
@@ -246,7 +250,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_3(self) -> dict:
+    def calculate_kpi_numerator_3(self) -> dict:
         """
         Calculates KPI 3: Total number of patients with T1DM
         """
@@ -256,7 +260,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_4(self) -> dict:
+    def calculate_kpi_numerator_4(self) -> dict:
         """
         Calculates KPI 4: Total number of patients with T1DM aged 12 or older
         """
@@ -266,7 +270,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_5(self) -> dict:
+    def calculate_kpi_numerator_5(self) -> dict:
         """
         Calculates KPI 5: Total number of patients with T1DM who have completed a year of care
         """
@@ -276,7 +280,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_6(self) -> dict:
+    def calculate_kpi_numerator_6(self) -> dict:
         """
         Calculates KPI 6: Total number of patients with T1DM who have completed a year of care and are aged 12 or older
         """
@@ -286,7 +290,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_7(self) -> dict:
+    def calculate_kpi_numerator_7(self) -> dict:
         """
         Calculates KPI 7: Total number of new diagnoses of T1DM
         """
@@ -296,7 +300,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_8(self) -> dict:
+    def calculate_kpi_numerator_8(self) -> dict:
         """
         Calculates KPI 8: Total number of deaths
         """
@@ -306,7 +310,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_9(self) -> dict:
+    def calculate_kpi_numerator_9(self) -> dict:
         """
         Calculates KPI 9: Total number of service transitions
         """
@@ -316,7 +320,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_10(self) -> dict:
+    def calculate_kpi_numerator_10(self) -> dict:
         """
         Calculates KPI 10: Total number of coeliacs
         """
@@ -326,7 +330,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_11(self) -> dict:
+    def calculate_kpi_numerator_11(self) -> dict:
         """
         Calculates KPI 11: Total number of thyroid patients
         """
@@ -336,7 +340,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_12(self) -> dict:
+    def calculate_kpi_numerator_12(self) -> dict:
         """
         Calculates KPI 12: Total number of patients with ketone test equipment
         """
@@ -346,7 +350,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_13(self) -> dict:
+    def calculate_kpi_numerator_13(self) -> dict:
         """
         Calculates KPI 13: Total number of patients on 1-3 injections per day
         """
@@ -356,7 +360,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_14(self) -> dict:
+    def calculate_kpi_numerator_14(self) -> dict:
         """
         Calculates KPI 14: Total number of patients on 4 or more injections per day
         """
@@ -366,7 +370,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_15(self) -> dict:
+    def calculate_kpi_numerator_15(self) -> dict:
         """
         Calculates KPI 15: Total number of patients on insulin pump
         """
@@ -376,7 +380,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_16(self) -> dict:
+    def calculate_kpi_numerator_16(self) -> dict:
         """
         Calculates KPI 16: Total number of patients on 1-3 injections per day plus other medication
         """
@@ -386,7 +390,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_17(self) -> dict:
+    def calculate_kpi_numerator_17(self) -> dict:
         """
         Calculates KPI 17: Total number of patients on 4 or more injections per day plus other medication
         """
@@ -396,7 +400,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_18(self) -> dict:
+    def calculate_kpi_numerator_18(self) -> dict:
         """
         Calculates KPI 18: Total number of patients on insulin pump plus other medication
         """
@@ -406,7 +410,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_19(self) -> dict:
+    def calculate_kpi_numerator_19(self) -> dict:
         """
         Calculates KPI 19: Total number of patients on dietary management alone
         """
@@ -416,7 +420,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_20(self) -> dict:
+    def calculate_kpi_numerator_20(self) -> dict:
         """
         Calculates KPI 20: Total number of patients on dietary management plus other medication
         """
@@ -426,7 +430,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_21(self) -> dict:
+    def calculate_kpi_numerator_21(self) -> dict:
         """
         Calculates KPI 21: Total number of patients on flash glucose monitor
         """
@@ -436,7 +440,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_22(self) -> dict:
+    def calculate_kpi_numerator_22(self) -> dict:
         """
         Calculates KPI 22: Total number of patients on real time CGM with alarms
         """
@@ -446,7 +450,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_23(self) -> dict:
+    def calculate_kpi_numerator_23(self) -> dict:
         """
         Calculates KPI 23: Total number of patients on type 1 real time CGM with alarms
         """
@@ -456,7 +460,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_24(self) -> dict:
+    def calculate_kpi_numerator_24(self) -> dict:
         """
         Calculates KPI 24: Total number of patients on hybrid closed loop system
         """
@@ -466,7 +470,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_25(self) -> dict:
+    def calculate_kpi_numerator_25(self) -> dict:
         """
         Calculates KPI 25: Total number of patients with HbA1c
         """
@@ -476,7 +480,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_26(self) -> dict:
+    def calculate_kpi_numerator_26(self) -> dict:
         """
         Calculates KPI 26: Total number of patients with BMI
         """
@@ -486,7 +490,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_27(self) -> dict:
+    def calculate_kpi_numerator_27(self) -> dict:
         """
         Calculates KPI 27: Total number of patients with thyroid screen
         """
@@ -496,7 +500,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_28(self) -> dict:
+    def calculate_kpi_numerator_28(self) -> dict:
         """
         Calculates KPI 28: Total number of patients with blood pressure
         """
@@ -506,7 +510,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_29(self) -> dict:
+    def calculate_kpi_numerator_29(self) -> dict:
         """
         Calculates KPI 29: Total number of patients with urinary albumin
         """
@@ -516,7 +520,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_30(self) -> dict:
+    def calculate_kpi_numerator_30(self) -> dict:
         """
         Calculates KPI 30: Total number of patients with retinal screening
         """
@@ -526,7 +530,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_31(self) -> dict:
+    def calculate_kpi_numerator_31(self) -> dict:
         """
         Calculates KPI 31: Total number of patients with foot examination
         """
@@ -536,7 +540,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_32(self) -> dict:
+    def calculate_kpi_numerator_32(self) -> dict:
         """
         Calculates KPI 32: Total number of patients with health check completion rate
         """
@@ -546,7 +550,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_33(self) -> dict:
+    def calculate_kpi_numerator_33(self) -> dict:
         """
         Calculates KPI 33: Total number of patients with HbA1c 4+
         """
@@ -556,7 +560,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_34(self) -> dict:
+    def calculate_kpi_numerator_34(self) -> dict:
         """
         Calculates KPI 34: Total number of patients with psychological assessment
         """
@@ -566,7 +570,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_35(self) -> dict:
+    def calculate_kpi_numerator_35(self) -> dict:
         """
         Calculates KPI 35: Total number of patients with smoking status screened
         """
@@ -576,7 +580,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_36(self) -> dict:
+    def calculate_kpi_numerator_36(self) -> dict:
         """
         Calculates KPI 36: Total number of patients with referral to smoking cessation service
         """
@@ -586,7 +590,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_37(self) -> dict:
+    def calculate_kpi_numerator_37(self) -> dict:
         """
         Calculates KPI 37: Total number of patients with additional dietetic appointment offered
         """
@@ -596,7 +600,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_38(self) -> dict:
+    def calculate_kpi_numerator_38(self) -> dict:
         """
         Calculates KPI 38: Total number of patients attending additional dietetic appointment
         """
@@ -606,7 +610,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_39(self) -> dict:
+    def calculate_kpi_numerator_39(self) -> dict:
         """
         Calculates KPI 39: Total number of patients with influenza immunisation recommended
         """
@@ -616,7 +620,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_40(self) -> dict:
+    def calculate_kpi_numerator_40(self) -> dict:
         """
         Calculates KPI 40: Total number of patients with sick day rules advice
         """
@@ -626,7 +630,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_41(self) -> dict:
+    def calculate_kpi_numerator_41(self) -> dict:
         """
         Calculates KPI 41: Total number of patients with coeliac disease screening
         """
@@ -636,7 +640,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_42(self) -> dict:
+    def calculate_kpi_numerator_42(self) -> dict:
         """
         Calculates KPI 42: Total number of patients with thyroid disease screening
         """
@@ -646,7 +650,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_43(self) -> dict:
+    def calculate_kpi_numerator_43(self) -> dict:
         """
         Calculates KPI 43: Total number of patients with carbohydrate counting education
         """
@@ -656,7 +660,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_44(self) -> dict:
+    def calculate_kpi_numerator_44(self) -> dict:
         """
         Calculates KPI 44: Total number of patients with mean HbA1c
         """
@@ -666,7 +670,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_45(self) -> dict:
+    def calculate_kpi_numerator_45(self) -> dict:
         """
         Calculates KPI 45: Total number of patients with median HbA1c
         """
@@ -676,7 +680,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_46(self) -> dict:
+    def calculate_kpi_numerator_46(self) -> dict:
         """
         Calculates KPI 46: Total number of patients with number of admissions
         """
@@ -686,7 +690,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_47(self) -> dict:
+    def calculate_kpi_numerator_47(self) -> dict:
         """
         Calculates KPI 47: Total number of patients with number of DKA admissions
         """
@@ -696,7 +700,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_48(self) -> dict:
+    def calculate_kpi_numerator_48(self) -> dict:
         """
         Calculates KPI 48: Total number of patients with required additional psychological support
         """
@@ -706,7 +710,7 @@ class CalculateKPIS:
             audit_end_date=self.audit_end_date,
         )
 
-    def calculate_kpi_49(self) -> dict:
+    def calculate_kpi_numerator_49(self) -> dict:
         """
         Calculates KPI 49: Total number of patients with albuminuria present
         """
