@@ -17,12 +17,33 @@ def kpi_6_total_t1dm_complete_year_gte_12yo(
     * Date of leaving service within the audit period
     * Date of death within the audit period
     """
-    eligible_patients = patients.filter(
-        Q(diabetes_type=1)
-        & Q(diagnosis_date__lt=audit_start_date.replace(year=audit_start_date.year - 1))
-        & Q(
-            date_of_birth__lte=audit_start_date.replace(year=audit_start_date.year - 12)
+    eligible_patients = (
+        patients.filter(
+            Q(nhs_number__isnull=False)
+            # valid NHS number
+            # NOTE: should be already filtered out when setting
+            # patients in init method, but adding for clarity
+            & Q(site__paediatric_diabetes_unit__pz_code__isnull=False)
+            # Visit / admisison date within audit period
+            & Q(visit__visit_date__range=(audit_start_date, audit_end_date))
+            # Over 12 years old at the start of the audit period
+            & Q(
+                date_of_birth__lte=audit_start_date.replace(
+                    year=audit_start_date.year - 12
+                )
+            )
+            # is type 1 diabetes
+            & Q(diabetes_type=1)
         )
-    ).distinct()
+        .exclude(
+            # Diagnosis date within audit period
+            Q(diagnosis_date__range=(audit_start_date, audit_end_date))
+            # Date of leaving service within the audit period
+            | Q(site__date_leaving_service__range=(audit_start_date, audit_end_date))
+            # Date of death within the audit period
+            | Q(date_of_death__range=(audit_start_date, audit_end_date))
+        )
+        .distinct()
+    )
 
     return eligible_patients.count()

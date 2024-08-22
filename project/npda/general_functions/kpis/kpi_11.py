@@ -1,5 +1,7 @@
 from typing import List
+from django.apps import apps
 from django.db.models import Q
+
 
 
 def kpi_11_total_thyroids(
@@ -11,6 +13,11 @@ def kpi_11_total_thyroids(
     whose most recent observation for item 35 (based on visit date)
     is either 2 = Thyroxine for hypothyroidism or 3 = Antithyroid medication for hyperthyroidism
     """
-    eligible_patients = patients.filter(Q()).distinct()
+    Visit = apps.get_model("npda", "Visit")
+    eligible_patients = Visit.objects.filter(Q(
+        Q(patient__in=patients) &
+        Q(thyroid_treatment_status__in=[2, 3]) &
+        Q(visit_date__range=(audit_start_date, audit_end_date)
+    )).distinct()
 
     return eligible_patients.count()
