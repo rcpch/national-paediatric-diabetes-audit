@@ -4,3 +4,6 @@ from .kpi_3 import kpi_3_total_t1dm
 from .kpi_4 import kpi_4_total_t1dm_gte_12yo
 from .kpi_5 import kpi_5_total_t1dm_complete_year
 from .kpi_6 import kpi_6_total_t1dm_complete_year_gte_12yo
+from .kpi_7 import kpi_7_total_new_diagnoses_t1dm
+from .kpi_8 import kpi_8_total_deaths
+from .kpi_9 import kpi_9_total_service_transitions

@@ -20,6 +20,10 @@ from project.npda.general_functions.kpis import kpi_3_total_t1dm
 from project.npda.general_functions.kpis import kpi_4_total_t1dm_gte_12yo
 from project.npda.general_functions.kpis import kpi_5_total_t1dm_complete_year
 from project.npda.general_functions.kpis import kpi_6_total_t1dm_complete_year_gte_12yo
+from project.npda.general_functions.kpis import kpi_7_total_new_diagnoses_t1dm
+from project.npda.general_functions.kpis import kpi_8_total_deaths
+from project.npda.general_functions.kpis import kpi_9_total_service_transitions
+from project.npda.general_functions.kpis import kpi_10_total_coeliacs
 
 
 class CalculateKPIS:
@@ -220,6 +224,46 @@ class CalculateKPIS:
         Calculates KPI 6: Total number of patients with T1DM who have completed a year of care and are aged 12 or older
         """
         return kpi_6_total_t1dm_complete_year_gte_12yo(
+            patients=self.patients,
+            audit_start_date=self.audit_start_date,
+            audit_end_date=self.audit_end_date,
+        )
+
+    def calculate_kpi_7(self) -> dict:
+        """
+        Calculates KPI 7: Total number of new diagnoses of T1DM
+        """
+        return kpi_7_total_new_diagnoses_t1dm(
+            patients=self.patients,
+            audit_start_date=self.audit_start_date,
+            audit_end_date=self.audit_end_date,
+        )
+
+    def calculate_kpi_8(self) -> dict:
+        """
+        Calculates KPI 8: Total number of deaths
+        """
+        return kpi_8_total_deaths(
+            patients=self.patients,
+            audit_start_date=self.audit_start_date,
+            audit_end_date=self.audit_end_date,
+        )
+
+    def calculate_kpi_9(self) -> dict:
+        """
+        Calculates KPI 9: Total number of service transitions
+        """
+        return kpi_9_total_service_transitions(
+            patients=self.patients,
+            audit_start_date=self.audit_start_date,
+            audit_end_date=self.audit_end_date,
+        )
+
+    def calculate_kpi_10(self) -> dict:
+        """
+        Calculates KPI 10: Total number of coeliacs
+        """
+        return kpi_10_total_coeliacs(
             patients=self.patients,
             audit_start_date=self.audit_start_date,
             audit_end_date=self.audit_end_date,
