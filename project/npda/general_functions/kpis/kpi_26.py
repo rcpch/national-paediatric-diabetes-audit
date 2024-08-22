@@ -1,4 +1,5 @@
 from typing import List
+from django.apps import apps
 from django.db.models import Q
 
 
@@ -11,6 +12,12 @@ def kpi_26_bmi(
     Numerator: Number of eligible patients at least one valid entry for Patient Height (item 14) and for Patient Weight (item 15) with an observation date (item 16) within the audit period
     Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
     """
-    eligible_patients = patients.filter(Q()).distinct()
+    Visit = apps.get_model("npda", "Visit")
+    eligible_patients = Visit.objects.filter(
+        Q(patient__in=patients)
+        & Q(weight__isnull=False)
+        & Q(height__isnull=False)
+        & Q(height_weight_observation_date__range=(audit_start_date, audit_end_date))
+    ).distinct()
 
     return eligible_patients.count()
