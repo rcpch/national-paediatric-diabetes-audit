@@ -1,4 +1,5 @@
 from typing import List
+from django.apps import apps
 from django.db.models import Q
 
 
@@ -11,6 +12,14 @@ def kpi_47_number_of_dka_admissions(
     Numerator: Total number of admissions with a reason for admission (item 50) that is 2 = DKA AND with a start date (item 48) OR discharge date (item 49) within the audit period
     Denominator: Total number of eligible patients (measure 1)
     """
-    eligible_patients = patients.filter(Q()).distinct()
+    Visit = apps.get_model("npda", "Visit")
+    eligible_visits = Visit.objects.filter(
+        Q(patient__in=patients)
+        & (
+            Q(hospital_admission_date__range=(audit_start_date, audit_end_date))
+            | Q(hospital_discharge_date__range=(audit_start_date, audit_end_date))
+        )
+        & Q(hospital_admission_reason=2)
+    ).distinct()
 
-    return eligible_patients.count()
+    return eligible_visits.count()

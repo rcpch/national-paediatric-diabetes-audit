@@ -17,7 +17,6 @@ def kpi_25_hba1c(
         Q(patient__in=patients)
         & Q(hba1c__isnull=False)
         & Q(hba1c_date__range=(audit_start_date, audit_end_date))
-        & Q(visit_date__range=(audit_start_date, audit_end_date))
     ).distinct()
 
     return eligible_patients.count()
