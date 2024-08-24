@@ -40,6 +40,7 @@ class PatientListView(
     permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
     model = Patient
     template_name = "patients.html"
+    paginate_by = 5
 
     def get_queryset(self):
         """
@@ -129,7 +130,14 @@ class PatientListView(
             # filter the patients to only those in the same organisation as the user
             # trigger a GET request from the patient table to update the list of patients
             # by calling the get_queryset method again with the new ods_code/pz_code stored in session
+            sort_by = request.GET.get("sort_by")
             queryset = self.get_queryset()
+            if sort_by == "npda_id":
+                # sort by patient id
+                queryset = queryset.order_by("pk")
+            elif sort_by == "nhs_number":
+                # sort by NHS number
+                queryset = queryset.order_by("nhs_number")
             context = self.get_context_data()
             context["patient_list"] = queryset
 

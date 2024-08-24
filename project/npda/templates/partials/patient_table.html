@@ -4,8 +4,34 @@
 <table class="table table-md w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
     <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">
             <tr>
-                <th scope="col" class="px-2 py-3 text-center">NPDA ID</th>
-                <th scope="col" class="px-2 py-3 text-center">NHS Number</th>
+                <th 
+                    scope="col" class="px-2 py-3 text-center cursor-pointer"
+                    hx-get="{% url 'patients' %}?sort_by=npda_id"
+                    hx-trigger="click"
+                    hx-target="#patient_table"
+                    hx-swap="innerHTML"
+                    class="stroke-rcpch_pink"
+                    >
+                        <span class="flex flex-row">
+                            NPDA ID
+                            <?xml version="1.0" ?><svg height="14px" class="fill-none" id="icon" style="enable-background:new 0 0 32 32;" version="1.1" viewBox="0 0 32 32" width="32px" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                <polygon class="fill-rcpch_pink" points="24,24 16,32 8,24 "/>
+                                <polygon class="fill-rcpch_pink" points="8,8 16,0 24,8 "/><rect class="st0" height="32" id="_Transparent_Rectangle_" width="32"/></svg>
+                        </span>
+                </th>
+                <th 
+                    scope="col" class="px-2 py-3 text-center cursor-pointer"
+                    hx-get="{% url 'patients' %}?sort_by=nhs_number"
+                    hx-trigger="click"
+                    hx-target="#patient_table"
+                    hx-swap="innerHTML">
+                        <span class="flex flex-row">
+                            NHS Number
+                            <?xml version="1.0" ?><svg height="14px" class="fill-none" id="icon" style="enable-background:new 0 0 32 32;" version="1.1" viewBox="0 0 32 32" width="32px" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                <polygon class="fill-rcpch_pink" points="24,24 16,32 8,24 "/>
+                                <polygon class="fill-rcpch_pink" points="8,8 16,0 24,8 "/><rect class="st0" height="32" id="_Transparent_Rectangle_" width="32"/></svg>
+                        </span>
+                </th>
                 <th scope="col" class="px-2 py-3 text-center">Sex</th>
                 <th scope="col" class="px-2 py-3 text-center">Date of Birth</th>
                 <th scope="col" class="px-2 py-3 text-center">Postcode</th>
@@ -160,10 +186,30 @@
             </tbody>
             <tfoot>
                 <tr class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white py-5">
-                    <th colspan="12" class="px-2">
+                    <th colspan="10" class="px-2">
                         <strong>
                         Total: {{patient_list.count}} patients
                         </strong>
+                    </th>
+                    <th colspan="2">
+                        <!-- Pagination controls -->
+                        <div class="pagination text-right">
+                            <span class="step-links">
+                                {% if page_obj.has_previous %}
+                                    <a href="?page=1" >&laquo; first</a>
+                                    <a href="?page={{ page_obj.previous_page_number }}" >previous</a>
+                                {% endif %}
+
+                                <span class="current">
+                                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+                                </span>
+
+                                {% if page_obj.has_next %}
+                                    <a href="?page={{ page_obj.next_page_number }}" >next</a>
+                                    <a href="?page={{ page_obj.paginator.num_pages }}" >last &raquo;</a>
+                                {% endif %}
+                            </span>
+                        </div>
                     </th>
                 </tr>
             </tfoot>
