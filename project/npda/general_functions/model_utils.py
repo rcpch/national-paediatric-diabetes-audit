@@ -30,4 +30,4 @@ def print_instance_field_attrs(instance):
         except AttributeError:
             fields_dict[field_name] = "<error retrieving value>"
 
-    logger.info(f"{model.__name__} instance:\n{pformat(fields_dict, indent=2)}")
+    logger.info(f"%s instance:\n%s", {model.__name__}, pformat(fields_dict, indent=2))

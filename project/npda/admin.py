@@ -1,25 +1,24 @@
+from django.apps import apps
 from django.contrib import admin
 
 from .models import (
     NPDAUser,
     OrganisationEmployer,
     Patient,
-    Site,
     Visit,
+    Transfer,
     VisitActivity,
-    AuditCohort,
+    Submission,
 )
 from django.contrib.sessions.models import Session
 
+PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
 
-@admin.register(AuditCohort)
-class AuditCohortAdmin(admin.ModelAdmin):
-    search_fields = ("audit_year", "quarter", "pz_code", "ods_code")
 
 
 @admin.register(OrganisationEmployer)
 class OrganisationEmployerAdmin(admin.ModelAdmin):
-    search_fields = ("name", "pk", "ods_code", "pz_code")
+    search_fields = ("name", "pk", "lead_organisation_ods_code", "pz_code")
 
 
 @admin.register(NPDAUser)
@@ -32,9 +31,20 @@ class PatientAdmin(admin.ModelAdmin):
     search_fields = ("nhs_number_icontains", "pk")
 
 
-@admin.register(Site)
-class SiteAdmin(admin.ModelAdmin):
-    search_fields = ("organisation", "pk")
+@admin.register(PaediatricDiabetesUnit)
+class PaediatricDiabetesUnitAdmin(admin.ModelAdmin):
+    search_fields = ("pk", "pz_code")
+    list_display = (
+        "pz_code",
+        "lead_organisation_ods_code",
+        "lead_organisation_name",
+    )
+    ordering = ("lead_organisation_name",)
+
+
+@admin.register(Transfer)
+class TransferAdmin(admin.ModelAdmin):
+    search_fields = ("paediatric_diabetes_unit", "patient", "pk")
 
 
 @admin.register(Visit)
@@ -47,13 +57,17 @@ class VisitActivityAdmin(admin.ModelAdmin):
     search_fields = ("activity_datetime", "pk", "ip_address")
 
 
+@admin.register(Submission)
+class SubmissionAdmin(admin.ModelAdmin):
+    search_fields = ["pk"]
+
+
 @admin.register(Session)
 class SessionAdmin(admin.ModelAdmin):
 
     list_display = [
         "session_key",
         "user_id",
-        "ods_code",
         "pz_code",
         "organisation_choices",
         "pdu_choices",
@@ -69,9 +83,6 @@ class SessionAdmin(admin.ModelAdmin):
     def user_id(self, obj):
         return self.session_data(obj).get("_auth_user_id", "N/A")
 
-    def ods_code(self, obj):
-        return self.session_data(obj).get("ods_code", "N/A")
-
     def pz_code(self, obj):
         return self.session_data(obj).get("pz_code", "N/A")
 
@@ -82,7 +93,6 @@ class SessionAdmin(admin.ModelAdmin):
         return self.session_data(obj).get("pdu_choices", "N/A")
 
     user_id.short_description = "User ID"
-    ods_code.short_description = "ODS Code"
     pz_code.short_description = "PZ Code"
     organisation_choices.short_description = "Organisation Choices"
     pdu_choices.short_description = "PDU Choices"

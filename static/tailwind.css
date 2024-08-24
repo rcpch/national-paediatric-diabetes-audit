@@ -1,3 +1,7 @@
+* {
+  border-radius: 0 !important; /* completely remove rounded corners */
+}
+
 .tooltip{
     visibility: hidden;
     position: absolute;
@@ -46,4 +50,8 @@
 .fade-in {
   opacity: 1;
   transition: opacity 500ms ease-out;
+}
+
+.hidden {
+  display: none;
 }

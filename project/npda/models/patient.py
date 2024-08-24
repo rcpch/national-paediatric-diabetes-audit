@@ -3,11 +3,8 @@ from datetime import date
 import logging
 
 # django imports
-from django.apps import apps
 from django.contrib.gis.db import models
 from django.contrib.gis.db.models import CharField, DateField, PositiveSmallIntegerField
-from django.contrib.postgres.fields import ArrayField
-from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 
@@ -16,7 +13,6 @@ from ...constants import (
     ETHNICITIES,
     DIABETES_TYPES,
     SEX_TYPE,
-    UNKNOWN_POSTCODES_NO_SPACES,
     CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING,
     CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING,
     CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
@@ -24,12 +20,11 @@ from ...constants import (
 from ..general_functions import (
     stringify_time_elapsed,
     imd_for_postcode,
-    gp_practice_for_postcode,
-    validate_postcode,
 )
 
 # Logging
 logger = logging.getLogger(__name__)
+
 
 class Patient(models.Model):
     """
@@ -41,16 +36,13 @@ class Patient(models.Model):
     Custom methods age and age_days, returns the age
     """
 
-    nhs_number = CharField(  # the NHS number for England and Wales
-        "NHS Number", max_length=10
-    )
+    nhs_number = CharField("NHS Number")  # the NHS number for England and Wales
 
     sex = models.IntegerField("Stated gender", choices=SEX_TYPE, blank=True, null=True)
 
     date_of_birth = DateField("date of birth (YYYY-MM-DD)")
     postcode = CharField(
         "Postcode of usual address",
-        max_length=8,
         blank=True,
         null=True,
     )
@@ -109,14 +101,6 @@ class Patient(models.Model):
             CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
         ]
 
-    # relationships
-    site = models.ForeignKey(
-        to="npda.Site",
-        on_delete=models.CASCADE,
-        related_name="patients",
-        verbose_name="Sites",
-    )
-
     def __str__(self) -> str:
         return f"ID: {self.pk}, {self.nhs_number}"
 
@@ -156,6 +140,6 @@ class Patient(models.Model):
                 self.index_of_multiple_deprivation_quintile = None
                 print(
                     f"Cannot calculate deprivation score for {self.postcode}: {error}"
-                )   
+                )
 
         return super().save(*args, **kwargs)

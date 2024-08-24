@@ -2,6 +2,7 @@
 
 import logging
 
+from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.mixins import AccessMixin
@@ -71,13 +72,17 @@ class CheckPDUListMixin(AccessMixin):
         model = self.get_model().__name__
 
         # get PDU assigned to user
-        user_pdus = request.user.organisation_employers.values_list("pz_code", flat=True)
+        user_pdus = request.user.organisation_employers.values_list(
+            "pz_code", flat=True
+        )
 
         # get pdu that user is requesting access of
         requested_pdu = ""
         if model == "Visit":
             requested_patient = Patient.objects.get(pk=self.kwargs["patient_id"])
-            requested_pdu = requested_patient.site.paediatric_diabetes_unit_pz_code
+            Transfer = apps.get_model("npda", "Transfer")
+            transfer = Transfer.objects.get(patient=requested_patient)
+            requested_pdu = transfer.paediatric_diabetes_unit.pz_code
 
         elif model == "NPDAUser" or model == "Patient":
             requested_pdu = request.session.get("pz_code")
@@ -119,6 +124,8 @@ class CheckPDUInstanceMixin(AccessMixin):
 
         model = self.get_model().__name__
 
+        Transfer = apps.get_model("npda", "Transfer")
+
         # get PDU assigned to user who is trying to access a view
         user_pdu = request.user.organisation_employers.first().pz_code
 
@@ -131,11 +138,13 @@ class CheckPDUInstanceMixin(AccessMixin):
 
         elif model == "Patient":
             requested_patient = Patient.objects.get(pk=self.kwargs["pk"])
-            requested_pdu = requested_patient.site.paediatric_diabetes_unit_pz_code
+            transfer = Transfer.objects.get(patient=requested_patient)
+            requested_pdu = transfer.paediatric_diabetes_unit.pz_code
 
         elif model == "Visit":
             requested_patient = Patient.objects.get(pk=self.kwargs["patient_id"])
-            requested_pdu = requested_patient.site.paediatric_diabetes_unit_pz_code
+            transfer = Transfer.objects.get(patient=requested_patient)
+            requested_pdu = transfer.paediatric_diabetes_unit.pz_code
 
         if (
             request.user.is_superuser

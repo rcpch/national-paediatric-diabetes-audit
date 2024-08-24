@@ -7,7 +7,7 @@ from project.npda.views import (
     VisitUpdateView,
     PatientListView,
     PatientVisitsListView,
-    AuditCohortsListView,
+    SubmissionsListView,
 )
 from project.npda.forms.npda_user_form import NPDAUpdatePasswordForm
 
@@ -16,11 +16,12 @@ from .views import *
 urlpatterns = [
     path("", view=home, name="home"),
     path("home", view=home, name="home"),
-    # Audit cohort views
+    path("view_preference", view=view_preference, name="view_preference"),
+    # Submission views
     path(
-        "audit_cohorts",
-        view=AuditCohortsListView.as_view(),
-        name="audit_cohorts",
+        "submissions",
+        view=SubmissionsListView.as_view(),
+        name="submissions",
     ),
     # Patient views
     path(

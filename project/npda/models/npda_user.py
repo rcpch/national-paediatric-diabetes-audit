@@ -6,7 +6,6 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.gis.db import models
 from django.db.models.functions import Lower
 from django.contrib.gis.db.models import UniqueConstraint
-from .organisation_employer import OrganisationEmployer
 
 from ...constants import *
 from ..general_functions import *
@@ -29,14 +28,6 @@ class NPDAUserManager(BaseUserManager):
 
         if not email:
             raise ValueError(_("You must provide an email address"))
-
-        # if not extra_fields.get("organisation_employer") and not extra_fields.get(
-        #     "is_rcpch_staff"
-        # ):
-        #     # Non-RCPCH staff (is_rcpch_staff) are not affiliated with a organisation
-        #     raise ValueError(
-        #         _("You must provide the name of your main organisation trust.")
-        #     )
 
         if not role:
             raise ValueError(_("You must provide your role in the NPDA audit."))
@@ -76,7 +67,8 @@ class NPDAUserManager(BaseUserManager):
         """
         Create and save a SuperUser with the given email and password.
         """
-        # Organisation = apps.get_model("npda", "Organisation")
+        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+        OrganisationEmployer = apps.get_model("npda", "OrganisationEmployer")
 
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("is_active", True)
@@ -101,25 +93,33 @@ class NPDAUserManager(BaseUserManager):
             if extra_fields.get("role") == 4:
                 extra_fields.setdefault("is_rcpch_staff", True)
                 extra_fields.setdefault("view_preference", 2)  # national scope
-                organisation_employer, created = (
-                    OrganisationEmployer.objects.get_or_create(
-                        ods_code="8HV48",
-                        name="Royal College of Paediatrics and Child Health",
-                    )
+                logged_in_user = self.create_user(
+                    email.lower(), password, **extra_fields
+                )
+                paediatric_diabetes_unit = PaediatricDiabetesUnit.objects.get(
+                    pz_code="PZ999",  # RCPCH
+                )
+                # if user already has an employer, do not create a new one - update the status to primary
+                OrganisationEmployer.objects.update_or_create(
+                    paediatric_diabetes_unit=paediatric_diabetes_unit,
+                    npda_user=logged_in_user,
+                    defaults={"is_primary_employer": True},
                 )
             else:
                 extra_fields.setdefault("is_rcpch_staff", False)
                 extra_fields.setdefault("view_preference", 2)  # national scope
-                organisation_employer, created = (
-                    OrganisationEmployer.objects.get_or_create(
-                        ods_code="RJZ01",
-                        name="KING'S COLLEGE HOSPITAL (DENMARK HILL)",
-                        pz_code="PZ215",
-                    )
+                logged_in_user = self.create_user(
+                    email.lower(), password, **extra_fields
                 )
-
-        logged_in_user = self.create_user(email.lower(), password, **extra_fields)
-        logged_in_user.organisation_employers.add(organisation_employer)
+                paediatric_diabetes_unit = PaediatricDiabetesUnit.objects.get(
+                    pz_code="PZ215",  # Superusers that are not RCPCH staff are affiliated with King's College Hospital
+                )
+                # if user already has an employer, do not create a new one - update the status to primary
+                OrganisationEmployer.objects.update_or_create(
+                    paediatric_diabetes_unit=paediatric_diabetes_unit,
+                    npda_user=logged_in_user,
+                    defaults={"is_primary_employer": True},
+                )
 
         """
         Allocate Roles
@@ -192,10 +192,10 @@ class NPDAUser(AbstractUser, PermissionsMixin):
     objects = NPDAUserManager()
 
     organisation_employers = models.ManyToManyField(
-        to=OrganisationEmployer,
+        to="npda.PaediatricDiabetesUnit",
         verbose_name=_("Employing organisation"),
         help_text=_("Enter your employing organisation"),
-        related_name="organisation_employers",
+        through="npda.OrganisationEmployer",
     )
 
     def get_full_name(self):

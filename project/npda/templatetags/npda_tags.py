@@ -1,7 +1,6 @@
 import re
-import json
+import itertools
 from django import template, forms
-from django.utils.safestring import mark_safe
 from django.conf import settings
 from ..general_functions import get_visit_category_for_field
 from ...constants import VisitCategories, VISIT_FIELD_FLAT_LIST, VISIT_FIELDS
@@ -123,50 +122,62 @@ def is_textinput(widget):
 def is_checkbox(widget):
     return isinstance(widget, (forms.CheckboxInput))
 
+
 @register.filter
 def is_emailfield(widget):
     return isinstance(widget, (forms.EmailField, forms.EmailInput))
 
 
 @register.filter
-def error_for_field(messages, field):
+def error_for_field(errors_by_field, field):
     """
     Returns all errors for a given field
     """
+    if errors_by_field is None:
+        return ""
+
     concatenated_fields = ""
-    if messages is None:
-        messages = []
+
     if field in VISIT_FIELD_FLAT_LIST:
         return "There are errors associated with one or more of this child's visits."
-    if len(messages) > 0:
-        for message in messages:
-            if field == message["field"]:
-                concatenated_fields += f"{message['message']},\n"
-    return concatenated_fields if len(concatenated_fields) > 0 else []
+
+    errors = errors_by_field[field] if field in errors_by_field else []
+
+    error_messages = [error["message"] for error in errors]
+
+    return "\n".join(error_messages)
 
 
 @register.filter
-def errors_for_category(category, error_list):
+def errors_for_category(selected_category, errors_by_field):
     """
     Returns all error messages for a given category
     """
-    selected_category = None
-    for visit_category in VisitCategories:
-        if visit_category.value == category:
-            selected_category = visit_category
 
-    final_string = ""
-    for error in error_list:
-        if error:
-            error_field_list = []
+    # VISIT_FIELDS: (VisitCategory -> [string])
+    # Get the first or default to the empty list
+    fields_in_category = next(
+        (
+            fields
+            for (category, fields) in VISIT_FIELDS
+            if category.value == selected_category
+        ),
+        [],
+    )
 
-            for visit_field in VISIT_FIELDS:
-                if visit_field[0] == selected_category:
-                    error_field_list = visit_field[1]
-            if len(error_field_list) > 0:
-                if error["field"] in error_field_list:
-                    final_string += f"{error['message']}\n"
-    return final_string
+    # errors_by_field: { [string] -> [{ message: string }]}
+    errors = [
+        errors
+        for (field, errors) in errors_by_field.items()
+        if field in fields_in_category
+    ]
+
+    # flatten
+    errors = itertools.chain(*errors)
+
+    error_messages = [error["message"] for error in errors]
+
+    return "\n".join(error_messages)
 
 
 @register.simple_tag
@@ -180,3 +191,8 @@ def patient_valid(patient):
         return False
     else:
         return True
+
+# Used to keep text highlighted in navbar for the tab that has been selected
+@register.simple_tag
+def active_navbar_tab(request, url_name):
+    return 'text-rcpch_light_blue' if request.resolver_match.url_name == url_name else 'text-gray-700'

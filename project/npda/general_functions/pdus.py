@@ -108,7 +108,6 @@ def get_single_pdu_from_pz_code(pz_number: str) -> Union[PDUWithOrganisations, d
     """
     url = settings.RCPCH_NHS_ORGANISATIONS_API_URL
     request_url = f"{url}/paediatric_diabetes_units/organisations/?pz_code={pz_number}"
-
     try:
         response = requests.get(request_url, timeout=10)  # times out after 10 seconds
         response.raise_for_status()
@@ -126,13 +125,16 @@ def get_single_pdu_from_pz_code(pz_number: str) -> Union[PDUWithOrganisations, d
         logger.error(f"An error occurred: {err}")
 
     # Return an error value in the same format
-    return {"error": f"{pz_number=} not found"}
+    return PDUWithOrganisations(
+        pz_code="error",
+        organisations=[OrganisationODSAndName(ods_code="error", name="PDUs not found")],
+    )
 
 
 # TODO MRB: this should return dataclasses too
 def get_single_pdu_from_ods_code(
     ods_code: str,
-) -> Union[PDUWithOrganisations, Dict[str, str]]:
+) -> PDUWithOrganisations:
     """
     Fetches a specific Paediatric Diabetes Unit (PDU) with its associated organisations from the RCPCH NHS Organisations API using the ODS code.
 
@@ -140,8 +142,7 @@ def get_single_pdu_from_ods_code(
         ods_code (str): The ODS code of the Paediatric Diabetes Unit.
 
     Returns:
-        Union[Dict, Dict[str, str]]: A dictionary with the PDU details if the request is successful,
-                                     or a dictionary indicating an error.
+        list[PDUWithOrganisations]: A list of PDUWithOrganisations objects. Error values if PDUs are not found.
     """
     # Ensure the ODS code is uppercase
     ods_code = ods_code.upper()
@@ -153,11 +154,20 @@ def get_single_pdu_from_ods_code(
         response = requests.get(request_url, timeout=10)  # times out after 10 seconds
         response.raise_for_status()
         data = response.json()[0]
-        return data
+        return PDUWithOrganisations(
+            pz_code=data["pz_code"],
+            organisations=[
+                OrganisationODSAndName(name=org["name"], ods_code=org["ods_code"])
+                for org in data["organisations"]
+            ],
+        )
     except HTTPError as http_err:
         logger.error(f"HTTP error occurred: {http_err.response.text}")
     except Exception as err:
-        logger.error(f"An error occurred: {err}")
+        logger.error(f"An error occurred: {err}\n{ods_code=}{response.json()=}")
 
     # Return an error value in the same format
-    return {"error": f"ODS code {ods_code} not found"}
+    return PDUWithOrganisations(
+        pz_code="error",
+        organisations=[OrganisationODSAndName(ods_code="error", name="PDUs not found")],
+    )

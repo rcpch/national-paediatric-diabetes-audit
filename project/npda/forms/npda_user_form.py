@@ -2,6 +2,7 @@
 import logging
 
 # django imports
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.forms import SetPasswordForm, AuthenticationForm
 from django import forms
@@ -15,7 +16,7 @@ from project.npda.general_functions import organisations_adapter
 
 # RCPCH imports
 from ...constants.styles.form_styles import *
-from ..models import NPDAUser, OrganisationEmployer
+from ..models import NPDAUser
 from project.npda.general_functions import (
     organisations_adapter,
 )
@@ -27,10 +28,9 @@ logger = logging.getLogger(__name__)
 
 class NPDAUserForm(forms.ModelForm):
 
-    use_required_attribute = False
     add_employer = forms.ChoiceField(
         choices=[],  # Initially empty, will be populated dynamically
-        required=True,
+        required=False,
         widget=forms.Select(attrs={"class": SELECT}),
         label="Add Employer",
     )
@@ -47,6 +47,7 @@ class NPDAUserForm(forms.ModelForm):
             "is_rcpch_audit_team_member",
             "is_rcpch_staff",
             "role",
+            "add_employer",
         ]
         widgets = {
             "title": forms.Select(attrs={"class": SELECT}),
@@ -60,35 +61,38 @@ class NPDAUserForm(forms.ModelForm):
             ),
             "is_rcpch_staff": forms.CheckboxInput(attrs={"class": "accent-rcpch_pink"}),
             "role": forms.Select(attrs={"class": SELECT}),
+            "add_employer": forms.Select(
+                attrs={
+                    "class": SELECT,
+                    "required": False,
+                    "name": "add_employer",
+                    "id": "id_add_employer",
+                }
+            ),
         }
 
     def __init__(self, *args, **kwargs) -> None:
-
         # get the request object from the kwargs
         self.request = kwargs.pop("request", None)
-
+        employer_choices = kwargs.pop("employer_choices", [])
         super().__init__(*args, **kwargs)
         self.fields["title"].required = False
         self.fields["first_name"].required = True
         self.fields["surname"].required = True
         self.fields["email"].required = True
         self.fields["role"].required = True
-        self.fields["add_employer"].required = True
+        self.fields["add_employer"].required = False
+        self.fields["add_employer"].choices = employer_choices
+        self.employer_choices = employer_choices
 
-        if self.request:
-            if (
-                self.request.user.is_superuser
-                or self.request.user.is_rcpch_audit_team_member
-                or self.request.user.is_rcpch_staff
-            ):
-                self.fields["add_employer"].choices = organisations_adapter.get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit()
-            else:
-                pz_code = self.request.session.get('pz_code')
-                sibling_organisations = organisations_adapter.get_single_pdu_from_pz_code(pz_number=pz_code).organisations
-                self.fields["add_employer"].choices = [(org.ods_code, org.name) for org in sibling_organisations]
-
-            # set the default value to the current user's organisation
-            self.fields["add_employer"].initial = self.request.session.get("ods_code")
+        # only if the form is bound - this user is being updated
+        if self.instance.pk is not None:
+            # this is a bit of a hack but necessary due to htmx.
+            # The add_employer field is not part of the model, so we need to remove it from the data dictionary
+            # in a bound form on form submission, so that the form will validate correctly
+            # the add employer work flow happens via htmx and not form submission
+            self.data = self.data.copy()
+            self.data.pop("add_employer", None)
 
 
 class NPDAUpdatePasswordForm(SetPasswordForm):
