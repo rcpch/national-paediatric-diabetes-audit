@@ -14,73 +14,73 @@ from django.db.models import QuerySet
 from project.npda.models import Site, Patient, Visit, AuditCohort
 from project.npda.views.mixins import CheckPDUListMixin, LoginAndOTPRequiredMixin
 from project.npda.general_functions import get_audit_period_for_date
-from project.npda.general_functions.kpis import kpi_1_total_eligible
-from project.npda.general_functions.kpis import kpi_2_total_new_diagnoses
-from project.npda.general_functions.kpis import kpi_3_total_t1dm
-from project.npda.general_functions.kpis import kpi_4_total_t1dm_gte_12yo
-from project.npda.general_functions.kpis import kpi_5_total_t1dm_complete_year
-from project.npda.general_functions.kpis import kpi_6_total_t1dm_complete_year_gte_12yo
-from project.npda.general_functions.kpis import kpi_7_total_new_diagnoses_t1dm
-from project.npda.general_functions.kpis import kpi_8_total_deaths
-from project.npda.general_functions.kpis import kpi_9_total_service_transitions
-from project.npda.general_functions.kpis import kpi_10_total_coeliacs
-from project.npda.general_functions.kpis import kpi_11_total_thyroids
-from project.npda.general_functions.kpis import kpi_12_total_ketone_test_equipment
-from project.npda.general_functions.kpis import kpi_13_one_to_three_injections_per_day
-from project.npda.general_functions.kpis import kpi_14_four_or_more_injections_per_day
-from project.npda.general_functions.kpis import kpi_15_insulin_pump
-from project.npda.general_functions.kpis import (
+from project.npda.general_functions.kpis_calculations import kpi_1_total_eligible
+from project.npda.general_functions.kpis_calculations import kpi_2_total_new_diagnoses
+from project.npda.general_functions.kpis_calculations import kpi_3_total_t1dm
+from project.npda.general_functions.kpis_calculations import kpi_4_total_t1dm_gte_12yo
+from project.npda.general_functions.kpis_calculations import kpi_5_total_t1dm_complete_year
+from project.npda.general_functions.kpis_calculations import kpi_6_total_t1dm_complete_year_gte_12yo
+from project.npda.general_functions.kpis_calculations import kpi_7_total_new_diagnoses_t1dm
+from project.npda.general_functions.kpis_calculations import kpi_8_total_deaths
+from project.npda.general_functions.kpis_calculations import kpi_9_total_service_transitions
+from project.npda.general_functions.kpis_calculations import kpi_10_total_coeliacs
+from project.npda.general_functions.kpis_calculations import kpi_11_total_thyroids
+from project.npda.general_functions.kpis_calculations import kpi_12_total_ketone_test_equipment
+from project.npda.general_functions.kpis_calculations import kpi_13_one_to_three_injections_per_day
+from project.npda.general_functions.kpis_calculations import kpi_14_four_or_more_injections_per_day
+from project.npda.general_functions.kpis_calculations import kpi_15_insulin_pump
+from project.npda.general_functions.kpis_calculations import (
     kpi_16_one_to_three_injections_plus_other_medication,
 )
-from project.npda.general_functions.kpis import (
+from project.npda.general_functions.kpis_calculations import (
     kpi_17_four_or_more_injections_plus_other_medication,
 )
-from project.npda.general_functions.kpis import (
+from project.npda.general_functions.kpis_calculations import (
     kpi_18_insulin_pump_plus_other_medication,
 )
-from project.npda.general_functions.kpis import kpi_19_dietary_management_alone
-from project.npda.general_functions.kpis import (
+from project.npda.general_functions.kpis_calculations import kpi_19_dietary_management_alone
+from project.npda.general_functions.kpis_calculations import (
     kpi_20_dietary_management_plus_other_medication,
 )
-from project.npda.general_functions.kpis import kpi_21_flash_glucose_monitor
-from project.npda.general_functions.kpis import kpi_22_real_time_cgm_with_alarms
-from project.npda.general_functions.kpis import kpi_23_type1_real_time_cgm_with_alarms
-from project.npda.general_functions.kpis import kpi_24_hybrid_closed_loop_system
-from project.npda.general_functions.kpis import kpi_25_hba1c
-from project.npda.general_functions.kpis import kpi_26_bmi
-from project.npda.general_functions.kpis import kpi_27_thyroid_screen
-from project.npda.general_functions.kpis import kpi_28_blood_pressure
-from project.npda.general_functions.kpis import kpi_29_urinary_albumin
-from project.npda.general_functions.kpis import kpi_30_retinal_screening
-from project.npda.general_functions.kpis import kpi_31_foot_examination
-from project.npda.general_functions.kpis import kpi_32_health_check_completion_rate
-from project.npda.general_functions.kpis import kpi_33_hba1c_4plus
-from project.npda.general_functions.kpis import kpi_34_psychological_assessment
-from project.npda.general_functions.kpis import kpi_35_smoking_status_screened
-from project.npda.general_functions.kpis import (
+from project.npda.general_functions.kpis_calculations import kpi_21_flash_glucose_monitor
+from project.npda.general_functions.kpis_calculations import kpi_22_real_time_cgm_with_alarms
+from project.npda.general_functions.kpis_calculations import kpi_23_type1_real_time_cgm_with_alarms
+from project.npda.general_functions.kpis_calculations import kpi_24_hybrid_closed_loop_system
+from project.npda.general_functions.kpis_calculations import kpi_25_hba1c
+from project.npda.general_functions.kpis_calculations import kpi_26_bmi
+from project.npda.general_functions.kpis_calculations import kpi_27_thyroid_screen
+from project.npda.general_functions.kpis_calculations import kpi_28_blood_pressure
+from project.npda.general_functions.kpis_calculations import kpi_29_urinary_albumin
+from project.npda.general_functions.kpis_calculations import kpi_30_retinal_screening
+from project.npda.general_functions.kpis_calculations import kpi_31_foot_examination
+from project.npda.general_functions.kpis_calculations import kpi_32_health_check_completion_rate
+from project.npda.general_functions.kpis_calculations import kpi_33_hba1c_4plus
+from project.npda.general_functions.kpis_calculations import kpi_34_psychological_assessment
+from project.npda.general_functions.kpis_calculations import kpi_35_smoking_status_screened
+from project.npda.general_functions.kpis_calculations import (
     kpi_36_referral_to_smoking_cessation_service,
 )
-from project.npda.general_functions.kpis import (
+from project.npda.general_functions.kpis_calculations import (
     kpi_37_additional_dietetic_appointment_offered,
 )
-from project.npda.general_functions.kpis import (
+from project.npda.general_functions.kpis_calculations import (
     kpi_38_patients_attending_additional_dietetic_appointment,
 )
-from project.npda.general_functions.kpis import (
+from project.npda.general_functions.kpis_calculations import (
     kpi_39_influenza_immunisation_recommended,
 )
-from project.npda.general_functions.kpis import kpi_40_sick_day_rules_advice
-from project.npda.general_functions.kpis import kpi_41_coeliac_disease_screening
-from project.npda.general_functions.kpis import kpi_42_thyroid_disease_screening
-from project.npda.general_functions.kpis import kpi_43_carbohydrate_counting_education
-from project.npda.general_functions.kpis import kpi_44_mean_hba1c
-from project.npda.general_functions.kpis import kpi_45_median_hba1c
-from project.npda.general_functions.kpis import kpi_46_number_of_admissions
-from project.npda.general_functions.kpis import kpi_47_number_of_dka_admissions
-from project.npda.general_functions.kpis import (
+from project.npda.general_functions.kpis_calculations import kpi_40_sick_day_rules_advice
+from project.npda.general_functions.kpis_calculations import kpi_41_coeliac_disease_screening
+from project.npda.general_functions.kpis_calculations import kpi_42_thyroid_disease_screening
+from project.npda.general_functions.kpis_calculations import kpi_43_carbohydrate_counting_education
+from project.npda.general_functions.kpis_calculations import kpi_44_mean_hba1c
+from project.npda.general_functions.kpis_calculations import kpi_45_median_hba1c
+from project.npda.general_functions.kpis_calculations import kpi_46_number_of_admissions
+from project.npda.general_functions.kpis_calculations import kpi_47_number_of_dka_admissions
+from project.npda.general_functions.kpis_calculations import (
     kpi_48_required_additional_psychological_support,
 )
-from project.npda.general_functions.kpis import kpi_49_albuminuria_present
+from project.npda.general_functions.kpis_calculations import kpi_49_albuminuria_present
 
 
 class CalculateKPIS:
