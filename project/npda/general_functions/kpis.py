@@ -2,6 +2,7 @@
 
 # Python imports
 from datetime import date
+import logging
 
 # Django imports
 from django.views.generic import TemplateView
@@ -77,7 +78,11 @@ from project.npda.general_functions.kpis_calculations import (
     kpi_48_required_additional_psychological_support,
 )
 from project.npda.general_functions.kpis_calculations import kpi_49_albuminuria_present
+from project.npda.models.transfer import Transfer
 
+
+# Logging
+logger = logging.getLogger(__name__)
 
 class CalculateKPIS:
 
@@ -100,9 +105,11 @@ class CalculateKPIS:
         self.kpis_names_map = self._get_kpi_attribute_names()
 
         # Sets relevant patients for this PZ code
-        self.patients = Patient.objects.filter(
-            site__paediatric_diabetes_unit_pz_code=pz_code
+        self.patients = Transfer.objects.filter(
+            paediatric_diabetes_unit__pz_code=pz_code
         )
+        
+        logger.debug(f'Patients: {self.patients}')
 
     def _get_audit_start_and_end_dates(self) -> tuple[date, date]:
         return get_audit_period_for_date(input_date=self.calculation_date)
@@ -724,7 +731,7 @@ class KPIAggregationForPDU(TemplateView):
 
         pz_code = kwargs.get("pz_code", None)
 
-        aggregated_data = CalculateKPIS(pz_code=pz_code).calculate_kpis_for_patients()
+        aggregated_data = CalculateKPIS(pz_code=pz_code)
 
         # Collate aggregated data
         return JsonResponse(aggregated_data, safe=False)
