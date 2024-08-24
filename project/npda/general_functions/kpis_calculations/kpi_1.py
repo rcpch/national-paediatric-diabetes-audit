@@ -1,7 +1,14 @@
+from datetime import date
+
 from django.db.models import Q
+from django.db.models import QuerySet
+
+from project.npda.models import Patient
 
 
-def kpi_1_total_eligible(patients, audit_start_date, audit_end_date) -> dict:
+def kpi_1_total_eligible(
+    patients: QuerySet[Patient], audit_start_date: date, audit_end_date: date
+) -> int:
     """Calculates KPI 1: Total number of eligible patients
     Total number of patients with:
         * a valid NHS number
@@ -15,9 +22,6 @@ def kpi_1_total_eligible(patients, audit_start_date, audit_end_date) -> dict:
         # Valid attributes
         Q(nhs_number__isnull=False)
         & Q(date_of_birth__isnull=False)
-        # NOTE: should be already filtered out when setting
-        # patients in init method, but adding for clarity
-        & Q(site__paediatric_diabetes_unit__pz_code__isnull=False)
         # Visit / admisison date within audit period
         & Q(visit__visit_date__range=(audit_start_date, audit_end_date))
         # Below the age of 25 at the start of the audit period
