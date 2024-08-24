@@ -6,13 +6,9 @@ from datetime import date
 # Django imports
 from django.views.generic import TemplateView
 from django.http import JsonResponse
-from django.db.models import Count, Q, Subquery
-from django.contrib.auth.mixins import PermissionRequiredMixin
-from django.db.models import QuerySet
 
 # NPDA Imports
-from project.npda.models import Site, Patient, Visit, AuditCohort
-from project.npda.views.mixins import CheckPDUListMixin, LoginAndOTPRequiredMixin
+from project.npda.models import Patient
 from project.npda.general_functions import get_audit_period_for_date
 from project.npda.general_functions.kpis_calculations import kpi_1_total_eligible
 from project.npda.general_functions.kpis_calculations import kpi_2_total_new_diagnoses
