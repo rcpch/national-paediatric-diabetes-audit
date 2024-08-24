@@ -7,11 +7,11 @@ import logging
 # Django imports
 from django.views.generic import TemplateView
 from django.http import JsonResponse
+from django.db.models import Q
 
 # NPDA Imports
 from project.npda.models import Patient
 from project.npda.general_functions import get_audit_period_for_date
-from project.npda.general_functions.kpis_calculations import kpi_1_total_eligible
 from project.npda.general_functions.kpis_calculations import kpi_2_total_new_diagnoses
 from project.npda.general_functions.kpis_calculations import kpi_3_total_t1dm
 from project.npda.general_functions.kpis_calculations import kpi_4_total_t1dm_gte_12yo
@@ -148,8 +148,8 @@ class CalculateKPIS:
         self.kpis_names_map = self._get_kpi_attribute_names()
 
         # Sets relevant patients for this PZ code
-        # NOTE: the first `paediatric_diabetes_units` uses the `related_name` from the 
-        # `Transfer` link table, the second `paediatric_diabetes_unit` actually 
+        # NOTE: the first `paediatric_diabetes_units` uses the `related_name` from the
+        # `Transfer` link table, the second `paediatric_diabetes_unit` actually
         # accesses the `PaediatricDiabetesUnit` model.
         # TODO: should this filter out patients who have left the service?
         self.patients = Patient.objects.filter(
@@ -284,11 +284,21 @@ class CalculateKPIS:
         Calculates KPI 1: Total number of eligible patients
         """
 
-        return kpi_1_total_eligible(
-            patients=self.patients,
-            audit_start_date=self.audit_start_date,
-            audit_end_date=self.audit_end_date,
-        )
+        eligible_patients = self.patients.filter(
+            # Valid attributes
+            Q(nhs_number__isnull=False)
+            & Q(date_of_birth__isnull=False)
+            # Visit / admisison date within audit period
+            & Q(visit__visit_date__range=(self.audit_start_date, self.audit_end_date))
+            # Below the age of 25 at the start of the audit period
+            & Q(
+                date_of_birth__gt=self.audit_start_date.replace(
+                    year=self.audit_start_date.year - 25
+                )
+            )
+        ).distinct()
+
+        return eligible_patients.count()
 
     def calculate_kpi_numerator_2(self) -> dict:
         """
