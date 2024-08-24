@@ -1,4 +1,18 @@
-"""Tests for NPDAUser model actions."""
+"""
+Tests for NPDAUser model actions.
+
+- NPDAUser can be created if a valid email, role and PDU are provided.
+- NPDAUser cannot be created if an invalid email is provided.
+- NPDAUser cannot be created if an invalid role is provided (incorrect key).
+- NPDAUser cannot be created if an invalid PDU is provided.
+- NPDAUser can be updated if a valid email, role and PDU are provided.
+- NPDAUser cannot be updated if an invalid email is provided.
+- NPDAUser cannot be updated if an invalid role is provided (incorrect key).
+- NPDAUser cannot be updated if an invalid PDU is provided.
+- NPDAUser cannot be deleted.
+- NPDAUser can be deactivated.
+- NPDAUser can be reactivated.
+"""
 
 # Python imports
 import pytest

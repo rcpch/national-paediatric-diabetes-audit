@@ -11,7 +11,7 @@ import nhs_number
 
 # rcpch imports
 from project.npda.models import Patient
-from .TransferFactory import TransferFactory
+from .transfer_factory import TransferFactory
 from project.constants import (
     ETHNICITIES,
     DIABETES_TYPES,

@@ -510,7 +510,7 @@ class Visit(models.Model, HelpTextMixin):
     hospital_admission_other = CategorisedCharField(
         verbose_name="Only complete if OTHER selected: Reason for admission (free text)",
         help_text={
-            "label": "Mandatory only if ‘DKA’ selected as Reason for admission.",
+            "label": "Mandatory only if ‘Other causes' selected as Reason for admission.",
             "reference": "",
         },
         max_length=500,
