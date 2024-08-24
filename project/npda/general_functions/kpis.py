@@ -282,6 +282,12 @@ class CalculateKPIS:
     def calculate_kpi_1_total_eligible(self) -> dict:
         """
         Calculates KPI 1: Total number of eligible patients
+        Total number of patients with:
+            * a valid NHS number
+            *a valid date of birth
+            *a valid PDU number
+            * a visit date or admission date within the audit period
+            * Below the age of 25 at the start of the audit period
         """
 
         eligible_patients = self.patients.filter(
@@ -300,15 +306,36 @@ class CalculateKPIS:
 
         return eligible_patients.count()
 
-    def calculate_kpi_numerator_2(self) -> dict:
+    def calculate_kpi_2_total_new_diagnoses(self) -> dict:
         """
-        Calculates KPI 2: Total number of new diagnoses
+        Calculates KPI 2: Total number of new diagnoses within the audit period
+
+        "Total number of patients with:
+        * a valid NHS number
+        *a valid date of birth
+        *a valid PDU number
+        * a visit date or admission date within the audit period
+        * Below the age of 25 at the start of the audit period
+        * Date of diagnosis within the audit period"
         """
-        return kpi_2_total_new_diagnoses(
-            patients=self.patients,
-            audit_start_date=self.audit_start_date,
-            audit_end_date=self.audit_end_date,
-        )
+        
+        # This is same as KPI1 but with an additional filter for diagnosis date
+        eligible_patients = self.patients.filter(
+            # Valid attributes
+            Q(nhs_number__isnull=False)
+            & Q(date_of_birth__isnull=False)
+            # Visit / admisison date within audit period
+            & Q(visit__visit_date__range=(self.audit_start_date, self.audit_end_date))
+            # Below the age of 25 at the start of the audit period
+            & Q(
+                date_of_birth__gt=self.audit_start_date.replace(
+                    year=self.audit_start_date.year - 25
+                )
+            )
+            & Q(diagnosis_date__range=(self.audit_start_date, self.audit_end_date))
+        ).distinct()
+
+        return eligible_patients.count()
 
     def calculate_kpi_numerator_3(self) -> dict:
         """
