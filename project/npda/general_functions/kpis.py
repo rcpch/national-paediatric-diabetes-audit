@@ -107,7 +107,7 @@ class CalculateKPIS:
         # Sets relevant patients for this PZ code
         self.patients = Transfer.objects.filter(
             paediatric_diabetes_unit__pz_code=pz_code
-        )
+        ).select_related('patient').values('patient')
         
         logger.debug(f'Patients: {self.patients}')
 
