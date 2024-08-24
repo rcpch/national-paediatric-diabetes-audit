@@ -85,7 +85,7 @@ from project.npda.general_functions.kpis import kpi_49_albuminuria_present
 
 class CalculateKPIS:
 
-    def __init__(self, pz_code: str, calculation_date: date = date.today()):
+    def __init__(self, pz_code: str, calculation_date: date = None):
         """Calculates KPIs for given pz_code
 
         Params:
@@ -94,7 +94,7 @@ class CalculateKPIS:
         """
         # Set various attributes used in calculations
         self.pz_code = pz_code
-        self.calculation_date = calculation_date
+        self.calculation_date = calculation_date if calculation_date is not None else date.today()
         # Set the start and end audit dates
         self.audit_start_date, self.audit_end_date = (
             self._get_audit_start_and_end_dates()
