@@ -135,6 +135,8 @@ class CalculateKPIS:
             * pz_code (str) - PZ code for KPIS
             * calculation_date (date) - used to define start and end date of audit period
         """
+        if not pz_code:
+            raise AttributeError('pz_code must be provided')
         # Set various attributes used in calculations
         self.pz_code = pz_code
         self.calculation_date = (
@@ -276,17 +278,13 @@ class CalculateKPIS:
 
         return return_obj
 
-    """
-    These next methods 1-49 calculate the numerators for each KPI
-    """
-
     def calculate_kpi_1_total_eligible(self) -> dict:
         """
         Calculates KPI 1: Total number of eligible patients
         Total number of patients with:
             * a valid NHS number
-            *a valid date of birth
-            *a valid PDU number
+            * a valid date of birth
+            * a valid PDU number
             * a visit date or admission date within the audit period
             * Below the age of 25 at the start of the audit period
         """
