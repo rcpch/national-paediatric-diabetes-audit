@@ -10,6 +10,7 @@ from django.http import JsonResponse
 from django.db.models import Q
 
 # NPDA Imports
+from project.constants.diabetes_types import DIABETES_TYPES
 from project.npda.models import Patient
 from project.npda.general_functions import get_audit_period_for_date
 from project.npda.general_functions.kpis_calculations import kpi_2_total_new_diagnoses
@@ -252,7 +253,7 @@ class CalculateKPIS:
         calculated_kpis = {}
 
         # Calculate KPIs 1 - 12, used as denominators for subsequent KPIs
-        for i in range(1, 2):
+        for i in range(1, 4):
             kpi_method_name = self.kpis_names_map[i]
             kpi_method = getattr(self, f"calculate_{kpi_method_name}")
             calculated_kpis[kpi_method_name] = kpi_method()
@@ -318,10 +319,9 @@ class CalculateKPIS:
         * Below the age of 25 at the start of the audit period
         * Date of diagnosis within the audit period"
         """
-        
+
         # This is same as KPI1 but with an additional filter for diagnosis date
         eligible_patients = self.patients.filter(
-            # Valid attributes
             Q(nhs_number__isnull=False)
             & Q(date_of_birth__isnull=False)
             # Visit / admisison date within audit period
@@ -337,15 +337,35 @@ class CalculateKPIS:
 
         return eligible_patients.count()
 
-    def calculate_kpi_numerator_3(self) -> dict:
+    def calculate_kpi_3_total_t1dm(self) -> dict:
         """
-        Calculates KPI 3: Total number of patients with T1DM
+        Calculates KPI 3: Total number of eligible patients with Type 1 diabetes
+        Total number of patients with:
+            * a valid NHS number
+            *a valid date of birth
+            *a valid PDU number
+            * a visit date or admission date within the audit period
+            * Below the age of 25 at the start of the audit period
+            * Diagnosis of Type 1 diabetes"
+
+        (1, Type 1 Insulin-Dependent Diabetes Mellitus)
         """
-        return kpi_3_total_t1dm(
-            patients=self.patients,
-            audit_start_date=self.audit_start_date,
-            audit_end_date=self.audit_end_date,
-        )
+        eligible_patients = self.patients.filter(
+            Q(nhs_number__isnull=False)
+            & Q(date_of_birth__isnull=False)
+            # Visit / admisison date within audit period
+            & Q(visit__visit_date__range=(self.audit_start_date, self.audit_end_date))
+            # Below the age of 25 at the start of the audit period
+            & Q(
+                date_of_birth__gt=self.audit_start_date.replace(
+                    year=self.audit_start_date.year - 25
+                )
+            )
+            # is type 1 diabetes
+            & Q(diabetes_type=DIABETES_TYPES[0][0])
+        ).distinct()
+
+        return eligible_patients.count()
 
     def calculate_kpi_numerator_4(self) -> dict:
         """
