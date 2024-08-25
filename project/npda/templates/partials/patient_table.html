@@ -4,32 +4,90 @@
 <table class="table table-md w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
     <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">
             <tr>
-                <th 
-                    scope="col" class="px-2 py-3 text-center cursor-pointer"
-                    hx-get="{% url 'patients' %}?sort_by=pk"
-                    hx-trigger="click"
-                    hx-target="#patient_table"
-                    hx-swap="innerHTML"
-                    class="stroke-rcpch_pink"
-                    >
+                <th scope="col" class="px-2 py-3 text-center cursor-pointer">
                         <span class="flex flex-row">
-                            NPDA ID
-                            <?xml version="1.0" ?><svg height="14px" class="fill-none" id="icon" style="enable-background:new 0 0 32 32;" version="1.1" viewBox="0 0 32 32" width="32px" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                            <?xml version="1.0" ?>
+                            <svg 
+                                height="14px" 
+                                class="fill-none" 
+                                id="icon" 
+                                style="enable-background:new 0 0 32 32;" 
+                                version="1.1" viewBox="0 0 32 32" 
+                                width="32px"
+                                xml:space="preserve" 
+                                xmlns="http://www.w3.org/2000/svg" 
+                                xmlns:xlink="http://www.w3.org/1999/xlink"
+                                hx-get="{% url 'patients' %}?sort_by=pk&page={{current_page}}&sort=asc"
+                                hx-trigger="click"
+                                hx-target="#patient_table"
+                                hx-swap="innerHTML"
+                            >
                                 <polygon class="fill-rcpch_pink" points="24,24 16,32 8,24 "/>
-                                <polygon class="fill-rcpch_pink" points="8,8 16,0 24,8 "/><rect class="st0" height="32" id="_Transparent_Rectangle_" width="32"/></svg>
+                                <polygon class="fill-rcpch_pink" points="8,8 16,0 24,8 "/><rect class="st0" height="32" id="_Transparent_Rectangle_" width="32"/>
+                            </svg>
+                            NPDA ID
+                            <?xml version="1.0" ?>
+                            <svg 
+                                height="14px" 
+                                class="fill-none" 
+                                id="icon" 
+                                style="enable-background:new 0 0 32 32;" 
+                                version="1.1" viewBox="0 0 32 32" 
+                                width="32px"
+                                xml:space="preserve" 
+                                xmlns="http://www.w3.org/2000/svg" 
+                                xmlns:xlink="http://www.w3.org/1999/xlink"
+                                hx-get="{% url 'patients' %}?sort_by=pk&page={{current_page}}&sort=desc"
+                                hx-trigger="click"
+                                hx-target="#patient_table"
+                                hx-swap="innerHTML"
+                            >
+                                <polygon class="fill-rcpch_pink" points="24,24 16,32 8,24 "/>
+                                <polygon class="fill-rcpch_pink" points="8,8 16,0 24,8 "/><rect class="st0" height="32" id="_Transparent_Rectangle_" width="32"/>
+                            </svg>
                         </span>
                 </th>
-                <th 
-                    scope="col" class="px-2 py-3 text-center cursor-pointer"
-                    hx-get="{% url 'patients' %}?sort_by=nhs_number"
-                    hx-trigger="click"
-                    hx-target="#patient_table"
-                    hx-swap="innerHTML">
+                <th scope="col" class="px-2 py-3 text-center cursor-pointer">
                         <span class="flex flex-row">
-                            NHS Number
-                            <?xml version="1.0" ?><svg height="14px" class="fill-none" id="icon" style="enable-background:new 0 0 32 32;" version="1.1" viewBox="0 0 32 32" width="32px" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                            <?xml version="1.0" ?>
+                            <svg 
+                                height="14px" 
+                                class="fill-none" 
+                                id="icon" 
+                                style="enable-background:new 0 0 32 32;" 
+                                version="1.1" viewBox="0 0 32 32" 
+                                width="32px"
+                                xml:space="preserve" 
+                                xmlns="http://www.w3.org/2000/svg" 
+                                xmlns:xlink="http://www.w3.org/1999/xlink"
+                                hx-get="{% url 'patients' %}?sort_by=nhs_number&page={{current_page}}&sort=asc"
+                                hx-trigger="click"
+                                hx-target="#patient_table"
+                                hx-swap="innerHTML"
+                            >
                                 <polygon class="fill-rcpch_pink" points="24,24 16,32 8,24 "/>
-                                <polygon class="fill-rcpch_pink" points="8,8 16,0 24,8 "/><rect class="st0" height="32" id="_Transparent_Rectangle_" width="32"/></svg>
+                                <polygon class="fill-rcpch_pink" points="8,8 16,0 24,8 "/><rect class="st0" height="32" id="_Transparent_Rectangle_" width="32"/>
+                            </svg>
+                            NHS Number
+                            <?xml version="1.0" ?>
+                            <svg 
+                                height="14px" 
+                                class="fill-none" 
+                                id="icon" 
+                                style="enable-background:new 0 0 32 32;" 
+                                version="1.1" viewBox="0 0 32 32" 
+                                width="32px"
+                                xml:space="preserve" 
+                                xmlns="http://www.w3.org/2000/svg" 
+                                xmlns:xlink="http://www.w3.org/1999/xlink"
+                                hx-get="{% url 'patients' %}?sort_by=nhs_number&page={{current_page}}&sort=desc"
+                                hx-trigger="click"
+                                hx-target="#patient_table"
+                                hx-swap="innerHTML"
+                            >
+                                <polygon class="fill-rcpch_pink" points="24,24 16,32 8,24 "/>
+                                <polygon class="fill-rcpch_pink" points="8,8 16,0 24,8 "/><rect class="st0" height="32" id="_Transparent_Rectangle_" width="32"/>
+                            </svg>
                         </span>
                 </th>
                 <th scope="col" class="px-2 py-3 text-center">Sex</th>
@@ -149,19 +207,17 @@
                         class="text-rcpch_red hover:text-white flex justify-end"
                         {% endif %}
                         >
-                        <!-- <span class='tooltip '></span>  -->
                             {% if not patient.is_valid or patient.visit_error_count > 0 %}
-                            <strong class="text-rcpch_red hover:text-white px-2 self-center">Visits ({{patient.visit_set.all.count}})</strong>
-                            <!-- info icon -->
-                            <svg 
-                                class="self-center hover:text-white text-rcpch_red" 
-                                height="16" style="overflow:visible;enable-background:new 0 0 32 32" 
-                                viewBox="0 0 32 32" width="16" 
-                                xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-                                <g><g id="Error_1_"><g id="Error">
-                                <circle cx="16" cy="16" id="BG" r="16" fill="currentColor"/>
-                                <path d="M14.5,25h3v-3h-3V25z M14.5,6v13h3V6H14.5z" id="Exclamatory_x5F_Sign" style="fill:#E6E6E6;"/>
-                                </g></g></g>
+                                <strong class="text-rcpch_red hover:text-white px-2 self-center">Visits ({{patient.visit_set.all.count}})</strong>
+                                <svg 
+                                    class="self-center hover:text-white text-rcpch_red" 
+                                    height="16" style="overflow:visible;enable-background:new 0 0 32 32" 
+                                    viewBox="0 0 32 32" width="16" 
+                                    xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                    <g><g id="Error_1_"><g id="Error">
+                                    <circle cx="16" cy="16" id="BG" r="16" fill="currentColor"/>
+                                    <path d="M14.5,25h3v-3h-3V25z M14.5,6v13h3V6H14.5z" id="Exclamatory_x5F_Sign" style="fill:#E6E6E6;"/>
+                                    </g></g></g>
                                 </svg>
                             <div class="tooltip-content hidden group-hover:block absolute rounded shadow-lg px-2 py-2 bg-gray-800 text-white -mt-20 text-left hover:text-white font-montserrat">
                                 {{patient.visit_error_count}} visit{{patient.visit_error_count|pluralize}} {{patient.visit_error_count|pluralize:'has, have'}} errors that need addressing.<br>Items have been saved but will not be included until rectified.
