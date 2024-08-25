@@ -61,6 +61,12 @@ class PatientListView(
         # apply filters and annotations to the queryset
         pz_code = self.request.session.get("pz_code")
         filtered_patients = Q(submissions__submission_active=True)
+        # filter by contents of the search bar
+        search = self.request.GET.get("search-input")
+        if search:
+            filtered_patients &= Q(
+                Q(nhs_number__icontains=search) | Q(pk__icontains=search)
+            )
         # filter patients to the view preference of the user
         if self.request.user.view_preference == 1:
             # PDU view
