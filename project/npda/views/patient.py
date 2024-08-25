@@ -48,27 +48,23 @@ class PatientListView(
         Order by valid patients first, then by number of errors in visits, then by primary key
         Scope to patient only in the same organisation as the user and current audit year
         """
+        patient_queryset = super().get_queryset()
+        sort_by = self.request.GET.get("sort_by", "pk")  # Default sort by npda_id
+        if sort_by in ["pk", "nhs_number"]:
+            patient_queryset = patient_queryset.order_by(sort_by)
+
+        # apply filters and annotations to the queryset
         pz_code = self.request.session.get("pz_code")
         filtered_patients = None
+        patient_queryset = Patient.objects.filter(
+            submissions__submission_active=True,
+        )
         # filter patients to the view preference of the user
-        if self.request.user.view_preference == 0:
-            # organisation view
-            # this has been deprecated
-            pass
-        elif self.request.user.view_preference == 1:
+        if self.request.user.view_preference == 1:
             # PDU view
             filtered_patients = Q(
                 submissions__paediatric_diabetes_unit__pz_code=pz_code,
             )
-        elif self.request.user.view_preference == 2:
-            # National view - no filter
-            pass
-        else:
-            raise ValueError("Invalid view preference")
-
-        patient_queryset = Patient.objects.filter(
-            submissions__submission_active=True,
-        )
         if filtered_patients is not None:
             patient_queryset = patient_queryset.filter(filtered_patients)
 
@@ -122,6 +118,9 @@ class PatientListView(
             )
         )
         context["chosen_pdu"] = self.request.session.get("pz_code")
+        # Add current page and sorting parameters to the context
+        context["current_page"] = self.request.GET.get("page", 1)
+        context["sort_by"] = self.request.GET.get("sort_by", "pk")
         return context
 
     def get(self, request, *args: str, **kwargs) -> HttpResponse:
@@ -130,14 +129,7 @@ class PatientListView(
             # filter the patients to only those in the same organisation as the user
             # trigger a GET request from the patient table to update the list of patients
             # by calling the get_queryset method again with the new ods_code/pz_code stored in session
-            sort_by = request.GET.get("sort_by")
             queryset = self.get_queryset()
-            if sort_by == "npda_id":
-                # sort by patient id
-                queryset = queryset.order_by("pk")
-            elif sort_by == "nhs_number":
-                # sort by NHS number
-                queryset = queryset.order_by("nhs_number")
             context = self.get_context_data()
             context["patient_list"] = queryset
 

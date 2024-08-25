@@ -6,7 +6,7 @@
             <tr>
                 <th 
                     scope="col" class="px-2 py-3 text-center cursor-pointer"
-                    hx-get="{% url 'patients' %}?sort_by=npda_id"
+                    hx-get="{% url 'patients' %}?sort_by=pk"
                     hx-trigger="click"
                     hx-target="#patient_table"
                     hx-swap="innerHTML"
