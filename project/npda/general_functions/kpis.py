@@ -266,7 +266,7 @@ class CalculateKPIS:
         calculated_kpis = {}
 
         # Calculate KPIs 1 - 12, used as denominators for subsequent KPIs
-        for i in range(1, 6):
+        for i in range(1, 7):
             kpi_method_name = self.kpis_names_map[i]
             kpi_method = getattr(self, f"calculate_{kpi_method_name}")
             kpi_result = kpi_method()
@@ -298,10 +298,9 @@ class CalculateKPIS:
         return_obj["audit_end_date"] = self.audit_end_date
 
         # Finally, add in the kpis
-        # First convert the KPIResult objects to dictionaries so serializable
+        return_obj["calculated_kpi_values"] = {}
         for kpi_name, kpi_result in calculated_kpis.items():
-            return_obj[kpi_name] = kpi_result
-        return_obj["calculated_kpi_values"] = calculated_kpis
+            return_obj["calculated_kpi_values"][kpi_name] = kpi_result
 
         return return_obj
 
