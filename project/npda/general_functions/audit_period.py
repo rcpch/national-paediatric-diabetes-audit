@@ -18,7 +18,9 @@ def get_audit_period_for_date(input_date: date) -> tuple[date, date]:
     """
 
     if input_date < date(2024, 4, 1) or input_date > date(2027, 3, 31):
-        raise ValueError("Audit period is only available for the years 2024 to 2027")
+        raise ValueError(
+            f"Audit period is only available for the years 2024 to 2027. Provided date: {input_date}"
+        )
 
     # Audit year is the year of the input date if the month is April or later, otherwise it is the previous year
     audit_year = input_date.year if input_date.month >= 4 else input_date.year - 1
