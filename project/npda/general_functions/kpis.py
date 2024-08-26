@@ -5,6 +5,7 @@ from dataclasses import dataclass, is_dataclass
 from dataclasses import asdict
 from datetime import date
 import logging
+from dateutil.relativedelta import relativedelta
 
 # Django imports
 from django.views.generic import TemplateView
@@ -323,11 +324,7 @@ class CalculateKPIS:
             # Visit / admisison date within audit period
             & Q(visit__visit_date__range=(self.audit_start_date, self.audit_end_date))
             # Below the age of 25 at the start of the audit period
-            & Q(
-                date_of_birth__gt=self.audit_start_date.replace(
-                    year=self.audit_start_date.year - 25
-                )
-            )
+            & Q(date_of_birth__gt=self.audit_start_date - relativedelta(years=25))
         )
 
         eligible_patients = self.total_kpi_1_eligible_pts_base_query_set.distinct()
@@ -423,12 +420,43 @@ class CalculateKPIS:
 
     def calculate_kpi_numerator_4(self) -> dict:
         """
-        Calculates KPI 4: Total number of patients with T1DM aged 12 or older
+        Calculates KPI 4: Number of patients aged 12+ with Type 1 diabetes
+        Total number of patients with:
+            * a valid NHS number
+            *a valid date of birth
+            *a valid PDU number
+            * a visit date or admission date within the audit period
+            * Below the age of 25 at the start of the audit period
+            * Age 12 and above years at the start of the audit period
+            * Diagnosis of Type 1 diabetes"
         """
-        return kpi_4_total_t1dm_gte_12yo(
-            patients=self.patients,
-            audit_start_date=self.audit_start_date,
-            audit_end_date=self.audit_end_date,
+
+        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set.filter(
+            # Diagnosis of Type 1 diabetes
+            Q(diabetes_type=DIABETES_TYPES[0][0])
+            # Age 12 and above years at the start of the audit period
+            & Q(
+                date_of_birth__lt=audit_start_date.replace(
+                    year=audit_start_date.year - 12
+                )
+            )
+        ).distinct()
+
+        # Count eligible patients
+        total_eligible = eligible_patients.count()
+
+        # Calculate ineligible patients
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Assuming total_passed is equal to total_eligible and total_failed is equal to total_ineligible
+        total_passed = total_eligible
+        total_failed = total_ineligible
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
         )
 
     def calculate_kpi_numerator_5(self) -> dict:
