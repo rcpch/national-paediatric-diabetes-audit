@@ -159,8 +159,6 @@ class CalculateKPIS:
             paediatric_diabetes_units__paediatric_diabetes_unit__pz_code=pz_code
         ).distinct()
 
-        logger.debug(f"Patients: {self.patients}")
-
     def _get_audit_start_and_end_dates(self) -> tuple[date, date]:
         return get_audit_period_for_date(input_date=self.calculation_date)
 
