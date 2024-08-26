@@ -329,7 +329,7 @@ class CalculateKPIS:
             total_failed=total_failed,
         )
 
-    def calculate_kpi_2_total_new_diagnoses(self) -> dict:
+    def calculate_kpi_2_total_new_diagnoses(self) -> KPIResult:
         """
         Calculates KPI 2: Total number of new diagnoses within the audit period
 
@@ -357,7 +357,22 @@ class CalculateKPIS:
             & Q(diagnosis_date__range=(self.audit_start_date, self.audit_end_date))
         ).distinct()
 
-        return eligible_patients.count()
+        # Count eligible patients
+        total_eligible = eligible_patients.count()
+
+        # Calculate ineligible patients
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Assuming total_passed is equal to total_eligible and total_failed is equal to total_ineligible
+        total_passed = total_eligible
+        total_failed = total_ineligible
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
 
     def calculate_kpi_3_total_t1dm(self) -> dict:
         """

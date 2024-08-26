@@ -60,15 +60,17 @@ def assert_kpi_result_equal(expected: KPIResult, actual: KPIResult) -> None:
 
 
 @pytest.fixture
-def TODAY():
-    """TODAY is Day 2 of the first audit period"""
-    return date(year=2024, month=4, day=2)
+def AUDIT_START_DATE():
+    """AUDIT_START_DATE is Day 2 of the first audit period"""
+    return date(year=2024, month=4, day=1)
 
 
 @pytest.mark.django_db
-def test_ensure_mocked_audit_date_range_is_correct(TODAY):
+def test_ensure_mocked_audit_date_range_is_correct(AUDIT_START_DATE):
     """Ensure that the mocked audit date range is correct."""
-    calc_kpis = CalculateKPIS(pz_code="mocked_pz_code", calculation_date=TODAY)
+    calc_kpis = CalculateKPIS(
+        pz_code="mocked_pz_code", calculation_date=AUDIT_START_DATE
+    )
 
     assert calc_kpis.audit_start_date == date(
         2024, 4, 1
@@ -79,7 +81,7 @@ def test_ensure_mocked_audit_date_range_is_correct(TODAY):
 
 
 @pytest.mark.django_db
-def test_kpi_calculation_1(TODAY):
+def test_kpi_calculation_1(AUDIT_START_DATE):
     """Tests that KPI1 is calculated correctly."""
 
     # Ensure starting with clean pts in test db
@@ -90,21 +92,23 @@ def test_kpi_calculation_1(TODAY):
 
     # Create  Patients and Visits that should PASS KPI1
     eligible_patients: List[Patient] = PatientFactory.create_batch(
-        size=N_PATIENTS_ELIGIBLE, visit__visit_date=TODAY + timedelta(days=1)
+        size=N_PATIENTS_ELIGIBLE, visit__visit_date=AUDIT_START_DATE + timedelta(days=1)
     )
 
     # Create Patients and Visits that should FAIL KPI1
     # Visit date before audit period
     ineligible_patients_visit_date: List[Patient] = PatientFactory.create_batch(
-        size=N_PATIENTS_INELIGIBLE, visit__visit_date=TODAY - timedelta(days=10)
+        size=N_PATIENTS_INELIGIBLE,
+        visit__visit_date=AUDIT_START_DATE - timedelta(days=10),
     )
     # Above age 25 at start of audit period
     ineligible_patients_too_old: List[Patient] = PatientFactory.create_batch(
-        size=N_PATIENTS_INELIGIBLE, date_of_birth=TODAY - timedelta(days=365 * 26)
+        size=N_PATIENTS_INELIGIBLE,
+        date_of_birth=AUDIT_START_DATE - timedelta(days=365 * 26),
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=TODAY)
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=N_PATIENTS_ELIGIBLE,
@@ -116,4 +120,58 @@ def test_kpi_calculation_1(TODAY):
 
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT, actual=calc_kpis.calculate_kpi_1_total_eligible()
+    )
+
+
+@pytest.mark.django_db
+def test_kpi_calculation_2(AUDIT_START_DATE):
+    """Tests that KPI2 is calculated correctly.
+
+    Essentialy KPI1 but also check date of diagnosis within audit period
+    """
+
+    # Ensure starting with clean pts in test db
+    Patient.objects.all().delete()
+
+    N_PATIENTS_ELIGIBLE = N_PATIENTS_PASS = 3
+    N_PATIENTS_INELIGIBLE = N_PATIENTS_FAIL = 4
+
+    # Create  Patients and Visits that should PASS KPI2
+    eligible_patients: List[Patient] = PatientFactory.create_batch(
+        size=N_PATIENTS_ELIGIBLE,
+        visit__visit_date=AUDIT_START_DATE + timedelta(days=2),
+        diagnosis_date=AUDIT_START_DATE + timedelta(days=10),
+    )
+
+    # Create Patients and Visits that should FAIL KPI2
+    # Visit date before audit period
+    ineligible_patients_visit_date: List[Patient] = PatientFactory.create_batch(
+        size=N_PATIENTS_INELIGIBLE,
+        visit__visit_date=AUDIT_START_DATE - timedelta(days=10),
+    )
+    # Diagnosis date before audit period
+    ineligible_patients_diagnosis_date: List[Patient] = PatientFactory.create_batch(
+        size=N_PATIENTS_INELIGIBLE,
+        diagnosis_date=AUDIT_START_DATE - timedelta(days=10),
+    )
+    # Above age 25 at start of audit period
+    ineligible_patients_too_old: List[Patient] = PatientFactory.create_batch(
+        size=N_PATIENTS_INELIGIBLE,
+        date_of_birth=AUDIT_START_DATE - timedelta(days=365 * 26),
+    )
+
+    # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+
+    EXPECTED_KPIRESULT = KPIResult(
+        total_eligible=N_PATIENTS_ELIGIBLE,
+        total_passed=N_PATIENTS_PASS,
+        # We have 2 sets of ineligible patients
+        total_ineligible=N_PATIENTS_INELIGIBLE * 3,
+        total_failed=N_PATIENTS_FAIL * 3,
+    )
+
+    assert_kpi_result_equal(
+        expected=EXPECTED_KPIRESULT,
+        actual=calc_kpis.calculate_kpi_2_total_new_diagnoses(),
     )
