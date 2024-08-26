@@ -1,6 +1,7 @@
 """Views for KPIs"""
 
 # Python imports
+from dataclasses import dataclass
 from datetime import date
 import logging
 
@@ -126,6 +127,15 @@ from project.npda.models.transfer import Transfer
 logger = logging.getLogger(__name__)
 
 
+# Object types
+@dataclass
+class KPIResult:
+    total_eligible: int
+    total_ineligible: int
+    total_passed: int
+    total_failed: int
+
+
 class CalculateKPIS:
 
     def __init__(self, pz_code: str, calculation_date: date = None):
@@ -136,7 +146,7 @@ class CalculateKPIS:
             * calculation_date (date) - used to define start and end date of audit period
         """
         if not pz_code:
-            raise AttributeError('pz_code must be provided')
+            raise AttributeError("pz_code must be provided")
         # Set various attributes used in calculations
         self.pz_code = pz_code
         self.calculation_date = (
@@ -158,6 +168,7 @@ class CalculateKPIS:
         self.patients = Patient.objects.filter(
             paediatric_diabetes_units__paediatric_diabetes_unit__pz_code=pz_code
         ).distinct()
+        self.total_patients_count = self.patients.count()
 
     def _get_audit_start_and_end_dates(self) -> tuple[date, date]:
         return get_audit_period_for_date(input_date=self.calculation_date)
@@ -276,7 +287,7 @@ class CalculateKPIS:
 
         return return_obj
 
-    def calculate_kpi_1_total_eligible(self) -> dict:
+    def calculate_kpi_1_total_eligible(self) -> KPIResult:
         """
         Calculates KPI 1: Total number of eligible patients
         Total number of patients with:
@@ -301,7 +312,22 @@ class CalculateKPIS:
             )
         ).distinct()
 
-        return eligible_patients.count()
+        # Count eligible patients
+        total_eligible = eligible_patients.count()
+
+        # Calculate ineligible patients
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Assuming total_passed is equal to total_eligible and total_failed is equal to total_ineligible
+        total_passed = total_eligible
+        total_failed = total_ineligible
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
 
     def calculate_kpi_2_total_new_diagnoses(self) -> dict:
         """
