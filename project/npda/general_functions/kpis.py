@@ -265,7 +265,7 @@ class CalculateKPIS:
         calculated_kpis = {}
 
         # Calculate KPIs 1 - 12, used as denominators for subsequent KPIs
-        for i in range(1, 3):
+        for i in range(1, 4):
             kpi_method_name = self.kpis_names_map[i]
             kpi_method = getattr(self, f"calculate_{kpi_method_name}")
             kpi_result = kpi_method()
@@ -281,7 +281,6 @@ class CalculateKPIS:
 
             # Each kpi method returns a KPIResult object
             # so we convert it first to a dictionary
-            logger.debug(f"KPI {i} result: {kpi_result=}   {type(kpi_result)=}")
             calculated_kpis[kpi_method_name] = asdict(kpi_result)
 
         # Calculate remaining KPIs (13-49)
@@ -316,7 +315,8 @@ class CalculateKPIS:
             * Below the age of 25 at the start of the audit period
         """
 
-        eligible_patients = self.patients.filter(
+        # Set the query set as an attribute to be used in subsequent KPI calculations
+        self.total_kpi_1_eligible_pts_base_query_set = self.patients.filter(
             # Valid attributes
             Q(nhs_number__isnull=False)
             & Q(date_of_birth__isnull=False)
@@ -328,15 +328,19 @@ class CalculateKPIS:
                     year=self.audit_start_date.year - 25
                 )
             )
-        ).distinct()
+        )
 
-        # Count eligible patients
+        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set.distinct()
+        total_eligible = eligible_patients.count()
+
+        # Count eligible patients and set as attribute
+        # to be used in subsequent KPI calculations
         total_eligible = eligible_patients.count()
 
         # Calculate ineligible patients
         total_ineligible = self.total_patients_count - total_eligible
 
-        # Assuming total_passed is equal to total_eligible and total_failed is equal to total_ineligible
+        # Assuming total_passed is equal to total_number_of_eligible_patients_kpi_1 and total_failed is equal to total_ineligible
         total_passed = total_eligible
         total_failed = total_ineligible
 
@@ -361,18 +365,8 @@ class CalculateKPIS:
         """
 
         # This is same as KPI1 but with an additional filter for diagnosis date
-        eligible_patients = self.patients.filter(
-            Q(nhs_number__isnull=False)
-            & Q(date_of_birth__isnull=False)
-            # Visit / admisison date within audit period
-            & Q(visit__visit_date__range=(self.audit_start_date, self.audit_end_date))
-            # Below the age of 25 at the start of the audit period
-            & Q(
-                date_of_birth__gt=self.audit_start_date.replace(
-                    year=self.audit_start_date.year - 25
-                )
-            )
-            & Q(diagnosis_date__range=(self.audit_start_date, self.audit_end_date))
+        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set.filter(
+            Q(diagnosis_date__range=(self.audit_start_date, self.audit_end_date))
         ).distinct()
 
         # Count eligible patients
@@ -420,7 +414,22 @@ class CalculateKPIS:
             & Q(diabetes_type=DIABETES_TYPES[0][0])
         ).distinct()
 
-        return eligible_patients.count()
+        # Count eligible patients
+        total_eligible = eligible_patients.count()
+
+        # Calculate ineligible patients
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Assuming total_passed is equal to total_eligible and total_failed is equal to total_ineligible
+        total_passed = total_eligible
+        total_failed = total_ineligible
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
 
     def calculate_kpi_numerator_4(self) -> dict:
         """
