@@ -266,7 +266,7 @@ class CalculateKPIS:
         calculated_kpis = {}
 
         # Calculate KPIs 1 - 12, used as denominators for subsequent KPIs
-        for i in range(1, 4):
+        for i in range(1, 5):
             kpi_method_name = self.kpis_names_map[i]
             kpi_method = getattr(self, f"calculate_{kpi_method_name}")
             kpi_result = kpi_method()
@@ -372,7 +372,8 @@ class CalculateKPIS:
         # Calculate ineligible patients
         total_ineligible = self.total_patients_count - total_eligible
 
-        # Assuming total_passed is equal to total_eligible and total_failed is equal to total_ineligible
+        # This is just a count so pass/fail doesn't make sense; just set to same
+        # as eligible/ineligible
         total_passed = total_eligible
         total_failed = total_ineligible
 
@@ -407,7 +408,8 @@ class CalculateKPIS:
         # Calculate ineligible patients
         total_ineligible = self.total_patients_count - total_eligible
 
-        # Assuming total_passed is equal to total_eligible and total_failed is equal to total_ineligible
+        # This is just a count so pass/fail doesn't make sense; just set to same
+        # as eligible/ineligible
         total_passed = total_eligible
         total_failed = total_ineligible
 
@@ -418,7 +420,7 @@ class CalculateKPIS:
             total_failed=total_failed,
         )
 
-    def calculate_kpi_numerator_4(self) -> dict:
+    def calculate_kpi_4_total_t1dm_gte_12yo(self) -> dict:
         """
         Calculates KPI 4: Number of patients aged 12+ with Type 1 diabetes
         Total number of patients with:
@@ -435,11 +437,7 @@ class CalculateKPIS:
             # Diagnosis of Type 1 diabetes
             Q(diabetes_type=DIABETES_TYPES[0][0])
             # Age 12 and above years at the start of the audit period
-            & Q(
-                date_of_birth__lt=audit_start_date.replace(
-                    year=audit_start_date.year - 12
-                )
-            )
+            & Q(date_of_birth__lte=self.audit_start_date - relativedelta(years=12))
         ).distinct()
 
         # Count eligible patients
@@ -448,7 +446,8 @@ class CalculateKPIS:
         # Calculate ineligible patients
         total_ineligible = self.total_patients_count - total_eligible
 
-        # Assuming total_passed is equal to total_eligible and total_failed is equal to total_ineligible
+        # This is just a count so pass/fail doesn't make sense; just set to same
+        # as eligible/ineligible
         total_passed = total_eligible
         total_failed = total_ineligible
 
