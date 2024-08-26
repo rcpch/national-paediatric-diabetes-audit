@@ -384,7 +384,7 @@ class CalculateKPIS:
             total_failed=total_failed,
         )
 
-    def calculate_kpi_3_total_t1dm(self) -> dict:
+    def calculate_kpi_3_total_t1dm(self) -> KPIResult:
         """
         Calculates KPI 3: Total number of eligible patients with Type 1 diabetes
         Total number of patients with:
@@ -420,7 +420,7 @@ class CalculateKPIS:
             total_failed=total_failed,
         )
 
-    def calculate_kpi_4_total_t1dm_gte_12yo(self) -> dict:
+    def calculate_kpi_4_total_t1dm_gte_12yo(self) -> KPIResult:
         """
         Calculates KPI 4: Number of patients aged 12+ with Type 1 diabetes
         Total number of patients with:
