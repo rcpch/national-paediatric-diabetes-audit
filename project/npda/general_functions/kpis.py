@@ -1,7 +1,8 @@
 """Views for KPIs"""
 
 # Python imports
-from dataclasses import dataclass
+from dataclasses import dataclass, is_dataclass
+from dataclasses import asdict
 from datetime import date
 import logging
 
@@ -264,10 +265,24 @@ class CalculateKPIS:
         calculated_kpis = {}
 
         # Calculate KPIs 1 - 12, used as denominators for subsequent KPIs
-        for i in range(1, 4):
+        for i in range(1, 3):
             kpi_method_name = self.kpis_names_map[i]
             kpi_method = getattr(self, f"calculate_{kpi_method_name}")
-            calculated_kpis[kpi_method_name] = kpi_method()
+            kpi_result = kpi_method()
+
+            if not is_dataclass(kpi_result):
+                raise TypeError(
+                    f"kpi_result is not a dataclass instance: {kpi_result} (type: {type(kpi_result)})"
+                )
+            if not isinstance(kpi_result, KPIResult):
+                raise TypeError(
+                    f"kpi_result is not an instance of KPIResult: {kpi_result} (type: {type(kpi_result)})"
+                )
+
+            # Each kpi method returns a KPIResult object
+            # so we convert it first to a dictionary
+            logger.debug(f"KPI {i} result: {kpi_result=}   {type(kpi_result)=}")
+            calculated_kpis[kpi_method_name] = asdict(kpi_result)
 
         # Calculate remaining KPIs (13-49)
         # for i in range(13, 50):
@@ -283,6 +298,9 @@ class CalculateKPIS:
         return_obj["audit_end_date"] = self.audit_end_date
 
         # Finally, add in the kpis
+        # First convert the KPIResult objects to dictionaries so serializable
+        for kpi_name, kpi_result in calculated_kpis.items():
+            return_obj[kpi_name] = kpi_result
         return_obj["calculated_kpi_values"] = calculated_kpis
 
         return return_obj
