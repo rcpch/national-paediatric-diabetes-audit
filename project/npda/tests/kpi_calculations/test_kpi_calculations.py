@@ -172,7 +172,7 @@ def test_kpi_calculation_2(AUDIT_START_DATE):
         total_failed=N_PATIENTS_FAIL * 3,
     )
 
-    # First set kpi result of total eligible
+    # First set kpi1 result of total eligible
     calc_kpis.calculate_kpi_1_total_eligible()
 
     assert_kpi_result_equal(
@@ -227,6 +227,10 @@ def test_kpi_calculation_3(AUDIT_START_DATE):
         total_ineligible=N_PATIENTS_INELIGIBLE * 3,
         total_failed=N_PATIENTS_FAIL * 3,
     )
+
+    # First set self.total_kpi_1_eligible_pts_base_query_set result
+    # of total eligible
+    calc_kpis.calculate_kpi_1_total_eligible()
 
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,

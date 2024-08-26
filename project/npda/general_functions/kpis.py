@@ -399,19 +399,9 @@ class CalculateKPIS:
 
         (1, Type 1 Insulin-Dependent Diabetes Mellitus)
         """
-        eligible_patients = self.patients.filter(
-            Q(nhs_number__isnull=False)
-            & Q(date_of_birth__isnull=False)
-            # Visit / admisison date within audit period
-            & Q(visit__visit_date__range=(self.audit_start_date, self.audit_end_date))
-            # Below the age of 25 at the start of the audit period
-            & Q(
-                date_of_birth__gt=self.audit_start_date.replace(
-                    year=self.audit_start_date.year - 25
-                )
-            )
+        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set.filter(
             # is type 1 diabetes
-            & Q(diabetes_type=DIABETES_TYPES[0][0])
+            Q(diabetes_type=DIABETES_TYPES[0][0])
         ).distinct()
 
         # Count eligible patients
