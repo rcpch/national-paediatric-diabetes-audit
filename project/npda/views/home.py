@@ -11,9 +11,10 @@ from django.core.exceptions import ValidationError
 from django_htmx.http import trigger_client_event
 
 # RCPCH imports
-from ..general_functions.csv_upload import csv_upload, csv_summarise
-from ..general_functions.session import update_session_object, get_new_session_fields
+from ..general_functions.csv_upload import csv_upload
+from ..general_functions.session import get_new_session_fields
 from ..general_functions.view_preference import get_or_update_view_preference
+from ..general_functions.csv_summarize import csv_summarize
 from ..forms.upload import UploadFileForm
 from .decorators import login_and_otp_required
 
@@ -49,7 +50,7 @@ def home(request):
         file = request.FILES["csv_upload"]
         pz_code = request.session.get("pz_code")
 
-        summary = csv_summarise(csv_file=file)
+        summary = csv_summarize(csv_file=file)
 
         # You can't read the same file twice without resetting it
         file.seek(0)
