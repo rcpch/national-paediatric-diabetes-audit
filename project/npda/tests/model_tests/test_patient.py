@@ -129,7 +129,6 @@ def invalid_nhs_number():
     return "123456789"
 
 
-@pytest.mark.skip(reason="Not yet implemented validation errors")
 @pytest.mark.django_db
 def test_patient_creation_without_nhs_number_raises_error():
     """Test creating a Patient without an NHS number raises ValidationError."""
@@ -137,7 +136,6 @@ def test_patient_creation_without_nhs_number_raises_error():
         PatientFactory(nhs_number=None)
 
 
-@pytest.mark.skip(reason="Not yet implemented validation errors")
 @pytest.mark.django_db
 def test_patient_creation_with_invalid_nhs_number_raises_error(invalid_nhs_number):
     """Test creating a Patient with an invalid NHS number raises ValidationError."""
@@ -145,7 +143,6 @@ def test_patient_creation_with_invalid_nhs_number_raises_error(invalid_nhs_numbe
         PatientFactory(nhs_number=invalid_nhs_number)
 
 
-@pytest.mark.skip(reason="Not yet implemented validation errors")
 @pytest.mark.django_db
 def test_patient_creation_with_duplicate_nhs_number_raises_error():
     """Test creating a Patient with a duplicate NHS number raises ValidationError."""
