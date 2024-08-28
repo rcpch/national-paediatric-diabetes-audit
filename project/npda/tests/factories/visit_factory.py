@@ -8,10 +8,10 @@ from datetime import timedelta
 import factory
 
 # rcpch imports
-from project.npda.models import Patient, Visit
+from project.npda.models import Visit
 
 
-class PatientVisitFactory(factory.django.DjangoModelFactory):
+class VisitFactory(factory.django.DjangoModelFactory):
     """Dependency factory for creating a minimum viable NPDAManagement.
 
     This Factory is generated AFTER a Patient has been generated.
@@ -22,3 +22,9 @@ class PatientVisitFactory(factory.django.DjangoModelFactory):
 
     # Once Patient instance made, it will attach to this instance
     patient = None
+    
+    class Params:
+        """Factory parameters for VisitFactory.
+        """
+
+        # KPI 1

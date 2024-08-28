@@ -1,12 +1,15 @@
 # python imports
 from datetime import date
 import logging
+from enum import Enum
 
 # django imports
 from django.contrib.gis.db import models
 from django.contrib.gis.db.models import CharField, DateField, PositiveSmallIntegerField
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
+
+from project.npda.models.custom_validators import validate_nhs_number
 
 # npda imports
 from ...constants import (
@@ -26,6 +29,18 @@ from ..general_functions import (
 logger = logging.getLogger(__name__)
 
 
+class PatientError(Enum):
+    """NOT including nhs number as that error should prevent saving"""
+
+    DOB_IN_FUTURE = "Date of birth cannot be in the future."
+    PT_OLDER_THAN_19yo = "Patient is too old for the NPDA."
+    INVALID_POSTCODE = "Postcode is invalid."
+    DEPRIVATION_CALCULATION_FAILED = "Cannot calculate deprivation score."
+    INVALID_DIABETES_TYPE = "Diabetes type is invalid."
+    DIAGNOSIS_DATE_BEFORE_DOB = "Diagnosis date is before date of birth."
+    DIAGNOSIS_DATE_IN_FUTURE = "Diagnosis date cannot be in the future."
+
+
 class Patient(models.Model):
     """
     The Patient class.
@@ -36,7 +51,9 @@ class Patient(models.Model):
     Custom methods age and age_days, returns the age
     """
 
-    nhs_number = CharField("NHS Number")  # the NHS number for England and Wales
+    nhs_number = CharField(  # the NHS number for England and Wales
+        "NHS Number", unique=True, validators=[validate_nhs_number]
+    )
 
     sex = models.IntegerField("Stated gender", choices=SEX_TYPE, blank=True, null=True)
 
@@ -107,24 +124,31 @@ class Patient(models.Model):
     def get_absolute_url(self):
         return reverse("patient-detail", kwargs={"pk": self.pk})
 
+    def get_todays_date(self) -> date:
+        """Simply returns today's date. Used to enable testing of the age methods"""
+        return date.today()
+
     # class methods
-    def age_days(self, today_date=date.today()):
+    def age_days(self, today_date=None):
         """
         Returns the age of the patient in years, months and days
         This is a calculated field
         Date of birth is required
-        Today's date is optional and defaults to date.today()
+        Today's date is optional and defaults to self.get_todays_date()):
         """
-        # return stringify_time_elapsed(self.date_of_birth, today_date)
+        if today_date is None:
+            today_date = self.get_todays_date()
         return (today_date - self.date_of_birth).days
 
-    def age(self, today_date=date.today()):
+    def age(self, today_date=None):
         """
         Returns the age of the patient in years, months and days
         This is a calculated field
         Date of birth is required
-        Today's date is optional and defaults to date.today()
+        Today's date is optional and defaults to self.get_todays_date()):
         """
+        if today_date is None:
+            today_date = self.get_todays_date()
         return stringify_time_elapsed(self.date_of_birth, today_date)
 
     def save(self, *args, **kwargs) -> None:
@@ -142,4 +166,5 @@ class Patient(models.Model):
                     f"Cannot calculate deprivation score for {self.postcode}: {error}"
                 )
 
+        self.full_clean()  # Trigger validation
         return super().save(*args, **kwargs)
