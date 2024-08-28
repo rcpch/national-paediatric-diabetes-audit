@@ -7,6 +7,8 @@ from django.contrib.gis.db import models
 from django.db.models.functions import Lower
 from django.contrib.gis.db.models import UniqueConstraint
 
+import citext
+
 from ...constants import *
 from ..general_functions import *
 
@@ -147,7 +149,7 @@ class NPDAUser(AbstractUser, PermissionsMixin):
         blank=True,
     )
     title = models.PositiveSmallIntegerField(choices=TITLES, blank=True, null=True)
-    email = models.EmailField(
+    email = citext.CIEmailField(
         _("Email address"),
         help_text=_("Enter your email address."),
         unique=True,
