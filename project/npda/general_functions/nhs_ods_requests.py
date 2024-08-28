@@ -1,5 +1,5 @@
 # python
-import logging 
+import logging
 
 # django
 
@@ -12,6 +12,7 @@ from django.conf import settings
 
 # Logging
 logger = logging.getLogger(__name__)
+
 
 def gp_practice_for_postcode(postcode: str):
     """
@@ -29,8 +30,7 @@ def gp_practice_for_postcode(postcode: str):
             timeout=10,  # times out after 10 seconds
         )
         response.raise_for_status()
-    except HTTPError as e:
-        print(e.response.text)
+    except HTTPError:
         raise Exception(f"{postcode} not found")
 
     organisations = response.json()["Organisations"]
@@ -54,6 +54,6 @@ def gp_details_for_ods_code(ods_code: str):
         response.raise_for_status()
     except HTTPError as e:
         return {"error": e}
-    
+
     logger.warning(response.json())
     return response.json()["Organisation"]

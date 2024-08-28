@@ -17,14 +17,13 @@ from django.http import HttpResponse
 from django.urls import reverse_lazy
 
 # Third party imports
-from django_htmx.http import trigger_client_event
+
 
 from project.npda.general_functions import (
-    get_new_session_fields,
-    get_or_update_view_preference,
+    organisations_adapter,
 )
 from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
-from project.npda.models import NPDAUser, Submission
+from project.npda.models import NPDAUser
 
 # RCPCH imports
 from ..models import Patient
@@ -110,17 +109,17 @@ class PatientListView(
             .count()
         )
         context["pz_code"] = self.request.session.get("pz_code")
-        context["ods_code"] = self.request.session.get("ods_code")
         context["total_valid_patients"] = total_valid_patients
         context["total_invalid_patients"] = (
             Patient.objects.filter(submissions__submission_active=True).count()
             - total_valid_patients
         )
-        context["index_of_first_invalid_patient"] = total_valid_patients
-        context["organisation_choices"] = self.request.session.get(
-            "organisation_choices"
+        context["index_of_first_invalid_patient"] = total_valid_patients + 1
+        context["pdu_choices"] = (
+            organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
+                requesting_user=self.request.user, user_instance=self.request.user
+            )
         )
-        context["pdu_choices"] = self.request.session.get("pdu_choices")
         context["chosen_pdu"] = self.request.session.get("pz_code")
         return context
 
@@ -134,50 +133,8 @@ class PatientListView(
             context = self.get_context_data()
             context["patient_list"] = queryset
 
-            return render(
-                request, "partials/patient_table.html", context=self.get_context_data()
-            )
+            return render(request, "partials/patient_table.html", context=context)
         return response
-
-    def post(self, request, *args: str, **kwargs) -> HttpResponse:
-        """
-        Override POST method to requery the database for the list of patients if  view preference changes
-        """
-        if request.htmx:
-            view_preference = request.POST.get("view_preference", None)
-            ods_code = request.POST.get("patient_ods_code_select_name", None)
-            pz_code = request.POST.get("patient_pz_code_select_name", None)
-
-            new_session_fields = get_new_session_fields(
-                self.request.user, ods_code, pz_code
-            )
-            self.request.session.update(new_session_fields)
-
-            view_preference = get_or_update_view_preference(
-                self.request.user, view_preference
-            )
-
-            context = {
-                "view_preference": int(view_preference),
-                "ods_code": ods_code,
-                "pz_code": request.session.get("pz_code"),
-                "hx_post": reverse_lazy("patients"),
-                "organisation_choices": self.request.session.get(
-                    "organisation_choices"
-                ),
-                "pdu_choices": self.request.session.get("pdu_choices"),
-                "chosen_pdu": request.session.get("pz_code"),
-                "ods_code_select_name": "patient_ods_code_select_name",
-                "pz_code_select_name": "patient_pz_code_select_name",
-                "hx_target": "#patient_view_preference",
-            }
-
-            response = render(request, "partials/view_preference.html", context=context)
-
-            trigger_client_event(
-                response=response, name="patients", params={}
-            )  # reloads the form to show the active steps
-            return response
 
 
 class PatientCreateView(
@@ -195,10 +152,16 @@ class PatientCreateView(
     success_url = reverse_lazy("patients")
 
     def get_context_data(self, **kwargs):
+        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
         pz_code = self.request.session.get("pz_code")
-        organisation_ods_code = self.request.session.get("ods_code")
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
         context = super().get_context_data(**kwargs)
-        context["title"] = f"Add New Child to {organisation_ods_code} ({pz_code})"
+        title = f"Add New Child to {pdu.lead_organisation_name}  ({pz_code})"
+        if (
+            pdu.parent_name is not None
+        ):  # if the PDU has a parent, include the parent name in the title
+            title = f"Add New Child to {pdu.lead_organisation_name} - {pdu.parent_name} ({pz_code})"
+        context["title"] = title
         context["button_title"] = "Add New Child"
         context["form_method"] = "create"
         return context
@@ -213,11 +176,8 @@ class PatientCreateView(
         # add the PDU to the patient record
         # get or create the paediatric diabetes unit object
         PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-        paediatric_diabetes_unit, created = (
-            PaediatricDiabetesUnit.objects.get_or_create(
-                pz_code=self.request.session.get("pz_code"),
-                ods_code=self.request.session.get("ods_code"),
-            )
+        paediatric_diabetes_unit = PaediatricDiabetesUnit.objects.get(
+            pz_code=self.request.session.get("pz_code"),
         )
 
         Transfer = apps.get_model("npda", "Transfer")
@@ -281,14 +241,18 @@ class PatientUpdateView(
 
     def get_context_data(self, **kwargs):
         Transfer = apps.get_model("npda", "Transfer")
+        pz_code = self.request.session.get("pz_code")
         patient = Patient.objects.get(pk=self.kwargs["pk"])
-
         transfer = Transfer.objects.get(patient=patient)
-
         context = super().get_context_data(**kwargs)
-        context["title"] = (
-            f"Edit Child Details in {transfer.paediatric_diabetes_unit.ods_code}({transfer.paediatric_diabetes_unit.pz_code})"
-        )
+        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+        title = f"Edit Child Details in {pdu.lead_organisation_name}  ({pz_code})"
+        if (
+            transfer.paediatric_diabetes_unit.parent_name is not None
+        ):  # if the PDU has a parent, include the parent name in the title
+            title = f"Add New Child to {transfer.paediatric_diabetes_unit.lead_organisation_name} - {transfer.paediatric_diabetes_unit.parent_name} ({pz_code})"
+        context["title"] = title
         context["button_title"] = "Edit Child Details"
         context["form_method"] = "update"
         context["patient_id"] = self.kwargs["pk"]

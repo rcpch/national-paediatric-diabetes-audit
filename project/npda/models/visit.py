@@ -2,14 +2,6 @@
 
 # django imports
 from django.contrib.gis.db import models
-from django.contrib.gis.db.models import (
-    CharField,
-    DateField,
-    DecimalField,
-    PositiveSmallIntegerField,
-    IntegerField,
-)
-from django.contrib.postgres.fields import ArrayField
 
 # npda imports
 from .help_text_mixin import HelpTextMixin

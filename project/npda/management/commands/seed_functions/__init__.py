@@ -1,0 +1,1 @@
+from .paediatric_diabetes_units_seeder import paediatric_diabetes_units_seeder

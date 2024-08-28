@@ -29,14 +29,6 @@ class NPDAUserManager(BaseUserManager):
         if not email:
             raise ValueError(_("You must provide an email address"))
 
-        # if not extra_fields.get("organisation_employer") and not extra_fields.get(
-        #     "is_rcpch_staff"
-        # ):
-        #     # Non-RCPCH staff (is_rcpch_staff) are not affiliated with a organisation
-        #     raise ValueError(
-        #         _("You must provide the name of your main organisation trust.")
-        #     )
-
         if not role:
             raise ValueError(_("You must provide your role in the NPDA audit."))
 
@@ -104,18 +96,14 @@ class NPDAUserManager(BaseUserManager):
                 logged_in_user = self.create_user(
                     email.lower(), password, **extra_fields
                 )
-                paediatric_diabetes_unit, created = (
-                    PaediatricDiabetesUnit.objects.get_or_create(
-                        pz_code="PZ999",
-                        ods_code="8HV48",
-                    )
+                paediatric_diabetes_unit = PaediatricDiabetesUnit.objects.get(
+                    pz_code="PZ999",  # RCPCH
                 )
-                organisation_employer, created = (
-                    OrganisationEmployer.objects.get_or_create(
-                        is_primary_employer=True,
-                        paediatric_diabetes_unit=paediatric_diabetes_unit,
-                        npda_user=logged_in_user,
-                    )
+                # if user already has an employer, do not create a new one - update the status to primary
+                OrganisationEmployer.objects.update_or_create(
+                    paediatric_diabetes_unit=paediatric_diabetes_unit,
+                    npda_user=logged_in_user,
+                    defaults={"is_primary_employer": True},
                 )
             else:
                 extra_fields.setdefault("is_rcpch_staff", False)
@@ -123,18 +111,14 @@ class NPDAUserManager(BaseUserManager):
                 logged_in_user = self.create_user(
                     email.lower(), password, **extra_fields
                 )
-                paediatric_diabetes_unit, created = (
-                    PaediatricDiabetesUnit.objects.get_or_create(
-                        ods_code="RJZ01",
-                        pz_code="PZ215",
-                    )
+                paediatric_diabetes_unit = PaediatricDiabetesUnit.objects.get(
+                    pz_code="PZ215",  # Superusers that are not RCPCH staff are affiliated with King's College Hospital
                 )
-                organisation_employer, created = (
-                    OrganisationEmployer.objects.get_or_create(
-                        is_primary_employer=True,
-                        paediatric_diabetes_unit=paediatric_diabetes_unit,
-                        npda_user=logged_in_user,
-                    )
+                # if user already has an employer, do not create a new one - update the status to primary
+                OrganisationEmployer.objects.update_or_create(
+                    paediatric_diabetes_unit=paediatric_diabetes_unit,
+                    npda_user=logged_in_user,
+                    defaults={"is_primary_employer": True},
                 )
 
         """

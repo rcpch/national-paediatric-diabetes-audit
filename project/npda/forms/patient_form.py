@@ -1,5 +1,4 @@
 # python imports
-from datetime import date
 
 # django imports
 from django.apps import apps
@@ -13,7 +12,6 @@ from ...constants.styles.form_styles import *
 from ..general_functions import (
     validate_postcode,
     gp_practice_for_postcode,
-    retrieve_quarter_for_date,
 )
 
 

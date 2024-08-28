@@ -8,12 +8,11 @@ from django.contrib.auth.signals import (
     user_login_failed,
 )
 from django.dispatch import receiver
+from django.apps import apps
 
 # RCPCH
 from .models import VisitActivity, NPDAUser
-from .general_functions.session import (
-    create_session_object
-)
+from .general_functions.session import create_session_object
 
 # Logging setup
 logger = logging.getLogger(__name__)
@@ -22,10 +21,13 @@ logger = logging.getLogger(__name__)
 @receiver(user_logged_in)
 def log_user_login(sender, request, user, **kwargs):
     # Set up the session data so that views are filtered correctly (eg by PDU)
+    # Default is to show all PDUs that the user has access to, including the PDU that the user is affiliated with
     new_session_object = create_session_object(user)
     request.session.update(new_session_object)
 
-    logger.info(f"{user} ({user.email}) logged in from {get_client_ip(request)}. ods_code: {new_session_object['ods_code']}. pz_code: {new_session_object['pz_code']}.")
+    logger.info(
+        f"{user} ({user.email}) logged in from {get_client_ip(request)}. pz_code: {new_session_object['pz_code']}."
+    )
 
     VisitActivity.objects.create(
         activity=1, ip_address=get_client_ip(request), npdauser=user

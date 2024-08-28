@@ -433,7 +433,6 @@ class VisitForm(forms.ModelForm):
 
     def clean_visit_date(self):
         data = self.cleaned_data["visit_date"]
-        print(f"cleaning visit_date: {data} death_date: {self.patient.death_date}")
         valid, error = validate_date(
             date_under_examination_field_name="visit_date",
             date_under_examination_label_name="Visit/Appointment Date",

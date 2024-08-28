@@ -1,85 +1,105 @@
 {% load static %}
-{% if submissions %}
-            <table class="table table-md w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
-                <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">
-                    <tr>
-                        <th>Submission Date</th>
-                        <th>Submission By</th>
-                        <th>Audit Year</th>
-                        <th>Patient Number</th>
-                        <th>Active</th>
-                        <th>Download</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for submission in submissions %}
-                    {% if forloop.first %}
-                    <tr class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white">
-                    {% else %}
-                    <tr class="border-b bg-rcpch_lightest_grey text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_mid_grey hover:text-white">
-                    {% endif %}
-                            <td>{{  submission.submission_date|date:"d/m/Y H:i s" }} secs</td>
-                            <td>{{ submission.submission_by}}</td>
-                            <td>{{ submission.audit_year}}</td>
-                            <td>{{ submission.patient_count}}</td>
-                            <td>
-                                {% if submission.submission_active %}
-                                    <span class="bg-rcpch_pink px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white">
-                                        <small>ACTIVE</small>
-                                    </span>
-                                {% else %}
-                                    <span class="bg-rcpch_dark_blue px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white">
-                                        <small>INACTIVE</small>
-                                    </span>
-                                    <span class="bg-rcpch_dark_blue px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white">
-                                        <small>INACTIVE</small>
-                                {% endif %}
-                            </td>
-                            <td class="flex flex-row">
-                                <form method="post" action="{% url 'submissions' %}" class="join">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="audit_id" value="{{submission.pk}}">
-                                    <button name="submit-data" value="download-data" type="submit" class="join-item bg-rcpch_light_blue text-white font-semibold hover:text-white py-1 px-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue btn-sm rounded-none">Download</button>
-                                    <button 
-                                        name="submit-data"
-                                        {% if submission.submission_active %}
-                                        disabled="true"
-                                        {% endif %}
-                                        value="delete-data"  
-                                        type="submit" 
-                                        class="join-item bg-rcpch_red text-white font-semibold hover:text-white py-1 px-2 border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint btn-sm rounded-none {% if submission.submission_active %}opacity-50 cursor-not-allowed {% endif %}">Delete</button>
-                                </form>
-                                {% if forloop.first %}
-                                    <a href="{% url 'patients' %}">
-                                        <svg
-                                            class="h-8 w-8 text-rcpch_pink self-center hover:text-white"
-                                            width="24" height="24" viewBox="0 0 24 24" stroke-width="2" 
-                                            stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">  
-                                            <path stroke="none" d="M0 0h24v24H0z"/>  <polyline points="9 6 15 12 9 18" />
-                                        </svg>
-                                    </a>
-                                {% endif %}
-                            </td>
+<div>
+    {% if request.user.view_preference == 1 %}
+        <!-- national view -->
+        <h1 class="text-md font-montserrat font-semibold text-rcpch_dark_blue">All Submissions for {{pz_code}}</h1>
+    {% elif request.user.view_preference == 2 %}
+        <!-- PDU view   -->
+        <h1 class="text-md font-montserrat font-semibold text-rcpch_dark_blue">All Submissions Nationally</h1>
+    {% endif %}
+    {% if submissions %}
+                <table class="table table-md w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">
+                        <tr>
+                            <th>Submission Date</th>
+                            <th>Submission By</th>
+                            <th>Audit Year</th>
+                            <th>Patient Number</th>
+                            <th>Active</th>
+                            <th>Download</th>
                         </tr>
-                    {% endfor %}
-                </tbody>
-                <tfoot>
-                    <tr class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white py-5">
-                        <th colspan="11" class="px-2">
-                            <strong>
-                            
-                            </strong>
-                        </th>
-                    </tr>
-                </tfoot>
-            </table>
+                    </thead>
+                    <tbody>
+                        {% for submission in submissions %}
+                        {% if forloop.first %}
+                        <tr class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white">
+                        {% else %}
+                        <tr class="border-b bg-rcpch_lightest_grey text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_mid_grey hover:text-white">
+                        {% endif %}
+                                <td>{{  submission.submission_date|date:"d/m/Y H:i s" }} secs</td>
+                                <td>{{ submission.submission_by}}</td>
+                                <td>{{ submission.audit_year}}</td>
+                                <td>{{ submission.patient_count}}</td>
+                                <td>
+                                    {% if submission.submission_active %}
+                                        <span class="bg-rcpch_pink px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white">
+                                            <small>ACTIVE</small>
+                                        </span>
+                                    {% else %}
+                                        <span class="bg-rcpch_dark_blue px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white">
+                                            <small>INACTIVE</small>
+                                        </span>
+                                        <span class="bg-rcpch_dark_blue px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white">
+                                            <small>INACTIVE</small>
+                                    {% endif %}
+                                </td>
+                                <td class="flex flex-row">
+                                    <form method="post" action="{% url 'submissions' %}" class="join">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="audit_id" value="{{submission.pk}}">
+                                        <button 
+                                            name="submit-data" 
+                                            value="download-data" 
+                                            type="submit" 
+                                            class="join-item bg-rcpch_light_blue text-white font-semibold hover:text-white py-1 px-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue btn-sm rounded-none">Download</button>
+                                        <button 
+                                            name="submit-data"
+                                            {% if submission.submission_active %}
+                                            disabled="true"
+                                            {% endif %}
+                                            value="delete-data"  
+                                            type="submit" 
+                                            class="join-item bg-rcpch_red text-white font-semibold hover:text-white py-1 px-2 border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint btn-sm rounded-none {% if submission.submission_active %}opacity-50 cursor-not-allowed {% endif %}">Delete</button>
+                                    </form>
+                                    {% if forloop.first %}
+                                        <a href="{% url 'patients' %}">
+                                            <svg
+                                                class="h-8 w-8 text-rcpch_pink self-center hover:text-white"
+                                                width="24" height="24" viewBox="0 0 24 24" stroke-width="2" 
+                                                stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">  
+                                                <path stroke="none" d="M0 0h24v24H0z"/>  <polyline points="9 6 15 12 9 18" />
+                                            </svg>
+                                        </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white py-5">
+                            <th colspan="11" class="px-2">
+                                <strong>
+                                
+                                </strong>
+                            </th>
+                        </tr>
+                    </tfoot>
+                </table>
 
-    </div>
-{% else %}
-    
+        </div>
+        {% if data is not None %}
+            <!-- data quality report only visible for PDU view -->
+            {% if request.user.view_preference == 1 %}
+                {% include 'partials/data_quality_report.html' with data=data %}
+            {% elif request.user.view_preference == 2 %}
+                <p class="text-gray-400">It is not possible to view individual data quality reports for an individual Paediatric Diabetes Unit in the National View.</p>
+            {% endif %}
+        {% else %}
+                <p class="text-gray-400">No data quality report available for {{request.session.pz_code}}.</p>
+        {% endif %}
 
-    <h3>Upload History</h3>
-    <p>No submissions uploaded yet for {{request.session.pz_code}}.</p>
-
-    
-{% endif %}
+    {% else %}
+        <!-- No submissions so far -->
+        <p class="text-gray-400">No submissions uploaded yet for {{request.session.pz_code}}.</p>
+    {% endif %}
+</div>

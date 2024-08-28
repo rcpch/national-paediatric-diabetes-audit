@@ -1,13 +1,9 @@
 # python imports
 from datetime import date
-import time
 import logging
-import os
-from typing import Literal
 
 # django imports
 from django.apps import apps
-from django.conf import settings
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 
@@ -20,18 +16,13 @@ from ...constants import (
     ALL_DATES,
 )
 
-from .validate_postcode import validate_postcode
-from .nhs_ods_requests import gp_details_for_ods_code
-from .quarter_for_date import retrieve_quarter_for_date
-
+# Logging setup
+logger = logging.getLogger(__name__)
 from ..forms.patient_form import PatientForm
 from ..forms.visit_form import VisitForm
 
-# Logging setup
-logger = logging.getLogger(__name__)
 
-
-def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None):
+def csv_upload(user, csv_file=None, pdu_pz_code=None):
     """
     Processes standardised NPDA csv file and persists results in NPDA tables
 
@@ -50,9 +41,8 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
     )
 
     # get the PDU object
-    pdu, created = PaediatricDiabetesUnit.objects.get_or_create(
-        pz_code=pdu_pz_code, ods_code=organisation_ods_code
-    )
+    # TODO #249 MRB: handle case where PDU does not exist
+    pdu = PaediatricDiabetesUnit.objects.get(pz_code=pdu_pz_code)
 
     # Set previous submission to inactive
     Submission.objects.filter(
@@ -112,6 +102,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         ) | {"paediatric_diabetes_unit": pdu}
 
     def validate_patient_using_form(row):
+
         fields = row_to_dict(
             row,
             Patient,
@@ -133,6 +124,7 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
         return form
 
     def validate_visit_using_form(patient, row):
+
         fields = row_to_dict(
             row,
             Visit,
@@ -270,6 +262,8 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
                 visit.patient = patient
                 visit.save()
 
+    # save the csv file
+    new_submission.csv_file = csv_file
     new_submission.save()
 
     # delete the previous submission
@@ -281,38 +275,3 @@ def csv_upload(user, csv_file=None, organisation_ods_code=None, pdu_pz_code=None
 
     if errors_to_return:
         raise ValidationError(errors_to_return)
-
-
-def csv_summarise(csv_file):
-    """
-    This function takes a csv file and processes the file to create a summary of the data
-    It returns a dictionary with the status of the operation and the summary data
-    """
-    Patient = apps.get_model("npda", "Patient")
-
-    dataframe = pd.read_csv(
-        csv_file, parse_dates=ALL_DATES, dayfirst=True, date_format="%d/%m/%Y"
-    )
-
-    total_records = len(dataframe)
-    number_unique_nhs_numbers = dataframe["NHS Number"].nunique()
-    unique_nhs_numbers_no_spaces = (
-        dataframe["NHS Number"].fillna("").apply(lambda x: x.replace(" ", "")).unique()
-    )
-    count_of_records_per_nhs_number = dataframe["NHS Number"].value_counts()
-    matching_patients_in_current_audit_year = Patient.objects.filter(
-        nhs_number__in=list(unique_nhs_numbers_no_spaces),
-        submissions__submission_active=True,
-        submissions__audit_year=date.today().year,
-    ).count()
-
-    summary = {
-        "total_records": total_records,
-        "number_unique_nhs_numbers": number_unique_nhs_numbers,
-        "count_of_records_per_nhs_number": list(
-            count_of_records_per_nhs_number.items()
-        ),
-        "matching_patients_in_current_audit_year": matching_patients_in_current_audit_year,
-    }
-
-    return summary

@@ -35,8 +35,6 @@ class NPDAUserForm(forms.ModelForm):
         label="Add Employer",
     )
 
-    organisation_choices = []
-
     class Meta:
         model = NPDAUser
         fields = [
@@ -74,12 +72,9 @@ class NPDAUserForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs) -> None:
-        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-        OrganisationEmployer = apps.get_model("npda", "OrganisationEmployer")
-
         # get the request object from the kwargs
         self.request = kwargs.pop("request", None)
-
+        employer_choices = kwargs.pop("employer_choices", [])
         super().__init__(*args, **kwargs)
         self.fields["title"].required = False
         self.fields["first_name"].required = True
@@ -87,63 +82,17 @@ class NPDAUserForm(forms.ModelForm):
         self.fields["email"].required = True
         self.fields["role"].required = True
         self.fields["add_employer"].required = False
+        self.fields["add_employer"].choices = employer_choices
+        self.employer_choices = employer_choices
 
         # only if the form is bound - this user is being updated
         if self.instance.pk is not None:
-            if self.request.GET:
-                # populate the add_employer choices with organisations that the user is not already affiliated with, based on user permissions
-                # this is only necessary if the form is being instantiated to serve to the user, not on form submission
-                # populating the choices includes an API call and this takes time, so we only want to do it when necessary
-                self.organisation_choices = (
-                    organisations_adapter.organisations_to_populate_select_field(
-                        request=self.request, user_instance=self.instance
-                    )
-                )
-
             # this is a bit of a hack but necessary due to htmx.
             # The add_employer field is not part of the model, so we need to remove it from the data dictionary
             # in a bound form on form submission, so that the form will validate correctly
             # the add employer work flow happens via htmx and not form submission
             self.data = self.data.copy()
             self.data.pop("add_employer", None)
-
-        else:
-            # this means the form is unbound and this user is being created - therefore need the organisation_choices to be populated with all organisations
-            # but only on form instantiation, not on form submission
-            # populating the choices includes an API call and this takes time, so we only want to do it when necessary
-            if self.request.GET:
-                self.organisation_choices = (
-                    organisations_adapter.organisations_to_populate_select_field(
-                        request=self.request, user_instance=None
-                    )
-                )
-            else:
-                # this is a POST request - the form is being submitted
-                # we need to remove the selection from the add_employer field and use this to create the employer relationship
-                # but only if the form is valid
-                ods_code = self.data.get("add_employer")
-                # remove the add_employer field from the data dictionary
-                # as it is immutable we need to copy it first
-                self.data = self.data.copy()
-                self.data.pop("add_employer", None)
-
-                if ods_code and self.is_valid():
-                    # the form is filled out correctly and the user has selected an employer
-                    # we need to create the employer relationship - since this is a new user,
-                    # this organisation will be the user's primary employer
-                    pdu_object = organisations_adapter.get_single_pdu_from_ods_code(
-                        ods_code
-                    )
-                    pdu, created = PaediatricDiabetesUnit.objects.update_or_create(
-                        ods_code=ods_code, pz_code=pdu_object.pz_code
-                    )
-                    npda_user = self.instance
-                    npda_user.save()
-                    OrganisationEmployer.objects.update_or_create(
-                        npda_user=npda_user,
-                        paediatric_diabetes_unit=pdu,
-                        is_primary_employer=True,
-                    )
 
 
 class NPDAUpdatePasswordForm(SetPasswordForm):

@@ -17,7 +17,7 @@ PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
 
 @admin.register(OrganisationEmployer)
 class OrganisationEmployerAdmin(admin.ModelAdmin):
-    search_fields = ("name", "pk", "ods_code", "pz_code")
+    search_fields = ("name", "pk", "lead_organisation_ods_code", "pz_code")
 
 
 @admin.register(NPDAUser)
@@ -32,7 +32,13 @@ class PatientAdmin(admin.ModelAdmin):
 
 @admin.register(PaediatricDiabetesUnit)
 class PaediatricDiabetesUnitAdmin(admin.ModelAdmin):
-    search_fields = ("pk", "ods_code", "pz_code")
+    search_fields = ("pk", "pz_code")
+    list_display = (
+        "pz_code",
+        "lead_organisation_ods_code",
+        "lead_organisation_name",
+    )
+    ordering = ("lead_organisation_name",)
 
 
 @admin.register(Transfer)
@@ -61,7 +67,6 @@ class SessionAdmin(admin.ModelAdmin):
     list_display = [
         "session_key",
         "user_id",
-        "ods_code",
         "pz_code",
         "organisation_choices",
         "pdu_choices",
@@ -77,9 +82,6 @@ class SessionAdmin(admin.ModelAdmin):
     def user_id(self, obj):
         return self.session_data(obj).get("_auth_user_id", "N/A")
 
-    def ods_code(self, obj):
-        return self.session_data(obj).get("ods_code", "N/A")
-
     def pz_code(self, obj):
         return self.session_data(obj).get("pz_code", "N/A")
 
@@ -90,7 +92,6 @@ class SessionAdmin(admin.ModelAdmin):
         return self.session_data(obj).get("pdu_choices", "N/A")
 
     user_id.short_description = "User ID"
-    ods_code.short_description = "ODS Code"
     pz_code.short_description = "PZ Code"
     organisation_choices.short_description = "Organisation Choices"
     pdu_choices.short_description = "PDU Choices"

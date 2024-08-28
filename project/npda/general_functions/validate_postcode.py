@@ -1,4 +1,5 @@
 # python
+import logging
 
 # django
 
@@ -8,6 +9,9 @@ from requests.exceptions import HTTPError
 
 # npda imports
 from django.conf import settings
+
+# Logging
+logger = logging.getLogger(__name__)
 
 
 def validate_postcode(postcode):
@@ -25,7 +29,7 @@ def validate_postcode(postcode):
         )
         response.raise_for_status()
     except HTTPError as e:
-        print(e.response.text)
+        logger.error(e.response.text)
         return False
 
     return True

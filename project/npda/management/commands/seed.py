@@ -8,6 +8,9 @@ from django.core.management.base import BaseCommand
 logger = logging.getLogger(__name__)
 
 from .create_groups import groups_seeder
+from .seed_functions.paediatric_diabetes_units_seeder import (
+    paediatric_diabetes_units_seeder,
+)
 
 
 class Command(BaseCommand):
@@ -24,6 +27,9 @@ class Command(BaseCommand):
         elif options["mode"] == "add_permissions_to_existing_groups":
             self.stdout.write("adding permissions to groups...")
             groups_seeder(add_permissions_to_existing_groups=True)
+        elif options["mode"] == "seed_paediatric_diabetes_units":
+            self.stdout.write("seeding paediatric diabetes units...")
+            paediatric_diabetes_units_seeder()
 
         else:
             self.stdout.write("No options supplied...")
