@@ -22,6 +22,9 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
     The SubmissionsListView class.
 
     This class is used to display a list of submissions.
+
+    Users with permisson should be able to view all submissions for the PDU & ODS code in the session for all audit years/quarters.
+    Only one submission per audit year/quarter should be active.
     """
 
     model = apps.get_model(app_label="npda", model_name="Submission")

@@ -2,8 +2,8 @@ from .seed_groups_permissions import *
 from .seed_patients import *
 from .seed_users import *
 from .npda_user_factory import *
-from .PatientFactory import *
-from .PatientVisitFactory import *
-from .TransferFactory import *
+from .patient_factory import *
+from .visit_factory import *
+from .transfer_factory import *
 from .paediatrics_diabetes_unit_factory import *
 from .organisation_employer_factory import *

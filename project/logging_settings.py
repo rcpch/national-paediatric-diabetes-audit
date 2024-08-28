@@ -107,7 +107,7 @@ LOGGING = {
             "level": CONSOLE_DJANGO_LOG_LEVEL,
         },
         **django_loggers,  # this injects the default django logger settings defined above
-        "npda": {
+        "project": {
             "handlers": ["npda_console", "npda_logfile"],
             "propagate": False,
             "level": CONSOLE_LOG_LEVEL,
@@ -117,3 +117,7 @@ LOGGING = {
         },
     },
 }
+
+# Using print statements to show the logging settings
+print(f"Console Log Level: {CONSOLE_LOG_LEVEL}")
+print(f"File Log Level: {FILE_LOG_LEVEL}")

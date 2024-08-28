@@ -15,7 +15,7 @@ from project.npda.tests.factories import (
     seed_users_fixture,
     seed_patients_fixture,
     PatientFactory,
-    PatientVisitFactory,
+    VisitFactory,
     NPDAUserFactory,
     OrganisationEmployerFactory,
     PaediatricsDiabetesUnitFactory,
@@ -27,7 +27,7 @@ from project.npda.tests.factories import (
 
 # factory object becomes lowercase-underscore form of the class name
 register(PatientFactory)  # => patient_factory
-register(PatientVisitFactory)  # => patient_visit_factory
+register(VisitFactory)  # => patient_visit_factory
 register(NPDAUserFactory)  # => npdauser_factory
 register(OrganisationEmployerFactory)  # => npdauser_factory
 register(PaediatricsDiabetesUnitFactory)  # => npdauser_factory
