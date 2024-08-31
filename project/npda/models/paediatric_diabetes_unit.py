@@ -32,6 +32,18 @@ class PaediatricDiabetesUnit(Model):
         blank=True,
         null=True,
     )
+    paediatric_diabetes_network_code = CharField(
+        max_length=10,
+        help_text="Enter the paedidatric diabetes network PN code",
+        blank=True,
+        null=True,
+    )
+    paediatric_diabetes_network_name = CharField(
+        max_length=75,
+        help_text="Enter the paediatric diabetes network name",
+        blank=True,
+        null=True,
+    )
 
     class Meta:
         verbose_name = "Paediatric Diabetes Unit"
