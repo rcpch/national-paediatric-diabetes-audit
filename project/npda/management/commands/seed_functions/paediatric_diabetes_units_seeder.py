@@ -40,8 +40,8 @@ def paediatric_diabetes_units_seeder():
                     "lead_organisation_name": pdu["primary_organisation"]["name"],
                     "parent_ods_code": parent_ods_code,
                     "parent_name": parent_name,
-                    "network_name": network_name,
-                    "network_code": network_code,
+                    "paediatric_diabetes_network_code": network_code,
+                    "paediatric_diabetes_network_name": network_name,
                 },
             )
         except DatabaseError as e:
