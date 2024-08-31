@@ -40,7 +40,7 @@ class PatientListView(
     permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
     model = Patient
     template_name = "patients.html"
-    paginate_by = 5
+    paginate_by = 50
 
     def get_queryset(self):
         """
