@@ -1,4 +1,6 @@
+{% load static %}
 {% load npda_tags %}
+{% url 'patients' as patients_url %}
 <h1 class="text-md font-montserrat font-semibold text-rcpch_dark_blue">Patients under the care of {{pz_code}}</h1>
 {% if patient_list %}
 <table class="table table-md w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
@@ -6,88 +8,16 @@
             <tr>
                 <th scope="col" class="px-2 py-3 text-center cursor-pointer">
                         <span class="flex flex-row">
-                            <?xml version="1.0" ?>
-                            <svg 
-                                height="14px" 
-                                class="fill-none" 
-                                id="icon" 
-                                style="enable-background:new 0 0 32 32;" 
-                                version="1.1" viewBox="0 0 32 32" 
-                                width="32px"
-                                xml:space="preserve" 
-                                xmlns="http://www.w3.org/2000/svg" 
-                                xmlns:xlink="http://www.w3.org/1999/xlink"
-                                hx-get="{% url 'patients' %}?sort_by=pk&page={{current_page}}&sort=asc"
-                                hx-trigger="click"
-                                hx-target="#patient_table"
-                                hx-swap="innerHTML"
-                            >
-                                <polygon class="fill-rcpch_pink" points="24,24 16,32 8,24 "/>
-                                <polygon class="fill-rcpch_pink" points="8,8 16,0 24,8 "/><rect class="st0" height="32" id="_Transparent_Rectangle_" width="32"/>
-                            </svg>
+                            {% include 'partials/page_elements/filter_icon.html' with hx_get=asc_url hx_target="#patient_table" filter_direction="asc" current_page=current_page sort_field="pk" %}
                             NPDA ID
-                            <?xml version="1.0" ?>
-                            <svg 
-                                height="14px" 
-                                class="fill-none" 
-                                id="icon" 
-                                style="enable-background:new 0 0 32 32;" 
-                                version="1.1" viewBox="0 0 32 32" 
-                                width="32px"
-                                xml:space="preserve" 
-                                xmlns="http://www.w3.org/2000/svg" 
-                                xmlns:xlink="http://www.w3.org/1999/xlink"
-                                hx-get="{% url 'patients' %}?sort_by=pk&page={{current_page}}&sort=desc"
-                                hx-trigger="click"
-                                hx-target="#patient_table"
-                                hx-swap="innerHTML"
-                            >
-                                <polygon class="fill-rcpch_pink" points="24,24 16,32 8,24 "/>
-                                <polygon class="fill-rcpch_pink" points="8,8 16,0 24,8 "/><rect class="st0" height="32" id="_Transparent_Rectangle_" width="32"/>
-                            </svg>
+                            {% include 'partials/page_elements/filter_icon.html' with hx_get=desc_url hx_target="#patient_table" filter_direction="desc" current_page=current_page sort_field="pk" %}
                         </span>
                 </th>
                 <th scope="col" class="px-2 py-3 text-center cursor-pointer">
                         <span class="flex flex-row">
-                            <?xml version="1.0" ?>
-                            <svg 
-                                height="14px" 
-                                class="fill-none" 
-                                id="icon" 
-                                style="enable-background:new 0 0 32 32;" 
-                                version="1.1" viewBox="0 0 32 32" 
-                                width="32px"
-                                xml:space="preserve" 
-                                xmlns="http://www.w3.org/2000/svg" 
-                                xmlns:xlink="http://www.w3.org/1999/xlink"
-                                hx-get="{% url 'patients' %}?sort_by=nhs_number&page={{current_page}}&sort=asc"
-                                hx-trigger="click"
-                                hx-target="#patient_table"
-                                hx-swap="innerHTML"
-                            >
-                                <polygon class="fill-rcpch_pink" points="24,24 16,32 8,24 "/>
-                                <polygon class="fill-rcpch_pink" points="8,8 16,0 24,8 "/><rect class="st0" height="32" id="_Transparent_Rectangle_" width="32"/>
-                            </svg>
+                            {% include 'partials/page_elements/filter_icon.html' with hx_get=asc_url hx_target="#patient_table" filter_direction="asc" current_page=current_page sort_field="nhs_number" %}
                             NHS Number
-                            <?xml version="1.0" ?>
-                            <svg 
-                                height="14px" 
-                                class="fill-none" 
-                                id="icon" 
-                                style="enable-background:new 0 0 32 32;" 
-                                version="1.1" viewBox="0 0 32 32" 
-                                width="32px"
-                                xml:space="preserve" 
-                                xmlns="http://www.w3.org/2000/svg" 
-                                xmlns:xlink="http://www.w3.org/1999/xlink"
-                                hx-get="{% url 'patients' %}?sort_by=nhs_number&page={{current_page}}&sort=desc"
-                                hx-trigger="click"
-                                hx-target="#patient_table"
-                                hx-swap="innerHTML"
-                            >
-                                <polygon class="fill-rcpch_pink" points="24,24 16,32 8,24 "/>
-                                <polygon class="fill-rcpch_pink" points="8,8 16,0 24,8 "/><rect class="st0" height="32" id="_Transparent_Rectangle_" width="32"/>
-                            </svg>
+                            {% include 'partials/page_elements/filter_icon.html' with hx_get=desc_url hx_target="#patient_table" filter_direction="desc" current_page=current_page sort_field="nhs_number" %}
                         </span>
                 </th>
                 <th scope="col" class="px-2 py-3 text-center">Sex</th>
