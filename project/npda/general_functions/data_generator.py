@@ -24,11 +24,11 @@ class AgeRange(Enum):
     Enum class to represent the range of ages for children.
     """
 
-    AGE_0_4 = 0
-    AGE_5_10 = 1
-    AGE_11_15 = 2
-    AGE_16_19 = 3
-    AGE_20_25 = 4
+    AGE_0_4 = "Birth to primary school age (0-4)"
+    AGE_5_10 = "Primary school age (5-10)"
+    AGE_11_15 = "Early secondary school age (11-15)"
+    AGE_16_19 = "Late secondary school age (16-19): transition to adult services"
+    AGE_20_25 = "Young adult (20-25)"
 
 
 class Child:
