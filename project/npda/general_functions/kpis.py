@@ -1,6 +1,7 @@
 """Views for KPIs"""
 
 # Python imports
+import time
 from dataclasses import dataclass, is_dataclass
 from dataclasses import asdict
 from datetime import date, datetime
@@ -1302,6 +1303,12 @@ class KPIAggregationForPDU(TemplateView):
 
         pz_code = kwargs.get("pz_code", None)
 
+        start_time = time.time()  # Record the start time for calc
         aggregated_data = CalculateKPIS(pz_code=pz_code).calculate_kpis_for_patients()
+        end_time = time.time()  # Record the end time
+        calculation_time = round((end_time - start_time) * 1000, 2)  # Calculate the time taken in milliseconds, rounded to 2dp
+        
+        # Add to context
+        aggregated_data['calculation_time'] = calculation_time
 
         return render(request, self.template_name, context=aggregated_data)
