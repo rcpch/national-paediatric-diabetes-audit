@@ -8,6 +8,7 @@ import logging
 from dateutil.relativedelta import relativedelta
 
 # Django imports
+from django.shortcuts import render
 from django.views.generic import TemplateView
 from django.http import JsonResponse
 from django.db.models import Q, OuterRef, Subquery
@@ -1228,7 +1229,7 @@ class CalculateKPIS:
 
         # Define the subquery to find the latest visit where blood glucose monitoring (item 22) is 4 = Real time continuous glucose monitor with alarms
         latest_visit_subquery = (
-            Visit.objects.filter(patient=OuterRef("pk"), glucose_monitoring=[4])
+            Visit.objects.filter(patient=OuterRef("pk"), glucose_monitoring=4)
             .order_by("-visit_date")
             .values("pk")[:1]
         )
@@ -1270,7 +1271,7 @@ class CalculateKPIS:
 
         # Define the subquery to find the latest visit where blood glucose monitoring (item 22) is 4 = Real time continuous glucose monitor with alarms
         latest_visit_subquery = (
-            Visit.objects.filter(patient=OuterRef("pk"), glucose_monitoring=[4])
+            Visit.objects.filter(patient=OuterRef("pk"), glucose_monitoring=4)
             .order_by("-visit_date")
             .values("pk")[:1]
         )
@@ -1295,11 +1296,12 @@ class CalculateKPIS:
 # WIP simply return KPI Agg result for given PDU
 class KPIAggregationForPDU(TemplateView):
 
+    template_name = "kpi_aggregations.html"
+
     def get(self, request, *args, **kwargs):
 
         pz_code = kwargs.get("pz_code", None)
 
         aggregated_data = CalculateKPIS(pz_code=pz_code).calculate_kpis_for_patients()
 
-        # Collate aggregated data
-        return JsonResponse(aggregated_data, safe=False)
+        return render(request, self.template_name, context=aggregated_data)
