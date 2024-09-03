@@ -268,11 +268,21 @@ class CalculateKPIS:
         calculated_kpis = {}
 
         # Calculate KPIs 1 - 49
-        for i in range(1, 15):
+        for i in range(1, 50):
+            # Dynamically get the method name from the kpis_names_map
             kpi_method_name = self.kpis_names_map[i]
-            kpi_method = getattr(self, f"calculate_{kpi_method_name}")
+            kpi_method = getattr(self, f"calculate_{kpi_method_name}", None)
+
+            # If the method is not implemented, set the value to "Not implemented"
+            # and skip
+            if kpi_method is None:
+                calculated_kpis[kpi_method_name] = "Not implemented"
+                continue
+
+            # Else, calculate the KPI
             kpi_result = kpi_method()
 
+            # Validations
             if not is_dataclass(kpi_result):
                 raise TypeError(
                     f"kpi_result is not a dataclass instance: {kpi_result} (type: {type(kpi_result)})"
@@ -917,6 +927,41 @@ class CalculateKPIS:
         # Define the subquery to find the latest visit where treatment_regimen = 2
         latest_visit_subquery = (
             Visit.objects.filter(patient=OuterRef("pk"), treatment=2)
+            .order_by("-visit_date")
+            .values("pk")[:1]
+        )
+        # Filter the Patient queryset based on the subquery
+        total_passed = eligible_patients.filter(
+            Q(
+                id__in=Subquery(
+                    Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
+                )
+            )
+        ).count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def calculate_kpi_15_insulin_pump(self) -> dict:
+        """
+        Calculates KPI 15: Insulin pump (including those using a pump as part of a hybrid closed loop)
+
+        Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is 3 = Insulin pump
+
+        Denominator: Total number of eligible patients (measure 1)
+        """
+        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set
+        total_eligible = eligible_patients.count()
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Define the subquery to find the latest visit where treatment_regimen = 3
+        latest_visit_subquery = (
+            Visit.objects.filter(patient=OuterRef("pk"), treatment=3)
             .order_by("-visit_date")
             .values("pk")[:1]
         )
