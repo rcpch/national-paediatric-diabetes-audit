@@ -19,64 +19,6 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name="PaediatricDiabetesUnit",
-            fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                (
-                    "pz_code",
-                    models.CharField(
-                        help_text="Enter the paediatric diabetes unit PZ code",
-                        max_length=10,
-                    ),
-                ),
-                (
-                    "lead_organisation_ods_code",
-                    models.CharField(
-                        help_text="Enter the organisation ODS code", max_length=10
-                    ),
-                ),
-                (
-                    "lead_organisation_name",
-                    models.CharField(
-                        blank=True,
-                        help_text="Enter the organisation name",
-                        max_length=75,
-                        null=True,
-                    ),
-                ),
-                (
-                    "parent_ods_code",
-                    models.CharField(
-                        blank=True,
-                        help_text="Enter the parent ODS code",
-                        max_length=10,
-                        null=True,
-                    ),
-                ),
-                (
-                    "parent_name",
-                    models.CharField(
-                        blank=True,
-                        help_text="Enter the parent name",
-                        max_length=75,
-                        null=True,
-                    ),
-                ),
-            ],
-            options={
-                "verbose_name": "Paediatric Diabetes Unit",
-                "verbose_name_plural": "Paediatric Diabetes Units",
-            },
-        ),
-        migrations.CreateModel(
             name="Patient",
             fields=[
                 (
@@ -369,6 +311,38 @@ class Migration(migrations.Migration):
                         "Can consent to participating in NPDA.",
                     ),
                 ],
+            },
+        ),
+        migrations.CreateModel(
+            name="PaediatricDiabetesUnit",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "pz_code",
+                    models.CharField(
+                        help_text="Enter the paediatric diabetes unit PZ code",
+                        max_length=10,
+                    ),
+                ),
+                (
+                    "ods_code",
+                    models.CharField(
+                        help_text="Enter the organisation ODS code", max_length=10
+                    ),
+                ),
+            ],
+            options={
+                "verbose_name": "Paediatric Diabetes Unit",
+                "verbose_name_plural": "Paediatric Diabetes Units",
+                "unique_together": {("pz_code", "ods_code")},
             },
         ),
         migrations.CreateModel(
