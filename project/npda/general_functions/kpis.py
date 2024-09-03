@@ -267,8 +267,8 @@ class CalculateKPIS:
 
         calculated_kpis = {}
 
-        # Calculate KPIs 1 - 12, used as denominators for subsequent KPIs
-        for i in range(1, 13):
+        # Calculate KPIs 1 - 49
+        for i in range(1, 14):
             kpi_method_name = self.kpis_names_map[i]
             kpi_method = getattr(self, f"calculate_{kpi_method_name}")
             kpi_result = kpi_method()
@@ -285,12 +285,6 @@ class CalculateKPIS:
             # Each kpi method returns a KPIResult object
             # so we convert it first to a dictionary
             calculated_kpis[kpi_method_name] = asdict(kpi_result)
-
-        # Calculate remaining KPIs (13-49)
-        # for i in range(13, 50):
-        #     kpi_method_name = self.kpis[i]
-        #     kpi_method = getattr(self, f"calculate_{kpi_method_name}")
-        #     calculated_kpis[kpi_method_name] = kpi_method(calculated_kpis)
 
         # Add in used attributes for calculations
         return_obj = {}
@@ -873,14 +867,39 @@ class CalculateKPIS:
             total_failed=total_failed,
         )
 
-    def calculate_kpi_numerator_13(self) -> dict:
+    def calculate_kpi_13_one_to_three_injections_per_day(self) -> dict:
         """
-        Calculates KPI 13: Total number of patients on 1-3 injections per day
+        Calculates KPI 13: One - three injections/day
+
+        Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is 1 = One-three injections/day
+
+        Denominator: Total number of eligible patients (measure 1)
         """
-        return kpi_13_one_to_three_injections_per_day(
-            patients=self.patients,
-            audit_start_date=self.audit_start_date,
-            audit_end_date=self.audit_end_date,
+        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set
+        total_eligible = eligible_patients.count()
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Define the subquery to find the latest visit where treatment_regimen = 1
+        latest_visit_subquery = (
+            Visit.objects.filter(patient=OuterRef("pk"), treatment=1)
+            .order_by("-visit_date")
+            .values("pk")[:1]
+        )
+        # Filter the Patient queryset based on the subquery
+        total_passed = eligible_patients.filter(
+            Q(
+                id__in=Subquery(
+                    Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
+                )
+            )
+        ).count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
         )
 
     def calculate_kpi_numerator_14(self) -> dict:
