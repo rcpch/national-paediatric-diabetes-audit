@@ -7,6 +7,7 @@ import logging
 from typing import List
 import pytest
 
+from project.constants.diabetes_treatment import TREATMENT_TYPES
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.npda.general_functions.kpis import CalculateKPIS, KPIResult
 from project.npda.general_functions.model_utils import print_instance_field_attrs
@@ -944,11 +945,28 @@ def test_kpi_calculation_12(AUDIT_START_DATE):
     )
 
 
-@pytest.mark.django_db
-def test_kpi_calculation_13(AUDIT_START_DATE):
-    """Tests that KPI13 is calculated correctly.
+# Set up test params for kpis 13-20, as they all have the same denominator
+# and the only thing being changed is value for visit__treatment
+# the final option (9 - unknown) is not a KPI calculation so excluded
+TX_TYPE_PARAMS = []
+for treatment_type in TREATMENT_TYPES[:-1]:
+    expected_result = KPIResult(
+        total_eligible=8,
+        total_passed=1,
+        total_ineligible=2,
+        total_failed=7,
+    )
+    TX_TYPE_PARAMS.append((treatment_type[0], expected_result))
 
-    Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is 1 = One-three injections/day
+
+@pytest.mark.parametrize(("treatment", "expected_result"), TX_TYPE_PARAMS)
+@pytest.mark.django_db
+def test_kpi_calculations_13_to_20(
+    AUDIT_START_DATE, treatment: int, expected_result: KPIResult
+):
+    """Tests that KPIS13-20 are calculated correctly.
+
+    Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is `treatment` (int 1-9)
 
     Denominator: Total number of eligible patients (measure 1)
     """
@@ -964,15 +982,21 @@ def test_kpi_calculation_13(AUDIT_START_DATE):
     passing = PatientFactory(
         # KPI1 eligible
         **eligible_criteria,
-        # most recent observation for item 20 (based on visit date) is 1 = One-three injections/day
-        visit__treatment=1,
+        # most recent observation for treatment regimen (item 20) is `treatment`
+        visit__treatment=treatment,
     )
-    failling = PatientFactory(
-        # KPI1 eligible
-        **eligible_criteria,
-        # most recent observation for item 20 (based on visit date) is not 1 = One-three injections/day
-        visit__treatment=2,
-    )
+
+    # TODO: query are these 'failing' or just 'not passing'?
+    # Create failing patients (remember exclude final option 9 - unknown)
+    for val, _ in TREATMENT_TYPES[:-1]:
+        if val != treatment:
+
+            failing = PatientFactory(
+                # KPI1 eligible
+                **eligible_criteria,
+                # most recent observation for treatment regimen (item 20) is NOT `treatment`
+                visit__treatment=val,
+            )
 
     # Create Patients and Visits that should be excluded
     # Visit date before audit period
@@ -991,161 +1015,18 @@ def test_kpi_calculation_13(AUDIT_START_DATE):
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
     calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
 
-    EXPECTED_TOTAL_ELIGIBLE = 2
-    EXPECTED_TOTAL_INELIGIBLE = 2
-    EXPECTED_TOTAL_PASSED = 1
-    EXPECTED_TOTAL_FAILED = 1
-
-    EXPECTED_KPIRESULT = KPIResult(
-        total_eligible=EXPECTED_TOTAL_ELIGIBLE,
-        total_passed=EXPECTED_TOTAL_PASSED,
-        total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
-        total_failed=EXPECTED_TOTAL_FAILED,
-    )
-
     # First set self.total_kpi_1_eligible_pts_base_query_set result
     # of total eligible
     calc_kpis.calculate_kpi_1_total_eligible()
 
+    # Dynamically get the kpi calc method based on treatment type
+    #   `treatment` is an int between 1-8
+    #   these kpi calulations start at 13
+    #   so just offset by 12 to get kpi number
+    kpi_number = treatment + 12
+    kpi_method_name = calc_kpis.kpis_names_map[kpi_number]
+    kpi_calc_method = getattr(calc_kpis, f"calculate_{kpi_method_name}")
     assert_kpi_result_equal(
-        expected=EXPECTED_KPIRESULT,
-        actual=calc_kpis.calculate_kpi_13_one_to_three_injections_per_day(),
-    )
-
-
-@pytest.mark.django_db
-def test_kpi_calculation_14(AUDIT_START_DATE):
-    """Tests that KPI14 is calculated correctly.
-
-    Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is 2 = Four or more injections/day
-
-    Denominator: Total number of eligible patients (measure 1)
-    """
-
-    # Ensure starting with clean pts in test db
-    Patient.objects.all().delete()
-
-    # Create  Patients and Visits that should be eligible
-    eligible_criteria = {
-        "visit__visit_date": AUDIT_START_DATE + relativedelta(days=2),
-        "date_of_birth": AUDIT_START_DATE - relativedelta(days=365 * 10),
-    }
-    passing = PatientFactory(
-        # KPI1 eligible
-        **eligible_criteria,
-        # most recent observation for item 20 (based on visit date) is 1 = One-three injections/day
-        visit__treatment=2,
-    )
-    failling = PatientFactory(
-        # KPI1 eligible
-        **eligible_criteria,
-        # most recent observation for item 20 (based on visit date) is not 1 = One-three injections/day
-        visit__treatment=1,
-    )
-
-    # Create Patients and Visits that should be excluded
-    # Visit date before audit period
-    ineligible_patient_visit_date = PatientFactory(
-        postcode="ineligible_patient_visit_date",
-        visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
-        visit__treatment=1,
-    )
-    # Above age 25 at start of audit period
-    ineligible_patient_too_old = PatientFactory(
-        postcode="ineligible_patient_too_old",
-        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
-        visit__treatment=1,
-    )
-
-    # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
-
-    EXPECTED_TOTAL_ELIGIBLE = 2
-    EXPECTED_TOTAL_INELIGIBLE = 2
-    EXPECTED_TOTAL_PASSED = 1
-    EXPECTED_TOTAL_FAILED = 1
-
-    EXPECTED_KPIRESULT = KPIResult(
-        total_eligible=EXPECTED_TOTAL_ELIGIBLE,
-        total_passed=EXPECTED_TOTAL_PASSED,
-        total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
-        total_failed=EXPECTED_TOTAL_FAILED,
-    )
-
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
-
-    assert_kpi_result_equal(
-        expected=EXPECTED_KPIRESULT,
-        actual=calc_kpis.calculate_kpi_14_four_or_more_injections_per_day(),
-    )
-
-
-@pytest.mark.django_db
-def test_kpi_calculation_15(AUDIT_START_DATE):
-    """Tests that KPI15 is calculated correctly.
-
-    Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is 3 = Insulin pump
-
-        Denominator: Total number of eligible patients (measure 1)
-    """
-
-    # Ensure starting with clean pts in test db
-    Patient.objects.all().delete()
-
-    # Create  Patients and Visits that should be eligible
-    eligible_criteria = {
-        "visit__visit_date": AUDIT_START_DATE + relativedelta(days=2),
-        "date_of_birth": AUDIT_START_DATE - relativedelta(days=365 * 10),
-    }
-    passing = PatientFactory(
-        # KPI1 eligible
-        **eligible_criteria,
-        # most recent observation for item 20 (based on visit date) is 1 = One-three injections/day
-        visit__treatment=3,
-    )
-    failling = PatientFactory(
-        # KPI1 eligible
-        **eligible_criteria,
-        # most recent observation for item 20 (based on visit date) is not 1 = One-three injections/day
-        visit__treatment=1,
-    )
-
-    # Create Patients and Visits that should be excluded
-    # Visit date before audit period
-    ineligible_patient_visit_date = PatientFactory(
-        postcode="ineligible_patient_visit_date",
-        visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
-        visit__treatment=1,
-    )
-    # Above age 25 at start of audit period
-    ineligible_patient_too_old = PatientFactory(
-        postcode="ineligible_patient_too_old",
-        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
-        visit__treatment=1,
-    )
-
-    # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
-
-    EXPECTED_TOTAL_ELIGIBLE = 2
-    EXPECTED_TOTAL_INELIGIBLE = 2
-    EXPECTED_TOTAL_PASSED = 1
-    EXPECTED_TOTAL_FAILED = 1
-
-    EXPECTED_KPIRESULT = KPIResult(
-        total_eligible=EXPECTED_TOTAL_ELIGIBLE,
-        total_passed=EXPECTED_TOTAL_PASSED,
-        total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
-        total_failed=EXPECTED_TOTAL_FAILED,
-    )
-
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
-
-    assert_kpi_result_equal(
-        expected=EXPECTED_KPIRESULT,
-        actual=calc_kpis.calculate_kpi_15_insulin_pump(),
+        expected=expected_result,
+        actual=kpi_calc_method(),
     )

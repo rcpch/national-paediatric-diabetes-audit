@@ -334,11 +334,11 @@ class CalculateKPIS:
         )
 
         eligible_patients = self.total_kpi_1_eligible_pts_base_query_set.distinct()
-        total_eligible = eligible_patients.count()
+        self.kpi_1_total_eligible = eligible_patients.count()
 
         # Count eligible patients and set as attribute
         # to be used in subsequent KPI calculations
-        total_eligible = eligible_patients.count()
+        total_eligible = self.kpi_1_total_eligible
 
         # Calculate ineligible patients
         total_ineligible = self.total_patients_count - total_eligible
@@ -886,7 +886,7 @@ class CalculateKPIS:
         Denominator: Total number of eligible patients (measure 1)
         """
         eligible_patients = self.total_kpi_1_eligible_pts_base_query_set
-        total_eligible = eligible_patients.count()
+        total_eligible = self.kpi_1_total_eligible
         total_ineligible = self.total_patients_count - total_eligible
 
         # Define the subquery to find the latest visit where treatment_regimen = 1
@@ -921,7 +921,7 @@ class CalculateKPIS:
         Denominator: Total number of eligible patients (measure 1)
         """
         eligible_patients = self.total_kpi_1_eligible_pts_base_query_set
-        total_eligible = eligible_patients.count()
+        total_eligible = self.kpi_1_total_eligible
         total_ineligible = self.total_patients_count - total_eligible
 
         # Define the subquery to find the latest visit where treatment_regimen = 2
@@ -956,12 +956,197 @@ class CalculateKPIS:
         Denominator: Total number of eligible patients (measure 1)
         """
         eligible_patients = self.total_kpi_1_eligible_pts_base_query_set
-        total_eligible = eligible_patients.count()
+        total_eligible = self.kpi_1_total_eligible
         total_ineligible = self.total_patients_count - total_eligible
 
         # Define the subquery to find the latest visit where treatment_regimen = 3
         latest_visit_subquery = (
             Visit.objects.filter(patient=OuterRef("pk"), treatment=3)
+            .order_by("-visit_date")
+            .values("pk")[:1]
+        )
+        # Filter the Patient queryset based on the subquery
+        total_passed = eligible_patients.filter(
+            Q(
+                id__in=Subquery(
+                    Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
+                )
+            )
+        ).count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def calculate_kpi_16_one_to_three_injections_plus_other_medication(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 16: One - three injections/day plus other blood glucose lowering medication
+
+        Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is 4 = One - three injections/day plus other blood glucose lowering medication
+
+        Denominator: Total number of eligible patients (measure 1)
+        """
+        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set
+        total_eligible = self.kpi_1_total_eligible
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Define the subquery to find the latest visit where treatment_regimen = 4
+        latest_visit_subquery = (
+            Visit.objects.filter(patient=OuterRef("pk"), treatment=4)
+            .order_by("-visit_date")
+            .values("pk")[:1]
+        )
+        # Filter the Patient queryset based on the subquery
+        total_passed = eligible_patients.filter(
+            Q(
+                id__in=Subquery(
+                    Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
+                )
+            )
+        ).count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def calculate_kpi_17_four_or_more_injections_plus_other_medication(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 17: Four or more injections/day plus other blood glucose lowering medication
+
+        Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is 5 = Four or more injections/day plus other blood glucose lowering medication
+
+        Denominator: Total number of eligible patients (measure 1)
+        """
+        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set
+        total_eligible = self.kpi_1_total_eligible
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Define the subquery to find the latest visit where treatment_regimen = 5
+        latest_visit_subquery = (
+            Visit.objects.filter(patient=OuterRef("pk"), treatment=5)
+            .order_by("-visit_date")
+            .values("pk")[:1]
+        )
+        # Filter the Patient queryset based on the subquery
+        total_passed = eligible_patients.filter(
+            Q(
+                id__in=Subquery(
+                    Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
+                )
+            )
+        ).count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def calculate_kpi_18_insulin_pump_plus_other_medication(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 18: Insulin pump therapy plus other blood glucose lowering medication
+
+        Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is 6 = Insulin pump therapy plus other blood glucose lowering medication
+
+        Denominator: Total number of eligible patients (measure 1)
+        """
+        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set
+        total_eligible = self.kpi_1_total_eligible
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Define the subquery to find the latest visit where treatment_regimen = 6
+        latest_visit_subquery = (
+            Visit.objects.filter(patient=OuterRef("pk"), treatment=6)
+            .order_by("-visit_date")
+            .values("pk")[:1]
+        )
+        # Filter the Patient queryset based on the subquery
+        total_passed = eligible_patients.filter(
+            Q(
+                id__in=Subquery(
+                    Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
+                )
+            )
+        ).count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def calculate_kpi_19_dietary_management_alone(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 19: Dietary management alone (no insulin or other diabetes related medication)
+
+        Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is 7 = Dietary management alone (no insulin or other diabetes related medication)
+
+        Denominator: Total number of eligible patients (measure 1)
+        """
+        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set
+        total_eligible = self.kpi_1_total_eligible
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Define the subquery to find the latest visit where treatment_regimen = 7
+        latest_visit_subquery = (
+            Visit.objects.filter(patient=OuterRef("pk"), treatment=7)
+            .order_by("-visit_date")
+            .values("pk")[:1]
+        )
+        # Filter the Patient queryset based on the subquery
+        total_passed = eligible_patients.filter(
+            Q(
+                id__in=Subquery(
+                    Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
+                )
+            )
+        ).count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def calculate_kpi_20_dietary_management_plus_other_medication(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 16: Dietary management plus other blood glucose lowering medication (non Type-1 diabetes)
+
+        Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is 8 = Dietary management plus other blood glucose lowering medication (non Type-1 diabetes)
+
+        Denominator: Total number of eligible patients (measure 1)
+        """
+        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set
+        total_eligible = self.kpi_1_total_eligible
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Define the subquery to find the latest visit where treatment_regimen = 8
+        latest_visit_subquery = (
+            Visit.objects.filter(patient=OuterRef("pk"), treatment=8)
             .order_by("-visit_date")
             .values("pk")[:1]
         )
