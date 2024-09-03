@@ -1011,3 +1011,72 @@ def test_kpi_calculation_13(AUDIT_START_DATE):
         expected=EXPECTED_KPIRESULT,
         actual=calc_kpis.calculate_kpi_13_one_to_three_injections_per_day(),
     )
+
+
+@pytest.mark.django_db
+def test_kpi_calculation_14(AUDIT_START_DATE):
+    """Tests that KPI14 is calculated correctly.
+
+    Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is 2 = Four or more injections/day
+
+    Denominator: Total number of eligible patients (measure 1)
+    """
+
+    # Ensure starting with clean pts in test db
+    Patient.objects.all().delete()
+
+    # Create  Patients and Visits that should be eligible
+    eligible_criteria = {
+        "visit__visit_date": AUDIT_START_DATE + relativedelta(days=2),
+        "date_of_birth": AUDIT_START_DATE - relativedelta(days=365 * 10),
+    }
+    passing = PatientFactory(
+        # KPI1 eligible
+        **eligible_criteria,
+        # most recent observation for item 20 (based on visit date) is 1 = One-three injections/day
+        visit__treatment=2,
+    )
+    failling = PatientFactory(
+        # KPI1 eligible
+        **eligible_criteria,
+        # most recent observation for item 20 (based on visit date) is not 1 = One-three injections/day
+        visit__treatment=1,
+    )
+
+    # Create Patients and Visits that should be excluded
+    # Visit date before audit period
+    ineligible_patient_visit_date = PatientFactory(
+        postcode="ineligible_patient_visit_date",
+        visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
+        visit__treatment=1,
+    )
+    # Above age 25 at start of audit period
+    ineligible_patient_too_old = PatientFactory(
+        postcode="ineligible_patient_too_old",
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
+        visit__treatment=1,
+    )
+
+    # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+
+    EXPECTED_TOTAL_ELIGIBLE = 2
+    EXPECTED_TOTAL_INELIGIBLE = 2
+    EXPECTED_TOTAL_PASSED = 1
+    EXPECTED_TOTAL_FAILED = 1
+
+    EXPECTED_KPIRESULT = KPIResult(
+        total_eligible=EXPECTED_TOTAL_ELIGIBLE,
+        total_passed=EXPECTED_TOTAL_PASSED,
+        total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
+        total_failed=EXPECTED_TOTAL_FAILED,
+    )
+
+    # First set self.total_kpi_1_eligible_pts_base_query_set result
+    # of total eligible
+    calc_kpis.calculate_kpi_1_total_eligible()
+
+    assert_kpi_result_equal(
+        expected=EXPECTED_KPIRESULT,
+        actual=calc_kpis.calculate_kpi_14_four_or_more_injections_per_day(),
+    )

@@ -268,7 +268,7 @@ class CalculateKPIS:
         calculated_kpis = {}
 
         # Calculate KPIs 1 - 49
-        for i in range(1, 14):
+        for i in range(1, 15):
             kpi_method_name = self.kpis_names_map[i]
             kpi_method = getattr(self, f"calculate_{kpi_method_name}")
             kpi_result = kpi_method()
@@ -907,12 +907,34 @@ class CalculateKPIS:
         Calculates KPI 14: Four or more injections/day
 
         Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is 2 = Four or more injections/day
+
         Denominator: Total number of eligible patients (measure 1)
         """
-        return kpi_14_four_or_more_injections_per_day(
-            patients=self.patients,
-            audit_start_date=self.audit_start_date,
-            audit_end_date=self.audit_end_date,
+        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set
+        total_eligible = eligible_patients.count()
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Define the subquery to find the latest visit where treatment_regimen = 2
+        latest_visit_subquery = (
+            Visit.objects.filter(patient=OuterRef("pk"), treatment=2)
+            .order_by("-visit_date")
+            .values("pk")[:1]
+        )
+        # Filter the Patient queryset based on the subquery
+        total_passed = eligible_patients.filter(
+            Q(
+                id__in=Subquery(
+                    Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
+                )
+            )
+        ).count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
         )
 
 
