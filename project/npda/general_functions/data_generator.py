@@ -15,7 +15,21 @@ from django.apps import apps
 import nhs_number
 
 # Importing constants
-from project.constants import SEX_TYPE, DIABETES_TYPES, ETHNICITIES
+from project.constants import (
+    SEX_TYPE,
+    DIABETES_TYPES,
+    ETHNICITIES,
+    HBA1C_FORMATS,
+    TREATMENT_TYPES,
+    YES_NO_UNKNOWN,
+    RETINAL_SCREENING_RESULTS,
+    ALBUMINURIA_STAGES,
+    THYROID_TREATMENT_STATUS,
+    SMOKING_STATUS,
+    HOSPITAL_ADMISSION_REASONS,
+    DKA_ADDITIONAL_THERAPIES,
+)
+from project.constants.visit_categories import VisitCategories, VISIT_FIELDS
 
 
 # create an Enum for the range of ages
@@ -193,3 +207,350 @@ def generate_transfer_instance(patient, paediatric_diabetes_unit=None):
         paediatric_diabetes_unit=paediatric_diabetes_unit,
         date=date.today(),
     )
+
+
+class Attendance:
+    """
+    Class to represent an attendance for a child.
+    """
+
+    visit_date = date.today()
+    visit_category = random.choice(list(VisitCategories))
+    hba1_target_range = random.choice(["target", "above", "well-above"])
+
+    def __init__(
+        self, patient, visit_date: date, visit_category: VisitCategories = None, hba1_target_range: str = None # one of ["target", "above", "well-above"]
+    ) -> None:
+        """
+        Constructor for the Attendance class.
+        It creates a valid attendance object using these parameters as seed values to generate an instance with random values.
+        Optional parameters are randomised if not provided.
+        patient: Patient - the patient object for which the attendance is created
+        visit_category: VisitCategories - Enum class representing the category of the visit
+        """
+        self.patient = patient
+
+        if hba1_target_range:
+            self.hba1_target_range = hba1_target_range
+
+        self.visit_date = (
+            visit_date
+            if visit_date is not None
+            else self._random_date(self.patient.diagnosis_date, date.today())
+        )
+
+        # Set the visit category to generate randomly if not provided
+        if visit_category is not None:
+            self.visit_category = visit_category
+
+        # use the visit category to get the fields for the visit that need completing
+        self.visit_fields = VISIT_FIELDS[self.visit_category]
+
+        # generate random values for the height and weight observations appropriate for the age range of the child
+        self.weight, self.height, self.height_weight_observation_date = (
+            age_range=self._height_weight_observations(self.patient.age_range)
+        )
+
+        # generate random values for the HbA1c observations appropriate for the diabetes type of the child
+        self.hba1c, self.hba1c_format, self.hba1c_date = self._hba1c_observations(
+            diabetes_type=self.patient.diabetes_type, hba1_target_range=self.hba1_target_range
+        )
+
+        # generate random values for the treatment observations appropriate for the diabetes type of the child
+        self.treatment, self.closed_loop_system = self._treatment_observations(
+            diabetes_type=self.patient.diabetes_type
+        )
+
+        # generate random values for the blood pressure observations appropriate for the age range of the child
+        self.diastolic_blood_pressure, self.systolic_blood_pressure, self.blood_pressure_observation_date = self._bp_observations(
+            age_range=self.patient.age_range
+        )
+
+        # generate random values for the foot examination observations
+        self.foot_examination_observation_date = self._foot_observations()
+
+        # generate random values for the DECS observations
+        self.retinal_screening_result, self.retinal_screening_observation_date = self._decs_observations()
+
+        # generate random values for the ACR observations
+        self.albumin_creatinine_ratio, self.albumin_creatinine_ratio_date, self.albuminuria_stage = self._acr_observations()
+
+        # generate random values for the cholesterol observations
+        self.total_cholesterol, self.total_cholesterol_date = self._cholesterol_observations()
+
+        # generate random values for the thyroid function observations
+        self.thyroid_function_date, self.thyroid_treatment_status = self._thyroid_observations()
+
+        # generate random values for the coeliac screening observations
+        self.coeliac_screen_date, self.gluten_free_diet = self._coeliac_observations()
+
+        # generate random values for the psychological screening observations
+        self.psychological_screening_assessment_date, self.psychological_additional_support_status = self._psychological_observations()
+
+        # generate random values for the smoking status observations
+        self.smoking_status, self.smoking_cessation_referral_date = self._smoking_observations()
+
+        # generate random values for the carbohydrate counting observations
+        self.carbohydrate_counting_level_three_education_date = self._carbohydrate_counting_observations()
+
+        # generate random values for the dietician observations
+        self.dietician_additional_appointment_offered, self.dietician_additional_appointment_date = self._dietician_observations()
+
+        # generate random values for the flu immunisation observations
+        self.flu_immunisation_recommended_date = self._flu_immunisation_observations()
+
+        # generate random values for the ketone meter observations
+        self.ketone_meter_training = self._ketone_meter_observations()
+
+        # generate random values for the sick day rules observations
+        self.sick_day_rules_training_date = self._sick_day_rules_observations()
+
+        # generate random values for the hospital admission observations
+        self.hospital_admission_date, self.hospital_discharge_date, self.hospital_admission_reason, self.dka_additional_therapies, self.hospital_admission_other = self._hospital_admission_observations()
+
+        # set the attendance as valid
+        self.is_valid = True
+        self.errors = []
+
+        """
+        Private methods to generate random values for the observations. 
+        Some of these methods are specific to the age range of the child or the diabetes type or the level of diabetes control they have.
+        """
+
+        def _height_weight_observations(self, age_range: AgeRange):
+            """
+            Generates random height and weight observations for a child.
+            Use the age_range to determine the range of values for height and weight.
+            Allocate the visit date to the date of the observation.
+            """
+            height_weight_observations = {
+                AgeRange.AGE_0_4: (50, 110, 10, 20),
+                AgeRange.AGE_5_10: (110, 150, 20, 40),
+                AgeRange.AGE_11_15: (150, 170, 40, 70),
+                AgeRange.AGE_16_19: (170, 190, 60, 90),
+                AgeRange.AGE_20_25: (170, 190, 60, 90),
+            }
+
+            height_min, height_max, weight_min, weight_max = height_weight_observations[
+                age_range
+            ]
+            height = round(random.uniform(height_min, height_max), 2)
+            weight = round(random.uniform(weight_min, weight_max), 2)
+            height_weight_observation_date = (
+                self.visit_date
+            )  # set the date of the observation to the visit date
+            return height, weight, height_weight_observation_date
+
+        def _hba1c_observations(
+            self, hba1_target_range: str = ["target", "above", "well-above"]
+        ):
+            """
+            Generates random HbA1c observations for a child.
+            Use the diabetes type to determine the range of values for HbA1c in mmol/mol.
+            Allocate the visit date to the date of the observation.
+            """
+            hba1c_observations = {
+                "target": (48, 58),
+                "above": (58, 85),
+                "well-above": (85, 120),
+            }
+
+            hba1c_min, hba1c_max = hba1c_observations[hba1_target_range]
+            hba1c = random.randint(hba1c_min, hba1c_max)
+            hba1c_format = HBA1C_FORMATS[0][0]  # mmol/mol
+            hba1c_date = self.visit_date
+            return hba1c, hba1c_format, hba1c_date
+
+        def _treatment_observations(self):
+            """
+            Generates random treatment observations for a child.
+            Use the diabetes type to determine the range of values for treatment.
+            Allocate the visit date to the date of the observation.
+            """
+            if self.patient.diabetes_type == 1:
+                treatment = random.choice(TREATMENT_TYPES[0:6])[
+                    0
+                ]  # MDI or pump options
+            else:
+                treatment = random.choice(
+                    [1, 2, 4, 5, 7, 8, 9]
+                )  # insulin or non-insulin options compatible with type 2 diabetes
+
+            if self.patient.diabetes_type == 1:
+                closed_loop_system = random.choice([True, False])
+            else:
+                closed_loop_system = YES_NO_UNKNOWN[0][0]  # No
+
+            return treatment, closed_loop_system
+
+        def _bp_observations(self, age_range: AgeRange):
+            """
+            Generates random blood pressure observations for a child based on the age range.
+            Allocate the visit date to the date of the observation.
+            """
+            bp_ranges = {
+                AgeRange.AGE_0_4: (40, 50, 80, 90),
+                AgeRange.AGE_5_10: (40, 50, 90, 100),
+                AgeRange.AGE_11_15: (50, 60, 95, 105),
+                AgeRange.AGE_16_19: (60, 70, 110, 130),
+                AgeRange.AGE_20_25: (60, 70, 110, 130),
+            }
+            diastolic_blood_pressure = random.randint(
+                (bp_ranges[age_range])[0], (bp_ranges[age_range])[1]
+            )
+            systolic_blood_pressure = random.randint(
+                (bp_ranges[age_range])[2], (bp_ranges[age_range])[3]
+            )
+            blood_pressure_observation_date = self.visit_date
+            return (
+                diastolic_blood_pressure,
+                systolic_blood_pressure,
+                blood_pressure_observation_date,
+            )
+
+        def _foot_observations(self):
+            """
+            Generates random foot examination observations for a child.
+            Allocate the visit date to the date of the observation.
+            """
+            foot_examination_observation_date = self.visit_date
+            return foot_examination_observation_date
+
+        def _decs_observations(self):
+            """
+            Generates random DECS observations for a child.
+            Allocate the visit date to the date of the observation.
+            """
+            retinal_screening_observation_date = self.visit_date
+            retinal_screening_result = random.choice(RETINAL_SCREENING_RESULTS)[0]
+            return retinal_screening_result, retinal_screening_observation_date
+
+        def _acr_observations(self):
+            """
+            Generates random ACR observations for a child.
+            Allocate the visit date to the date of the observation.
+            """
+            albumin_creatinine_ratio = random.randint(0, 300)
+            albumin_creatinine_ratio_date = self.visit_date
+            albuminuria_stage = random.choice(ALBUMINURIA_STAGES)[0]
+            return (
+                albumin_creatinine_ratio,
+                albumin_creatinine_ratio_date,
+                albuminuria_stage,
+            )
+
+        def _cholesterol_observations(self):
+            """
+            Generates random cholesterol observations for a child.
+            Allocate the visit date to the date of the observation.
+            """
+            total_cholesterol = round(random.uniform(2, 7), 2)
+            total_cholesterol_date = self.visit_date
+            return total_cholesterol, total_cholesterol_date
+
+        def _thyroid_observations(self):
+            """
+            Generates random thyroid function observations for a child.
+            Allocate the visit date to the date of the observation.
+            """
+            thyroid_function_date = self.visit_date
+            thyroid_treatment_status = random.choice(THYROID_TREATMENT_STATUS)[0]
+            return thyroid_function_date, thyroid_treatment_status
+
+        def _coeliac_observations(self):
+            """
+            Generates random coeliac screening observations for a child.
+            Allocate the visit date to the date of the observation.
+            """
+            coeliac_screen_date = self.visit_date
+            gluten_free_diet = random.choice(YES_NO_UNKNOWN)[0]
+            return coeliac_screen_date, gluten_free_diet
+
+        def _psychological_observations(self):
+            """
+            Generates random psychological screening observations for a child.
+            Allocate the visit date to the date of the observation.
+            """
+            psychological_screening_assessment_date = self.visit_date
+            psychological_additional_support_status = random.choice(YES_NO_UNKNOWN)[0]
+            return (
+                psychological_screening_assessment_date,
+                psychological_additional_support_status,
+            )
+
+        def _smoking_observations(self):
+            """
+            Generates random smoking status observations for a child.
+            Allocate the visit date to the date of the observation.
+            """
+            smoking_status = random.choice(SMOKING_STATUS)[0]
+            smoking_cessation_referral_date = self.visit_date
+            return smoking_status, smoking_cessation_referral_date
+
+        def _carbohydrate_counting_observations(self):
+            """
+            Generates random carbohydrate counting observations for a child.
+            Allocate the visit date to the date of the observation.
+            """
+            carbohydrate_counting_level_three_education_date = self.visit_date
+            return carbohydrate_counting_level_three_education_date
+
+        def _dietician_observations(self):
+            """
+            Generates random dietician observations for a child.
+            Allocate the visit date to the date of the observation.
+            """
+            dietician_additional_appointment_offered = random.choice(YES_NO_UNKNOWN)[0]
+            dietician_additional_appointment_date = self.visit_date
+            return (
+                dietician_additional_appointment_offered,
+                dietician_additional_appointment_date,
+            )
+
+        def _flu_immunisation_observations(self):
+            """
+            Generates random flu immunisation observations for a child.
+            Allocate the visit date to the date of the observation.
+            """
+            flu_immunisation_recommended_date = self.visit_date
+            return flu_immunisation_recommended_date
+
+        def _ketone_meter_observations(self):
+            """
+            Generates random ketone meter observations for a child.
+            """
+            ketone_meter_training = random.choice(YES_NO_UNKNOWN)[0]
+            return ketone_meter_training
+
+        def _sick_day_rules_observations(self):
+            """
+            Generates random sick day rules observations for a child.
+            Allocate the visit date to the date of the observation.
+            """
+            sick_day_rules_training_date = self.visit_date
+            return sick_day_rules_training_date
+
+        def _hospital_admission_observations(self):
+            """
+            Generates random hospital admission observations for a child.
+            Allocate the visit date to the date of the observation.
+            """
+            hospital_admission_date = self.visit_date
+            hospital_discharge_date = self.visit_date
+            hospital_admission_reason = random.choice(HOSPITAL_ADMISSION_REASONS)[0]
+            dka_additional_therapies = random.choice(DKA_ADDITIONAL_THERAPIES)[0]
+            hospital_admission_other = None
+            return (
+                hospital_admission_date,
+                hospital_discharge_date,
+                hospital_admission_reason,
+                dka_additional_therapies,
+                hospital_admission_other,
+            )
+
+    def _random_date(self, start_date, end_date):
+        """
+        Returns a random date between the start and end dates.
+        """
+        random_days = random.randint(0, (end_date - start_date).days)
+        return start_date + relativedelta(days=random_days)
