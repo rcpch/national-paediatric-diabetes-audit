@@ -1134,7 +1134,7 @@ class CalculateKPIS:
         self,
     ) -> dict:
         """
-        Calculates KPI 16: Dietary management plus other blood glucose lowering medication (non Type-1 diabetes)
+        Calculates KPI 20: Dietary management plus other blood glucose lowering medication (non Type-1 diabetes)
 
         Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is 8 = Dietary management plus other blood glucose lowering medication (non Type-1 diabetes)
 
@@ -1147,6 +1147,43 @@ class CalculateKPIS:
         # Define the subquery to find the latest visit where treatment_regimen = 8
         latest_visit_subquery = (
             Visit.objects.filter(patient=OuterRef("pk"), treatment=8)
+            .order_by("-visit_date")
+            .values("pk")[:1]
+        )
+        # Filter the Patient queryset based on the subquery
+        total_passed = eligible_patients.filter(
+            Q(
+                id__in=Subquery(
+                    Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
+                )
+            )
+        ).count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def calculate_kpi_21_flash_glucose_monitor(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 21: Number of patients using a flash glucose monitor
+
+        Numerator: Number of eligible patients whose most recent entry (based on visit date) for blood glucose monitoring (item 22) is either 2 = Flash glucose monitor or 3 = Modified flash glucose monitor (e.g. with MiaoMiao, Blucon etc.)
+
+        Denominator: Total number of eligible patients (measure 1)
+        """
+        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set
+        total_eligible = self.kpi_1_total_eligible
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Define the subquery to find the latest visit where blood glucose monitoring (item 22) is either 2 = Flash glucose monitor or 3 = Modified flash glucose monitor (e.g. with MiaoMiao, Blucon etc.)
+        latest_visit_subquery = (
+            Visit.objects.filter(patient=OuterRef("pk"), glucose_monitoring__in=[2, 3])
             .order_by("-visit_date")
             .values("pk")[:1]
         )
