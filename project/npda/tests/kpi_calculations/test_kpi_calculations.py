@@ -658,3 +658,77 @@ def test_kpi_calculation_8(AUDIT_START_DATE):
         expected=EXPECTED_KPIRESULT,
         actual=calc_kpis.calculate_kpi_8_total_deaths(),
     )
+
+
+@pytest.mark.django_db
+def test_kpi_calculation_9(AUDIT_START_DATE):
+    """Tests that KPI9 is calculated correctly.
+
+    Essentialy KPI1 but also check
+        * Date of death within the audit period"
+    """
+
+    # Ensure starting with clean pts in test db
+    Patient.objects.all().delete()
+
+    # Create  Patients and Visits that should be included
+    eligible_patient_leaving_date_within_audit_period = PatientFactory(
+        postcode="eligible_patient_diag_NOT_within_audit_period",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # leaving_date within the audit period
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
+    )
+
+    # Create Patients and Visits that should be excluded
+    # Visit date before audit period
+    ineligible_patient_visit_date: List[Patient] = PatientFactory(
+        postcode="ineligible_patient_visit_date",
+        visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
+    )
+    # Above age 25 at start of audit period
+    ineligible_patient_too_old: List[Patient] = PatientFactory(
+        postcode="ineligible_patient_too_old",
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
+    )
+
+    # KPI9 specific
+    ineligible_patient_no_leaving_date = PatientFactory(
+        postcode="ineligible_patient_no_leaving_date",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # has not left
+        transfer__date_leaving_service=None,
+    )
+    ineligible_patient_leaving_date_outside_audit_period = PatientFactory(
+        postcode="ineligible_patient_leaving_date_outside_audit_period",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # Date of leaving_date outside the audit period"
+        transfer__date_leaving_service=AUDIT_START_DATE - relativedelta(days=2),
+    )
+
+    # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+
+    EXPECTED_TOTAL_ELIGIBLE = 1
+    EXPECTED_TOTAL_INELIGIBLE = 4
+
+    EXPECTED_KPIRESULT = KPIResult(
+        total_eligible=EXPECTED_TOTAL_ELIGIBLE,
+        total_passed=EXPECTED_TOTAL_ELIGIBLE,
+        total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
+        total_failed=EXPECTED_TOTAL_INELIGIBLE,
+    )
+
+    # First set self.total_kpi_1_eligible_pts_base_query_set result
+    # of total eligible
+    calc_kpis.calculate_kpi_1_total_eligible()
+
+    assert_kpi_result_equal(
+        expected=EXPECTED_KPIRESULT,
+        actual=calc_kpis.calculate_kpi_9_total_service_transitions(),
+    )
