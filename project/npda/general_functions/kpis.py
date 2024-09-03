@@ -786,17 +786,18 @@ class CalculateKPIS:
             total_failed=total_failed,
         )
 
-    def calculate_kpi_numerator_11(self) -> dict:
+    def calculate_kpi_11_total_thyroids(self) -> dict:
         """
         Calculates KPI 11: Number of patients with thyroid  disease
         Number of eligible patients (measure 1)
-        whose most recent observation for item 35 (based on visit date)
-        is either 2 = Thyroxine for hypothyroidism or 3 = Antithyroid medication for hyperthyroidism
+        who:
+            * most recent observation for item 35 (based on visit date) is either 2 = Thyroxine for hypothyroidism or 3 = Antithyroid medication for hyperthyroidism
+            // NOTE: item35 is _At time of, or following measurement of thyroid function, was the patient prescribed any thyroid treatment?_
         """
-        # Define the subquery to find the latest visit where smoking_status = 2 or 3
+        # Define the subquery to find the latest visit where thyroid_treatment_status__in = 2 or 3
         latest_visit_subquery = (
             Visit.objects.filter(
-                patient=OuterRef("pk"), dietician_additional_appointment_offered=1
+                patient=OuterRef("pk"), thyroid_treatment_status__in=[2, 3]
             )
             .order_by("-visit_date")
             .values("pk")[:1]

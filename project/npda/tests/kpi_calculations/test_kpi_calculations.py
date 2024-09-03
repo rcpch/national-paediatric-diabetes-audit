@@ -799,3 +799,79 @@ def test_kpi_calculation_10(AUDIT_START_DATE):
         expected=EXPECTED_KPIRESULT,
         actual=calc_kpis.calculate_kpi_10_total_coeliacs(),
     )
+
+
+@pytest.mark.django_db
+def test_kpi_calculation_11(AUDIT_START_DATE):
+    """Tests that KPI11 is calculated correctly.
+
+    KPI1 PLUS
+    who:
+        * most recent observation for item 35 (based on visit date) is either 2 = Thyroxine for hypothyroidism or 3 = Antithyroid medication for hyperthyroidism
+        // NOTE: item35 is _At time of, or following measurement of thyroid function, was the patient prescribed any thyroid treatment?_
+    """
+
+    # Ensure starting with clean pts in test db
+    Patient.objects.all().delete()
+
+    # Create  Patients and Visits that should be included
+    eligible_patient_most_recent_thyroid_treatment_status_is_2 = PatientFactory(
+        postcode="eligible_patient_most_recent_thyroid_treatment_status_is_2",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # most recent observation for item 35 (based on visit date) is 2
+        visit__thyroid_treatment_status=2,
+    )
+    eligible_patient_most_recent_thyroid_treatment_status_is_3 = PatientFactory(
+        postcode="eligible_patient_most_recent_thyroid_treatment_status_is_3",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # most recent observation for item 35 (based on visit date) is 2
+        visit__thyroid_treatment_status=3,
+    )
+
+    # Create Patients and Visits that should be excluded
+    # Visit date before audit period
+    ineligible_patient_visit_date: List[Patient] = PatientFactory(
+        postcode="ineligible_patient_visit_date",
+        visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
+    )
+    # Above age 25 at start of audit period
+    ineligible_patient_too_old: List[Patient] = PatientFactory(
+        postcode="ineligible_patient_too_old",
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
+    )
+
+    # KPI11 specific
+    ineligible_patient_most_recent_thyroid_treatment_status_is_not_in_range_2_to_3 = PatientFactory(
+        postcode="ineligible_patient_most_recent_thyroid_treatment_status_is_not_in_range_2_to_3",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # most recent observation for item 37 (based on visit date) is not 1
+        visit__thyroid_treatment_status=1,
+    )
+
+    # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+
+    EXPECTED_TOTAL_ELIGIBLE = 2
+    EXPECTED_TOTAL_INELIGIBLE = 3
+
+    EXPECTED_KPIRESULT = KPIResult(
+        total_eligible=EXPECTED_TOTAL_ELIGIBLE,
+        total_passed=EXPECTED_TOTAL_ELIGIBLE,
+        total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
+        total_failed=EXPECTED_TOTAL_INELIGIBLE,
+    )
+
+    # First set self.total_kpi_1_eligible_pts_base_query_set result
+    # of total eligible
+    calc_kpis.calculate_kpi_1_total_eligible()
+
+    assert_kpi_result_equal(
+        expected=EXPECTED_KPIRESULT,
+        actual=calc_kpis.calculate_kpi_11_total_thyroids(),
+    )
