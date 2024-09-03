@@ -367,13 +367,21 @@ class CalculateKPIS:
         * Date of diagnosis within the audit period"
         """
 
+        # If we have not already calculated KPI 1, do so now to set
+        # self.total_kpi_1_eligible_pts_base_query_set
+        if not hasattr(self, "total_kpi_1_eligible_pts_base_query_set"):
+            self.calculate_kpi_1_total_eligible()
+
         # This is same as KPI1 but with an additional filter for diagnosis date
-        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set.filter(
-            Q(diagnosis_date__range=(self.AUDIT_DATE_RANGE))
-        ).distinct()
+        self.total_kpi_2_eligible_pts_base_query_set = (
+            self.total_kpi_1_eligible_pts_base_query_set.filter(
+                Q(diagnosis_date__range=(self.AUDIT_DATE_RANGE))
+            ).distinct()
+        )
 
         # Count eligible patients
-        total_eligible = eligible_patients.count()
+        self.kpi_2_total_eligible = self.total_kpi_2_eligible_pts_base_query_set.count()
+        total_eligible = self.kpi_2_total_eligible
 
         # Calculate ineligible patients
         total_ineligible = self.total_patients_count - total_eligible
@@ -1184,6 +1192,85 @@ class CalculateKPIS:
         # Define the subquery to find the latest visit where blood glucose monitoring (item 22) is either 2 = Flash glucose monitor or 3 = Modified flash glucose monitor (e.g. with MiaoMiao, Blucon etc.)
         latest_visit_subquery = (
             Visit.objects.filter(patient=OuterRef("pk"), glucose_monitoring__in=[2, 3])
+            .order_by("-visit_date")
+            .values("pk")[:1]
+        )
+        # Filter the Patient queryset based on the subquery
+        total_passed = eligible_patients.filter(
+            Q(
+                id__in=Subquery(
+                    Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
+                )
+            )
+        ).count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def calculate_kpi_22_real_time_cgm_with_alarms(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 22: Number of patients using a real time continuous glucose monitor (CGM) with alarms
+
+        Numerator: Number of eligible patients whose most recent entry (based on visit date) for blood glucose monitoring (item 22) is either 4 = Real time continuous glucose monitor with alarms
+
+        Denominator: Total number of eligible patients (measure 1)
+        """
+        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set
+        total_eligible = self.kpi_1_total_eligible
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Define the subquery to find the latest visit where blood glucose monitoring (item 22) is either 4 = Real time continuous glucose monitor with alarms
+        latest_visit_subquery = (
+            Visit.objects.filter(patient=OuterRef("pk"), glucose_monitoring__in=[4])
+            .order_by("-visit_date")
+            .values("pk")[:1]
+        )
+        # Filter the Patient queryset based on the subquery
+        total_passed = eligible_patients.filter(
+            Q(
+                id__in=Subquery(
+                    Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
+                )
+            )
+        ).count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def calculate_kpi_23_type1_real_time_cgm_with_alarms(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 23: Number of patients with Type 1 diabetes using a real time continuous glucose monitor (CGM) with alarms
+
+        Numerator: Total number of eligible patients with Type 1 diabetes (measure 2)
+
+        Denominator: Number of eligible patients whose most recent entry (based on visit date) for blood glucose monitoring (item 22) is either 4 = Real time continuous glucose monitor with alarms
+        """
+        # If running this method standalone, need to set calculate_kpi_2_total_eligible first
+        # by running its calculation method
+        if not hasattr(self, "kpi_2_total_eligible"):
+            self.calculate_kpi_2_total_new_diagnoses()
+
+        eligible_patients = self.total_kpi_2_eligible_pts_base_query_set
+        total_eligible = self.kpi_2_total_eligible
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Define the subquery to find the latest visit where blood glucose monitoring (item 22) is either 4 = Real time continuous glucose monitor with alarms
+        latest_visit_subquery = (
+            Visit.objects.filter(patient=OuterRef("pk"), glucose_monitoring__in=[4])
             .order_by("-visit_date")
             .values("pk")[:1]
         )
