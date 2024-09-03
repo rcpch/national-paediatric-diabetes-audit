@@ -158,6 +158,7 @@ class CalculateKPIS:
         self.audit_start_date, self.audit_end_date = (
             self._get_audit_start_and_end_dates()
         )
+        self.AUDIT_DATE_RANGE = (self.audit_start_date, self.audit_end_date)
 
         # Sets the KPI attribute names map
         self.kpis_names_map = self._get_kpi_attribute_names()
@@ -522,7 +523,6 @@ class CalculateKPIS:
 
         NOTE: exclusion same as KPI5
         """
-        AUDIT_DATE_RANGE = (self.audit_start_date, self.audit_end_date)
 
         # We cannot simply use KPI1 base queryset as that includes a filter
         # for age < 25. Additionally, this requires an observation within
@@ -559,18 +559,30 @@ class CalculateKPIS:
                 # this requires checking for a date in any of the Visit model's
                 # observation fields (found simply by searching for date fields
                 # with the word 'observation' in the field verbose_name)
-                Q(visit__height_weight_observation_date__range=(AUDIT_DATE_RANGE))
-                | Q(visit__hba1c_date__range=(AUDIT_DATE_RANGE))
-                | Q(visit__blood_pressure_observation_date__range=(AUDIT_DATE_RANGE))
-                | Q(visit__foot_examination_observation_date__range=(AUDIT_DATE_RANGE))
-                | Q(visit__retinal_screening_observation_date__range=(AUDIT_DATE_RANGE))
-                | Q(visit__albumin_creatinine_ratio_date__range=(AUDIT_DATE_RANGE))
-                | Q(visit__total_cholesterol_date__range=(AUDIT_DATE_RANGE))
-                | Q(visit__thyroid_function_date__range=(AUDIT_DATE_RANGE))
-                | Q(visit__coeliac_screen_date__range=(AUDIT_DATE_RANGE))
+                Q(visit__height_weight_observation_date__range=(self.AUDIT_DATE_RANGE))
+                | Q(visit__hba1c_date__range=(self.AUDIT_DATE_RANGE))
+                | Q(
+                    visit__blood_pressure_observation_date__range=(
+                        self.AUDIT_DATE_RANGE
+                    )
+                )
+                | Q(
+                    visit__foot_examination_observation_date__range=(
+                        self.AUDIT_DATE_RANGE
+                    )
+                )
+                | Q(
+                    visit__retinal_screening_observation_date__range=(
+                        self.AUDIT_DATE_RANGE
+                    )
+                )
+                | Q(visit__albumin_creatinine_ratio_date__range=(self.AUDIT_DATE_RANGE))
+                | Q(visit__total_cholesterol_date__range=(self.AUDIT_DATE_RANGE))
+                | Q(visit__thyroid_function_date__range=(self.AUDIT_DATE_RANGE))
+                | Q(visit__coeliac_screen_date__range=(self.AUDIT_DATE_RANGE))
                 | Q(
                     visit__psychological_screening_assessment_date__range=(
-                        AUDIT_DATE_RANGE
+                        self.AUDIT_DATE_RANGE
                     )
                 )
             )
@@ -594,14 +606,78 @@ class CalculateKPIS:
             total_failed=total_failed,
         )
 
-    def calculate_kpi_numerator_7(self) -> dict:
+    def calculate_kpi_7_total_new_diagnoses_t1dm(self) -> dict:
         """
         Calculates KPI 7: Total number of new diagnoses of T1DM
+        Total number of patients with:
+        * a valid NHS number
+        * an observation within the audit period
+        * Age 0-24 years at the start of the audit period
+        * Diagnosis of Type 1 diabetes
+        * Date of diagnosis within the audit period
         """
-        return kpi_7_total_new_diagnoses_t1dm(
-            patients=self.patients,
-            audit_start_date=self.audit_start_date,
-            audit_end_date=self.audit_end_date,
+
+        # total_kpi_1_eligible_pts_base_query_set is slightly different (additionally specifies
+        # visit date). So we need to make a new query set
+        eligible_patients = self.patients.filter(
+            # Valid attributes
+            Q(nhs_number__isnull=False)
+            & Q(date_of_birth__isnull=False)
+            # * Age < 25y years at the start of the audit period
+            & Q(date_of_birth__gt=self.audit_start_date - relativedelta(years=25))
+            # Diagnosis of Type 1 diabetes
+            & Q(diabetes_type=DIABETES_TYPES[0][0])
+            & Q(diagnosis_date__range=self.AUDIT_DATE_RANGE)
+            & (
+                # an observation within the audit period
+                # this requires checking for a date in any of the Visit model's
+                # observation fields (found simply by searching for date fields
+                # with the word 'observation' in the field verbose_name)
+                Q(visit__height_weight_observation_date__range=(self.AUDIT_DATE_RANGE))
+                | Q(visit__hba1c_date__range=(self.AUDIT_DATE_RANGE))
+                | Q(
+                    visit__blood_pressure_observation_date__range=(
+                        self.AUDIT_DATE_RANGE
+                    )
+                )
+                | Q(
+                    visit__foot_examination_observation_date__range=(
+                        self.AUDIT_DATE_RANGE
+                    )
+                )
+                | Q(
+                    visit__retinal_screening_observation_date__range=(
+                        self.AUDIT_DATE_RANGE
+                    )
+                )
+                | Q(visit__albumin_creatinine_ratio_date__range=(self.AUDIT_DATE_RANGE))
+                | Q(visit__total_cholesterol_date__range=(self.AUDIT_DATE_RANGE))
+                | Q(visit__thyroid_function_date__range=(self.AUDIT_DATE_RANGE))
+                | Q(visit__coeliac_screen_date__range=(self.AUDIT_DATE_RANGE))
+                | Q(
+                    visit__psychological_screening_assessment_date__range=(
+                        self.AUDIT_DATE_RANGE
+                    )
+                )
+            )
+        ).distinct()
+
+        # Count eligible patients
+        total_eligible = eligible_patients.count()
+
+        # Calculate ineligible patients
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # This is just a count so pass/fail doesn't make sense; just set to same
+        # as eligible/ineligible
+        total_passed = total_eligible
+        total_failed = total_ineligible
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
         )
 
     def calculate_kpi_numerator_8(self) -> dict:

@@ -328,7 +328,7 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
     # Ensure starting with clean pts in test db
     Patient.objects.all().delete()
 
-    # Create  Patients and Visits that should PASS KPI3
+    # Create  Patients and Visits that should be included
     eligible_patient_diag_NOT_within_audit_period = PatientFactory(
         postcode="eligible_patient_diag_NOT_within_audit_period",
         # KPI1 eligible
@@ -505,4 +505,90 @@ def test_kpi_calculation_6(AUDIT_START_DATE):
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
         actual=calc_kpis.calculate_kpi_6_total_t1dm_complete_year_gte_12yo(),
+    )
+
+
+@pytest.mark.django_db
+def test_kpi_calculation_7(AUDIT_START_DATE):
+    """Tests that KPI7 is calculated correctly.
+
+    Total number of patients with:
+        * a valid NHS number
+        * an observation within the audit period
+        * Age 0-24 years at the start of the audit period
+        * Diagnosis of Type 1 diabetes
+        * Date of diagnosis within the audit period
+    """
+
+    # Ensure starting with clean pts in test db
+    Patient.objects.all().delete()
+
+    observation_field_names = [
+        "height_weight_observation_date",
+        "hba1c_date",
+        "blood_pressure_observation_date",
+        "albumin_creatinine_ratio_date",
+        "total_cholesterol_date",
+        "thyroid_function_date",
+        "coeliac_screen_date",
+        "psychological_screening_assessment_date",
+    ]
+    # Loop through each observation field name and create a patient with an
+    # observation date within the audit period for that field
+    for field_name in observation_field_names:
+        eligible_patient_pt_obs = PatientFactory(
+            # string field without validation, just using for debugging
+            postcode=f"eligible_patient_{field_name}",
+            # KPI1 eligible
+            # Age 12 and above at the start of the audit period
+            date_of_birth=AUDIT_START_DATE - relativedelta(years=12),
+            # Diagnosis of Type 1 diabetes
+            diabetes_type=DIABETES_TYPES[0][0],
+            # Diagnosis date within audit date range
+            diagnosis_date=AUDIT_START_DATE + relativedelta(days=2),
+            # an observation within the audit period
+            **{f"visit__{field_name}": AUDIT_START_DATE + relativedelta(days=2)},
+        )
+
+    # Create Patients and Visits that should BE EXCLUDED
+    ineligible_patient_not_t1dm = PatientFactory(
+        postcode="ineligible_patient_not_t1dm",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # T1DM
+        diabetes_type=DIABETES_TYPES[1][0],
+        # Date of diagnosis inside the audit period
+        diagnosis_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+    ineligible_patient_diag_outside_audit_period = PatientFactory(
+        postcode="ineligible_patient_diag_outside_audit_period",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # T1DM
+        diabetes_type=DIABETES_TYPES[0][0],
+        # Date of diagnosis outside the audit period
+        diagnosis_date=AUDIT_START_DATE - relativedelta(days=2),
+    )
+
+    # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+    # First set self.total_kpi_1_eligible_pts_base_query_set result
+    # of total eligible
+    calc_kpis.calculate_kpi_1_total_eligible()
+
+    EXPECTED_TOTAL_ELIGIBLE = len(observation_field_names)
+    EXPECTED_TOTAL_INELIGIBLE = 2
+
+    EXPECTED_KPIRESULT = KPIResult(
+        total_eligible=EXPECTED_TOTAL_ELIGIBLE,
+        total_passed=EXPECTED_TOTAL_ELIGIBLE,
+        total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
+        total_failed=EXPECTED_TOTAL_INELIGIBLE,
+    )
+
+    assert_kpi_result_equal(
+        expected=EXPECTED_KPIRESULT,
+        actual=calc_kpis.calculate_kpi_7_total_new_diagnoses_t1dm(),
     )
