@@ -322,7 +322,7 @@ class CalculateKPIS:
             Q(nhs_number__isnull=False)
             & Q(date_of_birth__isnull=False)
             # Visit / admisison date within audit period
-            & Q(visit__visit_date__range=(self.audit_start_date, self.audit_end_date))
+            & Q(visit__visit_date__range=(self.AUDIT_DATE_RANGE))
             # Below the age of 25 at the start of the audit period
             & Q(date_of_birth__gt=self.audit_start_date - relativedelta(years=25))
         )
@@ -363,7 +363,7 @@ class CalculateKPIS:
 
         # This is same as KPI1 but with an additional filter for diagnosis date
         eligible_patients = self.total_kpi_1_eligible_pts_base_query_set.filter(
-            Q(diagnosis_date__range=(self.audit_start_date, self.audit_end_date))
+            Q(diagnosis_date__range=(self.AUDIT_DATE_RANGE))
         ).distinct()
 
         # Count eligible patients
@@ -475,7 +475,7 @@ class CalculateKPIS:
         """
         eligible_patients = self.total_kpi_1_eligible_pts_base_query_set.exclude(
             # EXCLUDE Date of diagnosis within the audit period
-            Q(diagnosis_date__range=(self.audit_start_date, self.audit_end_date))
+            Q(diagnosis_date__range=(self.AUDIT_DATE_RANGE))
             # EXCLUDE Date of leaving service within the audit period
             | (
                 Q(
@@ -486,7 +486,7 @@ class CalculateKPIS:
                 )
             )
             # EXCLUDE Date of death within the audit period"
-            | Q(death_date__range=(self.audit_start_date, self.audit_end_date))
+            | Q(death_date__range=(self.AUDIT_DATE_RANGE))
         ).distinct()
 
         # Count eligible patients
@@ -532,7 +532,7 @@ class CalculateKPIS:
         # Separate exclusions from the main query for clarity
         eligible_patients_exclusions = self.patients.exclude(
             # EXCLUDE Date of diagnosis within the audit period
-            Q(diagnosis_date__range=(self.audit_start_date, self.audit_end_date))
+            Q(diagnosis_date__range=(self.AUDIT_DATE_RANGE))
             # EXCLUDE Date of leaving service within the audit period
             | (
                 Q(
@@ -543,7 +543,7 @@ class CalculateKPIS:
                 )
             )
             # EXCLUDE Date of death within the audit period"
-            | Q(death_date__range=(self.audit_start_date, self.audit_end_date))
+            | Q(death_date__range=(self.AUDIT_DATE_RANGE))
         )
 
         eligible_patients = eligible_patients_exclusions.filter(
@@ -680,14 +680,33 @@ class CalculateKPIS:
             total_failed=total_failed,
         )
 
-    def calculate_kpi_numerator_8(self) -> dict:
+    def calculate_kpi_8_total_deaths(self) -> dict:
         """
-        Calculates KPI 8: Total number of deaths
+        Calculates KPI 8: Number of patients who died within audit period
+        Number of eligible patients (measure 1) with:
+            * a death date in the audit period
         """
-        return kpi_8_total_deaths(
-            patients=self.patients,
-            audit_start_date=self.audit_start_date,
-            audit_end_date=self.audit_end_date,
+        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set.filter(
+            # Date of death within the audit period"
+            Q(death_date__range=(self.AUDIT_DATE_RANGE))
+        ).distinct()
+
+        # Count eligible patients
+        total_eligible = eligible_patients.count()
+
+        # Calculate ineligible patients
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # This is just a count so pass/fail doesn't make sense; just set to same
+        # as eligible/ineligible
+        total_passed = total_eligible
+        total_failed = total_ineligible
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
         )
 
     def calculate_kpi_numerator_9(self) -> dict:
