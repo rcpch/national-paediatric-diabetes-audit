@@ -1218,7 +1218,7 @@ class CalculateKPIS:
         """
         Calculates KPI 22: Number of patients using a real time continuous glucose monitor (CGM) with alarms
 
-        Numerator: Number of eligible patients whose most recent entry (based on visit date) for blood glucose monitoring (item 22) is either 4 = Real time continuous glucose monitor with alarms
+        Numerator: Number of eligible patients whose most recent entry (based on visit date) for blood glucose monitoring (item 22) is 4 = Real time continuous glucose monitor with alarms
 
         Denominator: Total number of eligible patients (measure 1)
         """
@@ -1226,9 +1226,9 @@ class CalculateKPIS:
         total_eligible = self.kpi_1_total_eligible
         total_ineligible = self.total_patients_count - total_eligible
 
-        # Define the subquery to find the latest visit where blood glucose monitoring (item 22) is either 4 = Real time continuous glucose monitor with alarms
+        # Define the subquery to find the latest visit where blood glucose monitoring (item 22) is 4 = Real time continuous glucose monitor with alarms
         latest_visit_subquery = (
-            Visit.objects.filter(patient=OuterRef("pk"), glucose_monitoring__in=[4])
+            Visit.objects.filter(patient=OuterRef("pk"), glucose_monitoring=[4])
             .order_by("-visit_date")
             .values("pk")[:1]
         )
@@ -1257,7 +1257,7 @@ class CalculateKPIS:
 
         Numerator: Total number of eligible patients with Type 1 diabetes (measure 2)
 
-        Denominator: Number of eligible patients whose most recent entry (based on visit date) for blood glucose monitoring (item 22) is either 4 = Real time continuous glucose monitor with alarms
+        Denominator: Number of eligible patients whose most recent entry (based on visit date) for blood glucose monitoring (item 22) is 4 = Real time continuous glucose monitor with alarms
         """
         # If running this method standalone, need to set calculate_kpi_2_total_eligible first
         # by running its calculation method
@@ -1268,9 +1268,9 @@ class CalculateKPIS:
         total_eligible = self.kpi_2_total_eligible
         total_ineligible = self.total_patients_count - total_eligible
 
-        # Define the subquery to find the latest visit where blood glucose monitoring (item 22) is either 4 = Real time continuous glucose monitor with alarms
+        # Define the subquery to find the latest visit where blood glucose monitoring (item 22) is 4 = Real time continuous glucose monitor with alarms
         latest_visit_subquery = (
-            Visit.objects.filter(patient=OuterRef("pk"), glucose_monitoring__in=[4])
+            Visit.objects.filter(patient=OuterRef("pk"), glucose_monitoring=[4])
             .order_by("-visit_date")
             .values("pk")[:1]
         )

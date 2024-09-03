@@ -1113,7 +1113,7 @@ def test_kpi_calculation_21(AUDIT_START_DATE):
 def test_kpi_calculation_22(AUDIT_START_DATE):
     """Tests that KPI22 is calculated correctly.
 
-    Numerator: Number of eligible patients whose most recent entry (based on visit date) for blood glucose monitoring (item 22) is either 4 = Real time continuous glucose monitor with alarms
+    Numerator: Number of eligible patients whose most recent entry (based on visit date) for blood glucose monitoring (item 22) is  4 = Real time continuous glucose monitor with alarms
 
     Denominator: Total number of eligible patients (measure 1)
     """
@@ -1129,7 +1129,7 @@ def test_kpi_calculation_22(AUDIT_START_DATE):
     passing_glucose_monitoring_4 = PatientFactory(
         # KPI1 eligible
         **eligible_criteria,
-        # most recent observation for  blood glucose monitoring (item 22) is either 4 = Real time continuous glucose monitor with alarms
+        # most recent observation for  blood glucose monitoring (item 22) is  4 = Real time continuous glucose monitor with alarms
         visit__glucose_monitoring=4,
     )
 
@@ -1137,7 +1137,7 @@ def test_kpi_calculation_22(AUDIT_START_DATE):
         failing_glucose_monitoring_not_2_or_3 = PatientFactory(
             # KPI1 eligible
             **eligible_criteria,
-            # most recent observation for  blood glucose monitoring (item 22) is NOT either 4 = Real time continuous glucose monitor with alarms
+            # most recent observation for  blood glucose monitoring (item 22) is NOT  4 = Real time continuous glucose monitor with alarms
             visit__glucose_monitoring=val,
         )
 
@@ -1186,7 +1186,7 @@ def test_kpi_calculation_23(AUDIT_START_DATE):
 
     Numerator: Total number of eligible patients with Type 1 diabetes (measure 2)
 
-    Denominator: Number of eligible patients whose most recent entry (based on visit date) for blood glucose monitoring (item 22) is either 4 = Real time continuous glucose monitor with alarms
+    Denominator: Number of eligible patients whose most recent entry (based on visit date) for blood glucose monitoring (item 22) is  4 = Real time continuous glucose monitor with alarms
     """
 
     # Ensure starting with clean pts in test db
@@ -1202,7 +1202,7 @@ def test_kpi_calculation_23(AUDIT_START_DATE):
     passing_glucose_monitoring_4 = PatientFactory(
         # KPI1 eligible
         **eligible_criteria,
-        # most recent observation for  blood glucose monitoring (item 22) is either 4 = Real time continuous glucose monitor with alarms
+        # most recent observation for  blood glucose monitoring (item 22) is  4 = Real time continuous glucose monitor with alarms
         visit__glucose_monitoring=4,
     )
 
@@ -1210,7 +1210,7 @@ def test_kpi_calculation_23(AUDIT_START_DATE):
         failing_glucose_monitoring_not_2_or_3 = PatientFactory(
             # KPI1 eligible
             **eligible_criteria,
-            # most recent observation for  blood glucose monitoring (item 22) is NOT either 4 = Real time continuous glucose monitor with alarms
+            # most recent observation for  blood glucose monitoring (item 22) is NOT  4 = Real time continuous glucose monitor with alarms
             visit__glucose_monitoring=val,
         )
 
