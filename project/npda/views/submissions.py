@@ -1,10 +1,11 @@
 # Python imports
 from typing import Any, Iterable
+from datetime import date
 
 # Django imports
 from django.apps import apps
 from django.contrib import messages
-from django.db.models import Count, F, Value
+from django.db.models import Count, Case, When, F, Value
 from django.db.models.functions import Concat
 from django.http import HttpResponse
 from django.shortcuts import render
@@ -13,6 +14,7 @@ from django.views.generic import ListView
 # RCPCH imports
 from .mixins import LoginAndOTPRequiredMixin
 from ..models import Submission
+from ..general_functions import download_csv, csv_summarize
 
 
 class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
@@ -27,13 +29,11 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
 
     model = apps.get_model(app_label="npda", model_name="Submission")
     template_name = "submissions_list.html"
-    context_object_name = "Submissions"
+    context_object_name = "submissions"
 
     def get_queryset(self) -> Iterable[Any]:
         """
-        Get the queryset for the view.
-
-        :return: The queryset for the view
+        Retrieve all submissions for the current PZ code, unless view_preference is set to 2 (national view)
         """
         PaediatricDiabetesUnit = apps.get_model(
             app_label="npda", model_name="PaediatricDiabetesUnit"
@@ -41,34 +41,50 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
         pdu = PaediatricDiabetesUnit.objects.get(
             pz_code=self.request.session.get("pz_code"),
         )
-        queryset = (
-            self.model.objects.filter(paediatric_diabetes_unit=pdu)
-            .values("submission_date", "audit_year")
-            .annotate(
-                patient_count=Count("patients"),
-                submission_active=F("submission_active"),
-                submission_by=Concat(
-                    "submission_by__first_name", Value(" "), "submission_by__surname"
-                ),
-                pk=F("id"),
-            )
-            .order_by(
-                "-submission_date",
-                "audit_year",
-                "submission_active",
-            )
+        if self.request.user.view_preference == 1:
+            base_queryset = self.model.objects.filter(paediatric_diabetes_unit=pdu)
+        else:
+            base_queryset = self.model.objects.all()
+
+        base_queryset.values("submission_date", "audit_year").annotate(
+            patient_count=Count("patients"),
+            submission_active=F("submission_active"),
+            submission_by=Concat(
+                "submission_by__first_name", Value(" "), "submission_by__surname"
+            ),
+            pk=F("id"),
+        ).order_by(
+            "-submission_date",
+            "audit_year",
+            "submission_active",
         )
-        return queryset
+        return base_queryset
 
     def get_context_data(self, **kwargs: Any) -> dict:
         """
-        Get the context data for the view.
-
-        :param kwargs: The keyword arguments
-        :return: The context data for the view
+        Add data to the context.
+        Includes the patient data for the active submission and the csv summary data.
         """
         context = super().get_context_data(**kwargs)
         context["pz_code"] = self.request.session.get("pz_code")
+        Submission = apps.get_model("npda", "Submission")
+        Patient = apps.get_model("npda", "Patient")
+        context["data"] = None  # data stores csv summary data if a submission exists
+        latest_active_submission = self.object_list.filter(
+            submission_active=True,
+            audit_year=date.today().year,
+            paediatric_diabetes_unit__pz_code=self.request.session.get("pz_code"),
+        ).first()  # there can be only one of these
+        if latest_active_submission:
+            # If a submission exists, summarize the csv data
+            context["data"] = csv_summarize(latest_active_submission.csv_file)
+            # Get some summary data about the patients in the submission...
+            context["patients"] = Patient.objects.filter(
+                submissions=latest_active_submission
+            ).annotate(
+                visit_error_count=Count(Case(When(visit__is_valid=False, then=1))),
+                visit_count=Count("visit"),
+            )
         return context
 
     def get(self, request, *args, **kwargs):
@@ -80,21 +96,21 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
         template = self.template_name
         if request.htmx:
             # If the request is an HTMX request from the PDU selector, returns the partial template
+            # Otherwise, returns the full template
+            # The partial template is used to update the submission history table when a new PDU is selected
+            # This is done with a custom htmx trigger in the PDU selector
             template = "partials/submission_history.html"
         return render(request=request, template_name=template, context=context)
 
     def post(self, request, *args, **kwargs):
         """
         Handle the HTMX POST request.
-
-        :param request: The request
-        :param args: The arguments
-        :param kwargs: The keyword arguments
-        :return: the updated table data
+        The button name "submit-data" is used to determine the action to be taken.
+        If the value of "submit-data" is "delete-data", the submission is deleted.
+        If the value of "submit-data" is "download-data", the original csv is downloaded.
         """
         button_name = request.POST.get("submit-data")
         if button_name == "delete-data":
-
             # retrieve the  submission instance
             submission = Submission.objects.filter(
                 pk=request.POST.get("audit_id")
@@ -121,6 +137,13 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
                 new_first.submission_active = True
                 new_first.save()
             messages.success(request, "Cohort submission deleted successfully")
+
+        if button_name == "download-data":
+            submission = Submission.objects.filter(
+                pk=request.POST.get("audit_id")
+            ).get()
+            return download_csv(request, submission.id)
+
         # POST is not supported for this view
         # Must therefore return the queryset as an obect_list and context
         self.object_list = self.get_queryset()

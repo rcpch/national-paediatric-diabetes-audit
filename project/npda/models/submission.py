@@ -34,6 +34,12 @@ class Submission(models.Model):
         to="npda.NPDAUser",
     )
 
+    csv_file = models.FileField(
+        upload_to="submissions/csv/",
+        help_text="CSV file containing the audit data for this submission",
+        default="submissions/csv/default.csv",
+    )
+
     patients = models.ManyToManyField(to="npda.Patient", related_name="submissions")
 
     paediatric_diabetes_unit = models.ForeignKey(

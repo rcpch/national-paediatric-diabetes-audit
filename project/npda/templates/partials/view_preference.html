@@ -12,7 +12,7 @@
             type="radio" 
             name="view_preference" 
             value="1" 
-            aria-label="Paediatric Diabetes Unit - {{chosen_pdu}}" 
+            aria-label="Paediatric Diabetes Unit View - {{chosen_pdu}}" 
             {% if view_preference == 1 %} checked {% endif %} 
             hx-include="[name='view_preference'], [name='pz_code_select_name']"/>
         {% if view_preference == 1 %}
@@ -39,7 +39,7 @@
                 type="radio" 
                 name="view_preference" 
                 value="2" 
-                aria-label="All" 
+                aria-label="National View" 
                 {% if view_preference == 2 %} checked {% endif %} 
                 hx-include="[name='view_preference'], [name='pz_code_select_name']"/>
         {% endif %}

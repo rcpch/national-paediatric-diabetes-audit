@@ -245,6 +245,8 @@ class PatientUpdateView(
         patient = Patient.objects.get(pk=self.kwargs["pk"])
         transfer = Transfer.objects.get(patient=patient)
         context = super().get_context_data(**kwargs)
+        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
         title = f"Edit Child Details in {pdu.lead_organisation_name}  ({pz_code})"
         if (
             transfer.paediatric_diabetes_unit.parent_name is not None

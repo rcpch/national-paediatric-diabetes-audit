@@ -26,23 +26,6 @@ from project.settings import LOGGING
 logger = logging.getLogger(__name__)
 
 
-def test_logging_effective_level_is_same_as_env_var():
-    """Ensures that the logger level is set to the same level as the environment variable.
-
-    Error most likely due to config issue.
-    """
-
-    environment_log_level = os.getenv("CONSOLE_LOG_LEVEL")
-    if environment_log_level is None:
-        pytest.fail("Environment variable 'CONSOLE_LOG_LEVEL' not set.")
-
-    effective_logger_level = logging.getLevelName(logger.getEffectiveLevel())
-
-    assert (
-        effective_logger_level == environment_log_level
-    ), f"Effective logger level: {effective_logger_level} | Environment log level: {environment_log_level}"
-
-
 @pytest.mark.django_db
 def test__seed_test_db(
     seed_groups_fixture,

@@ -149,7 +149,7 @@ def get_all_pz_codes_with_their_trust_and_primary_organisation() -> (
     Returns:
         List[Tuple[str, str]]: A list of tuples containing the ODS code and name of NHS organisations.
     """
-    url = f"{settings.RCPCH_NHS_ORGANISATIONS_API_URL}/paediatric_diabetes_units/trust"
+    url = f"{settings.RCPCH_NHS_ORGANISATIONS_API_URL}/paediatric_diabetes_units/parent"
     ERROR_RESPONSE = [("999", "An error occurred while fetching NHS organisations.")]
 
     try:
