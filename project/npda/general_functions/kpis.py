@@ -830,14 +830,46 @@ class CalculateKPIS:
             total_failed=total_failed,
         )
 
-    def calculate_kpi_numerator_12(self) -> dict:
+    def calculate_kpi_12_total_ketone_test_equipment(self) -> dict:
         """
-        Calculates KPI 12: Total number of patients with ketone test equipment
+        Calculates KPI 12: Number of patients using (or trained to use) blood ketone testing equipment
+
+        Number of eligible patients (measure 1) whose
+            * most recent observation for item 45 (based on visit date) is 1 = Yes
+            // NOTE: item45 is _Was the patient using (or trained to use) blood ketone testing equipment at time of visit? _
         """
-        return kpi_12_total_ketone_test_equipment(
-            patients=self.patients,
-            audit_start_date=self.audit_start_date,
-            audit_end_date=self.audit_end_date,
+        # Define the subquery to find the latest visit where ketone_meter_training = 1
+        latest_visit_subquery = (
+            Visit.objects.filter(patient=OuterRef("pk"), ketone_meter_training=1)
+            .order_by("-visit_date")
+            .values("pk")[:1]
+        )
+
+        # Filter the Patient queryset based on the subquery
+        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set.filter(
+            Q(
+                id__in=Subquery(
+                    Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
+                )
+            )
+        )
+
+        # Count eligible patients
+        total_eligible = eligible_patients.count()
+
+        # Calculate ineligible patients
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # This is just a count so pass/fail doesn't make sense; just set to same
+        # as eligible/ineligible
+        total_passed = total_eligible
+        total_failed = total_ineligible
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
         )
 
     def calculate_kpi_numerator_13(self) -> dict:
