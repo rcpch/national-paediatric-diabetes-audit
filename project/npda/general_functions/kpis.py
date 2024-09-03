@@ -750,13 +750,11 @@ class CalculateKPIS:
         Number of eligible patients (measure 1) who:
 
         * most recent observation for item 37 (based on visit date) is 1 = Yes
-        // NOTE: item37 is _Numer of eligible patients with at least one entry for Additional Dietitian Appointment Offered (item 43) that is 1 = Yes within the audit period (based on visit date)_
+        // NOTE: item37 is _Has the patient been recommended a Gluten-free diet? _
         """
-        # Define the subquery to find the latest visit where dietician_additional_appointment_offered = 1
+        # Define the subquery to find the latest visit where visit__gluten_free_diet = 1
         latest_visit_subquery = (
-            Visit.objects.filter(
-                patient=OuterRef("pk"), dietician_additional_appointment_offered=1
-            )
+            Visit.objects.filter(patient=OuterRef("pk"), gluten_free_diet=1)
             .order_by("-visit_date")
             .values("pk")[:1]
         )
@@ -790,16 +788,28 @@ class CalculateKPIS:
 
     def calculate_kpi_numerator_11(self) -> dict:
         """
-        Calculates KPI 11: Total number of thyroid patients
+        Calculates KPI 11: Number of patients with thyroid  disease
+        Number of eligible patients (measure 1)
+        whose most recent observation for item 35 (based on visit date)
+        is either 2 = Thyroxine for hypothyroidism or 3 = Antithyroid medication for hyperthyroidism
         """
+        # Define the subquery to find the latest visit where smoking_status = 2 or 3
+        latest_visit_subquery = (
+            Visit.objects.filter(
+                patient=OuterRef("pk"), dietician_additional_appointment_offered=1
+            )
+            .order_by("-visit_date")
+            .values("pk")[:1]
+        )
+
+        # Filter the Patient queryset based on the subquery
         eligible_patients = self.total_kpi_1_eligible_pts_base_query_set.filter(
-            # a leaving date in the audit period
             Q(
-                paediatric_diabetes_units__date_leaving_service__range=(
-                    self.AUDIT_DATE_RANGE
+                id__in=Subquery(
+                    Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
                 )
             )
-        ).distinct()
+        )
 
         # Count eligible patients
         total_eligible = eligible_patients.count()

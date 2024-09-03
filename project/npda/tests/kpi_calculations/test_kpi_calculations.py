@@ -740,20 +740,20 @@ def test_kpi_calculation_10(AUDIT_START_DATE):
 
     Essentialy KPI1 but also check
         * most recent observation for item 37 (based on visit date) is 1 = Yes
-        // NOTE: item37 is _Numer of eligible patients with at least one entry for Additional Dietitian Appointment Offered (item 43) that is 1 = Yes within the audit period (based on visit date)_
+        // NOTE: item37 is _Has the patient been recommended a Gluten-free diet?_
     """
 
     # Ensure starting with clean pts in test db
     Patient.objects.all().delete()
 
     # Create  Patients and Visits that should be included
-    eligible_patient_most_recent_additional_dietitian_appt_offerred_is_1 = PatientFactory(
+    eligible_patient_most_recent_gluten_free_diet_is_1 = PatientFactory(
         postcode="eligible_patient_diag_NOT_within_audit_period",
         # KPI1 eligible
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # most recent observation for item 37 (based on visit date) is 1 = Yes
-        visit__dietician_additional_appointment_offered=1,
+        visit__gluten_free_diet=1,
     )
 
     # Create Patients and Visits that should be excluded
@@ -775,7 +775,7 @@ def test_kpi_calculation_10(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # most recent observation for item 37 (based on visit date) is not 1
-        visit__dietician_additional_appointment_offered=2,
+        visit__gluten_free_diet=2,
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
