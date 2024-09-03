@@ -3,7 +3,7 @@
 # Python imports
 from dataclasses import dataclass, is_dataclass
 from dataclasses import asdict
-from datetime import date
+from datetime import date, datetime
 import logging
 from dateutil.relativedelta import relativedelta
 
@@ -295,7 +295,7 @@ class CalculateKPIS:
         # Add in used attributes for calculations
         return_obj = {}
         return_obj["pz_code"] = self.pz_code
-        return_obj["calculation_date"] = self.calculation_date
+        return_obj["calculation_datetime"] = datetime.now()
         return_obj["audit_start_date"] = self.audit_start_date
         return_obj["audit_end_date"] = self.audit_end_date
         return_obj["total_patients_count"] = self.total_patients_count
