@@ -10,7 +10,7 @@ from dateutil.relativedelta import relativedelta
 # Django imports
 from django.views.generic import TemplateView
 from django.http import JsonResponse
-from django.db.models import Q
+from django.db.models import Q, OuterRef, Subquery
 
 # NPDA Imports
 from project.constants.diabetes_types import DIABETES_TYPES
@@ -123,6 +123,7 @@ from project.npda.general_functions.kpis_calculations import (
 )
 from project.npda.general_functions.kpis_calculations import kpi_49_albuminuria_present
 from project.npda.models.transfer import Transfer
+from project.npda.models.visit import Visit
 
 
 # Logging
@@ -743,24 +744,79 @@ class CalculateKPIS:
             total_failed=total_failed,
         )
 
-    def calculate_kpi_numerator_10(self) -> dict:
+    def calculate_kpi_10_total_coeliacs(self) -> dict:
         """
         Calculates KPI 10: Total number of coeliacs
+        Number of eligible patients (measure 1) who:
+
+        * most recent observation for item 37 (based on visit date) is 1 = Yes
+        // NOTE: item37 is _Numer of eligible patients with at least one entry for Additional Dietitian Appointment Offered (item 43) that is 1 = Yes within the audit period (based on visit date)_
         """
-        return kpi_10_total_coeliacs(
-            patients=self.patients,
-            audit_start_date=self.audit_start_date,
-            audit_end_date=self.audit_end_date,
+        # Define the subquery to find the latest visit where dietician_additional_appointment_offered = 1
+        latest_visit_subquery = (
+            Visit.objects.filter(
+                patient=OuterRef("pk"), dietician_additional_appointment_offered=1
+            )
+            .order_by("-visit_date")
+            .values("pk")[:1]
+        )
+
+        # Filter the Patient queryset based on the subquery
+        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set.filter(
+            Q(
+                id__in=Subquery(
+                    Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
+                )
+            )
+        )
+
+        # Count eligible patients
+        total_eligible = eligible_patients.count()
+
+        # Calculate ineligible patients
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # This is just a count so pass/fail doesn't make sense; just set to same
+        # as eligible/ineligible
+        total_passed = total_eligible
+        total_failed = total_ineligible
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
         )
 
     def calculate_kpi_numerator_11(self) -> dict:
         """
         Calculates KPI 11: Total number of thyroid patients
         """
-        return kpi_11_total_thyroids(
-            patients=self.patients,
-            audit_start_date=self.audit_start_date,
-            audit_end_date=self.audit_end_date,
+        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set.filter(
+            # a leaving date in the audit period
+            Q(
+                paediatric_diabetes_units__date_leaving_service__range=(
+                    self.AUDIT_DATE_RANGE
+                )
+            )
+        ).distinct()
+
+        # Count eligible patients
+        total_eligible = eligible_patients.count()
+
+        # Calculate ineligible patients
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # This is just a count so pass/fail doesn't make sense; just set to same
+        # as eligible/ineligible
+        total_passed = total_eligible
+        total_failed = total_ineligible
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
         )
 
     def calculate_kpi_numerator_12(self) -> dict:

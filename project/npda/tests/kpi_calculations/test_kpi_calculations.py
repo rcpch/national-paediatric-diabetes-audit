@@ -732,3 +732,70 @@ def test_kpi_calculation_9(AUDIT_START_DATE):
         expected=EXPECTED_KPIRESULT,
         actual=calc_kpis.calculate_kpi_9_total_service_transitions(),
     )
+
+
+@pytest.mark.django_db
+def test_kpi_calculation_10(AUDIT_START_DATE):
+    """Tests that KPI10 is calculated correctly.
+
+    Essentialy KPI1 but also check
+        * most recent observation for item 37 (based on visit date) is 1 = Yes
+        // NOTE: item37 is _Numer of eligible patients with at least one entry for Additional Dietitian Appointment Offered (item 43) that is 1 = Yes within the audit period (based on visit date)_
+    """
+
+    # Ensure starting with clean pts in test db
+    Patient.objects.all().delete()
+
+    # Create  Patients and Visits that should be included
+    eligible_patient_most_recent_additional_dietitian_appt_offerred_is_1 = PatientFactory(
+        postcode="eligible_patient_diag_NOT_within_audit_period",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # most recent observation for item 37 (based on visit date) is 1 = Yes
+        visit__dietician_additional_appointment_offered=1,
+    )
+
+    # Create Patients and Visits that should be excluded
+    # Visit date before audit period
+    ineligible_patient_visit_date: List[Patient] = PatientFactory(
+        postcode="ineligible_patient_visit_date",
+        visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
+    )
+    # Above age 25 at start of audit period
+    ineligible_patient_too_old: List[Patient] = PatientFactory(
+        postcode="ineligible_patient_too_old",
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
+    )
+
+    # KPI10 specific
+    ineligible_patient_most_recent_additional_dietitian_appt_offerred_is_not_1 = PatientFactory(
+        postcode="ineligible_patient_most_recent_additional_dietitian_appt_offerred_is_not_1",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # most recent observation for item 37 (based on visit date) is not 1
+        visit__dietician_additional_appointment_offered=2,
+    )
+
+    # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+
+    EXPECTED_TOTAL_ELIGIBLE = 1
+    EXPECTED_TOTAL_INELIGIBLE = 3
+
+    EXPECTED_KPIRESULT = KPIResult(
+        total_eligible=EXPECTED_TOTAL_ELIGIBLE,
+        total_passed=EXPECTED_TOTAL_ELIGIBLE,
+        total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
+        total_failed=EXPECTED_TOTAL_INELIGIBLE,
+    )
+
+    # First set self.total_kpi_1_eligible_pts_base_query_set result
+    # of total eligible
+    calc_kpis.calculate_kpi_1_total_eligible()
+
+    assert_kpi_result_equal(
+        expected=EXPECTED_KPIRESULT,
+        actual=calc_kpis.calculate_kpi_10_total_coeliacs(),
+    )
