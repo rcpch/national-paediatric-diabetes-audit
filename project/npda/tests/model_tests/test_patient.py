@@ -25,34 +25,6 @@ logger = logging.getLogger(__name__)
 TODAY = date.today()
 
 
-# Helper functions
-def check_error_field_has_errors(
-    model_instance, field_name: str, error_enums: list[str]
-):
-    """
-    Check that the specified error is in the errors field for the specified field.
-
-    Args:
-        model_instance: The model instance to check.
-        field_name: The name of the field to check.
-        error: The error to check for.
-    """
-
-    print(f"!! {model_instance.errors}")
-
-    # Firstly, if model.errors is None, that means no errors have been added
-    # so we can return False
-    if model_instance.errors is None:
-        return False
-
-    # Check if the field_name is in the errors field
-    assert field_name in model_instance.errors
-
-    # Using set as order of errors does not matter
-    return set(error_enums) == set(model_instance.errors[field_name])
-
-
-# # NHS NUMBER TESTS
 @pytest.fixture
 def valid_nhs_number():
     """Provide a valid NHS number using the factory."""
@@ -123,6 +95,9 @@ def test_patient_creation_with_over_19_years_old_date_of_birth_raises_error():
 
     assert('date_of_birth' in exc_info.value.error_dict)
 
+    error_message = exc_info.value.error_dict['date_of_birth'][0].messages[0]
+    assert(error_message == "NPDA patients cannot be 19+ years old. This patient is 19")
+
 
 @pytest.mark.django_db
 def test_patient_creation_without_diabetes_type_raises_error():
@@ -133,46 +108,42 @@ def test_patient_creation_without_diabetes_type_raises_error():
 
 
 @pytest.mark.django_db
-def test_patient_creation_with_invalid_diabetes_type_stores_error():
+def test_patient_creation_with_invalid_diabetes_type_raises_error():
     with pytest.raises(ValidationError) as exc_info:
         PatientFactory(diabetes_type=DIABETES_TYPE_INVALID)
 
     assert('diabetes_type' in exc_info.value.error_dict)
 
 
-# @pytest.mark.skip(reason="Not yet implemented validation errors")
-# @pytest.mark.django_db
-# def test_patient_creation_without_date_of_diagnosis_raises_error():
-#     """Test creating a Patient without a date of diagnosis raises ValidationError."""
-#     with pytest.raises(ValidationError):
-#         PatientFactory(diagnosis_date=None)
+@pytest.mark.django_db
+def test_patient_creation_without_date_of_diagnosis_raises_error():
+    with pytest.raises(ValidationError) as exc_info:
+        PatientFactory(diagnosis_date=None)
+    
+    assert('diagnosis_date' in exc_info.value.error_dict)
 
 
-# @pytest.mark.skip(reason="Not yet implemented validation errors")
-# @pytest.mark.django_db
-# def test_patient_creation_with_future_date_of_diagnosis_stores_error():
-#     """Test creating a Patient with a future date of diagnosis creates an error item."""
-#     future_date = TODAY + timedelta(days=1)
-#     new_patient = PatientFactory(diagnosis_date=future_date)
+@pytest.mark.django_db
+def test_patient_creation_with_future_date_of_diagnosis_raises_error():
+    with pytest.raises(ValidationError) as exc_info:
+        PatientFactory(diagnosis_date=TODAY + timedelta(days=1))
 
-#     assert check_error_field_has_errors(
-#         new_patient, "diagnosis_date", [PatientError.DIAGNOSIS_DATE_IN_FUTURE.name]
-#     ), "Error not raised for future date of diagnosis"
+    assert('diagnosis_date' in exc_info.value.error_dict)
 
 
-# @pytest.mark.skip(reason="Not yet implemented validation errors")
-# @pytest.mark.django_db
-# def test_patient_creation_with_date_of_diagnosis_before_date_of_birth_stores_error():
-#     """Test creating a Patient with a date of diagnosis before the date of birth creates an error item."""
-#     birth_date = date(2005, 1, 1)
-#     diagnosis_date = date(2004, 12, 31)
-#     new_patient = PatientFactory(
-#         date_of_birth=birth_date, diagnosis_date=diagnosis_date
-#     )
+@pytest.mark.django_db
+def test_patient_creation_with_date_of_diagnosis_before_date_of_birth_raises_error():
+    """Test creating a Patient with a date of diagnosis before the date of birth creates an error item."""
+    date_of_birth = PatientFactory().date_of_birth
+    diagnosis_date = date_of_birth - relativedelta(years=1)
 
-#     assert check_error_field_has_errors(
-#         new_patient, "diagnosis_date", [PatientError.DIAGNOSIS_DATE_BEFORE_DOB.name]
-#     ), "Error not raised for diagnosis date before date of birth"
+    with pytest.raises(ValidationError) as exc_info:
+        PatientFactory(
+            date_of_birth=date_of_birth,
+            diagnosis_date=diagnosis_date
+        )
+
+    assert('diagnosis_date' in exc_info.value.error_dict)
 
 
 # @pytest.mark.skip(reason="Not yet implemented validation errors")
