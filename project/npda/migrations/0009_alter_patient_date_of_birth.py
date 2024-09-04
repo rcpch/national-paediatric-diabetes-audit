@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
             name="date_of_birth",
             field=models.DateField(
                 validators=[
-                    project.npda.models.patient.validate_date_of_birth
+                    project.npda.models.patient.validate_date_not_in_future
                 ],
                 verbose_name="date of birth (YYYY-MM-DD)",
             ),

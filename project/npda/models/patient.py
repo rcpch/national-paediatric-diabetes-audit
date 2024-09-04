@@ -40,12 +40,14 @@ def validate_nhs_number(value):
             params={"value": value},
         )
 
-def validate_date_of_birth(value):
+def validate_date_not_in_future(value):
     today = date.today()
 
     if value > today:
-        raise ValidationError("Date of birth cannot be in the future")
+        raise ValidationError("Date cannot be in the future")
 
+def validate_age(value):
+    today = date.today()
     age = relativedelta(today, value).years
 
     if age >= 19:
@@ -71,7 +73,10 @@ class Patient(models.Model):
     sex = models.IntegerField("Stated gender", choices=SEX_TYPE, blank=True, null=True)
 
     date_of_birth = DateField(
-        "date of birth (YYYY-MM-DD)", validators=[validate_date_of_birth]
+        "date of birth (YYYY-MM-DD)", validators=[
+            validate_date_not_in_future,
+            validate_age
+        ]
     )
 
     postcode = CharField(
@@ -97,7 +102,10 @@ class Patient(models.Model):
         verbose_name="Diabetes Type", choices=DIABETES_TYPES
     )
 
-    diagnosis_date = DateField(verbose_name="Date of Diabetes Diagnosis")
+    diagnosis_date = DateField(
+        verbose_name="Date of Diabetes Diagnosis",
+        validators=[validate_date_not_in_future]
+    )
 
     death_date = models.DateField(
         verbose_name="Date of death",
@@ -139,6 +147,10 @@ class Patient(models.Model):
 
     def get_absolute_url(self):
         return reverse("patient-detail", kwargs={"pk": self.pk})
+
+    def clean(self):
+        if self.diagnosis_date and self.date_of_birth and self.diagnosis_date < self.date_of_birth:
+            raise ValidationError("Diagnosis date cannot be before date of birth")
 
     def save(self, *args, **kwargs) -> None:
         # calculate the index of multiple deprivation quintile if the postcode is present

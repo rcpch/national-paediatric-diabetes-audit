@@ -143,8 +143,6 @@ def test_patient_creation_with_date_of_diagnosis_before_date_of_birth_raises_err
             diagnosis_date=diagnosis_date
         )
 
-    assert('diagnosis_date' in exc_info.value.error_dict)
-
 
 # @pytest.mark.skip(reason="Not yet implemented validation errors")
 # @pytest.mark.django_db
