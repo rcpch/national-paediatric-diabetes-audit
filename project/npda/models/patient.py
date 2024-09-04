@@ -9,7 +9,7 @@ from django.contrib.gis.db.models import CharField, DateField, PositiveSmallInte
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 
-from project.npda.models.custom_validators import validate_nhs_number
+from project.npda.models.custom_validators import validate_nhs_number, not_in_the_future_validator
 
 # npda imports
 from ...constants import (
@@ -57,7 +57,10 @@ class Patient(models.Model):
 
     sex = models.IntegerField("Stated gender", choices=SEX_TYPE, blank=True, null=True)
 
-    date_of_birth = DateField("date of birth (YYYY-MM-DD)")
+    date_of_birth = DateField(
+        "date of birth (YYYY-MM-DD)", validators=[not_in_the_future_validator]
+    )
+
     postcode = CharField(
         "Postcode of usual address",
         blank=True,

@@ -163,7 +163,6 @@ INVALID_POSTCODE = "!!@@##"
 UNKNOWN_POSTCODE = "ZZ99 45"
 
 
-@pytest.mark.skip(reason="Not yet implemented validation errors")
 @pytest.mark.django_db
 def test_patient_creation_without_date_of_birth_raises_error():
     """Test creating a Patient without a date of birth raises ValidationError."""
@@ -171,7 +170,6 @@ def test_patient_creation_without_date_of_birth_raises_error():
         PatientFactory(date_of_birth=None)
 
 
-@pytest.mark.skip(reason="Not yet implemented validation errors")
 @pytest.mark.django_db
 def test_patient_creation_with_future_date_of_birth_stores_error():
     """Test creating a Patient with a future date of birth creates an error item."""
@@ -183,7 +181,6 @@ def test_patient_creation_with_future_date_of_birth_stores_error():
     ), "Error not raised for future date of birth"
 
 
-@pytest.mark.skip(reason="Not yet implemented validation errors")
 @pytest.mark.django_db
 def test_patient_creation_with_over_19_years_old_date_of_birth_stores_error():
     """Test creating a Patient with a date of birth over or equal to 19 years old creates an error item."""
