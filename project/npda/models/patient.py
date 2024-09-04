@@ -8,8 +8,10 @@ from django.contrib.gis.db import models
 from django.contrib.gis.db.models import CharField, DateField, PositiveSmallIntegerField
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
+from django.core.exceptions import ValidationError
 
-from project.npda.models.custom_validators import validate_nhs_number, not_in_the_future_validator
+# third party imports
+import nhs_number
 
 # npda imports
 from ...constants import (
@@ -31,7 +33,6 @@ logger = logging.getLogger(__name__)
 
 class PatientError(Enum):
     """NOT including nhs number as that error should prevent saving"""
-
     DOB_IN_FUTURE = "Date of birth cannot be in the future."
     PT_OLDER_THAN_19yo = "Patient is too old for the NPDA."
     INVALID_POSTCODE = "Postcode is invalid."
@@ -39,6 +40,18 @@ class PatientError(Enum):
     INVALID_DIABETES_TYPE = "Diabetes type is invalid."
     DIAGNOSIS_DATE_BEFORE_DOB = "Diagnosis date is before date of birth."
     DIAGNOSIS_DATE_IN_FUTURE = "Diagnosis date cannot be in the future."
+
+def validate_nhs_number(value):
+    """Validate the NHS number using the nhs_number package."""
+    if not nhs_number.is_valid(value):
+        raise ValidationError(
+            f"{value} is not a valid NHS number.",
+            params={"value": value},
+        )
+
+def validate_date_of_birth(value):
+    if value > date.today():
+        raise ValidationError(PatientError.DOB_IN_FUTURE.value)
 
 
 class Patient(models.Model):
@@ -58,7 +71,7 @@ class Patient(models.Model):
     sex = models.IntegerField("Stated gender", choices=SEX_TYPE, blank=True, null=True)
 
     date_of_birth = DateField(
-        "date of birth (YYYY-MM-DD)", validators=[not_in_the_future_validator]
+        "date of birth (YYYY-MM-DD)", validators=[validate_date_of_birth]
     )
 
     postcode = CharField(
