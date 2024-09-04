@@ -898,7 +898,7 @@ class CalculateKPIS:
         """
         Calculates KPI 13: One - three injections/day
 
-        Numerator: Number of eligible patients whose most recent entry (based on visit date) 
+        Numerator: Number of eligible patients whose most recent entry (based on visit date)
         for treatment regimen (item 20) is 1 = One-three injections/day
 
         Denominator: Total number of eligible patients (measure 1)
@@ -934,7 +934,7 @@ class CalculateKPIS:
         """
         Calculates KPI 14: Four or more injections/day
 
-        Numerator: Number of eligible patients whose most recent entry (based on visit date) 
+        Numerator: Number of eligible patients whose most recent entry (based on visit date)
         for treatment regimen (item 20) is 2 = Four or more injections/day
 
         Denominator: Total number of eligible patients (measure 1)
@@ -970,7 +970,7 @@ class CalculateKPIS:
         """
         Calculates KPI 15: Insulin pump (including those using a pump as part of a hybrid closed loop)
 
-        Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment 
+        Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment
         regimen (item 20) is 3 = Insulin pump
 
         Denominator: Total number of eligible patients (measure 1)
@@ -1307,11 +1307,14 @@ class CalculateKPIS:
         self,
     ) -> dict:
         """
+        TODO: this was a little confusing, should be rechecked
+                but tests are passing. # Issue 269 https://github.com/orgs/rcpch/projects/13/views/1?pane=issue&itemId=78574146
+
         Calculates KPI 24: Hybrid closed loop system (HCL)
 
-        Numerator: Total number of eligible patients (measure 1)
+        Denominator: Total number of eligible patients (measure 1)
 
-        Denominator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is either
+        Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is either
             * 3 = insulin pump
             * or 6 = Insulin pump therapy plus other blood glucose lowering medication
 
@@ -1320,28 +1323,69 @@ class CalculateKPIS:
             * or 3 = Closed loop system (DIY, unlicenced)
             * or 4 = Closed loop system (licence status unknown)
         """
-        eligible_patients, total_eligible = self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
-  
-        total_ineligible = self.total_patients_count - total_eligible
+        # Denominator
+        total_kpi_1_eligible_pts_base_query_set, total_eligible_kpi_1 = (
+            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+        )
 
-        # Define the subquery to find the latest visit where blood glucose monitoring (item 22) is 4 = Real time continuous glucose monitor with alarms
-        latest_visit_subquery = (
-            Visit.objects.filter(patient=OuterRef("pk"), glucose_monitoring=4)
+        # Eligible kpi24 patients are those who are either on an insulin pump or insulin pump therapy
+        eligible_kpi_24_latest_visit_subquery = (
+            Visit.objects.filter(patient=OuterRef("pk"))
+            .filter(
+                # Either:
+                # 3 = insulin pump
+                # or 6 = Insulin pump therapy plus other blood glucose lowering medication
+                Q(treatment__in=[3, 6])
+            )
             .order_by("-visit_date")
             .values("pk")[:1]
         )
-        # Filter the Patient queryset based on the subquery
-        total_passed = eligible_patients.filter(
+        eligible_patients_kpi_24 = total_kpi_1_eligible_pts_base_query_set.filter(
             Q(
                 id__in=Subquery(
-                    Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
+                    Patient.objects.filter(
+                        visit__in=eligible_kpi_24_latest_visit_subquery
+                    ).values("id")
                 )
             )
-        ).count()
-        total_failed = total_eligible - total_passed
+        )
+        total_eligible_kpi_24 = eligible_patients_kpi_24.count()
+
+        # So ineligible patients are
+        #   patients already ineligible for KPI 1
+        #   PLUS
+        #   the subset of total_kpi_1_eligible_pts_base_query_set
+        #   who are ineligible for kpi24 (not on an insulin pump or insulin pump therapy)
+        total_ineligible = (self.total_patients_count - total_eligible_kpi_1) + (
+            total_eligible_kpi_1 - total_eligible_kpi_24
+        )
+
+        # Passing patients are the subset of kpi_24 eligible who are on closed loop system
+        passing_patients = eligible_patients_kpi_24.filter(
+            Q(
+                id__in=Subquery(
+                    Patient.objects.filter(
+                        Q(visit__in=eligible_kpi_24_latest_visit_subquery)
+                        # AND whose most recent entry for item 21 (based on visit date) is either
+                        # * 2 = Closed loop system (licenced)
+                        # * or 3 = Closed loop system (DIY, unlicenced)
+                        # * or 4 = Closed loop system (licence status unknown)
+                        & Q(visit__closed_loop_system__in=[2, 3, 4])
+                    ).values("id")
+                )
+            )
+        )
+        total_passed = passing_patients.count()
+        total_failed = eligible_patients_kpi_24.count() - total_passed
+
+        # logger.debug(f"passing_patients: {passing_patients.values_list('postcode')}")
+        # logger.debug(f'{eligible_patients_kpi_24.values_list("postcode")=}')
+        # logger.debug(
+        #     f"{total_eligible_kpi_24, total_ineligible,total_passed,total_failed=}"
+        # )
 
         return KPIResult(
-            total_eligible=total_eligible,
+            total_eligible=total_eligible_kpi_24,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
@@ -1355,7 +1399,7 @@ class CalculateKPIS:
         If running calculation methods in order, this attribute will be set in calculate_kpi_1_total_eligible().
 
         If running another kpi calculation standalone, need to run that method first to have the attribute set.
-        
+
         Returns:
             QuerySet: Base query set of eligible patients for KPI 1
             int: base query set count of total eligible patients for KPI 1
