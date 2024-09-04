@@ -8,6 +8,7 @@ import logging
 # third-party imports
 import factory
 import nhs_number
+from dateutil.relativedelta import relativedelta
 
 # rcpch imports
 from project.npda.models import Patient
@@ -58,11 +59,11 @@ class PatientFactory(factory.django.DjangoModelFactory):
             )
 
     sex = SEX_TYPE[2][0]  # Female
-    date_of_birth = date(2005, 1, 1)
+    date_of_birth = date.today() - relativedelta(years = 12)
     postcode = "NW1 2DB"  # The Alan Turing Institute
     ethnicity = ETHNICITIES[0][0]  # African
     diabetes_type = DIABETES_TYPES[0][0]  # Type 1 Insulin-Dependent Diabetes Mellitus
-    diagnosis_date = date(2020, 1, 1)
+    diagnosis_date = date.today() - relativedelta(years = 6)
 
     gp_practice_ods_code = "RP401"
 

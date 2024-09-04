@@ -12,6 +12,7 @@ from django.core.exceptions import ValidationError
 
 # third party imports
 import nhs_number
+from dateutil.relativedelta import relativedelta
 
 # npda imports
 from ...constants import (
@@ -34,7 +35,7 @@ logger = logging.getLogger(__name__)
 class PatientError(Enum):
     """NOT including nhs number as that error should prevent saving"""
     DOB_IN_FUTURE = "Date of birth cannot be in the future."
-    PT_OLDER_THAN_19yo = "Patient is too old for the NPDA."
+    PT_OLDER_THAN_19 = "Patient is too old for the NPDA."
     INVALID_POSTCODE = "Postcode is invalid."
     DEPRIVATION_CALCULATION_FAILED = "Cannot calculate deprivation score."
     INVALID_DIABETES_TYPE = "Diabetes type is invalid."
@@ -50,8 +51,13 @@ def validate_nhs_number(value):
         )
 
 def validate_date_of_birth(value):
-    if value > date.today():
+    today = date.today()
+
+    if value > today:
         raise ValidationError(PatientError.DOB_IN_FUTURE.value)
+
+    if relativedelta(today, value).years >= 19:
+        raise ValidationError(PatientError.PT_OLDER_THAN_19.value)
 
 
 class Patient(models.Model):
@@ -139,33 +145,6 @@ class Patient(models.Model):
 
     def get_absolute_url(self):
         return reverse("patient-detail", kwargs={"pk": self.pk})
-
-    def get_todays_date(self) -> date:
-        """Simply returns today's date. Used to enable testing of the age methods"""
-        return date.today()
-
-    # class methods
-    def age_days(self, today_date=None):
-        """
-        Returns the age of the patient in years, months and days
-        This is a calculated field
-        Date of birth is required
-        Today's date is optional and defaults to self.get_todays_date()):
-        """
-        if today_date is None:
-            today_date = self.get_todays_date()
-        return (today_date - self.date_of_birth).days
-
-    def age(self, today_date=None):
-        """
-        Returns the age of the patient in years, months and days
-        This is a calculated field
-        Date of birth is required
-        Today's date is optional and defaults to self.get_todays_date()):
-        """
-        if today_date is None:
-            today_date = self.get_todays_date()
-        return stringify_time_elapsed(self.date_of_birth, today_date)
 
     def save(self, *args, **kwargs) -> None:
         # calculate the index of multiple deprivation quintile if the postcode is present
