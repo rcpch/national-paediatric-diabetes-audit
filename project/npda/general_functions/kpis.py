@@ -1,4 +1,10 @@
-"""Views for KPIs"""
+"""Views for KPIs
+
+TODO:
+    - refactor all calculate_kpi methods which require kpi_1 base query set to use 
+      _get_total_kpi_1_eligible_pts_base_query_set_and_total_count
+        - additionally, do same for any other reused attrs
+"""
 
 # Python imports
 import time
@@ -6,13 +12,14 @@ from dataclasses import dataclass, is_dataclass
 from dataclasses import asdict
 from datetime import date, datetime
 import logging
+from typing import Tuple
 from dateutil.relativedelta import relativedelta
 
 # Django imports
 from django.shortcuts import render
 from django.views.generic import TemplateView
 from django.http import JsonResponse
-from django.db.models import Q, OuterRef, Subquery
+from django.db.models import Q, OuterRef, Subquery, QuerySet
 
 # NPDA Imports
 from project.constants.diabetes_types import DIABETES_TYPES
@@ -891,7 +898,8 @@ class CalculateKPIS:
         """
         Calculates KPI 13: One - three injections/day
 
-        Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is 1 = One-three injections/day
+        Numerator: Number of eligible patients whose most recent entry (based on visit date) 
+        for treatment regimen (item 20) is 1 = One-three injections/day
 
         Denominator: Total number of eligible patients (measure 1)
         """
@@ -926,7 +934,8 @@ class CalculateKPIS:
         """
         Calculates KPI 14: Four or more injections/day
 
-        Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is 2 = Four or more injections/day
+        Numerator: Number of eligible patients whose most recent entry (based on visit date) 
+        for treatment regimen (item 20) is 2 = Four or more injections/day
 
         Denominator: Total number of eligible patients (measure 1)
         """
@@ -961,7 +970,8 @@ class CalculateKPIS:
         """
         Calculates KPI 15: Insulin pump (including those using a pump as part of a hybrid closed loop)
 
-        Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is 3 = Insulin pump
+        Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment 
+        regimen (item 20) is 3 = Insulin pump
 
         Denominator: Total number of eligible patients (measure 1)
         """
@@ -1293,6 +1303,69 @@ class CalculateKPIS:
             total_failed=total_failed,
         )
 
+    def calculate_kpi_24_hybrid_closed_loop_system(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 24: Hybrid closed loop system (HCL)
+
+        Numerator: Total number of eligible patients (measure 1)
+
+        Denominator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is either
+            * 3 = insulin pump
+            * or 6 = Insulin pump therapy plus other blood glucose lowering medication
+
+            AND whose most recent entry for item 21 (based on visit date) is either
+            * 2 = Closed loop system (licenced)
+            * or 3 = Closed loop system (DIY, unlicenced)
+            * or 4 = Closed loop system (licence status unknown)
+        """
+        eligible_patients, total_eligible = self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+  
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Define the subquery to find the latest visit where blood glucose monitoring (item 22) is 4 = Real time continuous glucose monitor with alarms
+        latest_visit_subquery = (
+            Visit.objects.filter(patient=OuterRef("pk"), glucose_monitoring=4)
+            .order_by("-visit_date")
+            .values("pk")[:1]
+        )
+        # Filter the Patient queryset based on the subquery
+        total_passed = eligible_patients.filter(
+            Q(
+                id__in=Subquery(
+                    Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
+                )
+            )
+        ).count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def _get_total_kpi_1_eligible_pts_base_query_set_and_total_count(
+        self,
+    ) -> Tuple[QuerySet, int]:
+        """Enables reuse of the base query set for KPI 1
+
+        If running calculation methods in order, this attribute will be set in calculate_kpi_1_total_eligible().
+
+        If running another kpi calculation standalone, need to run that method first to have the attribute set.
+        
+        Returns:
+            QuerySet: Base query set of eligible patients for KPI 1
+            int: base query set count of total eligible patients for KPI 1
+        """
+
+        if not hasattr(self, "total_kpi_1_eligible_pts_base_query_set"):
+            self.calculate_kpi_1_total_eligible()
+
+        return self.total_kpi_1_eligible_pts_base_query_set, self.kpi_1_total_eligible
+
 
 # WIP simply return KPI Agg result for given PDU
 class KPIAggregationForPDU(TemplateView):
@@ -1306,9 +1379,11 @@ class KPIAggregationForPDU(TemplateView):
         start_time = time.time()  # Record the start time for calc
         aggregated_data = CalculateKPIS(pz_code=pz_code).calculate_kpis_for_patients()
         end_time = time.time()  # Record the end time
-        calculation_time = round((end_time - start_time) * 1000, 2)  # Calculate the time taken in milliseconds, rounded to 2dp
-        
+        calculation_time = round(
+            (end_time - start_time) * 1000, 2
+        )  # Calculate the time taken in milliseconds, rounded to 2dp
+
         # Add to context
-        aggregated_data['calculation_time'] = calculation_time
+        aggregated_data["calculation_time"] = calculation_time
 
         return render(request, self.template_name, context=aggregated_data)
