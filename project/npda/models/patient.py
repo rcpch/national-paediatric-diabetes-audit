@@ -32,21 +32,11 @@ from ..general_functions import (
 logger = logging.getLogger(__name__)
 
 
-class PatientError(Enum):
-    """NOT including nhs number as that error should prevent saving"""
-    DOB_IN_FUTURE = "Date of birth cannot be in the future."
-    PT_OLDER_THAN_19 = "Patient is too old for the NPDA."
-    INVALID_POSTCODE = "Postcode is invalid."
-    DEPRIVATION_CALCULATION_FAILED = "Cannot calculate deprivation score."
-    INVALID_DIABETES_TYPE = "Diabetes type is invalid."
-    DIAGNOSIS_DATE_BEFORE_DOB = "Diagnosis date is before date of birth."
-    DIAGNOSIS_DATE_IN_FUTURE = "Diagnosis date cannot be in the future."
-
 def validate_nhs_number(value):
     """Validate the NHS number using the nhs_number package."""
     if not nhs_number.is_valid(value):
         raise ValidationError(
-            f"{value} is not a valid NHS number.",
+            "%(value)s is not a valid NHS number.",
             params={"value": value},
         )
 
@@ -54,10 +44,14 @@ def validate_date_of_birth(value):
     today = date.today()
 
     if value > today:
-        raise ValidationError(PatientError.DOB_IN_FUTURE.value)
+        raise ValidationError("Date of birth cannot be in the future")
 
-    if relativedelta(today, value).years >= 19:
-        raise ValidationError(PatientError.PT_OLDER_THAN_19.value)
+    age = relativedelta(today, value).years
+
+    if age >= 19:
+        raise ValidationError(
+            "NPDA patients cannot be 19+ years old. This patient is %(age)s",
+            params={"age": age})
 
 
 class Patient(models.Model):

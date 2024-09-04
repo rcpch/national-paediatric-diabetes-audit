@@ -16,7 +16,7 @@ from project.constants import (
     DIABETES_TYPES,
     SEX_TYPE,
 )
-from project.npda.models.patient import Patient, PatientError
+from project.npda.models.patient import Patient
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -78,6 +78,7 @@ def test_patient_creation_with_invalid_nhs_number_raises_error(invalid_nhs_numbe
     with pytest.raises(ValidationError):
         PatientFactory(nhs_number=invalid_nhs_number)
 
+
 @pytest.mark.django_db
 def test_patient_creation_with_duplicate_nhs_number_raises_error():
     """Test creating a Patient with a duplicate NHS number raises ValidationError."""
@@ -110,7 +111,6 @@ def test_patient_creation_with_future_date_of_birth_raises_error():
         PatientFactory(date_of_birth=TODAY + timedelta(days=1))
 
     assert('date_of_birth' in exc_info.value.error_dict)
-    assert(PatientError.DOB_IN_FUTURE.value in exc_info.value.error_dict['date_of_birth'][0].messages)
 
 
 @pytest.mark.django_db
@@ -122,30 +122,22 @@ def test_patient_creation_with_over_19_years_old_date_of_birth_raises_error():
         PatientFactory(date_of_birth=over_19_years_date)
 
     assert('date_of_birth' in exc_info.value.error_dict)
-    assert(PatientError.PT_OLDER_THAN_19.value in exc_info.value.error_dict['date_of_birth'][0].messages)
 
 
-# @pytest.mark.skip(reason="Not yet implemented validation errors")
-# @pytest.mark.django_db
-# def test_patient_creation_without_diabetes_type_stores_error():
-#     """Test creating a Patient without a diabetes type creates an error item."""
-#     new_patient = PatientFactory(diabetes_type=None)
+@pytest.mark.django_db
+def test_patient_creation_without_diabetes_type_raises_error():
+    with pytest.raises(ValidationError) as exc_info:
+        PatientFactory(diabetes_type=None)
 
-#     assert check_error_field_has_errors(
-#         new_patient, "diabetes_type", [PatientError.INVALID_DIABETES_TYPE.name]
-#     ), "Error not raised for missing diabetes type"
+    assert('diabetes_type' in exc_info.value.error_dict)
 
 
-# @pytest.mark.skip(reason="Not yet implemented validation errors")
-# @pytest.mark.django_db
-# def test_patient_creation_with_invalid_diabetes_type_stores_error():
-#     """Test creating a Patient with an invalid diabetes type creates an error item."""
+@pytest.mark.django_db
+def test_patient_creation_with_invalid_diabetes_type_stores_error():
+    with pytest.raises(ValidationError) as exc_info:
+        PatientFactory(diabetes_type=DIABETES_TYPE_INVALID)
 
-#     new_patient = PatientFactory(diabetes_type=DIABETES_TYPE_INVALID)
-
-#     assert check_error_field_has_errors(
-#         new_patient, "diabetes_type", [PatientError.INVALID_DIABETES_TYPE.name]
-#     ), "Error not raised for invalid diabetes type"
+    assert('diabetes_type' in exc_info.value.error_dict)
 
 
 # @pytest.mark.skip(reason="Not yet implemented validation errors")
