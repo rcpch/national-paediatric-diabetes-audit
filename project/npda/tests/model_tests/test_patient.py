@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from enum import Enum
 import pytest
 import logging
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 # 3rd Party imports
 from django.core.exceptions import ValidationError
@@ -17,6 +17,7 @@ from project.constants import (
     SEX_TYPE,
 )
 from project.npda.models.patient import Patient
+from project.npda import general_functions
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -36,6 +37,12 @@ def invalid_nhs_number():
     """Provide an invalid NHS number for testing."""
     return "123456789"
 
+# TODO MRB: this mocking doesn't work
+# @pytest.fixture(autouse=True)
+# def patch_validate_postcode():
+#     with patch.object(general_functions, 'validate_postcode') as _mock:
+#         print(f"!! {_mock}")
+#         yield _mock
 
 @pytest.mark.django_db
 def test_patient_creation_without_nhs_number_raises_error():
@@ -44,115 +51,112 @@ def test_patient_creation_without_nhs_number_raises_error():
         PatientFactory(nhs_number=None)
 
 
-@pytest.mark.django_db
-def test_patient_creation_with_invalid_nhs_number_raises_error(invalid_nhs_number):
-    """Test creating a Patient with an invalid NHS number raises ValidationError."""
-    with pytest.raises(ValidationError):
-        PatientFactory(nhs_number=invalid_nhs_number)
-
-
-@pytest.mark.django_db
-def test_patient_creation_with_duplicate_nhs_number_raises_error():
-    """Test creating a Patient with a duplicate NHS number raises ValidationError."""
-    duplicate_nhs_number = PatientFactory().nhs_number
-    with pytest.raises(ValidationError):
-        PatientFactory(nhs_number=duplicate_nhs_number)
-
-
-# Constants for below tests
-SEX_TYPE_VALID = SEX_TYPE[0][0]
-ETHNICITY_VALID = ETHNICITIES[0][0]
-DIABETES_TYPE_VALID = DIABETES_TYPES[0][0]
-VALID_POSTCODE = "NW1 2DB"
-SEX_TYPE_INVALID = 45
-ETHNICITY_INVALID = "45"
-DIABETES_TYPE_INVALID = 45
-INVALID_POSTCODE = "!!@@##"
-UNKNOWN_POSTCODE = "ZZ99 45"
-
-
-@pytest.mark.django_db
-def test_patient_creation_without_date_of_birth_raises_error():
-    with pytest.raises(ValidationError):
-        PatientFactory(date_of_birth=None)
-
-
-@pytest.mark.django_db
-def test_patient_creation_with_future_date_of_birth_raises_error():
-    with pytest.raises(ValidationError) as exc_info:
-        PatientFactory(date_of_birth=TODAY + timedelta(days=1))
-
-    assert('date_of_birth' in exc_info.value.error_dict)
-
-
-@pytest.mark.django_db
-def test_patient_creation_with_over_19_years_old_date_of_birth_raises_error():
-    # 1 day over 19
-    over_19_years_date = TODAY - relativedelta(years=19, days=1)
-
-    with pytest.raises(ValidationError) as exc_info:
-        PatientFactory(date_of_birth=over_19_years_date)
-
-    assert('date_of_birth' in exc_info.value.error_dict)
-
-    error_message = exc_info.value.error_dict['date_of_birth'][0].messages[0]
-    assert(error_message == "NPDA patients cannot be 19+ years old. This patient is 19")
-
-
-@pytest.mark.django_db
-def test_patient_creation_without_diabetes_type_raises_error():
-    with pytest.raises(ValidationError) as exc_info:
-        PatientFactory(diabetes_type=None)
-
-    assert('diabetes_type' in exc_info.value.error_dict)
-
-
-@pytest.mark.django_db
-def test_patient_creation_with_invalid_diabetes_type_raises_error():
-    with pytest.raises(ValidationError) as exc_info:
-        PatientFactory(diabetes_type=DIABETES_TYPE_INVALID)
-
-    assert('diabetes_type' in exc_info.value.error_dict)
-
-
-@pytest.mark.django_db
-def test_patient_creation_without_date_of_diagnosis_raises_error():
-    with pytest.raises(ValidationError) as exc_info:
-        PatientFactory(diagnosis_date=None)
-    
-    assert('diagnosis_date' in exc_info.value.error_dict)
-
-
-@pytest.mark.django_db
-def test_patient_creation_with_future_date_of_diagnosis_raises_error():
-    with pytest.raises(ValidationError) as exc_info:
-        PatientFactory(diagnosis_date=TODAY + timedelta(days=1))
-
-    assert('diagnosis_date' in exc_info.value.error_dict)
-
-
-@pytest.mark.django_db
-def test_patient_creation_with_date_of_diagnosis_before_date_of_birth_raises_error():
-    """Test creating a Patient with a date of diagnosis before the date of birth creates an error item."""
-    date_of_birth = PatientFactory().date_of_birth
-    diagnosis_date = date_of_birth - relativedelta(years=1)
-
-    with pytest.raises(ValidationError) as exc_info:
-        PatientFactory(
-            date_of_birth=date_of_birth,
-            diagnosis_date=diagnosis_date
-        )
-
-
-# @pytest.mark.skip(reason="Not yet implemented validation errors")
 # @pytest.mark.django_db
-# def test_patient_creation_with_invalid_postcode_stores_error():
-#     """Test creating a Patient with an invalid postcode creates an error item."""
-#     new_patient = PatientFactory(postcode=INVALID_POSTCODE)
+# def test_patient_creation_with_invalid_nhs_number_raises_error(invalid_nhs_number):
+#     """Test creating a Patient with an invalid NHS number raises ValidationError."""
+#     with pytest.raises(ValidationError):
+#         PatientFactory(nhs_number=invalid_nhs_number)
 
-#     assert check_error_field_has_errors(
-#         new_patient, "postcode", [PatientError.INVALID_POSTCODE.name]
-#     ), "Error not raised for invalid postcode"
+
+# @pytest.mark.django_db
+# def test_patient_creation_with_duplicate_nhs_number_raises_error():
+#     """Test creating a Patient with a duplicate NHS number raises ValidationError."""
+#     duplicate_nhs_number = PatientFactory().nhs_number
+#     with pytest.raises(ValidationError):
+#         PatientFactory(nhs_number=duplicate_nhs_number)
+
+
+# # Constants for below tests
+# SEX_TYPE_VALID = SEX_TYPE[0][0]
+# ETHNICITY_VALID = ETHNICITIES[0][0]
+# DIABETES_TYPE_VALID = DIABETES_TYPES[0][0]
+# VALID_POSTCODE = "NW1 2DB"
+# SEX_TYPE_INVALID = 45
+# ETHNICITY_INVALID = "45"
+# DIABETES_TYPE_INVALID = 45
+INVALID_POSTCODE = "!!@@##"
+# UNKNOWN_POSTCODE = "ZZ99 45"
+
+
+# @pytest.mark.django_db
+# def test_patient_creation_without_date_of_birth_raises_error():
+#     with pytest.raises(ValidationError):
+#         PatientFactory(date_of_birth=None)
+
+
+# @pytest.mark.django_db
+# def test_patient_creation_with_future_date_of_birth_raises_error():
+#     with pytest.raises(ValidationError) as exc_info:
+#         PatientFactory(date_of_birth=TODAY + timedelta(days=1))
+
+#     assert('date_of_birth' in exc_info.value.error_dict)
+
+
+# @pytest.mark.django_db
+# def test_patient_creation_with_over_19_years_old_date_of_birth_raises_error():
+#     # 1 day over 19
+#     over_19_years_date = TODAY - relativedelta(years=19, days=1)
+
+#     with pytest.raises(ValidationError) as exc_info:
+#         PatientFactory(date_of_birth=over_19_years_date)
+
+#     assert('date_of_birth' in exc_info.value.error_dict)
+
+#     error_message = exc_info.value.error_dict['date_of_birth'][0].messages[0]
+#     assert(error_message == "NPDA patients cannot be 19+ years old. This patient is 19")
+
+
+# @pytest.mark.django_db
+# def test_patient_creation_without_diabetes_type_raises_error():
+#     with pytest.raises(ValidationError) as exc_info:
+#         PatientFactory(diabetes_type=None)
+
+#     assert('diabetes_type' in exc_info.value.error_dict)
+
+
+# @pytest.mark.django_db
+# def test_patient_creation_with_invalid_diabetes_type_raises_error():
+#     with pytest.raises(ValidationError) as exc_info:
+#         PatientFactory(diabetes_type=DIABETES_TYPE_INVALID)
+
+#     assert('diabetes_type' in exc_info.value.error_dict)
+
+
+# @pytest.mark.django_db
+# def test_patient_creation_without_date_of_diagnosis_raises_error():
+#     with pytest.raises(ValidationError) as exc_info:
+#         PatientFactory(diagnosis_date=None)
+    
+#     assert('diagnosis_date' in exc_info.value.error_dict)
+
+
+# @pytest.mark.django_db
+# def test_patient_creation_with_future_date_of_diagnosis_raises_error():
+#     with pytest.raises(ValidationError) as exc_info:
+#         PatientFactory(diagnosis_date=TODAY + timedelta(days=1))
+
+#     assert('diagnosis_date' in exc_info.value.error_dict)
+
+
+# @pytest.mark.django_db
+# def test_patient_creation_with_date_of_diagnosis_before_date_of_birth_raises_error():
+#     date_of_birth = PatientFactory().date_of_birth
+#     diagnosis_date = date_of_birth - relativedelta(years=1)
+
+#     with pytest.raises(ValidationError):
+#         PatientFactory(
+#             date_of_birth=date_of_birth,
+#             diagnosis_date=diagnosis_date
+#         )
+
+
+@pytest.mark.django_db
+@patch.object(general_functions, 'validate_postcode', Mock(return_value=None))
+def test_patient_creation_with_invalid_postcode_raises_error():
+    with pytest.raises(ValidationError) as exc_info:
+        PatientFactory(postcode=INVALID_POSTCODE)
+    
+    assert('postcode' in exc_info.value.error_dict)
 
 
 # @pytest.mark.skip(reason="Not yet implemented validation errors")

@@ -9,6 +9,7 @@ from requests.exceptions import HTTPError
 
 # npda imports
 from django.conf import settings
+from django.core.exceptions import ValidationError
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -21,7 +22,6 @@ def validate_postcode(postcode):
     """
 
     request_url = f"{settings.POSTCODE_API_BASE_URL}/postcodes/{postcode}.json"
-
     try:
         response = requests.get(
             url=request_url,
@@ -30,6 +30,4 @@ def validate_postcode(postcode):
         response.raise_for_status()
     except HTTPError as e:
         logger.error(e.response.text)
-        return False
-
-    return True
+        raise ValidationError("Postcode invalid")

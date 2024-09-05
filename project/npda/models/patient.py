@@ -23,9 +23,10 @@ from ...constants import (
     CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING,
     CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
 )
-from ..general_functions import (
+from project.npda.general_functions import (
     stringify_time_elapsed,
     imd_for_postcode,
+    validate_postcode
 )
 
 # Logging
@@ -83,6 +84,7 @@ class Patient(models.Model):
         "Postcode of usual address",
         blank=True,
         null=True,
+        validators=[validate_postcode]
     )
 
     ethnicity = CharField(

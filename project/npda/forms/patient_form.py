@@ -71,8 +71,7 @@ class PatientForm(forms.ModelForm):
         postcode = (
             self.cleaned_data["postcode"].upper().replace(" ", "").replace("-", "")
         )
-        if not validate_postcode(postcode=postcode):
-            raise ValidationError("Postcode invalid")
+        validate_postcode(postcode=postcode)
         return postcode
 
     def clean(self):
