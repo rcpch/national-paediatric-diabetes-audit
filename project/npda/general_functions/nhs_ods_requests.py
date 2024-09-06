@@ -14,24 +14,22 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
-def gp_practice_for_postcode(postcode: str):
-    """
-    Returns GP practice as an object from NHS API against a postcode
-    """
-
+def gp_ods_code_for_postcode(postcode: str):
     url = settings.NHS_SPINE_SERVICES_URL
     request_url = (
         f"{url}/organisations/?PostCode={postcode}&Status=Active&PrimaryRoleId=RO177"
     )
 
-    try:
-        response = requests.get(
-            url=request_url,
-            timeout=10,  # times out after 10 seconds
-        )
-        response.raise_for_status()
-    except HTTPError:
-        raise Exception(f"{postcode} not found")
+    response = requests.get(
+        url=request_url,
+        timeout=10,  # times out after 10 seconds
+    )
+
+    response = requests.get(
+        url=request_url,
+        timeout=10,  # times out after 10 seconds
+    )
+    response.raise_for_status()
 
     organisations = response.json()["Organisations"]
 
@@ -40,10 +38,6 @@ def gp_practice_for_postcode(postcode: str):
 
 
 def gp_details_for_ods_code(ods_code: str):
-    """
-    Returns address, name and long/lat for ods code
-    """
-
     url = f"{settings.NHS_SPINE_SERVICES_URL}/organisations/{ods_code}"
 
     try:
@@ -51,9 +45,12 @@ def gp_details_for_ods_code(ods_code: str):
             url=url,
             timeout=10,  # times out after 10 seconds
         )
+
+        if response.status == 404:
+            return None
+
         response.raise_for_status()
     except HTTPError as e:
         return {"error": e}
 
-    logger.warning(response.json())
     return response.json()["Organisation"]

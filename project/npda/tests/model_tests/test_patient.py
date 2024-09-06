@@ -33,7 +33,10 @@ ETHNICITY_INVALID = "45"
 DIABETES_TYPE_INVALID = 45
 INVALID_POSTCODE = "!!@@##"
 UNKNOWN_POSTCODE = "ZZ99 45"
-INDEX_OF_MULTIPLE_DEPRIVATION_QUANTILE=1
+INDEX_OF_MULTIPLE_DEPRIVATION_QUANTILE = 1
+GP_PRACTICE_ODS_CODE_VALID = 'G85023'
+GP_PRACTICE_POSTCODE_VALID = 'SE13 5PJ'
+GP_PRACTICE_ODS_CODE_INVALID = '@@@@@@'
 
 @pytest.fixture
 def valid_nhs_number():
@@ -46,7 +49,7 @@ def invalid_nhs_number():
     """Provide an invalid NHS number for testing."""
     return "123456789"
 
-# We don't want to call postcodes.io for every test
+# We don't want to call remote services during unit tests
 @pytest.fixture(autouse=True)
 def patch_validate_postcode():
     with patch('project.npda.models.patient._validate_postcode') as _mock:
@@ -56,6 +59,17 @@ def patch_validate_postcode():
 def patch_imd_for_postcode():
     with patch('project.npda.models.patient.imd_for_postcode', return_value=INDEX_OF_MULTIPLE_DEPRIVATION_QUANTILE) as _mock:
         yield _mock
+
+@pytest.fixture(autouse=True)
+def patch_gp_ods_code_for_postcode():
+    with patch('project.npda.models.patient.gp_ods_code_for_postcode', return_value=GP_PRACTICE_ODS_CODE_VALID) as _mock:
+        yield _mock
+
+@pytest.fixture(autouse=True)
+def patch_gp_details_for_ods_code():
+    with patch('project.npda.models.patient.gp_details_for_ods_code', return_value={"placeholder": 1234}) as _mock:
+        yield _mock
+
 
 @pytest.mark.django_db
 def test_patient_creation_without_nhs_number_raises_error():
@@ -221,40 +235,54 @@ def test_patient_creation_with_death_date_before_date_of_birth_raises_error():
         PatientFactory(death_date=death_date)
 
 
-# @pytest.mark.skip(reason="Not yet implemented validation errors")
-# @pytest.mark.django_db
-# def test_patient_creation_with_valid_gp_practice_ods_code():
-#     """Test creating a Patient with a valid GP practice ODS code does not raise an error."""
-#     try:
-#         PatientFactory(gp_practice_ods_code="RP401")  # Assuming 'RP401' is valid
-#     except ValidationError:
-#         pytest.fail("ValidationError raised for a valid GP practice ODS code")
+@pytest.mark.django_db
+def test_patient_creation_with_valid_gp_practice_ods_code():
+    patient = PatientFactory(gp_practice_ods_code=GP_PRACTICE_ODS_CODE_VALID)
+    
+    assert(patient.gp_practice_ods_code == GP_PRACTICE_ODS_CODE_VALID)
 
 
-# @pytest.mark.skip(reason="Not yet implemented validation errors")
-# @pytest.mark.django_db
-# def test_patient_creation_with_invalid_gp_practice_ods_code_raises_error():
-#     """Test creating a Patient with an invalid GP practice ODS code creates an error item."""
-#     with pytest.raises(ValidationError):
-#         PatientFactory(gp_practice_ods_code="@@@@@@")
+@pytest.mark.django_db
+@patch('project.npda.models.patient.gp_details_for_ods_code', Mock(return_value=None))
+def test_patient_creation_with_invalid_gp_practice_ods_code_raises_error():
+    with pytest.raises(ValidationError):
+        PatientFactory(gp_practice_ods_code="@@@@@@")
 
 
-# @pytest.mark.skip(reason="Not yet implemented validation errors")
-# @pytest.mark.django_db
-# def test_patient_creation_with_pdu_instance():
-#     """Test creating a Patient with a Paediatric Diabetes Unit instance associated does not raise an error."""
-#     try:
-#         PatientFactory(
-#             transfer__paediatric_diabetes_unit__pz_code="VALID_PZ"
-#         )  # Ensure 'VALID_PZ' is valid
-#     except ValidationError:
-#         pytest.fail("ValidationError raised for a valid PDU association")
+@pytest.mark.django_db
+@patch('project.npda.models.patient.gp_ods_code_for_postcode', Mock(side_effect=Exception('oopsie')))
+def test_patient_creation_gp_practice_ods_code_lookup_failure():
+    patient = PatientFactory(gp_practice_ods_code=GP_PRACTICE_ODS_CODE_VALID)
+    
+    assert(patient.gp_practice_ods_code is GP_PRACTICE_ODS_CODE_VALID)
 
 
-# @pytest.mark.skip(reason="Need to discuss model-level validation for PDU association")
-# @pytest.mark.skip(reason="Not yet implemented validation errors")
-# @pytest.mark.django_db
-# def test_patient_creation_without_pdu_instance_raises_error():
-#     """Test creating a Patient without a Paediatric Diabetes Unit instance creates an error item."""
-#     with pytest.raises(ValidationError):
-#         PatientFactory(transfer=None)
+@pytest.mark.django_db
+def test_patient_creation_with_valid_gp_practice_postcode():
+    patient = PatientFactory(
+        gp_practice_ods_code=None,
+        gp_practice_postcode=GP_PRACTICE_POSTCODE_VALID
+    )
+    
+    assert(patient.gp_practice_ods_code == GP_PRACTICE_ODS_CODE_VALID)
+    assert(patient.gp_practice_postcode == GP_PRACTICE_POSTCODE_VALID)
+
+
+@pytest.mark.django_db
+@patch('project.npda.models.patient.gp_ods_code_for_postcode', Mock(side_effect=Exception('oopsie')))
+def test_patient_creation_with_gp_practice_postcode_lookup_failure():
+    patient = PatientFactory(
+        gp_practice_ods_code=None,
+        gp_practice_postcode=GP_PRACTICE_POSTCODE_VALID
+    )
+    
+    assert(patient.gp_practice_ods_code == None)
+    assert(patient.gp_practice_postcode == GP_PRACTICE_POSTCODE_VALID)
+
+
+@pytest.mark.django_db
+@patch('project.npda.models.patient.gp_details_for_ods_code', Mock(return_value=[]))
+def test_patient_creation_with_gp_practice_postcode_that_isnt_a_gp_raises_error():
+    with pytest.raises(ValidationError):
+        PatientFactory(gp_practice_postcode="WC1X 8SH")
+

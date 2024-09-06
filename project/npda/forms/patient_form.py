@@ -1,4 +1,5 @@
 # python imports
+import logging
 
 # django imports
 from django.apps import apps
@@ -11,8 +12,10 @@ from ..models import Patient
 from ...constants.styles.form_styles import *
 from ..general_functions import (
     validate_postcode,
-    gp_practice_for_postcode,
+    gp_ods_code_for_postcode,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class DateInput(forms.DateInput):
@@ -118,7 +121,7 @@ class PatientForm(forms.ModelForm):
 
         if not gp_practice_ods_code and gp_practice_postcode:
             try:
-                ods_code = gp_practice_for_postcode(gp_practice_postcode)
+                ods_code = gp_ods_code_for_postcode(gp_practice_postcode)
 
                 if not ods_code:
                     raise ValidationError(
@@ -126,7 +129,7 @@ class PatientForm(forms.ModelForm):
                     )
                 else:
                     cleaned_data["gp_practice_ods_code"] = ods_code
-            except Exception as error:
-                raise ValidationError({"gp_practice_postcode": [error]})
+            except Exception as err:
+                logger.warning(f"Error looking up GP practice by postcode {err}")
 
         return cleaned_data
