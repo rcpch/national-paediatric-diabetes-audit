@@ -209,25 +209,28 @@ def test_patient_creation_with_invalid_ethnicity_raises_error():
         PatientFactory(ethnicity=ETHNICITY_INVALID)
 
 
-# @pytest.mark.skip(reason="Not yet implemented validation errors")
-# @pytest.mark.django_db
-# def test_patient_creation_with_valid_death_date():
-#     """Test creating a Patient with a valid death date does not raise an error."""
-#     try:
-#         PatientFactory(
-#             death_date=date(2024, 1, 1)
-#         )  # Ensure this is valid for your context
-#     except ValidationError:
-#         pytest.fail("ValidationError raised for a valid death date")
+@pytest.mark.django_db
+def test_patient_creation_with_valid_death_date():
+    death_date = PatientFactory().date_of_birth + relativedelta(years=1)
+
+    patient = PatientFactory(death_date=death_date)
+    assert(patient.death_date == death_date)
 
 
-# @pytest.mark.skip(reason="Not yet implemented validation errors")
-# @pytest.mark.django_db
-# def test_patient_creation_with_invalid_death_date_raises_error():
-#     """Test creating a Patient with an invalid death date creates an error item."""
-#     future_date = TODAY + timedelta(days=1)
-#     with pytest.raises(ValidationError):
-#         PatientFactory(death_date=future_date)
+@pytest.mark.django_db
+def test_patient_creation_with_future_death_date_raises_error():
+    death_date = TODAY + relativedelta(years=1)
+
+    with pytest.raises(ValidationError):
+        PatientFactory(death_date=death_date)
+
+
+@pytest.mark.django_db
+def test_patient_creation_with_death_date_before_date_of_birth_raises_error():
+    death_date = PatientFactory().date_of_birth - relativedelta(years=1)
+
+    with pytest.raises(ValidationError):
+        PatientFactory(death_date=death_date)
 
 
 # @pytest.mark.skip(reason="Not yet implemented validation errors")

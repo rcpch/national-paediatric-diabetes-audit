@@ -115,6 +115,7 @@ class Patient(models.Model):
         verbose_name="Date of death",
         blank=True,
         null=True,
+        validators=[validate_date_not_in_future]
     )
 
     gp_practice_ods_code = models.CharField(
@@ -153,8 +154,20 @@ class Patient(models.Model):
         return reverse("patient-detail", kwargs={"pk": self.pk})
 
     def clean(self):
+        errors = []
+
         if self.diagnosis_date and self.date_of_birth and self.diagnosis_date < self.date_of_birth:
-            raise ValidationError("Diagnosis date cannot be before date of birth")
+            errors.append(ValidationError("Diagnosis date cannot be before date of birth"))
+        
+        if self.death_date and self.date_of_birth and self.death_date < self.date_of_birth:
+            errors.append(ValidationError("Death date cannot be before date of birth"))
+
+        match(len(errors)):
+            case 1:
+                raise ValidationError(errors[0])
+            
+            case l if l > 1:
+                raise ValidationError(errors)
 
     def save(self, *args, **kwargs) -> None:
         # calculate the index of multiple deprivation quintile if the postcode is present
