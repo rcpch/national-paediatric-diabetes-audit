@@ -24,7 +24,16 @@ logger = logging.getLogger(__name__)
 
 # Constants
 TODAY = date.today()
-
+SEX_TYPE_VALID = SEX_TYPE[0][0]
+ETHNICITY_VALID = ETHNICITIES[0][0]
+DIABETES_TYPE_VALID = DIABETES_TYPES[0][0]
+VALID_POSTCODE = "NW1 2DB"
+SEX_TYPE_INVALID = 45
+ETHNICITY_INVALID = "45"
+DIABETES_TYPE_INVALID = 45
+INVALID_POSTCODE = "!!@@##"
+UNKNOWN_POSTCODE = "ZZ99 45"
+INDEX_OF_MULTIPLE_DEPRIVATION_QUANTILE=1
 
 @pytest.fixture
 def valid_nhs_number():
@@ -45,7 +54,7 @@ def patch_validate_postcode():
 
 @pytest.fixture(autouse=True)
 def patch_imd_for_postcode():
-    with patch('project.npda.models.patient.imd_for_postcode', return_value=1) as _mock:
+    with patch('project.npda.models.patient.imd_for_postcode', return_value=INDEX_OF_MULTIPLE_DEPRIVATION_QUANTILE) as _mock:
         yield _mock
 
 @pytest.mark.django_db
@@ -68,18 +77,6 @@ def test_patient_creation_with_duplicate_nhs_number_raises_error():
     duplicate_nhs_number = PatientFactory().nhs_number
     with pytest.raises(ValidationError):
         PatientFactory(nhs_number=duplicate_nhs_number)
-
-
-# Constants for below tests
-SEX_TYPE_VALID = SEX_TYPE[0][0]
-ETHNICITY_VALID = ETHNICITIES[0][0]
-DIABETES_TYPE_VALID = DIABETES_TYPES[0][0]
-VALID_POSTCODE = "NW1 2DB"
-SEX_TYPE_INVALID = 45
-ETHNICITY_INVALID = "45"
-DIABETES_TYPE_INVALID = 45
-INVALID_POSTCODE = "!!@@##"
-UNKNOWN_POSTCODE = "ZZ99 45"
 
 
 @pytest.mark.django_db
@@ -164,42 +161,33 @@ def test_patient_creation_with_invalid_postcode_raises_error():
 
 @pytest.mark.django_db
 def test_patient_creation_with_valid_index_of_multiple_deprivation():
-    """Test creating a Patient with valid details including a valid index of multiple deprivation."""
     patient = PatientFactory()
-    assert(patient.index_of_multiple_deprivation_quintile == 1)
+    assert(patient.index_of_multiple_deprivation_quintile == INDEX_OF_MULTIPLE_DEPRIVATION_QUANTILE)
 
 
 @pytest.mark.django_db
 @patch('project.npda.models.patient.imd_for_postcode', Mock(side_effect=Exception('oopsie')))
 def test_patient_creation_with_index_of_multiple_deprivation_lookup_failure():
-    """Test that if an index of multiple deprivation quintile cannot be calculated, it is set to None."""
     patient = PatientFactory()
     assert patient.index_of_multiple_deprivation_quintile is None
 
 
 @pytest.mark.django_db
 def test_patient_creation_with_valid_sex():
-    """Test creating a Patient with a valid sex does not raise an error."""
-    try:
-        PatientFactory(sex=SEX_TYPE_VALID)
-    except ValidationError:
-        pytest.fail("ValidationError raised for a valid sex")
+    patient = PatientFactory(sex=SEX_TYPE_VALID)
+    assert(patient.sex == SEX_TYPE_VALID)
 
 
 @pytest.mark.django_db
 def test_patient_creation_with_invalid_sex_raises_error():
-    """Test creating a Patient with an invalid sex creates an error item."""
     with pytest.raises(ValidationError):
         PatientFactory(sex=SEX_TYPE_INVALID)
 
 
 @pytest.mark.django_db
 def test_patient_creation_with_valid_ethnicity():
-    """Test creating a Patient with a valid ethnicity does not raise an error."""
-    try:
-        PatientFactory(ethnicity=ETHNICITY_VALID)
-    except ValidationError:
-        pytest.fail("ValidationError raised for a valid ethnicity")
+    patient = PatientFactory(ethnicity=ETHNICITY_VALID)
+    assert(patient.ethnicity == ETHNICITY_VALID)
 
 
 @pytest.mark.django_db
