@@ -177,40 +177,36 @@ def test_patient_creation_with_index_of_multiple_deprivation_lookup_failure():
     assert patient.index_of_multiple_deprivation_quintile is None
 
 
-# @pytest.mark.skip(reason="Not yet implemented validation errors")
-# @pytest.mark.django_db
-# def test_patient_creation_with_valid_sex():
-#     """Test creating a Patient with a valid sex does not raise an error."""
-#     try:
-#         PatientFactory(sex=SEX_TYPE_VALID)
-#     except ValidationError:
-#         pytest.fail("ValidationError raised for a valid sex")
+@pytest.mark.django_db
+def test_patient_creation_with_valid_sex():
+    """Test creating a Patient with a valid sex does not raise an error."""
+    try:
+        PatientFactory(sex=SEX_TYPE_VALID)
+    except ValidationError:
+        pytest.fail("ValidationError raised for a valid sex")
 
 
-# @pytest.mark.skip(reason="Not yet implemented validation errors")
-# @pytest.mark.django_db
-# def test_patient_creation_with_invalid_sex_raises_error():
-#     """Test creating a Patient with an invalid sex creates an error item."""
-#     with pytest.raises(ValidationError):
-#         PatientFactory(sex=SEX_TYPE_INVALID)
+@pytest.mark.django_db
+def test_patient_creation_with_invalid_sex_raises_error():
+    """Test creating a Patient with an invalid sex creates an error item."""
+    with pytest.raises(ValidationError):
+        PatientFactory(sex=SEX_TYPE_INVALID)
 
 
-# @pytest.mark.skip(reason="Not yet implemented validation errors")
-# @pytest.mark.django_db
-# def test_patient_creation_with_valid_ethnicity():
-#     """Test creating a Patient with a valid ethnicity does not raise an error."""
-#     try:
-#         PatientFactory(ethnicity=ETHNICITY_VALID)
-#     except ValidationError:
-#         pytest.fail("ValidationError raised for a valid ethnicity")
+@pytest.mark.django_db
+def test_patient_creation_with_valid_ethnicity():
+    """Test creating a Patient with a valid ethnicity does not raise an error."""
+    try:
+        PatientFactory(ethnicity=ETHNICITY_VALID)
+    except ValidationError:
+        pytest.fail("ValidationError raised for a valid ethnicity")
 
 
-# @pytest.mark.skip(reason="Not yet implemented validation errors")
-# @pytest.mark.django_db
-# def test_patient_creation_with_invalid_ethnicity_raises_error():
-#     """Test creating a Patient with an invalid ethnicity creates an error item."""
-#     with pytest.raises(ValidationError):
-#         PatientFactory(ethnicity=ETHNICITY_INVALID)
+@pytest.mark.django_db
+def test_patient_creation_with_invalid_ethnicity_raises_error():
+    """Test creating a Patient with an invalid ethnicity creates an error item."""
+    with pytest.raises(ValidationError):
+        PatientFactory(ethnicity=ETHNICITY_INVALID)
 
 
 # @pytest.mark.skip(reason="Not yet implemented validation errors")
