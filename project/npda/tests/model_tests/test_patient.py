@@ -45,7 +45,7 @@ def patch_validate_postcode():
 
 @pytest.fixture(autouse=True)
 def patch_imd_for_postcode():
-    with patch('project.npda.models.patient.imd_for_postcode') as _mock:
+    with patch('project.npda.models.patient.imd_for_postcode', return_value=1) as _mock:
         yield _mock
 
 @pytest.mark.django_db
@@ -162,20 +162,19 @@ def test_patient_creation_with_invalid_postcode_raises_error():
     assert('postcode' in exc_info.value.error_dict)
 
 
-# @pytest.mark.skip(reason="Not yet implemented validation errors")
-# @pytest.mark.django_db
-# def test_patient_creation_with_valid_index_of_multiple_deprivation():
-#     """Test creating a Patient with valid details including a valid index of multiple deprivation."""
-#     patient = PatientFactory()
-#     assert patient.index_of_multiple_deprivation_quintile is not None
+@pytest.mark.django_db
+def test_patient_creation_with_valid_index_of_multiple_deprivation():
+    """Test creating a Patient with valid details including a valid index of multiple deprivation."""
+    patient = PatientFactory()
+    assert(patient.index_of_multiple_deprivation_quintile == 1)
 
 
-# @pytest.mark.skip(reason="Not yet implemented validation errors")
-# @pytest.mark.django_db
-# def test_patient_creation_with_unknown_postcode_sets_index_of_multiple_deprivation_to_none():
-#     """Test that if an index of multiple deprivation quintile cannot be calculated, it is set to None."""
-#     patient = PatientFactory(postcode=UNKNOWN_POSTCODE)
-#     assert patient.index_of_multiple_deprivation_quintile is None
+@pytest.mark.django_db
+@patch('project.npda.models.patient.imd_for_postcode', Mock(side_effect=Exception('oopsie')))
+def test_patient_creation_with_index_of_multiple_deprivation_lookup_failure():
+    """Test that if an index of multiple deprivation quintile cannot be calculated, it is set to None."""
+    patient = PatientFactory()
+    assert patient.index_of_multiple_deprivation_quintile is None
 
 
 # @pytest.mark.skip(reason="Not yet implemented validation errors")
