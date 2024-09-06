@@ -26,7 +26,7 @@ from ...constants import (
 from project.npda.general_functions import (
     stringify_time_elapsed,
     imd_for_postcode,
-    validate_postcode
+    validate_postcode as _validate_postcode
 )
 
 # Logging
@@ -56,6 +56,8 @@ def validate_age(value):
             "NPDA patients cannot be 19+ years old. This patient is %(age)s",
             params={"age": age})
 
+def validate_postcode(value):
+    return _validate_postcode(value)
 
 class Patient(models.Model):
     """
@@ -169,5 +171,7 @@ class Patient(models.Model):
                     f"Cannot calculate deprivation score for {self.postcode}: {error}"
                 )
 
+        # TODO MRB: should trigger validation in calling code not in save
+        # to avoid double calls when used with a ModelForm
         self.full_clean()  # Trigger validation
         return super().save(*args, **kwargs)
