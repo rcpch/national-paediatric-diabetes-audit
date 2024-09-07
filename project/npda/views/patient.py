@@ -40,6 +40,7 @@ class PatientListView(
     permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
     model = Patient
     template_name = "patients.html"
+    paginate_by = 50
 
     def get_queryset(self):
         """
@@ -47,36 +48,42 @@ class PatientListView(
         Order by valid patients first, then by number of errors in visits, then by primary key
         Scope to patient only in the same organisation as the user and current audit year
         """
+        patient_queryset = super().get_queryset()
+        # sort the queryset by the user'selection
+        sort_by = self.request.GET.get("sort_by", "pk")  # Default sort by npda_id
+        sort = self.request.GET.get("sort", "asc")  # Default sort by ascending order
+        if sort_by in ["pk", "nhs_number"]:
+            if sort == "asc":
+                sort_by = sort_by
+            else:
+                sort_by = f"-{sort_by}"
+
+        # apply filters and annotations to the queryset
         pz_code = self.request.session.get("pz_code")
-        filtered_patients = None
-        # filter patients to the view preference of the user
-        if self.request.user.view_preference == 0:
-            # organisation view
-            # this has been deprecated
-            pass
-        elif self.request.user.view_preference == 1:
-            # PDU view
-            filtered_patients = Q(
-                submissions__paediatric_diabetes_unit__pz_code=pz_code,
+        filtered_patients = Q(submissions__submission_active=True)
+        # filter by contents of the search bar
+        search = self.request.GET.get("search-input")
+        if search:
+            filtered_patients &= Q(
+                Q(nhs_number__icontains=search) | Q(pk__icontains=search)
             )
-        elif self.request.user.view_preference == 2:
-            # National view - no filter
-            pass
-        else:
-            raise ValueError("Invalid view preference")
+        # filter patients to the view preference of the user
+        if self.request.user.view_preference == 1:
+            # PDU view
+            filtered_patients &= Q(
+                submissions__paediatric_diabetes_unit__pz_code=pz_code
+            )
 
-        patient_queryset = Patient.objects.filter(
-            submissions__submission_active=True,
+        patient_queryset = (
+            patient_queryset.filter(filtered_patients)
+            .annotate(
+                audit_year=F("submissions__audit_year"),
+                visit_error_count=Count(Case(When(visit__is_valid=False, then=1))),
+                last_upload_date=Max("submissions__submission_date"),
+                most_recent_visit_date=Max("visit__visit_date"),
+            )
+            .order_by("is_valid", "visit_error_count", sort_by)
         )
-        if filtered_patients is not None:
-            patient_queryset = patient_queryset.filter(filtered_patients)
-
-        patient_queryset = patient_queryset.annotate(
-            audit_year=F("submissions__audit_year"),
-            visit_error_count=Count(Case(When(visit__is_valid=False, then=1))),
-            last_upload_date=Max("submissions__submission_date"),
-            most_recent_visit_date=Max("visit__visit_date"),
-        ).order_by("is_valid", "visit_error_count", "pk")
 
         # add another annotation to the queryset to signpost the latest quarter
         # This does involve iterating over the queryset, but it is necessary to add the latest_quarter attribute to each object
@@ -121,6 +128,9 @@ class PatientListView(
             )
         )
         context["chosen_pdu"] = self.request.session.get("pz_code")
+        # Add current page and sorting parameters to the context
+        context["current_page"] = self.request.GET.get("page", 1)
+        context["sort_by"] = self.request.GET.get("sort_by", "pk")
         return context
 
     def get(self, request, *args: str, **kwargs) -> HttpResponse:
@@ -131,6 +141,19 @@ class PatientListView(
             # by calling the get_queryset method again with the new ods_code/pz_code stored in session
             queryset = self.get_queryset()
             context = self.get_context_data()
+            # Paginate the queryset
+            page_size = self.get_paginate_by(queryset)
+            page_number = request.GET.get("page", 1)
+            paginator, page, queryset, is_paginated = self.paginate_queryset(
+                queryset, page_size
+            )
+
+            # Update the context with the paginated queryset and pagination information
+            context = self.get_context_data()
+            context["patient_list"] = queryset
+            context["paginator"] = paginator
+            context["page_obj"] = page
+            context["is_paginated"] = is_paginated
             context["patient_list"] = queryset
 
             return render(request, "partials/patient_table.html", context=context)
