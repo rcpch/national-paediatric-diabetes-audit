@@ -45,20 +45,55 @@ def csv_upload(user, csv_file=None, pdu_pz_code=None):
     pdu = PaediatricDiabetesUnit.objects.get(pz_code=pdu_pz_code)
 
     # Set previous submission to inactive
-    Submission.objects.filter(
+    if Submission.objects.filter(
         paediatric_diabetes_unit__pz_code=pdu.pz_code,
         audit_year=date.today().year,
-    ).update(submission_active=False)
+        submission_active=True,
+    ).exists():
+        original_submission = Submission.objects.filter(
+            paediatric_diabetes_unit__pz_code=pdu.pz_code,
+            audit_year=date.today().year,
+        ).get()  # there can be only one of these
+        original_submission.submission_active = False
+        original_submission.save()
+    else:
+        original_submission = None
 
     # Create new submission for the audit year
     # It is not possble to create submissions in years other than the current year
-    new_submission = Submission.objects.create(
-        paediatric_diabetes_unit=pdu,
-        audit_year=date.today().year,
-        submission_date=timezone.now(),
-        submission_by=user,  # user is the user who is logged in. Passed in as a parameter
-        submission_active=True,
-    )
+    try:
+        new_submission = Submission.objects.create(
+            paediatric_diabetes_unit=pdu,
+            audit_year=date.today().year,
+            submission_date=timezone.now(),
+            submission_by=user,  # user is the user who is logged in. Passed in as a parameter
+            submission_active=True,
+        )
+
+        # save the csv file with a custom name
+        new_filename = f"{pdu.pz_code}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        new_submission.csv_file.save(new_filename, csv_file)
+        new_submission.save()
+
+        # now can delete the orginal submission's csv file and remove the path from the field by setting it to None if it exists
+        if original_submission:
+            original_submission.csv_file.delete()
+            original_submission.csv_file = None
+            original_submission.save()
+
+    except Exception as e:
+        logger.error(f"Error creating new submission: {e}")
+        # the new submission was not created so we need to delete the csv file and
+        # reset the old submission to active and add the csv file back if a there was a previous submission
+        if original_submission:
+            original_submission.get().submission_active = True
+            original_submission.csv_file = new_submission.csv_file
+            original_submission.save()
+        raise ValidationError(
+            {
+                "csv_upload": "Error creating new submission. The old submission has been restored."
+            }
+        )
 
     def csv_value_to_model_value(model_field, value):
         if pd.isnull(value):
@@ -261,17 +296,6 @@ def csv_upload(user, csv_file=None, pdu_pz_code=None):
                 visit = create_instance(Visit, visit_form)
                 visit.patient = patient
                 visit.save()
-
-    # save the csv file
-    new_submission.csv_file = csv_file
-    new_submission.save()
-
-    # delete the previous submission
-    Submission.objects.filter(
-        paediatric_diabetes_unit__pz_code=pdu.pz_code,
-        audit_year=date.today().year,
-        submission_active=False,
-    ).delete()
 
     if errors_to_return:
         raise ValidationError(errors_to_return)

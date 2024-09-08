@@ -67,7 +67,6 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
         """
         context = super().get_context_data(**kwargs)
         context["pz_code"] = self.request.session.get("pz_code")
-        Submission = apps.get_model("npda", "Submission")
         Patient = apps.get_model("npda", "Patient")
         context["data"] = None  # data stores csv summary data if a submission exists
         latest_active_submission = self.object_list.filter(
