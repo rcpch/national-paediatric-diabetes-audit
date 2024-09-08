@@ -34,7 +34,7 @@ WORKDIR /app/
 COPY . /app/
 
 # Ensure the media directory exists - csv files are stored here
-RUN mkdir -p /app/media/submissions/csv/
+RUN mkdir -p /media/submissions/csv/
 
 # Collect and compress static files into image
 RUN python manage.py collectstatic --no-input

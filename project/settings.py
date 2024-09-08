@@ -125,7 +125,7 @@ ROOT_URLCONF = "project.urls"
 
 # This directory is used to store the .csv files that are uploaded by the user
 MEDIA_URL = "/media/"
-MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+MEDIA_ROOT = "/media/submissions/csv/"
 
 TEMPLATES = [
     {
