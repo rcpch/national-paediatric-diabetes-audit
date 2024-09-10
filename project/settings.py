@@ -80,6 +80,7 @@ CAPTCHA_FONT_SIZE = 40
 # Application definition
 
 INSTALLED_APPS = [
+    "django.contrib.gis",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
