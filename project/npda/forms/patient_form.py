@@ -31,6 +31,9 @@ class NHSNumberField(forms.CharField):
         return normalised or value
 
     def validate(self, value):
+        if not value:
+            raise ValidationError('NHS number required')
+
         if not nhs_number.is_valid(value):
             raise ValidationError("Invalid NHS number")
 
