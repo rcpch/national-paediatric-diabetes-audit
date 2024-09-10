@@ -186,21 +186,5 @@ class Patient(models.Model):
                 print(
                     f"Cannot calculate deprivation score for {self.postcode}: {error}"
                 )
-
-        if self.gp_practice_postcode and not self.gp_practice_ods_code:
-            try:
-                self.gp_practice_ods_code = gp_ods_code_for_postcode(self.gp_practice_postcode)
-
-                if not self.gp_practice_ods_code:
-                    raise ValidationError("Could not find GP with postcode %(postcode)s", params={"postcode": self.gp_practice_postcode})
-            except Exception as err:
-                self.gp_practice_ods_code = None
-                logger.warning(f"Error looking up GP practice by postcode {err}")
-        elif self.gp_practice_ods_code:
-            if not gp_details_for_ods_code(self.gp_practice_ods_code):
-                raise ValidationError("Invalid GP ODS code %(ods_code)s", params = {"ods_code": self.gp_practice_ods_code})
-
-        # TODO MRB: should trigger validation in calling code not in save
-        # to avoid double calls when used with a ModelForm
-        self.full_clean()  # Trigger validation
+        
         return super().save(*args, **kwargs)

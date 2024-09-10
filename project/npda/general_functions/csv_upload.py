@@ -18,7 +18,7 @@ from ...constants import (
 
 # Logging setup
 logger = logging.getLogger(__name__)
-from ..forms.patient_form import PatientForm
+from ..forms.patient_form import PatientFormWithSynchronousValidators
 from ..forms.visit_form import VisitForm
 
 
@@ -119,7 +119,7 @@ def csv_upload(user, csv_file=None, pdu_pz_code=None):
             },
         )
         # TODO MRB: check we Validate gp practice ods code
-        form = PatientForm(fields)
+        form = PatientFormWithSynchronousValidators(fields)
         assign_original_row_indices_to_errors(form, row)
         return form
 

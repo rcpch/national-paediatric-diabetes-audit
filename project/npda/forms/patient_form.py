@@ -6,6 +6,8 @@ from django.apps import apps
 from django.core.exceptions import ValidationError
 from django import forms
 
+from requests import RequestException
+
 # project imports
 import nhs_number
 from ..models import Patient
@@ -13,6 +15,8 @@ from ...constants.styles.form_styles import *
 from ..general_functions import (
     validate_postcode,
     gp_ods_code_for_postcode,
+    gp_details_for_ods_code,
+    imd_for_postcode
 )
 
 
@@ -122,19 +126,6 @@ class PatientForm(forms.ModelForm):
                 )
             )
 
-        if not gp_practice_ods_code and gp_practice_postcode:
-            try:
-                ods_code = gp_ods_code_for_postcode(gp_practice_postcode)
-
-                if not ods_code:
-                    raise ValidationError(
-                        "Could not find GP practice with that postcode"
-                    )
-                else:
-                    cleaned_data["gp_practice_ods_code"] = ods_code
-            except Exception as err:
-                logger.warning(f"Error looking up GP practice by postcode {err}")
-
         return cleaned_data
 
 
@@ -148,9 +139,48 @@ class PatientFormWithSynchronousValidators(PatientForm):
             if not validate_postcode(postcode=postcode):
                 self.add_error(
                     "postcode",
-                    ValidationError("Invalid postcode")
+                    ValidationError("Invalid postcode %(postcode)s",
+                        params={"postcode":postcode})
                 )
-        except Exception as err:
+        except RequestException as err:
             logger.warning(f"Error validating postcode {err}")
 
         return postcode
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        gp_practice_ods_code = cleaned_data.get("gp_practice_ods_code")
+        gp_practice_postcode = cleaned_data.get("gp_practice_postcode")
+
+        if not gp_practice_ods_code and gp_practice_postcode:
+            try:
+                ods_code = gp_ods_code_for_postcode(gp_practice_postcode)
+
+                if not ods_code:
+                    self.add_error(
+                        "gp_practice_postcode",
+                        ValidationError(
+                            "Could not find GP practice with postcode %(postcode)s",
+                            params={"postcode":gp_practice_postcode}
+                        )
+                    )
+                else:
+                    cleaned_data["gp_practice_ods_code"] = ods_code
+            except RequestException as err:
+                logger.warning(f"Error looking up GP practice by postcode {err}")
+        elif gp_practice_ods_code:
+            try:
+                if not gp_details_for_ods_code(gp_practice_ods_code):
+                    self.add_error(
+                        "gp_practice_ods_code",
+                        ValidationError(
+                            "Could not find GP practice with ODS code %(ods_code)s",
+                            params={"ods_code":gp_practice_ods_code}
+                        )
+                    )
+            except RequestException as err:
+                logger.warning(f"Error looking up GP practice by ODS code {err}")
+
+        return cleaned_data
+
+    # TODO MRB: override save and move the imd lookup from the patient model
