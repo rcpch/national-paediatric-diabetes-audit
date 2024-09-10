@@ -30,22 +30,56 @@ NHS_NUMBER_INVALID = "123456789"
 SEX_TYPE_VALID = SEX_TYPE[0][0]
 ETHNICITY_VALID = ETHNICITIES[0][0]
 DIABETES_TYPE_VALID = DIABETES_TYPES[0][0]
-VALID_POSTCODE = "NW1 2DB"
 SEX_TYPE_INVALID = 45
 ETHNICITY_INVALID = "45"
 DIABETES_TYPE_INVALID = 45
-INVALID_POSTCODE = "!!@@##"
-UNKNOWN_POSTCODE = "ZZ99 45"
-INDEX_OF_MULTIPLE_DEPRIVATION_QUANTILE = 1
+VALID_POSTCODE = "NW1 2DB"
 GP_PRACTICE_ODS_CODE_VALID = 'G85023'
-GP_PRACTICE_POSTCODE_VALID = 'SE13 5PJ'
-GP_PRACTICE_ODS_CODE_INVALID = '@@@@@@'
 
 
-# TODO: valid create
 # TODO: keep tests in patient for catasrophic failures to save
 # TODO: remove validators from patient model
 # TODO: move network calls (IMD, postcode, GP details) to separate function
+
+
+@pytest.mark.django_db
+def test_create_patient():
+    date_of_birth = TODAY - relativedelta(years=10)
+    diagnosis_date = date_of_birth + relativedelta(years=8)
+
+    form = PatientForm({
+        "nhs_number": NHS_NUMBER_VALID,
+        "sex": SEX_TYPE_VALID,
+        "date_of_birth": date_of_birth,
+        "postcode": VALID_POSTCODE,
+        "ethnicity": ETHNICITY_VALID,
+        "diabetes_type": DIABETES_TYPE_VALID,
+        "diagnosis_date": diagnosis_date,
+        "gp_practice_ods_code": GP_PRACTICE_ODS_CODE_VALID
+    })
+
+    assert(len(form.errors.as_data()) == 0)
+
+
+@pytest.mark.django_db
+def test_create_patient_with_death_date():
+    date_of_birth = TODAY - relativedelta(years=10)
+    diagnosis_date = date_of_birth + relativedelta(years=8)
+    death_date = diagnosis_date + relativedelta(years=1)
+
+    form = PatientForm({
+        "nhs_number": NHS_NUMBER_VALID,
+        "sex": SEX_TYPE_VALID,
+        "date_of_birth": date_of_birth,
+        "postcode": VALID_POSTCODE,
+        "ethnicity": ETHNICITY_VALID,
+        "diabetes_type": DIABETES_TYPE_VALID,
+        "diagnosis_date": diagnosis_date,
+        "death_date": death_date,
+        "gp_practice_ods_code": GP_PRACTICE_ODS_CODE_VALID
+    })
+
+    assert(len(form.errors.as_data()) == 0)
 
 
 def test_missing_nhs_number():
@@ -144,78 +178,35 @@ def test_invalid_ethnicity():
     assert("ethnicity" in form.errors.as_data())
 
 
-# @pytest.mark.django_db
-# def test_patient_creation_with_valid_death_date():
-#     death_date = PatientFactory().date_of_birth + relativedelta(years=1)
-
-#     patient = PatientFactory(death_date=death_date)
-#     assert(patient.death_date == death_date)
-
-
-# @pytest.mark.django_db
-# def test_patient_creation_with_future_death_date_raises_error():
-#     death_date = TODAY + relativedelta(years=1)
-
-#     with pytest.raises(ValidationError):
-#         PatientFactory(death_date=death_date)
-
-
-# @pytest.mark.django_db
-# def test_patient_creation_with_death_date_before_date_of_birth_raises_error():
-#     death_date = PatientFactory().date_of_birth - relativedelta(years=1)
-
-#     with pytest.raises(ValidationError):
-#         PatientFactory(death_date=death_date)
-
-
-# @pytest.mark.django_db
-# def test_patient_creation_with_valid_gp_practice_ods_code():
-#     patient = PatientFactory(gp_practice_ods_code=GP_PRACTICE_ODS_CODE_VALID)
+def test_missing_gp_details():
+    form = PatientForm({})
     
-#     assert(patient.gp_practice_ods_code == GP_PRACTICE_ODS_CODE_VALID)
+    errors = form.errors.as_data()
+    assert("gp_practice_ods_code" in errors)
+
+    error_message = errors["gp_practice_ods_code"][0].messages[0]
+    assert(error_message == "'GP Practice ODS code' and 'GP Practice postcode' cannot both be empty")
 
 
-# @pytest.mark.django_db
-# @patch('project.npda.models.patient.gp_details_for_ods_code', Mock(return_value=None))
-# def test_patient_creation_with_invalid_gp_practice_ods_code_raises_error():
-#     with pytest.raises(ValidationError):
-#         PatientFactory(gp_practice_ods_code="@@@@@@")
+def test_patient_creation_with_future_death_date_raises_error():
+    form = PatientForm({
+        "death_date": TODAY + relativedelta(years=1)
+    })
+
+    assert("death_date" in form.errors.as_data())
 
 
-# @pytest.mark.django_db
-# @patch('project.npda.models.patient.gp_ods_code_for_postcode', Mock(side_effect=Exception('oopsie')))
-# def test_patient_creation_gp_practice_ods_code_lookup_failure():
-#     patient = PatientFactory(gp_practice_ods_code=GP_PRACTICE_ODS_CODE_VALID)
-    
-#     assert(patient.gp_practice_ods_code is GP_PRACTICE_ODS_CODE_VALID)
+def test_patient_creation_with_death_date_before_date_of_birth_raises_error():
+    date_of_birth = TODAY - relativedelta(years=1)
 
+    form = PatientForm({
+        "date_of_birth": date_of_birth,
+        "death_date": date_of_birth - relativedelta(years=1)
+    })
 
-# @pytest.mark.django_db
-# def test_patient_creation_with_valid_gp_practice_postcode():
-#     patient = PatientFactory(
-#         gp_practice_ods_code=None,
-#         gp_practice_postcode=GP_PRACTICE_POSTCODE_VALID
-#     )
-    
-#     assert(patient.gp_practice_ods_code == GP_PRACTICE_ODS_CODE_VALID)
-#     assert(patient.gp_practice_postcode == GP_PRACTICE_POSTCODE_VALID)
+    errors = form.errors.as_data()
+    assert("death_date" in errors)
 
-
-# @pytest.mark.django_db
-# @patch('project.npda.models.patient.gp_ods_code_for_postcode', Mock(side_effect=Exception('oopsie')))
-# def test_patient_creation_with_gp_practice_postcode_lookup_failure():
-#     patient = PatientFactory(
-#         gp_practice_ods_code=None,
-#         gp_practice_postcode=GP_PRACTICE_POSTCODE_VALID
-#     )
-    
-#     assert(patient.gp_practice_ods_code == None)
-#     assert(patient.gp_practice_postcode == GP_PRACTICE_POSTCODE_VALID)
-
-
-# @pytest.mark.django_db
-# @patch('project.npda.models.patient.gp_details_for_ods_code', Mock(return_value=[]))
-# def test_patient_creation_with_gp_practice_postcode_that_isnt_a_gp_raises_error():
-#     with pytest.raises(ValidationError):
-#         PatientFactory(gp_practice_postcode="WC1X 8SH")
+    error_message = errors["death_date"][0].messages[0]
+    assert(error_message == "'Death Date' cannot be before 'Date of Birth'")
 

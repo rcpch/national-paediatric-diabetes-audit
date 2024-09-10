@@ -117,7 +117,7 @@ class PatientForm(forms.ModelForm):
             raise ValidationError(
                 {
                     "gp_practice_ods_code": [
-                        "GP Practice ODS code and GP Practice postcode cannot both be empty. At least one must be supplied."
+                        "'GP Practice ODS code' and 'GP Practice postcode' cannot both be empty"
                     ]
                 }
             )
