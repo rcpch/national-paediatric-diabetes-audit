@@ -17,7 +17,7 @@ from project.constants import (
     SEX_TYPE,
 )
 from project.npda.models.patient import Patient
-from project.npda.forms.patient_form import PatientForm
+from project.npda.forms.patient_form import PatientForm, PatientFormWithSynchronousValidators
 from project.npda import general_functions
 
 # Logging
@@ -40,6 +40,13 @@ VALID_FIELDS = {
 # TODO: keep tests in patient for catasrophic failures to save
 # TODO: remove validators from patient model
 # TODO: move network calls (IMD, postcode, GP details) to separate function
+
+
+# We don't want to call remote services unexpectedly during unit tests
+# @pytest.fixture(autouse=True)
+# def patch_validate_postcode():
+#     with patch('project.npda.forms.patient_form.validate_postcode', Mock(side_effect=Exception("Unexpected call to validate_postcode"))) as _mock:
+#         yield _mock
 
 
 @pytest.mark.django_db
@@ -199,3 +206,31 @@ def test_dashes_removed_from_postcode():
 
     form.is_valid()
     assert(form.cleaned_data["postcode"] == "WC1X8SH")
+
+
+@pytest.mark.django_db
+@patch('project.npda.forms.patient_form.validate_postcode', Mock(return_value=True))
+def test_valid_postcode():
+    form = PatientFormWithSynchronousValidators(VALID_FIELDS)
+
+    form.is_valid()
+    assert(len(form.errors.as_data()) == 0)
+
+
+@pytest.mark.django_db
+@patch('project.npda.forms.patient_form.validate_postcode', Mock(return_value=False))
+def test_invalid_postcode():
+    form = PatientFormWithSynchronousValidators(VALID_FIELDS)
+
+    form.is_valid()
+    assert("postcode" in form.errors.as_data())
+
+
+@pytest.mark.django_db
+@patch('project.npda.forms.patient_form.validate_postcode', Mock(side_effect=Exception("oopsie!")))
+def test_error_validating_postcode():
+    # TODO MRB: report this back somehow rather than just eat it in the log?
+    form = PatientFormWithSynchronousValidators(VALID_FIELDS)
+
+    form.is_valid()
+    assert(len(form.errors.as_data()) == 0)

@@ -88,8 +88,7 @@ class Patient(models.Model):
     postcode = CharField(
         "Postcode of usual address",
         blank=True,
-        null=True,
-        validators=[validate_postcode]
+        null=True
     )
 
     ethnicity = CharField(

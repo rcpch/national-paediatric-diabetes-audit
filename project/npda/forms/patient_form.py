@@ -15,6 +15,7 @@ from ..general_functions import (
     gp_ods_code_for_postcode,
 )
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -77,7 +78,7 @@ class PatientForm(forms.ModelForm):
         postcode = (
             self.cleaned_data["postcode"].upper().replace(" ", "").replace("-", "")
         )
-        validate_postcode(postcode=postcode)
+        
         return postcode
 
     def clean(self):
@@ -114,12 +115,11 @@ class PatientForm(forms.ModelForm):
                 )
 
         if gp_practice_ods_code is None and gp_practice_postcode is None:
-            raise ValidationError(
-                {
-                    "gp_practice_ods_code": [
-                        "'GP Practice ODS code' and 'GP Practice postcode' cannot both be empty"
-                    ]
-                }
+            self.add_error(
+                "gp_practice_ods_code",
+                ValidationError(
+                    "'GP Practice ODS code' and 'GP Practice postcode' cannot both be empty"
+                )
             )
 
         if not gp_practice_ods_code and gp_practice_postcode:
@@ -136,3 +136,21 @@ class PatientForm(forms.ModelForm):
                 logger.warning(f"Error looking up GP practice by postcode {err}")
 
         return cleaned_data
+
+
+class PatientFormWithSynchronousValidators(PatientForm):
+    def clean_postcode(self):
+        super().clean_postcode()
+
+        postcode = self.cleaned_data["postcode"]
+
+        try:
+            if not validate_postcode(postcode=postcode):
+                self.add_error(
+                    "postcode",
+                    ValidationError("Invalid postcode")
+                )
+        except Exception as err:
+            logger.warning(f"Error validating postcode {err}")
+
+        return postcode
