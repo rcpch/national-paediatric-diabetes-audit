@@ -23,19 +23,19 @@ from project.npda import general_functions
 # Logging
 logger = logging.getLogger(__name__)
 
-# Constants
 TODAY = date.today()
-NHS_NUMBER_VALID = "6239431915"
-NHS_NUMBER_INVALID = "123456789"
-SEX_TYPE_VALID = SEX_TYPE[0][0]
-ETHNICITY_VALID = ETHNICITIES[0][0]
-DIABETES_TYPE_VALID = DIABETES_TYPES[0][0]
-SEX_TYPE_INVALID = 45
-ETHNICITY_INVALID = "45"
-DIABETES_TYPE_INVALID = 45
-VALID_POSTCODE = "NW1 2DB"
-GP_PRACTICE_ODS_CODE_VALID = 'G85023'
+DATE_OF_BIRTH = TODAY - relativedelta(years=10)
 
+VALID_FIELDS = {
+    "nhs_number": "6239431915",
+    "sex": SEX_TYPE[0][0],
+    "date_of_birth": TODAY - relativedelta(years=10),
+    "postcode": "NW1 2DB",
+    "ethnicity":  ETHNICITIES[0][0],
+    "diabetes_type":  DIABETES_TYPES[0][0],
+    "diagnosis_date": DATE_OF_BIRTH + relativedelta(years=8),
+    "gp_practice_ods_code": "G85023"
+}
 
 # TODO: keep tests in patient for catasrophic failures to save
 # TODO: remove validators from patient model
@@ -44,39 +44,14 @@ GP_PRACTICE_ODS_CODE_VALID = 'G85023'
 
 @pytest.mark.django_db
 def test_create_patient():
-    date_of_birth = TODAY - relativedelta(years=10)
-    diagnosis_date = date_of_birth + relativedelta(years=8)
-
-    form = PatientForm({
-        "nhs_number": NHS_NUMBER_VALID,
-        "sex": SEX_TYPE_VALID,
-        "date_of_birth": date_of_birth,
-        "postcode": VALID_POSTCODE,
-        "ethnicity": ETHNICITY_VALID,
-        "diabetes_type": DIABETES_TYPE_VALID,
-        "diagnosis_date": diagnosis_date,
-        "gp_practice_ods_code": GP_PRACTICE_ODS_CODE_VALID
-    })
-
+    form = PatientForm(VALID_FIELDS)
     assert(len(form.errors.as_data()) == 0)
 
 
 @pytest.mark.django_db
 def test_create_patient_with_death_date():
-    date_of_birth = TODAY - relativedelta(years=10)
-    diagnosis_date = date_of_birth + relativedelta(years=8)
-    death_date = diagnosis_date + relativedelta(years=1)
-
-    form = PatientForm({
-        "nhs_number": NHS_NUMBER_VALID,
-        "sex": SEX_TYPE_VALID,
-        "date_of_birth": date_of_birth,
-        "postcode": VALID_POSTCODE,
-        "ethnicity": ETHNICITY_VALID,
-        "diabetes_type": DIABETES_TYPE_VALID,
-        "diagnosis_date": diagnosis_date,
-        "death_date": death_date,
-        "gp_practice_ods_code": GP_PRACTICE_ODS_CODE_VALID
+    form = PatientForm(VALID_FIELDS | {
+        "death_date": VALID_FIELDS["diagnosis_date"] + relativedelta(years=1)
     })
 
     assert(len(form.errors.as_data()) == 0)
@@ -89,7 +64,7 @@ def test_missing_nhs_number():
 
 def test_invalid_nhs_number():
     form = PatientForm({
-        "nhs_number": NHS_NUMBER_INVALID
+        "nhs_number": "123456789"
     })
 
     assert("nhs_number" in form.errors.as_data())
@@ -127,7 +102,7 @@ def test_missing_diabetes_type():
 
 def test_invalid_diabetes_type():
     form = PatientForm({
-        "diabetes_type": DIABETES_TYPE_INVALID
+        "diabetes_type": 45
     })
 
     assert("diabetes_type" in form.errors.as_data())
@@ -147,12 +122,9 @@ def test_future_diagnosis_date():
 
 
 def test_diagnosis_date_before_date_of_birth():
-    date_of_birth = TODAY - relativedelta(years = 12)
-    diagnosis_date = date_of_birth - relativedelta(years=1)
-
     form = PatientForm({
-        "date_of_birth": date_of_birth,
-        "diagnosis_date": diagnosis_date
+        "date_of_birth": VALID_FIELDS["date_of_birth"],
+        "diagnosis_date": VALID_FIELDS["date_of_birth"] - relativedelta(years=1)
     })
 
     errors = form.errors.as_data()
@@ -164,7 +136,7 @@ def test_diagnosis_date_before_date_of_birth():
 
 def test_invalid_sex():
     form = PatientForm({
-        "sex": SEX_TYPE_INVALID
+        "sex": 45
     })
 
     assert("sex" in form.errors.as_data())
@@ -172,7 +144,7 @@ def test_invalid_sex():
 
 def test_invalid_ethnicity():
     form = PatientForm({
-        "ethnicity": ETHNICITY_INVALID
+        "ethnicity": 45
     })
 
     assert("ethnicity" in form.errors.as_data())
@@ -197,11 +169,9 @@ def test_patient_creation_with_future_death_date_raises_error():
 
 
 def test_patient_creation_with_death_date_before_date_of_birth_raises_error():
-    date_of_birth = TODAY - relativedelta(years=1)
-
     form = PatientForm({
-        "date_of_birth": date_of_birth,
-        "death_date": date_of_birth - relativedelta(years=1)
+        "date_of_birth": VALID_FIELDS["date_of_birth"],
+        "death_date": VALID_FIELDS["date_of_birth"] - relativedelta(years=1)
     })
 
     errors = form.errors.as_data()
@@ -210,3 +180,22 @@ def test_patient_creation_with_death_date_before_date_of_birth_raises_error():
     error_message = errors["death_date"][0].messages[0]
     assert(error_message == "'Death Date' cannot be before 'Date of Birth'")
 
+
+@pytest.mark.django_db
+def test_spaces_removed_from_postcode():
+    form = PatientForm(VALID_FIELDS | {
+        "postcode": "WC1X 8SH",
+    })
+
+    form.is_valid()
+    assert(form.cleaned_data["postcode"] == "WC1X8SH")
+
+
+@pytest.mark.django_db
+def test_dashes_removed_from_postcode():
+    form = PatientForm(VALID_FIELDS | {
+        "postcode": "WC1X-8SH",
+    })
+
+    form.is_valid()
+    assert(form.cleaned_data["postcode"] == "WC1X8SH")

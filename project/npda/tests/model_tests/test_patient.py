@@ -38,38 +38,6 @@ GP_PRACTICE_ODS_CODE_VALID = 'G85023'
 GP_PRACTICE_POSTCODE_VALID = 'SE13 5PJ'
 GP_PRACTICE_ODS_CODE_INVALID = '@@@@@@'
 
-@pytest.fixture
-def valid_nhs_number():
-    """Provide a valid NHS number using the factory."""
-    return PatientFactory().nhs_number
-
-
-@pytest.fixture
-def invalid_nhs_number():
-    """Provide an invalid NHS number for testing."""
-    return "123456789"
-
-# We don't want to call remote services during unit tests
-@pytest.fixture(autouse=True)
-def patch_validate_postcode():
-    with patch('project.npda.models.patient._validate_postcode') as _mock:
-        yield _mock
-
-@pytest.fixture(autouse=True)
-def patch_imd_for_postcode():
-    with patch('project.npda.models.patient.imd_for_postcode', return_value=INDEX_OF_MULTIPLE_DEPRIVATION_QUANTILE) as _mock:
-        yield _mock
-
-@pytest.fixture(autouse=True)
-def patch_gp_ods_code_for_postcode():
-    with patch('project.npda.models.patient.gp_ods_code_for_postcode', return_value=GP_PRACTICE_ODS_CODE_VALID) as _mock:
-        yield _mock
-
-@pytest.fixture(autouse=True)
-def patch_gp_details_for_ods_code():
-    with patch('project.npda.models.patient.gp_details_for_ods_code', return_value={"placeholder": 1234}) as _mock:
-        yield _mock
-
 
 @pytest.mark.django_db
 def test_patient_creation_without_nhs_number_raises_error():
