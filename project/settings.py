@@ -124,7 +124,6 @@ MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
 ROOT_URLCONF = "project.urls"
 
 # This directory is used to store the .csv files that are uploaded by the user
-# This directory is used to store the .csv files that are uploaded by the user
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 

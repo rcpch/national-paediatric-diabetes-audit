@@ -51,11 +51,10 @@ def csv_upload(user, csv_file=None, pdu_pz_code=None):
         submission_active=True,
     ).exists():
         original_submission = Submission.objects.filter(
+            submission_active=True,
             paediatric_diabetes_unit__pz_code=pdu.pz_code,
             audit_year=date.today().year,
-        ).get()  # there can be only one of these
-        original_submission.submission_active = False
-        original_submission.save()
+        ).get()  # there can be only one of these - store it in a variable in case we need to revert
     else:
         original_submission = None
 
@@ -75,25 +74,21 @@ def csv_upload(user, csv_file=None, pdu_pz_code=None):
         new_submission.csv_file.save(new_filename, csv_file)
         new_submission.save()
 
-        # now can delete the orginal submission's csv file and remove the path from the field by setting it to None if it exists
-        if original_submission:
-            original_submission.csv_file.delete()
-            original_submission.csv_file = None
-            original_submission.save()
-
     except Exception as e:
         logger.error(f"Error creating new submission: {e}")
-        # the new submission was not created so we need to delete the csv file and
-        # reset the old submission to active and add the csv file back if a there was a previous submission
-        if original_submission:
-            original_submission.get().submission_active = True
-            original_submission.csv_file = new_submission.csv_file
-            original_submission.save()
+        # the new submission was not created  - no action required as the previous submission is still active
         raise ValidationError(
             {
                 "csv_upload": "Error creating new submission. The old submission has been restored."
             }
         )
+
+    # now can delete the any previous active submission's csv file (if it exists)
+    # and remove the path from the field by setting it to None
+    # the rest of the submission will be retained
+    if original_submission:
+        original_submission.submission_active = False
+        original_submission.save()  # this action will delete the csv file also as per the save method in the model
 
     def csv_value_to_model_value(model_field, value):
         if pd.isnull(value):
