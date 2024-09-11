@@ -333,7 +333,7 @@ def test_lookup_index_of_multiple_deprivation():
     assert(len(form.errors.as_data()) == 0)
 
     patient = form.save()
-    patient.index_of_multiple_deprivation_quintile = 4
+    assert(patient.index_of_multiple_deprivation_quintile == 4)
 
 
 @pytest.mark.django_db

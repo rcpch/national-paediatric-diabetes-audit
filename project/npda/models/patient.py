@@ -171,20 +171,3 @@ class Patient(models.Model):
             
             case l if l > 1:
                 raise ValidationError(errors)
-
-    def save(self, *args, **kwargs) -> None:
-        # calculate the index of multiple deprivation quintile if the postcode is present
-        # Skips the calculation if the postcode is on the 'unknown' list
-        if self.postcode:
-            try:
-                self.index_of_multiple_deprivation_quintile = imd_for_postcode(
-                    self.postcode
-                )
-            except Exception as error:
-                # Deprivation score not persisted if deprivation score server down
-                self.index_of_multiple_deprivation_quintile = None
-                print(
-                    f"Cannot calculate deprivation score for {self.postcode}: {error}"
-                )
-        
-        return super().save(*args, **kwargs)
