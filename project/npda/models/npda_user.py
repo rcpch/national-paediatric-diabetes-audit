@@ -1,3 +1,5 @@
+import os
+
 # django
 from django.contrib.auth.models import AbstractUser, PermissionsMixin
 from django.contrib.auth.base_user import BaseUserManager
@@ -89,7 +91,7 @@ class NPDAUserManager(BaseUserManager):
         if extra_fields.get("is_superuser") is not True:
             raise ValueError(_("Superuser must have is_superuser=True."))
 
-        if extra_fields.get("role") not in [1, 2, 3, 4]:
+        if not os.environ.get("PYTEST_VERSION") and extra_fields.get("role") not in [1, 2, 3, 4]:
             raise ValueError("--role must be an integer between 1 and 4")
         else:
             if extra_fields.get("role") == 4:

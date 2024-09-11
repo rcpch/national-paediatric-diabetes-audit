@@ -22,7 +22,12 @@ from ..forms.patient_form import PatientFormWithSynchronousValidators
 from ..forms.visit_form import VisitForm
 
 
-def csv_upload(user, csv_file=None, pdu_pz_code=None):
+def read_csv(csv_file):
+    return pd.read_csv(
+        csv_file, parse_dates=ALL_DATES, dayfirst=True, date_format="%d/%m/%Y"
+    )
+
+def csv_upload(user, dataframe, pdu_pz_code, csv_file):
     """
     Processes standardised NPDA csv file and persists results in NPDA tables
 
@@ -35,10 +40,6 @@ def csv_upload(user, csv_file=None, pdu_pz_code=None):
     Visit = apps.get_model("npda", "Visit")
     Submission = apps.get_model("npda", "Submission")
     PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-
-    dataframe = pd.read_csv(
-        csv_file, parse_dates=ALL_DATES, dayfirst=True, date_format="%d/%m/%Y"
-    )
 
     # get the PDU object
     # TODO #249 MRB: handle case where PDU does not exist

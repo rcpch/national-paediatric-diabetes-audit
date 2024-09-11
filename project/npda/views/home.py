@@ -11,7 +11,7 @@ from django.core.exceptions import ValidationError
 from django_htmx.http import trigger_client_event
 
 # RCPCH imports
-from ..general_functions.csv_upload import csv_upload
+from ..general_functions.csv_upload import csv_upload, read_csv
 from ..general_functions.session import get_new_session_fields
 from ..general_functions.view_preference import get_or_update_view_preference
 from ..general_functions.csv_summarize import csv_summarize
@@ -59,8 +59,9 @@ def home(request):
         try:
             csv_upload(
                 user=request.user,
-                csv_file=file,
+                dataframe=read_csv(file),
                 pdu_pz_code=pz_code,
+                csv_file=file
             )
             messages.success(request=request, message="File uploaded successfully")
         except ValidationError as error:

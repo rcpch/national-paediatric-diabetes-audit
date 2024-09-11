@@ -46,7 +46,7 @@ def gp_details_for_ods_code(ods_code: str):
             timeout=10,  # times out after 10 seconds
         )
 
-        if response.status == 404:
+        if response.status_code == 404:
             return None
 
         response.raise_for_status()
