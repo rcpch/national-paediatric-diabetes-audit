@@ -1,6 +1,7 @@
 # python imports
 import logging
 from datetime import date
+from dataclasses import dataclass
 
 # django imports
 from django.apps import apps
@@ -15,10 +16,10 @@ import nhs_number
 from ..models import Patient
 from ...constants.styles.form_styles import *
 from ..general_functions import (
-    validate_postcode,
-    gp_ods_code_for_postcode,
-    gp_details_for_ods_code,
-    imd_for_postcode
+    validate_postcode as default_validate_postcode,
+    gp_ods_code_for_postcode as default_gp_ods_code_for_postcode,
+    gp_details_for_ods_code as default_gp_details_for_ods_code,
+    imd_for_postcode as default_imd_for_postcode
 )
 
 
@@ -168,12 +169,20 @@ class PatientForm(forms.ModelForm):
         return cleaned_data
 
 
-class PatientFormWithSynchronousValidators(PatientForm):
+class PatientFormWithSynchronousRemoteCalls(PatientForm):
+    def __init__(self, data, validate_postcode=default_validate_postcode, gp_details_for_ods_code=default_gp_details_for_ods_code, gp_ods_code_for_postcode=default_gp_ods_code_for_postcode, imd_for_postcode=default_imd_for_postcode):
+        super().__init__(data)
+
+        self.validate_postcode = validate_postcode
+        self.gp_details_for_ods_code = gp_details_for_ods_code
+        self.gp_ods_code_for_postcode = gp_ods_code_for_postcode
+        self.imd_for_postcode = imd_for_postcode
+
     def clean_postcode(self):
         postcode = self.cleaned_data["postcode"]
 
         try:
-            if not validate_postcode(postcode=postcode):
+            if not self.validate_postcode(postcode=postcode):
                 self.add_error(
                     "postcode",
                     ValidationError("Invalid postcode %(postcode)s",
@@ -191,7 +200,7 @@ class PatientFormWithSynchronousValidators(PatientForm):
 
         if not gp_practice_ods_code and gp_practice_postcode:
             try:
-                ods_code = gp_ods_code_for_postcode(gp_practice_postcode)
+                ods_code = self.gp_ods_code_for_postcode(gp_practice_postcode)
 
                 if not ods_code:
                     self.add_error(
@@ -207,7 +216,7 @@ class PatientFormWithSynchronousValidators(PatientForm):
                 logger.warning(f"Error looking up GP practice by postcode {err}")
         elif gp_practice_ods_code:
             try:
-                if not gp_details_for_ods_code(gp_practice_ods_code):
+                if not self.gp_details_for_ods_code(gp_practice_ods_code):
                     self.add_error(
                         "gp_practice_ods_code",
                         ValidationError(
@@ -225,7 +234,7 @@ class PatientFormWithSynchronousValidators(PatientForm):
 
         if instance.postcode:
             try:
-                instance.index_of_multiple_deprivation_quintile = imd_for_postcode(instance.postcode)
+                instance.index_of_multiple_deprivation_quintile = self.imd_for_postcode(instance.postcode)
             except RequestException as err:
                 logger.warning(f"Error looking up deprivate score for {instance.postcode} {err}")
 

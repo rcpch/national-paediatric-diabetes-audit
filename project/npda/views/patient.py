@@ -27,7 +27,7 @@ from project.npda.models import NPDAUser
 
 # RCPCH imports
 from ..models import Patient
-from ..forms.patient_form import PatientFormWithSynchronousValidators
+from ..forms.patient_form import PatientFormWithSynchronousRemoteCalls
 from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
 
 logger = logging.getLogger(__name__)
@@ -170,7 +170,7 @@ class PatientCreateView(
     permission_required = "npda.add_patient"
     permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
     model = Patient
-    form_class = PatientFormWithSynchronousValidators
+    form_class = PatientFormWithSynchronousRemoteCalls
     success_message = "New child record created was created successfully"
     success_url = reverse_lazy("patients")
 
@@ -257,7 +257,7 @@ class PatientUpdateView(
     permission_required = "npda.change_patient"
     permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
     model = Patient
-    form_class = PatientFormWithSynchronousValidators
+    form_class = PatientFormWithSynchronousRemoteCalls
     success_message = "New child record updated successfully"
     success_url = reverse_lazy("patients")
     Submission = apps.get_model("npda", "Submission")
