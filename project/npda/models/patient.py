@@ -25,41 +25,10 @@ from ...constants import (
 )
 from project.npda.general_functions import (
     stringify_time_elapsed,
-    imd_for_postcode,
-    validate_postcode as _validate_postcode,
-    gp_details_for_ods_code,
-    gp_ods_code_for_postcode
 )
 
 # Logging
 logger = logging.getLogger(__name__)
-
-
-def validate_nhs_number(value):
-    """Validate the NHS number using the nhs_number package."""
-    if not nhs_number.is_valid(value):
-        raise ValidationError(
-            "%(value)s is not a valid NHS number.",
-            params={"value": value},
-        )
-
-def validate_date_not_in_future(value):
-    today = date.today()
-
-    if value > today:
-        raise ValidationError("Date cannot be in the future")
-
-def validate_age(value):
-    today = date.today()
-    age = relativedelta(today, value).years
-
-    if age >= 19:
-        raise ValidationError(
-            "NPDA patients cannot be 19+ years old. This patient is %(age)s",
-            params={"age": age})
-
-def validate_postcode(value):
-    return _validate_postcode(value)
 
 
 class Patient(models.Model):
@@ -73,17 +42,12 @@ class Patient(models.Model):
     """
 
     nhs_number = CharField(  # the NHS number for England and Wales
-        "NHS Number", unique=True, validators=[validate_nhs_number]
+        "NHS Number", unique=True
     )
 
     sex = models.IntegerField("Stated gender", choices=SEX_TYPE, blank=True, null=True)
 
-    date_of_birth = DateField(
-        "date of birth (YYYY-MM-DD)", validators=[
-            validate_date_not_in_future,
-            validate_age
-        ]
-    )
+    date_of_birth = DateField("date of birth (YYYY-MM-DD)")
 
     postcode = CharField(
         "Postcode of usual address",
@@ -109,15 +73,13 @@ class Patient(models.Model):
     )
 
     diagnosis_date = DateField(
-        verbose_name="Date of Diabetes Diagnosis",
-        validators=[validate_date_not_in_future]
+        verbose_name="Date of Diabetes Diagnosis"
     )
 
     death_date = models.DateField(
         verbose_name="Date of death",
         blank=True,
-        null=True,
-        validators=[validate_date_not_in_future]
+        null=True
     )
 
     gp_practice_ods_code = models.CharField(
@@ -155,19 +117,3 @@ class Patient(models.Model):
 
     def get_absolute_url(self):
         return reverse("patient-detail", kwargs={"pk": self.pk})
-
-    def clean(self):
-        errors = []
-
-        if self.diagnosis_date and self.date_of_birth and self.diagnosis_date < self.date_of_birth:
-            errors.append(ValidationError("Diagnosis date cannot be before date of birth"))
-        
-        if self.death_date and self.date_of_birth and self.death_date < self.date_of_birth:
-            errors.append(ValidationError("Death date cannot be before date of birth"))
-
-        match(len(errors)):
-            case 1:
-                raise ValidationError(errors[0])
-            
-            case l if l > 1:
-                raise ValidationError(errors)

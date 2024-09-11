@@ -43,10 +43,6 @@ VALID_FIELDS_WITH_GP_POSTCODE = VALID_FIELDS | {
     "gp_practice_postcode": "SE13 5PJ"
 }
 
-# TODO: keep tests in patient for catasrophic failures to save
-# TODO: remove validators from patient model
-# TODO: move network calls (IMD, postcode, GP details) to separate function
-
 
 # We don't want to call remote services unexpectedly during unit tests
 @pytest.fixture(autouse=True)
@@ -108,19 +104,23 @@ def test_future_date_of_birth():
         "date_of_birth": TODAY + timedelta(days=1)
     })
 
-    assert("date_of_birth" in form.errors.as_data())
+    errors = form.errors.as_data()
+    assert("date_of_birth" in errors)
+
+    error_message = errors["date_of_birth"][0].messages[0]
+    assert(error_message == "'Date of Birth' cannot be in the future")
 
 
-def test_over_19():
+def test_over_25():
     form = PatientForm({
-        "date_of_birth": TODAY - relativedelta(years=19, days=1)
+        "date_of_birth": TODAY - relativedelta(years=25, days=1)
     })
 
     errors = form.errors.as_data()
     assert("date_of_birth" in errors)
 
     error_message = errors["date_of_birth"][0].messages[0]
-    assert(error_message == "NPDA patients cannot be 19+ years old. This patient is 19")
+    assert(error_message == "NPDA patients cannot be 25+ years old. This patient is 25")
 
 
 def test_missing_diabetes_type():
@@ -146,7 +146,11 @@ def test_future_diagnosis_date():
         "diagnosis_date": TODAY + timedelta(days=1)
     })
 
-    assert("diagnosis_date" in form.errors.as_data())
+    errors = form.errors.as_data()
+    assert("diagnosis_date" in errors)
+
+    error_message = errors["diagnosis_date"][0].messages[0]
+    assert(error_message == "'Diagnosis Date' cannot be in the future")
 
 
 def test_diagnosis_date_before_date_of_birth():
@@ -188,15 +192,19 @@ def test_missing_gp_details():
     assert(error_message == "'GP Practice ODS code' and 'GP Practice postcode' cannot both be empty")
 
 
-def test_patient_creation_with_future_death_date_raises_error():
+def test_patient_creation_with_future_death_date():
     form = PatientForm({
         "death_date": TODAY + relativedelta(years=1)
     })
 
-    assert("death_date" in form.errors.as_data())
+    errors = form.errors.as_data()
+    assert("death_date" in errors)
+
+    error_message = errors["death_date"][0].messages[0]
+    assert(error_message == "'Death Date' cannot be in the future")
 
 
-def test_patient_creation_with_death_date_before_date_of_birth_raises_error():
+def test_patient_creation_with_death_date_before_date_of_birth():
     form = PatientForm({
         "date_of_birth": VALID_FIELDS["date_of_birth"],
         "death_date": VALID_FIELDS["date_of_birth"] - relativedelta(years=1)

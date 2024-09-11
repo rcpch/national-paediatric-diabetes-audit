@@ -17,7 +17,8 @@ class Migration(migrations.Migration):
             name="nhs_number",
             field=models.CharField(
                 unique=True,
-                validators=[project.npda.models.patient.validate_nhs_number],
+                # Removed in later update
+                # validators=[project.npda.models.patient.validate_nhs_number],
                 verbose_name="NHS Number",
             ),
         ),

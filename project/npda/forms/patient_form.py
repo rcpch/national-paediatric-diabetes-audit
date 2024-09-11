@@ -1,5 +1,6 @@
 # python imports
 import logging
+from datetime import date
 
 # django imports
 from django.apps import apps
@@ -7,6 +8,7 @@ from django.core.exceptions import ValidationError
 from django import forms
 
 from requests import RequestException
+from dateutil.relativedelta import relativedelta
 
 # project imports
 import nhs_number
@@ -40,7 +42,16 @@ class NHSNumberField(forms.CharField):
             raise ValidationError('NHS number required')
 
         if not nhs_number.is_valid(value):
-            raise ValidationError("Invalid NHS number")
+            raise ValidationError("Invalid NHS number %(value)s",
+                params={"value":value})
+
+
+class PostcodeField(forms.CharField):
+    def to_python(self, value):
+        postcode = super().to_python(value)
+
+        if postcode:
+            return postcode.upper().replace(" ", "").replace("-", "")
 
 
 class PatientForm(forms.ModelForm):
@@ -59,7 +70,11 @@ class PatientForm(forms.ModelForm):
             "gp_practice_ods_code",
             "gp_practice_postcode",
         ]
-        field_classes = {"nhs_number": NHSNumberField}
+        field_classes = {
+            "nhs_number": NHSNumberField,
+            "postcode": PostcodeField,
+            "gp_practice_postcode": PostcodeField
+        }
         widgets = {
             "nhs_number": forms.TextInput(
                 attrs={"class": TEXT_INPUT},
@@ -75,15 +90,39 @@ class PatientForm(forms.ModelForm):
             "gp_practice_postcode": forms.TextInput(attrs={"class": TEXT_INPUT}),
         }
 
-    def clean_postcode(self):
-        if not self.cleaned_data["postcode"]:
-            raise ValidationError("This field is required")
+    def clean_date_of_birth(self):
+        date_of_birth = self.cleaned_data["date_of_birth"]
 
-        postcode = (
-            self.cleaned_data["postcode"].upper().replace(" ", "").replace("-", "")
-        )
+        if date_of_birth:
+            today = date.today()
+            age = relativedelta(today, date_of_birth).years
+
+            if date_of_birth > date.today():
+                raise ValidationError("'Date of Birth' cannot be in the future")
+            
+            if age >= 25:
+                raise ValidationError(
+                    "NPDA patients cannot be 25+ years old. This patient is %(age)s",
+                    params={"age": age}
+                )
         
-        return postcode
+        return date_of_birth
+
+    def clean_diagnosis_date(self):
+        diagnosis_date = self.cleaned_data["diagnosis_date"]
+
+        if diagnosis_date and diagnosis_date > date.today():
+            raise ValidationError("'Diagnosis Date' cannot be in the future")
+
+        return diagnosis_date
+
+    def clean_death_date(self):
+        death_date = self.cleaned_data["death_date"]
+
+        if death_date and death_date > date.today():
+            raise ValidationError("'Death Date' cannot be in the future")
+
+        return death_date
 
     def clean(self):
         cleaned_data = super().clean()
@@ -131,8 +170,6 @@ class PatientForm(forms.ModelForm):
 
 class PatientFormWithSynchronousValidators(PatientForm):
     def clean_postcode(self):
-        super().clean_postcode()
-
         postcode = self.cleaned_data["postcode"]
 
         try:
