@@ -90,7 +90,7 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
         """
         Handle the HTMX GET request.
         """
-        self.object_list = self.get_queryset()
+        self.object_list = self.get_queryset().order_by("-submission_date")
         context = self.get_context_data(object_list=self.object_list)
         template = self.template_name
         if request.htmx:

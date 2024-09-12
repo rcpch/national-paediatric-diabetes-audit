@@ -58,6 +58,8 @@ def csv_upload(user, csv_file=None, pdu_pz_code=None):
     else:
         original_submission = None
 
+    print(f"Original submission: {original_submission}")
+
     # Create new submission for the audit year
     # It is not possble to create submissions in years other than the current year
     try:
@@ -84,15 +86,16 @@ def csv_upload(user, csv_file=None, pdu_pz_code=None):
         )
 
     # now can delete all patients and visits from the previous active submission
-    try:
-        print(
-            f"Deleting patients from previous submission: {Patient.objects.filter(submissions=original_submission).count()}"
-        )
-        Patient.objects.filter(submissions=original_submission).delete()
-    except Exception as e:
-        raise ValidationError(
-            {"csv_upload": "Error deleting patients from previous submission"}
-        )
+    if original_submission:
+        try:
+            print(
+                f"Deleting patients from previous submission: {Patient.objects.filter(submissions=original_submission).count()}"
+            )
+            Patient.objects.filter(submissions=original_submission).delete()
+        except Exception as e:
+            raise ValidationError(
+                {"csv_upload": "Error deleting patients from previous submission"}
+            )
 
     # now can delete the any previous active submission's csv file (if it exists)
     # and remove the path from the field by setting it to None
