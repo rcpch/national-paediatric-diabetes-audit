@@ -54,9 +54,9 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
             ),
             pk=F("id"),
         ).order_by(
-            "-submission_date",
             "audit_year",
-            "submission_active",
+            "-submission_active",
+            "-submission_date",
         )
         return base_queryset
 
@@ -67,7 +67,6 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
         """
         context = super().get_context_data(**kwargs)
         context["pz_code"] = self.request.session.get("pz_code")
-        Submission = apps.get_model("npda", "Submission")
         Patient = apps.get_model("npda", "Patient")
         context["data"] = None  # data stores csv summary data if a submission exists
         latest_active_submission = self.object_list.filter(
@@ -91,7 +90,7 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
         """
         Handle the HTMX GET request.
         """
-        self.object_list = self.get_queryset()
+        self.object_list = self.get_queryset().order_by("-submission_date")
         context = self.get_context_data(object_list=self.object_list)
         template = self.template_name
         if request.htmx:

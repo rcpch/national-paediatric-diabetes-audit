@@ -4,6 +4,7 @@ staticdocs
 staticfiles
 logs/npda.log
 npda.log.*
+media/submissions/csv/*
 
 __pycache__
 .DS_Store
