@@ -54,9 +54,9 @@ class SubmissionsListView(LoginAndOTPRequiredMixin, ListView):
             ),
             pk=F("id"),
         ).order_by(
-            "-submission_date",
             "audit_year",
-            "submission_active",
+            "-submission_active",
+            "-submission_date",
         )
         return base_queryset
 

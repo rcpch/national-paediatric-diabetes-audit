@@ -83,12 +83,28 @@ def csv_upload(user, csv_file=None, pdu_pz_code=None):
             }
         )
 
+    # now can delete all patients and visits from the previous active submission
+    try:
+        print(
+            f"Deleting patients from previous submission: {Patient.objects.filter(submissions=original_submission).count()}"
+        )
+        Patient.objects.filter(submissions=original_submission).delete()
+    except Exception as e:
+        raise ValidationError(
+            {"csv_upload": "Error deleting patients from previous submission"}
+        )
+
     # now can delete the any previous active submission's csv file (if it exists)
     # and remove the path from the field by setting it to None
     # the rest of the submission will be retained
     if original_submission:
         original_submission.submission_active = False
-        original_submission.save()  # this action will delete the csv file also as per the save method in the model
+        try:
+            original_submission.save()  # this action will delete the csv file also as per the save method in the model
+        except Exception as e:
+            raise ValidationError(
+                {"csv_upload": "Error deactivating previous submission"}
+            )
 
     def csv_value_to_model_value(model_field, value):
         if pd.isnull(value):
