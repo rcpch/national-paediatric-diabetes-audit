@@ -247,7 +247,7 @@ SITE_CONTACT_EMAIL = os.environ.get("SITE_CONTACT_EMAIL")
 STATIC_URL = "/static/"
 STATICFILES_DIRS = (str(BASE_DIR.joinpath("static")),)
 STATIC_ROOT = str(BASE_DIR.joinpath("staticfiles"))
-# STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 WHITENOISE_ROOT = os.path.join(BASE_DIR, "static/root")
 
 SMTP_EMAIL_ENABLED = "False"
