@@ -4,7 +4,6 @@
 @tailwind utilities;
 
 /* DaisyUI components */
-@import "daisyui";
 
 @layer components {
     .rcpch-light-blue-btn {
