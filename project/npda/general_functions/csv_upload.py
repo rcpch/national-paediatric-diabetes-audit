@@ -18,7 +18,6 @@ from ...constants import (
 
 # Logging setup
 logger = logging.getLogger(__name__)
-from ..forms.patient_form import PatientFormWithSynchronousRemoteCalls
 from ..forms.visit_form import VisitForm
 
 
@@ -27,7 +26,7 @@ def read_csv(csv_file):
         csv_file, parse_dates=ALL_DATES, dayfirst=True, date_format="%d/%m/%Y"
     )
 
-def csv_upload(user, dataframe, pdu_pz_code, csv_file):
+def csv_upload(user, dataframe, pdu_pz_code, csv_file, PatientForm):
     """
     Processes standardised NPDA csv file and persists results in NPDA tables
 
@@ -120,7 +119,7 @@ def csv_upload(user, dataframe, pdu_pz_code, csv_file):
             },
         )
 
-        form = PatientFormWithSynchronousRemoteCalls(fields)
+        form = PatientForm(fields)
         assign_original_row_indices_to_errors(form, row)
         return form
 
@@ -177,6 +176,8 @@ def csv_upload(user, dataframe, pdu_pz_code, csv_file):
         return form
 
     def assign_original_row_indices_to_errors(form, row):
+        print(f"!! assign_original_row_indices_to_errors {form.errors.as_data()['nhs_number'][0].__traceback__}")
+
         for _, errors in form.errors.as_data().items():
             for error in errors:
                 error.original_row_index = row["row_index"]

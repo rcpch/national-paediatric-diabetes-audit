@@ -39,10 +39,12 @@ class NHSNumberField(forms.CharField):
         return normalised or value
 
     def validate(self, value):
-        if not value:
-            raise ValidationError('NHS number required')
+        print(f"!! NHSNumberField.validate {value}")
 
-        if not nhs_number.is_valid(value):
+        # if not value:
+            # raise ValidationError('NHS number required')
+
+        if value and not nhs_number.is_valid(value):
             raise ValidationError("Invalid NHS number %(value)s",
                 params={"value":value})
 
@@ -127,6 +129,7 @@ class PatientForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+
         date_of_birth = cleaned_data.get("date_of_birth")
         diagnosis_date = cleaned_data.get("diagnosis_date")
         death_date = cleaned_data.get("death_date")

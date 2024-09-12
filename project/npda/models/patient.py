@@ -42,7 +42,10 @@ class Patient(models.Model):
     """
 
     nhs_number = CharField(  # the NHS number for England and Wales
-        "NHS Number", unique=True
+        "NHS Number",
+        unique=True,
+        blank=False,
+        null=False
     )
 
     sex = models.IntegerField("Stated gender", choices=SEX_TYPE, blank=True, null=True)

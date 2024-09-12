@@ -3,8 +3,9 @@ import pandas as pd
 
 from django.apps import apps
 
-from project.npda.models import NPDAUser
+from project.npda.models import NPDAUser, Patient
 from project.npda.general_functions.csv_upload import read_csv, csv_upload
+from project.npda.tests.mocks.mock_patient_form import patient_form_with_mock_remote_calls
 
 ALDER_HEY_PZ_CODE = "PZ074"
 
@@ -26,7 +27,13 @@ def test_user(seed_users_fixture):
 
 @pytest.mark.django_db
 def test_missing_nhs_number(test_user, single_row_valid_df):
-    csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None)
+    single_row_valid_df["NHS Number"] = None
+
+    csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
+    patient = Patient.objects.first()
+
+    print(f"!! {patient.errors.as_data()}")
+
     raise Exception("not implemented")
 
 # @pytest.mark.django_db
