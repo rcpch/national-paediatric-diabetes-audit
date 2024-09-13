@@ -1,7 +1,10 @@
 import pytest
 import pandas as pd
 
+from functools import partial
 from dateutil.relativedelta import relativedelta
+from unittest.mock import Mock
+from requests import RequestException
 
 from django.apps import apps
 from django.core.exceptions import ValidationError
@@ -11,6 +14,7 @@ from project.npda.general_functions.csv_upload import read_csv, csv_upload
 from project.npda.tests.mocks.mock_patient import (
     TODAY,
     VALID_FIELDS,
+    INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
     patient_form_with_mock_remote_calls
 )
 
@@ -191,6 +195,150 @@ def test_missing_gp_ods_code(test_user, single_row_valid_df):
     patient = Patient.objects.first()
 
     assert("gp_practice_ods_code" in patient.errors)
+
+
+@pytest.mark.django_db
+def test_future_death_date(test_user, single_row_valid_df):
+    death_date = TODAY + relativedelta(days = 1)
+
+    single_row_valid_df["Death Date"] = pd.to_datetime(death_date)
+
+    with pytest.raises(ValidationError) as e_info:
+        csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
+
+    patient = Patient.objects.first()
+
+    assert(patient.death_date == death_date)
+    assert("death_date" in patient.errors)
+
+    error_message = patient.errors["death_date"][0]['message']
+    # TODO MRB: why does this have entity encoding issues?
+    assert(error_message == "&#x27;Death Date&#x27; cannot be in the future")
+
+
+@pytest.mark.django_db
+def test_death_date_before_date_of_birth(test_user, single_row_valid_df):
+    date_of_birth = VALID_FIELDS["date_of_birth"],
+    death_date = VALID_FIELDS["date_of_birth"] - relativedelta(years=1)
+
+    single_row_valid_df["Death Date"] = pd.to_datetime(death_date)
+
+    with pytest.raises(ValidationError) as e_info:
+        csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
+
+    patient = Patient.objects.first()
+
+    assert(patient.death_date == death_date)
+    assert("death_date" in patient.errors)
+
+    error_message = patient.errors["death_date"][0]['message']
+    # TODO MRB: why does this have entity encoding issues?
+    assert(error_message == "&#x27;Death Date&#x27; cannot be before &#x27;Date of Birth&#x27;")
+
+
+@pytest.mark.django_db
+def test_spaces_removed_from_postcode(test_user, single_row_valid_df):
+    single_row_valid_df["Postcode of usual address"] = "WC1X 8SH"
+
+    csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
+    patient = Patient.objects.first()
+
+    assert(patient.postcode == "WC1X8SH")
+
+
+@pytest.mark.django_db
+def test_dashes_removed_from_postcode(test_user, single_row_valid_df):
+    single_row_valid_df["Postcode of usual address"] = "WC1X-8SH"
+
+    csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
+    patient = Patient.objects.first()
+
+    assert(patient.postcode == "WC1X8SH")
+
+
+@pytest.mark.django_db
+def test_invalid_postcode(test_user, single_row_valid_df):
+    single_row_valid_df["Postcode of usual address"] = "not a postcode"
+
+    patient_form = partial(patient_form_with_mock_remote_calls,
+        validate_postcode=Mock(return_value=False))
+
+    with pytest.raises(ValidationError) as e_info:
+        csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form)
+    
+    patient = Patient.objects.first()
+
+    assert(patient.postcode == "not a postcode")
+    assert("postcode" in patient.errors)
+
+
+@pytest.mark.django_db
+def test_error_validating_postcode(test_user, single_row_valid_df):
+    single_row_valid_df["Postcode of usual address"] = "WC1X 8SH"
+
+    patient_form = partial(patient_form_with_mock_remote_calls,
+        validate_postcode=Mock(side_effect=RequestException("Oopsie!")))
+
+    csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form)
+    
+    patient = Patient.objects.first()
+    assert(patient.postcode == "WC1X8SH")
+
+
+@pytest.mark.django_db
+def test_invalid_gp_ods_code(test_user, single_row_valid_df):
+    single_row_valid_df["GP Practice Code"] = "not a GP code"
+
+    patient_form = partial(patient_form_with_mock_remote_calls,
+        gp_details_for_ods_code=Mock(return_value=None))
+
+    with pytest.raises(ValidationError) as e_info:
+        csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form)
+    
+    patient = Patient.objects.first()
+
+    assert(patient.gp_practice_ods_code == "not a GP code")
+    assert("gp_practice_ods_code" in patient.errors)
+
+
+@pytest.mark.django_db
+def test_error_validating_gp_ods_code(test_user, single_row_valid_df):
+    single_row_valid_df["GP Practice Code"] = "G85023"
+
+    patient_form = partial(patient_form_with_mock_remote_calls,
+        validate_postcode=Mock(side_effect=RequestException("Oopsie!")))
+
+    csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form)
+    
+    patient = Patient.objects.first()
+    assert(patient.gp_practice_ods_code == "G85023")
+
+
+# TODO MRB: this fails because we do the lookup in PatientForm.save
+# This isn't called from csv_upload because we create instances manually to preserve data on error
+@pytest.mark.django_db
+def test_lookup_index_of_multiple_deprivation(test_user, single_row_valid_df):
+    patient_form = partial(patient_form_with_mock_remote_calls,
+        imd_for_postcode=Mock(return_value=INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE))
+
+    csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form)
+    
+    patient = Patient.objects.first()
+    assert(patient.index_of_multiple_deprivation_quintile == INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE)
+
+
+@pytest.mark.django_db
+def test_error_looking_up_index_of_multiple_deprivation(test_user, single_row_valid_df):
+    patient_form = partial(patient_form_with_mock_remote_calls,
+        imd_for_postcode=Mock(side_effect=RequestException("oopsie!")))
+
+    csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form)
+    
+    patient = Patient.objects.first()
+    assert(patient.index_of_multiple_deprivation_quintile is None)
+
+# TODO MRB: test valid with and without death date
+# TODO MRB: test transfer
 
 # # TODO MRB: should probably expand this out to each possible error just for completeness
 # def test_synchronous_validation_errors_saved():

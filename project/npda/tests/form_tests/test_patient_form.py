@@ -2,7 +2,7 @@
 from enum import Enum
 import pytest
 import logging
-from unittest.mock import patch, Mock
+from unittest.mock import Mock
 
 # 3rd Party imports
 from django.core.exceptions import ValidationError
@@ -18,7 +18,8 @@ from project.npda.tests.mocks.mock_patient import (
     TODAY,
     DATE_OF_BIRTH,
     VALID_FIELDS,
-    VALID_FIELDS_WITH_GP_POSTCODE
+    VALID_FIELDS_WITH_GP_POSTCODE,
+    INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE
 )
 
 # Logging
@@ -268,7 +269,7 @@ def test_lookup_index_of_multiple_deprivation():
     assert(len(form.errors.as_data()) == 0)
 
     patient = form.save()
-    assert(patient.index_of_multiple_deprivation_quintile == 4)
+    assert(patient.index_of_multiple_deprivation_quintile == INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE)
 
 
 @pytest.mark.django_db

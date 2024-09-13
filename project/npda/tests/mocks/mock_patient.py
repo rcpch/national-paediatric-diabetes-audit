@@ -29,13 +29,15 @@ VALID_FIELDS_WITH_GP_POSTCODE = VALID_FIELDS | {
     "gp_practice_postcode": "SE13 5PJ"
 }
 
+INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE=4
+
 # We don't want to call remote services during unit tests
 def patient_form_with_mock_remote_calls(
     data,
     validate_postcode=Mock(return_value=True),
     gp_details_for_ods_code=Mock(return_value = True),
     gp_ods_code_for_postcode=Mock(return_value = "G85023"),
-    imd_for_postcode=Mock(return_value = 4)
+    imd_for_postcode=Mock(return_value = INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE)
 ):
     return PatientFormWithSynchronousRemoteCalls(
         data,
