@@ -112,6 +112,27 @@ def test_missing_mandatory_field(test_user, single_row_valid_df, column):
 
 
 @pytest.mark.django_db
+def test_one_row_fails_one_row_passes(test_user, valid_df):
+    # TODO MRB: a descriptive fixture for this
+    df = valid_df.drop(1).reset_index(drop=True).head(2)
+    print(f"!! {df}")
+    assert(df["NHS Number"][0] != df["NHS Number"][1])
+
+    # Force a failure to save
+    df["NHS Number"][0] = None
+
+    with pytest.raises(ValidationError) as e_info:
+        csv_upload(test_user, df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
+    
+    # TODO: assert row number in exception
+
+    assert(Patient.objects.count() == 1)
+
+    patient = Patient.objects.first()
+    assert(patient.nhs_number == df["NHS Number"][1])
+
+
+@pytest.mark.django_db
 def test_invalid_nhs_number(test_user, single_row_valid_df):
     invalid_nhs_number = "123456789"
     single_row_valid_df["NHS Number"] = invalid_nhs_number 
