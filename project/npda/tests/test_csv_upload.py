@@ -10,6 +10,7 @@ from project.npda.models import NPDAUser, Patient
 from project.npda.general_functions.csv_upload import read_csv, csv_upload
 from project.npda.tests.mocks.mock_patient import (
     TODAY,
+    VALID_FIELDS,
     patient_form_with_mock_remote_calls
 )
 
@@ -25,7 +26,7 @@ def single_row_valid_df(dummy_sheets_folder):
     return read_csv(dummy_sheets_folder / 'dummy_sheet.csv').head(1)
 
 @pytest.fixture
-def test_user(seed_users_fixture):
+def test_user(seed_groups_fixture, seed_users_fixture):
     return NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE
     ).first()
@@ -54,7 +55,7 @@ def test_missing_mandatory_field(test_user, single_row_valid_df, column):
 @pytest.mark.django_db
 def test_invalid_nhs_number(test_user, single_row_valid_df):
     invalid_nhs_number = "123456789"
-    single_row_valid_df.at[0, "NHS Number"] = invalid_nhs_number 
+    single_row_valid_df["NHS Number"] = invalid_nhs_number 
 
     with pytest.raises(ValidationError) as e_info:
         csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
@@ -71,7 +72,7 @@ def test_invalid_nhs_number(test_user, single_row_valid_df):
 @pytest.mark.django_db
 def test_future_date_of_birth(test_user, single_row_valid_df):
     date_of_birth = TODAY + relativedelta(days=1)
-    single_row_valid_df.at[0, "Date of Birth"] = pd.to_datetime(date_of_birth)
+    single_row_valid_df["Date of Birth"] = pd.to_datetime(date_of_birth)
 
     with pytest.raises(ValidationError) as e_info:
         csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
@@ -89,7 +90,7 @@ def test_future_date_of_birth(test_user, single_row_valid_df):
 @pytest.mark.django_db
 def test_over_25(test_user, single_row_valid_df):
     date_of_birth = TODAY + - relativedelta(years=25, days=1)
-    single_row_valid_df.at[0, "Date of Birth"] = pd.to_datetime(date_of_birth)
+    single_row_valid_df["Date of Birth"] = pd.to_datetime(date_of_birth)
 
     with pytest.raises(ValidationError) as e_info:
         csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
@@ -105,12 +106,11 @@ def test_over_25(test_user, single_row_valid_df):
 
 @pytest.mark.django_db
 def test_invalid_diabetes_type(test_user, single_row_valid_df):
-    single_row_valid_df.at[0, "Diabetes Type"] = 45 
+    single_row_valid_df["Diabetes Type"] = 45 
 
     with pytest.raises(ValidationError) as e_info:
         csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
 
-    # Not catastrophic - error saved in model and raised back to caller
     patient = Patient.objects.first()
 
     assert(patient.diabetes_type == 45)
@@ -120,7 +120,7 @@ def test_invalid_diabetes_type(test_user, single_row_valid_df):
 @pytest.mark.django_db
 def test_future_diagnosis_date(test_user, single_row_valid_df):
     diagnosis_date = TODAY + relativedelta(days=1)
-    single_row_valid_df.at[0, "Date of Diabetes Diagnosi"] = pd.to_datetime(diagnosis_date)
+    single_row_valid_df["Date of Diabetes Diagnosis"] = pd.to_datetime(diagnosis_date)
 
     with pytest.raises(ValidationError) as e_info:
         csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
@@ -133,6 +133,64 @@ def test_future_diagnosis_date(test_user, single_row_valid_df):
     error_message = patient.errors["diagnosis_date"][0]['message']
     # TODO MRB: why does this have entity encoding issues?
     assert(error_message == "&#x27;Diagnosis Date&#x27; cannot be in the future")
+
+
+@pytest.mark.django_db
+def test_diagnosis_date_before_date_of_birth(test_user, single_row_valid_df):
+    date_of_birth = VALID_FIELDS["date_of_birth"],
+    diagnosis_date = VALID_FIELDS["date_of_birth"] - relativedelta(years=1)
+
+    single_row_valid_df["Date of Diabetes Diagnosis"] = pd.to_datetime(diagnosis_date)
+
+    with pytest.raises(ValidationError) as e_info:
+        csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
+
+    patient = Patient.objects.first()
+
+    assert(patient.diagnosis_date == diagnosis_date)
+    assert("diagnosis_date" in patient.errors)
+
+    error_message = patient.errors["diagnosis_date"][0]['message']
+    # TODO MRB: why does this have entity encoding issues?
+    assert(error_message == "&#x27;Date of Diabetes Diagnosis&#x27; cannot be before &#x27;Date of Birth&#x27;")
+
+
+@pytest.mark.django_db
+def test_invalid_sex(test_user, single_row_valid_df):
+    single_row_valid_df["Stated gender"] = 45 
+
+    with pytest.raises(ValidationError) as e_info:
+        csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
+
+    patient = Patient.objects.first()
+
+    assert(patient.sex == 45)
+    assert("sex" in patient.errors)
+
+
+@pytest.mark.django_db
+def test_invalid_ethnicity(test_user, single_row_valid_df):
+    single_row_valid_df["Ethnic Category"] = "45" 
+
+    with pytest.raises(ValidationError) as e_info:
+        csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
+
+    patient = Patient.objects.first()
+
+    assert(patient.ethnicity == "45")
+    assert("ethnicity" in patient.errors)
+
+
+@pytest.mark.django_db
+def test_missing_gp_ods_code(test_user, single_row_valid_df):
+    single_row_valid_df["GP Practice Code"] = None 
+
+    with pytest.raises(ValidationError) as e_info:
+        csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
+
+    patient = Patient.objects.first()
+
+    assert("gp_practice_ods_code" in patient.errors)
 
 # # TODO MRB: should probably expand this out to each possible error just for completeness
 # def test_synchronous_validation_errors_saved():
