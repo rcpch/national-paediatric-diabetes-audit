@@ -1,5 +1,6 @@
 import pytest
 import pandas as pd
+import nhs_number
 
 from functools import partial
 from dateutil.relativedelta import relativedelta
@@ -26,6 +27,10 @@ def dummy_sheets_folder(request):
     return request.config.rootdir / 'project' / 'npda' / 'dummy_sheets'
 
 @pytest.fixture
+def valid_df(dummy_sheets_folder):
+    return read_csv(dummy_sheets_folder / 'dummy_sheet.csv')
+
+@pytest.fixture
 def single_row_valid_df(dummy_sheets_folder):
     return read_csv(dummy_sheets_folder / 'dummy_sheet.csv').head(1)
 
@@ -34,6 +39,56 @@ def test_user(seed_groups_fixture, seed_users_fixture):
     return NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE
     ).first()
+
+# TODO MRB: test transfer
+# TODO MRB: test Visit creation and validation
+
+@pytest.mark.django_db
+def test_create_patient(test_user, single_row_valid_df):
+    csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
+    patient = Patient.objects.first()
+
+    assert(patient.nhs_number == nhs_number.normalise_number(single_row_valid_df["NHS Number"][0]))
+    assert(patient.date_of_birth == single_row_valid_df["Date of Birth"][0].date())
+    assert(patient.diabetes_type == single_row_valid_df["Diabetes Type"][0])
+    assert(patient.diagnosis_date == single_row_valid_df["Date of Diabetes Diagnosis"][0].date())
+    assert(patient.death_date is None)
+
+
+@pytest.mark.django_db
+def test_create_patient_with_death_date(test_user, single_row_valid_df):
+    death_date = VALID_FIELDS["diagnosis_date"] + relativedelta(years=1)
+    single_row_valid_df["Death Date"] = pd.to_datetime(death_date)
+
+    csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
+    patient = Patient.objects.first()
+
+    assert(patient.death_date == single_row_valid_df["Death Date"][0].date())
+
+
+@pytest.mark.django_db
+def test_multiple_rows(test_user, valid_df):
+    df = valid_df.head(3)
+
+    assert(df["NHS Number"][0] == df["NHS Number"][1])
+    assert(df["NHS Number"][0] != df["NHS Number"][2])
+
+    csv_upload(test_user, df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
+
+    assert(Patient.objects.count() == 2)
+
+    first_patient = Patient.objects.all()[0]
+    second_patient = Patient.objects.all()[1]
+
+    assert(first_patient.nhs_number == nhs_number.normalise_number(df["NHS Number"][0]))
+    assert(first_patient.date_of_birth == df["Date of Birth"][0].date())
+    assert(first_patient.diabetes_type == df["Diabetes Type"][0])
+    assert(first_patient.diagnosis_date == df["Date of Diabetes Diagnosis"][0].date())
+
+    assert(second_patient.nhs_number == nhs_number.normalise_number(df["NHS Number"][2]))
+    assert(second_patient.date_of_birth == df["Date of Birth"][2].date())
+    assert(second_patient.diabetes_type == df["Diabetes Type"][2])
+    assert(second_patient.diagnosis_date == df["Date of Diabetes Diagnosis"][2].date())
 
 
 @pytest.mark.parametrize("column", [
@@ -317,6 +372,7 @@ def test_error_validating_gp_ods_code(test_user, single_row_valid_df):
 # TODO MRB: this fails because we do the lookup in PatientForm.save
 # This isn't called from csv_upload because we create instances manually to preserve data on error
 @pytest.mark.django_db
+@pytest.mark.skip(reason="IMD lookup for CSV upload needs implementing")
 def test_lookup_index_of_multiple_deprivation(test_user, single_row_valid_df):
     patient_form = partial(patient_form_with_mock_remote_calls,
         imd_for_postcode=Mock(return_value=INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE))
@@ -337,8 +393,7 @@ def test_error_looking_up_index_of_multiple_deprivation(test_user, single_row_va
     patient = Patient.objects.first()
     assert(patient.index_of_multiple_deprivation_quintile is None)
 
-# TODO MRB: test valid with and without death date
-# TODO MRB: test transfer
+
 
 # # TODO MRB: should probably expand this out to each possible error just for completeness
 # def test_synchronous_validation_errors_saved():
