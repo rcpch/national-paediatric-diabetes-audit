@@ -168,9 +168,16 @@ class PatientForm(forms.ModelForm):
 
 
 class PatientFormWithSynchronousRemoteCalls(PatientForm):
-    def __init__(self, data, validate_postcode=default_validate_postcode, gp_details_for_ods_code=default_gp_details_for_ods_code, gp_ods_code_for_postcode=default_gp_ods_code_for_postcode, imd_for_postcode=default_imd_for_postcode):
+    def __init__(self, data,
+        save_with_errors=False,
+        validate_postcode=default_validate_postcode,
+        gp_details_for_ods_code=default_gp_details_for_ods_code,
+        gp_ods_code_for_postcode=default_gp_ods_code_for_postcode,
+        imd_for_postcode=default_imd_for_postcode
+    ):
         super().__init__(data)
 
+        self.save_with_errors = True
         self.validate_postcode = validate_postcode
         self.gp_details_for_ods_code = gp_details_for_ods_code
         self.gp_ods_code_for_postcode = gp_ods_code_for_postcode
@@ -228,7 +235,15 @@ class PatientFormWithSynchronousRemoteCalls(PatientForm):
         return cleaned_data
 
     def save(self, commit=True):
-        instance = super().save(commit=False)
+        try:
+            instance = super().save(commit=False)
+        except ValueError as err:
+            if self.save_with_errors:
+                # CSV Upload
+                instance = Patient(self.data | self.cleaned_data)
+            else:
+                # Interactive usage via the Web UI
+                raise err
 
         if instance.postcode:
             try:

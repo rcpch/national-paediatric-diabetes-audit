@@ -84,26 +84,31 @@ def csv_upload(user, dataframe, pdu_pz_code, csv_file, PatientForm):
         return value
 
     def row_to_dict(row, model, mapping):
-        return {
-            model_field: csv_value_to_model_value(
-                model._meta.get_field(model_field), row[csv_field]
-            )
-            for model_field, csv_field in mapping.items()
-        }
+        ret = {}
 
-    def validate_transfer(row):
-        # TODO MRB: do something with transfer_errors
-        return row_to_dict(
-            row,
-            Transfer,
-            {
-                "date_leaving_service": "Date of leaving service",
-                "reason_leaving_service": "Reason for leaving service",
-            },
-        ) | {"paediatric_diabetes_unit": pdu}
+        for model_field_name, csv_field in mapping.items():
+            model_field = model._meta.get_field(model_field_name)
 
-    def validate_patient_using_form(row):
+            value = csv_value_to_model_value(model_field, row[csv_field])
+            ret[model_field_name] = value
 
+        return ret
+
+    def create_instance(form):
+        instance = form.save()
+        instance.is_valid = form.is_valid()
+        instance.errors = (
+            None if form.is_valid() else form.errors.get_json_data(escape_html=True)
+        )
+
+        return instance
+
+    def assign_original_row_indices_to_errors(form, row):
+        for _, errors in form.errors.as_data().items():
+            for error in errors:
+                error.original_row_index = row["row_index"]
+
+    def create_patient_from_row(row):
         fields = row_to_dict(
             row,
             Patient,
@@ -122,10 +127,25 @@ def csv_upload(user, dataframe, pdu_pz_code, csv_file, PatientForm):
 
         form = PatientForm(fields)
         assign_original_row_indices_to_errors(form, row)
-        return form
 
-    def validate_visit_using_form(patient, row):
+        return create_instance(form)
 
+    def create_transfer_from_row(row, patient):
+        # TODO MRB: do something with transfer_errors
+        fields = row_to_dict(
+            row,
+            Transfer,
+            {
+                "date_leaving_service": "Date of leaving service",
+                "reason_leaving_service": "Reason for leaving service",
+            },
+        )
+
+        fields["paediatric_diabetes_unit"] = pdu
+        fields["patient"] = patient
+        return Transfer.objects.create(**fields)
+
+    def create_visit_from_row(patient, row):
         fields = row_to_dict(
             row,
             Visit,
@@ -174,62 +194,8 @@ def csv_upload(user, dataframe, pdu_pz_code, csv_file, PatientForm):
 
         form = VisitForm(data=fields, initial={"patient": patient})
         assign_original_row_indices_to_errors(form, row)
-        return form
 
-    def assign_original_row_indices_to_errors(form, row):
-        for _, errors in form.errors.as_data().items():
-            for error in errors:
-                error.original_row_index = row["row_index"]
-
-    def validate_rows(rows):
-        first_row = rows.iloc[0]
-
-        transfer_fields = validate_transfer(first_row)
-        patient_form = validate_patient_using_form(first_row)
-
-        visits = rows.apply(
-            lambda row: validate_visit_using_form(patient_form.instance, row),
-            axis=1,
-        )
-
-        return (patient_form, transfer_fields, visits)
-
-    def gather_errors(form):
-        ret = {}
-
-        for field, errors in form.errors.as_data().items():
-            for error in errors:
-                errors_for_field = []
-
-                if field in ret:
-                    errors_for_field = ret[field]
-
-                errors_for_field.append(error)
-
-                ret[field] = errors_for_field
-
-        return ret
-
-    def has_error_that_would_fail_save(errors):
-        for _, errors in errors.items():
-            for error in errors:
-                if error.code in ["required", "null", "blank"]:
-                    return True
-
-    def create_instance(model, form):
-        # We want to retain fields even if they're invalid so that we can edit them in the UI
-        # Use the field value from cleaned_data, falling back to data if it's not there
-        if form.is_valid():
-            data = form.cleaned_data
-        else:
-            data = form.data
-        instance = model(**data)
-        instance.is_valid = form.is_valid()
-        instance.errors = (
-            None if form.is_valid() else form.errors.get_json_data(escape_html=True)
-        )
-
-        return instance
+        return create_instance(form)
 
     # We only one to create one patient per NHS number
     # Remember the original row number to help users find where the problem was in the CSV
@@ -237,31 +203,20 @@ def csv_upload(user, dataframe, pdu_pz_code, csv_file, PatientForm):
 
     visits_by_patient = dataframe.groupby("NHS Number", sort=False, dropna=False)
 
-    errors_to_return = {}
+    errors_to_return = []
 
     for _, rows in visits_by_patient:
-        (patient_form, transfer_fields, visits) = validate_rows(rows)
+        patient = create_patient_from_row(rows.iloc[0])
+        transfer = create_transfer_from_row(rows.iloc[0], patient)
 
-        errors_to_return = errors_to_return | gather_errors(patient_form)
+        if patient.errors:
+            errors_to_return.append(patient.errors)
+        
+        for _, row in rows.iterrows():
+            visit = create_visit_from_row(patient, row)
 
-        for visit_form in visits:
-            errors_to_return = errors_to_return | gather_errors(visit_form)
-
-        if not has_error_that_would_fail_save(errors_to_return):
-            patient = create_instance(Patient, patient_form)
-            patient.save()
-
-            # add the patient to a new Transfer instance
-            transfer_fields["paediatric_diabetes_unit"] = pdu
-            transfer_fields["patient"] = patient
-            Transfer.objects.create(**transfer_fields)
-
-            new_submission.patients.add(patient)
-
-            for visit_form in visits:
-                visit = create_instance(Visit, visit_form)
-                visit.patient = patient
-                visit.save()
+            if visit.errors:
+                errors_to_return.append(visit.errors)
 
     # save the csv file
     new_submission.csv_file = csv_file

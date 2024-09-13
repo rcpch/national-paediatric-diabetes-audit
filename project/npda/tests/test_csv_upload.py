@@ -115,7 +115,6 @@ def test_missing_mandatory_field(test_user, single_row_valid_df, column):
 def test_one_row_fails_one_row_passes(test_user, valid_df):
     # TODO MRB: a descriptive fixture for this
     df = valid_df.drop(1).reset_index(drop=True).head(2)
-    print(f"!! {df}")
     assert(df["NHS Number"][0] != df["NHS Number"][1])
 
     # Force a failure to save
@@ -131,6 +130,7 @@ def test_one_row_fails_one_row_passes(test_user, valid_df):
     patient = Patient.objects.first()
     assert(patient.nhs_number == df["NHS Number"][1])
 
+# TODO MRB: test errors returned, across multiple visits for the same patient and across multiple patients
 
 @pytest.mark.django_db
 def test_invalid_nhs_number(test_user, single_row_valid_df):
