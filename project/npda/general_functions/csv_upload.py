@@ -1,6 +1,7 @@
 # python imports
 from datetime import date
 import logging
+import traceback
 
 # django imports
 from django.apps import apps
@@ -176,8 +177,6 @@ def csv_upload(user, dataframe, pdu_pz_code, csv_file, PatientForm):
         return form
 
     def assign_original_row_indices_to_errors(form, row):
-        print(f"!! assign_original_row_indices_to_errors {form.errors.as_data()['nhs_number'][0].__traceback__}")
-
         for _, errors in form.errors.as_data().items():
             for error in errors:
                 error.original_row_index = row["row_index"]
@@ -214,7 +213,7 @@ def csv_upload(user, dataframe, pdu_pz_code, csv_file, PatientForm):
     def has_error_that_would_fail_save(errors):
         for _, errors in errors.items():
             for error in errors:
-                if error.code == "required":
+                if error.code in ["required", "null", "blank"]:
                     return True
 
     def create_instance(model, form):

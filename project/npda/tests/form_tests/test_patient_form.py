@@ -63,6 +63,7 @@ def test_create_patient_with_death_date():
 def test_missing_nhs_number():
     form = PatientForm({})
     assert("nhs_number" in form.errors.as_data())
+    print(f"!! {form.errors.as_data()["nhs_number"][0].code}")
 
 
 def test_invalid_nhs_number():

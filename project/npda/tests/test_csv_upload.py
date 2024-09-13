@@ -2,6 +2,7 @@ import pytest
 import pandas as pd
 
 from django.apps import apps
+from django.core.exceptions import ValidationError
 
 from project.npda.models import NPDAUser, Patient
 from project.npda.general_functions.csv_upload import read_csv, csv_upload
@@ -24,22 +25,29 @@ def test_user(seed_users_fixture):
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE
     ).first()
 
+# ,Date of Birth,Diabetes Type,Date of Diabetes Diagnosis", column)
 
 @pytest.mark.django_db
-def test_missing_nhs_number(test_user, single_row_valid_df):
-    single_row_valid_df["NHS Number"] = None
+@pytest.mark.parametrize("column", [
+    pytest.param("NHS Number"),
+    pytest.param("Date of Birth"),
+    pytest.param("Diabetes Type"),
+    pytest.param("Date of Diabetes Diagnosis")
+])
+def test_missing_mandatory_field(test_user, single_row_valid_df, column):
+    single_row_valid_df[column] = None
 
-    csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
-    patient = Patient.objects.first()
-
-    print(f"!! {patient.errors.as_data()}")
-
-    raise Exception("not implemented")
+    # Catastrophic - we can't save this patient at all
+    with pytest.raises(ValidationError) as e_info:    
+        csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
 
 # @pytest.mark.django_db
 # def test_missing_date_of_birth(test_user, test_pdu, single_row_valid_df):
-#     csv_upload(None, single_row_valid_df, test_pdu.pz_code)
-#     raise Exception("not implemented")
+#     single_row_valid_df["Date of Birth"] = None
+
+#     # Catastrophic - we can't save this patient at all
+#     with pytest.raises(ValidationError) as e_info:    
+#         csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
 
 # def test_missing_diabetes_type():
 #     raise Error("not implemented")
