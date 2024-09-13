@@ -1,5 +1,4 @@
 # Standard imports
-from datetime import date, timedelta
 from enum import Enum
 import pytest
 import logging
@@ -11,38 +10,19 @@ from dateutil.relativedelta import relativedelta
 from requests import RequestException
 
 # NPDA Imports
-from project.npda.tests.factories import PatientFactory
-from project.constants import (
-    ETHNICITIES,
-    DIABETES_TYPES,
-    SEX_TYPE,
-)
 from project.npda.models.patient import Patient
 from project.npda.forms.patient_form import PatientForm
 from project.npda import general_functions
-from project.npda.tests.mocks.mock_patient_form import patient_form_with_mock_remote_calls
+from project.npda.tests.mocks.mock_patient import (
+    patient_form_with_mock_remote_calls,
+    TODAY,
+    DATE_OF_BIRTH,
+    VALID_FIELDS,
+    VALID_FIELDS_WITH_GP_POSTCODE
+)
 
 # Logging
 logger = logging.getLogger(__name__)
-
-TODAY = date.today()
-DATE_OF_BIRTH = TODAY - relativedelta(years=10)
-
-VALID_FIELDS = {
-    "nhs_number": "6239431915",
-    "sex": SEX_TYPE[0][0],
-    "date_of_birth": TODAY - relativedelta(years=10),
-    "postcode": "NW1 2DB",
-    "ethnicity":  ETHNICITIES[0][0],
-    "diabetes_type":  DIABETES_TYPES[0][0],
-    "diagnosis_date": DATE_OF_BIRTH + relativedelta(years=8),
-    "gp_practice_ods_code": "G85023"
-}
-
-VALID_FIELDS_WITH_GP_POSTCODE = VALID_FIELDS | {
-    "gp_practice_ods_code": None,
-    "gp_practice_postcode": "SE13 5PJ"
-}
 
 
 @pytest.mark.django_db
@@ -63,7 +43,6 @@ def test_create_patient_with_death_date():
 def test_missing_nhs_number():
     form = PatientForm({})
     assert("nhs_number" in form.errors.as_data())
-    print(f"!! {form.errors.as_data()["nhs_number"][0].code}")
 
 
 def test_invalid_nhs_number():
@@ -81,7 +60,7 @@ def test_date_of_birth_missing():
 
 def test_future_date_of_birth():
     form = PatientForm({
-        "date_of_birth": TODAY + timedelta(days=1)
+        "date_of_birth": TODAY + relativedelta(days=1)
     })
 
     errors = form.errors.as_data()
@@ -123,7 +102,7 @@ def test_missing_diagnosis_date():
 
 def test_future_diagnosis_date():
     form = PatientForm({
-        "diagnosis_date": TODAY + timedelta(days=1)
+        "diagnosis_date": TODAY + relativedelta(days=1)
     })
 
     errors = form.errors.as_data()

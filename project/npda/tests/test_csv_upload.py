@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 
 from project.npda.models import NPDAUser, Patient
 from project.npda.general_functions.csv_upload import read_csv, csv_upload
-from project.npda.tests.mocks.mock_patient_form import patient_form_with_mock_remote_calls
+from project.npda.tests.mocks.mock_patient import patient_form_with_mock_remote_calls
 
 ALDER_HEY_PZ_CODE = "PZ074"
 
@@ -25,7 +25,6 @@ def test_user(seed_users_fixture):
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE
     ).first()
 
-# ,Date of Birth,Diabetes Type,Date of Diabetes Diagnosis", column)
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("column", [
@@ -41,19 +40,17 @@ def test_missing_mandatory_field(test_user, single_row_valid_df, column):
     with pytest.raises(ValidationError) as e_info:    
         csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
 
-# @pytest.mark.django_db
-# def test_missing_date_of_birth(test_user, test_pdu, single_row_valid_df):
-#     single_row_valid_df["Date of Birth"] = None
+    assert(column in e_info.value.message_dict)
+    assert(Patient.objects.count() == 0)
 
-#     # Catastrophic - we can't save this patient at all
-#     with pytest.raises(ValidationError) as e_info:    
-#         csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
 
-# def test_missing_diabetes_type():
-#     raise Error("not implemented")
+@pytest.mark.django_db
+def test_invalid_nhs_number(test_user, single_row_valid_df):
+    single_row_valid_df.at[0, "NHS Number"] = "123456789"
 
-# def test_missing_diagnosis_date():
-#     raise Error("not implemented")
+    # Not catastrophic - error saved in model
+    csv_upload(test_user, single_row_valid_df, ALDER_HEY_PZ_CODE, None, patient_form_with_mock_remote_calls)
+
 
 # # TODO MRB: should probably expand this out to each possible error just for completeness
 # def test_synchronous_validation_errors_saved():
