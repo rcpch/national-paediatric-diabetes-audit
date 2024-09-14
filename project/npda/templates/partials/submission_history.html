@@ -39,19 +39,19 @@
                                         <span class="bg-rcpch_dark_blue px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white">
                                             <small>INACTIVE</small>
                                         </span>
-                                        <span class="bg-rcpch_dark_blue px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white">
-                                            <small>INACTIVE</small>
                                     {% endif %}
                                 </td>
                                 <td class="flex flex-row">
                                     <form method="post" action="{% url 'submissions' %}" class="join">
                                         {% csrf_token %}
                                         <input type="hidden" name="audit_id" value="{{submission.pk}}">
+                                        {% if submission.submission_active %}
                                         <button 
                                             name="submit-data" 
                                             value="download-data" 
                                             type="submit" 
                                             class="join-item bg-rcpch_light_blue text-white font-semibold hover:text-white py-1 px-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue btn-sm rounded-none">Download</button>
+                                        {% endif %}
                                         <button 
                                             name="submit-data"
                                             {% if submission.submission_active %}
