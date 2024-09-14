@@ -496,7 +496,12 @@ class CalculateKPIS:
         * Date of leaving service within the audit period
         * Date of death within the audit period"
         """
-        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set.exclude(
+        # If we have not already calculated KPI 1, do so now to set
+        total_kpi_1_eligible_pts_base_query_set, total_eligible_kpi_1 = (
+            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = total_kpi_1_eligible_pts_base_query_set.exclude(
             # EXCLUDE Date of diagnosis within the audit period
             Q(diagnosis_date__range=(self.AUDIT_DATE_RANGE))
             # EXCLUDE Date of leaving service within the audit period
@@ -514,6 +519,10 @@ class CalculateKPIS:
 
         # Count eligible patients
         total_eligible = eligible_patients.count()
+        # We also use this as denominator for subsequent KPIS
+        # so set as attributes
+        self.total_kpi_5_eligible_pts_base_query_set = eligible_patients
+        self.kpi_5_total_eligible = total_eligible
 
         # Calculate ineligible patients
         total_ineligible = self.total_patients_count - total_eligible
@@ -1391,6 +1400,37 @@ class CalculateKPIS:
             total_failed=total_failed,
         )
 
+    def calculate_kpi_25_hba1c(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 25: HbA1c (%)
+
+
+        Numerator: Number of eligible patients with at least one valid entry for HbA1c value (item 17) with an observation date (item 19) within the audit period
+
+        Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
+        """
+        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = (
+            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = kpi_5_total_eligible_query_set
+        total_eligible = total_eligible_kpi_5
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Find patients with at least one valid entry for HbA1c value (item 17) with an observation date (item 19) within the audit period
+        # This is simply patients with a visit with a valid HbA1c value
+        total_passed = eligible_patients.filter(Q(visit__hba1c__isnull=False)).count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
     def _get_total_kpi_1_eligible_pts_base_query_set_and_total_count(
         self,
     ) -> Tuple[QuerySet, int]:
@@ -1409,6 +1449,25 @@ class CalculateKPIS:
             self.calculate_kpi_1_total_eligible()
 
         return self.total_kpi_1_eligible_pts_base_query_set, self.kpi_1_total_eligible
+
+    def _get_total_kpi_5_eligible_pts_base_query_set_and_total_count(
+        self,
+    ) -> Tuple[QuerySet, int]:
+        """Enables reuse of the base query set for KPI 5
+
+        If running calculation methods in order, this attribute will be set in calculate_kpi_5_total_t1dm_complete_year().
+
+        If running another kpi calculation standalone, need to run that method first to have the attribute set.
+
+        Returns:
+            QuerySet: Base query set of eligible patients for KPI 5
+            int: base query set count of total eligible patients for KPI 5
+        """
+
+        if not hasattr(self, "total_kpi_1_eligible_pts_base_query_set"):
+            self.calculate_kpi_5_total_t1dm_complete_year()
+
+        return self.total_kpi_5_eligible_pts_base_query_set, self.kpi_5_total_eligible
 
 
 # WIP simply return KPI Agg result for given PDU
