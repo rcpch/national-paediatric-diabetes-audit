@@ -1679,16 +1679,14 @@ class CalculateKPIS:
         kpi_6_total_eligible_query_set, _ = (
             self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count()
         )
-
-        # Merge and deduplicate the querysets
-        eligible_patients = kpi_5_total_eligible_query_set.union(
+        total_eligible = kpi_5_total_eligible_query_set.union(
             kpi_6_total_eligible_query_set
-        )
-        total_eligible = eligible_patients.count()
+        ).count()
         total_ineligible = self.total_patients_count - total_eligible
 
-        # Find patients with ALL KPIS 25,26,27,28,29, 31 PASSING
-        total_passed = eligible_patients.filter(
+        # Find patients with ALL KPIS 25,26,27,28,29, 31 PASSING (Apply conditions
+        # to both querysets first, THEN union them)
+        eligibility_conditions = [
             # KPI 25
             Q(visit__hba1c__isnull=False),
             Q(visit__hba1c_date__range=(self.AUDIT_DATE_RANGE)),
@@ -1706,7 +1704,20 @@ class CalculateKPIS:
             Q(visit__albumin_creatinine_ratio_date__range=(self.AUDIT_DATE_RANGE)),
             # KPI 31
             Q(visit__foot_examination_observation_date__range=(self.AUDIT_DATE_RANGE)),
-        ).count()
+        ]
+        filtered_kpi_5_eligible = kpi_5_total_eligible_query_set.filter(
+            *eligibility_conditions
+        )
+
+        filtered_kpi_6_eligible = kpi_6_total_eligible_query_set.filter(
+            *eligibility_conditions
+        )
+
+        # Perform the union after filtering for passing patients
+        eligible_patients_filtered = filtered_kpi_5_eligible.union(
+            filtered_kpi_6_eligible
+        )
+        total_passed = eligible_patients_filtered.count()
         total_failed = total_eligible - total_passed
 
         return KPIResult(
