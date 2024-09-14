@@ -1473,6 +1473,40 @@ class CalculateKPIS:
             total_failed=total_failed,
         )
 
+    def calculate_kpi_27_thyroid_screen(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 26: Thyroid Screen (%)
+
+        Numerator: Number of eligible patients with at least one entry for Thyroid function observation date (item 34) within the audit period
+
+        Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
+        """
+        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = (
+            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = kpi_5_total_eligible_query_set
+        total_eligible = total_eligible_kpi_5
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Find patients with at least one valid entry for thyroid screen within audit period
+        total_passed_query_set = eligible_patients.filter(
+            # Within audit period
+            Q(visit__thyroid_function_date__range=(self.AUDIT_DATE_RANGE)),
+        )
+
+        total_passed = total_passed_query_set.count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
     def _get_total_kpi_1_eligible_pts_base_query_set_and_total_count(
         self,
     ) -> Tuple[QuerySet, int]:

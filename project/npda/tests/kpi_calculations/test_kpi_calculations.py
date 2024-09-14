@@ -1511,7 +1511,7 @@ def test_kpi_calculation_26(AUDIT_START_DATE):
 
     # Passing patients
     passing_patient_valid_ht_wt_within_audit_period_1 = PatientFactory(
-        postcode="passing_patient_valid_hba1c_within_audit_period_1",
+        postcode="passing_patient_valid_ht_wt_within_audit_period_1",
         # KPI5 eligible
         **eligible_criteria,
         # valid ht wt values within audit period
@@ -1519,8 +1519,8 @@ def test_kpi_calculation_26(AUDIT_START_DATE):
         visit__weight=40.0,
         visit__height_weight_observation_date=AUDIT_START_DATE + relativedelta(days=2),
     )
-    passing_patient_valid_hba1c_within_audit_period_2 = PatientFactory(
-        postcode="passing_patient_valid_hba1c_within_audit_period_2",
+    passing_patient_valid_ht_wt_within_audit_period_2 = PatientFactory(
+        postcode="passing_patient_valid_ht_wt_within_audit_period_2",
         # KPI5 eligible
         **eligible_criteria,
         # valid ht wt values within audit period
@@ -1608,4 +1608,125 @@ def test_kpi_calculation_26(AUDIT_START_DATE):
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
         actual=calc_kpis.calculate_kpi_26_bmi(),
+    )
+
+
+@pytest.mark.django_db
+def test_kpi_calculation_27(AUDIT_START_DATE):
+    """Tests that KPI27 is calculated correctly.
+
+    Numerator: Number of eligible patients with at least one entry for Thyroid function observation date (item 34) within the audit period
+
+    Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
+    """
+
+    # Ensure starting with clean pts in test db
+    Patient.objects.all().delete()
+
+    # Create  Patients and Visits that should be eligible (KPI5)
+    eligible_criteria = {
+        # KPI5 base criteria
+        "visit__visit_date": AUDIT_START_DATE + relativedelta(days=2),
+        "date_of_birth": AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # KPI 5 specific eligibility are any of the following:
+        # Date of diagnosis NOT within the audit period
+        "diagnosis_date": AUDIT_START_DATE - relativedelta(days=2),
+        # Date of leaving service NOT within the audit period
+        # transfer date only not None if they have left
+        "transfer__date_leaving_service": None,
+        # Date of death NOT within the audit period"
+        "death_date": None,
+    }
+
+    # Passing patients
+    passing_patient_thryoid_function_date_within_audit_period_1 = PatientFactory(
+        postcode="passing_patient_valid_hba1c_within_audit_period_1",
+        # KPI5 eligible
+        **eligible_criteria,
+        # valid thryoid function date within audit period
+        visit__thyroid_function_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+    passing_patient_valid_thryoid_function_within_audit_period_2 = PatientFactory(
+        postcode="passing_patient_valid_thryoid_function_within_audit_period_2",
+        # KPI5 eligible
+        **eligible_criteria,
+        # valid thryoid function date within audit period
+        visit__thyroid_function_date=AUDIT_START_DATE + relativedelta(days=12),
+    )
+
+    # Failing patients
+    # No thyroid function date within audit period
+    failing_patient_no_thyroid_fn = PatientFactory(
+        postcode="failing_patient_no_thyroid_fn",
+        # KPI5 eligible
+        **eligible_criteria,
+        # no thyroid fn
+        visit__thyroid_function_date=None,
+    )
+    # thryoid fn before audit period
+    failing_patient_thyroid_before_audit_period = PatientFactory(
+        postcode="failing_patient_thyroid_before_audit_period",
+        # KPI5 eligible
+        **eligible_criteria,
+        # thyroid date before audit period
+        visit__thyroid_function_date=AUDIT_START_DATE - relativedelta(days=2),
+    )
+
+    # Create Patients and Visits that should be ineligble
+    # Visit date before audit period
+    ineligible_patient_visit_date = PatientFactory(
+        postcode="ineligible_patient_visit_date",
+        visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
+        visit__treatment=1,
+    )
+    # Above age 25 at start of audit period
+    ineligible_patient_too_old = PatientFactory(
+        postcode="ineligible_patient_too_old",
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
+        visit__treatment=1,
+    )
+    # KPI5 specific
+    ineligible_patient_diag_within_audit_period = PatientFactory(
+        postcode="ineligible_patient_diag_within_audit_period",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # Date of diagnosis within the audit period
+        diagnosis_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+    ineligible_patient_date_leaving_within_audit_period = PatientFactory(
+        postcode="ineligible_patient_date_leaving_within_audit_period",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # Date of leaving service within the audit period
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
+    )
+    ineligible_patient_death_within_audit_period = PatientFactory(
+        postcode="ineligible_patient_death_within_audit_period",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # Date of death within the audit period"
+        death_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+
+    # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+
+    EXPECTED_TOTAL_ELIGIBLE = 4
+    EXPECTED_TOTAL_INELIGIBLE = 5
+    EXPECTED_TOTAL_PASSED = 2
+    EXPECTED_TOTAL_FAILED = 2
+
+    EXPECTED_KPIRESULT = KPIResult(
+        total_eligible=EXPECTED_TOTAL_ELIGIBLE,
+        total_passed=EXPECTED_TOTAL_PASSED,
+        total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
+        total_failed=EXPECTED_TOTAL_FAILED,
+    )
+
+    assert_kpi_result_equal(
+        expected=EXPECTED_KPIRESULT,
+        actual=calc_kpis.calculate_kpi_27_thyroid_screen(),
     )
