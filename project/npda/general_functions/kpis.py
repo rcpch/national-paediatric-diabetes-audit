@@ -1438,6 +1438,9 @@ class CalculateKPIS:
         self,
     ) -> dict:
         """
+        # TODO: query - for 7 key processes KPIs (25-32), should we be
+        # querying all visits for a patient? or is current implementation fine?
+
         Calculates KPI 26: BMI (%)
 
         Numerator: Number of eligible patients at least one valid entry for Patient Height (item 14) and for Patient Weight (item 15) with an observation date (item 16) within the audit period
