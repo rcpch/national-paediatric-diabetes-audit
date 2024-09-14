@@ -1456,12 +1456,14 @@ class CalculateKPIS:
         total_ineligible = self.total_patients_count - total_eligible
 
         # Find patients with at least one valid entry for ht & wt within audit period
-        total_passed = eligible_patients.filter(
+        total_passed_query_set = eligible_patients.filter(
             Q(visit__height__isnull=False),
             Q(visit__weight__isnull=False),
             # Within audit period
-            Q(visit__height_date__range=(self.AUDIT_DATE_RANGE)),
-        ).count()
+            Q(visit__height_weight_observation_date__range=(self.AUDIT_DATE_RANGE)),
+        )
+
+        total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
         return KPIResult(

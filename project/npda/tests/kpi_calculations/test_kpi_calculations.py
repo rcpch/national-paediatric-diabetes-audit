@@ -1480,3 +1480,132 @@ def test_kpi_calculation_25(AUDIT_START_DATE):
         expected=EXPECTED_KPIRESULT,
         actual=calc_kpis.calculate_kpi_25_hba1c(),
     )
+
+
+@pytest.mark.django_db
+def test_kpi_calculation_26(AUDIT_START_DATE):
+    """Tests that KPI26 is calculated correctly.
+
+    Numerator: Number of eligible patients at least one valid entry for Patient Height (item 14) and for Patient Weight (item 15) with an observation date (item 16) within the audit period
+
+    Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
+    """
+
+    # Ensure starting with clean pts in test db
+    Patient.objects.all().delete()
+
+    # Create  Patients and Visits that should be eligible (KPI5)
+    eligible_criteria = {
+        # KPI5 base criteria
+        "visit__visit_date": AUDIT_START_DATE + relativedelta(days=2),
+        "date_of_birth": AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # KPI 5 specific eligibility are any of the following:
+        # Date of diagnosis NOT within the audit period
+        "diagnosis_date": AUDIT_START_DATE - relativedelta(days=2),
+        # Date of leaving service NOT within the audit period
+        # transfer date only not None if they have left
+        "transfer__date_leaving_service": None,
+        # Date of death NOT within the audit period"
+        "death_date": None,
+    }
+
+    # Passing patients
+    passing_patient_valid_ht_wt_within_audit_period_1 = PatientFactory(
+        postcode="passing_patient_valid_hba1c_within_audit_period_1",
+        # KPI5 eligible
+        **eligible_criteria,
+        # valid ht wt values within audit period
+        visit__height=140.0,
+        visit__weight=40.0,
+        visit__height_weight_observation_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+    passing_patient_valid_hba1c_within_audit_period_2 = PatientFactory(
+        postcode="passing_patient_valid_hba1c_within_audit_period_2",
+        # KPI5 eligible
+        **eligible_criteria,
+        # valid ht wt values within audit period
+        visit__height=160.0,
+        visit__weight=50.0,
+        visit__height_weight_observation_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+
+    # Failing patients
+    # No ht wt value within audit period
+    failing_patient_no_ht_wt_within_audit_period = PatientFactory(
+        postcode="failing_patient_no_ht_wt_within_audit_period",
+        # KPI5 eligible
+        **eligible_criteria,
+        # No ht wt value within audit period
+        visit__height=None,
+        visit__weight=None,
+        visit__height_weight_observation_date=None,
+    )
+    # Ht wt value before audit period
+    failing_patient_ht_wt_before_audit_period = PatientFactory(
+        postcode="failing_patient_ht_wt_before_audit_period",
+        # KPI5 eligible
+        **eligible_criteria,
+        # ht wt value before audit period
+        visit__height=160.0,
+        visit__weight=50.0,
+        visit__height_weight_observation_date=AUDIT_START_DATE - relativedelta(days=2),
+    )
+
+    # Create Patients and Visits that should be ineligble
+    # Visit date before audit period
+    ineligible_patient_visit_date = PatientFactory(
+        postcode="ineligible_patient_visit_date",
+        visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
+        visit__treatment=1,
+    )
+    # Above age 25 at start of audit period
+    ineligible_patient_too_old = PatientFactory(
+        postcode="ineligible_patient_too_old",
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
+        visit__treatment=1,
+    )
+    # KPI5 specific
+    ineligible_patient_diag_within_audit_period = PatientFactory(
+        postcode="ineligible_patient_diag_within_audit_period",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # Date of diagnosis within the audit period
+        diagnosis_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+    ineligible_patient_date_leaving_within_audit_period = PatientFactory(
+        postcode="ineligible_patient_date_leaving_within_audit_period",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # Date of leaving service within the audit period
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
+    )
+    ineligible_patient_death_within_audit_period = PatientFactory(
+        postcode="ineligible_patient_death_within_audit_period",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # Date of death within the audit period"
+        death_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+
+    # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+
+    EXPECTED_TOTAL_ELIGIBLE = 4
+    EXPECTED_TOTAL_INELIGIBLE = 5
+    EXPECTED_TOTAL_PASSED = 2
+    EXPECTED_TOTAL_FAILED = 2
+
+    EXPECTED_KPIRESULT = KPIResult(
+        total_eligible=EXPECTED_TOTAL_ELIGIBLE,
+        total_passed=EXPECTED_TOTAL_PASSED,
+        total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
+        total_failed=EXPECTED_TOTAL_FAILED,
+    )
+
+    assert_kpi_result_equal(
+        expected=EXPECTED_KPIRESULT,
+        actual=calc_kpis.calculate_kpi_26_bmi(),
+    )
