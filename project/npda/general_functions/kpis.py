@@ -622,7 +622,7 @@ class CalculateKPIS:
 
         # Count eligible patients
         total_eligible = eligible_patients.count()
-        
+
         # In case we need to use this as a base query set for subsequent KPIs
         self.total_kpi_6_eligible_pts_base_query_set = eligible_patients
         self.kpi_6_total_eligible = total_eligible
@@ -1510,7 +1510,7 @@ class CalculateKPIS:
             total_passed=total_passed,
             total_failed=total_failed,
         )
-        
+
     def calculate_kpi_28_blood_pressure(
         self,
     ) -> dict:
@@ -1536,6 +1536,42 @@ class CalculateKPIS:
             # Within audit period
             Q(visit__systolic_blood_pressure__isnull=False),
             Q(visit__blood_pressure_observation_date__range=(self.AUDIT_DATE_RANGE)),
+        )
+
+        total_passed = total_passed_query_set.count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def calculate_kpi_29_urinary_albumin(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 29: Urinary Albumin (%)
+
+        Numerator: Number of eligible patients with at entry for Urinary Albumin Level (item 29) with an observation date (item 30) within the audit period
+
+        Denominator: Number of patients with Type 1 diabetes aged 12+ with a complete year of care in audit period (measure 6)
+        """
+        kpi_6_total_eligible_query_set, total_eligible_kpi_6 = (
+            self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = kpi_6_total_eligible_query_set
+        total_eligible = total_eligible_kpi_6
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Find patients with at least one valid entry for Urinary Albumin Level (item 29) 
+        # with an observation date (item 30) within the audit period
+        total_passed_query_set = eligible_patients.filter(
+            Q(visit__albumin_creatinine_ratio__isnull=False),
+            # Within audit period
+            Q(visit__albumin_creatinine_ratio_date__range=(self.AUDIT_DATE_RANGE)),
         )
 
         total_passed = total_passed_query_set.count()
@@ -1585,7 +1621,7 @@ class CalculateKPIS:
             self.calculate_kpi_5_total_t1dm_complete_year()
 
         return self.total_kpi_5_eligible_pts_base_query_set, self.kpi_5_total_eligible
-    
+
     def _get_total_kpi_6_eligible_pts_base_query_set_and_total_count(
         self,
     ) -> Tuple[QuerySet, int]:

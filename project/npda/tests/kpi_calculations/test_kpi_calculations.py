@@ -1849,3 +1849,119 @@ def test_kpi_calculation_28(AUDIT_START_DATE):
         expected=EXPECTED_KPIRESULT,
         actual=calc_kpis.calculate_kpi_28_blood_pressure(),
     )
+
+@pytest.mark.django_db
+def test_kpi_calculation_29(AUDIT_START_DATE):
+    """Tests that KPI29 is calculated correctly.
+
+     Numerator: Number of eligible patients with at entry for Urinary Albumin Level (item 29) with an observation date (item 30) within the audit period
+
+    Denominator: Number of patients with Type 1 diabetes aged 12+ with a complete year of care in audit period (measure 6)
+    """
+
+    # Ensure starting with clean pts in test db
+    Patient.objects.all().delete()
+
+    # Create  Patients and Visits that should be eligible (KPI6)
+    eligible_criteria = {
+        # First needs to be KPI1 eligible
+        # Age 12 and above at the start of the audit period
+        "date_of_birth": AUDIT_START_DATE - relativedelta(years=12),
+        # Diagnosis of Type 1 diabetes
+        "diabetes_type": DIABETES_TYPES[0][0],
+        # KPI 6 specific = an observation within the audit period
+        "visit__height_weight_observation_date": AUDIT_START_DATE
+        + relativedelta(days=2),
+        # Also has same exclusions as KPI 5
+        # Date of diagnosis NOT within the audit period
+        "diagnosis_date": AUDIT_START_DATE - relativedelta(days=2),
+        # Date of leaving service NOT within the audit period
+        # transfer date only not None if they have left
+        "transfer__date_leaving_service": None,
+        # Date of death NOT within the audit period"
+        "death_date": None,
+    }
+
+    # Passing patients
+    passing_patient_urinary_albumin_within_audit_period_1 = PatientFactory(
+        postcode="passing_patient_urinary_albumin_within_audit_period_1",
+        # KPI6 eligible
+        **eligible_criteria,
+        # valid ACR within audit period
+        visit__albumin_creatinine_ratio=2,
+        visit__albumin_creatinine_ratio_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+    passing_patient_urinary_albumin_within_audit_period_2 = PatientFactory(
+        postcode="passing_patient_urinary_albumin_within_audit_period_2",
+        # KPI6 eligible
+        **eligible_criteria,
+        # valid ACR within audit period
+        visit__albumin_creatinine_ratio=3,
+        visit__albumin_creatinine_ratio_date=AUDIT_START_DATE + relativedelta(days=27),
+    )
+
+    # Failing patients
+    # No urinary albumin within audit period
+    failing_patient_no_acr = PatientFactory(
+        postcode="failing_patient_no_acr",
+        # KPI6 eligible
+        **eligible_criteria,
+        # no ACR 
+        visit__albumin_creatinine_ratio=None,
+        visit__albumin_creatinine_ratio_date=None,
+    )
+    # urinary_albumin before audit period
+    failing_patient_urinary_albumin_before_audit = PatientFactory(
+        postcode="failing_patient_urinary_albumin_before_audit",
+        # KPI6 eligible
+        **eligible_criteria,
+        # ACR before audit period 
+        visit__albumin_creatinine_ratio=3,
+        visit__albumin_creatinine_ratio_date=AUDIT_START_DATE - relativedelta(days=2),
+    )
+
+    # Create Patients and Visits that should be ineligble
+    ineligible_patient_diag_within_audit_period = PatientFactory(
+        postcode="ineligible_patient_diag_within_audit_period",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # Date of diagnosis within the audit period
+        diagnosis_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+    ineligible_patient_date_leaving_within_audit_period = PatientFactory(
+        postcode="ineligible_patient_date_leaving_within_audit_period",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # Date of leaving service within the audit period
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
+    )
+    ineligible_patient_death_within_audit_period = PatientFactory(
+        postcode="ineligible_patient_death_within_audit_period",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # Date of death within the audit period"
+        death_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+
+    # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+
+    EXPECTED_TOTAL_ELIGIBLE = 4
+    EXPECTED_TOTAL_INELIGIBLE = 3
+    EXPECTED_TOTAL_PASSED = 2
+    EXPECTED_TOTAL_FAILED = 2
+
+    EXPECTED_KPIRESULT = KPIResult(
+        total_eligible=EXPECTED_TOTAL_ELIGIBLE,
+        total_passed=EXPECTED_TOTAL_PASSED,
+        total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
+        total_failed=EXPECTED_TOTAL_FAILED,
+    )
+
+    assert_kpi_result_equal(
+        expected=EXPECTED_KPIRESULT,
+        actual=calc_kpis.calculate_kpi_29_urinary_albumin(),
+    )
