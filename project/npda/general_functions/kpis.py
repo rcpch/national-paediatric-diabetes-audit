@@ -1421,7 +1421,44 @@ class CalculateKPIS:
 
         # Find patients with at least one valid entry for HbA1c value (item 17) with an observation date (item 19) within the audit period
         # This is simply patients with a visit with a valid HbA1c value
-        total_passed = eligible_patients.filter(Q(visit__hba1c__isnull=False)).count()
+        total_passed = eligible_patients.filter(
+            Q(visit__hba1c__isnull=False),
+            Q(visit__hba1c_date__range=(self.AUDIT_DATE_RANGE)),
+        ).count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def calculate_kpi_26_bmi(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 26: BMI (%)
+
+        Numerator: Number of eligible patients at least one valid entry for Patient Height (item 14) and for Patient Weight (item 15) with an observation date (item 16) within the audit period
+
+        Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
+        """
+        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = (
+            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = kpi_5_total_eligible_query_set
+        total_eligible = total_eligible_kpi_5
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Find patients with at least one valid entry for ht & wt within audit period
+        total_passed = eligible_patients.filter(
+            Q(visit__height__isnull=False),
+            Q(visit__weight__isnull=False),
+            # Within audit period
+            Q(visit__height_date__range=(self.AUDIT_DATE_RANGE)),
+        ).count()
         total_failed = total_eligible - total_passed
 
         return KPIResult(
