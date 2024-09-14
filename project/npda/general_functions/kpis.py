@@ -23,6 +23,7 @@ from django.db.models import Q, OuterRef, Subquery, QuerySet
 
 # NPDA Imports
 from project.constants.diabetes_types import DIABETES_TYPES
+from project.constants.retinal_screening_results import RETINAL_SCREENING_RESULTS
 from project.npda.models import Patient
 from project.npda.general_functions import get_audit_period_for_date
 from project.npda.general_functions.kpis_calculations import kpi_2_total_new_diagnoses
@@ -1566,12 +1567,52 @@ class CalculateKPIS:
         total_eligible = total_eligible_kpi_6
         total_ineligible = self.total_patients_count - total_eligible
 
-        # Find patients with at least one valid entry for Urinary Albumin Level (item 29) 
+        # Find patients with at least one valid entry for Urinary Albumin Level (item 29)
         # with an observation date (item 30) within the audit period
         total_passed_query_set = eligible_patients.filter(
             Q(visit__albumin_creatinine_ratio__isnull=False),
             # Within audit period
             Q(visit__albumin_creatinine_ratio_date__range=(self.AUDIT_DATE_RANGE)),
+        )
+
+        total_passed = total_passed_query_set.count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def calculate_kpi_30_retinal_screening(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 30: Retinal Screening (%)
+
+        Numerator: Number of eligible patients with at least one entry for Retinal Screening Result (item 28) is either 1 = Normal or 2 = Abnormal AND the observation date (item 27) is within the audit period
+
+        Denominator: Number of patients with Type 1 diabetes aged 12+ with a complete year of care in audit period (measure 6)
+        """
+        kpi_6_total_eligible_query_set, total_eligible_kpi_6 = (
+            self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = kpi_6_total_eligible_query_set
+        total_eligible = total_eligible_kpi_6
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Find patients with at least one for Retinal Screening Result (item 28) is either 1 = Normal or 2 = Abnormal AND the observation date (item 27) is within the audit period
+        total_passed_query_set = eligible_patients.filter(
+            Q(
+                visit__retinal_screening_result__in=[
+                    RETINAL_SCREENING_RESULTS[0][0],
+                    RETINAL_SCREENING_RESULTS[1][0],
+                ]
+            ),
+            # Within audit period
+            Q(visit__retinal_screening_observation_date__range=(self.AUDIT_DATE_RANGE)),
         )
 
         total_passed = total_passed_query_set.count()
