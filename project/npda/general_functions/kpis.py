@@ -622,6 +622,10 @@ class CalculateKPIS:
 
         # Count eligible patients
         total_eligible = eligible_patients.count()
+        
+        # In case we need to use this as a base query set for subsequent KPIs
+        self.total_kpi_6_eligible_pts_base_query_set = eligible_patients
+        self.kpi_6_total_eligible = total_eligible
 
         # Calculate ineligible patients
         total_ineligible = self.total_patients_count - total_eligible
@@ -1477,7 +1481,7 @@ class CalculateKPIS:
         self,
     ) -> dict:
         """
-        Calculates KPI 26: Thyroid Screen (%)
+        Calculates KPI 27: Thyroid Screen (%)
 
         Numerator: Number of eligible patients with at least one entry for Thyroid function observation date (item 34) within the audit period
 
@@ -1495,6 +1499,43 @@ class CalculateKPIS:
         total_passed_query_set = eligible_patients.filter(
             # Within audit period
             Q(visit__thyroid_function_date__range=(self.AUDIT_DATE_RANGE)),
+        )
+
+        total_passed = total_passed_query_set.count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+        
+    def calculate_kpi_28_blood_pressure(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 28: Blood Pressure (%)
+
+        Numerator: Number of eligible patients with a valid entry for systolic measurement (item 23) with an observation date (item 25) within the audit period
+
+        Denominator: Number of patients with Type 1 diabetes aged 12+ with a complete year of care in audit period (measure 6)
+
+        # NOTE: Does not need a valid diastolic measurement
+        """
+        kpi_6_total_eligible_query_set, total_eligible_kpi_6 = (
+            self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = kpi_6_total_eligible_query_set
+        total_eligible = total_eligible_kpi_6
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Find patients with at least one valid entry for systolic measurement within audit period
+        total_passed_query_set = eligible_patients.filter(
+            # Within audit period
+            Q(visit__systolic_blood_pressure__isnull=False),
+            Q(visit__blood_pressure_observation_date__range=(self.AUDIT_DATE_RANGE)),
         )
 
         total_passed = total_passed_query_set.count()
@@ -1544,6 +1585,25 @@ class CalculateKPIS:
             self.calculate_kpi_5_total_t1dm_complete_year()
 
         return self.total_kpi_5_eligible_pts_base_query_set, self.kpi_5_total_eligible
+    
+    def _get_total_kpi_6_eligible_pts_base_query_set_and_total_count(
+        self,
+    ) -> Tuple[QuerySet, int]:
+        """Enables reuse of the base query set for KPI 6
+
+        If running calculation methods in order, this attribute will be set in calculate_kpi_6_total_t1dm_complete_year_gte_12yo().
+
+        If running another kpi calculation standalone, need to run that method first to have the attribute set.
+
+        Returns:
+            QuerySet: Base query set of eligible patients for KPI 6
+            int: base query set count of total eligible patients for KPI 6
+        """
+
+        if not hasattr(self, "total_kpi_1_eligible_pts_base_query_set"):
+            self.calculate_kpi_6_total_t1dm_complete_year_gte_12yo()
+
+        return self.total_kpi_6_eligible_pts_base_query_set, self.kpi_6_total_eligible
 
 
 # WIP simply return KPI Agg result for given PDU
