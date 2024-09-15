@@ -2143,7 +2143,7 @@ def test_kpi_calculation_31(AUDIT_START_DATE):
         postcode="passing_patient_foot_exam_within_audit_period_2",
         # KPI6 eligible
         **eligible_criteria,
-         # valid foot exam within audit period
+        # valid foot exam within audit period
         visit__foot_examination_observation_date=AUDIT_START_DATE
         + relativedelta(days=7),
     )
@@ -2211,4 +2211,80 @@ def test_kpi_calculation_31(AUDIT_START_DATE):
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
         actual=calc_kpis.calculate_kpi_31_foot_examination(),
+    )
+
+@pytest.mark.skip(reason='KPI32 calculation definition needs to be confirmed, just stubbed out for now, issue #274 https://github.com/orgs/rcpch/projects/13/views/1?pane=issue&itemId=79836032')
+@pytest.mark.django_db
+def test_kpi_calculation_32(AUDIT_START_DATE):
+    """Tests that KPI32 is calculated correctly.
+
+    COUNT: Number of eligible patients with care processes 25,26,27,28,29, and 31 completed in the audit period
+
+    NOTE: Excludes Retinal screening, as this only needs to be completed every 2 years
+
+    Eligible patients = KPI_5_TOTAL_ELIGIBLE + KPI_6_TOTAL_ELIGIBLE
+    PASS = of eligible patients, how many completed KPI 25-29, 31, 32 (exclude 30 retinal screening)
+    """
+
+    # Ensure starting with clean pts in test db
+    Patient.objects.all().delete()
+
+    # Create  Patients and Visits that should be eligible (KPI5 & KPI6)
+    elibible_criteria_base = {
+        # Diagnosis of Type 1 diabetes
+        "diabetes_type": DIABETES_TYPES[0][0],
+        # Date of diagnosis NOT within the audit period
+        "diagnosis_date": AUDIT_START_DATE - relativedelta(days=2),
+        # Date of leaving service NOT within the audit period
+        "transfer__date_leaving_service": None,
+        # Date of death NOT within the audit period"
+        "death_date": None,
+    }
+    eligible_criteria_kpi_5 = {
+        # a visit date or admission date within the audit period
+        "visit__visit_date": AUDIT_START_DATE + relativedelta(days=2),
+        # Below the age of 25 at the start of the audit period
+        "date_of_birth": AUDIT_START_DATE - relativedelta(days=365 * 10),
+    }
+    eligible_criteria_kpi_6 = {
+        # Age 12 and above at the start of the audit period
+        "date_of_birth": AUDIT_START_DATE - relativedelta(years=12),
+        # an observation within the audit period
+        "visit__height_weight_observation_date": AUDIT_START_DATE
+        + relativedelta(days=2),
+    }
+
+    eligible_criteria = {
+        **elibible_criteria_base,
+        **eligible_criteria_kpi_5,
+        **eligible_criteria_kpi_6,
+    }
+
+    # Passing patients
+    
+
+    # Failing patients
+    
+
+    # Create Patients and Visits that should be ineligble
+    
+
+    # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+
+    EXPECTED_TOTAL_ELIGIBLE = 4
+    EXPECTED_TOTAL_INELIGIBLE = 3
+    EXPECTED_TOTAL_PASSED = 2
+    EXPECTED_TOTAL_FAILED = 2
+
+    EXPECTED_KPIRESULT = KPIResult(
+        total_eligible=EXPECTED_TOTAL_ELIGIBLE,
+        total_passed=EXPECTED_TOTAL_PASSED,
+        total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
+        total_failed=EXPECTED_TOTAL_FAILED,
+    )
+
+    assert_kpi_result_equal(
+        expected=EXPECTED_KPIRESULT,
+        actual=calc_kpis.calculate_kpi_32_health_check_completion_rate(),
     )
