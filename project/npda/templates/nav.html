@@ -53,8 +53,7 @@
                         <ul
                         tabindex="0"
                         class="menu dropdown-content bg-base-100 rounded-none z-[1] mt-4 w-52 p-2 hover:bg-white">
-                            <li><a href="{% url 'two_factor:profile' %}">2FA</a></li>
-                            <li><a href="{% url 'password_reset' %}">Reset Password</a></li>
+                            <li><a href="{% url 'two_factor:profile' %}">Two Factor Authentication</a></li>
                             <form method="POST" action="{% url 'logout' %}">
                                 <li >{% csrf_token%}
                                     <button type="submit">Log Out</button>

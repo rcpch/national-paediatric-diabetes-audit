@@ -171,23 +171,28 @@ class CaptchaAuthenticationForm(AuthenticationForm):
 
             user = NPDAUser.objects.get(email=email.lower())
 
-            # visit_activities = VisitActivity.objects.filter(
-            #     npda12user=user
-            # ).order_by("-activity_datetime")[:5]
+            visit_activities = VisitActivity.objects.filter(npdauser=user).order_by(
+                "-activity_datetime"
+            )[:5]
 
-            # failed_login_activities = [
-            #     activity for activity in visit_activities if activity.activity == 2
-            # ]
+            failed_login_activities = [
+                activity for activity in visit_activities if activity.activity == 2
+            ]
 
-            # if failed_login_activities:
-            #     first_activity = failed_login_activities[-1]
+            if failed_login_activities:
+                first_activity = failed_login_activities[-1]
 
-            #     if len(
-            #         failed_login_activities
-            #     ) >= 5 and timezone.now() <= first_activity.activity_datetime + timezone.timedelta(
-            #         minutes=10
-            #     ):
-            #         raise forms.ValidationError(
-            #             "You have failed to login 5 or more consecutive times. You have been locked out for 10 minutes"
-            #         )
+                if len(
+                    failed_login_activities
+                ) >= 5 and timezone.now() <= first_activity.activity_datetime + timezone.timedelta(
+                    minutes=5
+                ):
+                    VisitActivity.objects.create(
+                        activity=6,
+                        ip_address=self.request.META.get("REMOTE_ADDR"),
+                        npdauser=user,  # password lockout - activity 6
+                    )
+                    raise forms.ValidationError(
+                        "You have failed to login 5 or more consecutive times. You have been locked out for 10 minutes"
+                    )
             return email.lower()
