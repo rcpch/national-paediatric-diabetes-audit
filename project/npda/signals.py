@@ -17,6 +17,15 @@ from .general_functions.session import create_session_object
 # Logging setup
 logger = logging.getLogger(__name__)
 
+"""
+This file contains signals that are triggered when a user logs in, logs out, or fails to log in.
+These signals are used to log user activity in the VisitActivity model.
+They are also used to track if users have touched patient records.
+"""
+
+# Custom signals
+from django.dispatch import Signal
+
 
 @receiver(user_logged_in)
 def log_user_login(sender, request, user, **kwargs):
@@ -64,6 +73,16 @@ def log_user_logout(sender, request, user, **kwargs):
     VisitActivity.objects.create(
         activity=3, ip_address=get_client_ip(request), npdauser=user
     )
+
+
+# @receiver(password_reset_sent)
+# def log_password_reset(sender, request, user, **kwargs):
+#     logger.info(
+#         f"Password reset link sent to {user} ({user.email}) from {get_client_ip(request)}."
+#     )
+#     VisitActivity.objects.create(
+#     activity=4, ip_address=get_client_ip(request), npdauser=user
+# )
 
 
 # helper functions

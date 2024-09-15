@@ -9,16 +9,16 @@ class VisitActivity(models.Model):
     LOGOUT = 3
     PASSWORD_RESET_LINK_SENT = 4
     PASSWORD_RESET = 5
-    SETUP_TWO_FACTOR_AUTHENTICATION = 5
-    UPLOADED_CSV = 6
-    TOUCHED_PATIENT_RECORD = 7
+    SETUP_TWO_FACTOR_AUTHENTICATION = 6
+    UPLOADED_CSV = 7
+    TOUCHED_PATIENT_RECORD = 8
 
     ACTIVITY = (
         (SUCCESSFUL_LOGIN, "Successful login"),
         (UNSUCCESSFUL_LOGIN, "Login failed"),
         (LOGOUT, "Logout"),
-        (PASSWORD_RESET_LINK_SENT, "Password Reset link sent"),
-        (PASSWORD_RESET, "Password reset"),
+        (PASSWORD_RESET_LINK_SENT, "Password reset link sent"),
+        (PASSWORD_RESET, "Password reset successfully"),
         (SETUP_TWO_FACTOR_AUTHENTICATION, "Two factor authentication set up"),
         (UPLOADED_CSV, "Uploaded CSV"),
         (TOUCHED_PATIENT_RECORD, "Touched patient record"),

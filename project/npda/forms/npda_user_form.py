@@ -12,14 +12,9 @@ from django.utils.translation import gettext as _
 # third party imports
 from captcha.fields import CaptchaField
 
-from project.npda.general_functions import organisations_adapter
-
 # RCPCH imports
 from ...constants.styles.form_styles import *
-from ..models import NPDAUser
-from project.npda.general_functions import (
-    organisations_adapter,
-)
+from ..models import NPDAUser, VisitActivity
 
 
 # Logging setup
@@ -126,6 +121,11 @@ class NPDAUpdatePasswordForm(SetPasswordForm):
         user.password_last_set = timezone.now()
         if commit:
             logger.debug(f"Updating password_last_set to {timezone.now()}")
+            VisitActivity.objects.create(
+                npdauser=user,
+                activity=5,
+                ip_address=None,  # cannot get ip address here as it is not a request
+            )  # password reset successful - activity 5
             user.save()
         return user
 
