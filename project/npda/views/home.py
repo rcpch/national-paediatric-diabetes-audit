@@ -65,11 +65,14 @@ def home(request):
             )
             messages.success(request=request, message="File uploaded successfully")
             VisitActivity = apps.get_model("npda", "VisitActivity")
-            VisitActivity.objects.create(
-                activity=8,
-                ip_address=request.META.get("REMOTE_ADDR"),
-                npdauser=request.user,
-            )  # uploaded csv - activity 8
+            try:
+                VisitActivity.objects.create(
+                    activity=8,
+                    ip_address=request.META.get("REMOTE_ADDR"),
+                    npdauser=request.user,
+                )  # uploaded csv - activity 8
+            except Exception as e:
+                logger.error(f"Failed to log user activity: {e}")
         except ValidationError as error:
             errors = error_list(error)
 
