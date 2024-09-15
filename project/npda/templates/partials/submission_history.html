@@ -16,6 +16,7 @@
                             <th>Audit Year</th>
                             <th>Patient Number</th>
                             <th>Active</th>
+                            {% if request.user.view_preference == 2 %}<th>PDU</th>{% endif %}
                             <th>Download</th>
                         </tr>
                     </thead>
@@ -41,6 +42,7 @@
                                         </span>
                                     {% endif %}
                                 </td>
+                                {% if request.user.view_preference == 2 %}<td>{{ submission.paediatric_diabetes_unit.pz_code }} ({{submission.paediatric_diabetes_unit.lead_organisation_name}})</td>{% endif %}
                                 <td class="flex flex-row">
                                     <form method="post" action="{% url 'submissions' %}" class="join">
                                         {% csrf_token %}
@@ -61,7 +63,7 @@
                                             type="submit" 
                                             class="join-item bg-rcpch_red text-white font-semibold hover:text-white py-1 px-2 border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint btn-sm rounded-none {% if submission.submission_active %}opacity-50 cursor-not-allowed {% endif %}">Delete</button>
                                     </form>
-                                    {% if forloop.first %}
+                                    {% if submission.submission_active %}
                                         <a href="{% url 'patients' %}">
                                             <svg
                                                 class="h-8 w-8 text-rcpch_pink self-center hover:text-white"
