@@ -1659,6 +1659,8 @@ class CalculateKPIS:
             total_failed=total_failed,
         )
 
+    # TODO: confirm calculation definition
+    # https://github.com/orgs/rcpch/projects/13/views/1?pane=issue&itemId=79836032
     def calculate_kpi_32_health_check_completion_rate(
         self,
     ) -> dict:
