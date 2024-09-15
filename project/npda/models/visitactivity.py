@@ -7,11 +7,21 @@ class VisitActivity(models.Model):
     SUCCESSFUL_LOGIN = 1
     UNSUCCESSFUL_LOGIN = 2
     LOGOUT = 3
+    PASSWORD_RESET_LINK_SENT = 4
+    PASSWORD_RESET = 5
+    SETUP_TWO_FACTOR_AUTHENTICATION = 5
+    UPLOADED_CSV = 6
+    TOUCHED_PATIENT_RECORD = 7
 
     ACTIVITY = (
-        (SUCCESSFUL_LOGIN, "SUCCESSFUL_LOGIN"),
-        (UNSUCCESSFUL_LOGIN, "UNSUCCESSFUL_LOGIN"),
-        (LOGOUT, "LOGOUT"),
+        (SUCCESSFUL_LOGIN, "Successful login"),
+        (UNSUCCESSFUL_LOGIN, "Login failed"),
+        (LOGOUT, "Logout"),
+        (PASSWORD_RESET_LINK_SENT, "Password Reset link sent"),
+        (PASSWORD_RESET, "Password reset"),
+        (SETUP_TWO_FACTOR_AUTHENTICATION, "Two factor authentication set up"),
+        (UPLOADED_CSV, "Uploaded CSV"),
+        (TOUCHED_PATIENT_RECORD, "Touched patient record"),
     )
 
     activity_datetime = models.DateTimeField(auto_created=True, default=timezone.now)
