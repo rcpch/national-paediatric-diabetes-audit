@@ -2,10 +2,11 @@
 import logging
 
 # Django imports
-from django.urls import reverse
+from django.apps import apps
 from django.contrib import messages
-from django.shortcuts import render
 from django.core.exceptions import ValidationError
+from django.shortcuts import render
+from django.urls import reverse
 
 # HTMX imports
 from django_htmx.http import trigger_client_event
@@ -63,6 +64,12 @@ def home(request):
                 pdu_pz_code=pz_code,
             )
             messages.success(request=request, message="File uploaded successfully")
+            VisitActivity = apps.get_model("npda", "VisitActivity")
+            VisitActivity.objects.create(
+                activity=8,
+                ip_address=request.META.get("REMOTE_ADDR"),
+                npdauser=request.user,
+            )  # uploaded csv - activity 8
         except ValidationError as error:
             errors = error_list(error)
 
