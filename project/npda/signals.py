@@ -8,7 +8,9 @@ from django.contrib.auth.signals import (
     user_login_failed,
 )
 from django.dispatch import receiver
-from django.apps import apps
+
+# third party imports
+from two_factor.signals import user_verified
 
 # RCPCH
 from .models import VisitActivity, NPDAUser
@@ -75,14 +77,19 @@ def log_user_logout(sender, request, user, **kwargs):
     )
 
 
-# @receiver(password_reset_sent)
-# def log_password_reset(sender, request, user, **kwargs):
-#     logger.info(
-#         f"Password reset link sent to {user} ({user.email}) from {get_client_ip(request)}."
-#     )
-#     VisitActivity.objects.create(
-#     activity=4, ip_address=get_client_ip(request), npdauser=user
-# )
+# Two factor auth receiver
+@receiver(user_verified)
+def two_factor_auth_setup(request, user, device, **kwargs):
+    if (
+        user_verified
+        and VisitActivity.objects.filter(npdauser=user, activity=7).count() < 1
+    ):
+        logger.info(
+            f"{user} ({user.email}) has logged in the for the first time with two factor authentication."
+        )
+        VisitActivity.objects.create(
+            activity=7, ip_address=get_client_ip(request), npdauser=user
+        )  # Two factor authentication set up
 
 
 # helper functions
