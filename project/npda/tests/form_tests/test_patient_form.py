@@ -2,7 +2,7 @@
 from enum import Enum
 import pytest
 import logging
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 # 3rd Party imports
 from django.core.exceptions import ValidationError
@@ -23,6 +23,16 @@ from project.npda.tests.factories.patient_factory import (
 
 # Logging
 logger = logging.getLogger(__name__)
+
+
+# We don't want to call remote services in unit tests
+@pytest.fixture(autouse=True)
+def mock_remote_calls():
+    with patch("project.npda.forms.patient_form.validate_postcode", Mock(return_value=True)):
+        with patch("project.npda.forms.patient_form.gp_ods_code_for_postcode", Mock(return_value = "G85023")):
+            with patch("project.npda.forms.patient_form.gp_details_for_ods_code", Mock(return_value = True)):
+                with patch("project.npda.forms.patient_form.imd_for_postcode", Mock(return_value = INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE)):
+                    yield None
 
 
 @pytest.mark.django_db
@@ -145,9 +155,9 @@ def test_missing_gp_details():
     form = PatientForm({})
     
     errors = form.errors.as_data()
-    assert("gp_practice_ods_code" in errors)
+    assert("__all__" in errors)
 
-    error_message = errors["gp_practice_ods_code"][0].messages[0]
+    error_message = errors["__all__"][0].messages[0]
     assert(error_message == "'GP Practice ODS code' and 'GP Practice postcode' cannot both be empty")
 
 
@@ -210,66 +220,60 @@ def test_dashes_removed_from_postcode():
 
 
 @pytest.mark.django_db
+@patch("project.npda.forms.patient_form.validate_postcode", Mock(return_value=False))
 def test_invalid_postcode():
-    form = PatientForm(VALID_FIELDS,
-        validate_postcode=Mock(return_value=False)
-    )
-
+    form = PatientForm(VALID_FIELDS)
     form.is_valid()
+
     assert("postcode" in form.errors.as_data())
 
 
 @pytest.mark.django_db
+
+@patch("project.npda.forms.patient_form.validate_postcode", Mock(side_effect=RequestException("oopsie!")))
 def test_error_validating_postcode():
     # TODO MRB: report this back somehow rather than just eat it in the log?
-    form = PatientForm(VALID_FIELDS,
-        validate_postcode=Mock(side_effect=RequestException("oopsie!")))
-
+    form = PatientForm(VALID_FIELDS)
     form.is_valid()
+
     assert(len(form.errors.as_data()) == 0)
 
 
 @pytest.mark.django_db
+@patch("project.npda.forms.patient_form.gp_ods_code_for_postcode", Mock(return_value=None))
 def test_invalid_gp_postcode():
-    mock_gp_ods_code_for_postcode = Mock(return_value=None)
-
-    form = PatientForm(VALID_FIELDS_WITH_GP_POSTCODE,
-        gp_ods_code_for_postcode=mock_gp_ods_code_for_postcode
-    )
-
+    form = PatientForm(VALID_FIELDS_WITH_GP_POSTCODE)
     form.is_valid()
+
     assert("gp_practice_postcode" in form.errors.as_data())
 
 
 @pytest.mark.django_db
+@patch("project.npda.forms.patient_form.gp_ods_code_for_postcode", Mock(side_effect=RequestException("oopsie!")))
 def test_error_validating_gp_postcode():
     # TODO MRB: report this back somehow rather than just eat it in the log?
-    form = PatientForm(VALID_FIELDS_WITH_GP_POSTCODE,
-        gp_ods_code_for_postcode=Mock(side_effect=RequestException("oopsie!"))
-    )
-
+    form = PatientForm(VALID_FIELDS_WITH_GP_POSTCODE)
     form.is_valid()
+
     assert(len(form.errors.as_data()) == 0)
 
 
 @pytest.mark.django_db
+@patch("project.npda.forms.patient_form.gp_details_for_ods_code", Mock(return_value=None))
 def test_invalid_gp_ods_code():
-    form = PatientForm(VALID_FIELDS,
-        gp_details_for_ods_code=Mock(return_value=None)
-    )
-
+    form = PatientForm(VALID_FIELDS)
     form.is_valid()
+
     assert("gp_practice_ods_code" in form.errors.as_data())
 
 
 @pytest.mark.django_db
+@patch("project.npda.forms.patient_form.gp_details_for_ods_code", Mock(side_effect=RequestException("oopsie!")))
 def test_error_validating_gp_ods_code():
     # TODO MRB: report this back somehow rather than just eat it in the log?
-    form = PatientForm(VALID_FIELDS,
-        gp_details_for_ods_code=Mock(side_effect=RequestException("oopsie!"))
-    )
-
+    form = PatientForm(VALID_FIELDS)
     form.is_valid()
+
     assert(len(form.errors.as_data()) == 0)
 
 
@@ -285,11 +289,10 @@ def test_lookup_index_of_multiple_deprivation():
 
 
 @pytest.mark.django_db
+@patch("project.npda.forms.patient_form.imd_for_postcode", Mock(side_effect=RequestException("oopsie!")))
 def test_error_looking_up_index_of_multiple_deprivation():
     # TODO MRB: report this back somehow rather than just eat it in the log?
-    form = PatientForm(VALID_FIELDS,
-        imd_for_postcode=Mock(side_effect=RequestException("oopsie!"))
-    )
-
+    form = PatientForm(VALID_FIELDS)
     patient = form.save()
+    
     patient.index_of_multiple_deprivation_quintile = None

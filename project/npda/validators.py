@@ -13,9 +13,8 @@ from django.utils.translation import gettext as _
 def not_in_the_future_validator(value):
     if value and value <= date.today():
         return value
-    else:
+    elif value:
         raise ValidationError("Cannot be in the future")
-
 
 class CapitalAndSymbolValidator:
     def __init__(

@@ -1,5 +1,6 @@
 # python imports
 from datetime import date
+import logging
 
 # django imports
 from django.apps import apps
@@ -8,6 +9,7 @@ from django import forms
 
 # third-party imports
 from dateutil.relativedelta import relativedelta
+from requests import RequestException
 
 # project imports
 import nhs_number
@@ -15,9 +17,14 @@ from ..models import Patient
 from ...constants.styles.form_styles import *
 from ..general_functions import (
     validate_postcode,
-    gp_practice_for_postcode,
+    gp_ods_code_for_postcode,
+    gp_details_for_ods_code,
+    imd_for_postcode
 )
 from ..validators import not_in_the_future_validator
+
+
+logger = logging.getLogger(__name__)
 
 
 class DateInput(forms.DateInput):
@@ -96,6 +103,21 @@ class PatientForm(forms.ModelForm):
                 )
 
         return date_of_birth
+    
+    def clean_postcode(self):
+        postcode = self.cleaned_data["postcode"]
+
+        try:
+            if not validate_postcode(postcode=postcode):
+                self.add_error(
+                    "postcode",
+                    ValidationError("Invalid postcode %(postcode)s",
+                        params={"postcode":postcode})
+                )
+        except RequestException as err:
+            logger.warning(f"Error validating postcode {err}")
+
+        return postcode
 
     def clean_diagnosis_date(self):
         diagnosis_date = self.cleaned_data["diagnosis_date"]
@@ -143,25 +165,50 @@ class PatientForm(forms.ModelForm):
                 )
 
         if gp_practice_ods_code is None and gp_practice_postcode is None:
-            raise ValidationError(
-                {
-                    "gp_practice_ods_code": [
-                        "'GP Practice ODS code' and 'GP Practice postcode' cannot both be empty"
-                    ]
-                }
-            )
+            self.add_error(None, ValidationError("'GP Practice ODS code' and 'GP Practice postcode' cannot both be empty"))
 
         if not gp_practice_ods_code and gp_practice_postcode:
             try:
-                ods_code = gp_practice_for_postcode(gp_practice_postcode)
+                ods_code = gp_ods_code_for_postcode(gp_practice_postcode)
 
                 if not ods_code:
-                    raise ValidationError(
-                        "Could not find GP practice with that postcode"
+                    self.add_error(
+                        "gp_practice_postcode",
+                        ValidationError(
+                            "Could not find GP practice with postcode %(postcode)s",
+                            params={"postcode":gp_practice_postcode}
+                        )
                     )
                 else:
                     cleaned_data["gp_practice_ods_code"] = ods_code
-            except Exception as error:
-                raise ValidationError({"gp_practice_postcode": [error]})
+            except RequestException as err:
+                logger.warning(f"Error looking up GP practice by postcode {err}")
+
+        elif gp_practice_ods_code:
+            try:
+                if not gp_details_for_ods_code(gp_practice_ods_code):
+                    self.add_error(
+                        "gp_practice_ods_code",
+                        ValidationError(
+                            "Could not find GP practice with ODS code %(ods_code)s",
+                            params={"ods_code":gp_practice_ods_code}
+                        )
+                    )
+            except RequestException as err:
+                logger.warning(f"Error looking up GP practice by ODS code {err}")
 
         return cleaned_data
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+
+        if instance.postcode:
+            try:
+                instance.index_of_multiple_deprivation_quintile = imd_for_postcode(instance.postcode)
+            except RequestException as err:
+                logger.warning(f"Error looking up deprivate score for {instance.postcode} {err}")
+
+        if commit:
+            instance.save()
+        
+        return instance
