@@ -264,7 +264,7 @@ def csv_upload(user, dataframe, csv_file, pdu_pz_code):
     def has_error_that_would_fail_save(errors):
         for _, errors in errors.items():
             for error in errors:
-                if error.code == "required":
+                if error.code in ["required", "null"]:
                     return True
 
     def create_instance(model, form):
