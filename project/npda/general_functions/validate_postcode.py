@@ -28,8 +28,12 @@ def validate_postcode(postcode):
             timeout=10,  # times out after 10 seconds
         )
         response.raise_for_status()
+        
+        return {
+            "normalised_postcode": response.json()["data"]["id"]
+        }
     except HTTPError as e:
         logger.error(e.response.text)
-        return False
+        return None
 
     return True

@@ -41,9 +41,12 @@ VALID_FIELDS = {
     "gp_practice_ods_code": "G85023"
 }
 
+GP_POSTCODE_NO_SPACES = "SE135PJ"
+GP_POSTCODE_WITH_SPACES = "SE13 5PJ"
+
 VALID_FIELDS_WITH_GP_POSTCODE = VALID_FIELDS | {
     "gp_practice_ods_code": None,
-    "gp_practice_postcode": "SE13 5PJ"
+    "gp_practice_postcode": GP_POSTCODE_WITH_SPACES
 }
 
 INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE=4

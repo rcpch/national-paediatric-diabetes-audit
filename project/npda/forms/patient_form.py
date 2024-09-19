@@ -167,9 +167,12 @@ class PatientForm(forms.ModelForm):
         if gp_practice_ods_code is None and gp_practice_postcode is None:
             self.add_error(None, ValidationError("'GP Practice ODS code' and 'GP Practice postcode' cannot both be empty"))
 
-        if not gp_practice_ods_code and gp_practice_postcode:
+        if gp_practice_postcode:
             try:
-                ods_code = gp_ods_code_for_postcode(gp_practice_postcode)
+                validation_result = validate_postcode(gp_practice_postcode)
+                normalised_postcode = validation_result["normalised_postcode"]
+
+                ods_code = gp_ods_code_for_postcode(normalised_postcode)
 
                 if not ods_code:
                     self.add_error(
@@ -181,6 +184,7 @@ class PatientForm(forms.ModelForm):
                     )
                 else:
                     cleaned_data["gp_practice_ods_code"] = ods_code
+                    cleaned_data["gp_practice_postcode"] = normalised_postcode
             except RequestException as err:
                 logger.warning(f"Error looking up GP practice by postcode {err}")
 

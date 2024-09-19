@@ -18,7 +18,9 @@ from project.npda.tests.factories.patient_factory import (
     DATE_OF_BIRTH,
     VALID_FIELDS,
     VALID_FIELDS_WITH_GP_POSTCODE,
-    INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE
+    INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
+    GP_POSTCODE_NO_SPACES,
+    GP_POSTCODE_WITH_SPACES
 )
 
 # Logging
@@ -28,7 +30,7 @@ logger = logging.getLogger(__name__)
 # We don't want to call remote services in unit tests
 @pytest.fixture(autouse=True)
 def mock_remote_calls():
-    with patch("project.npda.forms.patient_form.validate_postcode", Mock(return_value=True)):
+    with patch("project.npda.forms.patient_form.validate_postcode", Mock(return_value={"normalised_postcode":VALID_FIELDS["postcode"]})):
         with patch("project.npda.forms.patient_form.gp_ods_code_for_postcode", Mock(return_value = "G85023")):
             with patch("project.npda.forms.patient_form.gp_details_for_ods_code", Mock(return_value = True)):
                 with patch("project.npda.models.patient.imd_for_postcode", Mock(return_value = INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE)):
@@ -221,7 +223,7 @@ def test_dashes_removed_from_postcode():
 
 
 @pytest.mark.django_db
-@patch("project.npda.forms.patient_form.validate_postcode", Mock(return_value=False))
+@patch("project.npda.forms.patient_form.validate_postcode", Mock(return_value=None))
 def test_invalid_postcode():
     form = PatientForm(VALID_FIELDS)
     form.is_valid()
@@ -257,6 +259,22 @@ def test_error_validating_gp_postcode():
     form.is_valid()
 
     assert(len(form.errors.as_data()) == 0)
+
+
+@pytest.mark.django_db
+@patch("project.npda.forms.patient_form.gp_ods_code_for_postcode", Mock(side_effect=RequestException("oopsie!")))
+def test_normalised_postcode_used_for_call_to_nhs_spine():
+    # The NHS API only returns results if you have a space between the parts of the postcode
+    with patch("project.npda.forms.patient_form.validate_postcode", Mock(return_value={"normalised_postcode":GP_POSTCODE_WITH_SPACES})):
+        with patch("project.npda.forms.patient_form.gp_ods_code_for_postcode") as mock_gp_ods_code_for_postcode:
+            form = PatientForm(VALID_FIELDS_WITH_GP_POSTCODE | {
+                "gp_practice_postcode": GP_POSTCODE_NO_SPACES
+            })
+
+            form.is_valid()
+
+            assert(len(mock_gp_ods_code_for_postcode.call_args_list) == 1)
+            assert(mock_gp_ods_code_for_postcode.call_args_list[0][0][0] == GP_POSTCODE_WITH_SPACES)
 
 
 @pytest.mark.django_db

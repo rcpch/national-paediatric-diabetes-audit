@@ -22,7 +22,7 @@ from project.npda.tests.factories.patient_factory import (
 # We don't want to call remote services in unit tests
 @pytest.fixture(autouse=True)
 def mock_remote_calls():
-    with patch("project.npda.forms.patient_form.validate_postcode", Mock(return_value=True)):
+    with patch("project.npda.forms.patient_form.validate_postcode", Mock(return_value={"normalised_postcode": VALID_FIELDS["postcode"]})):
         with patch("project.npda.forms.patient_form.gp_ods_code_for_postcode", Mock(return_value = "G85023")):
             with patch("project.npda.forms.patient_form.gp_details_for_ods_code", Mock(return_value = True)):
                 with patch("project.npda.models.patient.imd_for_postcode", Mock(return_value = INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE)):
@@ -406,7 +406,7 @@ def test_dashes_removed_from_postcode(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-@patch("project.npda.forms.patient_form.validate_postcode", Mock(return_value=False))
+@patch("project.npda.forms.patient_form.validate_postcode", Mock(return_value=None))
 def test_invalid_postcode(test_user, single_row_valid_df):
     single_row_valid_df["Postcode of usual address"] = "not a postcode"
 
