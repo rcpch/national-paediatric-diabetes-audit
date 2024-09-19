@@ -31,7 +31,7 @@ def mock_remote_calls():
     with patch("project.npda.forms.patient_form.validate_postcode", Mock(return_value=True)):
         with patch("project.npda.forms.patient_form.gp_ods_code_for_postcode", Mock(return_value = "G85023")):
             with patch("project.npda.forms.patient_form.gp_details_for_ods_code", Mock(return_value = True)):
-                with patch("project.npda.forms.patient_form.imd_for_postcode", Mock(return_value = INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE)):
+                with patch("project.npda.models.patient.imd_for_postcode", Mock(return_value = INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE)):
                     yield None
 
 
@@ -290,7 +290,7 @@ def test_lookup_index_of_multiple_deprivation():
 
 
 @pytest.mark.django_db
-@patch("project.npda.forms.patient_form.imd_for_postcode", Mock(side_effect=RequestException("oopsie!")))
+@patch("project.npda.models.patient.imd_for_postcode", Mock(side_effect=RequestException("oopsie!")))
 def test_error_looking_up_index_of_multiple_deprivation():
     # TODO MRB: report this back somehow rather than just eat it in the log?
     form = PatientForm(VALID_FIELDS)

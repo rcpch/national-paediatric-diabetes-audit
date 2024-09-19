@@ -198,17 +198,3 @@ class PatientForm(forms.ModelForm):
                 logger.warning(f"Error looking up GP practice by ODS code {err}")
 
         return cleaned_data
-    
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-
-        if instance.postcode:
-            try:
-                instance.index_of_multiple_deprivation_quintile = imd_for_postcode(instance.postcode)
-            except RequestException as err:
-                logger.warning(f"Error looking up deprivate score for {instance.postcode} {err}")
-
-        if commit:
-            instance.save()
-        
-        return instance

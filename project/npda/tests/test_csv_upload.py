@@ -25,7 +25,7 @@ def mock_remote_calls():
     with patch("project.npda.forms.patient_form.validate_postcode", Mock(return_value=True)):
         with patch("project.npda.forms.patient_form.gp_ods_code_for_postcode", Mock(return_value = "G85023")):
             with patch("project.npda.forms.patient_form.gp_details_for_ods_code", Mock(return_value = True)):
-                with patch("project.npda.forms.patient_form.imd_for_postcode", Mock(return_value = INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE)):
+                with patch("project.npda.models.patient.imd_for_postcode", Mock(return_value = INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE)):
                     yield None
 
 
@@ -395,14 +395,8 @@ def test_error_validating_gp_ods_code(test_user, single_row_valid_df):
     assert(patient.gp_practice_ods_code == "G85023")
 
 
-# TODO MRB: this fails because we do the lookup in PatientForm.save
-# This isn't called from csv_upload because we create instances manually to preserve data on error
 @pytest.mark.django_db
-@pytest.mark.skip(reason="IMD lookup for CSV upload needs implementing")
 def test_lookup_index_of_multiple_deprivation(test_user, single_row_valid_df):
-    patient_form = partial(patient_form_with_mock_remote_calls,
-        imd_for_postcode=Mock(return_value=INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE))
-
     csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
     
     patient = Patient.objects.first()
@@ -410,11 +404,8 @@ def test_lookup_index_of_multiple_deprivation(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-@pytest.mark.skip(reason="IMD lookup for CSV upload needs implementing")
+@patch("project.npda.models.patient.imd_for_postcode", Mock(side_effect=RequestException("oopsie!")))
 def test_error_looking_up_index_of_multiple_deprivation(test_user, single_row_valid_df):
-    patient_form = partial(patient_form_with_mock_remote_calls,
-        imd_for_postcode=Mock(side_effect=RequestException("oopsie!")))
-
     csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
     
     patient = Patient.objects.first()

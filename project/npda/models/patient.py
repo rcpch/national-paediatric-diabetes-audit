@@ -3,6 +3,8 @@ from datetime import date
 import logging
 from enum import Enum
 
+from requests import RequestException
+
 # django imports
 from django.contrib.gis.db import models
 from django.contrib.gis.db.models import CharField, DateField, PositiveSmallIntegerField
@@ -150,3 +152,12 @@ class Patient(models.Model):
         if today_date is None:
             today_date = self.get_todays_date()
         return stringify_time_elapsed(self.date_of_birth, today_date)
+
+    def save(self, *args, **kwargs) -> None:
+        if self.postcode:
+            try:
+                self.index_of_multiple_deprivation_quintile = imd_for_postcode(self.postcode)
+            except RequestException as err:
+                logger.warning(f"Cannot calculate deprivation score for {self.postcode} {err}")
+        
+        return super().save(*args, **kwargs)
