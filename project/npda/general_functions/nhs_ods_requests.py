@@ -14,7 +14,7 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
-def gp_practice_for_postcode(postcode: str):
+def gp_ods_code_for_postcode(postcode: str):
     """
     Returns GP practice as an object from NHS API against a postcode
     """
