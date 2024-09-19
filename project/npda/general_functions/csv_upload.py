@@ -170,7 +170,6 @@ def csv_upload(user, dataframe, csv_file, pdu_pz_code):
                 "death_date": "Death Date",
             },
         )
-        # TODO MRB: check we Validate gp practice ods code
         form = PatientForm(fields)
         assign_original_row_indices_to_errors(form, row)
         return form
