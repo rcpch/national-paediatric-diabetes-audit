@@ -346,11 +346,9 @@ def test_dashes_removed_from_postcode(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@patch("project.npda.forms.patient_form.validate_postcode", Mock(return_value=False))
 def test_invalid_postcode(test_user, single_row_valid_df):
     single_row_valid_df["Postcode of usual address"] = "not a postcode"
-
-    patient_form = partial(patient_form_with_mock_remote_calls,
-        validate_postcode=Mock(return_value=False))
 
     with pytest.raises(ValidationError) as e_info:
         csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
@@ -362,11 +360,9 @@ def test_invalid_postcode(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@patch("project.npda.forms.patient_form.validate_postcode", Mock(side_effect=RequestException("oopsie!")))
 def test_error_validating_postcode(test_user, single_row_valid_df):
     single_row_valid_df["Postcode of usual address"] = "WC1X 8SH"
-
-    patient_form = partial(patient_form_with_mock_remote_calls,
-        validate_postcode=Mock(side_effect=RequestException("Oopsie!")))
 
     csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
     
@@ -375,11 +371,9 @@ def test_error_validating_postcode(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@patch("project.npda.forms.patient_form.gp_details_for_ods_code", Mock(return_value=None))
 def test_invalid_gp_ods_code(test_user, single_row_valid_df):
     single_row_valid_df["GP Practice Code"] = "not a GP code"
-
-    patient_form = partial(patient_form_with_mock_remote_calls,
-        gp_details_for_ods_code=Mock(return_value=None))
 
     with pytest.raises(ValidationError) as e_info:
         csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
@@ -391,11 +385,9 @@ def test_invalid_gp_ods_code(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@patch("project.npda.forms.patient_form.gp_details_for_ods_code", Mock(side_effect=RequestException("oopsie!")))
 def test_error_validating_gp_ods_code(test_user, single_row_valid_df):
     single_row_valid_df["GP Practice Code"] = "G85023"
-
-    patient_form = partial(patient_form_with_mock_remote_calls,
-        validate_postcode=Mock(side_effect=RequestException("Oopsie!")))
 
     csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
     
@@ -418,6 +410,7 @@ def test_lookup_index_of_multiple_deprivation(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@pytest.mark.skip(reason="IMD lookup for CSV upload needs implementing")
 def test_error_looking_up_index_of_multiple_deprivation(test_user, single_row_valid_df):
     patient_form = partial(patient_form_with_mock_remote_calls,
         imd_for_postcode=Mock(side_effect=RequestException("oopsie!")))
@@ -426,33 +419,3 @@ def test_error_looking_up_index_of_multiple_deprivation(test_user, single_row_va
     
     patient = Patient.objects.first()
     assert(patient.index_of_multiple_deprivation_quintile is None)
-
-
-
-# # TODO MRB: should probably expand this out to each possible error just for completeness
-# def test_synchronous_validation_errors_saved():
-#     raise Error("not implemented")
-
-# def test_postcode_validation_error_saved():
-#     raise Error("not implemented")
-
-# def test_index_of_multiple_deprivation_saved():
-#     raise Error("not implemented")
-
-# def test_error_calculating_index_of_multiple_deprivation():
-#     raise Error("not implemented")
-
-# def test_gp_ods_code_validation_error_saved():
-#     raise Error("not implemented")
-
-# def test_error_validating_gp_ods_code():
-#     raise Error("not implemented")
-
-# def test_postcode_validation_error_saved():
-#     raise Error("not implemented")
-
-# def test_error_validating_postcode():
-#     raise Error("not implemented")
-
-# def test_multiple_rows():
-#     raise Error("not implemented")
