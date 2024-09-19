@@ -45,6 +45,25 @@ def single_row_valid_df(dummy_sheets_folder):
     return read_csv(dummy_sheets_folder / 'dummy_sheet.csv').head(1)
 
 @pytest.fixture
+def one_patient_two_visits(dummy_sheets_folder):
+    df = read_csv(dummy_sheets_folder / 'dummy_sheet.csv').head(2)
+
+    assert(len(df) == 2)
+    assert(df["NHS Number"][0] == df["NHS Number"][1])
+
+    return df
+
+@pytest.fixture
+def two_patients_first_with_two_visits_second_with_one(dummy_sheets_folder):
+    df = read_csv(dummy_sheets_folder / 'dummy_sheet.csv').head(3)
+
+    assert(len(df) == 3)
+    assert(df["NHS Number"][0] == df["NHS Number"][1])
+    assert(df["NHS Number"][2] != df["NHS Number"][0])
+
+    return df
+
+@pytest.fixture
 def test_user(seed_groups_fixture, seed_users_fixture):
     return NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE
@@ -75,8 +94,8 @@ def test_create_patient_with_death_date(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_multiple_rows(test_user, valid_df):
-    df = valid_df.head(3)
+def test_multiple_patients(test_user, two_patients_first_with_two_visits_second_with_one):
+    df = two_patients_first_with_two_visits_second_with_one
 
     assert(df["NHS Number"][0] == df["NHS Number"][1])
     assert(df["NHS Number"][0] != df["NHS Number"][2])
@@ -84,9 +103,10 @@ def test_multiple_rows(test_user, valid_df):
     csv_upload(test_user, df, None, ALDER_HEY_PZ_CODE)
 
     assert(Patient.objects.count() == 2)
+    [first_patient, second_patient] = Patient.objects.all()
 
-    first_patient = Patient.objects.all()[0]
-    second_patient = Patient.objects.all()[1]
+    assert(Visit.objects.filter(patient=first_patient).count() == 2)
+    assert(Visit.objects.filter(patient=second_patient).count() == 1)
 
     assert(first_patient.nhs_number == nhs_number.normalise_number(df["NHS Number"][0]))
     assert(first_patient.date_of_birth == df["Date of Birth"][0].date())
@@ -150,10 +170,8 @@ def test_error_in_single_visit(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_error_in_multiple_visits(test_user, valid_df):
-    df = valid_df.head(2)
-    assert(df["NHS Number"][0] == df["NHS Number"][1])
-
+def test_error_in_multiple_visits(test_user, one_patient_two_visits):
+    df = one_patient_two_visits
     df['Diabetes Treatment at time of Hba1c measurement'][0] = 45
 
     with pytest.raises(ValidationError) as e_info:
@@ -174,8 +192,8 @@ def test_error_in_multiple_visits(test_user, valid_df):
 
 
 @pytest.mark.django_db
-def test_multiple_patients_where_one_has_visit_errors_and_the_other_does_not(test_user, valid_df):
-    df = valid_df.head(3)
+def test_multiple_patients_where_one_has_visit_errors_and_the_other_does_not(test_user, two_patients_first_with_two_visits_second_with_one):
+    df = two_patients_first_with_two_visits_second_with_one
 
     assert(df["NHS Number"][0] == df["NHS Number"][1])
     assert(df["NHS Number"][0] != df["NHS Number"][2])
