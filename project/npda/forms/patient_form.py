@@ -170,7 +170,7 @@ class PatientForm(forms.ModelForm):
                 )
 
         if gp_practice_ods_code is None and gp_practice_postcode is None:
-            self.add_error(None, ValidationError("'GP Practice ODS code' and 'GP Practice postcode' cannot both be empty"))
+            self.add_error("gp_practice_ods_code", ValidationError("'GP Practice ODS code' and 'GP Practice postcode' cannot both be empty"))
 
         if gp_practice_postcode:
             try:

@@ -158,9 +158,9 @@ def test_missing_gp_details():
     form = PatientForm({})
     
     errors = form.errors.as_data()
-    assert("__all__" in errors)
+    assert("gp_practice_ods_code" in errors)
 
-    error_message = errors["__all__"][0].messages[0]
+    error_message = errors["gp_practice_ods_code"][0].messages[0]
     assert(error_message == "'GP Practice ODS code' and 'GP Practice postcode' cannot both be empty")
 
 
