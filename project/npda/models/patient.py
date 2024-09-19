@@ -31,18 +31,6 @@ from ..general_functions import (
 logger = logging.getLogger(__name__)
 
 
-class PatientError(Enum):
-    """NOT including nhs number as that error should prevent saving"""
-
-    DOB_IN_FUTURE = "Date of birth cannot be in the future."
-    PT_OLDER_THAN_19yo = "Patient is too old for the NPDA."
-    INVALID_POSTCODE = "Postcode is invalid."
-    DEPRIVATION_CALCULATION_FAILED = "Cannot calculate deprivation score."
-    INVALID_DIABETES_TYPE = "Diabetes type is invalid."
-    DIAGNOSIS_DATE_BEFORE_DOB = "Diagnosis date is before date of birth."
-    DIAGNOSIS_DATE_IN_FUTURE = "Diagnosis date cannot be in the future."
-
-
 class Patient(models.Model):
     """
     The Patient class.
