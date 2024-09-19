@@ -151,6 +151,7 @@ def test_invalid_ethnicity():
     assert("ethnicity" in form.errors.as_data())
 
 
+# TODO MRB: should we make this error more obvious that you can only set GP postcode in the form?
 def test_missing_gp_details():
     form = PatientForm({})
     

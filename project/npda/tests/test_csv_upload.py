@@ -83,7 +83,7 @@ def test_multiple_rows(test_user, valid_df):
     assert(df["NHS Number"][0] == df["NHS Number"][1])
     assert(df["NHS Number"][0] != df["NHS Number"][2])
 
-    csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
+    csv_upload(test_user, df, None, ALDER_HEY_PZ_CODE)
 
     assert(Patient.objects.count() == 2)
 
@@ -131,7 +131,7 @@ def test_one_row_fails_one_row_passes(test_user, valid_df):
     df["NHS Number"][0] = None
 
     with pytest.raises(ValidationError) as e_info:
-        csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
+        csv_upload(test_user, df, None, ALDER_HEY_PZ_CODE)
     
     # TODO: assert row number in exception
 
@@ -173,8 +173,7 @@ def test_future_date_of_birth(test_user, single_row_valid_df):
     assert("date_of_birth" in patient.errors)
 
     error_message = patient.errors["date_of_birth"][0]['message']
-    # TODO MRB: why does this have entity encoding issues?
-    assert(error_message == "&#x27;Date of Birth&#x27; cannot be in the future")
+    assert(error_message == "Cannot be in the future")
 
 
 @pytest.mark.django_db
@@ -221,8 +220,7 @@ def test_future_diagnosis_date(test_user, single_row_valid_df):
     assert("diagnosis_date" in patient.errors)
 
     error_message = patient.errors["diagnosis_date"][0]['message']
-    # TODO MRB: why does this have entity encoding issues?
-    assert(error_message == "&#x27;Diagnosis Date&#x27; cannot be in the future")
+    assert(error_message == "Cannot be in the future")
 
 
 @pytest.mark.django_db
@@ -280,7 +278,13 @@ def test_missing_gp_ods_code(test_user, single_row_valid_df):
 
     patient = Patient.objects.first()
 
-    assert("gp_practice_ods_code" in patient.errors)
+    assert("__all__" in patient.errors)
+
+    # TODO MRB: should we make this error more obvious that you can only set ODS code in the spreadsheet?
+    error_message = patient.errors["__all__"][0]['message']
+    # TODO MRB: why does this have entity encoding issues?
+    assert(error_message == "&#x27;GP Practice ODS code&#x27; and &#x27;GP Practice postcode&#x27; cannot both be empty")
+
 
 
 @pytest.mark.django_db
@@ -298,8 +302,7 @@ def test_future_death_date(test_user, single_row_valid_df):
     assert("death_date" in patient.errors)
 
     error_message = patient.errors["death_date"][0]['message']
-    # TODO MRB: why does this have entity encoding issues?
-    assert(error_message == "&#x27;Death Date&#x27; cannot be in the future")
+    assert(error_message == "Cannot be in the future")
 
 
 @pytest.mark.django_db
