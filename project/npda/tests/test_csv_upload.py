@@ -126,30 +126,13 @@ def test_multiple_patients(test_user, two_patients_first_with_two_visits_second_
     pytest.param("Date of Diabetes Diagnosis")
 ])
 @pytest.mark.django_db
-def test_missing_mandatory_field(test_user, single_row_valid_df, column):
-    single_row_valid_df.loc[0, column] = None
-
-    with pytest.raises(ValidationError) as e_info:
-        csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
-
-    # TODO MRB: report back the original column names rather than the form/model field names
-    # assert(column in e_info.value.message_dict)
-
-    # Catastrophic - we can't save this patient at all
-    assert(Patient.objects.count() == 0)
-
-
-@pytest.mark.django_db
-def test_missing_mandatory_field_fails_entire_upload(test_user, valid_df):
-    valid_df.loc[0, 'NHS Number'] = None
+def test_missing_mandatory_field(test_user, valid_df, column):
+    valid_df.loc[0, column] = None
 
     with pytest.raises(ValidationError) as e_info:
         csv_upload(test_user, valid_df, None, ALDER_HEY_PZ_CODE)
 
-    # TODO MRB: report back the original column names rather than the form/model field names
-    # assert(column in e_info.value.message_dict)
-
-    # Catastrophic - we can't save this patient at all
+    # Catastrophic - we can't save this patient at all so we won't save any of the patients in the submission
     assert(Patient.objects.count() == 0)
 
 
@@ -159,9 +142,6 @@ def test_error_in_single_visit(test_user, single_row_valid_df):
 
     with pytest.raises(ValidationError) as e_info:
         csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
-
-    # TODO MRB: report back the original column names rather than the form/model field names
-    # assert(column in e_info.value.message_dict)
 
     visit = Visit.objects.first()
 
@@ -176,9 +156,6 @@ def test_error_in_multiple_visits(test_user, one_patient_two_visits):
 
     with pytest.raises(ValidationError) as e_info:
         csv_upload(test_user, df, None, ALDER_HEY_PZ_CODE)
-
-    # TODO MRB: report back the original column names rather than the form/model field names
-    # assert(column in e_info.value.message_dict)
 
     assert(Visit.objects.count() == 2)
 

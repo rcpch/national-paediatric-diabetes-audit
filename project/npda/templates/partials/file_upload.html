@@ -12,7 +12,7 @@
                 </div>
                 {% for error in errors %}
                     <div class="text-md">
-                            Row <strong>{{error.original_row_index|add:1}}</strong>: {{error.message}}
+                            Row <strong>{{error.original_row_index|add:1}}</strong>: "{{error.field}}". {{error.message}}
                     </div>
                 {% endfor %}
             {% endif %}
