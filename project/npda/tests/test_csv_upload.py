@@ -85,7 +85,7 @@ def test_create_patient(test_user, single_row_valid_df):
 @pytest.mark.django_db
 def test_create_patient_with_death_date(test_user, single_row_valid_df):
     death_date = VALID_FIELDS["diagnosis_date"] + relativedelta(years=1)
-    single_row_valid_df["Death Date"] = pd.to_datetime(death_date)
+    single_row_valid_df.loc[0, "Death Date"] = pd.to_datetime(death_date)
 
     csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
     patient = Patient.objects.first()
@@ -127,7 +127,7 @@ def test_multiple_patients(test_user, two_patients_first_with_two_visits_second_
 ])
 @pytest.mark.django_db
 def test_missing_mandatory_field(test_user, single_row_valid_df, column):
-    single_row_valid_df[column] = None
+    single_row_valid_df.loc[0, column] = None
 
     with pytest.raises(ValidationError) as e_info:
         csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
@@ -141,7 +141,7 @@ def test_missing_mandatory_field(test_user, single_row_valid_df, column):
 
 @pytest.mark.django_db
 def test_missing_mandatory_field_fails_entire_upload(test_user, valid_df):
-    valid_df['NHS Number'][0] = None
+    valid_df.loc[0, 'NHS Number'] = None
 
     with pytest.raises(ValidationError) as e_info:
         csv_upload(test_user, valid_df, None, ALDER_HEY_PZ_CODE)
@@ -155,7 +155,7 @@ def test_missing_mandatory_field_fails_entire_upload(test_user, valid_df):
 
 @pytest.mark.django_db
 def test_error_in_single_visit(test_user, single_row_valid_df):
-    single_row_valid_df['Diabetes Treatment at time of Hba1c measurement'][0] = 45
+    single_row_valid_df.loc[0, 'Diabetes Treatment at time of Hba1c measurement'] = 45
 
     with pytest.raises(ValidationError) as e_info:
         csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
@@ -172,7 +172,7 @@ def test_error_in_single_visit(test_user, single_row_valid_df):
 @pytest.mark.django_db
 def test_error_in_multiple_visits(test_user, one_patient_two_visits):
     df = one_patient_two_visits
-    df['Diabetes Treatment at time of Hba1c measurement'][0] = 45
+    df.loc[0, 'Diabetes Treatment at time of Hba1c measurement'] = 45
 
     with pytest.raises(ValidationError) as e_info:
         csv_upload(test_user, df, None, ALDER_HEY_PZ_CODE)
@@ -198,7 +198,7 @@ def test_multiple_patients_where_one_has_visit_errors_and_the_other_does_not(tes
     assert(df["NHS Number"][0] == df["NHS Number"][1])
     assert(df["NHS Number"][0] != df["NHS Number"][2])
 
-    df['Diabetes Treatment at time of Hba1c measurement'][0] = 45
+    df.loc[0, 'Diabetes Treatment at time of Hba1c measurement'] = 45
 
     with pytest.raises(ValidationError) as e_info:
         csv_upload(test_user, df, None, ALDER_HEY_PZ_CODE)
