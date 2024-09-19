@@ -10,7 +10,7 @@ from requests import RequestException
 from django.apps import apps
 from django.core.exceptions import ValidationError
 
-from project.npda.models import NPDAUser, Patient
+from project.npda.models import NPDAUser, Patient, Visit
 from project.npda.general_functions.csv_upload import read_csv, csv_upload
 from project.npda.tests.factories.patient_factory import (
     TODAY,
@@ -50,8 +50,6 @@ def test_user(seed_groups_fixture, seed_users_fixture):
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE
     ).first()
 
-# TODO MRB: test transfer
-# TODO MRB: test Visit creation and validation
 
 @pytest.mark.django_db
 def test_create_patient(test_user, single_row_valid_df):
@@ -122,25 +120,92 @@ def test_missing_mandatory_field(test_user, single_row_valid_df, column):
 
 
 @pytest.mark.django_db
-def test_one_row_fails_one_row_passes(test_user, valid_df):
-    # TODO MRB: a descriptive fixture for this
-    df = valid_df.drop(1).reset_index(drop=True).head(2)
-    assert(df["NHS Number"][0] != df["NHS Number"][1])
+def test_missing_mandatory_field_fails_entire_upload(test_user, valid_df):
+    valid_df['NHS Number'][0] = None
 
-    # Force a failure to save
-    df["NHS Number"][0] = None
+    with pytest.raises(ValidationError) as e_info:
+        csv_upload(test_user, valid_df, None, ALDER_HEY_PZ_CODE)
+
+    # TODO MRB: report back the original column names rather than the form/model field names
+    # assert(column in e_info.value.message_dict)
+
+    # Catastrophic - we can't save this patient at all
+    assert(Patient.objects.count() == 0)
+
+
+@pytest.mark.django_db
+def test_error_in_single_visit(test_user, single_row_valid_df):
+    single_row_valid_df['Diabetes Treatment at time of Hba1c measurement'][0] = 45
+
+    with pytest.raises(ValidationError) as e_info:
+        csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
+
+    # TODO MRB: report back the original column names rather than the form/model field names
+    # assert(column in e_info.value.message_dict)
+
+    visit = Visit.objects.first()
+
+    assert(visit.treatment == 45)
+    assert("treatment" in visit.errors)
+
+
+@pytest.mark.django_db
+def test_error_in_multiple_visits(test_user, valid_df):
+    df = valid_df.head(2)
+    assert(df["NHS Number"][0] == df["NHS Number"][1])
+
+    df['Diabetes Treatment at time of Hba1c measurement'][0] = 45
 
     with pytest.raises(ValidationError) as e_info:
         csv_upload(test_user, df, None, ALDER_HEY_PZ_CODE)
-    
-    # TODO: assert row number in exception
 
-    assert(Patient.objects.count() == 1)
+    # TODO MRB: report back the original column names rather than the form/model field names
+    # assert(column in e_info.value.message_dict)
 
-    patient = Patient.objects.first()
-    assert(patient.nhs_number == df["NHS Number"][1])
+    assert(Visit.objects.count() == 2)
 
-# TODO MRB: test errors returned, across multiple visits for the same patient and across multiple patients
+    [first_visit, second_visit] = Visit.objects.all().order_by('visit_date')
+
+    assert(first_visit.treatment == 45)
+    assert("treatment" in first_visit.errors)
+
+    assert(second_visit.treatment == df["Diabetes Treatment at time of Hba1c measurement"][1])
+    assert(second_visit.errors is None)
+
+
+@pytest.mark.django_db
+def test_multiple_patients_where_one_has_visit_errors_and_the_other_does_not(test_user, valid_df):
+    df = valid_df.head(3)
+
+    assert(df["NHS Number"][0] == df["NHS Number"][1])
+    assert(df["NHS Number"][0] != df["NHS Number"][2])
+
+    df['Diabetes Treatment at time of Hba1c measurement'][0] = 45
+
+    with pytest.raises(ValidationError) as e_info:
+        csv_upload(test_user, df, None, ALDER_HEY_PZ_CODE)
+
+    [patient_one, patient_two] = Patient.objects.all()
+
+    assert(Visit.objects.count() == 3)
+
+    [first_visit_for_first_patient, second_visit_for_first_patient] = Visit.objects.filter(patient=patient_one).order_by('visit_date')
+    [visit_for_second_patient] = Visit.objects.filter(patient=patient_two)
+
+    assert(first_visit_for_first_patient.treatment == 45)
+    assert("treatment" in first_visit_for_first_patient.errors)
+
+    assert(second_visit_for_first_patient.treatment == df["Diabetes Treatment at time of Hba1c measurement"][1])
+    assert(second_visit_for_first_patient.errors is None)
+
+    assert(visit_for_second_patient.treatment == df["Diabetes Treatment at time of Hba1c measurement"][2])
+    assert(visit_for_second_patient.errors is None)
+
+
+@pytest.mark.django_db
+def test_multiple_patients_with_visit_errors():
+    pass
+
 
 @pytest.mark.django_db
 def test_invalid_nhs_number(test_user, single_row_valid_df):
