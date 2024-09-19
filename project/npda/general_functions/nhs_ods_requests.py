@@ -24,14 +24,11 @@ def gp_ods_code_for_postcode(postcode: str):
         f"{url}/organisations/?PostCode={postcode}&Status=Active&PrimaryRoleId=RO177"
     )
 
-    try:
-        response = requests.get(
-            url=request_url,
-            timeout=10,  # times out after 10 seconds
-        )
-        response.raise_for_status()
-    except HTTPError:
-        raise Exception(f"{postcode} not found")
+    response = requests.get(
+        url=request_url,
+        timeout=10,  # times out after 10 seconds
+    )
+    response.raise_for_status()
 
     organisations = response.json()["Organisations"]
 
@@ -46,14 +43,14 @@ def gp_details_for_ods_code(ods_code: str):
 
     url = f"{settings.NHS_SPINE_SERVICES_URL}/organisations/{ods_code}"
 
-    try:
-        response = requests.get(
-            url=url,
-            timeout=10,  # times out after 10 seconds
-        )
-        response.raise_for_status()
-    except HTTPError as e:
-        return {"error": e}
+    response = requests.get(
+        url=url,
+        timeout=10,  # times out after 10 seconds
+    )
+    
+    if response.status_code == 404:
+        return None
 
-    logger.warning(response.json())
+    response.raise_for_status()
+
     return response.json()["Organisation"]
