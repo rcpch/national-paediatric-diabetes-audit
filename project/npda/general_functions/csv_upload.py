@@ -22,7 +22,12 @@ from ..forms.patient_form import PatientForm
 from ..forms.visit_form import VisitForm
 
 
-def csv_upload(user, csv_file=None, pdu_pz_code=None):
+def read_csv(csv_file):
+    return pd.read_csv(
+        csv_file, parse_dates=ALL_DATES, dayfirst=True, date_format="%d/%m/%Y"
+    )
+
+def csv_upload(user, dataframe, csv_file, pdu_pz_code):
     """
     Processes standardised NPDA csv file and persists results in NPDA tables
 
@@ -35,10 +40,6 @@ def csv_upload(user, csv_file=None, pdu_pz_code=None):
     Visit = apps.get_model("npda", "Visit")
     Submission = apps.get_model("npda", "Submission")
     PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-
-    dataframe = pd.read_csv(
-        csv_file, parse_dates=ALL_DATES, dayfirst=True, date_format="%d/%m/%Y"
-    )
 
     # get the PDU object
     # TODO #249 MRB: handle case where PDU does not exist
@@ -71,9 +72,11 @@ def csv_upload(user, csv_file=None, pdu_pz_code=None):
             submission_active=True,
         )
 
-        # save the csv file with a custom name
-        new_filename = f"{pdu.pz_code}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        new_submission.csv_file.save(new_filename, csv_file)
+        if csv_file:
+            # save the csv file with a custom name
+            new_filename = f"{pdu.pz_code}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            new_submission.csv_file.save(new_filename, csv_file)
+        
         new_submission.save()
 
     except Exception as e:
