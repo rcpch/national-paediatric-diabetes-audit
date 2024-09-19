@@ -204,22 +204,37 @@ def test_multiple_date_validation_errors_returned():
 
 @pytest.mark.django_db
 def test_spaces_removed_from_postcode():
-    form = PatientForm(VALID_FIELDS | {
-        "postcode": "WC1X 8SH",
-    })
+    with patch("project.npda.forms.patient_form.validate_postcode") as mock_validate_postcode:
+        form = PatientForm(VALID_FIELDS | {
+            "postcode": "WC1X 8SH",
+        })
 
-    form.is_valid()
-    assert(form.cleaned_data["postcode"] == "WC1X8SH")
+        form.is_valid()
+    
+        assert(len(mock_validate_postcode.call_args_list) == 1)
+        assert(mock_validate_postcode.call_args_list[0][0][0] == "WC1X8SH")
 
 
 @pytest.mark.django_db
 def test_dashes_removed_from_postcode():
-    form = PatientForm(VALID_FIELDS | {
-        "postcode": "WC1X-8SH",
-    })
+    with patch("project.npda.forms.patient_form.validate_postcode") as mock_validate_postcode:
+        form = PatientForm(VALID_FIELDS | {
+            "postcode": "WC1X-8SH",
+        })
 
+        form.is_valid()
+    
+        assert(len(mock_validate_postcode.call_args_list) == 1)
+        assert(mock_validate_postcode.call_args_list[0][0][0] == "WC1X8SH")
+
+
+@pytest.mark.django_db
+@patch("project.npda.forms.patient_form.validate_postcode", Mock(return_value={"normalised_postcode":"W1A 1AA"}))
+def test_normalised_postcode_saved():
+    form = PatientForm(VALID_FIELDS)
     form.is_valid()
-    assert(form.cleaned_data["postcode"] == "WC1X8SH")
+
+    assert(form.cleaned_data["postcode"] == "W1A 1AA")
 
 
 @pytest.mark.django_db
@@ -262,7 +277,6 @@ def test_error_validating_gp_postcode():
 
 
 @pytest.mark.django_db
-@patch("project.npda.forms.patient_form.gp_ods_code_for_postcode", Mock(side_effect=RequestException("oopsie!")))
 def test_normalised_postcode_used_for_call_to_nhs_spine():
     # The NHS API only returns results if you have a space between the parts of the postcode
     with patch("project.npda.forms.patient_form.validate_postcode", Mock(return_value={"normalised_postcode":GP_POSTCODE_WITH_SPACES})):

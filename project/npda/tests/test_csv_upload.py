@@ -386,26 +386,6 @@ def test_death_date_before_date_of_birth(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_spaces_removed_from_postcode(test_user, single_row_valid_df):
-    single_row_valid_df["Postcode of usual address"] = "WC1X 8SH"
-
-    csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
-    patient = Patient.objects.first()
-
-    assert(patient.postcode == "WC1X8SH")
-
-
-@pytest.mark.django_db
-def test_dashes_removed_from_postcode(test_user, single_row_valid_df):
-    single_row_valid_df["Postcode of usual address"] = "WC1X-8SH"
-
-    csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
-    patient = Patient.objects.first()
-
-    assert(patient.postcode == "WC1X8SH")
-
-
-@pytest.mark.django_db
 @patch("project.npda.forms.patient_form.validate_postcode", Mock(return_value=None))
 def test_invalid_postcode(test_user, single_row_valid_df):
     single_row_valid_df["Postcode of usual address"] = "not a postcode"

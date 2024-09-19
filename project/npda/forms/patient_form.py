@@ -108,16 +108,21 @@ class PatientForm(forms.ModelForm):
         postcode = self.cleaned_data["postcode"]
 
         try:
-            if not validate_postcode(postcode=postcode):
+            result = validate_postcode(postcode)
+            
+            if not result:
                 self.add_error(
                     "postcode",
                     ValidationError("Invalid postcode %(postcode)s",
                         params={"postcode":postcode})
                 )
+
+                return postcode
+            else:
+                return result["normalised_postcode"]
         except RequestException as err:
             logger.warning(f"Error validating postcode {err}")
-
-        return postcode
+            return postcode
 
     def clean_diagnosis_date(self):
         diagnosis_date = self.cleaned_data["diagnosis_date"]
