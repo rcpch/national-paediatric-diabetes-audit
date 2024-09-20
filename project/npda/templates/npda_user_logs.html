@@ -6,6 +6,10 @@
       <div class="inline-block min-w-full py-2 sm:px-6 lg:px-8">
           <div class="relative overflow-x-auto">
             <strong>NPDA Audit Access Logs for {{npdauser.get_full_name}} (NPDA User ID-{{npdauser.pk}})</strong>
+            <p class="text-gray-400 font-montserrat">
+              <small>Password last set: {{npdauser.password_last_set}}</small><br/>
+              <small>Account created: {{npdauser.date_joined}}</small> 
+            </p>
             {% if visitactivities %}
               <table class="lg-table-fixed table-fixed w-full text-sm text-left rtl:text-left text-gray-500 text-gray-400 mb-5 font-montserrat">
                   <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">

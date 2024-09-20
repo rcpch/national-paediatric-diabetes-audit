@@ -69,3 +69,23 @@ This has the basic django user functions but has the following extra custome fie
 - `is_patient_or_carer`: boolean - a custom field that defines the user is a patient or carer
 - `role` - user type as above
 - `organisation_employer` - this is a relational field with an Organisation. Only applies to clinicians and therefore is None for RCPCH employees.
+
+#### Passwords and Two factor authentication
+
+Password access is required to access all areas of the NPDA platform apart from the documentation/user guide. Rules for passwords are:
+Minimum of 10 characters (minimum 16 for RCPCH Audit team)
+Must contain ONE capital
+Must contain ONE number
+Must contain ONE symbol from !@£$%^&*()_-+=|~
+Must NOT be exclusively numbers
+Must NOT be same as your email, name, surname
+
+User accounts allow a maximum of 5 consecutive attempts after which the account is locked for 5 minutes.
+
+Two Factor authentication is required for all login access. This is set up only once at first login. A user can change their 2 Factor Authentication settings once logged in by clicking on the their name in the top right of the screen and navigating to Two Factor Authentication.
+
+Two Factor Authentication is either by email or Microsoft Authenticator on a mobile phone. If a user successfully logs in with their passwords, they must either check their email for a Token or generate one on their Microsoft Authenticator app.
+
+#### Captcha
+
+In addition to the above methods of authentication, a rotating image of numbers or letters is used to ensure only humans can gain access.

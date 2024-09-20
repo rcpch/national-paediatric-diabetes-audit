@@ -12,14 +12,9 @@ from django.utils.translation import gettext as _
 # third party imports
 from captcha.fields import CaptchaField
 
-from project.npda.general_functions import organisations_adapter
-
 # RCPCH imports
 from ...constants.styles.form_styles import *
-from ..models import NPDAUser
-from project.npda.general_functions import (
-    organisations_adapter,
-)
+from ..models import NPDAUser, VisitActivity
 
 
 # Logging setup
@@ -126,6 +121,11 @@ class NPDAUpdatePasswordForm(SetPasswordForm):
         user.password_last_set = timezone.now()
         if commit:
             logger.debug(f"Updating password_last_set to {timezone.now()}")
+            VisitActivity.objects.create(
+                npdauser=user,
+                activity=5,
+                ip_address=None,  # cannot get ip address here as it is not a request
+            )  # password reset successful - activity 5
             user.save()
         return user
 
@@ -171,23 +171,28 @@ class CaptchaAuthenticationForm(AuthenticationForm):
 
             user = NPDAUser.objects.get(email=email.lower())
 
-            # visit_activities = VisitActivity.objects.filter(
-            #     npda12user=user
-            # ).order_by("-activity_datetime")[:5]
+            visit_activities = VisitActivity.objects.filter(npdauser=user).order_by(
+                "-activity_datetime"
+            )[:5]
 
-            # failed_login_activities = [
-            #     activity for activity in visit_activities if activity.activity == 2
-            # ]
+            failed_login_activities = [
+                activity for activity in visit_activities if activity.activity == 2
+            ]
 
-            # if failed_login_activities:
-            #     first_activity = failed_login_activities[-1]
+            if failed_login_activities:
+                first_activity = failed_login_activities[-1]
 
-            #     if len(
-            #         failed_login_activities
-            #     ) >= 5 and timezone.now() <= first_activity.activity_datetime + timezone.timedelta(
-            #         minutes=10
-            #     ):
-            #         raise forms.ValidationError(
-            #             "You have failed to login 5 or more consecutive times. You have been locked out for 10 minutes"
-            #         )
+                if len(
+                    failed_login_activities
+                ) >= 5 and timezone.now() <= first_activity.activity_datetime + timezone.timedelta(
+                    minutes=5
+                ):
+                    VisitActivity.objects.create(
+                        activity=6,
+                        ip_address=self.request.META.get("REMOTE_ADDR"),
+                        npdauser=user,  # password lockout - activity 6
+                    )
+                    raise forms.ValidationError(
+                        "You have failed to login 5 or more consecutive times. You have been locked out for 10 minutes"
+                    )
             return email.lower()
