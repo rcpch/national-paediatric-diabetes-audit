@@ -34,7 +34,6 @@ register(TransferFactory)  # => npdauser_factory
 @pytest.fixture(autouse=True)
 def patch_imd_for_postcode():
     """Automatically patch `imd_for_postcode` for all tests."""
-    logger.debug("Patched imd_for_postcode returning 4")
     with patch('project.npda.models.patient.imd_for_postcode', return_value=4) as mock_model:
-        print("Patching imd_for_postcode at models.patient:", mock_model)
+        logger.debug("Patching imd_for_postcode at models.patient:", mock_model)
         yield
