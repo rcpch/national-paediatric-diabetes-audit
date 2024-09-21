@@ -1,7 +1,7 @@
 """Views for KPIs
 
 TODO:
-    - refactor all calculate_kpi methods which require kpi_1 base query set to use 
+    - refactor all calculate_kpi methods which require kpi_1 base query set to use
       _get_total_kpi_1_eligible_pts_base_query_set_and_total_count
         - additionally, do same for any other reused attrs
 """
@@ -1674,52 +1674,91 @@ class CalculateKPIS:
         Eligible patients = KPI_5_TOTAL_ELIGIBLE + KPI_6_TOTAL_ELIGIBLE
         PASS = of eligible patients, how many completed KPI 25-29, 31, 32 (exclude 30 retinal screening)
         """
-        # Get the KPI5&6 querysets
-        kpi_5_total_eligible_query_set, _ = (
+        
+
+
+        # # Get the KPI5&6 querysets
+        # kpi_5_total_eligible_query_set, _ = (
+        #     self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
+        # )
+        # kpi_6_total_eligible_query_set, _ = (
+        #     self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count()
+        # )
+        # total_eligible = kpi_5_total_eligible_query_set.union(
+        #     kpi_6_total_eligible_query_set
+        # ).count()
+        # total_ineligible = self.total_patients_count - total_eligible
+
+        # # Find patients with ALL KPIS 25,26,27,28,29, 31 PASSING (Apply conditions
+        # # to both querysets first, THEN union them)
+        # eligibility_conditions = [
+        #     # KPI 25
+        #     Q(visit__hba1c__isnull=False),
+        #     Q(visit__hba1c_date__range=(self.AUDIT_DATE_RANGE)),
+        #     # KPI 26
+        #     Q(visit__height__isnull=False),
+        #     Q(visit__weight__isnull=False),
+        #     Q(visit__height_weight_observation_date__range=(self.AUDIT_DATE_RANGE)),
+        #     # KPI 27
+        #     Q(visit__thyroid_function_date__range=(self.AUDIT_DATE_RANGE)),
+        #     # KPI 28
+        #     Q(visit__systolic_blood_pressure__isnull=False),
+        #     Q(visit__blood_pressure_observation_date__range=(self.AUDIT_DATE_RANGE)),
+        #     # KPI 29
+        #     Q(visit__albumin_creatinine_ratio__isnull=False),
+        #     Q(visit__albumin_creatinine_ratio_date__range=(self.AUDIT_DATE_RANGE)),
+        #     # KPI 31
+        #     Q(visit__foot_examination_observation_date__range=(self.AUDIT_DATE_RANGE)),
+        # ]
+        # filtered_kpi_5_eligible = kpi_5_total_eligible_query_set.filter(
+        #     *eligibility_conditions
+        # )
+
+        # filtered_kpi_6_eligible = kpi_6_total_eligible_query_set.filter(
+        #     *eligibility_conditions
+        # )
+
+        # # Perform the union after filtering for passing patients
+        # eligible_patients_filtered = filtered_kpi_5_eligible.union(
+        #     filtered_kpi_6_eligible
+        # )
+        # total_passed = eligible_patients_filtered.count()
+        # total_failed = total_eligible - total_passed
+
+        # return KPIResult(
+        #     total_eligible=total_eligible,
+        #     total_ineligible=total_ineligible,
+        #     total_passed=total_passed,
+        #     total_failed=total_failed,
+        # )
+
+    def calculate_kpi_33_hba1c_4plus(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 32: HbA1c 4+ (%)
+
+        Numerator: Number of eligible patients with at least four entries for HbA1c value (item 17) with an observation date (item 19) within the audit period
+
+        Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
+        """
+        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = (
             self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
         )
-        kpi_6_total_eligible_query_set, _ = (
-            self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count()
-        )
-        total_eligible = kpi_5_total_eligible_query_set.union(
-            kpi_6_total_eligible_query_set
-        ).count()
+
+        eligible_patients = kpi_5_total_eligible_query_set
+        total_eligible = total_eligible_kpi_5
         total_ineligible = self.total_patients_count - total_eligible
 
-        # Find patients with ALL KPIS 25,26,27,28,29, 31 PASSING (Apply conditions
-        # to both querysets first, THEN union them)
-        eligibility_conditions = [
-            # KPI 25
-            Q(visit__hba1c__isnull=False),
-            Q(visit__hba1c_date__range=(self.AUDIT_DATE_RANGE)),
-            # KPI 26
+        # Find patients with at least one valid entry for ht & wt within audit period
+        total_passed_query_set = eligible_patients.filter(
             Q(visit__height__isnull=False),
             Q(visit__weight__isnull=False),
+            # Within audit period
             Q(visit__height_weight_observation_date__range=(self.AUDIT_DATE_RANGE)),
-            # KPI 27
-            Q(visit__thyroid_function_date__range=(self.AUDIT_DATE_RANGE)),
-            # KPI 28
-            Q(visit__systolic_blood_pressure__isnull=False),
-            Q(visit__blood_pressure_observation_date__range=(self.AUDIT_DATE_RANGE)),
-            # KPI 29
-            Q(visit__albumin_creatinine_ratio__isnull=False),
-            Q(visit__albumin_creatinine_ratio_date__range=(self.AUDIT_DATE_RANGE)),
-            # KPI 31
-            Q(visit__foot_examination_observation_date__range=(self.AUDIT_DATE_RANGE)),
-        ]
-        filtered_kpi_5_eligible = kpi_5_total_eligible_query_set.filter(
-            *eligibility_conditions
         )
 
-        filtered_kpi_6_eligible = kpi_6_total_eligible_query_set.filter(
-            *eligibility_conditions
-        )
-
-        # Perform the union after filtering for passing patients
-        eligible_patients_filtered = filtered_kpi_5_eligible.union(
-            filtered_kpi_6_eligible
-        )
-        total_passed = eligible_patients_filtered.count()
+        total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
         return KPIResult(
