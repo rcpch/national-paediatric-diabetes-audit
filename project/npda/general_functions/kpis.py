@@ -11,10 +11,10 @@ import logging
 import time
 from dataclasses import asdict, dataclass, is_dataclass
 from datetime import date, datetime
-from typing import Tuple
+from typing import Tuple, Union
 
 from dateutil.relativedelta import relativedelta
-from django.db.models import OuterRef, Q, QuerySet, Subquery
+from django.db.models import Count, OuterRef, Q, QuerySet, Subquery
 from django.http import JsonResponse
 # Django imports
 from django.shortcuts import render
@@ -187,8 +187,39 @@ class CalculateKPIS:
 
         return kpis
 
+    def _run_kpi_calculation_method(
+        self, kpi_method_name: str
+    ) -> Union[KPIResult | str]:
+        """Will find and run kpi calculation method
+        (name schema is calculation_KPI_NAME_MAP_VALUE) if found, else returns
+        the string "Not implemented".
+        """
+
+        kpi_method = getattr(self, f"calculate_{kpi_method_name}", None)
+
+        # If the method is not implemented, set the value to "Not implemented"
+        # and skip
+        if kpi_method is None:
+            return "Not implemented"
+
+        # Else, calculate the KPI
+        kpi_result = kpi_method()
+
+        logger.debug(f'{kpi_method_name=} and {kpi_result=}')
+        # Validations
+        if not is_dataclass(kpi_result):
+            raise TypeError(
+                f"kpi_result is not a dataclass instance: {kpi_result} (type: {type(kpi_result)})"
+            )
+        if not isinstance(kpi_result, KPIResult):
+            raise TypeError(
+                f"kpi_result is not an instance of KPIResult: {kpi_result} (type: {type(kpi_result)})"
+            )
+
+        return kpi_result
+
     def calculate_kpis_for_patients(self) -> dict:
-        """Calculate KPIs for given self.pz_code and cohort range
+        """Calculate KPIs 1 - 49 for given self.pz_code and cohort range
         (self.audit_start_date and self.audit_end_date).
 
         We dynamically set these attributes using names set in self.kpis, done in
@@ -197,37 +228,27 @@ class CalculateKPIS:
         Incrementally build the query, which will be executed in a single
         transaction once a value is evaluated.
         """
-
+        # Init dict to store calc results
         calculated_kpis = {}
 
-        # Calculate KPIs 1 - 49
-        for i in range(1, 50):
+        # Standard KPIs (all excluding KPI32)
+        kpi_idxs = list(range(1, 32)) + (list(range(33, 50)))
+        # Now add kpi32 which has 3 sub kpis
+        kpi_idxs.extend([321,322,323])
+        for i in kpi_idxs:
             # Dynamically get the method name from the kpis_names_map
             kpi_method_name = self.kpis_names_map[i]
-            kpi_method = getattr(self, f"calculate_{kpi_method_name}", None)
 
-            # If the method is not implemented, set the value to "Not implemented"
-            # and skip
-            if kpi_method is None:
-                calculated_kpis[kpi_method_name] = "Not implemented"
-                continue
+            kpi_result = self._run_kpi_calculation_method(kpi_method_name)
 
-            # Else, calculate the KPI
-            kpi_result = kpi_method()
-
-            # Validations
-            if not is_dataclass(kpi_result):
-                raise TypeError(
-                    f"kpi_result is not a dataclass instance: {kpi_result} (type: {type(kpi_result)})"
-                )
-            if not isinstance(kpi_result, KPIResult):
-                raise TypeError(
-                    f"kpi_result is not an instance of KPIResult: {kpi_result} (type: {type(kpi_result)})"
-                )
-
-            # Each kpi method returns a KPIResult object
-            # so we convert it first to a dictionary
-            calculated_kpis[kpi_method_name] = asdict(kpi_result)
+            # If calculation_method name not found, kpi_result will be
+            # "Not implemented"
+            if type(kpi_result) == str:
+                calculated_kpis[kpi_method_name] = kpi_result
+            else:
+                # Each kpi method returns a KPIResult object
+                # so we convert it first to a dictionary
+                calculated_kpis[kpi_method_name] = asdict(kpi_result)
 
         # Add in used attributes for calculations
         return_obj = {}
@@ -1755,12 +1776,12 @@ class CalculateKPIS:
         # total_passed = eligible_patients_filtered.count()
         # total_failed = total_eligible - total_passed
 
-        # return KPIResult(
-        #     total_eligible=total_eligible,
-        #     total_ineligible=total_ineligible,
-        #     total_passed=total_passed,
-        #     total_failed=total_failed,
-        # )
+        return KPIResult(
+            total_eligible=-1,
+            total_ineligible=-1,
+            total_passed=-1,
+            total_failed=-1,
+        )
 
     def calculate_kpi_33_hba1c_4plus(
         self,
@@ -1780,17 +1801,31 @@ class CalculateKPIS:
         total_eligible = total_eligible_kpi_5
         total_ineligible = self.total_patients_count - total_eligible
 
-        # Find patients with at least one valid entry for ht & wt within audit period
-        total_passed_query_set = eligible_patients.filter(
-            Q(visit__height__isnull=False),
-            Q(visit__weight__isnull=False),
-            # Within audit period
-            Q(
-                visit__height_weight_observation_date__range=(
-                    self.AUDIT_DATE_RANGE
+        # Find patients with at least 4 entries for HbA1c value with associated
+        # observation date within audit period
+        logger.debug(
+            f"""ANNOTED PATIENTS:
+            {eligible_patients.annotate(
+                hba1c_valid_visits=Count(
+                    "visit",
+                    filter=Q(
+                        visit__hba1c__isnull=False,
+                        visit__hba1c_date__range=self.AUDIT_DATE_RANGE,
+                    ),
+                    distinct=True,
                 )
-            ),
+            )}"""
         )
+        total_passed_query_set = eligible_patients.annotate(
+            hba1c_valid_visits=Count(
+                "visit",
+                filter=Q(
+                    visit__hba1c__isnull=False,
+                    visit__hba1c_date__range=self.AUDIT_DATE_RANGE,
+                ),
+                distinct=True,
+            )
+        ).filter(hba1c_valid_visits__gte=4)
 
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
