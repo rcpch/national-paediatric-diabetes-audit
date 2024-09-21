@@ -205,7 +205,7 @@ class CalculateKPIS:
         # Else, calculate the KPI
         kpi_result = kpi_method()
 
-        logger.debug(f'{kpi_method_name=} and {kpi_result=}')
+        logger.debug(f"{kpi_method_name=} and {kpi_result=}")
         # Validations
         if not is_dataclass(kpi_result):
             raise TypeError(
@@ -234,7 +234,7 @@ class CalculateKPIS:
         # Standard KPIs (all excluding KPI32)
         kpi_idxs = list(range(1, 32)) + (list(range(33, 50)))
         # Now add kpi32 which has 3 sub kpis
-        kpi_idxs.extend([321,322,323])
+        kpi_idxs.extend([321, 322, 323])
         for i in kpi_idxs:
             # Dynamically get the method name from the kpis_names_map
             kpi_method_name = self.kpis_names_map[i]
@@ -1803,32 +1803,24 @@ class CalculateKPIS:
 
         # Find patients with at least 4 entries for HbA1c value with associated
         # observation date within audit period
-        logger.debug(
-            f"""ANNOTED PATIENTS:
-            {eligible_patients.annotate(
-                hba1c_valid_visits=Count(
-                    "visit",
-                    filter=Q(
-                        visit__hba1c__isnull=False,
-                        visit__hba1c_date__range=self.AUDIT_DATE_RANGE,
-                    ),
-                    distinct=True,
-                )
-            )}"""
-        )
-        total_passed_query_set = eligible_patients.annotate(
+
+        # First get query set of patients with at least 4 valid HbA1c measures
+        eligible_pts_annotated_hba1c_visits = eligible_patients.annotate(
             hba1c_valid_visits=Count(
                 "visit",
                 filter=Q(
                     visit__hba1c__isnull=False,
                     visit__hba1c_date__range=self.AUDIT_DATE_RANGE,
                 ),
-                distinct=True,
             )
-        ).filter(hba1c_valid_visits__gte=4)
+        )
+        total_passed_query_set = eligible_pts_annotated_hba1c_visits.filter(
+            hba1c_valid_visits__gte=4
+        )
 
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
+
 
         return KPIResult(
             total_eligible=total_eligible,
