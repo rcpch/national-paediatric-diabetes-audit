@@ -2525,3 +2525,137 @@ def test_kpi_calculation_33(AUDIT_START_DATE):
         expected=EXPECTED_KPIRESULT,
         actual=calc_kpis.calculate_kpi_33_hba1c_4plus(),
     )
+
+
+@pytest.mark.django_db
+def test_kpi_calculation_34(AUDIT_START_DATE):
+    """Tests that KPI34 is calculated correctly.
+
+    Numerator: Number of eligible patients with an entry for Psychological Screening Date (item 38) within the audit period
+
+    Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
+    """
+
+    # Ensure starting with clean pts in test db
+    Patient.objects.all().delete()
+
+    # Create  Patients and Visits that should be eligible (KPI5)
+    eligible_criteria = {
+        # KPI5 base criteria
+        "visit__visit_date": AUDIT_START_DATE + relativedelta(days=2),
+        "date_of_birth": AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # KPI 5 specific eligibility are any of the following:
+        # Date of diagnosis NOT within the audit period
+        "diagnosis_date": AUDIT_START_DATE - relativedelta(days=2),
+        # Date of leaving service NOT within the audit period
+        # transfer date only not None if they have left
+        "transfer__date_leaving_service": None,
+        # Date of death NOT within the audit period"
+        "death_date": None,
+    }
+
+    # Passing patients
+    passing_patient_1 = PatientFactory(
+        postcode="passing_patient_1",
+        # KPI5 eligible
+        **eligible_criteria,
+        # KPI 34 specific
+        visit__psychological_screening_assessment_date=AUDIT_START_DATE
+        + relativedelta(days=2),
+    )
+    # second visit has a valid psychological screening date
+    passing_patient_2 = PatientFactory(
+        postcode="passing_patient_2",
+        # KPI5 eligible
+        **eligible_criteria,
+        # KPI 34 specific
+        visit__psychological_screening_assessment_date=None,
+    )
+    # create 2nd visit
+    VisitFactory(
+        patient=passing_patient_2,
+        visit_date=AUDIT_START_DATE + relativedelta(days=5),
+        psychological_screening_assessment_date=AUDIT_START_DATE+relativedelta(days=5),
+    )
+
+
+    # Failing patients
+    # outside audit period
+    failing_patient_1 = PatientFactory(
+        postcode="failing_patient_1",
+        # KPI5 eligible
+        **eligible_criteria,
+        # KPI 34 specific
+        visit__psychological_screening_assessment_date=AUDIT_START_DATE
+        - relativedelta(days=2),
+    )
+    # No psychological screening
+    failing_patient_2 = PatientFactory(
+        postcode="failing_patient_2",
+        # KPI5 eligible
+        **eligible_criteria,
+        # KPI 34 specific
+        visit__psychological_screening_assessment_date=None,
+    )
+
+    # Create Patients and Visits that should be ineligble
+    # Visit date before audit period
+    ineligible_patient_visit_date = PatientFactory(
+        postcode="ineligible_patient_visit_date",
+        visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
+        visit__treatment=1,
+    )
+    # Above age 25 at start of audit period
+    ineligible_patient_too_old = PatientFactory(
+        postcode="ineligible_patient_too_old",
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
+        visit__treatment=1,
+    )
+    # KPI5 specific
+    ineligible_patient_diag_within_audit_period = PatientFactory(
+        postcode="ineligible_patient_diag_within_audit_period",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # Date of diagnosis within the audit period
+        diagnosis_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+    ineligible_patient_date_leaving_within_audit_period = PatientFactory(
+        postcode="ineligible_patient_date_leaving_within_audit_period",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # Date of leaving service within the audit period
+        transfer__date_leaving_service=AUDIT_START_DATE
+        + relativedelta(days=2),
+    )
+    ineligible_patient_death_within_audit_period = PatientFactory(
+        postcode="ineligible_patient_death_within_audit_period",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # Date of death within the audit period"
+        death_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+
+    calc_kpis = CalculateKPIS(
+        pz_code="PZ130",
+        calculation_date=AUDIT_START_DATE,
+    )
+
+    EXPECTED_TOTAL_ELIGIBLE = 4
+    EXPECTED_TOTAL_INELIGIBLE = 5
+    EXPECTED_TOTAL_PASSED = 2
+    EXPECTED_TOTAL_FAILED = 2
+
+    EXPECTED_KPIRESULT = KPIResult(
+        total_eligible=EXPECTED_TOTAL_ELIGIBLE,
+        total_passed=EXPECTED_TOTAL_PASSED,
+        total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
+        total_failed=EXPECTED_TOTAL_FAILED,
+    )
+
+    assert_kpi_result_equal(
+        expected=EXPECTED_KPIRESULT,
+        actual=calc_kpis.calculate_kpi_34_psychological_assessment(),
+    )

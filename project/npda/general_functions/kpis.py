@@ -1757,7 +1757,7 @@ class CalculateKPIS:
         self,
     ) -> dict:
         """
-        Calculates KPI 32: HbA1c 4+ (%)
+        Calculates KPI 33: HbA1c 4+ (%)
 
         Numerator: Number of eligible patients with at least four entries for HbA1c value (item 17) with an observation date (item 19) within the audit period
 
@@ -1791,6 +1791,49 @@ class CalculateKPIS:
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def calculate_kpi_34_psychological_assessment(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 34: Psychological assessment (%)
+
+        Numerator: Number of eligible patients with an entry for Psychological Screening Date (item 38) within the audit period
+
+        Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
+        """
+        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = (
+            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = kpi_5_total_eligible_query_set
+        total_eligible = total_eligible_kpi_5
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Find patients with an entry for Psychological Screening Date
+        # (item 38) within the audit period
+
+        # First get query set of patients with at least 1 valid psych screen
+        eligible_pts_annotated_psych_screen_visits = eligible_patients.annotate(
+            psych_valid_visits=Count(
+                "visit",
+                filter=Q(
+                    visit__psychological_screening_assessment_date__range=self.AUDIT_DATE_RANGE,
+                ),
+            )
+        )
+        total_passed_query_set = eligible_pts_annotated_psych_screen_visits.filter(
+            psych_valid_visits__gte=1
+        )
+
+        total_passed = total_passed_query_set.count()
+        total_failed = total_eligible - total_passed
 
         return KPIResult(
             total_eligible=total_eligible,
