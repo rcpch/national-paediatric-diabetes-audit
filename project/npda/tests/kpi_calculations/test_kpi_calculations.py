@@ -3,25 +3,11 @@ Also contains utils / helper functions for testing the CalculateKPIS class.
 """
 
 import logging
-from dataclasses import fields
 from datetime import date
-from typing import List
 
 import pytest
-from dateutil.relativedelta import relativedelta
 
-from project.constants.diabetes_treatment import TREATMENT_TYPES
-from project.constants.diabetes_types import DIABETES_TYPES
-from project.constants.hba1c_format import HBA1C_FORMATS
-from project.constants.retinal_screening_results import \
-    RETINAL_SCREENING_RESULTS
-from project.constants.smoking_status import SMOKING_STATUS
 from project.npda.general_functions.kpis import CalculateKPIS, KPIResult
-from project.npda.general_functions.model_utils import \
-    print_instance_field_attrs
-from project.npda.models import Patient, Visit
-from project.npda.tests.factories.patient_factory import PatientFactory
-from project.npda.tests.factories.visit_factory import VisitFactory
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -86,5 +72,3 @@ def test_ensure_mocked_audit_date_range_is_correct(AUDIT_START_DATE):
     assert calc_kpis.audit_end_date == date(
         2025, 3, 31
     ), f"Mocked audit end date incorrect!"
-
-

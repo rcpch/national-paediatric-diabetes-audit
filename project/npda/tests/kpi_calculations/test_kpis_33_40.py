@@ -5,9 +5,6 @@ import pytest
 from dateutil.relativedelta import relativedelta
 
 from project.constants.diabetes_types import DIABETES_TYPES
-from project.constants.hba1c_format import HBA1C_FORMATS
-from project.constants.retinal_screening_results import \
-    RETINAL_SCREENING_RESULTS
 from project.constants.smoking_status import SMOKING_STATUS
 from project.npda.general_functions.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
