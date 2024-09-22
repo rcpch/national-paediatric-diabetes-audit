@@ -2037,6 +2037,51 @@ class CalculateKPIS:
             total_failed=total_failed,
         )
 
+    def calculate_kpi_39_influenza_immunisation_recommended(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 39: Influenza immunisation recommended (%)
+
+        Numerator: Number of eligible patients with at least one entry for Influzena Immunisation Recommended (item 24) within the audit period
+
+        Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
+        """
+        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = (
+            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = kpi_5_total_eligible_query_set
+        total_eligible = total_eligible_kpi_5
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Find patients with at least one entry for Influzena Immunisation
+        # Recommended (item 24) within the audit period
+        eligible_pts_annotated_flu_immunisation_recommended_date_visits = eligible_patients.annotate(
+            flu_immunisation_recommended_date_valid_visits=Count(
+                "visit",
+                filter=Q(
+                    visit__visit_date__range=self.AUDIT_DATE_RANGE,
+                    visit__flu_immunisation_recommended_date__range=self.AUDIT_DATE_RANGE,
+                ),
+            )
+        )
+        total_passed_query_set = (
+            eligible_pts_annotated_flu_immunisation_recommended_date_visits.filter(
+                flu_immunisation_recommended_date_valid_visits__gte=1
+            )
+        )
+
+        total_passed = total_passed_query_set.count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
     def _get_total_kpi_1_eligible_pts_base_query_set_and_total_count(
         self,
     ) -> Tuple[QuerySet, int]:
