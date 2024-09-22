@@ -1965,18 +1965,65 @@ class CalculateKPIS:
         total_ineligible = self.total_patients_count - total_eligible
 
         # Find patients with at least one entry for Additional Dietitian Appointment Offered (item 43) that is 1 = Yes within the audit period (based on visit date)
-        eligible_pts_annotated_dietician_offered_visits = eligible_patients.annotate(
-            dietician_offered_valid_visits=Count(
-                "visit",
-                filter=Q(
-                    visit__visit_date__range=self.AUDIT_DATE_RANGE,
-                    visit__dietician_additional_appointment_offered=1,
-                ),
+        eligible_pts_annotated_dietician_offered_visits = (
+            eligible_patients.annotate(
+                dietician_offered_valid_visits=Count(
+                    "visit",
+                    filter=Q(
+                        visit__visit_date__range=self.AUDIT_DATE_RANGE,
+                        visit__dietician_additional_appointment_offered=1,
+                    ),
+                )
             )
         )
         total_passed_query_set = (
             eligible_pts_annotated_dietician_offered_visits.filter(
                 dietician_offered_valid_visits__gte=1
+            )
+        )
+
+        total_passed = total_passed_query_set.count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def calculate_kpi_38_patients_attending_additional_dietetic_appointment(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 38: Patients attending additional dietetic appointment (%)
+
+        Numerator: Number of eligible patients with at least one entry for Additional Dietitian Appointment Date (item 44) within the audit year
+
+        Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
+        """
+        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = (
+            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = kpi_5_total_eligible_query_set
+        total_eligible = total_eligible_kpi_5
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Find patients with at least one entry for Additional Dietitian
+        # Appointment Date (item 44) within the audit year
+        eligible_pts_annotated_dietician_additional_visits = eligible_patients.annotate(
+            dietician_additional_valid_visits=Count(
+                "visit",
+                filter=Q(
+                    visit__visit_date__range=self.AUDIT_DATE_RANGE,
+                    visit__dietician_additional_appointment_date__range=self.AUDIT_DATE_RANGE,
+                ),
+            )
+        )
+        total_passed_query_set = (
+            eligible_pts_annotated_dietician_additional_visits.filter(
+                dietician_additional_valid_visits__gte=1
             )
         )
 
