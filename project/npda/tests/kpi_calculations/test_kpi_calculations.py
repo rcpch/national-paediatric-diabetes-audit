@@ -13,6 +13,7 @@ from project.constants.diabetes_types import DIABETES_TYPES
 from project.constants.hba1c_format import HBA1C_FORMATS
 from project.constants.retinal_screening_results import \
     RETINAL_SCREENING_RESULTS
+from project.constants.smoking_status import SMOKING_STATUS
 from project.npda.general_functions.kpis import CalculateKPIS, KPIResult
 from project.npda.general_functions.model_utils import \
     print_instance_field_attrs
@@ -2658,4 +2659,130 @@ def test_kpi_calculation_34(AUDIT_START_DATE):
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
         actual=calc_kpis.calculate_kpi_34_psychological_assessment(),
+    )
+
+
+@pytest.mark.django_db
+def test_kpi_calculation_35(AUDIT_START_DATE):
+    """Tests that KPI35 is calculated correctly.
+
+       Numerator: Number of eligible patients with at least one entry for Smoking Status (item 40) that is either 1 = Non-smoker or 2 = Curent smoker within the audit period (based on visit date)
+
+        Denominator: Number of patients with Type 1 diabetes aged 12+ with a complete year of care in audit period (measure 6)
+    """
+
+    # Ensure starting with clean pts in test db
+    Patient.objects.all().delete()
+
+    # Create  Patients and Visits that should be eligible (KPI6)
+    eligible_criteria = {
+        # First needs to be KPI1 eligible
+        # Age 12 and above at the start of the audit period
+        "date_of_birth": AUDIT_START_DATE - relativedelta(years=12),
+        # Diagnosis of Type 1 diabetes
+        "diabetes_type": DIABETES_TYPES[0][0],
+        # KPI 6 specific = an observation within the audit period
+        "visit__height_weight_observation_date": AUDIT_START_DATE
+        + relativedelta(days=2),
+        # Also has same exclusions as KPI 5
+        # Date of diagnosis NOT within the audit period
+        "diagnosis_date": AUDIT_START_DATE - relativedelta(days=2),
+        # Date of leaving service NOT within the audit period
+        # transfer date only not None if they have left
+        "transfer__date_leaving_service": None,
+        # Date of death NOT within the audit period"
+        "death_date": None,
+    }
+
+    # Passing patients
+    passing_patient_1 = PatientFactory(
+        postcode="passing_patient_1",
+        # KPI5 eligible
+        **eligible_criteria,
+        # KPI 35 specific
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=5),
+        visit__smoking_status=SMOKING_STATUS[0][0]
+    )
+    # second visit has a valid smoking status
+    passing_patient_2 = PatientFactory(
+        postcode="passing_patient_2",
+        # KPI5 eligible
+        **eligible_criteria,
+        # KPI 35 specific
+        visit__visit_date=None,
+        visit__smoking_status=None,
+    )
+    # create 2nd visit
+    VisitFactory(
+        patient=passing_patient_2,
+        visit_date=AUDIT_START_DATE + relativedelta(days=5),
+        smoking_status=SMOKING_STATUS[1][0]
+    )
+
+
+    # Failing patients
+    # other smoking status
+    failing_patient_1 = PatientFactory(
+        postcode="failing_patient_1",
+        # KPI5 eligible
+        **eligible_criteria,
+        # KPI 35 specific
+        visit__smoking_status=SMOKING_STATUS[2][0],
+    )
+    # No smoke screening
+    failing_patient_2 = PatientFactory(
+        postcode="failing_patient_2",
+        # KPI5 eligible
+        **eligible_criteria,
+        # KPI 35 specific
+        visit__smoking_status=None,
+    )
+
+    # Create Patients and Visits that should be ineligble
+    ineligible_patient_diag_within_audit_period = PatientFactory(
+        postcode="ineligible_patient_diag_within_audit_period",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # Date of diagnosis within the audit period
+        diagnosis_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+    ineligible_patient_date_leaving_within_audit_period = PatientFactory(
+        postcode="ineligible_patient_date_leaving_within_audit_period",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # Date of leaving service within the audit period
+        transfer__date_leaving_service=AUDIT_START_DATE
+        + relativedelta(days=2),
+    )
+    ineligible_patient_death_within_audit_period = PatientFactory(
+        postcode="ineligible_patient_death_within_audit_period",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # Date of death within the audit period"
+        death_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+
+    calc_kpis = CalculateKPIS(
+        pz_code="PZ130",
+        calculation_date=AUDIT_START_DATE,
+    )
+
+    EXPECTED_TOTAL_ELIGIBLE = 4
+    EXPECTED_TOTAL_INELIGIBLE = 3
+    EXPECTED_TOTAL_PASSED = 2
+    EXPECTED_TOTAL_FAILED = 2
+
+    EXPECTED_KPIRESULT = KPIResult(
+        total_eligible=EXPECTED_TOTAL_ELIGIBLE,
+        total_passed=EXPECTED_TOTAL_PASSED,
+        total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
+        total_failed=EXPECTED_TOTAL_FAILED,
+    )
+
+    assert_kpi_result_equal(
+        expected=EXPECTED_KPIRESULT,
+        actual=calc_kpis.calculate_kpi_35_smoking_status_screened(),
     )
