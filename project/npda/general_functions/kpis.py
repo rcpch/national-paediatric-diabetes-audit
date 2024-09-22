@@ -14,7 +14,7 @@ from datetime import date, datetime
 from typing import Tuple, Union
 
 from dateutil.relativedelta import relativedelta
-from django.db.models import Count, OuterRef, Q, QuerySet, Subquery
+from django.db.models import Count, Exists, OuterRef, Q, QuerySet, Subquery
 # Django imports
 from django.shortcuts import render
 from django.views.generic import TemplateView
@@ -23,6 +23,7 @@ from django.views.generic import TemplateView
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.constants.retinal_screening_results import \
     RETINAL_SCREENING_RESULTS
+from project.constants.smoking_status import SMOKING_STATUS
 from project.npda.general_functions import get_audit_period_for_date
 from project.npda.models import Patient
 from project.npda.models.visit import Visit
@@ -1828,8 +1829,293 @@ class CalculateKPIS:
                 ),
             )
         )
-        total_passed_query_set = eligible_pts_annotated_psych_screen_visits.filter(
-            psych_valid_visits__gte=1
+        total_passed_query_set = (
+            eligible_pts_annotated_psych_screen_visits.filter(
+                psych_valid_visits__gte=1
+            )
+        )
+
+        total_passed = total_passed_query_set.count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def calculate_kpi_35_smoking_status_screened(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 35: Smoking status screened (%)
+
+        Numerator: Number of eligible patients with at least one entry for Smoking Status (item 40) that is either 1 = Non-smoker or 2 = Curent smoker within the audit period (based on visit date)
+
+        Denominator: Number of patients with Type 1 diabetes aged 12+ with a complete year of care in audit period (measure 6)
+        """
+        kpi_6_total_eligible_query_set, total_eligible_kpi_6 = (
+            self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = kpi_6_total_eligible_query_set
+        total_eligible = total_eligible_kpi_6
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Find patients with a valid entry for Smoking status
+        # Get the visits that match the valid smoking status criteria
+        valid_smoking_visits = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            visit_date__range=self.AUDIT_DATE_RANGE,
+            smoking_status__in=[1, 2],
+        )
+        eligible_pts_annotated_smoke_screen_visits = eligible_patients.annotate(
+            smoke_valid_visits=Exists(
+                valid_smoking_visits
+            )  # This ensures a boolean check if such visits exist
+            # NOTE: spent far too long debugging why this would not work
+            # by just using Count() and filter when the patient's first
+            # Visit had no smoking status but the second did. Some underlying
+            # join issue with the first None meaning no subsequent Visits
+            # would be founted. Exists() implementation here solved this.
+        )
+
+        total_passed_query_set = (
+            eligible_pts_annotated_smoke_screen_visits.filter(
+                smoke_valid_visits__gte=1
+            )
+        )
+
+        total_passed = total_passed_query_set.count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def calculate_kpi_36_referral_to_smoking_cessation_service(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 36: Referral to smoking cessation service (%)
+
+        Numerator: Number of eligible patients with an entry for Date of Smoking Cessation Referral (item 41) within the audit period
+
+        Denominator: Number of patients with Type 1 diabetes aged 12+ with a complete year of care in audit period (measure 6)
+        """
+        kpi_6_total_eligible_query_set, total_eligible_kpi_6 = (
+            self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = kpi_6_total_eligible_query_set
+        total_eligible = total_eligible_kpi_6
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Get the visits that match the valid Smoking Cessation Referral date
+        smoke_cessation_visits = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            visit_date__range=self.AUDIT_DATE_RANGE,
+            smoking_cessation_referral_date__range=self.AUDIT_DATE_RANGE,
+        )
+        # Find patients with a valid entry for Smoking Cessation Referral
+        eligible_pts_annotated_smoke_screen_visits = (
+            eligible_patients.annotate(
+                smoke_cessation_referral_valid_visits=Exists(
+                    smoke_cessation_visits
+                )
+            )
+        )
+
+        total_passed_query_set = (
+            eligible_pts_annotated_smoke_screen_visits.filter(
+                smoke_cessation_referral_valid_visits__gte=1
+            )
+        )
+
+        total_passed = total_passed_query_set.count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def calculate_kpi_37_additional_dietetic_appointment_offered(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 37: Additional dietetic appointment offered (%)
+
+        Numerator: Numer of eligible patients with at least one entry for Additional Dietitian Appointment Offered (item 43) that is 1 = Yes within the audit period (based on visit date)
+
+        Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
+        """
+        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = (
+            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = kpi_5_total_eligible_query_set
+        total_eligible = total_eligible_kpi_5
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Find patients with at least one entry for Additional Dietitian Appointment Offered (item 43) that is 1 = Yes within the audit period (based on visit date)
+        eligible_pts_annotated_dietician_offered_visits = (
+            eligible_patients.annotate(
+                dietician_offered_valid_visits=Count(
+                    "visit",
+                    filter=Q(
+                        visit__visit_date__range=self.AUDIT_DATE_RANGE,
+                        visit__dietician_additional_appointment_offered=1,
+                    ),
+                )
+            )
+        )
+        total_passed_query_set = (
+            eligible_pts_annotated_dietician_offered_visits.filter(
+                dietician_offered_valid_visits__gte=1
+            )
+        )
+
+        total_passed = total_passed_query_set.count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def calculate_kpi_38_patients_attending_additional_dietetic_appointment(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 38: Patients attending additional dietetic appointment (%)
+
+        Numerator: Number of eligible patients with at least one entry for Additional Dietitian Appointment Date (item 44) within the audit year
+
+        Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
+        """
+        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = (
+            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = kpi_5_total_eligible_query_set
+        total_eligible = total_eligible_kpi_5
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Find patients with at least one entry for Additional Dietitian
+        # Appointment Date (item 44) within the audit year
+        eligible_pts_annotated_dietician_additional_visits = eligible_patients.annotate(
+            dietician_additional_valid_visits=Count(
+                "visit",
+                filter=Q(
+                    visit__visit_date__range=self.AUDIT_DATE_RANGE,
+                    visit__dietician_additional_appointment_date__range=self.AUDIT_DATE_RANGE,
+                ),
+            )
+        )
+        total_passed_query_set = (
+            eligible_pts_annotated_dietician_additional_visits.filter(
+                dietician_additional_valid_visits__gte=1
+            )
+        )
+
+        total_passed = total_passed_query_set.count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def calculate_kpi_39_influenza_immunisation_recommended(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 39: Influenza immunisation recommended (%)
+
+        Numerator: Number of eligible patients with at least one entry for Influzena Immunisation Recommended (item 24) within the audit period
+
+        Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
+        """
+        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = (
+            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = kpi_5_total_eligible_query_set
+        total_eligible = total_eligible_kpi_5
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Find patients with at least one entry for Influzena Immunisation
+        # Recommended (item 24) within the audit period
+        eligible_pts_annotated_flu_immunisation_recommended_date_visits = eligible_patients.annotate(
+            flu_immunisation_recommended_date_valid_visits=Count(
+                "visit",
+                filter=Q(
+                    visit__visit_date__range=self.AUDIT_DATE_RANGE,
+                    visit__flu_immunisation_recommended_date__range=self.AUDIT_DATE_RANGE,
+                ),
+            )
+        )
+        total_passed_query_set = (
+            eligible_pts_annotated_flu_immunisation_recommended_date_visits.filter(
+                flu_immunisation_recommended_date_valid_visits__gte=1
+            )
+        )
+
+        total_passed = total_passed_query_set.count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def calculate_kpi_40_sick_day_rules_advice(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 40: Sick day rules advice (%)
+
+        Numerator:Number of eligible patients with at least one entry for Sick
+        Day Rules (item 47) within the audit period
+
+        Denominator: Total number of eligible patients (measure 1)
+        """
+        kpi_1_total_eligible_query_set, total_eligible_kpi_1 = (
+            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = kpi_1_total_eligible_query_set
+        total_eligible = total_eligible_kpi_1
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Find patients with at least one entry for Sick
+        # Day Rules (item 47) within the audit period
+        eligible_pts_annotated_sick_day_rules_visits = eligible_patients.annotate(
+            sick_day_rules_valid_visits=Count(
+                "visit",
+                filter=Q(
+                    visit__visit_date__range=self.AUDIT_DATE_RANGE,
+                    visit__sick_day_rules_training_date__range=self.AUDIT_DATE_RANGE,
+                ),
+            )
+        )
+        total_passed_query_set = (
+            eligible_pts_annotated_sick_day_rules_visits.filter(
+                sick_day_rules_valid_visits__gte=1
+            )
         )
 
         total_passed = total_passed_query_set.count()
