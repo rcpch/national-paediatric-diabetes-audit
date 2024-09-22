@@ -2082,6 +2082,52 @@ class CalculateKPIS:
             total_failed=total_failed,
         )
 
+    def calculate_kpi_40_sick_day_rules_advice(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 40: Sick day rules advice (%)
+
+        Numerator:Number of eligible patients with at least one entry for Sick
+        Day Rules (item 47) within the audit period
+
+        Denominator: Total number of eligible patients (measure 1)
+        """
+        kpi_1_total_eligible_query_set, total_eligible_kpi_1 = (
+            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = kpi_1_total_eligible_query_set
+        total_eligible = total_eligible_kpi_1
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Find patients with at least one entry for Sick
+        # Day Rules (item 47) within the audit period
+        eligible_pts_annotated_sick_day_rules_visits = eligible_patients.annotate(
+            sick_day_rules_valid_visits=Count(
+                "visit",
+                filter=Q(
+                    visit__visit_date__range=self.AUDIT_DATE_RANGE,
+                    visit__sick_day_rules_training_date__range=self.AUDIT_DATE_RANGE,
+                ),
+            )
+        )
+        total_passed_query_set = (
+            eligible_pts_annotated_sick_day_rules_visits.filter(
+                sick_day_rules_valid_visits__gte=1
+            )
+        )
+
+        total_passed = total_passed_query_set.count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
     def _get_total_kpi_1_eligible_pts_base_query_set_and_total_count(
         self,
     ) -> Tuple[QuerySet, int]:

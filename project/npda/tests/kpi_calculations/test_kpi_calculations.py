@@ -1244,9 +1244,9 @@ def test_kpi_calculation_22(AUDIT_START_DATE):
 def test_kpi_calculation_23(AUDIT_START_DATE):
     """Tests that KPI23 is calculated correctly.
 
-    Numerator: Total number of eligible patients with Type 1 diabetes (measure 2)
+    Denominator: Total number of eligible patients with Type 1 diabetes (measure 2)
 
-    Denominator: Number of eligible patients whose most recent entry (based on visit date) for blood glucose monitoring (item 22) is  4 = Real time continuous glucose monitor with alarms
+    Numerator: Number of eligible patients whose most recent entry (based on visit date) for blood glucose monitoring (item 22) is  4 = Real time continuous glucose monitor with alarms
     """
 
     # Ensure starting with clean pts in test db
@@ -1315,9 +1315,9 @@ def test_kpi_calculation_23(AUDIT_START_DATE):
 def test_kpi_calculation_24(AUDIT_START_DATE):
     """Tests that KPI24 is calculated correctly.
 
-    Numerator: Total number of eligible patients (measure 1)
+    Denominator: Total number of eligible patients (measure 1)
 
-    Denominator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is either
+    Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is either
         * 3 = insulin pump
         * or 6 = Insulin pump therapy plus other blood glucose lowering medication
 
@@ -3269,4 +3269,88 @@ def test_kpi_calculation_39(AUDIT_START_DATE):
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
         actual=calc_kpis.calculate_kpi_39_influenza_immunisation_recommended(),
+    )
+
+@pytest.mark.django_db
+def test_kpi_calculation_40(AUDIT_START_DATE):
+    """Tests that KPI40 is calculated correctly.
+
+    Numerator:Number of eligible patients with at least one entry for Sick
+    Day Rules (item 47) within the audit period
+
+    Denominator: Total number of eligible patients (measure 1)
+    """
+
+    # Ensure starting with clean pts in test db
+    Patient.objects.all().delete()
+
+    # Create  Patients and Visits that should be eligible (KPI1)
+    eligible_criteria = {
+        "visit__visit_date": AUDIT_START_DATE + relativedelta(days=2),
+        "date_of_birth": AUDIT_START_DATE - relativedelta(days=365 * 10),
+    }
+
+    # Passing patients
+    passing_patient_1 = PatientFactory(
+        postcode="passing_patient_1",
+        # KPI1 eligible
+        **eligible_criteria,
+        # KPI 40 specific
+        visit__sick_day_rules_training_date=AUDIT_START_DATE+relativedelta(days=30)
+    )
+    # only second visit has a valid sick day rule
+    passing_patient_2 = PatientFactory(
+        postcode="passing_patient_2",
+        # KPI1 eligible
+        **eligible_criteria,
+        # KPI 40 specific
+        visit__sick_day_rules_training_date=None,
+    )
+    # create 2nd visit
+    VisitFactory(
+        patient=passing_patient_2,
+        visit_date=AUDIT_START_DATE + relativedelta(days=5),
+        sick_day_rules_training_date=AUDIT_START_DATE+relativedelta(days=4)
+    )
+
+    # Failing patients
+    # No sick day rule
+    failing_patient_2 = PatientFactory(
+        postcode="failing_patient_2",
+        # KPI5 eligible
+        **eligible_criteria,
+        # KPI 40 specific
+        visit__sick_day_rules_training_date=None,
+    )
+
+    # Create Patients and Visits that should be ineligble (KPI1)
+    # Visit date before audit period
+    ineligible_patients_visit_date: List[Patient] = PatientFactory(
+        visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
+    )
+    # Above age 25 at start of audit period
+    ineligible_patients_too_old: List[Patient] = PatientFactory(
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
+    )
+
+    calc_kpis = CalculateKPIS(
+        pz_code="PZ130",
+        calculation_date=AUDIT_START_DATE,
+    )
+
+    EXPECTED_TOTAL_ELIGIBLE = 3
+    EXPECTED_TOTAL_INELIGIBLE = 2
+    EXPECTED_TOTAL_PASSED = 2
+    EXPECTED_TOTAL_FAILED = 1
+
+    EXPECTED_KPIRESULT = KPIResult(
+        total_eligible=EXPECTED_TOTAL_ELIGIBLE,
+        total_passed=EXPECTED_TOTAL_PASSED,
+        total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
+        total_failed=EXPECTED_TOTAL_FAILED,
+    )
+
+    assert_kpi_result_equal(
+        expected=EXPECTED_KPIRESULT,
+        actual=calc_kpis.calculate_kpi_40_sick_day_rules_advice(),
     )
