@@ -4,8 +4,9 @@ Configures pytest fixtures for npda app tests.
 
 # standard imports
 
-# third-party imports
 import logging
+# third-party imports
+from datetime import date
 from unittest.mock import patch
 
 import pytest
@@ -37,3 +38,8 @@ def patch_imd_for_postcode():
     with patch('project.npda.models.patient.imd_for_postcode', return_value=4) as mocked_imd_for_postcode:
         logger.debug("Patching imd_for_postcode")
         yield
+
+@pytest.fixture
+def AUDIT_START_DATE():
+    """AUDIT_START_DATE is Day 2 of the first audit period"""
+    return date(year=2024, month=4, day=1)
