@@ -1870,17 +1870,15 @@ class CalculateKPIS:
             visit_date__range=self.AUDIT_DATE_RANGE,
             smoking_status__in=[1, 2],
         )
-        eligible_pts_annotated_smoke_screen_visits = (
-            eligible_patients.annotate(
-                smoke_valid_visits=Exists(
-                    valid_smoking_visits
-                )  # This ensures a boolean check if such visits exist
-                # NOTE: spent far too long debugging why this would not work
-                # by just using Count() and filter when the patient's first
-                # Visit had no smoking status but the second did. Some underlying
-                # join issue with the first None meaning no subsequent Visits
-                # would be founted. Exists() implementation here solved this.
-            )
+        eligible_pts_annotated_smoke_screen_visits = eligible_patients.annotate(
+            smoke_valid_visits=Exists(
+                valid_smoking_visits
+            )  # This ensures a boolean check if such visits exist
+            # NOTE: spent far too long debugging why this would not work
+            # by just using Count() and filter when the patient's first
+            # Visit had no smoking status but the second did. Some underlying
+            # join issue with the first None meaning no subsequent Visits
+            # would be founted. Exists() implementation here solved this.
         )
 
         total_passed_query_set = (
@@ -1888,7 +1886,6 @@ class CalculateKPIS:
                 smoke_valid_visits__gte=1
             )
         )
-
 
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
@@ -1939,6 +1936,49 @@ class CalculateKPIS:
             )
         )
 
+        total_passed = total_passed_query_set.count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def calculate_kpi_37_additional_dietetic_appointment_offered(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 37: Additional dietetic appointment offered (%)
+
+        Numerator: Numer of eligible patients with at least one entry for Additional Dietitian Appointment Offered (item 43) that is 1 = Yes within the audit period (based on visit date)
+
+        Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
+        """
+        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = (
+            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = kpi_5_total_eligible_query_set
+        total_eligible = total_eligible_kpi_5
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Find patients with at least one entry for Additional Dietitian Appointment Offered (item 43) that is 1 = Yes within the audit period (based on visit date)
+        eligible_pts_annotated_dietician_offered_visits = eligible_patients.annotate(
+            dietician_offered_valid_visits=Count(
+                "visit",
+                filter=Q(
+                    visit__visit_date__range=self.AUDIT_DATE_RANGE,
+                    visit__dietician_additional_appointment_offered=1,
+                ),
+            )
+        )
+        total_passed_query_set = (
+            eligible_pts_annotated_dietician_offered_visits.filter(
+                dietician_offered_valid_visits__gte=1
+            )
+        )
 
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
