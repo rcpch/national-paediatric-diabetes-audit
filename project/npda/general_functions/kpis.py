@@ -1900,6 +1900,56 @@ class CalculateKPIS:
             total_failed=total_failed,
         )
 
+    def calculate_kpi_36_referral_to_smoking_cessation_service(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 36: Referral to smoking cessation service (%)
+
+        Numerator: Number of eligible patients with an entry for Date of Smoking Cessation Referral (item 41) within the audit period
+
+        Denominator: Number of patients with Type 1 diabetes aged 12+ with a complete year of care in audit period (measure 6)
+        """
+        kpi_6_total_eligible_query_set, total_eligible_kpi_6 = (
+            self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = kpi_6_total_eligible_query_set
+        total_eligible = total_eligible_kpi_6
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Get the visits that match the valid Smoking Cessation Referral date
+        smoke_cessation_visits = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            visit_date__range=self.AUDIT_DATE_RANGE,
+            smoking_cessation_referral_date__range=self.AUDIT_DATE_RANGE,
+        )
+        # Find patients with a valid entry for Smoking Cessation Referral
+        eligible_pts_annotated_smoke_screen_visits = (
+            eligible_patients.annotate(
+                smoke_cessation_referral_valid_visits=Exists(
+                    smoke_cessation_visits
+                )
+            )
+        )
+
+        total_passed_query_set = (
+            eligible_pts_annotated_smoke_screen_visits.filter(
+                smoke_cessation_referral_valid_visits__gte=1
+            )
+        )
+
+
+        total_passed = total_passed_query_set.count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
     def _get_total_kpi_1_eligible_pts_base_query_set_and_total_count(
         self,
     ) -> Tuple[QuerySet, int]:
