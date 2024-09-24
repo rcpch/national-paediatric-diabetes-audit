@@ -19,3 +19,10 @@ urlpatterns = [
     path("", include(tf_urls)),
     path("", include("project.npda.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Custom error pages
+handler400 = "project.npda.views.error_400"
+handler403 = "project.npda.views.error_403"
+handler404 = "project.npda.views.error_404"
+handler500 = "project.npda.views.error_500"
+CSRF_FAILURE_VIEW = "project.npda.views.csrf_fail"

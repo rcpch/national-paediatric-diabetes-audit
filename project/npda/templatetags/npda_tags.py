@@ -195,4 +195,8 @@ def patient_valid(patient):
 # Used to keep text highlighted in navbar for the tab that has been selected
 @register.simple_tag
 def active_navbar_tab(request, url_name):
-    return 'text-rcpch_light_blue' if request.resolver_match.url_name == url_name else 'text-gray-700'
+    if(request.resolver_match is not None):
+        return 'text-rcpch_light_blue' if request.resolver_match.url_name == url_name else 'text-gray-700'
+    else:
+        # Some routes, such as Error 404, do not have resolver_match property.
+        return 'text-gray-700'
