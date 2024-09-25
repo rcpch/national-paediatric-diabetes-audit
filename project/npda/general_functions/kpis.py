@@ -10,11 +10,12 @@ import logging
 # Python imports
 import time
 from dataclasses import asdict, dataclass, is_dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
+from pprint import pformat
 from typing import Tuple, Union
 
 from dateutil.relativedelta import relativedelta
-from django.db.models import Count, Exists, OuterRef, Q, QuerySet, Subquery
+from django.db.models import Count, Exists, F, OuterRef, Q, QuerySet, Subquery
 # Django imports
 from django.shortcuts import render
 from django.views.generic import TemplateView
@@ -660,6 +661,10 @@ class CalculateKPIS:
 
         # Count eligible patients
         total_eligible = eligible_patients.count()
+
+        # In case we need to use this as a base query set for subsequent KPIs
+        self.total_kpi_7_eligible_pts_base_query_set = eligible_patients
+        self.kpi_7_total_eligible = total_eligible
 
         # Calculate ineligible patients
         total_ineligible = self.total_patients_count - total_eligible
@@ -2066,10 +2071,8 @@ class CalculateKPIS:
                 ),
             )
         )
-        total_passed_query_set = (
-            eligible_pts_annotated_flu_immunisation_recommended_date_visits.filter(
-                flu_immunisation_recommended_date_valid_visits__gte=1
-            )
+        total_passed_query_set = eligible_pts_annotated_flu_immunisation_recommended_date_visits.filter(
+            flu_immunisation_recommended_date_valid_visits__gte=1
         )
 
         total_passed = total_passed_query_set.count()
@@ -2127,6 +2130,80 @@ class CalculateKPIS:
             total_passed=total_passed,
             total_failed=total_failed,
         )
+
+    def calculate_kpi_41_coeliac_disease_screening(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 41: Coeliac diasease screening (%)
+
+        Numerator: Number of eligible patients with an entry for Coeliac Disease Screening Date (item 36) within 90 days of Date of Diabetes Diagnosis (item 7)
+
+        Denominator: Number of patients with Type 1 diabetes who were diagnosed with Coeliac at least 90 days before the end of the audit period.
+
+        NOTE: denominator is essentially KPI7 (total new T1DM diagnoses) plus
+        extra filter for diabetes diagnosis < (AUDIT_END_DATE - 90 DAYS)
+        """
+        eligible_patients, total_eligible = (
+            self._get_total_pts_new_t1dm_diag_90D_before_audit_end_base_query_set_and_total_count()
+        )
+        total_ineligible = self.total_patients_count - total_eligible
+
+        self._debug_helper_print_postcode_and_attrs(
+            eligible_patients, "diagnosis_date"
+        )
+
+        # Find patients with an entry for Coeliac Disease
+        # Screening Date (item 36) 90 days before or after diabetes diagnosis
+        # date
+        eligible_pts_annotated_coeliac_screen_visits = eligible_patients.annotate(
+            coeliac_screen_valid_visits=Count(
+                "visit",
+                # NOTE: relativedelta not supported
+                filter=Q(
+                    visit__coeliac_screen_date__gte=F("diagnosis_date")
+                    - timedelta(days=90),
+                    visit__coeliac_screen_date__lte=F("diagnosis_date")
+                    + timedelta(days=90),
+                ),
+            )
+        )
+        total_passed_query_set = (
+            eligible_pts_annotated_coeliac_screen_visits.filter(
+                coeliac_screen_valid_visits__gte=1
+            )
+        )
+
+        total_passed = total_passed_query_set.count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def _debug_helper_print_postcode_and_attrs(
+        self, queryset, name: str = None, *attrs
+    ):
+        """Helper function to be used with tests which prints out the postcode
+        (`can add name to postcode as non-validated string field`)
+        and specified attributes for each patient in the queryset
+
+        `name` is optional, to describe queryset, to be used for nicer
+        formatting
+        """
+
+        logger.debug(
+            f"====================QuerySet:{name if name else queryset}"
+        )
+        for item in queryset.values("postcode", *attrs):
+            logger.debug(f'Patient Name: {item["postcode"]}')
+            del item["postcode"]
+            logger.debug(pformat(item)+'\n')
+
+        logger.debug(f"====================\n")
 
     def _get_total_kpi_1_eligible_pts_base_query_set_and_total_count(
         self,
@@ -2192,6 +2269,77 @@ class CalculateKPIS:
         return (
             self.total_kpi_6_eligible_pts_base_query_set,
             self.kpi_6_total_eligible,
+        )
+
+    def _get_total_kpi_7_eligible_pts_base_query_set_and_total_count(
+        self,
+    ) -> Tuple[QuerySet, int]:
+        """Enables reuse of the base query set for KPI 7
+
+        If running calculation methods in order, this attribute will be set in calculate_kpi_7_total_t1dm_complete_year_gte_12yo().
+
+        If running another kpi calculation standalone, need to run that method first to have the attribute set.
+
+        Returns:
+            QuerySet: Base query set of eligible patients for KPI 7
+            int: base query set count of total eligible patients for KPI 7
+        """
+
+        if not hasattr(self, "total_kpi_1_eligible_pts_base_query_set"):
+            self.calculate_kpi_7_total_new_diagnoses_t1dm()
+
+        return (
+            self.total_kpi_7_eligible_pts_base_query_set,
+            self.kpi_7_total_eligible,
+        )
+
+    def _get_total_pts_new_t1dm_diag_90D_before_audit_end_base_query_set_and_total_count(
+        self,
+    ) -> Tuple[QuerySet, int]:
+        """Enables reuse of the base query set for denominator in KPIS 41-43
+        (patients with new T1DM, diagnosed at least 90 days before audit end
+        date).
+
+        Returns:
+            QuerySet: Base query set of eligible patients for KPIs 41-43
+            int: base query set count of total eligible patients for KPI 41-43
+
+        NOTE: this is essentially KPI 7 plus an extra filter for diagnosis_date
+        < 90 days before audit end date
+        """
+
+        # This might be run already so check if attribute exists
+        if hasattr(self, "t1dm_pts_diagnosed_90D_before_end_base_query_set"):
+            return (
+                self.t1dm_pts_diagnosed_90D_before_end_base_query_set,
+                self.t1dm_pts_diagnosed_90D_before_end_total_eligible,
+            )
+
+        # First get new T1DM diagnoses pts
+        base_query_set, _ = (
+            self._get_total_kpi_7_eligible_pts_base_query_set_and_total_count()
+        )
+
+        # Filter for those diagnoses at least 90 days before audit end date
+        self.t1dm_pts_diagnosed_90D_before_end_base_query_set = (
+            base_query_set.filter(
+                diagnosis_date__lt=self.audit_end_date
+                - relativedelta(days=90),
+            )
+        )
+        self.t1dm_pts_diagnosed_90D_before_end_total_eligible = (
+            self.t1dm_pts_diagnosed_90D_before_end_base_query_set.count()
+        )
+
+        self._debug_helper_print_postcode_and_attrs(
+            base_query_set,
+            "base_query_set",
+            "diagnosis_date",
+        )
+
+        return (
+            self.t1dm_pts_diagnosed_90D_before_end_base_query_set,
+            self.t1dm_pts_diagnosed_90D_before_end_total_eligible,
         )
 
 
