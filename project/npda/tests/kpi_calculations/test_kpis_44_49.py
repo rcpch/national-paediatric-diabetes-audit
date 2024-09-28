@@ -7,6 +7,8 @@ import pytest
 from dateutil.relativedelta import relativedelta
 
 from project.constants.diabetes_types import DIABETES_TYPES
+from project.constants.hospital_admission_reasons import \
+    HOSPITAL_ADMISSION_REASONS
 from project.constants.smoking_status import SMOKING_STATUS
 from project.npda.general_functions.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
@@ -167,8 +169,40 @@ def test_kpi_calculation_46(AUDIT_START_DATE):
     }
 
     # Create passing pts
+    passing_valid_admission_reason_and_admission_within_audit_range = PatientFactory(
+        # KPI1 eligible
+        **eligible_criteria,
+        # valid admission reason
+        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[0][0],
+        # admission date within audit range
+        visit__hospital_admission_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+    passing_valid_admission_reason_and_discharge_within_audit_range = PatientFactory(
+        # KPI1 eligible
+        **eligible_criteria,
+        # valid admission reason
+        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[-1][0],
+        # discharge date within audit range
+        visit__hospital_discharge_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
 
     # Create failing pts
+    failing_invalid_admission_reason = PatientFactory(
+        # KPI1 eligible
+        **eligible_criteria,
+        # invalid admission reason
+        visit__hospital_admission_reason='42',
+        # admission date within audit range
+        visit__hospital_admission_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+    failing_both_admission_outside_audit_date = PatientFactory(
+        # KPI1 eligible
+        **eligible_criteria,
+        # valid admission reason
+        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[-1][0],
+        # admission date outside audit range
+        visit__hospital_admission_date=AUDIT_START_DATE - relativedelta(days=2),
+    )
 
 
     # Create Patients and Visits that should be excluded
@@ -190,10 +224,10 @@ def test_kpi_calculation_46(AUDIT_START_DATE):
         pz_code="PZ130", calculation_date=AUDIT_START_DATE
     )
 
-    EXPECTED_TOTAL_ELIGIBLE = 6
+    EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 2
     EXPECTED_TOTAL_PASSED = 2
-    EXPECTED_TOTAL_FAILED = 4
+    EXPECTED_TOTAL_FAILED = 2
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=EXPECTED_TOTAL_ELIGIBLE,
@@ -204,5 +238,5 @@ def test_kpi_calculation_46(AUDIT_START_DATE):
 
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
-        actual=calc_kpis.calculate_kpi_45_median_hba1c(),
+        actual=calc_kpis.calculate_kpi_46_number_of_admissions(),
     )

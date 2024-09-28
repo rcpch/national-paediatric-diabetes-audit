@@ -24,6 +24,8 @@ from django.views.generic import TemplateView
 
 # NPDA Imports
 from project.constants.diabetes_types import DIABETES_TYPES
+from project.constants.hospital_admission_reasons import \
+    HOSPITAL_ADMISSION_REASONS
 from project.constants.retinal_screening_results import \
     RETINAL_SCREENING_RESULTS
 from project.constants.smoking_status import SMOKING_STATUS
@@ -2256,7 +2258,7 @@ class CalculateKPIS:
         total_eligible = eligible_patients.count()
         total_ineligible = self.total_patients_count - total_eligible
 
-        # Find patients with an entry for Carbohydrate Counting Education
+        # Find visits with an entry for Carbohydrate Counting Education
         # (item 42) within 7 days before or 14 days after the
         # Date of Diabetes Diagnosis (item 7)
         valid_visit_subquery = Visit.objects.filter(
@@ -2279,7 +2281,9 @@ class CalculateKPIS:
         )
 
         # Filter patients who have at least one valid Visit
-        total_passed_query_set = eligible_pts_annotated.filter(has_valid_visit=True)
+        total_passed_query_set = eligible_pts_annotated.filter(
+            has_valid_visit=True
+        )
 
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
@@ -2307,6 +2311,7 @@ class CalculateKPIS:
         eligible_patients, total_eligible = (
             self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
         )
+        total_ineligible = self.total_patients_count - total_eligible
 
         return KPIResult(
             total_eligible=-1,
@@ -2331,6 +2336,7 @@ class CalculateKPIS:
         eligible_patients, total_eligible = (
             self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
         )
+        total_ineligible = self.total_patients_count - total_eligible
 
         return KPIResult(
             total_eligible=-1,
@@ -2357,12 +2363,44 @@ class CalculateKPIS:
         eligible_patients, total_eligible = (
             self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
         )
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Find patients with at least one valid admission
+        # Get the visits that match the valid admission criteria
+        valid_visit_subquery = Visit.objects.filter(
+            # admission start date OR discharge date within audit period
+            Q(
+                Q(hospital_admission_date__range=self.AUDIT_DATE_RANGE)
+                | Q(hospital_discharge_date__range=self.AUDIT_DATE_RANGE)
+            ),
+            # valid reason for admission
+            hospital_admission_reason__in=[
+                choice[0] for choice in HOSPITAL_ADMISSION_REASONS
+            ],
+            patient=OuterRef("pk"),
+            visit_date__range=self.AUDIT_DATE_RANGE,
+        )
+
+        # Annotate eligible patients with a boolean indicating the existence
+        # of a valid Visit. NOTE: doing this because Count has weird behavior
+        # if the first Visit has no valid value even if second does
+        eligible_pts_annotated = eligible_patients.annotate(
+            has_valid_visit=Exists(valid_visit_subquery)
+        )
+
+        # Filter patients who have at least one valid Visit
+        total_passed_query_set = eligible_pts_annotated.filter(
+            has_valid_visit=True
+        )
+
+        total_passed = total_passed_query_set.count()
+        total_failed = total_eligible - total_passed
 
         return KPIResult(
-            total_eligible=-1,
-            total_ineligible=-1,
-            total_passed=-1,
-            total_failed=-1,
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
         )
 
     def calculate_kpi_47_number_of_dka_admissions(
@@ -2383,6 +2421,7 @@ class CalculateKPIS:
         eligible_patients, total_eligible = (
             self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
         )
+        total_ineligible = self.total_patients_count - total_eligible
 
         return KPIResult(
             total_eligible=-1,
@@ -2406,6 +2445,7 @@ class CalculateKPIS:
         eligible_patients, total_eligible = (
             self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
         )
+        total_ineligible = self.total_patients_count - total_eligible
 
         return KPIResult(
             total_eligible=-1,
@@ -2429,6 +2469,7 @@ class CalculateKPIS:
         eligible_patients, total_eligible = (
             self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
         )
+        total_ineligible = self.total_patients_count - total_eligible
 
         return KPIResult(
             total_eligible=-1,
