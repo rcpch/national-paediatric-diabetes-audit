@@ -240,3 +240,98 @@ def test_kpi_calculation_46(AUDIT_START_DATE):
         expected=EXPECTED_KPIRESULT,
         actual=calc_kpis.calculate_kpi_46_number_of_admissions(),
     )
+
+@pytest.mark.django_db
+def test_kpi_calculation_47(AUDIT_START_DATE):
+    """Tests that KPI47 is calculated correctly.
+
+    Numerator:Total number of admissions with a reason for admission
+    (item 50) that is 2 = DKA AND with a start date (item 48) OR
+    discharge date (item 49) within the audit period
+    NOTE: There can be more than one admission per patient, but eliminate
+    duplicate entries
+
+    Denominator: Total number of eligible patients (measure 1)
+    """
+
+    # Ensure starting with clean pts in test db
+    Patient.objects.all().delete()
+
+    # Create  Patients and Visits that should be eligible (KPI1)
+    eligible_criteria = {
+        "visit__visit_date": AUDIT_START_DATE + relativedelta(days=2),
+        "date_of_birth": AUDIT_START_DATE - relativedelta(days=365 * 10),
+    }
+
+    # Create passing pts
+    passing_valid_dka_admission_reason_and_admission_within_audit_range = PatientFactory(
+        # KPI1 eligible
+        **eligible_criteria,
+        # valid dka admission reason
+        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[1][0],
+        # admission date within audit range
+        visit__hospital_admission_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+    passing_valid_dka_admission_reason_and_discharge_within_audit_range = PatientFactory(
+        # KPI1 eligible
+        **eligible_criteria,
+        # valid dka admission reason
+        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[1][0],
+        # discharge date within audit range
+        visit__hospital_discharge_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+
+    # Create failing pts
+    failing_invalid_admission_reason_not_dka = PatientFactory(
+        # KPI1 eligible
+        **eligible_criteria,
+        # invalid admission reason
+        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[0][0],
+        # admission date within audit range
+        visit__hospital_admission_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+    failing_both_admission_outside_audit_date = PatientFactory(
+        # KPI1 eligible
+        **eligible_criteria,
+        # valid admission reason
+        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[0][0],
+        # admission date outside audit range
+        visit__hospital_admission_date=AUDIT_START_DATE - relativedelta(days=2),
+    )
+
+
+    # Create Patients and Visits that should be excluded
+    # Visit date before audit period
+    ineligible_patient_visit_date = PatientFactory(
+        postcode="ineligible_patient_visit_date",
+        visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
+        visit__treatment=1,
+    )
+    # Above age 25 at start of audit period
+    ineligible_patient_too_old = PatientFactory(
+        postcode="ineligible_patient_too_old",
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
+        visit__treatment=1,
+    )
+
+    # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
+    calc_kpis = CalculateKPIS(
+        pz_code="PZ130", calculation_date=AUDIT_START_DATE
+    )
+
+    EXPECTED_TOTAL_ELIGIBLE = 4
+    EXPECTED_TOTAL_INELIGIBLE = 2
+    EXPECTED_TOTAL_PASSED = 2
+    EXPECTED_TOTAL_FAILED = 2
+
+    EXPECTED_KPIRESULT = KPIResult(
+        total_eligible=EXPECTED_TOTAL_ELIGIBLE,
+        total_passed=EXPECTED_TOTAL_PASSED,
+        total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
+        total_failed=EXPECTED_TOTAL_FAILED,
+    )
+
+    assert_kpi_result_equal(
+        expected=EXPECTED_KPIRESULT,
+        actual=calc_kpis.calculate_kpi_47_number_of_dka_admissions(),
+    )

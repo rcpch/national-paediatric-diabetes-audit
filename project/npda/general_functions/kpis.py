@@ -2423,11 +2423,40 @@ class CalculateKPIS:
         )
         total_ineligible = self.total_patients_count - total_eligible
 
+        # Find patients with at least one valid DKA admission criteria
+        # Get the visits that match the valid DKA admission criteria
+        valid_visit_subquery = Visit.objects.filter(
+            # admission start date OR discharge date within audit period
+            Q(
+                Q(hospital_admission_date__range=self.AUDIT_DATE_RANGE)
+                | Q(hospital_discharge_date__range=self.AUDIT_DATE_RANGE)
+            ),
+            # DKA reason 2
+            hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[1][0],
+            patient=OuterRef("pk"),
+            visit_date__range=self.AUDIT_DATE_RANGE,
+        )
+
+        # Annotate eligible patients with a boolean indicating the existence
+        # of a valid Visit. NOTE: doing this because Count has weird behavior
+        # if the first Visit has no valid value even if second does
+        eligible_pts_annotated = eligible_patients.annotate(
+            has_valid_visit=Exists(valid_visit_subquery)
+        )
+
+        # Filter patients who have at least one valid Visit
+        total_passed_query_set = eligible_pts_annotated.filter(
+            has_valid_visit=True
+        )
+
+        total_passed = total_passed_query_set.count()
+        total_failed = total_eligible - total_passed
+
         return KPIResult(
-            total_eligible=-1,
-            total_ineligible=-1,
-            total_passed=-1,
-            total_failed=-1,
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
         )
 
     def calculate_kpi_48_required_additional_psychological_support(
