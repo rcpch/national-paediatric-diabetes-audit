@@ -2139,7 +2139,7 @@ class CalculateKPIS:
 
         Numerator: Number of eligible patients with an entry for Coeliac Disease Screening Date (item 36) within 90 days of Date of Diabetes Diagnosis (item 7)
 
-        Denominator: Number of patients with Type 1 diabetes who were diagnosed with Coeliac at least 90 days before the end of the audit period.
+        Denominator: Number of patients with Type 1 diabetes who were diagnosed at least 90 days before the end of the audit period.
 
         NOTE: denominator is essentially KPI7 (total new T1DM diagnoses) plus
         extra filter for diabetes diagnosis < (AUDIT_END_DATE - 90 DAYS)
@@ -2148,10 +2148,6 @@ class CalculateKPIS:
             self._get_total_pts_new_t1dm_diag_90D_before_audit_end_base_query_set_and_total_count()
         )
         total_ineligible = self.total_patients_count - total_eligible
-
-        self._debug_helper_print_postcode_and_attrs(
-            eligible_patients, "diagnosis_date"
-        )
 
         # Find patients with an entry for Coeliac Disease
         # Screening Date (item 36) 90 days before or after diabetes diagnosis
@@ -2184,24 +2180,18 @@ class CalculateKPIS:
             total_failed=total_failed,
         )
 
-    def _debug_helper_print_postcode_and_attrs(
-        self, queryset, *attrs
-    ):
+    def _debug_helper_print_postcode_and_attrs(self, queryset, *attrs):
         """Helper function to be used with tests which prints out the postcode
         (`can add name to postcode as non-validated string field`)
         and specified attributes for each patient in the queryset
         """
 
-        logger.debug(
-            f"===QuerySet:{str(queryset)}==="
-        )
-        logger.debug(
-            f'==={self.AUDIT_DATE_RANGE=}===\n'
-        )
+        logger.debug(f"===QuerySet:{str(queryset)}===")
+        logger.debug(f"==={self.AUDIT_DATE_RANGE=}===\n")
         for item in queryset.values("postcode", *attrs):
             logger.debug(f'Patient Name: {item["postcode"]}')
             del item["postcode"]
-            logger.debug(pformat(item)+'\n')
+            logger.debug(pformat(item) + "\n")
 
         logger.debug(f"====================")
 
@@ -2329,11 +2319,6 @@ class CalculateKPIS:
         )
         self.t1dm_pts_diagnosed_90D_before_end_total_eligible = (
             self.t1dm_pts_diagnosed_90D_before_end_base_query_set.count()
-        )
-
-        self._debug_helper_print_postcode_and_attrs(
-            base_query_set,
-            "diagnosis_date",
         )
 
         return (
