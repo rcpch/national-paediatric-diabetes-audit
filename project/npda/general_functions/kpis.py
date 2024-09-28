@@ -2291,6 +2291,152 @@ class CalculateKPIS:
             total_failed=total_failed,
         )
 
+    def calculate_kpi_44_mean_hba1c(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 44: Mean HbA1c
+
+        Numerator: Mean of HbA1c measurements (item 17) within the audit
+        period, excluding measurements taken within 90 days of diagnosis
+        NOTE: The mean for each patient is calculated. We then calculate the
+        mean of the means.
+
+        Denominator: Total number of eligible patients (measure 1)
+        """
+        eligible_patients, total_eligible = (
+            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+        )
+
+        return KPIResult(
+            total_eligible=-1,
+            total_ineligible=-1,
+            total_passed=-1,
+            total_failed=-1,
+        )
+
+    def calculate_kpi_45_median_hba1c(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 43: Median HbA1c
+
+        Numerator: median of HbA1c measurements (item 17) within the audit
+        period, excluding measurements taken within 90 days of diagnosis
+        NOTE: The median for each patient is calculated. We then calculate the
+        median of the medians.
+
+        Denominator: Total number of eligible patients (measure 1)
+        """
+        eligible_patients, total_eligible = (
+            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+        )
+
+        return KPIResult(
+            total_eligible=-1,
+            total_ineligible=-1,
+            total_passed=-1,
+            total_failed=-1,
+        )
+
+    def calculate_kpi_46_number_of_admissions(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 46: Number of admissions
+
+        Numerator:Total number of admissions with a valid reason for admission
+        (item 50) AND with a start date (item 48) OR discharge date (item 49)
+        within the audit period
+        NOTE: There can be more than one admission per patient, but eliminate
+        duplicate entries
+
+
+        Denominator: Total number of eligible patients (measure 1)
+        """
+        eligible_patients, total_eligible = (
+            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+        )
+
+        return KPIResult(
+            total_eligible=-1,
+            total_ineligible=-1,
+            total_passed=-1,
+            total_failed=-1,
+        )
+
+    def calculate_kpi_47_number_of_dka_admissions(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 47: Number of DKA admissions
+
+
+        Numerator:Total number of admissions with a reason for admission
+        (item 50) that is 2 = DKA AND with a start date (item 48) OR
+        discharge date (item 49) within the audit period
+        NOTE: There can be more than one admission per patient, but eliminate
+        duplicate entries
+
+        Denominator: Total number of eligible patients (measure 1)
+        """
+        eligible_patients, total_eligible = (
+            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+        )
+
+        return KPIResult(
+            total_eligible=-1,
+            total_ineligible=-1,
+            total_passed=-1,
+            total_failed=-1,
+        )
+
+    def calculate_kpi_48_required_additional_psychological_support(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 48: Required additional psychological support
+
+        Numerator:Total number of eligible patients with at least one entry for
+        Psychological Support (item 39) that is 1 = Yes within the audit period
+        (based on visit date)
+
+        Denominator: Total number of eligible patients (measure 1)
+        """
+        eligible_patients, total_eligible = (
+            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+        )
+
+        return KPIResult(
+            total_eligible=-1,
+            total_ineligible=-1,
+            total_passed=-1,
+            total_failed=-1,
+        )
+
+    def calculate_kpi_49_albuminuria_present(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 49: Albuminuria present
+
+        Numerator: Total number of eligible patients whose most recent
+        entry for for Albuminuria Stage (item 31) based on observation date
+        (item 30) is 2 = Microalbuminuria or 3 = Macroalbuminuria
+
+        Denominator: Total number of eligible patients (measure 1)
+        """
+        eligible_patients, total_eligible = (
+            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+        )
+
+        return KPIResult(
+            total_eligible=-1,
+            total_ineligible=-1,
+            total_passed=-1,
+            total_failed=-1,
+        )
+
     def _debug_helper_print_postcode_and_attrs(self, queryset, *attrs):
         """Helper function to be used with tests which prints out the postcode
         (`can add name to postcode as non-validated string field`)
