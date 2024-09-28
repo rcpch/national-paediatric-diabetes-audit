@@ -15,7 +15,9 @@ from pprint import pformat
 from typing import Tuple, Union
 
 from dateutil.relativedelta import relativedelta
-from django.db.models import Count, Exists, F, OuterRef, Q, QuerySet, Subquery
+from django.db.models import (Count, DateField, DurationField, Exists,
+                              ExpressionWrapper, F, OuterRef, Q, QuerySet,
+                              Subquery, Value)
 # Django imports
 from django.shortcuts import render
 from django.views.generic import TemplateView
@@ -2216,6 +2218,68 @@ class CalculateKPIS:
                 thyroid_fn_date_valid_visits__gte=1
             )
         )
+
+        total_passed = total_passed_query_set.count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
+    def calculate_kpi_43_carbohydrate_counting_education(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 43: Carbohydrate counting education (%)
+
+        Numerator: Number of eligible patients with an entry for Carbohydrate
+        Counting Education (item 42) within 7 days before or 14 days after the
+        Date of Diabetes Diagnosis (item 7)
+
+        Denominator: Number of patients with Type 1 diabetes who were diagnosed
+        at least 14 days before the end of the audit period (<= | >=)
+
+        (NOTE: Measure 7 AND diabetes diagnosis date < (AUDIT_END_DATE - 14 days))
+        """
+
+        # Eligible patients are measure 7 with
+        # diagnosis date < (AUDIT_END_DATE - 14 days)
+        base_eligible_patients, _ = (
+            self._get_total_kpi_7_eligible_pts_base_query_set_and_total_count()
+        )
+        eligible_patients = base_eligible_patients.filter(
+            diagnosis_date__lt=self.audit_end_date - relativedelta(days=14)
+        )
+        total_eligible = eligible_patients.count()
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Find patients with an entry for Carbohydrate Counting Education
+        # (item 42) within 7 days before or 14 days after the
+        # Date of Diabetes Diagnosis (item 7)
+        valid_visit_subquery = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            carbohydrate_counting_level_three_education_date__gte=F(
+                "patient__diagnosis_date"
+            )
+            - timedelta(days=7),
+            carbohydrate_counting_level_three_education_date__lte=F(
+                "patient__diagnosis_date"
+            )
+            + timedelta(days=14),
+        )
+
+        # Annotate eligible patients with a boolean indicating the existence
+        # of a valid Visit. NOTE: doing this because Count has weird behavior
+        # if the first Visit has no valid carb date even if second does
+        eligible_pts_annotated = eligible_patients.annotate(
+            has_valid_visit=Exists(valid_visit_subquery)
+        )
+
+        # Filter patients who have at least one valid Visit
+        total_passed_query_set = eligible_pts_annotated.filter(has_valid_visit=True)
 
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
