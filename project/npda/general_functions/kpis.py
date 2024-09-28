@@ -2185,25 +2185,25 @@ class CalculateKPIS:
         )
 
     def _debug_helper_print_postcode_and_attrs(
-        self, queryset, name: str = None, *attrs
+        self, queryset, *attrs
     ):
         """Helper function to be used with tests which prints out the postcode
         (`can add name to postcode as non-validated string field`)
         and specified attributes for each patient in the queryset
-
-        `name` is optional, to describe queryset, to be used for nicer
-        formatting
         """
 
         logger.debug(
-            f"====================QuerySet:{name if name else queryset}"
+            f"===QuerySet:{str(queryset)}==="
+        )
+        logger.debug(
+            f'==={self.AUDIT_DATE_RANGE=}===\n'
         )
         for item in queryset.values("postcode", *attrs):
             logger.debug(f'Patient Name: {item["postcode"]}')
             del item["postcode"]
             logger.debug(pformat(item)+'\n')
 
-        logger.debug(f"====================\n")
+        logger.debug(f"====================")
 
     def _get_total_kpi_1_eligible_pts_base_query_set_and_total_count(
         self,
@@ -2333,7 +2333,6 @@ class CalculateKPIS:
 
         self._debug_helper_print_postcode_and_attrs(
             base_query_set,
-            "base_query_set",
             "diagnosis_date",
         )
 
