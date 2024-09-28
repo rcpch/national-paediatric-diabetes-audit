@@ -6,8 +6,8 @@ TODO:
         - additionally, do same for any other reused attrs
 """
 
-import logging
 # Python imports
+import logging
 import time
 from dataclasses import asdict, dataclass, is_dataclass
 from datetime import date, datetime, timedelta
@@ -15,10 +15,8 @@ from pprint import pformat
 from typing import Tuple, Union
 
 from dateutil.relativedelta import relativedelta
-from django.db.models import (Count, DateField, DurationField, Exists,
-                              ExpressionWrapper, F, OuterRef, Q, QuerySet,
-                              Subquery, Value)
 # Django imports
+from django.db.models import Count, Exists, F, OuterRef, Q, QuerySet, Subquery
 from django.shortcuts import render
 from django.views.generic import TemplateView
 
@@ -30,6 +28,7 @@ from project.constants.hospital_admission_reasons import \
 from project.constants.retinal_screening_results import \
     RETINAL_SCREENING_RESULTS
 from project.constants.smoking_status import SMOKING_STATUS
+from project.constants.types.kpi_types import KPIResult
 from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 from project.npda.general_functions import get_audit_period_for_date
 from project.npda.models import Patient
@@ -37,16 +36,6 @@ from project.npda.models.visit import Visit
 
 # Logging
 logger = logging.getLogger(__name__)
-
-
-# Object types
-@dataclass
-class KPIResult:
-    total_eligible: int
-    total_ineligible: int
-    total_passed: int
-    total_failed: int
-
 
 class CalculateKPIS:
 
