@@ -12,6 +12,7 @@ from dateutil.relativedelta import relativedelta
 
 # rcpch imports
 from project.npda.models import Patient
+from project.npda.tests.factories.visit_factory import VisitFactory
 from .transfer_factory import TransferFactory
 from project.constants import (
     ETHNICITIES,
@@ -60,7 +61,7 @@ class PatientFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = Patient
-        skip_postgeneration_save=True
+        skip_postgeneration_save = True
 
     @factory.lazy_attribute
     def nhs_number(self):
@@ -93,7 +94,7 @@ class PatientFactory(factory.django.DjangoModelFactory):
     gp_practice_ods_code = VALID_FIELDS["gp_practice_ods_code"]
 
     # Once a Patient is created, we must create a Transfer object
-    transfer = factory.RelatedFactory(
-        TransferFactory,
-        factory_related_name='patient'
-    )
+    transfer = factory.RelatedFactory(TransferFactory, factory_related_name="patient")
+
+    # We also create a Visit object
+    visit = factory.RelatedFactory(VisitFactory, factory_related_name="patient")

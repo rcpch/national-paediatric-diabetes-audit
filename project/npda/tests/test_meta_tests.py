@@ -66,7 +66,6 @@ def test__multiple_PaediatricsDiabetesUnitFactory_instances_not_created(
     # GOSH User
     user_data = test_user_audit_centre_reader_data
     GOSH_PZ_CODE = "PZ196"
-    GOSH_ODS_CODE = "RP416"
 
     for _ in range(2):
 
@@ -103,23 +102,19 @@ def test__multiple_PaediatricsDiabetesUnitFactory_instances_not_created(
 
         # Patient with specified PDU
         # First create the specific PDU
-        gosh_pdu = PaediatricsDiabetesUnitFactory(
-            pz_code=GOSH_PZ_CODE, lead_organisation_ods_code=GOSH_ODS_CODE
-        )
+        gosh_pdu = PaediatricsDiabetesUnitFactory(pz_code=GOSH_PZ_CODE)
         # Then assign a Patient with to this PDU using the TransferFactory
         patient_with_custom_pdu = PatientFactory(
             transfer__paediatric_diabetes_unit=gosh_pdu
         )
 
     # Check that only one PDU exists in the db for the default PDU user and new patient
-    #     (default defined in PaediatricsDiabetesUnitFactory in pz_code="PZ130", ods_code="RQM01")
     assert (
-        PaediatricDiabetesUnit.objects.filter(pz_code="PZ130", lead_organisation_ods_code="RQM01").count()
-        == 1
-    )
+        PaediatricDiabetesUnit.objects.filter(pz_code="PZ130").count() == 1
+    ), "Multiple PDUs created with PZ130"
 
     # For the specified PDU user at GOSH
-    gosh_pdus_filterset = PaediatricDiabetesUnit.objects.filter(
-        pz_code=GOSH_PZ_CODE, lead_organisation_ods_code=GOSH_ODS_CODE
-    )
-    assert gosh_pdus_filterset.count() == 1
+    gosh_pdus_filterset = PaediatricDiabetesUnit.objects.filter(pz_code=GOSH_PZ_CODE)
+    assert (
+        gosh_pdus_filterset.count() == 1
+    ), f"Multiple GOSH PDU created: \n{'\n'.join([str(item) for item in gosh_pdus_filterset.values_list()])}"
