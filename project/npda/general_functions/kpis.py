@@ -2180,6 +2180,53 @@ class CalculateKPIS:
             total_failed=total_failed,
         )
 
+    def calculate_kpi_42_thyroid_disease_screening(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 42: Thyroid disaese screening (%)
+
+        Numerator: Number of eligible patients with an entry for Thyroid Function Observation Date (item 34) within 90 days (<= | >=) of Date of Diabetes Diagnosis (item 7)
+
+        Denominator: Number of patients with Type 1 diabetes who were diagnosed at least 90 days before the end of the audit period
+
+        (NOTE: measure 7 AND diabetes diagnosis date < (AUDIT_END_DATE - 90 days))
+        """
+        eligible_patients, total_eligible = (
+            self._get_total_pts_new_t1dm_diag_90D_before_audit_end_base_query_set_and_total_count()
+        )
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Find patients with an entry for Thyroid Function Observation Date
+        # (item 36) 90 days before or after diabetes diagnosis date
+        eligible_pts_annotated_thyroid_fn_date_visits = eligible_patients.annotate(
+            thyroid_fn_date_valid_visits=Count(
+                "visit",
+                # NOTE: relativedelta not supported
+                filter=Q(
+                    visit__thyroid_function_date__gte=F("diagnosis_date")
+                    - timedelta(days=90),
+                    visit__thyroid_function_date__lte=F("diagnosis_date")
+                    + timedelta(days=90),
+                ),
+            )
+        )
+        total_passed_query_set = (
+            eligible_pts_annotated_thyroid_fn_date_visits.filter(
+                thyroid_fn_date_valid_visits__gte=1
+            )
+        )
+
+        total_passed = total_passed_query_set.count()
+        total_failed = total_eligible - total_passed
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+        )
+
     def _debug_helper_print_postcode_and_attrs(self, queryset, *attrs):
         """Helper function to be used with tests which prints out the postcode
         (`can add name to postcode as non-validated string field`)
