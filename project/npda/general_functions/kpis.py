@@ -29,6 +29,7 @@ from project.constants.hospital_admission_reasons import \
 from project.constants.retinal_screening_results import \
     RETINAL_SCREENING_RESULTS
 from project.constants.smoking_status import SMOKING_STATUS
+from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 from project.npda.general_functions import get_audit_period_for_date
 from project.npda.models import Patient
 from project.npda.models.visit import Visit
@@ -2476,11 +2477,36 @@ class CalculateKPIS:
         )
         total_ineligible = self.total_patients_count - total_eligible
 
+        # Find patients with at least one valid psych support criteria
+        # Get the visits that match the valid psych support=1 criteria
+        valid_visit_subquery = Visit.objects.filter(
+            # required additional psychological support
+            psychological_additional_support_status=YES_NO_UNKNOWN[0][0],
+            patient=OuterRef("pk"),
+            visit_date__range=self.AUDIT_DATE_RANGE,
+        )
+
+
+        # Annotate eligible patients with a boolean indicating the existence
+        # of a valid Visit. NOTE: doing this because Count has weird behavior
+        # if the first Visit has no valid value even if second does
+        eligible_pts_annotated = eligible_patients.annotate(
+            has_valid_visit=Exists(valid_visit_subquery)
+        )
+
+        # Filter patients who have at least one valid Visit
+        total_passed_query_set = eligible_pts_annotated.filter(
+            has_valid_visit=True
+        )
+
+        total_passed = total_passed_query_set.count()
+        total_failed = total_eligible - total_passed
+
         return KPIResult(
-            total_eligible=-1,
-            total_ineligible=-1,
-            total_passed=-1,
-            total_failed=-1,
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
         )
 
     def calculate_kpi_49_albuminuria_present(
