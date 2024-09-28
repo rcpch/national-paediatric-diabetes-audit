@@ -1,4 +1,5 @@
 """Tests for the Patient Characteristics KPIS."""
+
 from typing import List
 
 import pytest
@@ -514,17 +515,15 @@ def test_kpi_calculation_7(AUDIT_START_DATE):
     # Create Patients and Visits that should BE EXCLUDED
     ineligible_patient_not_t1dm = PatientFactory(
         postcode="ineligible_patient_not_t1dm",
-        # KPI1 eligible
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
-        # T1DM
+        # not T1DM
         diabetes_type=DIABETES_TYPES[1][0],
         # Date of diagnosis inside the audit period
         diagnosis_date=AUDIT_START_DATE + relativedelta(days=2),
     )
     ineligible_patient_diag_outside_audit_period = PatientFactory(
         postcode="ineligible_patient_diag_outside_audit_period",
-        # KPI1 eligible
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # T1DM

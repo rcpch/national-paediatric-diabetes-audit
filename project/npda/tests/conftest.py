@@ -43,3 +43,8 @@ def patch_imd_for_postcode():
 def AUDIT_START_DATE():
     """AUDIT_START_DATE is Day 2 of the first audit period"""
     return date(year=2024, month=4, day=1)
+
+@pytest.fixture
+def AUDIT_END_DATE():
+    """AUDIT_END_DATE"""
+    return date(year=2025, month=3, day=31)
