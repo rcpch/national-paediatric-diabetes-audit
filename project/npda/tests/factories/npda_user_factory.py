@@ -1,21 +1,19 @@
 """Factory function to create new NPDAUser."""
 
 # Standard imports
-import factory
 import logging
+import uuid
+
+import factory
 
 # Project imports
-from project.npda.general_functions.pdus import (
-    PDUWithOrganisations,
-    get_single_pdu_from_pz_code,
-)
+from project.npda.general_functions.pdus import (PDUWithOrganisations,
+                                                 get_single_pdu_from_pz_code)
 from project.npda.models import NPDAUser
-from project.npda.tests.factories.organisation_employer_factory import (
-    OrganisationEmployerFactory,
-)
-from project.npda.tests.factories.paediatrics_diabetes_unit_factory import (
-    PaediatricsDiabetesUnitFactory,
-)
+from project.npda.tests.factories.organisation_employer_factory import \
+    OrganisationEmployerFactory
+from project.npda.tests.factories.paediatrics_diabetes_unit_factory import \
+    PaediatricsDiabetesUnitFactory
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -32,23 +30,7 @@ class NPDAUserFactory(factory.django.DjangoModelFactory):
         model = NPDAUser
         skip_postgeneration_save = True
 
-    # Email has unique constraint. Sometimes emails collide even with factory.Sequence
-    # So, we use a custom lazy fn to generate unique emails
-    @classmethod
-    def generate_unique_email(cls):
-        """Generate a unique email address."""
-        n = 0
-        while True:
-            email = f"npda_test_user_{n}@nhs.net"
-            if not NPDAUser.objects.filter(email=email).exists():
-                return email
-            n += 1
-            if n > 10000:  # Safety guard to avoid infinite loops
-                raise ValueError(
-                    "Unable to generate a unique email address after 10,000 attempts."
-                )
-
-    email = factory.LazyAttribute(lambda _: NPDAUserFactory.generate_unique_email())
+    email = factory.LazyAttribute(lambda _: f'npda_test_user_{str(uuid.uuid4())}@nhs.net')
 
     first_name = "Mandel"
     surname = "Brot"
