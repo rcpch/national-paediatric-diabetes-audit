@@ -23,6 +23,7 @@ from django.shortcuts import render
 from django.views.generic import TemplateView
 
 # NPDA Imports
+from project.constants.albuminuria_stage import ALBUMINURIA_STAGES
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.constants.hospital_admission_reasons import \
     HOSPITAL_ADMISSION_REASONS
@@ -2486,7 +2487,6 @@ class CalculateKPIS:
             visit_date__range=self.AUDIT_DATE_RANGE,
         )
 
-
         # Annotate eligible patients with a boolean indicating the existence
         # of a valid Visit. NOTE: doing this because Count has weird behavior
         # if the first Visit has no valid value even if second does
@@ -2526,11 +2526,38 @@ class CalculateKPIS:
         )
         total_ineligible = self.total_patients_count - total_eligible
 
+        # Find patients with at least one valid albuminuria stage criteria
+        # Get the visits that match the valid albuminuria criteria
+        valid_visit_subquery = Visit.objects.filter(
+            # valid albuminuria stage 2 or 3
+            albuminuria_stage__in=[
+                ALBUMINURIA_STAGES[1][0],
+                ALBUMINURIA_STAGES[2][0],
+            ],
+            patient=OuterRef("pk"),
+            visit_date__range=self.AUDIT_DATE_RANGE,
+        )
+
+        # Annotate eligible patients with a boolean indicating the existence
+        # of a valid Visit. NOTE: doing this because Count has weird behavior
+        # if the first Visit has no valid value even if second does
+        eligible_pts_annotated = eligible_patients.annotate(
+            has_valid_visit=Exists(valid_visit_subquery)
+        )
+
+        # Filter patients who have at least one valid Visit
+        total_passed_query_set = eligible_pts_annotated.filter(
+            has_valid_visit=True
+        )
+
+        total_passed = total_passed_query_set.count()
+        total_failed = total_eligible - total_passed
+
         return KPIResult(
-            total_eligible=-1,
-            total_ineligible=-1,
-            total_passed=-1,
-            total_failed=-1,
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
         )
 
     def _debug_helper_print_postcode_and_attrs(self, queryset, *attrs):
