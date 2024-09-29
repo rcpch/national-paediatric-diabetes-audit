@@ -113,7 +113,6 @@ module.exports = {
       backgroundColor: ["active"],
     },
   },
-  plugins: [require("daisyui")],
   daisyui: {
     themes: ["light", "dark"], // Example themes
     // Add any other DaisyUI-specific configurations here
