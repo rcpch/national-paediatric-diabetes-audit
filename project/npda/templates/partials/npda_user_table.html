@@ -30,7 +30,7 @@
             <td>
                 <div class="tooltip tooltip-top" data-tip="{{npda_user.email}}">
                     {{npda_user.email}}
-                        <div class='tooltip tooltip-right' data-tip="Email confirmed">
+                        <div class='tooltip tooltip-right bg-rcpch_pink' data-tip="Email confirmed">
                             
                                 {% if npda_user.email_confirmed %}
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="16" height="16"
@@ -51,7 +51,7 @@
                             
                         </div>
                         {% else %}
-                        <div class='tooltip tooltip-top' data-tip="Pending confirmation">
+                        <div class='tooltip tooltip-top bg-rcpch_pink' data-tip="Pending confirmation">
                             
                             <svg xmlns="http://www.w3.org/2000/svg" id="Layer_1" data-name="Layer 1" viewBox="0 0 24 24"
                                 width="16" height="16" class="-mt-1 -mx-2">
@@ -64,7 +64,9 @@
                     </span>
             </td>
             <td class="grid grid-cols-4 gap-1 px-5 place-content-evenly items-center mt-5">
+
                 <span class="flex flex-row">
+
                     {% if npda_user.is_staff %}
                         <div class='tooltip tooltip-top' data-tip="Has admin access">
 
@@ -76,6 +78,7 @@
 
                         </div>
                     {% endif %}
+
                     {% if npda_user.is_superuser %}
                         <div class='tooltip tooltip-top' data-tip="Superuser">
 
@@ -87,6 +90,7 @@
 
                         </div>
                     {% endif %}
+
                     {% if npda_user.is_rcpch_audit_team_member %}
                         <div class='tooltip tooltip-top' data-tip="RCPCH Audit Team Member">
                             
@@ -146,6 +150,7 @@
 
                         </div>
                     {% endif %}
+
                     {% if npda_user.is_rcpch_staff %}
                         <div class='tooltip tooltip-top' data-tip="RCPCH Staff Member">
 
@@ -157,18 +162,22 @@
 
                         </div>
                     {% endif %}
+
                 </span>
             </td>
             <td class="px-6 text-left">{{npda_user.get_role_display}}</td>
             <td class="px-2 text-right w-80">
-                <a href="{% url 'npdauser-logs' npda_user.pk %}"
-                    class="text-rcpch_pink px-2 flex justify-center items-center">
-                    <svg class="h-8 w-8 text-rcpch_pink" width="24" height="24" viewBox="0 0 24 24" stroke-width="2"
-                        stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                        <path stroke="none" d="M0 0h24v24H0z" />
-                        <polyline points="9 6 15 12 9 18" />
-                    </svg>
-                </a>
+                <div class="tooltip tooltip-left" data-tip="View user logs for {{user}}">
+                    
+                    <a href="{% url 'npdauser-logs' npda_user.pk %}" class="text-rcpch_pink px-2 flex justify-center items-center">
+                        <svg class="h-8 w-8 text-rcpch_pink" width="24" height="24" viewBox="0 0 24 24" stroke-width="2"
+                            stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <path stroke="none" d="M0 0h24v24H0z" />
+                            <polyline points="9 6 15 12 9 18" />
+                        </svg>
+                    </a>
+
+                </div>
             </td>
         </tr>
         {% endfor %}
