@@ -41,8 +41,10 @@ def seed_users_fixture(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
 
         if NPDAUser.objects.exists():
-            logger.info("Test users already seeded. Deleting all users.")
-            NPDAUser.objects.all().delete()
+            # logger.info("Test users already seeded. Deleting all users.")
+            # NPDAUser.objects.all().delete()
+            logger.info('NOTE: Test users already seeded! Not re-seeding.')
+            return
 
         # Otherwise, seed the users
         is_active = True
