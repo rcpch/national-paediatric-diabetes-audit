@@ -20,6 +20,7 @@ import logging
 from http import HTTPStatus
 
 # 3rd party imports
+from django.core.exceptions import PermissionDenied
 from django.urls import reverse
 from django.test import Client
 
@@ -171,7 +172,7 @@ def test_npda_user_list_view_users_cannot_switch_outside_their_pdu(
     set_view_preference_response = client.post(
         url,
         {"npdauser_pz_code_select_name": GOSH_PZ_CODE},
-        headers={"HX-Request": "true"},
+        **{"HTTP_HX-Request": "true"},
     )
 
     assert set_view_preference_response.status_code == HTTPStatus.FORBIDDEN
