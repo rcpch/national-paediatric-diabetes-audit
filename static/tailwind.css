@@ -4,14 +4,14 @@
   border-radius: 0 !important; /* completely remove rounded corners */
 }
 
-.tooltip{
+/* .tooltip{
     visibility: hidden;
     position: absolute;
   }
   .has-tooltip:hover .tooltip {
     visibility: visible;
     z-index: 100;
-  }
+  } */
   .dropdown:hover .dropdown-menu {
     display: block;
     background-color: white;
