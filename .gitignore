@@ -4,6 +4,7 @@ staticdocs
 staticfiles
 logs/npda.log
 npda.log.*
+media/submissions/csv/*
 
 __pycache__
 .DS_Store
@@ -16,3 +17,4 @@ node_modules
 build_info.json
 
 media/submissions/csv/*
+*.crt

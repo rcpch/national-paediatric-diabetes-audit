@@ -2,16 +2,17 @@
 import logging
 
 # Django imports
-from django.urls import reverse
+from django.apps import apps
 from django.contrib import messages
-from django.shortcuts import render
 from django.core.exceptions import ValidationError
+from django.shortcuts import render
+from django.urls import reverse
 
 # HTMX imports
 from django_htmx.http import trigger_client_event
 
 # RCPCH imports
-from ..general_functions.csv_upload import csv_upload
+from ..general_functions.csv_upload import csv_upload, read_csv
 from ..general_functions.session import get_new_session_fields
 from ..general_functions.view_preference import get_or_update_view_preference
 from ..general_functions.csv_summarize import csv_summarize
@@ -59,10 +60,20 @@ def home(request):
         try:
             csv_upload(
                 user=request.user,
+                dataframe=read_csv(file),
                 csv_file=file,
                 pdu_pz_code=pz_code,
             )
             messages.success(request=request, message="File uploaded successfully")
+            VisitActivity = apps.get_model("npda", "VisitActivity")
+            try:
+                VisitActivity.objects.create(
+                    activity=8,
+                    ip_address=request.META.get("REMOTE_ADDR"),
+                    npdauser=request.user,
+                )  # uploaded csv - activity 8
+            except Exception as e:
+                logger.error(f"Failed to log user activity: {e}")
         except ValidationError as error:
             errors = error_list(error)
 

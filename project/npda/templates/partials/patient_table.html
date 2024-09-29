@@ -1,7 +1,14 @@
 {% load static %}
 {% load npda_tags %}
 {% url 'patients' as patients_url %}
-<h1 class="text-md font-montserrat font-semibold text-rcpch_dark_blue">Patients under the care of {{pz_code}}</h1>
+{% if request.user.view_preference == 1 %}
+    <!-- PDU view   -->
+    <h1 class="text-md font-montserrat font-semibold text-rcpch_dark_blue">Patients under the care of {{pz_code}}</h1>
+{% elif request.user.view_preference == 2 %}
+    <!-- national view -->
+    <h1 class="text-md font-montserrat font-semibold text-rcpch_dark_blue">All patients nationally</h1>
+{% endif %}
+
 {% if patient_list %}
 <table class="table table-md w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
     <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">

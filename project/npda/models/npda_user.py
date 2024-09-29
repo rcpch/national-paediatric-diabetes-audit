@@ -53,7 +53,7 @@ class NPDAUserManager(BaseUserManager):
         user.email_confirmed = False
         # set time password has been updated
         user.password_last_set = timezone.now()
-        print(f"{user} password updated")
+        user.date_joined = timezone.now()
         user.save()
 
         """
@@ -122,6 +122,8 @@ class NPDAUserManager(BaseUserManager):
                     npda_user=logged_in_user,
                     defaults={"is_primary_employer": True},
                 )
+
+        logged_in_user.date_joined = timezone.now()
 
         """
         Allocate Roles
