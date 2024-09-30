@@ -1042,8 +1042,7 @@ class CalculateKPIS:
 
         Denominator: Total number of eligible patients (measure 1)
         """
-        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set
-        total_eligible = self.kpi_1_total_eligible
+        eligible_patients, total_eligible = self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
         total_ineligible = self.total_patients_count - total_eligible
 
         # Define the subquery to find the latest visit where treatment_regimen = 5
@@ -1081,8 +1080,7 @@ class CalculateKPIS:
 
         Denominator: Total number of eligible patients (measure 1)
         """
-        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set
-        total_eligible = self.kpi_1_total_eligible
+        eligible_patients, total_eligible = self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
         total_ineligible = self.total_patients_count - total_eligible
 
         # Define the subquery to find the latest visit where treatment_regimen = 6
@@ -1120,8 +1118,7 @@ class CalculateKPIS:
 
         Denominator: Total number of eligible patients (measure 1)
         """
-        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set
-        total_eligible = self.kpi_1_total_eligible
+        eligible_patients, total_eligible = self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
         total_ineligible = self.total_patients_count - total_eligible
 
         # Define the subquery to find the latest visit where treatment_regimen = 7
@@ -1159,8 +1156,7 @@ class CalculateKPIS:
 
         Denominator: Total number of eligible patients (measure 1)
         """
-        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set
-        total_eligible = self.kpi_1_total_eligible
+        eligible_patients, total_eligible = self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
         total_ineligible = self.total_patients_count - total_eligible
 
         # Define the subquery to find the latest visit where treatment_regimen = 8
@@ -1198,8 +1194,7 @@ class CalculateKPIS:
 
         Denominator: Total number of eligible patients (measure 1)
         """
-        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set
-        total_eligible = self.kpi_1_total_eligible
+        eligible_patients, total_eligible = self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
         total_ineligible = self.total_patients_count - total_eligible
 
         # Define the subquery to find the latest visit where blood glucose monitoring (item 22) is either 2 = Flash glucose monitor or 3 = Modified flash glucose monitor (e.g. with MiaoMiao, Blucon etc.)
@@ -1239,8 +1234,7 @@ class CalculateKPIS:
 
         Denominator: Total number of eligible patients (measure 1)
         """
-        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set
-        total_eligible = self.kpi_1_total_eligible
+        eligible_patients, total_eligible = self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
         total_ineligible = self.total_patients_count - total_eligible
 
         # Define the subquery to find the latest visit where blood glucose monitoring (item 22) is 4 = Real time continuous glucose monitor with alarms
