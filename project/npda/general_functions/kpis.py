@@ -1,9 +1,4 @@
-"""Views for KPIs
-
-TODO:
-    - refactor all calculate_kpi methods which require kpi_1 base query set to use
-      _get_total_kpi_1_eligible_pts_base_query_set_and_total_count
-        - additionally, do same for any other reused attrs
+"""Views for KPIs calculations
 """
 
 # Python imports
