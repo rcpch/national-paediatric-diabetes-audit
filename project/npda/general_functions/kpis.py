@@ -28,7 +28,7 @@ from project.constants.hospital_admission_reasons import \
 from project.constants.retinal_screening_results import \
     RETINAL_SCREENING_RESULTS
 from project.constants.smoking_status import SMOKING_STATUS
-from project.constants.types.kpi_types import KPIResult
+from project.constants.types.kpi_types import KPICalculationsObject, KPIResult
 from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 from project.npda.general_functions import get_audit_period_for_date
 from project.npda.models import Patient
@@ -185,7 +185,7 @@ class CalculateKPIS:
 
         return kpi_result
 
-    def calculate_kpis_for_patients(self) -> dict:
+    def calculate_kpis_for_patients(self) -> KPICalculationsObject:
         """Calculate KPIs 1 - 49 for given self.pz_code and cohort range
         (self.audit_start_date and self.audit_end_date).
 
