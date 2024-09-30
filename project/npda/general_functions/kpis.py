@@ -257,13 +257,9 @@ class CalculateKPIS:
             )
         )
 
-        eligible_patients = (
-            self.total_kpi_1_eligible_pts_base_query_set.distinct()
-        )
-        self.kpi_1_total_eligible = eligible_patients.count()
-
         # Count eligible patients and set as attribute
         # to be used in subsequent KPI calculations
+        self.kpi_1_total_eligible = self.total_kpi_1_eligible_pts_base_query_set.count()
         total_eligible = self.kpi_1_total_eligible
 
         # Calculate ineligible patients
@@ -293,14 +289,11 @@ class CalculateKPIS:
         * Date of diagnosis within the audit period"
         """
 
-        # If we have not already calculated KPI 1, do so now to set
-        # self.total_kpi_1_eligible_pts_base_query_set
-        if not hasattr(self, "total_kpi_1_eligible_pts_base_query_set"):
-            self.calculate_kpi_1_total_eligible()
+        base_eligible_patients, _ = self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
 
         # This is same as KPI1 but with an additional filter for diagnosis date
         self.total_kpi_2_eligible_pts_base_query_set = (
-            self.total_kpi_1_eligible_pts_base_query_set.filter(
+            base_eligible_patients.filter(
                 Q(diagnosis_date__range=(self.AUDIT_DATE_RANGE))
             ).distinct()
         )
@@ -712,14 +705,16 @@ class CalculateKPIS:
         Number of eligible patients (measure 1) with
         * a leaving date in the audit period
         """
-        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set.filter(
+        base_eligible_patients, _ = self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+
+        eligible_patients = base_eligible_patients.filter(
             # a leaving date in the audit period
             Q(
                 paediatric_diabetes_units__date_leaving_service__range=(
                     self.AUDIT_DATE_RANGE
                 )
             )
-        ).distinct()
+        )
 
         # Count eligible patients
         total_eligible = eligible_patients.count()
@@ -2566,7 +2561,7 @@ class CalculateKPIS:
 
     def _get_total_kpi_1_eligible_pts_base_query_set_and_total_count(
         self,
-    ) -> Tuple[QuerySet, int]:
+    ) -> Tuple[QuerySet[Patient], int]:
         """Enables reuse of the base query set for KPI 1
 
         If running calculation methods in order, this attribute will be set in calculate_kpi_1_total_eligible().
@@ -2584,6 +2579,28 @@ class CalculateKPIS:
         return (
             self.total_kpi_1_eligible_pts_base_query_set,
             self.kpi_1_total_eligible,
+        )
+
+    def _get_total_kpi_2_eligible_pts_base_query_set_and_total_count(
+        self,
+    ) -> Tuple[QuerySet[Patient], int]:
+        """Enables reuse of the base query set for KPI 2
+
+        If running calculation methods in order, this attribute will be set in calculate_kpi_2_total_new_diagnoses().
+
+        If running another kpi calculation standalone, need to run that method first to have the attribute set.
+
+        Returns:
+            QuerySet: Base query set of eligible patients for KPI 2
+            int: base query set count of total eligible patients for KPI 2
+        """
+
+        if not hasattr(self, "total_kpi_2_eligible_pts_base_query_set"):
+            self.calculate_kpi_2_total_new_diagnoses()
+
+        return (
+            self.total_kpi_2_eligible_pts_base_query_set,
+            self.kpi_2_total_eligible,
         )
 
     def _get_total_kpi_5_eligible_pts_base_query_set_and_total_count(

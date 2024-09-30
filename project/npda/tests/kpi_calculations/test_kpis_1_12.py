@@ -118,9 +118,6 @@ def test_kpi_calculation_2(AUDIT_START_DATE):
         total_failed=N_PATIENTS_FAIL * 3,
     )
 
-    # First set kpi1 result of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
-
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
         actual=calc_kpis.calculate_kpi_2_total_new_diagnoses(),
