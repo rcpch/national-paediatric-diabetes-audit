@@ -178,10 +178,6 @@ def test_kpi_calculation_3(AUDIT_START_DATE):
         total_failed=N_PATIENTS_FAIL * 3,
     )
 
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
-
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
         actual=calc_kpis.calculate_kpi_3_total_t1dm(),
@@ -249,10 +245,6 @@ def test_kpi_calculation_4(AUDIT_START_DATE):
         total_ineligible=N_PATIENTS_INELIGIBLE * 4,
         total_failed=N_PATIENTS_FAIL * 4,
     )
-
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
 
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
@@ -358,9 +350,6 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
         total_failed=EXPECTED_TOTAL_INELIGIBLE,
     )
 
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
 
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
@@ -533,9 +522,7 @@ def test_kpi_calculation_7(AUDIT_START_DATE):
     calc_kpis = CalculateKPIS(
         pz_code="PZ130", calculation_date=AUDIT_START_DATE
     )
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
+
 
     EXPECTED_TOTAL_ELIGIBLE = len(observation_field_names)
     EXPECTED_TOTAL_INELIGIBLE = 2
@@ -611,9 +598,6 @@ def test_kpi_calculation_8(AUDIT_START_DATE):
         total_failed=EXPECTED_TOTAL_INELIGIBLE,
     )
 
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
 
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
@@ -689,9 +673,6 @@ def test_kpi_calculation_9(AUDIT_START_DATE):
         total_failed=EXPECTED_TOTAL_INELIGIBLE,
     )
 
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
 
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
@@ -758,9 +739,7 @@ def test_kpi_calculation_10(AUDIT_START_DATE):
         total_failed=EXPECTED_TOTAL_INELIGIBLE,
     )
 
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
+
 
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
@@ -836,9 +815,7 @@ def test_kpi_calculation_11(AUDIT_START_DATE):
         total_failed=EXPECTED_TOTAL_INELIGIBLE,
     )
 
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
+
 
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
@@ -904,10 +881,6 @@ def test_kpi_calculation_12(AUDIT_START_DATE):
         total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
         total_failed=EXPECTED_TOTAL_INELIGIBLE,
     )
-
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
 
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,

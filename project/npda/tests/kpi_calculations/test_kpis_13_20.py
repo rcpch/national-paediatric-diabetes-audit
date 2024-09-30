@@ -81,10 +81,6 @@ def test_kpi_calculations_13_to_20(
         pz_code="PZ130", calculation_date=AUDIT_START_DATE
     )
 
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
-
     # Dynamically get the kpi calc method based on treatment type
     #   `treatment` is an int between 1-8
     #   these kpi calulations start at 13
