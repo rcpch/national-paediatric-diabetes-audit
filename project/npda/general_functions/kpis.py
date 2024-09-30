@@ -1868,7 +1868,7 @@ class CalculateKPIS:
         valid_smoking_visits = Visit.objects.filter(
             patient=OuterRef("pk"),
             visit_date__range=self.AUDIT_DATE_RANGE,
-            smoking_status__in=[1, 2],
+            smoking_status__in=[SMOKING_STATUS[0][0],SMOKING_STATUS[1][0]],
         )
         eligible_pts_annotated_smoke_screen_visits = eligible_patients.annotate(
             smoke_valid_visits=Exists(
