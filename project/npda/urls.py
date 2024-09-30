@@ -101,6 +101,7 @@ urlpatterns = [
     path(
         "kpis/aggregation/pdu/<str:pz_code>",
         view=KPIAggregationForPDU.as_view(),
-        name='aggregation-pdu'
-    )
+        name="aggregation-pdu",
+    ),
+    path("csrf_fail/", csrf_fail, name="csrf_fail"),
 ]

@@ -76,6 +76,8 @@ if DEBUG is True:
 CAPTCHA_IMAGE_SIZE = (200, 50)
 CAPTCHA_FONT_SIZE = 40
 
+# CSRF failure view
+CSRF_FAILURE_VIEW = "project.npda.views.csrf_fail"
 
 # Application definition
 

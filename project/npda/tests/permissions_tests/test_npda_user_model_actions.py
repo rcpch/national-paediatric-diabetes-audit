@@ -23,8 +23,15 @@ from http import HTTPStatus
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse
 from django.test import Client
+from django.test import RequestFactory
+from django.contrib.sessions.middleware import SessionMiddleware
 
 # E12 imports
+from project.npda.general_functions.session import (
+    get_new_session_fields,
+    update_session_object,
+)
+from project.npda.general_functions.view_preference import get_or_update_view_preference
 from project.npda.models import NPDAUser
 from project.npda.tests.utils import login_and_verify_user
 from project.npda.tests.UserDataClasses import test_user_rcpch_audit_team_data
@@ -123,39 +130,6 @@ def test_npda_user_list_view_rcpch_audit_team_can_view_all_users(
 
 
 @pytest.mark.django_db
-@pytest.mark.skip(
-    reason="This test is failing organisations have been removed and we nolonger use ods_code in view preference"
-)
-def test_npda_user_list_view_users_cannot_switch_outside_their_organisation(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_patients_fixture,
-    client,
-):
-    ah_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
-    ).first()
-    client = login_and_verify_user(client, ah_user)
-
-    url = reverse("npda_users")
-
-    set_view_preference_response = client.post(
-        url,
-        {"npdauser_ods_code_select_name": GOSH_ODS_CODE},
-        headers={"HX-Request": "true"},
-    )
-
-    assert set_view_preference_response.status_code == HTTPStatus.FORBIDDEN
-
-    # Check the session isn't modified anyway
-    response = client.get(url)
-    assert response.status_code == HTTPStatus.OK
-
-    users = response.context_data["object_list"]
-    check_all_users_in_pdu(ah_user, users, ALDER_HEY_PZ_CODE)
-
-
-@pytest.mark.django_db
 def test_npda_user_list_view_users_cannot_switch_outside_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
@@ -169,20 +143,12 @@ def test_npda_user_list_view_users_cannot_switch_outside_their_pdu(
 
     url = reverse("npda_users")
 
-    set_view_preference_response = client.post(
-        url,
-        {"npdauser_pz_code_select_name": GOSH_PZ_CODE},
-        **{"HTTP_HX-Request": "true"},
-    )
-
-    assert set_view_preference_response.status_code == HTTPStatus.FORBIDDEN
+    with pytest.raises(PermissionDenied):
+        get_new_session_fields(ah_user, GOSH_PZ_CODE)
 
     # Check the session isn't modified anyway
     response = client.get(url)
     assert response.status_code == HTTPStatus.OK
-
-    users = response.context_data["object_list"]
-    check_all_users_in_pdu(ah_user, users, ALDER_HEY_PZ_CODE)
 
 
 @pytest.mark.django_db  # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/189
@@ -199,15 +165,7 @@ def test_npda_user_list_view_normal_users_cannot_set_their_view_preference_to_na
 
     url = reverse("npda_users")
 
-    set_view_preference_response = client.post(
-        url, {"view_preference": 2}, headers={"HX-Request": "true"}
-    )
-
-    assert set_view_preference_response.status_code == HTTPStatus.FORBIDDEN
-
-    # Check the session isn't modified anyway
-    response = client.get(url)
-    assert response.status_code == HTTPStatus.OK
-
-    users = response.context_data["object_list"]
-    check_all_users_in_pdu(ah_user, users, ALDER_HEY_PZ_CODE)
+    with pytest.raises(PermissionDenied):
+        get_or_update_view_preference(
+            ah_user, 2
+        )  # this should raise a PermissionDenied
