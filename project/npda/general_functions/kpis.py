@@ -848,8 +848,9 @@ class CalculateKPIS:
         )
 
         # Filter the Patient queryset based on the subquery
+        base_query_set, _ = self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
         eligible_patients = (
-            self.total_kpi_1_eligible_pts_base_query_set.filter(
+            base_query_set.filter(
                 Q(
                     id__in=Subquery(
                         Patient.objects.filter(
