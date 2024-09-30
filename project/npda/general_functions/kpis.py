@@ -1272,13 +1272,8 @@ class CalculateKPIS:
 
         Denominator: Number of eligible patients whose most recent entry (based on visit date) for blood glucose monitoring (item 22) is 4 = Real time continuous glucose monitor with alarms
         """
-        # If running this method standalone, need to set self.kpi_2_total_eligible first
-        # by running its calculation method
-        if not hasattr(self, "kpi_2_total_eligible"):
-            self.calculate_kpi_2_total_new_diagnoses()
+        eligible_patients, total_eligible = self._get_total_kpi_2_eligible_pts_base_query_set_and_total_count()
 
-        eligible_patients = self.total_kpi_2_eligible_pts_base_query_set
-        total_eligible = self.kpi_2_total_eligible
         total_ineligible = self.total_patients_count - total_eligible
 
         # Define the subquery to find the latest visit where blood glucose monitoring (item 22) is 4 = Real time continuous glucose monitor with alarms
