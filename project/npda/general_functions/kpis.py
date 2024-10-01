@@ -438,7 +438,7 @@ class CalculateKPIS:
             )
             # EXCLUDE Date of death within the audit period"
             | Q(death_date__range=(self.AUDIT_DATE_RANGE))
-        ).distinct()
+        )
 
         # Count eligible patients
         total_eligible = eligible_patients.count()
@@ -558,7 +558,7 @@ class CalculateKPIS:
                     )
                 )
             )
-        ).distinct()
+        )
 
         # Count eligible patients
         total_eligible = eligible_patients.count()
@@ -593,8 +593,9 @@ class CalculateKPIS:
         * Date of diagnosis within the audit period
         """
 
-        # total_kpi_1_eligible_pts_base_query_set is slightly different (additionally specifies
-        # visit date). So we need to make a new query set
+        # total_kpi_1_eligible_pts_base_query_set is slightly different
+        # (additionally specifies visit date). So we need to make a new
+        # query set
         eligible_patients = self.patients.filter(
             # Valid attributes
             Q(nhs_number__isnull=False)
@@ -653,7 +654,7 @@ class CalculateKPIS:
                     )
                 )
             )
-        ).distinct()
+        )
 
         # Count eligible patients
         total_eligible = eligible_patients.count()
@@ -683,10 +684,14 @@ class CalculateKPIS:
         Number of eligible patients (measure 1) with:
             * a death date in the audit period
         """
-        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set.filter(
+        base_eligible_patients, _ = (
+            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = base_eligible_patients.filter(
             # Date of death within the audit period"
             Q(death_date__range=(self.AUDIT_DATE_RANGE))
-        ).distinct()
+        )
 
         # Count eligible patients
         total_eligible = eligible_patients.count()
