@@ -3,14 +3,13 @@
 # python imports
 import pytest
 import logging
-from http import HTTPStatus
 
 # 3rd party imports
 from django.urls import reverse
 from project.constants.user import TITLES
 
 # E12 imports
-from project.npda.models import NPDAUser, OrganisationEmployer
+from project.npda.models import NPDAUser
 
 logger = logging.getLogger(__name__)
 

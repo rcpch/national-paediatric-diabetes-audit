@@ -20,22 +20,11 @@ import logging
 from http import HTTPStatus
 
 # 3rd party imports
-from django.core.exceptions import PermissionDenied
 from django.urls import reverse
-from django.test import Client
-from django.test import RequestFactory
-from django.contrib.sessions.middleware import SessionMiddleware
 
 # E12 imports
-from project.npda.general_functions.session import (
-    get_new_session_fields,
-    update_session_object,
-)
-from project.npda.general_functions.view_preference import get_or_update_view_preference
 from project.npda.models import NPDAUser
 from project.npda.tests.utils import login_and_verify_user
-from project.npda.tests.UserDataClasses import test_user_rcpch_audit_team_data
-from project.npda.views.npda_users import NPDAUserListView
 from project.constants.user import RCPCH_AUDIT_TEAM
 
 logger = logging.getLogger(__name__)

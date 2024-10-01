@@ -251,7 +251,10 @@ STATICFILES_DIRS = (str(BASE_DIR.joinpath("static")),)
 STATIC_ROOT = str(BASE_DIR.joinpath("staticfiles"))
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 # enabled to allow daisy to be used in production
+# Ensure WHITENOISE_ROOT directory exists
 WHITENOISE_ROOT = os.path.join(BASE_DIR, "static/root")
+if not os.path.exists(WHITENOISE_ROOT):
+    os.makedirs(WHITENOISE_ROOT)
 
 SMTP_EMAIL_ENABLED = "False"
 
