@@ -290,7 +290,7 @@ class CalculateKPIS:
         self.total_kpi_2_eligible_pts_base_query_set = (
             base_eligible_patients.filter(
                 Q(diagnosis_date__range=(self.AUDIT_DATE_RANGE))
-            ).distinct()
+            )
         )
 
         # Count eligible patients
@@ -330,7 +330,7 @@ class CalculateKPIS:
         eligible_patients = self.total_kpi_1_eligible_pts_base_query_set.filter(
             # is type 1 diabetes
             Q(diabetes_type=DIABETES_TYPES[0][0])
-        ).distinct()
+        )
 
         # Count eligible patients
         total_eligible = eligible_patients.count()
