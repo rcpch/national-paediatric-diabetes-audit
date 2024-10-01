@@ -372,7 +372,11 @@ class CalculateKPIS:
             * Diagnosis of Type 1 diabetes"
         """
 
-        eligible_patients = self.total_kpi_1_eligible_pts_base_query_set.filter(
+        base_eligible_patients, _ = (
+            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = base_eligible_patients.filter(
             # Diagnosis of Type 1 diabetes
             Q(diabetes_type=DIABETES_TYPES[0][0])
             # Age 12 and above years at the start of the audit period
@@ -380,7 +384,7 @@ class CalculateKPIS:
                 date_of_birth__lte=self.audit_start_date
                 - relativedelta(years=12)
             )
-        ).distinct()
+        )
 
         # Count eligible patients
         total_eligible = eligible_patients.count()
