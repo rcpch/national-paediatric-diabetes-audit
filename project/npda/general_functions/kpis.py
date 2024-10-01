@@ -501,7 +501,7 @@ class CalculateKPIS:
             | Q(death_date__range=(self.AUDIT_DATE_RANGE))
         )
 
-        eligible_patients = eligible_patients_exclusions.filter(
+        base_eligible_patients = eligible_patients_exclusions.filter(
             # Valid attributes
             Q(nhs_number__isnull=False)
             & Q(date_of_birth__isnull=False)
@@ -512,58 +512,66 @@ class CalculateKPIS:
             )
             # Diagnosis of Type 1 diabetes
             & Q(diabetes_type=DIABETES_TYPES[0][0])
-            & (
-                # an observation within the audit period
-                # this requires checking for a date in any of the Visit model's
-                # observation fields (found simply by searching for date fields
-                # with the word 'observation' in the field verbose_name)
+        )
+
+        # Find patients with at least one observation within the audit period
+        # this requires checking for a date in any of the Visits for a given
+        # patient
+        valid_visit_subquery = Visit.objects.filter(
+            Q(
                 Q(
-                    visit__height_weight_observation_date__range=(
+                    height_weight_observation_date__range=(
                         self.AUDIT_DATE_RANGE
                     )
                 )
-                | Q(visit__hba1c_date__range=(self.AUDIT_DATE_RANGE))
+                | Q(hba1c_date__range=(self.AUDIT_DATE_RANGE))
                 | Q(
-                    visit__blood_pressure_observation_date__range=(
-                        self.AUDIT_DATE_RANGE
-                    )
-                )
-                | Q(
-                    visit__foot_examination_observation_date__range=(
+                    blood_pressure_observation_date__range=(
                         self.AUDIT_DATE_RANGE
                     )
                 )
                 | Q(
-                    visit__retinal_screening_observation_date__range=(
+                    foot_examination_observation_date__range=(
                         self.AUDIT_DATE_RANGE
                     )
                 )
                 | Q(
-                    visit__albumin_creatinine_ratio_date__range=(
+                    retinal_screening_observation_date__range=(
                         self.AUDIT_DATE_RANGE
                     )
                 )
                 | Q(
-                    visit__total_cholesterol_date__range=(
+                    albumin_creatinine_ratio_date__range=(
                         self.AUDIT_DATE_RANGE
                     )
                 )
+                | Q(total_cholesterol_date__range=(self.AUDIT_DATE_RANGE))
+                | Q(thyroid_function_date__range=(self.AUDIT_DATE_RANGE))
+                | Q(coeliac_screen_date__range=(self.AUDIT_DATE_RANGE))
                 | Q(
-                    visit__thyroid_function_date__range=(self.AUDIT_DATE_RANGE)
-                )
-                | Q(visit__coeliac_screen_date__range=(self.AUDIT_DATE_RANGE))
-                | Q(
-                    visit__psychological_screening_assessment_date__range=(
+                    psychological_screening_assessment_date__range=(
                         self.AUDIT_DATE_RANGE
                     )
                 )
-            )
+            ),
+            patient=OuterRef("pk"),
+            visit_date__range=self.AUDIT_DATE_RANGE,
+        )
+
+        # Check any observation across all visits
+        eligible_pts_annotated_kpi_6_visits = base_eligible_patients.annotate(
+            valid_kpi_6_visits=Exists(valid_visit_subquery)
+        )
+
+        eligible_patients = eligible_pts_annotated_kpi_6_visits.filter(
+            valid_kpi_6_visits__gte=1
         )
 
         # Count eligible patients
         total_eligible = eligible_patients.count()
 
-        # In case we need to use this as a base query set for subsequent KPIs
+        # We reuse this as a base query set for subsequent KPIs so set
+        # as an attribute
         self.total_kpi_6_eligible_pts_base_query_set = eligible_patients
         self.kpi_6_total_eligible = total_eligible
 
@@ -2573,15 +2581,14 @@ class CalculateKPIS:
             total_failed=total_failed,
         )
 
-    def _debug_helper_print_postcode_and_attrs(self, queryset, *attrs):
+    def _debug_helper_print_postcode_and_attrs(self, patient_queryset, *attrs):
         """Helper function to be used with tests which prints out the postcode
-        (`can add name to postcode as non-validated string field`)
         and specified attributes for each patient in the queryset
         """
 
-        logger.debug(f"===QuerySet:{str(queryset)}===")
+        logger.debug(f"===QuerySet:{str(patient_queryset)}===")
         logger.debug(f"==={self.AUDIT_DATE_RANGE=}===\n")
-        for item in queryset.values("postcode", *attrs):
+        for item in patient_queryset.values("postcode", *attrs):
             logger.debug(f'Patient Name: {item["postcode"]}')
             del item["postcode"]
             logger.debug(pformat(item) + "\n")
