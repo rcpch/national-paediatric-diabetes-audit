@@ -17,9 +17,12 @@ from project.npda.tests.kpi_calculations.test_kpi_calculations import \
 def test_kpi_calculation_25(AUDIT_START_DATE):
     """Tests that KPI25 is calculated correctly.
 
-    Numerator: Number of eligible patients with at least one valid entry for HbA1c value (item 17) with an observation date (item 19) within the audit period
+    Numerator: Number of eligible patients with at least one valid entry for
+    HbA1c value (item 17) with an observation date (item 19) within the audit
+    period
 
-    Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
+    Denominator: Number of patients with Type 1 diabetes with a complete year
+    of care in the audit period (measure 5)
     """
 
     # Ensure starting with clean pts in test db
@@ -415,6 +418,7 @@ def test_kpi_calculation_28(AUDIT_START_DATE):
         # Diagnosis of Type 1 diabetes
         "diabetes_type": DIABETES_TYPES[0][0],
         # KPI 6 specific = an observation within the audit period
+        "visit__visit_date": AUDIT_START_DATE + relativedelta(days=2),
         "visit__height_weight_observation_date": AUDIT_START_DATE
         + relativedelta(days=2),
         # Also has same exclusions as KPI 5
@@ -538,6 +542,7 @@ def test_kpi_calculation_29(AUDIT_START_DATE):
         # Diagnosis of Type 1 diabetes
         "diabetes_type": DIABETES_TYPES[0][0],
         # KPI 6 specific = an observation within the audit period
+        "visit__visit_date": AUDIT_START_DATE + relativedelta(days=2),
         "visit__height_weight_observation_date": AUDIT_START_DATE
         + relativedelta(days=2),
         # Also has same exclusions as KPI 5
@@ -661,6 +666,7 @@ def test_kpi_calculation_30(AUDIT_START_DATE):
         # Diagnosis of Type 1 diabetes
         "diabetes_type": DIABETES_TYPES[0][0],
         # KPI 6 specific = an observation within the audit period
+        "visit__visit_date": AUDIT_START_DATE + relativedelta(days=2),
         "visit__height_weight_observation_date": AUDIT_START_DATE
         + relativedelta(days=2),
         # Also has same exclusions as KPI 5
@@ -793,6 +799,7 @@ def test_kpi_calculation_31(AUDIT_START_DATE):
         # Diagnosis of Type 1 diabetes
         "diabetes_type": DIABETES_TYPES[0][0],
         # KPI 6 specific = an observation within the audit period
+        "visit__visit_date": AUDIT_START_DATE + relativedelta(days=2),
         "visit__height_weight_observation_date": AUDIT_START_DATE
         + relativedelta(days=2),
         # Also has same exclusions as KPI 5
