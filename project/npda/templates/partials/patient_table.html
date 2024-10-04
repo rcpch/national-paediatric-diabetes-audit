@@ -155,7 +155,7 @@
                         class="text-rcpch_red hover:text-white flex justify-end"
                         {% endif %}
                         >
-                            {% if not patient.is_valid or patient.visit_error_count > 0 %}
+                            {% if patient.visit_error_count > 0 %}
                                 <strong class="text-rcpch_red hover:text-white px-2 self-center">Visits ({{patient.visit_set.all.count}})</strong>
                                 <svg 
                                     class="self-center hover:text-white text-rcpch_red" 
