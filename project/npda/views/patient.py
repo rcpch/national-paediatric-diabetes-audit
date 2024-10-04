@@ -97,6 +97,8 @@ class PatientListView(
             else:
                 obj.latest_quarter = None
 
+        print(patient_queryset[0].errors)
+
         return patient_queryset
 
     def get_context_data(self, **kwargs):
