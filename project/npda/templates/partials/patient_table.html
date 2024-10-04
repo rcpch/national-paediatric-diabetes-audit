@@ -151,9 +151,9 @@
                         {% endif %}
                         >
                             {% if patient.visit_error_count > 0 %}
-                                <strong class="text-rcpch_red hover:text-white px-2 self-center">Visits ({{patient.visit_set.all.count}})</strong>
+                                <strong class="text-rcpch_red px-2 self-center">Visits ({{patient.visit_set.all.count}})</strong>
                                 <svg 
-                                    class="self-center hover:text-white text-rcpch_red" 
+                                    class="self-center text-rcpch_red" 
                                     height="16" style="overflow:visible;enable-background:new 0 0 32 32" 
                                     viewBox="0 0 32 32" width="16" 
                                     xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -162,18 +162,18 @@
                                     <path d="M14.5,25h3v-3h-3V25z M14.5,6v13h3V6H14.5z" id="Exclamatory_x5F_Sign" style="fill:#E6E6E6;"/>
                                     </g></g></g>
                                 </svg>
-                            <div class="tooltip-content hidden group-hover:block absolute rounded shadow-lg px-2 py-2 bg-gray-800 text-white -mt-20 text-left hover:text-white font-montserrat">
+                            <div class="tooltip-content hidden group-hover:block absolute rounded shadow-lg px-2 py-2 bg-gray-800 text-white -mt-20 text-left font-montserrat">
                                 {{patient.visit_error_count}} visit{{patient.visit_error_count|pluralize}} {{patient.visit_error_count|pluralize:'has, have'}} errors that need addressing.<br>Items have been saved but will not be included until rectified.
                             </div>
                             {% else %}
-                            <strong class="text-rcpch_pink hover:text-white self-center">Visits ({{patient.visit_set.all.count}})</strong>
+                            <strong class="text-rcpch_pink self-center">Visits ({{patient.visit_set.all.count}})</strong>
                             {% endif %}
                             <!-- caret -->
                             <svg
                                 {% if patient.is_valid and patient.visit_error_count < 1 %}
-                                class="h-8 w-8 text-rcpch_pink self-center hover:text-white"
+                                class="h-8 w-8 text-rcpch_pink self-center"
                                 {% else %}
-                                class="h-8 w-8 text-rcpch_red hover:text-white self-center hover:text-white"
+                                class="h-8 w-8 text-rcpch_red self-center"
                                 {% endif %}
                                 width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">  
                                 <path stroke="none" d="M0 0h24v24H0z"/>  <polyline points="9 6 15 12 9 18" />
