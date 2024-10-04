@@ -63,7 +63,11 @@
                     {% else %} 
                     class="border-b border-color-rcpch_red_light_tint3 text-rcpch_red border-gray-100 hover:bg-r hover:bg-rcpch_red_light_tint2 hover:text-white" 
                     {% endif %}>
-                    <td><a href="{% url 'patient-update' patient.pk %}" class="px-2 flex text-center hover:text-rcpch_pink"><strong>{{ patient.pk }}</strong></a></td>
+                    <td>
+                        <span class="tooltip tooltip-right" data-tip="View patient details">
+                            <a href="{% url 'patient-update' patient.pk %}" class="px-2 flex text-center hover:text-rcpch_pink"><strong>{{ patient.pk }}</strong></a>
+                        </span>
+                    </td>
                     <td class="nhs-number-column">
                         {% if patient.errors|error_for_field:"nhs_number" or patient.errors|error_for_field:"gp_practice_ods_code" %}
                           {% if patient.errors|error_for_field:"gp_practice_ods_code" %}
