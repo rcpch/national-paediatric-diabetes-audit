@@ -43,7 +43,7 @@
                                           >
                                           <small>
                                             {% if item.has_error %}
-                                              <div class='tooltip tooltip-bottom visible text-white -mt-20 text-center hover:text-white' data-tip='{{ item.category|errors_for_category:visit.visit.errors }}'>
+                                              <div class='tooltip tooltip-bottom visible text-white -mt-20 text-center hover:text-white' data-tip='{{ item.category|errors_for_category:visit.visit.errors|safe|linebreaksbr }}'>
                                               {{item.category}}
                                               </div>
                                             {% else %}
