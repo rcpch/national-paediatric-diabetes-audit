@@ -501,6 +501,7 @@ class CalculateKPIS:
             | Q(death_date__range=(self.AUDIT_DATE_RANGE))
         )
 
+
         base_eligible_patients = eligible_patients_exclusions.filter(
             # Valid attributes
             Q(nhs_number__isnull=False)
@@ -1918,6 +1919,7 @@ class CalculateKPIS:
                 smoke_valid_visits__gte=1
             )
         )
+
 
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
