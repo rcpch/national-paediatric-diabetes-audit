@@ -80,6 +80,26 @@ VISIT_FIELDS = (
     (VisitCategories.HOSPITAL_ADMISSION, HOSPITAL_ADMISSION_FIELDS),
 )
 
+VISIT_CATEGORY_COLOURS = (
+    (VisitCategories.HBA1, "rcpch_dark_grey"),
+    (VisitCategories.MEASUREMENT, "rcpch_yellow"),
+    (VisitCategories.TREATMENT, "rcpch_strong_green_light_tint1"),
+    (VisitCategories.CGM, "rcpch_aqua_green_light_tint1"),
+    (VisitCategories.BP, "rcpch_orange_light_tint1"),
+    (VisitCategories.FOOT, "rcpch_gold"),
+    (VisitCategories.DECS, "rcpch_vivid_green"),
+    (VisitCategories.ACR, "rcpch_red_light_tint2"),
+    (VisitCategories.CHOLESTEROL, "rcpch_orange_dark_tint"),
+    (VisitCategories.THYROID, "rcpch_red_dark_tint"),
+    (VisitCategories.COELIAC, "rcpch_purple_light_tint2"),
+    (VisitCategories.PSYCHOLOGY, "rcpch_yellow_dark_tint"),
+    (VisitCategories.SMOKING, "rcpch_strong_green_dark_tint"),
+    (VisitCategories.DIETETIAN, "rcpch_aqua_green_dark_tint"),
+    (VisitCategories.SICK_DAY, "rcpch_purple_dark_tint"),
+    (VisitCategories.FLU, "rcpch_orange"),
+    (VisitCategories.HOSPITAL_ADMISSION, "rcpch_red"),
+)
+
 VISIT_FIELD_FLAT_LIST = (
     MEASUREMENT_FIELDS
     + HBA1_FIELDS

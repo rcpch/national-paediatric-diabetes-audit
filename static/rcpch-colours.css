@@ -1,0 +1,64 @@
+/* rcpch-colours.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Explicitly use all colors to ensure they are included in the final CSS */
+.bg-rcpch_lightest_grey { background-color: #f3f3f3; }
+.bg-rcpch_dark_blue { background-color: #0d0d58; }
+.bg-rcpch_strong_blue { background-color: #3366cc; }
+.bg-rcpch_strong_blue_light_tint1 { background-color: #668cd9; }
+.bg-rcpch_strong_blue_light_tint2 { background-color: #99b3e6; }
+.bg-rcpch_strong_blue_light_tint3 { background-color: #ccd9f2; }
+.bg-rcpch_strong_blue_dark_tint { background-color: #405a97; }
+.bg-rcpch_light_blue { background-color: #11a7f2; }
+.bg-rcpch_light_blue_tint1 { background-color: #4dbdf5; }
+.bg-rcpch_light_blue_tint2 { background-color: #88d3f9; }
+.bg-rcpch_light_blue_tint3 { background-color: #cfe9fc; }
+.bg-rcpch_light_blue_dark_tint { background-color: #0082bc; }
+.bg-rcpch_pink { background-color: #e00087; }
+.bg-rcpch_pink_light_tint1 { background-color: #e840a5; }
+.bg-rcpch_pink_light_tint2 { background-color: #ef80c3; }
+.bg-rcpch_pink_light_tint3 { background-color: #f7bfe1; }
+.bg-rcpch_pink_dark_tint { background-color: #ab1368; }
+.bg-rcpch_white { background-color: #ffffff; }
+.bg-rcpch_light_grey { background-color: #d9d9d9; }
+.bg-rcpch_mid_grey { background-color: #b3b3b3; }
+.bg-rcpch_dark_grey { background-color: #808080; }
+.bg-rcpch_charcoal { background-color: #4d4d4d; }
+.bg-rcpch_charcoal_dark { background-color: #191919; }
+.bg-rcpch_black { background-color: #000000; }
+.bg-rcpch_red { background-color: #e60700; }
+.bg-rcpch_red_light_tint1 { background-color: #ec4540; }
+.bg-rcpch_red_light_tint2 { background-color: #f38380; }
+.bg-rcpch_red_light_tint3 { background-color: #f9c1bf; }
+.bg-rcpch_red_dark_tint { background-color: #b11d23; }
+.bg-rcpch_orange { background-color: #ff8000; }
+.bg-rcpch_orange_light_tint1 { background-color: #ffa040; }
+.bg-rcpch_orange_light_tint2 { background-color: #ffc080; }
+.bg-rcpch_orange_light_tint3 { background-color: #ffdfbf; }
+.bg-rcpch_orange_dark_tint { background-color: #bf6914; }
+.bg-rcpch_yellow { background-color: #ffd200; }
+.bg-rcpch_yellow_light_tint1 { background-color: #ffdd40; }
+.bg-rcpch_yellow_light_tint2 { background-color: #ffe980; }
+.bg-rcpch_yellow_light_tint3 { background-color: #fff4bf; }
+.bg-rcpch_yellow_dark_tint { background-color: #c5a000; }
+.bg-rcpch_strong_green { background-color: #66cc33; }
+.bg-rcpch_strong_green_light_tint1 { background-color: #8cd966; }
+.bg-rcpch_strong_green_light_tint2 { background-color: #b3e699; }
+.bg-rcpch_strong_green_light_tint3 { background-color: #d9f2cc; }
+.bg-rcpch_strong_green_dark_tint { background-color: #53861b; }
+.bg-rcpch_aqua_green { background-color: #00bdaa; }
+.bg-rcpch_aqua_green_light_tint1 { background-color: #40ecbf; }
+.bg-rcpch_aqua_green_light_tint2 { background-color: #80ded4; }
+.bg-rcpch_aqua_green_light_tint3 { background-color: #bfeeea; }
+.bg-rcpch_aqua_green_dark_tint { background-color: #2e888d; }
+.bg-rcpch_purple { background-color: #7159aa; }
+.bg-rcpch_purple_light_tint1 { background-color: #ae4cbf; }
+.bg-rcpch_purple_light_tint2 { background-color: #c987d4; }
+.bg-rcpch_purple_light_tint3 { background-color: #e4c3ea; }
+.bg-rcpch_purple_dark_tint { background-color: #66296c; }
+.bg-rcpch_gold { background-color: #c2a712; }
+.bg-rcpch_vivid_green { background-color: #c8d400; }
+.bg-rcpch_dark_red { background-color: #9a0500; }
+.border-rcpch_red { border-color: #e60700; }
