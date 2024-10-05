@@ -69,6 +69,21 @@ def test_kpi_calculation_33(AUDIT_START_DATE):
         hba1c=43,
         hba1c_date=AUDIT_START_DATE + relativedelta(days=6),
     )
+    # 1 of the Visits has no HbA1c
+    passing_patient_3 = PatientFactory(
+        postcode="passing_patient_3",
+        # KPI5 eligible
+        **eligible_criteria,
+        visit__hba1c=None,
+        visit__hba1c_date=None,
+    )
+    for i in range(4):
+        VisitFactory(
+            patient=passing_patient_3,
+            visit_date=AUDIT_START_DATE,
+            hba1c=46,
+            hba1c_date=AUDIT_START_DATE + relativedelta(days=i),
+        )
 
     # Failing patients
     # < 4 hba1c
@@ -141,9 +156,9 @@ def test_kpi_calculation_33(AUDIT_START_DATE):
         calculation_date=AUDIT_START_DATE,
     )
 
-    EXPECTED_TOTAL_ELIGIBLE = 4
+    EXPECTED_TOTAL_ELIGIBLE = 5
     EXPECTED_TOTAL_INELIGIBLE = 5
-    EXPECTED_TOTAL_PASSED = 2
+    EXPECTED_TOTAL_PASSED = 3
     EXPECTED_TOTAL_FAILED = 2
 
     EXPECTED_KPIRESULT = KPIResult(
