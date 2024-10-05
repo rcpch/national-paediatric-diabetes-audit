@@ -45,14 +45,14 @@ def match_category(value):
 def colour_for_category(category):
     # returns a colour for a given category
     colours = [
-        {"category": VisitCategories.HBA1, "colour": "rcpch_light_grey"},
-        {"category": VisitCategories.MEASUREMENT, "colour": "rcpch_yellow_light_tint2"},
+        {"category": VisitCategories.HBA1, "colour": "rcpch_dark_grey"},
+        {"category": VisitCategories.MEASUREMENT, "colour": "rcpch_yellow"},
         {
             "category": VisitCategories.TREATMENT,
-            "colour": "rcpch_strong_green_light_tint2",
+            "colour": "rcpch_strong_green_light_tint1",
         },
-        {"category": VisitCategories.CGM, "colour": "rcpch_aqua_green_light_tint2"},
-        {"category": VisitCategories.BP, "colour": "rcpch_orange_light_tint2"},
+        {"category": VisitCategories.CGM, "colour": "rcpch_aqua_green_light_tint1"},
+        {"category": VisitCategories.BP, "colour": "rcpch_orange_light_tint1"},
         {"category": VisitCategories.FOOT, "colour": "rcpch_gold"},
         {"category": VisitCategories.DECS, "colour": "rcpch_vivid_green"},
         {"category": VisitCategories.ACR, "colour": "rcpch_red_light_tint2"},
