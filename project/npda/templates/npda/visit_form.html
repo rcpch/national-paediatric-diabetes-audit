@@ -197,16 +197,19 @@
               <!-- This is the inpatient entry  -->
                 <div class="flex flex-col mb-6
                   {% if background_colour %} 
-                    bg-{{background_colour}} 
+                    border border-{{background_colour}} bg-white
                   {% endif %}
-                  {% if "Hospital Admission" in categories_with_errors %}
+                  {% if 'Hospital Admission' in categories_with_errors %}
                     outline outline-8 outline-rcpch_red
                   {% endif %}"
                 >
+
+                <div class="badge badge-outline p-2 {% if background_colour %} bg-{{background_colour}} {% endif %} text-white">{{field_category}}</div>
+                
                 {% for field in form %}
                     {% if field.field.category == field_category %}
                     <div class="flex flex-row my-2 mx-2">
-                      <div class="flex items-center justify-center md:w-1/3">
+                      <div class="flex flex-row align-items-center justify-end md:w-1/3">
                         <label for="{{ field.id_for_label }}" class="block text-gray-700 font-bold md:text-center mb-1 md:mb-0 pr-4"><small>{{ field.label }}</small></label>
                       </div>
                       <div class="flex space-between md:w-2/3">
