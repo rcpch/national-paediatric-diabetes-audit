@@ -8,11 +8,6 @@ module.exports = {
     "./static/**/*.tsx",
   ],
   theme: {
-    extend: {},
-  },
-  plugins: [require("daisyui")],
-  darkMode: "media",
-  theme: {
     backgroundColor: (theme) => ({
       ...theme("colors"),
       rcpch_lightest_grey: "#f3f3f3",
@@ -113,6 +108,8 @@ module.exports = {
       backgroundColor: ["active"],
     },
   },
+  plugins: [require("daisyui")],
+  darkMode: "media",
   daisyui: {
     themes: ["light", "dark"], // Example themes
     // Add any other DaisyUI-specific configurations here
