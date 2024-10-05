@@ -22,7 +22,7 @@
                         {% for visit in visits %}
                         <tr 
                         {% if visit.visit.is_valid %} 
-                          class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white"
+                          class="border-b bg-white text-rcpch_light_blue border-gray-100"
                         {% else %} 
                           class="border-b bg-white text-black border-gray-100"
                         {% endif %}>
@@ -31,26 +31,30 @@
                               </td>
                               <td class="px-6 py-4">{{ visit.visit.visit_date }}</td>
                               <td class="py-5 flex flex-wrap">
-                                  {% for item in visit.categories %}
+                                {% for item in visit.categories %}
+                                  {% with item.category|colour_for_category as background_colour %}
                                     {% if item.present %}  
                                         <span 
                                           {% if item.has_error %}
                                             class="bg-rcpch_red hover:bg-rcpch_red_dark_tint px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white"
                                           {% else %}
-                                            class="bg-rcpch_dark_blue px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white"
+                                            class="bg-{{background_colour}} px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white"
                                           {% endif  %}
                                           >
                                           <small>
                                             {% if item.has_error %}
-                                              <div class='tooltip tooltip-bottom visible px-2 py-2 text-white -mt-20 text-center hover:text-white' data-tip='{{ item.category|errors_for_category:visit.visit.errors }}'>
+                                              <div class='tooltip tooltip-bottom visible text-white -mt-20 text-center hover:text-white' data-tip='{{ item.category|errors_for_category:visit.visit.errors }}'>
                                               {{item.category}}
                                               </div>
                                             {% else %}
-                                              {{item.category}}
+                                              <div class='tooltip tooltip-top visible text-white text-center hover:text-white' data-tip='{{ item.category }} data complete'>
+                                                {{item.category}}
+                                            </div>
                                             {% endif %}
                                           </small>
                                         </span>
                                         {% endif %}
+                                      {% endwith %}
                                   {% endfor %}
                               </td>
                               <td>
