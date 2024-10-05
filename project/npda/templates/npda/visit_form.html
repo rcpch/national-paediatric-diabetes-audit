@@ -35,10 +35,8 @@
           
           {% if routine_measurements_categories_with_errors and form_method == 'update' %} 
             bg-rcpch_red
-          {% elif form_method == 'create' %} 
-            bg-white 
-          {% else %} 
-            bg-rcpch_pink_light_tint3
+            {% else %} 
+            bg-rcpch_light_blue
           {% endif %}" 
           aria-label="Routine&nbsp;Measurements" checked
         />
@@ -102,12 +100,10 @@
         
           <input type="radio" name="my_tabs_1" role="tab" 
             class="tab rounded-none font-bold mb-2
-            {% if annual_review_categories_with_errors %} 
-            bg-rcpch_red_light_tint3
-            {% elif form_method == 'create' %} 
-              bg-white 
+            {% if annual_review_categories_with_errors and form_method == 'update' %} 
+            bg-rcpch_red
             {% else %} 
-            bg-rcpch_pink_light_tint3
+              bg-rcpch_light_blue
             {% endif %}" 
             aria-label="Annual&nbsp;Review"
           />
@@ -119,10 +115,8 @@
               <div class="collapse collapse-arrow mb-2 rounded-none 
                 {% if field_category in categories_with_errors %} 
                   border-4 border-rcpch_red
-                {% elif field_category in categories_without_errors %} 
-                  border border-{{background_colour}}
                 {% else %} 
-                  border border-rcpch_dark_blue 
+                  border border-{{background_colour}}
                 {% endif %}
               ">
                 <input type="radio" name="my-accordion-3" checked="checked" /> 
@@ -182,10 +176,10 @@
 
         <input type="radio" name="my_tabs_1" role="tab" aria-label="Inpatient&nbsp;Entry" 
           class="tab font-bold mb-2
-          {% if "Hospital Admission" in categories_with_errors %}
+          {% if 'Hospital Admission' in categories_with_errors %}
             bg-rcpch_red
-          {% elif "Hospital Admission" in categories_without_errors %}
-          bg-rcpch_pink_light_tint3
+          {% else %}
+            bg-rcpch_light_blue
           {% endif %}
         "/>
         <div 
