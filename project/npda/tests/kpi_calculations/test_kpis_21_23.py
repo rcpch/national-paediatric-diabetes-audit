@@ -78,10 +78,6 @@ def test_kpi_calculation_21(AUDIT_START_DATE):
         total_failed=EXPECTED_TOTAL_FAILED,
     )
 
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
-
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
         actual=calc_kpis.calculate_kpi_21_flash_glucose_monitor(),
@@ -150,10 +146,6 @@ def test_kpi_calculation_22(AUDIT_START_DATE):
         total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
         total_failed=EXPECTED_TOTAL_FAILED,
     )
-
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
 
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
