@@ -1,17 +1,19 @@
 """Views for KPIs calculations
 """
 
-# Python imports
 import logging
 import time
 from dataclasses import asdict, dataclass, is_dataclass
 from datetime import date, datetime, timedelta
+# Python imports
+from decimal import Decimal
 from pprint import pformat
 from typing import Tuple, Union
 
 from dateutil.relativedelta import relativedelta
 # Django imports
-from django.db.models import Count, Exists, F, OuterRef, Q, QuerySet, Subquery
+from django.db.models import (Avg, Count, Exists, F, Func, OuterRef, Q,
+                              QuerySet, Subquery)
 from django.shortcuts import render
 from django.views.generic import TemplateView
 
@@ -500,7 +502,6 @@ class CalculateKPIS:
             # EXCLUDE Date of death within the audit period"
             | Q(death_date__range=(self.AUDIT_DATE_RANGE))
         )
-
 
         base_eligible_patients = eligible_patients_exclusions.filter(
             # Valid attributes
@@ -1920,7 +1921,6 @@ class CalculateKPIS:
             )
         )
 
-
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
@@ -2326,22 +2326,61 @@ class CalculateKPIS:
         """
         Calculates KPI 44: Mean HbA1c
 
-        Numerator: Mean of HbA1c measurements (item 17) within the audit
+        SINGLE NUMBER: Mean of HbA1c measurements (item 17) within the audit
         period, excluding measurements taken within 90 days of diagnosis
-        NOTE: The mean for each patient is calculated. We then calculate the
-        mean of the means.
+        NOTE: The median for each patient is calculated. We then calculate the
+        mean of the medians.
 
         Denominator: Total number of eligible patients (measure 1)
+
+        NOTE: Django does not support Median aggregation function. We can do
+        manually.
         """
         eligible_patients, total_eligible = (
             self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
         )
         total_ineligible = self.total_patients_count - total_eligible
 
+        # Calculate median HBa1c for each patient
+
+        # Get the visits that match the valid HbA1c criteria
+
+        # Subquery to filter valid HBA1c values while ensuring visit_date is in
+        # the required range
+        valid_hba1c_subquery = (
+            Visit.objects.filter(
+                visit_date__range=self.AUDIT_DATE_RANGE,
+                hba1c_date__gte=F("patient__diagnosis_date")
+                + timedelta(
+                    days=90
+                ),  # Ensure HbA1c is taken >90 days after diagnosis
+                patient=OuterRef("pk"),
+            )
+            # Clear any implicit ordering, select only 'hba1c' for calculating
+            # the median as getting error with the visit_date field
+            .order_by().values("hba1c")
+        )
+
+        # Annotate eligible patients with the median HbA1c value
+        eligible_pts_annotated = eligible_patients.annotate(
+            median_hba1c=Subquery(
+                valid_hba1c_subquery.annotate(
+                    median_hba1c=Median("hba1c")
+                ).values("median_hba1c")[:1]
+            )
+        )
+
+        # Calculate the mean of the medians and convert to float (as Decimal)
+        mean_of_median_hba1cs = eligible_pts_annotated.aggregate(
+            mean_of_median_hba1cs=Avg("median_hba1c")
+        ).get('mean_of_median_hba1cs', 0.0)
+
         return KPIResult(
-            total_eligible=-1,
-            total_ineligible=-1,
-            total_passed=-1,
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            # Use passed for storing the value
+            total_passed=mean_of_median_hba1cs,
+            # Failed is not used
             total_failed=-1,
         )
 
@@ -2749,6 +2788,27 @@ class CalculateKPIS:
             self.t1dm_pts_diagnosed_90D_before_end_base_query_set,
             self.t1dm_pts_diagnosed_90D_before_end_total_eligible,
         )
+
+
+# Custom Median function for PostgreSQL
+class Median(Func):
+    function = "percentile_cont"
+    template = "%(function)s(0.5) WITHIN GROUP (ORDER BY %(expressions)s)"
+
+
+def queryset_median_value(queryset: QuerySet, column_name: str):
+    """Calculates the median value of a given column_name:str in a queryset
+
+    Median is not a SQL aggregate function so we have to calculate it manually
+
+    Thanks https://stackoverflow.com/questions/942620/missing-median-aggregate-function-in-django.
+    """
+    count = queryset.count()
+    values = queryset.values_list(column_name, flat=True).order_by(column_name)
+    if count % 2 == 1:
+        return values[int(round(count / 2))]
+    else:
+        return sum(values[count / 2 - 1 : count / 2 + 1]) / Decimal(2.0)
 
 
 # WIP simply return KPI Agg result for given PDU
