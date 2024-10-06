@@ -1747,7 +1747,9 @@ class CalculateKPIS:
 
         # Separate the patients into those < 12yo and those >= 12yo
         eligible_patients_lt_12yo = self._get_eligible_pts_measure_5_lt_12yo()
-        eligible_patients_gte_12yo = self._get_eligible_pts_measure_5_gte_12yo()
+        eligible_patients_gte_12yo = (
+            self._get_eligible_pts_measure_5_gte_12yo()
+        )
 
         # Count health checks for patients < 12yo
         # Involves looking at all their Visits, finding if at least 1 of each
@@ -1884,7 +1886,6 @@ class CalculateKPIS:
             )
         )
 
-
         # Sum the counts to get the total health checks
         total_health_checks_gte_12yo = (
             actual_health_checks_gte_12yo["total_hba1c_checks"]
@@ -1899,13 +1900,17 @@ class CalculateKPIS:
             total_health_checks_lt_12yo + total_health_checks_gte_12yo
         )
 
-        expected_total_health_checks = eligible_patients_lt_12yo.count() * 3 + eligible_patients_gte_12yo.count() * 6
+        expected_total_health_checks = (
+            eligible_patients_lt_12yo.count() * 3
+            + eligible_patients_gte_12yo.count() * 6
+        )
 
         return KPIResult(
             total_eligible=expected_total_health_checks,
             total_ineligible=total_ineligible,
             total_passed=actual_health_checks_overall,
-            total_failed=expected_total_health_checks - actual_health_checks_overall,
+            total_failed=expected_total_health_checks
+            - actual_health_checks_overall,
         )
 
     def calculate_kpi_32_2_health_check_lt_12yo(self) -> dict:
@@ -1972,6 +1977,111 @@ class CalculateKPIS:
             total_pts_all_hcs_completed=Sum("all_3_hcs_completed")
         ).get("total_pts_all_hcs_completed", 0)
 
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_eligible - total_passed,
+        )
+
+    def calculate_kpi_32_3_health_check_gte_12yo(self) -> dict:
+        """
+        Calculates KPI 32.3: Health Checks (12 years and over)
+
+        Numerator:  Number of CYP with T1D aged 12 years and over with all six
+        health checks (HbA1c, BMI, Thyroid, BP, Urinary Albumin, Foot Exam)
+
+        Denominator:  Number of CYP with T1D aged 12 years and over
+        """
+        # Get the eligible patients
+        eligible_patients = self._get_eligible_pts_measure_5_gte_12yo()
+        total_eligible = eligible_patients.count()
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Count health checks for patients >= 12yo
+        # Involves looking at all their Visits, finding if at least 1 of each
+        # of the 6 health checks was done (= 1), and then summing this if all
+        # 6 checks are done
+        hba1c_subquery = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            hba1c__isnull=False,
+            hba1c_date__range=self.AUDIT_DATE_RANGE,
+        )
+        bmi_subquery = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            height__isnull=False,
+            weight__isnull=False,
+            height_weight_observation_date__range=self.AUDIT_DATE_RANGE,
+        )
+        thyroid_subquery = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            thyroid_function_date__range=self.AUDIT_DATE_RANGE,
+        )
+        bp_subquery = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            systolic_blood_pressure__isnull=False,
+            blood_pressure_observation_date__range=self.AUDIT_DATE_RANGE,
+        )
+        urinary_albumin_subquery = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            albumin_creatinine_ratio__isnull=False,
+            albumin_creatinine_ratio_date__range=self.AUDIT_DATE_RANGE,
+        )
+        foot_exam_subquery = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            foot_examination_observation_date__range=self.AUDIT_DATE_RANGE,
+        )
+
+        # Annotate each check individually and convert True to 1, False to 0
+        annotated_eligible_pts = eligible_patients.annotate(
+            hba1c_check=Case(
+                When(Exists(hba1c_subquery), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+            bmi_check=Case(
+                When(Exists(bmi_subquery), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+            thyroid_check=Case(
+                When(Exists(thyroid_subquery), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+            bp_check=Case(
+                When(Exists(bp_subquery), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+            urinary_albumin_check=Case(
+                When(Exists(urinary_albumin_subquery), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+            foot_exam_check=Case(
+                When(Exists(foot_exam_subquery), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+            all_6_hcs_completed=Case(
+                When(
+                    Q(hba1c_check=1)
+                    & Q(bmi_check=1)
+                    & Q(thyroid_check=1)
+                    & Q(bp_check=1)
+                    & Q(urinary_albumin_check=1)
+                    & Q(foot_exam_check=1),
+                    then=1,
+                ),
+                default=0,
+                output_field=IntegerField(),
+            ),
+        )
+
+        total_passed = annotated_eligible_pts.aggregate(
+            total_pts_all_hcs_completed=Sum("all_6_hcs_completed")
+        ).get("total_pts_all_hcs_completed", 0)
 
         return KPIResult(
             total_eligible=total_eligible,
@@ -1984,7 +2094,7 @@ class CalculateKPIS:
         """
         Returns the eligible patients for measure 5 who are under 12 years old
         """
-        if hasattr(self, 'eligible_pts_lt_12yo'):
+        if hasattr(self, "eligible_pts_lt_12yo"):
             return self.eligible_pts_lt_12yo
 
         base_eligible_query_set, _ = (
@@ -2004,7 +2114,7 @@ class CalculateKPIS:
         """
         Returns the eligible patients for measure 5 who are gte 12 years old
         """
-        if hasattr(self, 'eligible_patients_gte_12yo'):
+        if hasattr(self, "eligible_patients_gte_12yo"):
             return self.eligible_patients_gte_12yo
 
         base_eligible_query_set, _ = (
@@ -2019,8 +2129,6 @@ class CalculateKPIS:
         )
 
         return self.eligible_patients_gte_12yo
-
-
 
     def calculate_kpi_33_hba1c_4plus(
         self,
