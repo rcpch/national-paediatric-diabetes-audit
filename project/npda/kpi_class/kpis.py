@@ -60,7 +60,7 @@ class CalculateKPIS:
         """Calculates KPIs for given pz_code
 
         Params:
-            * pz_code (str) - PZ code for KPIS
+            * pz_code (str) - PZ code for KPIS: accepts a list of PZ codes as this allows aggregation of KPIs across multiple PZ codes to calculate KPIs for a region or the whole country
             * calculation_date (date) - used to define start and end date of audit period
             * patients (QuerySet) - optional, used to define patients for KPI calculations: this can be used to calculate KPIs for a subset of patients or an individual patient - if not provided, all patients for the given PZ code will be used
         """
