@@ -7,7 +7,7 @@ from datetime import date
 
 import pytest
 
-from project.npda.general_functions.kpis import CalculateKPIS, KPIResult
+from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models.patient import Patient
 
 # Logging
@@ -29,9 +29,7 @@ def assert_kpi_result_equal(expected: KPIResult, actual: KPIResult) -> None:
             f"expected must be of type KPIResult (current: {type(expected)}"
         )
     if isinstance(actual, KPIResult) is False:
-        raise TypeError(
-            f"actual must be of type KPIResult (current: {type(actual)}"
-        )
+        raise TypeError(f"actual must be of type KPIResult (current: {type(actual)}")
 
     mismatches = []
 
@@ -90,13 +88,8 @@ def test_kpi_calculations_dont_break_when_no_patients(AUDIT_START_DATE):
         pz_code="PZ130", calculation_date=AUDIT_START_DATE
     ).calculate_kpis_for_patients()
 
-    for kpi, results in kpi_calculations_object[
-        "calculated_kpi_values"
-    ].items():
+    for kpi, results in kpi_calculations_object["calculated_kpi_values"].items():
         values = list(results.values())
         assert all(
-            [
-                isinstance(value, int) or isinstance(value, float)
-                for value in values
-            ]
+            [isinstance(value, int) or isinstance(value, float) for value in values]
         ), f"KPI {kpi} has non-integer values: {results}"

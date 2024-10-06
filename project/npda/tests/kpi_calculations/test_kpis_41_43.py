@@ -8,12 +8,13 @@ from dateutil.relativedelta import relativedelta
 
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.constants.smoking_status import SMOKING_STATUS
-from project.npda.general_functions.kpis import CalculateKPIS, KPIResult
+from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.tests.kpi_calculations.test_kpi_calculations import \
-    assert_kpi_result_equal
+from project.npda.tests.kpi_calculations.test_kpi_calculations import (
+    assert_kpi_result_equal,
+)
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -37,8 +38,7 @@ def test_kpi_calculation_41(AUDIT_START_DATE, AUDIT_END_DATE):
     # Create  Patients and Visits that should be eligible (KPI7)
     DIAB_DIAGNOSIS_91D_BEFORE_END = AUDIT_END_DATE - relativedelta(days=91)
     eligible_criteria = {
-        "visit__visit_date": DIAB_DIAGNOSIS_91D_BEFORE_END
-        - relativedelta(months=2),
+        "visit__visit_date": DIAB_DIAGNOSIS_91D_BEFORE_END - relativedelta(months=2),
         "date_of_birth": AUDIT_START_DATE - relativedelta(years=10),
         "diabetes_type": DIABETES_TYPES[0][0],
         # any other observation date
@@ -68,8 +68,7 @@ def test_kpi_calculation_41(AUDIT_START_DATE, AUDIT_END_DATE):
     # create 2nd visit with coeliac screen < 90 days after T1DM diagnosis
     VisitFactory(
         patient=passing_patient_2,
-        coeliac_screen_date=DIAB_DIAGNOSIS_91D_BEFORE_END
-        + relativedelta(days=90),
+        coeliac_screen_date=DIAB_DIAGNOSIS_91D_BEFORE_END + relativedelta(days=90),
     )
 
     # Failing patients
@@ -167,8 +166,7 @@ def test_kpi_calculation_42(AUDIT_START_DATE, AUDIT_END_DATE):
     # Create  Patients and Visits that should be eligible (KPI7)
     DIAB_DIAGNOSIS_91D_BEFORE_END = AUDIT_END_DATE - relativedelta(days=91)
     eligible_criteria = {
-        "visit__visit_date": DIAB_DIAGNOSIS_91D_BEFORE_END
-        - relativedelta(months=2),
+        "visit__visit_date": DIAB_DIAGNOSIS_91D_BEFORE_END - relativedelta(months=2),
         "date_of_birth": AUDIT_START_DATE - relativedelta(years=10),
         "diabetes_type": DIABETES_TYPES[0][0],
         # any other observation date
@@ -198,8 +196,7 @@ def test_kpi_calculation_42(AUDIT_START_DATE, AUDIT_END_DATE):
     # create 2nd visit with thyroid_function_date < 90 days after T1DM diagnosis
     VisitFactory(
         patient=passing_patient_2,
-        thyroid_function_date=DIAB_DIAGNOSIS_91D_BEFORE_END
-        + relativedelta(days=90),
+        thyroid_function_date=DIAB_DIAGNOSIS_91D_BEFORE_END + relativedelta(days=90),
     )
 
     # Failing patients
@@ -279,6 +276,7 @@ def test_kpi_calculation_42(AUDIT_START_DATE, AUDIT_END_DATE):
         actual=calc_kpis.calculate_kpi_42_thyroid_disease_screening(),
     )
 
+
 @pytest.mark.django_db
 def test_kpi_calculation_43(AUDIT_START_DATE, AUDIT_END_DATE):
     """Tests that KPI43 is calculated correctly.
@@ -299,8 +297,7 @@ def test_kpi_calculation_43(AUDIT_START_DATE, AUDIT_END_DATE):
     # Create  Patients and Visits that should be eligible (KPI7)
     DIAB_DIAGNOSIS_15D_BEFORE_END = AUDIT_END_DATE - relativedelta(days=15)
     eligible_criteria = {
-        "visit__visit_date": DIAB_DIAGNOSIS_15D_BEFORE_END
-        - relativedelta(months=2),
+        "visit__visit_date": DIAB_DIAGNOSIS_15D_BEFORE_END - relativedelta(months=2),
         "date_of_birth": AUDIT_START_DATE - relativedelta(years=10),
         "diabetes_type": DIABETES_TYPES[0][0],
         # any other observation date
@@ -389,7 +386,8 @@ def test_kpi_calculation_43(AUDIT_START_DATE, AUDIT_END_DATE):
         diabetes_type=DIABETES_TYPES[0][0],
         # Date of diag 2 days before end of audit period
         diagnosis_date=AUDIT_END_DATE - relativedelta(days=14),
-        visit__carbohydrate_counting_level_three_education_date=AUDIT_END_DATE - relativedelta(days=14),
+        visit__carbohydrate_counting_level_three_education_date=AUDIT_END_DATE
+        - relativedelta(days=14),
     )
 
     calc_kpis = CalculateKPIS(

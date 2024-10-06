@@ -8,16 +8,16 @@ from dateutil.relativedelta import relativedelta
 
 from project.constants.albuminuria_stage import ALBUMINURIA_STAGES
 from project.constants.diabetes_types import DIABETES_TYPES
-from project.constants.hospital_admission_reasons import \
-    HOSPITAL_ADMISSION_REASONS
+from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
 from project.constants.smoking_status import SMOKING_STATUS
 from project.constants.yes_no_unknown import YES_NO_UNKNOWN
-from project.npda.general_functions.kpis import CalculateKPIS, KPIResult
+from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.tests.kpi_calculations.test_kpi_calculations import \
-    assert_kpi_result_equal
+from project.npda.tests.kpi_calculations.test_kpi_calculations import (
+    assert_kpi_result_equal,
+)
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -119,17 +119,15 @@ def test_kpi_calculation_44(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
 
     medians = list(map(calculate_median, [pt_1_hba1cs, pt_2_hba1cs]))
     EXPECTED_MEAN = sum(medians) / len(medians)
 
     EXPECTED_TOTAL_ELIGIBLE = 2
     EXPECTED_TOTAL_INELIGIBLE = 2
-    EXPECTED_TOTAL_PASSED = EXPECTED_MEAN # Stores the mean
-    EXPECTED_TOTAL_FAILED = -1 # Not used
+    EXPECTED_TOTAL_PASSED = EXPECTED_MEAN  # Stores the mean
+    EXPECTED_TOTAL_FAILED = -1  # Not used
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=EXPECTED_TOTAL_ELIGIBLE,
@@ -142,6 +140,7 @@ def test_kpi_calculation_44(AUDIT_START_DATE):
         expected=EXPECTED_KPIRESULT,
         actual=calc_kpis.calculate_kpi_44_mean_hba1c(),
     )
+
 
 @pytest.mark.django_db
 def test_kpi_calculation_45(AUDIT_START_DATE):
@@ -240,17 +239,15 @@ def test_kpi_calculation_45(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
 
     medians = list(map(calculate_median, [pt_1_hba1cs, pt_2_hba1cs]))
     EXPECTED_MEDIAN = calculate_median(medians)
 
     EXPECTED_TOTAL_ELIGIBLE = 2
     EXPECTED_TOTAL_INELIGIBLE = 2
-    EXPECTED_TOTAL_PASSED = EXPECTED_MEDIAN # Stores the mean
-    EXPECTED_TOTAL_FAILED = -1 # Not used
+    EXPECTED_TOTAL_PASSED = EXPECTED_MEDIAN  # Stores the mean
+    EXPECTED_TOTAL_FAILED = -1  # Not used
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=EXPECTED_TOTAL_ELIGIBLE,
@@ -294,8 +291,7 @@ def test_kpi_calculation_46(AUDIT_START_DATE):
         # valid admission reason
         visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[0][0],
         # admission date within audit range
-        visit__hospital_admission_date=AUDIT_START_DATE
-        + relativedelta(days=2),
+        visit__hospital_admission_date=AUDIT_START_DATE + relativedelta(days=2),
     )
     passing_valid_admission_reason_and_discharge_within_audit_range = PatientFactory(
         # KPI1 eligible
@@ -303,8 +299,7 @@ def test_kpi_calculation_46(AUDIT_START_DATE):
         # valid admission reason
         visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[-1][0],
         # discharge date within audit range
-        visit__hospital_discharge_date=AUDIT_START_DATE
-        + relativedelta(days=2),
+        visit__hospital_discharge_date=AUDIT_START_DATE + relativedelta(days=2),
     )
 
     # Create failing pts
@@ -314,8 +309,7 @@ def test_kpi_calculation_46(AUDIT_START_DATE):
         # invalid admission reason
         visit__hospital_admission_reason="42",
         # admission date within audit range
-        visit__hospital_admission_date=AUDIT_START_DATE
-        + relativedelta(days=2),
+        visit__hospital_admission_date=AUDIT_START_DATE + relativedelta(days=2),
     )
     failing_both_admission_outside_audit_date = PatientFactory(
         # KPI1 eligible
@@ -323,8 +317,7 @@ def test_kpi_calculation_46(AUDIT_START_DATE):
         # valid admission reason
         visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[-1][0],
         # admission date outside audit range
-        visit__hospital_admission_date=AUDIT_START_DATE
-        - relativedelta(days=2),
+        visit__hospital_admission_date=AUDIT_START_DATE - relativedelta(days=2),
     )
 
     # Create Patients and Visits that should be excluded
@@ -342,9 +335,7 @@ def test_kpi_calculation_46(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 2
@@ -393,8 +384,7 @@ def test_kpi_calculation_47(AUDIT_START_DATE):
         # valid dka admission reason
         visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[1][0],
         # admission date within audit range
-        visit__hospital_admission_date=AUDIT_START_DATE
-        + relativedelta(days=2),
+        visit__hospital_admission_date=AUDIT_START_DATE + relativedelta(days=2),
     )
     passing_valid_dka_admission_reason_and_discharge_within_audit_range = PatientFactory(
         # KPI1 eligible
@@ -402,8 +392,7 @@ def test_kpi_calculation_47(AUDIT_START_DATE):
         # valid dka admission reason
         visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[1][0],
         # discharge date within audit range
-        visit__hospital_discharge_date=AUDIT_START_DATE
-        + relativedelta(days=2),
+        visit__hospital_discharge_date=AUDIT_START_DATE + relativedelta(days=2),
     )
 
     # Create failing pts
@@ -413,8 +402,7 @@ def test_kpi_calculation_47(AUDIT_START_DATE):
         # invalid admission reason
         visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[0][0],
         # admission date within audit range
-        visit__hospital_admission_date=AUDIT_START_DATE
-        + relativedelta(days=2),
+        visit__hospital_admission_date=AUDIT_START_DATE + relativedelta(days=2),
     )
     failing_both_admission_outside_audit_date = PatientFactory(
         # KPI1 eligible
@@ -422,8 +410,7 @@ def test_kpi_calculation_47(AUDIT_START_DATE):
         # valid admission reason
         visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[0][0],
         # admission date outside audit range
-        visit__hospital_admission_date=AUDIT_START_DATE
-        - relativedelta(days=2),
+        visit__hospital_admission_date=AUDIT_START_DATE - relativedelta(days=2),
     )
 
     # Create Patients and Visits that should be excluded
@@ -441,9 +428,7 @@ def test_kpi_calculation_47(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 2
@@ -541,9 +526,7 @@ def test_kpi_calculation_48(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 5
     EXPECTED_TOTAL_INELIGIBLE = 2
@@ -641,9 +624,7 @@ def test_kpi_calculation_49(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 5
     EXPECTED_TOTAL_INELIGIBLE = 2
