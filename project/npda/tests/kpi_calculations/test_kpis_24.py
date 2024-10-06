@@ -1,12 +1,14 @@
 """Tests for the HCL KPI."""
+
 import pytest
 from dateutil.relativedelta import relativedelta
 
-from project.npda.general_functions.kpis import CalculateKPIS, KPIResult
+from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
 from project.npda.tests.factories.patient_factory import PatientFactory
-from project.npda.tests.kpi_calculations.test_kpi_calculations import \
-    assert_kpi_result_equal
+from project.npda.tests.kpi_calculations.test_kpi_calculations import (
+    assert_kpi_result_equal,
+)
 
 
 @pytest.mark.django_db
@@ -103,9 +105,7 @@ def test_kpi_calculation_24(AUDIT_START_DATE):
         )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 8
     EXPECTED_TOTAL_INELIGIBLE = 8

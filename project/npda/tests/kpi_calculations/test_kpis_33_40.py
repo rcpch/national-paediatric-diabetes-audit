@@ -7,12 +7,13 @@ from dateutil.relativedelta import relativedelta
 
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.constants.smoking_status import SMOKING_STATUS
-from project.npda.general_functions.kpis import CalculateKPIS, KPIResult
+from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.tests.kpi_calculations.test_kpi_calculations import \
-    assert_kpi_result_equal
+from project.npda.tests.kpi_calculations.test_kpi_calculations import (
+    assert_kpi_result_equal,
+)
 
 
 @pytest.mark.django_db
@@ -139,8 +140,7 @@ def test_kpi_calculation_33(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving service within the audit period
-        transfer__date_leaving_service=AUDIT_START_DATE
-        + relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
     )
     ineligible_patient_death_within_audit_period = PatientFactory(
         postcode="ineligible_patient_death_within_audit_period",
@@ -273,8 +273,7 @@ def test_kpi_calculation_34(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving service within the audit period
-        transfer__date_leaving_service=AUDIT_START_DATE
-        + relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
     )
     ineligible_patient_death_within_audit_period = PatientFactory(
         postcode="ineligible_patient_death_within_audit_period",
@@ -362,8 +361,7 @@ def test_kpi_calculation_35(AUDIT_START_DATE):
     VisitFactory(
         patient=passing_patient_2,
         # KPI 6 specific = an observation within the audit period
-        height_weight_observation_date=AUDIT_START_DATE
-        + relativedelta(days=5),
+        height_weight_observation_date=AUDIT_START_DATE + relativedelta(days=5),
         visit_date=AUDIT_START_DATE + relativedelta(days=5),
         smoking_status=SMOKING_STATUS[1][0],
     )
@@ -403,8 +401,7 @@ def test_kpi_calculation_35(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving service within the audit period
-        transfer__date_leaving_service=AUDIT_START_DATE
-        + relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
     )
     ineligible_patient_death_within_audit_period = PatientFactory(
         postcode="ineligible_patient_death_within_audit_period",
@@ -477,8 +474,7 @@ def test_kpi_calculation_36(AUDIT_START_DATE):
         # KPI5 eligible
         **eligible_criteria,
         # KPI 35 specific
-        visit__smoking_cessation_referral_date=AUDIT_START_DATE
-        + relativedelta(days=2),
+        visit__smoking_cessation_referral_date=AUDIT_START_DATE + relativedelta(days=2),
     )
     # only second visit has a valid smoking cessation referral
     passing_patient_2 = PatientFactory(
@@ -492,8 +488,7 @@ def test_kpi_calculation_36(AUDIT_START_DATE):
     VisitFactory(
         patient=passing_patient_2,
         visit_date=AUDIT_START_DATE + relativedelta(days=5),
-        smoking_cessation_referral_date=AUDIT_START_DATE
-        + relativedelta(days=32),
+        smoking_cessation_referral_date=AUDIT_START_DATE + relativedelta(days=32),
     )
 
     # Failing patients
@@ -521,8 +516,7 @@ def test_kpi_calculation_36(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving service within the audit period
-        transfer__date_leaving_service=AUDIT_START_DATE
-        + relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
     )
     ineligible_patient_death_within_audit_period = PatientFactory(
         postcode="ineligible_patient_death_within_audit_period",
@@ -644,8 +638,7 @@ def test_kpi_calculation_37(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving service within the audit period
-        transfer__date_leaving_service=AUDIT_START_DATE
-        + relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
     )
     ineligible_patient_death_within_audit_period = PatientFactory(
         postcode="ineligible_patient_death_within_audit_period",
@@ -727,8 +720,7 @@ def test_kpi_calculation_38(AUDIT_START_DATE):
     VisitFactory(
         patient=passing_patient_2,
         visit_date=AUDIT_START_DATE + relativedelta(days=5),
-        dietician_additional_appointment_date=AUDIT_START_DATE
-        + relativedelta(days=4),
+        dietician_additional_appointment_date=AUDIT_START_DATE + relativedelta(days=4),
     )
 
     # Failing patients
@@ -769,8 +761,7 @@ def test_kpi_calculation_38(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving service within the audit period
-        transfer__date_leaving_service=AUDIT_START_DATE
-        + relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
     )
     ineligible_patient_death_within_audit_period = PatientFactory(
         postcode="ineligible_patient_death_within_audit_period",
@@ -852,8 +843,7 @@ def test_kpi_calculation_39(AUDIT_START_DATE):
     VisitFactory(
         patient=passing_patient_2,
         visit_date=AUDIT_START_DATE + relativedelta(days=5),
-        flu_immunisation_recommended_date=AUDIT_START_DATE
-        + relativedelta(days=4),
+        flu_immunisation_recommended_date=AUDIT_START_DATE + relativedelta(days=4),
     )
 
     # Failing patients
@@ -894,8 +884,7 @@ def test_kpi_calculation_39(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving service within the audit period
-        transfer__date_leaving_service=AUDIT_START_DATE
-        + relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
     )
     ineligible_patient_death_within_audit_period = PatientFactory(
         postcode="ineligible_patient_death_within_audit_period",
@@ -954,8 +943,7 @@ def test_kpi_calculation_40(AUDIT_START_DATE):
         # KPI1 eligible
         **eligible_criteria,
         # KPI 40 specific
-        visit__sick_day_rules_training_date=AUDIT_START_DATE
-        + relativedelta(days=30),
+        visit__sick_day_rules_training_date=AUDIT_START_DATE + relativedelta(days=30),
     )
     # only second visit has a valid sick day rule
     passing_patient_2 = PatientFactory(

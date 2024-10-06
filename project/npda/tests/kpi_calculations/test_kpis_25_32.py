@@ -5,14 +5,14 @@ from dateutil.relativedelta import relativedelta
 
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.constants.hba1c_format import HBA1C_FORMATS
-from project.constants.retinal_screening_results import \
-    RETINAL_SCREENING_RESULTS
-from project.npda.general_functions.kpis import CalculateKPIS, KPIResult
+from project.constants.retinal_screening_results import RETINAL_SCREENING_RESULTS
+from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.tests.kpi_calculations.test_kpi_calculations import \
-    assert_kpi_result_equal
+from project.npda.tests.kpi_calculations.test_kpi_calculations import (
+    assert_kpi_result_equal,
+)
 
 
 @pytest.mark.django_db
@@ -104,8 +104,7 @@ def test_kpi_calculation_25(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving service within the audit period
-        transfer__date_leaving_service=AUDIT_START_DATE
-        + relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
     )
     ineligible_patient_death_within_audit_period = PatientFactory(
         postcode="ineligible_patient_death_within_audit_period",
@@ -117,9 +116,7 @@ def test_kpi_calculation_25(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 3
     EXPECTED_TOTAL_INELIGIBLE = 5
@@ -174,8 +171,7 @@ def test_kpi_calculation_26(AUDIT_START_DATE):
         # valid ht wt values within audit period
         visit__height=140.0,
         visit__weight=40.0,
-        visit__height_weight_observation_date=AUDIT_START_DATE
-        + relativedelta(days=2),
+        visit__height_weight_observation_date=AUDIT_START_DATE + relativedelta(days=2),
     )
     passing_patient_valid_ht_wt_within_audit_period_2 = PatientFactory(
         postcode="passing_patient_valid_ht_wt_within_audit_period_2",
@@ -184,8 +180,7 @@ def test_kpi_calculation_26(AUDIT_START_DATE):
         # valid ht wt values within audit period
         visit__height=160.0,
         visit__weight=50.0,
-        visit__height_weight_observation_date=AUDIT_START_DATE
-        + relativedelta(days=2),
+        visit__height_weight_observation_date=AUDIT_START_DATE + relativedelta(days=2),
     )
 
     # Failing patients
@@ -207,8 +202,7 @@ def test_kpi_calculation_26(AUDIT_START_DATE):
         # ht wt value before audit period
         visit__height=160.0,
         visit__weight=50.0,
-        visit__height_weight_observation_date=AUDIT_START_DATE
-        - relativedelta(days=2),
+        visit__height_weight_observation_date=AUDIT_START_DATE - relativedelta(days=2),
     )
 
     # Create Patients and Visits that should be ineligble
@@ -239,8 +233,7 @@ def test_kpi_calculation_26(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving service within the audit period
-        transfer__date_leaving_service=AUDIT_START_DATE
-        + relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
     )
     ineligible_patient_death_within_audit_period = PatientFactory(
         postcode="ineligible_patient_death_within_audit_period",
@@ -252,9 +245,7 @@ def test_kpi_calculation_26(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 5
@@ -363,8 +354,7 @@ def test_kpi_calculation_27(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving service within the audit period
-        transfer__date_leaving_service=AUDIT_START_DATE
-        + relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
     )
     ineligible_patient_death_within_audit_period = PatientFactory(
         postcode="ineligible_patient_death_within_audit_period",
@@ -376,9 +366,7 @@ def test_kpi_calculation_27(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 5
@@ -440,8 +428,7 @@ def test_kpi_calculation_28(AUDIT_START_DATE):
         **eligible_criteria,
         # valid bp date within audit period
         visit__systolic_blood_pressure=120,
-        visit__blood_pressure_observation_date=AUDIT_START_DATE
-        + relativedelta(days=2),
+        visit__blood_pressure_observation_date=AUDIT_START_DATE + relativedelta(days=2),
     )
     passing_patient_systolic_bp_within_audit_period_2 = PatientFactory(
         postcode="passing_patient_systolic_bp_within_audit_period_2",
@@ -449,8 +436,7 @@ def test_kpi_calculation_28(AUDIT_START_DATE):
         **eligible_criteria,
         # valid bp date within audit period
         visit__systolic_blood_pressure=130,
-        visit__blood_pressure_observation_date=AUDIT_START_DATE
-        + relativedelta(days=5),
+        visit__blood_pressure_observation_date=AUDIT_START_DATE + relativedelta(days=5),
     )
 
     # Failing patients
@@ -470,8 +456,7 @@ def test_kpi_calculation_28(AUDIT_START_DATE):
         **eligible_criteria,
         # systolic date before audit period
         visit__systolic_blood_pressure=120,
-        visit__blood_pressure_observation_date=AUDIT_START_DATE
-        - relativedelta(days=2),
+        visit__blood_pressure_observation_date=AUDIT_START_DATE - relativedelta(days=2),
     )
 
     # Create Patients and Visits that should be ineligble
@@ -489,8 +474,7 @@ def test_kpi_calculation_28(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving service within the audit period
-        transfer__date_leaving_service=AUDIT_START_DATE
-        + relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
     )
     ineligible_patient_death_within_audit_period = PatientFactory(
         postcode="ineligible_patient_death_within_audit_period",
@@ -502,9 +486,7 @@ def test_kpi_calculation_28(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 3
@@ -564,8 +546,7 @@ def test_kpi_calculation_29(AUDIT_START_DATE):
         **eligible_criteria,
         # valid ACR within audit period
         visit__albumin_creatinine_ratio=2,
-        visit__albumin_creatinine_ratio_date=AUDIT_START_DATE
-        + relativedelta(days=2),
+        visit__albumin_creatinine_ratio_date=AUDIT_START_DATE + relativedelta(days=2),
     )
     passing_patient_urinary_albumin_within_audit_period_2 = PatientFactory(
         postcode="passing_patient_urinary_albumin_within_audit_period_2",
@@ -573,8 +554,7 @@ def test_kpi_calculation_29(AUDIT_START_DATE):
         **eligible_criteria,
         # valid ACR within audit period
         visit__albumin_creatinine_ratio=3,
-        visit__albumin_creatinine_ratio_date=AUDIT_START_DATE
-        + relativedelta(days=27),
+        visit__albumin_creatinine_ratio_date=AUDIT_START_DATE + relativedelta(days=27),
     )
 
     # Failing patients
@@ -594,8 +574,7 @@ def test_kpi_calculation_29(AUDIT_START_DATE):
         **eligible_criteria,
         # ACR before audit period
         visit__albumin_creatinine_ratio=3,
-        visit__albumin_creatinine_ratio_date=AUDIT_START_DATE
-        - relativedelta(days=2),
+        visit__albumin_creatinine_ratio_date=AUDIT_START_DATE - relativedelta(days=2),
     )
 
     # Create Patients and Visits that should be ineligble
@@ -613,8 +592,7 @@ def test_kpi_calculation_29(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving service within the audit period
-        transfer__date_leaving_service=AUDIT_START_DATE
-        + relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
     )
     ineligible_patient_death_within_audit_period = PatientFactory(
         postcode="ineligible_patient_death_within_audit_period",
@@ -626,9 +604,7 @@ def test_kpi_calculation_29(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 3
@@ -746,8 +722,7 @@ def test_kpi_calculation_30(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving service within the audit period
-        transfer__date_leaving_service=AUDIT_START_DATE
-        + relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
     )
     ineligible_patient_death_within_audit_period = PatientFactory(
         postcode="ineligible_patient_death_within_audit_period",
@@ -759,9 +734,7 @@ def test_kpi_calculation_30(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 5
     EXPECTED_TOTAL_INELIGIBLE = 3
@@ -866,8 +839,7 @@ def test_kpi_calculation_31(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving service within the audit period
-        transfer__date_leaving_service=AUDIT_START_DATE
-        + relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
     )
     ineligible_patient_death_within_audit_period = PatientFactory(
         postcode="ineligible_patient_death_within_audit_period",
@@ -879,9 +851,7 @@ def test_kpi_calculation_31(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 3
@@ -952,8 +922,7 @@ def test_kpi_calculation_32_1(AUDIT_START_DATE):
         visit_date=AUDIT_START_DATE + relativedelta(months=3),
         height=160.0,
         weight=50.0,
-        height_weight_observation_date=AUDIT_START_DATE
-        + relativedelta(months=3),
+        height_weight_observation_date=AUDIT_START_DATE + relativedelta(months=3),
     )
 
     pt_lt_12yo_3_health_checks = PatientFactory(
@@ -970,8 +939,7 @@ def test_kpi_calculation_32_1(AUDIT_START_DATE):
         visit_date=AUDIT_START_DATE + relativedelta(months=3),
         height=160.0,
         weight=50.0,
-        height_weight_observation_date=AUDIT_START_DATE
-        + relativedelta(months=3),
+        height_weight_observation_date=AUDIT_START_DATE + relativedelta(months=3),
     )
     # Separate Visit has HC3
     VisitFactory(
@@ -996,12 +964,10 @@ def test_kpi_calculation_32_1(AUDIT_START_DATE):
         # HC 2
         height=160.0,
         weight=50.0,
-        height_weight_observation_date=AUDIT_START_DATE
-        + relativedelta(months=3),
+        height_weight_observation_date=AUDIT_START_DATE + relativedelta(months=3),
         # HC 3
         systolic_blood_pressure=120,
-        blood_pressure_observation_date=AUDIT_START_DATE
-        + relativedelta(months=3),
+        blood_pressure_observation_date=AUDIT_START_DATE + relativedelta(months=3),
     )
 
     pt_gte_12yo_6_health_checks = PatientFactory(
@@ -1019,8 +985,7 @@ def test_kpi_calculation_32_1(AUDIT_START_DATE):
         # HC 2
         height=160.0,
         weight=50.0,
-        height_weight_observation_date=AUDIT_START_DATE
-        + relativedelta(months=3),
+        height_weight_observation_date=AUDIT_START_DATE + relativedelta(months=3),
         # HC 3
         thyroid_function_date=AUDIT_START_DATE + relativedelta(months=3),
     )
@@ -1030,15 +995,12 @@ def test_kpi_calculation_32_1(AUDIT_START_DATE):
         visit_date=AUDIT_START_DATE + relativedelta(months=6),
         # HC 4
         systolic_blood_pressure=120,
-        blood_pressure_observation_date=AUDIT_START_DATE
-        + relativedelta(months=3),
+        blood_pressure_observation_date=AUDIT_START_DATE + relativedelta(months=3),
         # HC 5
         albumin_creatinine_ratio=2,
-        albumin_creatinine_ratio_date=AUDIT_START_DATE
-        + relativedelta(months=6),
+        albumin_creatinine_ratio_date=AUDIT_START_DATE + relativedelta(months=6),
         # HC 6
-        foot_examination_observation_date=AUDIT_START_DATE
-        + relativedelta(months=6),
+        foot_examination_observation_date=AUDIT_START_DATE + relativedelta(months=6),
     )
 
     # Create Patients and Visits that should be ineligble
@@ -1070,8 +1032,7 @@ def test_kpi_calculation_32_1(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving service within the audit period
-        transfer__date_leaving_service=AUDIT_START_DATE
-        + relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
     )
     ineligible_patient_death_within_audit_period = PatientFactory(
         postcode="ineligible_patient_death_within_audit_period",
@@ -1083,9 +1044,7 @@ def test_kpi_calculation_32_1(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 18  # (2*3) + (2*6)
     EXPECTED_TOTAL_INELIGIBLE = 5
@@ -1149,8 +1108,7 @@ def test_kpi_calculation_32_2(AUDIT_START_DATE):
         height=160.0,
         weight=50.0,
         # HC 3
-        height_weight_observation_date=AUDIT_START_DATE
-        + relativedelta(months=3),
+        height_weight_observation_date=AUDIT_START_DATE + relativedelta(months=3),
         thyroid_function_date=AUDIT_START_DATE + relativedelta(months=3),
     )
 
@@ -1169,8 +1127,7 @@ def test_kpi_calculation_32_2(AUDIT_START_DATE):
         # HC 2
         height=160.0,
         weight=50.0,
-        height_weight_observation_date=AUDIT_START_DATE
-        + relativedelta(months=3),
+        height_weight_observation_date=AUDIT_START_DATE + relativedelta(months=3),
     )
     # Separate Visit has HC3
     VisitFactory(
@@ -1193,8 +1150,7 @@ def test_kpi_calculation_32_2(AUDIT_START_DATE):
         patient=failing_pt_only_2_HCs,
         visit_date=AUDIT_START_DATE + relativedelta(months=3),
         # HC 3
-        height_weight_observation_date=AUDIT_START_DATE
-        + relativedelta(months=3),
+        height_weight_observation_date=AUDIT_START_DATE + relativedelta(months=3),
         thyroid_function_date=AUDIT_START_DATE + relativedelta(months=3),
     )
 
@@ -1208,8 +1164,7 @@ def test_kpi_calculation_32_2(AUDIT_START_DATE):
         patient=failing_pt_only_1_HCs,
         visit_date=AUDIT_START_DATE + relativedelta(months=3),
         # HC 1
-        height_weight_observation_date=AUDIT_START_DATE
-        + relativedelta(months=3),
+        height_weight_observation_date=AUDIT_START_DATE + relativedelta(months=3),
         thyroid_function_date=AUDIT_START_DATE + relativedelta(months=3),
     )
 
@@ -1241,8 +1196,7 @@ def test_kpi_calculation_32_2(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving service within the audit period
-        transfer__date_leaving_service=AUDIT_START_DATE
-        + relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
     )
     ineligible_patient_death_within_audit_period = PatientFactory(
         postcode="ineligible_patient_death_within_audit_period",
@@ -1254,9 +1208,7 @@ def test_kpi_calculation_32_2(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 5
@@ -1320,8 +1272,7 @@ def test_kpi_calculation_32_3(AUDIT_START_DATE):
         # HC 2
         height=160.0,
         weight=50.0,
-        height_weight_observation_date=AUDIT_START_DATE
-        + relativedelta(months=3),
+        height_weight_observation_date=AUDIT_START_DATE + relativedelta(months=3),
         # HC 3
         thyroid_function_date=AUDIT_START_DATE + relativedelta(months=3),
     )
@@ -1331,15 +1282,12 @@ def test_kpi_calculation_32_3(AUDIT_START_DATE):
         visit_date=AUDIT_START_DATE + relativedelta(months=6),
         # HC 4
         systolic_blood_pressure=120,
-        blood_pressure_observation_date=AUDIT_START_DATE
-        + relativedelta(months=3),
+        blood_pressure_observation_date=AUDIT_START_DATE + relativedelta(months=3),
         # HC 5
         albumin_creatinine_ratio=2,
-        albumin_creatinine_ratio_date=AUDIT_START_DATE
-        + relativedelta(months=6),
+        albumin_creatinine_ratio_date=AUDIT_START_DATE + relativedelta(months=6),
         # HC 6
-        foot_examination_observation_date=AUDIT_START_DATE
-        + relativedelta(months=6),
+        foot_examination_observation_date=AUDIT_START_DATE + relativedelta(months=6),
     )
 
     passing_pt_2 = PatientFactory(
@@ -1363,8 +1311,7 @@ def test_kpi_calculation_32_3(AUDIT_START_DATE):
         thyroid_function_date=AUDIT_START_DATE + relativedelta(months=3),
         # HC 4
         systolic_blood_pressure=120,
-        blood_pressure_observation_date=AUDIT_START_DATE
-        + relativedelta(months=3),
+        blood_pressure_observation_date=AUDIT_START_DATE + relativedelta(months=3),
     )
     # Separate Visit has HC5+6
     VisitFactory(
@@ -1372,11 +1319,9 @@ def test_kpi_calculation_32_3(AUDIT_START_DATE):
         visit_date=AUDIT_START_DATE + relativedelta(months=6),
         # HC 5
         albumin_creatinine_ratio=2,
-        albumin_creatinine_ratio_date=AUDIT_START_DATE
-        + relativedelta(months=6),
+        albumin_creatinine_ratio_date=AUDIT_START_DATE + relativedelta(months=6),
         # HC 6
-        foot_examination_observation_date=AUDIT_START_DATE
-        + relativedelta(months=6),
+        foot_examination_observation_date=AUDIT_START_DATE + relativedelta(months=6),
     )
 
     # Failing patients
@@ -1393,8 +1338,7 @@ def test_kpi_calculation_32_3(AUDIT_START_DATE):
         patient=failing_pt_only_2_HCs,
         visit_date=AUDIT_START_DATE + relativedelta(months=3),
         # HC 3
-        height_weight_observation_date=AUDIT_START_DATE
-        + relativedelta(months=3),
+        height_weight_observation_date=AUDIT_START_DATE + relativedelta(months=3),
         thyroid_function_date=AUDIT_START_DATE + relativedelta(months=3),
     )
 
@@ -1415,16 +1359,13 @@ def test_kpi_calculation_32_3(AUDIT_START_DATE):
         # HC 3
         height=160.0,
         weight=50.0,
-        height_weight_observation_date=AUDIT_START_DATE
-        + relativedelta(months=3),
+        height_weight_observation_date=AUDIT_START_DATE + relativedelta(months=3),
         # HC 4
         systolic_blood_pressure=120,
-        blood_pressure_observation_date=AUDIT_START_DATE
-        + relativedelta(months=3),
+        blood_pressure_observation_date=AUDIT_START_DATE + relativedelta(months=3),
         # HC 5
         albumin_creatinine_ratio=2,
-        albumin_creatinine_ratio_date=AUDIT_START_DATE
-        + relativedelta(months=3),
+        albumin_creatinine_ratio_date=AUDIT_START_DATE + relativedelta(months=3),
     )
 
     # Create Patients and Visits that should be ineligble
@@ -1455,8 +1396,7 @@ def test_kpi_calculation_32_3(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving service within the audit period
-        transfer__date_leaving_service=AUDIT_START_DATE
-        + relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
     )
     ineligible_patient_death_within_audit_period = PatientFactory(
         postcode="ineligible_patient_death_within_audit_period",
@@ -1468,9 +1408,7 @@ def test_kpi_calculation_32_3(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 5

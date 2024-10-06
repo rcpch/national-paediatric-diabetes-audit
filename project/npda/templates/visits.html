@@ -97,8 +97,8 @@
             </div>
           </div>
           
-          <div class="row mt-20">
-            <strong>Patient KPIs will go here...</strong>
+          <div class="row mt-1">
+            {% include 'partials/kpi_patient.html' with kpi_results=kpi_results patient=patient %}
           </div>
       </div>
       </div>
