@@ -169,7 +169,9 @@ def dashboard(request, pz_code):
         )
         return render(request, "dashboard.html", {"pz_code": pz_code})
 
-    pdu_kpis = CalculateKPIS(pz_code=pz_code, calculation_date=datetime.date.today())
+    pdu_kpis = CalculateKPIS(
+        pz_codes=[pz_code], calculation_date=datetime.date.today()
+    )  # accepts a list of PZ codes
 
     context = {"pdu": pdu, "pdu_kpis": pdu_kpis.calculate_kpis_for_patients()}
     return render(request, "dashboard.html", context)

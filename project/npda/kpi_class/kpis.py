@@ -54,7 +54,9 @@ class CalculateKPIS:
     Calculates KPIs for a given PZ code
     """
 
-    def __init__(self, pz_code: str, calculation_date: date = None, patients=None):
+    def __init__(
+        self, pz_codes: list[str], calculation_date: date = None, patients=None
+    ):
         """Calculates KPIs for given pz_code
 
         Params:
@@ -62,10 +64,10 @@ class CalculateKPIS:
             * calculation_date (date) - used to define start and end date of audit period
             * patients (QuerySet) - optional, used to define patients for KPI calculations: this can be used to calculate KPIs for a subset of patients or an individual patient - if not provided, all patients for the given PZ code will be used
         """
-        if not pz_code:
+        if not pz_codes or len(pz_codes) == 0:
             raise AttributeError("pz_code must be provided")
         # Set various attributes used in calculations
-        self.pz_code = pz_code
+        self.pz_codes = pz_codes
         self.calculation_date = (
             calculation_date if calculation_date is not None else date.today()
         )
@@ -85,7 +87,7 @@ class CalculateKPIS:
         # TODO: should this filter out patients who have left the service?
         if patients is None:
             self.patients = Patient.objects.filter(
-                paediatric_diabetes_units__paediatric_diabetes_unit__pz_code=pz_code
+                paediatric_diabetes_units__paediatric_diabetes_unit__pz_code__in=pz_codes
             ).distinct()
             self.total_patients_count = self.patients.count()
         else:
@@ -297,7 +299,7 @@ class CalculateKPIS:
 
         # Add in used attributes for calculations
         return_obj = {}
-        return_obj["pz_code"] = self.pz_code
+        return_obj["pz_codes"] = self.pz_codes
         return_obj["calculation_datetime"] = datetime.now()
         return_obj["audit_start_date"] = self.audit_start_date
         return_obj["audit_end_date"] = self.audit_end_date
