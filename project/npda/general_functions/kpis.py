@@ -1,17 +1,19 @@
 """Views for KPIs calculations
 """
 
-# Python imports
 import logging
 import time
 from dataclasses import asdict, dataclass, is_dataclass
 from datetime import date, datetime, timedelta
+# Python imports
+from decimal import Decimal
 from pprint import pformat
 from typing import Tuple, Union
 
 from dateutil.relativedelta import relativedelta
 # Django imports
-from django.db.models import Count, Exists, F, OuterRef, Q, QuerySet, Subquery
+from django.db.models import (Avg, Case, Count, Exists, F, Func, IntegerField,
+                              OuterRef, Q, QuerySet, Subquery, Sum, When)
 from django.shortcuts import render
 from django.views.generic import TemplateView
 
@@ -168,7 +170,6 @@ class CalculateKPIS:
         # Else, calculate the KPI
         kpi_result = kpi_method()
 
-        logger.debug(f"{kpi_method_name=} and {kpi_result=}")
         # Validations
         if not is_dataclass(kpi_result):
             raise TypeError(
@@ -500,7 +501,6 @@ class CalculateKPIS:
             # EXCLUDE Date of death within the audit period"
             | Q(death_date__range=(self.AUDIT_DATE_RANGE))
         )
-
 
         base_eligible_patients = eligible_patients_exclusions.filter(
             # Valid attributes
@@ -1711,81 +1711,429 @@ class CalculateKPIS:
             total_failed=total_failed,
         )
 
-    # TODO: confirm calculation definition
-    # https://github.com/orgs/rcpch/projects/13/views/1?pane=issue&itemId=79836032
     def calculate_kpi_32_1_health_check_completion_rate(
         self,
     ) -> dict:
         """
         Calculates KPI 32.1: Health check completion rate (%)
-
         Number of actual health checks over number of expected health checks.
+
+        Numerator: health checks given
         - Patients = those with T1DM.
         - Patients < 12yo  => expected health checks = 3
             (HbA1c, BMI, Thyroid)
         - patients >= 12yo => expected health checks = 6
             (HbA1c, BMI, Thyroid, BP, Urinary Albumin, Foot Exam)
 
-        TODO: unsure how to calculate [how to find patients with complete year
-        of care, do we look across all visits within audit range for a given
-        patient to see if eg had hba1c?],
-        will catch up with @eatyourpeas to discuss
+        Denominator: Number of expected health checks
+            - 3 for CYP <12 years with T1D
+            - 6 for CYP >= 12 years with T1D
+
+        NOTE: KPIResult(
+            total_eligible = total expected health checks,
+            total_passed = total actual health checks,
+            total_failed = total expected health checks - total actual health checks
+            total_ineligible = ineligible PATIENTS
+        )
         """
 
-        # # Get the KPI5&6 querysets
-        # kpi_5_total_eligible_query_set, _ = (
-        #     self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
-        # )
-        # kpi_6_total_eligible_query_set, _ = (
-        #     self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count()
-        # )
-        # total_eligible = kpi_5_total_eligible_query_set.union(
-        #     kpi_6_total_eligible_query_set
-        # ).count()
-        # total_ineligible = self.total_patients_count - total_eligible
+        # Get the eligible patients
+        base_eligible_query_set, base_total_eligible = (
+            # Pts with T1DM and a complete year of care
+            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
+        )
+        total_ineligible = self.total_patients_count - base_total_eligible
 
-        # # Find patients with ALL KPIS 25,26,27,28,29, 31 PASSING (Apply conditions
-        # # to both querysets first, THEN union them)
-        # eligibility_conditions = [
-        #     # KPI 25
-        #     Q(visit__hba1c__isnull=False),
-        #     Q(visit__hba1c_date__range=(self.AUDIT_DATE_RANGE)),
-        #     # KPI 26
-        #     Q(visit__height__isnull=False),
-        #     Q(visit__weight__isnull=False),
-        #     Q(visit__height_weight_observation_date__range=(self.AUDIT_DATE_RANGE)),
-        #     # KPI 27
-        #     Q(visit__thyroid_function_date__range=(self.AUDIT_DATE_RANGE)),
-        #     # KPI 28
-        #     Q(visit__systolic_blood_pressure__isnull=False),
-        #     Q(visit__blood_pressure_observation_date__range=(self.AUDIT_DATE_RANGE)),
-        #     # KPI 29
-        #     Q(visit__albumin_creatinine_ratio__isnull=False),
-        #     Q(visit__albumin_creatinine_ratio_date__range=(self.AUDIT_DATE_RANGE)),
-        #     # KPI 31
-        #     Q(visit__foot_examination_observation_date__range=(self.AUDIT_DATE_RANGE)),
-        # ]
-        # filtered_kpi_5_eligible = kpi_5_total_eligible_query_set.filter(
-        #     *eligibility_conditions
-        # )
+        # Separate the patients into those < 12yo and those >= 12yo
+        eligible_patients_lt_12yo = self._get_eligible_pts_measure_5_lt_12yo()
+        eligible_patients_gte_12yo = (
+            self._get_eligible_pts_measure_5_gte_12yo()
+        )
 
-        # filtered_kpi_6_eligible = kpi_6_total_eligible_query_set.filter(
-        #     *eligibility_conditions
-        # )
+        # Count health checks for patients < 12yo
+        # Involves looking at all their Visits, finding if at least 1 of each
+        # of the 3 health checks was done (= 1), and then summing this
+        hba1c_subquery_lt_12yo = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            hba1c__isnull=False,
+            hba1c_date__range=self.AUDIT_DATE_RANGE,
+        )
+        bmi_subquery_lt_12yo = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            height__isnull=False,
+            weight__isnull=False,
+            height_weight_observation_date__range=self.AUDIT_DATE_RANGE,
+        )
+        thyroid_subquery_lt_12yo = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            thyroid_function_date__range=self.AUDIT_DATE_RANGE,
+        )
 
-        # # Perform the union after filtering for passing patients
-        # eligible_patients_filtered = filtered_kpi_5_eligible.union(
-        #     filtered_kpi_6_eligible
-        # )
-        # total_passed = eligible_patients_filtered.count()
-        # total_failed = total_eligible - total_passed
+        # Annotate each check individually and convert True to 1, False to 0
+        annotated_eligible_pts_lt_12yo = eligible_patients_lt_12yo.annotate(
+            hba1c_check=Case(
+                When(Exists(hba1c_subquery_lt_12yo), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+            bmi_check=Case(
+                When(Exists(bmi_subquery_lt_12yo), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+            thyroid_check=Case(
+                When(Exists(thyroid_subquery_lt_12yo), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+        )
+
+        # Annotate each check count and sum them up
+        actual_health_checks_lt_12yo = (
+            annotated_eligible_pts_lt_12yo.aggregate(
+                total_hba1c_checks=Sum("hba1c_check"),
+                total_bmi_checks=Sum("bmi_check"),
+                total_thyroid_checks=Sum("thyroid_check"),
+            )
+        )
+
+        # Sum the counts to get the total health checks
+        total_health_checks_lt_12yo = sum(
+            actual_health_checks_lt_12yo.get(key) or 0
+            for key in [
+                "total_hba1c_checks",
+                "total_bmi_checks",
+                "total_thyroid_checks",
+            ]
+        )
+
+        # Repeat the process for patients >= 12yo
+
+        # Count health checks for patients >= 12yo
+        # Involves looking at all their Visits, finding if at least 1 of each
+        # of the 6 health checks was done (= 1), and then summing this
+        hba1c_subquery_gte_12yo = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            hba1c__isnull=False,
+            hba1c_date__range=self.AUDIT_DATE_RANGE,
+        )
+        bmi_subquery_gte_12yo = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            height__isnull=False,
+            weight__isnull=False,
+            height_weight_observation_date__range=self.AUDIT_DATE_RANGE,
+        )
+        thyroid_subquery_gte_12yo = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            thyroid_function_date__range=self.AUDIT_DATE_RANGE,
+        )
+        bp_subquery_gte_12yo = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            systolic_blood_pressure__isnull=False,
+            blood_pressure_observation_date__range=self.AUDIT_DATE_RANGE,
+        )
+        urinary_albumin_subquery_gte_12yo = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            albumin_creatinine_ratio__isnull=False,
+            albumin_creatinine_ratio_date__range=self.AUDIT_DATE_RANGE,
+        )
+        foot_exam_subquery_gte_12yo = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            foot_examination_observation_date__range=self.AUDIT_DATE_RANGE,
+        )
+
+        # Annotate each check individually and convert True to 1, False to 0
+        annotated_eligible_pts_gte_12yo = eligible_patients_gte_12yo.annotate(
+            hba1c_check=Case(
+                When(Exists(hba1c_subquery_gte_12yo), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+            bmi_check=Case(
+                When(Exists(bmi_subquery_gte_12yo), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+            thyroid_check=Case(
+                When(Exists(thyroid_subquery_gte_12yo), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+            bp_check=Case(
+                When(Exists(bp_subquery_gte_12yo), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+            urinary_albumin_check=Case(
+                When(Exists(urinary_albumin_subquery_gte_12yo), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+            foot_exam_check=Case(
+                When(Exists(foot_exam_subquery_gte_12yo), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+        )
+
+        # Annotate each check count and sum them up
+        actual_health_checks_gte_12yo = (
+            annotated_eligible_pts_gte_12yo.aggregate(
+                total_hba1c_checks=Sum("hba1c_check"),
+                total_bmi_checks=Sum("bmi_check"),
+                total_thyroid_checks=Sum("thyroid_check"),
+                total_bp_checks=Sum("bp_check"),
+                total_urinary_albumin_checks=Sum("urinary_albumin_check"),
+                total_foot_exam_checks=Sum("foot_exam_check"),
+            )
+        )
+
+        # Sum the counts to get the total health checks
+        total_health_checks_gte_12yo = sum(
+            actual_health_checks_gte_12yo.get(key) or 0
+            for key in [
+                "total_hba1c_checks",
+                "total_bmi_checks",
+                "total_thyroid_checks",
+                "total_bp_checks",
+                "total_urinary_albumin_checks",
+                "total_foot_exam_checks",
+            ]
+        )
+
+        actual_health_checks_overall = (
+            total_health_checks_lt_12yo + total_health_checks_gte_12yo
+        )
+
+        expected_total_health_checks = (
+            eligible_patients_lt_12yo.count() * 3
+            + eligible_patients_gte_12yo.count() * 6
+        )
 
         return KPIResult(
-            total_eligible=-1,
-            total_ineligible=-1,
-            total_passed=-1,
-            total_failed=-1,
+            total_eligible=expected_total_health_checks,
+            total_ineligible=total_ineligible,
+            total_passed=actual_health_checks_overall,
+            total_failed=expected_total_health_checks
+            - actual_health_checks_overall,
         )
+
+    def calculate_kpi_32_2_health_check_lt_12yo(self) -> dict:
+        """
+        Calculates KPI 32.2: Health Checks (Less than 12 years)
+
+        Numerator: number of CYP with T1D under 12 years with all three health checks (HbA1c, BMI, Thyroid)
+
+        Denominator:  number of CYP with T1D under 12 years
+        """
+        # Get the eligible patients
+        eligible_patients = self._get_eligible_pts_measure_5_lt_12yo()
+        total_eligible = eligible_patients.count()
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Count health checks for patients < 12yo
+        # Involves looking at all their Visits, finding if at least 1 of each
+        # of the 3 health checks was done (= 1), and then summing this if all
+        # 3 checks are done
+        hba1c_subquery = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            hba1c__isnull=False,
+            hba1c_date__range=self.AUDIT_DATE_RANGE,
+        )
+        bmi_subquery = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            height__isnull=False,
+            weight__isnull=False,
+            height_weight_observation_date__range=self.AUDIT_DATE_RANGE,
+        )
+        thyroid_subquery = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            thyroid_function_date__range=self.AUDIT_DATE_RANGE,
+        )
+
+        # Annotate each check individually and convert True to 1, False to 0
+        annotated_eligible_pts = eligible_patients.annotate(
+            hba1c_check=Case(
+                When(Exists(hba1c_subquery), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+            bmi_check=Case(
+                When(Exists(bmi_subquery), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+            thyroid_check=Case(
+                When(Exists(thyroid_subquery), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+            all_3_hcs_completed=Case(
+                When(
+                    Q(hba1c_check=1) & Q(bmi_check=1) & Q(thyroid_check=1),
+                    then=1,
+                ),
+                default=0,
+                output_field=IntegerField(),
+            ),
+        )
+
+        total_passed = annotated_eligible_pts.aggregate(
+            total_pts_all_hcs_completed=Sum("all_3_hcs_completed")
+        ).get("total_pts_all_hcs_completed") or 0
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_eligible - total_passed,
+        )
+
+    def calculate_kpi_32_3_health_check_gte_12yo(self) -> dict:
+        """
+        Calculates KPI 32.3: Health Checks (12 years and over)
+
+        Numerator:  Number of CYP with T1D aged 12 years and over with all six
+        health checks (HbA1c, BMI, Thyroid, BP, Urinary Albumin, Foot Exam)
+
+        Denominator:  Number of CYP with T1D aged 12 years and over
+        """
+        # Get the eligible patients
+        eligible_patients = self._get_eligible_pts_measure_5_gte_12yo()
+        total_eligible = eligible_patients.count()
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Count health checks for patients >= 12yo
+        # Involves looking at all their Visits, finding if at least 1 of each
+        # of the 6 health checks was done (= 1), and then summing this if all
+        # 6 checks are done
+        hba1c_subquery = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            hba1c__isnull=False,
+            hba1c_date__range=self.AUDIT_DATE_RANGE,
+        )
+        bmi_subquery = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            height__isnull=False,
+            weight__isnull=False,
+            height_weight_observation_date__range=self.AUDIT_DATE_RANGE,
+        )
+        thyroid_subquery = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            thyroid_function_date__range=self.AUDIT_DATE_RANGE,
+        )
+        bp_subquery = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            systolic_blood_pressure__isnull=False,
+            blood_pressure_observation_date__range=self.AUDIT_DATE_RANGE,
+        )
+        urinary_albumin_subquery = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            albumin_creatinine_ratio__isnull=False,
+            albumin_creatinine_ratio_date__range=self.AUDIT_DATE_RANGE,
+        )
+        foot_exam_subquery = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            foot_examination_observation_date__range=self.AUDIT_DATE_RANGE,
+        )
+
+        # Annotate each check individually and convert True to 1, False to 0
+        annotated_eligible_pts = eligible_patients.annotate(
+            hba1c_check=Case(
+                When(Exists(hba1c_subquery), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+            bmi_check=Case(
+                When(Exists(bmi_subquery), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+            thyroid_check=Case(
+                When(Exists(thyroid_subquery), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+            bp_check=Case(
+                When(Exists(bp_subquery), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+            urinary_albumin_check=Case(
+                When(Exists(urinary_albumin_subquery), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+            foot_exam_check=Case(
+                When(Exists(foot_exam_subquery), then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+            all_6_hcs_completed=Case(
+                When(
+                    Q(hba1c_check=1)
+                    & Q(bmi_check=1)
+                    & Q(thyroid_check=1)
+                    & Q(bp_check=1)
+                    & Q(urinary_albumin_check=1)
+                    & Q(foot_exam_check=1),
+                    then=1,
+                ),
+                default=0,
+                output_field=IntegerField(),
+            ),
+        )
+
+        total_passed = annotated_eligible_pts.aggregate(
+            total_pts_all_hcs_completed=Sum("all_6_hcs_completed")
+        ).get("total_pts_all_hcs_completed") or 0
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_eligible - total_passed,
+        )
+
+    def _get_eligible_pts_measure_5_lt_12yo(self):
+        """
+        Returns the eligible patients for measure 5 who are under 12 years old
+        """
+        if hasattr(self, "eligible_pts_lt_12yo"):
+            return self.eligible_pts_lt_12yo
+
+        base_eligible_query_set, _ = (
+            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
+        )
+
+        self.eligible_patients_lt_12yo = base_eligible_query_set.filter(
+            Q(
+                date_of_birth__gt=self.audit_start_date
+                - relativedelta(years=12)
+            )
+        )
+
+        return self.eligible_patients_lt_12yo
+
+    def _get_eligible_pts_measure_5_gte_12yo(self):
+        """
+        Returns the eligible patients for measure 5 who are gte 12 years old
+        """
+        if hasattr(self, "eligible_patients_gte_12yo"):
+            return self.eligible_patients_gte_12yo
+
+        base_eligible_query_set, _ = (
+            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
+        )
+
+        self.eligible_patients_gte_12yo = base_eligible_query_set.filter(
+            Q(
+                date_of_birth__lte=self.audit_start_date
+                - relativedelta(years=12)
+            )
+        )
+
+        return self.eligible_patients_gte_12yo
 
     def calculate_kpi_33_hba1c_4plus(
         self,
@@ -1919,7 +2267,6 @@ class CalculateKPIS:
                 smoke_valid_visits__gte=1
             )
         )
-
 
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
@@ -2326,22 +2673,61 @@ class CalculateKPIS:
         """
         Calculates KPI 44: Mean HbA1c
 
-        Numerator: Mean of HbA1c measurements (item 17) within the audit
+        SINGLE NUMBER: Mean of HbA1c measurements (item 17) within the audit
         period, excluding measurements taken within 90 days of diagnosis
-        NOTE: The mean for each patient is calculated. We then calculate the
-        mean of the means.
+        NOTE: The median for each patient is calculated. We then calculate the
+        mean of the medians.
 
         Denominator: Total number of eligible patients (measure 1)
+
+        NOTE: Django does not support Median aggregation function. We can do
+        manually.
         """
         eligible_patients, total_eligible = (
             self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
         )
         total_ineligible = self.total_patients_count - total_eligible
 
+        # Calculate median HBa1c for each patient
+
+        # Get the visits that match the valid HbA1c criteria
+
+        # Subquery to filter valid HBA1c values while ensuring visit_date is in
+        # the required range
+        valid_hba1c_subquery = (
+            Visit.objects.filter(
+                visit_date__range=self.AUDIT_DATE_RANGE,
+                hba1c_date__gte=F("patient__diagnosis_date")
+                + timedelta(
+                    days=90
+                ),  # Ensure HbA1c is taken >90 days after diagnosis
+                patient=OuterRef("pk"),
+            )
+            # Clear any implicit ordering, select only 'hba1c' for calculating
+            # the median as getting error with the visit_date field
+            .order_by().values("hba1c")
+        )
+
+        # Annotate eligible patients with the median HbA1c value
+        eligible_pts_annotated = eligible_patients.annotate(
+            median_hba1c=Subquery(
+                valid_hba1c_subquery.annotate(
+                    median_hba1c=Median("hba1c")
+                ).values("median_hba1c")[:1]
+            )
+        )
+
+        # Calculate the median of the medians and convert to float (as Decimal)
+        median_of_median_hba1cs = eligible_pts_annotated.aggregate(
+            median_of_median_hba1cs=Avg("median_hba1c")
+        ).get("median_of_median_hba1cs") or 0
+
         return KPIResult(
-            total_eligible=-1,
-            total_ineligible=-1,
-            total_passed=-1,
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            # Use passed for storing the value
+            total_passed=median_of_median_hba1cs,
+            # Failed is not used
             total_failed=-1,
         )
 
@@ -2351,8 +2737,9 @@ class CalculateKPIS:
         """
         Calculates KPI 43: Median HbA1c
 
-        Numerator: median of HbA1c measurements (item 17) within the audit
+        SINGLE NUMBER: median of HbA1c measurements (item 17) within the audit
         period, excluding measurements taken within 90 days of diagnosis
+
         NOTE: The median for each patient is calculated. We then calculate the
         median of the medians.
 
@@ -2363,10 +2750,46 @@ class CalculateKPIS:
         )
         total_ineligible = self.total_patients_count - total_eligible
 
+        # Calculate median HBa1c for each patient
+
+        # Get the visits that match the valid HbA1c criteria
+
+        # Subquery to filter valid HBA1c values while ensuring visit_date is in
+        # the required range
+        valid_hba1c_subquery = (
+            Visit.objects.filter(
+                visit_date__range=self.AUDIT_DATE_RANGE,
+                hba1c_date__gte=F("patient__diagnosis_date")
+                + timedelta(
+                    days=90
+                ),  # Ensure HbA1c is taken >90 days after diagnosis
+                patient=OuterRef("pk"),
+            )
+            # Clear any implicit ordering, select only 'hba1c' for calculating
+            # the median as getting error with the visit_date field
+            .order_by().values("hba1c")
+        )
+
+        # Annotate eligible patients with the median HbA1c value
+        eligible_pts_annotated = eligible_patients.annotate(
+            median_hba1c=Subquery(
+                valid_hba1c_subquery.annotate(
+                    median_hba1c=Median("hba1c")
+                ).values("median_hba1c")[:1]
+            )
+        )
+
+        # Calculate the mean of the medians and convert to float (as Decimal)
+        mean_of_median_hba1cs = eligible_pts_annotated.aggregate(
+            mean_of_median_hba1cs=Avg("median_hba1c")
+        ).get("mean_of_median_hba1cs") or 0
+
         return KPIResult(
-            total_eligible=-1,
-            total_ineligible=-1,
-            total_passed=-1,
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            # Use passed for storing the value
+            total_passed=mean_of_median_hba1cs,
+            # Failed is not used
             total_failed=-1,
         )
 
@@ -2749,6 +3172,27 @@ class CalculateKPIS:
             self.t1dm_pts_diagnosed_90D_before_end_base_query_set,
             self.t1dm_pts_diagnosed_90D_before_end_total_eligible,
         )
+
+
+# Custom Median function for PostgreSQL
+class Median(Func):
+    function = "percentile_cont"
+    template = "%(function)s(0.5) WITHIN GROUP (ORDER BY %(expressions)s)"
+
+
+def queryset_median_value(queryset: QuerySet, column_name: str):
+    """Calculates the median value of a given column_name:str in a queryset
+
+    Median is not a SQL aggregate function so we have to calculate it manually
+
+    Thanks https://stackoverflow.com/questions/942620/missing-median-aggregate-function-in-django.
+    """
+    count = queryset.count()
+    values = queryset.values_list(column_name, flat=True).order_by(column_name)
+    if count % 2 == 1:
+        return values[int(round(count / 2))]
+    else:
+        return sum(values[count / 2 - 1 : count / 2 + 1]) / Decimal(2.0)
 
 
 # WIP simply return KPI Agg result for given PDU

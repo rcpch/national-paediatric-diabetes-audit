@@ -23,17 +23,14 @@ from project.npda.tests.kpi_calculations.test_kpi_calculations import \
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.skip(
-    reason="Confirm calc issue https://github.com/orgs/rcpch/projects/13/views/1?pane=issue&itemId=81441322"
-)
 @pytest.mark.django_db
 def test_kpi_calculation_44(AUDIT_START_DATE):
     """Tests that KPI44 is calculated correctly.
 
-    Numerator: Mean of HbA1c measurements (item 17) within the audit
+    SINGLE NUMBER: Mean of HbA1c measurements (item 17) within the audit
     period, excluding measurements taken within 90 days of diagnosis
-    NOTE: The mean for each patient is calculated. We then calculate the
-    mean of the means.
+    NOTE: The median for each patient is calculated. We then calculate the
+    mean of the medians.
 
     Denominator: Total number of eligible patients (measure 1)
     """
@@ -42,14 +39,70 @@ def test_kpi_calculation_44(AUDIT_START_DATE):
     Patient.objects.all().delete()
 
     # Create  Patients and Visits that should be eligible (KPI1)
+    DIAGNOSIS_DATE = AUDIT_START_DATE - relativedelta(days=90)
     eligible_criteria = {
         "visit__visit_date": AUDIT_START_DATE + relativedelta(days=2),
         "date_of_birth": AUDIT_START_DATE - relativedelta(days=365 * 10),
     }
 
     # Create passing pts
+    pt_1_hba1cs = [45, 46, 47]
+    passing_pt_1_median_46 = PatientFactory(
+        # KPI1 eligible
+        **eligible_criteria,
+        postcode="passing_pt_1_median_46",
+        # HbA1c measurements within the audit period and after 90 days of diagnosis
+        visit__hba1c_date=DIAGNOSIS_DATE + relativedelta(days=91),
+        visit__hba1c=pt_1_hba1cs[0],
+    )
+    # 2 more HbA1c measurements
+    VisitFactory(
+        patient=passing_pt_1_median_46,
+        visit_date=AUDIT_START_DATE + relativedelta(months=3),
+        # HbA1c measurements within the audit period and after 90 days of diagnosis
+        hba1c_date=DIAGNOSIS_DATE + relativedelta(months=3),
+        hba1c=pt_1_hba1cs[1],
+    )
+    VisitFactory(
+        patient=passing_pt_1_median_46,
+        visit_date=AUDIT_START_DATE + relativedelta(months=6),
+        # HbA1c measurements within the audit period and after 90 days of diagnosis
+        hba1c_date=DIAGNOSIS_DATE + relativedelta(days=6),
+        hba1c=pt_1_hba1cs[2],
+    )
 
-    # Create failing pts
+    pt_2_hba1cs = [47, 48, 49]
+    passing_pt_2_median_48 = PatientFactory(
+        # KPI1 eligible
+        **eligible_criteria,
+        postcode="passing_pt_2_median_48",
+        # HbA1c measurements within the audit period and after 90 days of diagnosis
+        visit__hba1c_date=DIAGNOSIS_DATE + relativedelta(days=91),
+        visit__hba1c=pt_2_hba1cs[0],
+    )
+    # 2 more HbA1c measurements
+    VisitFactory(
+        patient=passing_pt_2_median_48,
+        visit_date=AUDIT_START_DATE + relativedelta(months=3),
+        # HbA1c measurements within the audit period and after 90 days of diagnosis
+        hba1c_date=DIAGNOSIS_DATE + relativedelta(months=3),
+        hba1c=pt_2_hba1cs[1],
+    )
+    VisitFactory(
+        patient=passing_pt_2_median_48,
+        visit_date=AUDIT_START_DATE + relativedelta(months=6),
+        # HbA1c measurements within the audit period and after 90 days of diagnosis
+        hba1c_date=DIAGNOSIS_DATE + relativedelta(months=6),
+        hba1c=pt_2_hba1cs[2],
+    )
+    # This measurement should NOT be counted
+    VisitFactory(
+        patient=passing_pt_2_median_48,
+        visit_date=DIAGNOSIS_DATE + relativedelta(days=89),
+        # HbA1c measurement is within 90 days of diagnosis
+        hba1c_date=DIAGNOSIS_DATE + relativedelta(days=89),
+        hba1c=1,  # ridiculously low to skew numbers if counted
+    )
 
     # Create Patients and Visits that should be excluded
     # Visit date before audit period
@@ -70,10 +123,13 @@ def test_kpi_calculation_44(AUDIT_START_DATE):
         pz_code="PZ130", calculation_date=AUDIT_START_DATE
     )
 
-    EXPECTED_TOTAL_ELIGIBLE = 6
+    medians = list(map(calculate_median, [pt_1_hba1cs, pt_2_hba1cs]))
+    EXPECTED_MEAN = sum(medians) / len(medians)
+
+    EXPECTED_TOTAL_ELIGIBLE = 2
     EXPECTED_TOTAL_INELIGIBLE = 2
-    EXPECTED_TOTAL_PASSED = 2
-    EXPECTED_TOTAL_FAILED = 4
+    EXPECTED_TOTAL_PASSED = EXPECTED_MEAN # Stores the mean
+    EXPECTED_TOTAL_FAILED = -1 # Not used
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=EXPECTED_TOTAL_ELIGIBLE,
@@ -87,16 +143,13 @@ def test_kpi_calculation_44(AUDIT_START_DATE):
         actual=calc_kpis.calculate_kpi_44_mean_hba1c(),
     )
 
-
-@pytest.mark.skip(
-    reason="Confirm calc issue https://github.com/orgs/rcpch/projects/13/views/1?pane=issue&itemId=81441322"
-)
 @pytest.mark.django_db
 def test_kpi_calculation_45(AUDIT_START_DATE):
     """Tests that KPI45 is calculated correctly.
 
-    Numerator: median of HbA1c measurements (item 17) within the audit
+    SINGLE NUMBER: median of HbA1c measurements (item 17) within the audit
     period, excluding measurements taken within 90 days of diagnosis
+
     NOTE: The median for each patient is calculated. We then calculate the
     median of the medians.
 
@@ -107,14 +160,70 @@ def test_kpi_calculation_45(AUDIT_START_DATE):
     Patient.objects.all().delete()
 
     # Create  Patients and Visits that should be eligible (KPI1)
+    DIAGNOSIS_DATE = AUDIT_START_DATE - relativedelta(days=90)
     eligible_criteria = {
         "visit__visit_date": AUDIT_START_DATE + relativedelta(days=2),
         "date_of_birth": AUDIT_START_DATE - relativedelta(days=365 * 10),
     }
 
     # Create passing pts
+    pt_1_hba1cs = [45, 46, 47]
+    passing_pt_1_median_46 = PatientFactory(
+        # KPI1 eligible
+        **eligible_criteria,
+        postcode="passing_pt_1_median_46",
+        # HbA1c measurements within the audit period and after 90 days of diagnosis
+        visit__hba1c_date=DIAGNOSIS_DATE + relativedelta(days=91),
+        visit__hba1c=pt_1_hba1cs[0],
+    )
+    # 2 more HbA1c measurements
+    VisitFactory(
+        patient=passing_pt_1_median_46,
+        visit_date=AUDIT_START_DATE + relativedelta(months=3),
+        # HbA1c measurements within the audit period and after 90 days of diagnosis
+        hba1c_date=DIAGNOSIS_DATE + relativedelta(months=3),
+        hba1c=pt_1_hba1cs[1],
+    )
+    VisitFactory(
+        patient=passing_pt_1_median_46,
+        visit_date=AUDIT_START_DATE + relativedelta(months=6),
+        # HbA1c measurements within the audit period and after 90 days of diagnosis
+        hba1c_date=DIAGNOSIS_DATE + relativedelta(days=6),
+        hba1c=pt_1_hba1cs[2],
+    )
 
-    # Create failing pts
+    pt_2_hba1cs = [47, 48, 49]
+    passing_pt_2_median_48 = PatientFactory(
+        # KPI1 eligible
+        **eligible_criteria,
+        postcode="passing_pt_2_median_48",
+        # HbA1c measurements within the audit period and after 90 days of diagnosis
+        visit__hba1c_date=DIAGNOSIS_DATE + relativedelta(days=91),
+        visit__hba1c=pt_2_hba1cs[0],
+    )
+    # 2 more HbA1c measurements
+    VisitFactory(
+        patient=passing_pt_2_median_48,
+        visit_date=AUDIT_START_DATE + relativedelta(months=3),
+        # HbA1c measurements within the audit period and after 90 days of diagnosis
+        hba1c_date=DIAGNOSIS_DATE + relativedelta(months=3),
+        hba1c=pt_2_hba1cs[1],
+    )
+    VisitFactory(
+        patient=passing_pt_2_median_48,
+        visit_date=AUDIT_START_DATE + relativedelta(months=6),
+        # HbA1c measurements within the audit period and after 90 days of diagnosis
+        hba1c_date=DIAGNOSIS_DATE + relativedelta(months=6),
+        hba1c=pt_2_hba1cs[2],
+    )
+    # This measurement should NOT be counted
+    VisitFactory(
+        patient=passing_pt_2_median_48,
+        visit_date=DIAGNOSIS_DATE + relativedelta(days=89),
+        # HbA1c measurement is within 90 days of diagnosis
+        hba1c_date=DIAGNOSIS_DATE + relativedelta(days=89),
+        hba1c=1,  # ridiculously low to skew numbers if counted
+    )
 
     # Create Patients and Visits that should be excluded
     # Visit date before audit period
@@ -135,10 +244,13 @@ def test_kpi_calculation_45(AUDIT_START_DATE):
         pz_code="PZ130", calculation_date=AUDIT_START_DATE
     )
 
-    EXPECTED_TOTAL_ELIGIBLE = 6
+    medians = list(map(calculate_median, [pt_1_hba1cs, pt_2_hba1cs]))
+    EXPECTED_MEDIAN = calculate_median(medians)
+
+    EXPECTED_TOTAL_ELIGIBLE = 2
     EXPECTED_TOTAL_INELIGIBLE = 2
-    EXPECTED_TOTAL_PASSED = 2
-    EXPECTED_TOTAL_FAILED = 4
+    EXPECTED_TOTAL_PASSED = EXPECTED_MEDIAN # Stores the mean
+    EXPECTED_TOTAL_FAILED = -1 # Not used
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=EXPECTED_TOTAL_ELIGIBLE,
@@ -396,19 +508,19 @@ def test_kpi_calculation_48(AUDIT_START_DATE):
 
     # Create failing pts
     failing_invalid_psych_support_no = PatientFactory(
-        postcode='failing_invalid_psych_support_no',
+        postcode="failing_invalid_psych_support_no",
         # KPI1 eligible
         **eligible_criteria,
         visit__psychological_additional_support_status=YES_NO_UNKNOWN[1][0],
     )
     failing_invalid_psych_support_unknown = PatientFactory(
-        postcode='failing_invalid_psych_support_unknown',
+        postcode="failing_invalid_psych_support_unknown",
         # KPI1 eligible
         **eligible_criteria,
         visit__psychological_additional_support_status=YES_NO_UNKNOWN[2][0],
     )
     failing_invalid_psych_support_none = PatientFactory(
-        postcode='failing_invalid_psych_support_none',
+        postcode="failing_invalid_psych_support_none",
         # KPI1 eligible
         **eligible_criteria,
         visit__psychological_additional_support_status=None,
@@ -496,19 +608,19 @@ def test_kpi_calculation_49(AUDIT_START_DATE):
 
     # Create failing pts
     failing_normoalbuminuria = PatientFactory(
-        postcode='failing_normoalbuminuria',
+        postcode="failing_normoalbuminuria",
         # KPI1 eligible
         **eligible_criteria,
         visit__albuminuria_stage=ALBUMINURIA_STAGES[0][0],
     )
     failing_unknown_albuminuria = PatientFactory(
-        postcode='failing_unknown_albuminuria',
+        postcode="failing_unknown_albuminuria",
         # KPI1 eligible
         **eligible_criteria,
         visit__albuminuria_stage=ALBUMINURIA_STAGES[3][0],
     )
     failing_none_albuminuria = PatientFactory(
-        postcode='failing_none_albuminuria',
+        postcode="failing_none_albuminuria",
         # KPI1 eligible
         **eligible_criteria,
         visit__albuminuria_stage=None,
@@ -549,3 +661,21 @@ def test_kpi_calculation_49(AUDIT_START_DATE):
         expected=EXPECTED_KPIRESULT,
         actual=calc_kpis.calculate_kpi_49_albuminuria_present(),
     )
+
+
+def calculate_median(values):
+    # Sort the list of integers
+    sorted_values = sorted(values)
+    n = len(sorted_values)
+
+    if n == 0:
+        raise ValueError("The list is empty, cannot compute median.")
+
+    # If the length of the list is odd, return the middle element
+    if n % 2 == 1:
+        return sorted_values[n // 2]
+    else:
+        # If the length of the list is even, return the average of the two middle elements
+        middle1 = sorted_values[n // 2 - 1]
+        middle2 = sorted_values[n // 2]
+        return (middle1 + middle2) / 2
