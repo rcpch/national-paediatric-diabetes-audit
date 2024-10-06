@@ -53,7 +53,7 @@ class PatientVisitsListView(
         # If the patient has left the PDU, the date_leaving_service will be set and it will be possible to view KPIs for the PDU up until transfer,
         # if this happened during the audit period. This is TODO
         kpi_results = CalculateKPIS(
-            pz_code=pdu.pz_code,
+            pz_codes=[pdu.pz_code],  # this is a list of one PZ code
             calculation_date=datetime.date.today(),
             patients=Patient.objects.filter(
                 pk=patient_id

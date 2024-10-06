@@ -45,7 +45,7 @@ def test_kpi_calculation_1(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=N_PATIENTS_ELIGIBLE,
@@ -100,7 +100,7 @@ def test_kpi_calculation_2(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=N_PATIENTS_ELIGIBLE,
@@ -156,7 +156,7 @@ def test_kpi_calculation_3(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=N_PATIENTS_ELIGIBLE,
@@ -220,7 +220,7 @@ def test_kpi_calculation_4(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=N_PATIENTS_ELIGIBLE,
@@ -319,7 +319,7 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 3
     EXPECTED_TOTAL_INELIGIBLE = 5
@@ -441,7 +441,7 @@ def test_kpi_calculation_6(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = len(observation_field_names) + 1
     EXPECTED_TOTAL_INELIGIBLE = 3
@@ -522,7 +522,7 @@ def test_kpi_calculation_7(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = len(observation_field_names)
     EXPECTED_TOTAL_INELIGIBLE = 2
@@ -584,7 +584,7 @@ def test_kpi_calculation_8(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 1
     EXPECTED_TOTAL_INELIGIBLE = 3
@@ -654,7 +654,7 @@ def test_kpi_calculation_9(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 1
     EXPECTED_TOTAL_INELIGIBLE = 4
@@ -717,7 +717,7 @@ def test_kpi_calculation_10(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 1
     EXPECTED_TOTAL_INELIGIBLE = 3
@@ -789,7 +789,7 @@ def test_kpi_calculation_11(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 2
     EXPECTED_TOTAL_INELIGIBLE = 3
@@ -852,7 +852,7 @@ def test_kpi_calculation_12(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 1
     EXPECTED_TOTAL_INELIGIBLE = 3

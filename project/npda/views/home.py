@@ -1,4 +1,5 @@
 # Python imports
+import datetime
 import logging
 
 # Django imports
@@ -7,17 +8,19 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.shortcuts import render
 from django.urls import reverse
+from django.shortcuts import redirect
 
 # HTMX imports
 from django_htmx.http import trigger_client_event
 
 # RCPCH imports
+from .decorators import login_and_otp_required
 from ..general_functions.csv_upload import csv_upload, read_csv
 from ..general_functions.session import get_new_session_fields
 from ..general_functions.view_preference import get_or_update_view_preference
 from ..general_functions.csv_summarize import csv_summarize
 from ..forms.upload import UploadFileForm
-from .decorators import login_and_otp_required
+from ..kpi_class.kpis import CalculateKPIS
 
 
 # Logging
@@ -131,6 +134,7 @@ def view_preference(request):
     patients_list_view_url = reverse("patients")
     submissions_list_view_url = reverse("submissions")
     npdauser_list_view_url = reverse("npda_users")
+    dashboard_url = reverse("dashboard")
 
     trigger_client_event(
         response=response,
@@ -149,4 +153,41 @@ def view_preference(request):
         name="patients",
         params={"method": "GET", "url": patients_list_view_url},
     )  # reloads the patients table
+
+    trigger_client_event(
+        response=response,
+        name="dashboard",
+        params={"method": "GET", "url": dashboard_url},
+    )  # reloads the dashboard
     return response
+
+
+@login_and_otp_required()
+def dashboard(request):
+    """
+    Dashboard view for the KPIs.
+    """
+    template = "dashboard.html"
+    pz_code = request.session.get("pz_code")
+    if request.htmx:
+        # If the request is an htmx request, we want to return the partial template
+        template = "partials/kpi_table.html"
+
+    PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+    try:
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+    except PaediatricDiabetesUnit.DoesNotExist:
+        messages.error(
+            request=request,
+            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
+        )
+        return render(request, "dashboard.html")
+
+    # accepts a list of PZ codes
+    pdu_kpis = CalculateKPIS(
+        pz_codes=[pz_code], calculation_date=datetime.date.today()
+    )  # accepts a list of PZ codes
+
+    context = {"pdu": pdu, "kpi_results": pdu_kpis.calculate_kpis_for_patients()}
+
+    return render(request, template_name=template, context=context)

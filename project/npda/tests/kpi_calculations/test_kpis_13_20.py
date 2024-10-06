@@ -79,7 +79,7 @@ def test_kpi_calculations_13_to_20(
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     # Dynamically get the kpi calc method based on treatment type
     #   `treatment` is an int between 1-8

@@ -105,7 +105,7 @@ def test_kpi_calculation_24(AUDIT_START_DATE):
         )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_code="PZ130", calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 8
     EXPECTED_TOTAL_INELIGIBLE = 8

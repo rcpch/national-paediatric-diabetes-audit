@@ -127,7 +127,7 @@ def test_kpi_calculation_41(AUDIT_START_DATE, AUDIT_END_DATE):
     )
 
     calc_kpis = CalculateKPIS(
-        pz_code="PZ130",
+        pz_codes=["PZ130"],
         calculation_date=AUDIT_START_DATE,
     )
 
@@ -255,7 +255,7 @@ def test_kpi_calculation_42(AUDIT_START_DATE, AUDIT_END_DATE):
     )
 
     calc_kpis = CalculateKPIS(
-        pz_code="PZ130",
+        pz_codes=["PZ130"],
         calculation_date=AUDIT_START_DATE,
     )
 
@@ -391,7 +391,7 @@ def test_kpi_calculation_43(AUDIT_START_DATE, AUDIT_END_DATE):
     )
 
     calc_kpis = CalculateKPIS(
-        pz_code="PZ130",
+        pz_codes=["PZ130"],
         calculation_date=AUDIT_START_DATE,
     )
 

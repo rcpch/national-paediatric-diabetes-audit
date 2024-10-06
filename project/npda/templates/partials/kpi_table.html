@@ -1,0 +1,58 @@
+<div class="w-100">
+<strong>
+    Key Performance Indicators for {{aggregation_level}} for {{pdu.lead_organisation_name}} ({{pdu.pz_code}} - {{pdu.parent_name}}) - {{pdu.paediatric_diabetes_network_name}} ({{pdu.paediatric_diabetes_network_code}})
+</strong>
+<table class="table-auto w-full text-sm text-left text-gray-500 mb-5 font-montserrat">
+    <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">
+        <tr>
+            <th class="px-6 py-3">KPI</th>
+            <th class="px-6 py-3">Total Eligible</th>
+            <th class="px-6 py-3">Total Passed</th>
+            <th class="px-6 py-3">Total Failed</th>
+            <th class="px-6 py-3">Total Ineligible</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for kpi_key, kpi_value in kpi_results.calculated_kpi_values.items %}
+            {% if not kpi_key|slice:":6" == "kpi_32" %}
+                <tr class="bg-white border-b">
+                    <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{{ kpi_value.kpi_label }}</td>
+                    <td class="px-6 py-4">{{ kpi_value.total_eligible }}</td>
+                    <td class="px-6 py-4">{{ kpi_value.total_passed }}</td>
+                    <td class="px-6 py-4">{{ kpi_value.total_failed }}</td>
+                    <td class="px-6 py-4">{{ kpi_value.total_ineligible }}</td>
+                </tr>
+            {% endif %}
+        {% endfor %}
+        <!-- Sub-rows for KPI 32 -->
+        <tr class="bg-white border-b">
+            <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">KPI 32</td>
+            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_1_health_check_completion_rate.total_eligible }}</td>
+            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_1_health_check_completion_rate.total_passed }}</td>
+            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_1_health_check_completion_rate.total_failed }}</td>
+            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_1_health_check_completion_rate.total_ineligible }}</td>
+        </tr>
+        <tr class="bg-gray-50 border-b">
+            <td class="px-6 py-4 pl-12 font-medium text-gray-900 whitespace-nowrap">Care Process Completion Rate</td>
+            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_1_health_check_completion_rate.total_eligible }}</td>
+            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_1_health_check_completion_rate.total_passed }}</td>
+            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_1_health_check_completion_rate.total_failed }}</td>
+            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_1_health_check_completion_rate.total_ineligible }}</td>
+        </tr>
+        <tr class="bg-gray-50 border-b">
+            <td class="px-6 py-4 pl-12 font-medium text-gray-900 whitespace-nowrap">Health Check &lt; 12yo</td>
+            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_2_health_check_lt_12yo.total_eligible }}</td>
+            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_2_health_check_lt_12yo.total_passed }}</td>
+            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_2_health_check_lt_12yo.total_failed }}</td>
+            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_2_health_check_lt_12yo.total_ineligible }}</td>
+        </tr>
+        <tr class="bg-gray-50 border-b">
+            <td class="px-6 py-4 pl-12 font-medium text-gray-900 whitespace-nowrap">Health Check &gt;= 12yo</td>
+            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_3_health_check_gte_12yo.total_eligible }}</td>
+            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_3_health_check_gte_12yo.total_passed }}</td>
+            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_3_health_check_gte_12yo.total_failed }}</td>
+            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_3_health_check_gte_12yo.total_ineligible }}</td>
+        </tr>
+    </tbody>
+</table>
+</div>
