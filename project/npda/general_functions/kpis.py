@@ -2720,7 +2720,7 @@ class CalculateKPIS:
         # Calculate the median of the medians and convert to float (as Decimal)
         median_of_median_hba1cs = eligible_pts_annotated.aggregate(
             median_of_median_hba1cs=Avg("median_hba1c")
-        ).get("median_of_median_hba1cs", 0.0)
+        ).get("median_of_median_hba1cs") or 0
 
         return KPIResult(
             total_eligible=total_eligible,
@@ -2782,7 +2782,7 @@ class CalculateKPIS:
         # Calculate the mean of the medians and convert to float (as Decimal)
         mean_of_median_hba1cs = eligible_pts_annotated.aggregate(
             mean_of_median_hba1cs=Avg("median_hba1c")
-        ).get("mean_of_median_hba1cs", 0.0)
+        ).get("mean_of_median_hba1cs") or 0
 
         return KPIResult(
             total_eligible=total_eligible,

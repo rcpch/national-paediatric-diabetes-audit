@@ -74,6 +74,7 @@ def test_ensure_mocked_audit_date_range_is_correct(AUDIT_START_DATE):
         2025, 3, 31
     ), f"Mocked audit end date incorrect!"
 
+
 @pytest.mark.django_db
 def test_kpi_calculations_dont_break_when_no_patients(AUDIT_START_DATE):
     """Tests none of the KPIs break when no patients are present.
@@ -85,6 +86,17 @@ def test_kpi_calculations_dont_break_when_no_patients(AUDIT_START_DATE):
     Patient.objects.all().delete()
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
+    kpi_calculations_object = CalculateKPIS(
         pz_code="PZ130", calculation_date=AUDIT_START_DATE
     ).calculate_kpis_for_patients()
+
+    for kpi, results in kpi_calculations_object[
+        "calculated_kpi_values"
+    ].items():
+        values = list(results.values())
+        assert all(
+            [
+                isinstance(value, int) or isinstance(value, float)
+                for value in values
+            ]
+        ), f"KPI {kpi} has non-integer values: {results}"
