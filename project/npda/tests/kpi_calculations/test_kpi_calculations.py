@@ -89,7 +89,11 @@ def test_kpi_calculations_dont_break_when_no_patients(AUDIT_START_DATE):
     ).calculate_kpis_for_patients()
 
     for kpi, results in kpi_calculations_object["calculated_kpi_values"].items():
+        # remove the kpi_label key from the results
+        results.pop("kpi_label", None)
+
         values = list(results.values())
+
         assert all(
             [isinstance(value, int) or isinstance(value, float) for value in values]
         ), f"KPI {kpi} has non-integer values: {results}"
