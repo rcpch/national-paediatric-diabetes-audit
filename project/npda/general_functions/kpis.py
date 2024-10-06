@@ -2370,6 +2370,68 @@ class CalculateKPIS:
             )
         )
 
+        # Calculate the median of the medians and convert to float (as Decimal)
+        median_of_median_hba1cs = eligible_pts_annotated.aggregate(
+            median_of_median_hba1cs=Avg("median_hba1c")
+        ).get('median_of_median_hba1cs', 0.0)
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            # Use passed for storing the value
+            total_passed=median_of_median_hba1cs,
+            # Failed is not used
+            total_failed=-1,
+        )
+
+    def calculate_kpi_45_median_hba1c(
+        self,
+    ) -> dict:
+        """
+        Calculates KPI 43: Median HbA1c
+
+        SINGLE NUMBER: median of HbA1c measurements (item 17) within the audit
+        period, excluding measurements taken within 90 days of diagnosis
+
+        NOTE: The median for each patient is calculated. We then calculate the
+        median of the medians.
+
+        Denominator: Total number of eligible patients (measure 1)
+        """
+        eligible_patients, total_eligible = (
+            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+        )
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # Calculate median HBa1c for each patient
+
+        # Get the visits that match the valid HbA1c criteria
+
+        # Subquery to filter valid HBA1c values while ensuring visit_date is in
+        # the required range
+        valid_hba1c_subquery = (
+            Visit.objects.filter(
+                visit_date__range=self.AUDIT_DATE_RANGE,
+                hba1c_date__gte=F("patient__diagnosis_date")
+                + timedelta(
+                    days=90
+                ),  # Ensure HbA1c is taken >90 days after diagnosis
+                patient=OuterRef("pk"),
+            )
+            # Clear any implicit ordering, select only 'hba1c' for calculating
+            # the median as getting error with the visit_date field
+            .order_by().values("hba1c")
+        )
+
+        # Annotate eligible patients with the median HbA1c value
+        eligible_pts_annotated = eligible_patients.annotate(
+            median_hba1c=Subquery(
+                valid_hba1c_subquery.annotate(
+                    median_hba1c=Median("hba1c")
+                ).values("median_hba1c")[:1]
+            )
+        )
+
         # Calculate the mean of the medians and convert to float (as Decimal)
         mean_of_median_hba1cs = eligible_pts_annotated.aggregate(
             mean_of_median_hba1cs=Avg("median_hba1c")
@@ -2381,31 +2443,6 @@ class CalculateKPIS:
             # Use passed for storing the value
             total_passed=mean_of_median_hba1cs,
             # Failed is not used
-            total_failed=-1,
-        )
-
-    def calculate_kpi_45_median_hba1c(
-        self,
-    ) -> dict:
-        """
-        Calculates KPI 43: Median HbA1c
-
-        Numerator: median of HbA1c measurements (item 17) within the audit
-        period, excluding measurements taken within 90 days of diagnosis
-        NOTE: The median for each patient is calculated. We then calculate the
-        median of the medians.
-
-        Denominator: Total number of eligible patients (measure 1)
-        """
-        eligible_patients, total_eligible = (
-            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
-        )
-        total_ineligible = self.total_patients_count - total_eligible
-
-        return KPIResult(
-            total_eligible=-1,
-            total_ineligible=-1,
-            total_passed=-1,
             total_failed=-1,
         )
 
