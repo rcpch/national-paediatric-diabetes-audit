@@ -1,7 +1,7 @@
 # python imports
 from django.apps import apps
 from django.db.models import F, Value, Case, When, CharField, Q
-from django.db.models.functions import Concat
+from django.db.models.functions import Concat, Upper
 from .rcpch_nhs_organisations import (
     get_all_nhs_organisations_affiliated_with_paediatric_diabetes_unit,
 )
@@ -74,10 +74,16 @@ def paediatric_diabetes_units_to_populate_select_field(
                 Case(
                     When(
                         parent_name__isnull=False,
-                        then=Concat(Value(" - "), F("parent_name")),
-                    ),
-                    default=Value(""),
-                    output_field=CharField(),
+                        then=Concat(
+                            Value(" - "),
+                            F("parent_name"),
+                            Value(" - "),
+                            Upper(F("paediatric_diabetes_network_name")),
+                            Value(" NETWORK"),
+                            default=Value(""),
+                            output_field=CharField(),
+                        ),
+                    )
                 ),
             )
         )
