@@ -99,7 +99,7 @@ urlpatterns = [
     ),
     # KPI views
     path(
-        "paediatric_diabetes_unit/<str:pz_code>/dashboard",
+        "dashboard",
         view=dashboard,
         name="dashboard",
     ),

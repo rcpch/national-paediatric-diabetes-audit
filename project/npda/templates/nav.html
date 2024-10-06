@@ -14,7 +14,7 @@
             <ul class="menu menu-horizontal px-1 flex items-center active:rounded-none">
                 {% if user.is_authenticated %}
                     <li class="ml-auto mr-2 flex items-center">
-                        <a href="{% url 'dashboard' pz_code=request.session.pz_code %}"
+                        <a href="{% url 'dashboard' %}"
                             class="text-xs block font-montserrat font-semibold py-2 pr-4 pl-3 text-gray-700 lg:border-0 lg:hover:text-primary-700 px-0 lg:px-5 py-2 lg:py-2.5 mr-2 text-gray-400 hover:text-rcpch_light_blue hover:bg-transparent active:bg-transparent {% active_navbar_tab request 'submissions' %}"
                             aria-current="page">Dashboard</a>
                     </li>
