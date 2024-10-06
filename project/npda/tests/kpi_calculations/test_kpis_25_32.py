@@ -1093,3 +1093,173 @@ def test_kpi_calculation_32_1(AUDIT_START_DATE):
         expected=EXPECTED_KPIRESULT,
         actual=calc_kpis.calculate_kpi_32_1_health_check_completion_rate(),
     )
+
+
+@pytest.mark.django_db
+def test_kpi_calculation_32_2(AUDIT_START_DATE):
+    """Tests that KPI32.2 is calculated correctly.
+
+    Number of actual health checks over number of expected health checks.
+
+    Numerator: number of CYP with T1D under 12 years with all three health checks (HbA1c, BMI, Thyroid)
+
+    Denominator:  number of CYP with T1D under 12 years
+    """
+
+    # Ensure starting with clean pts in test db
+    Patient.objects.all().delete()
+
+    # Create  Patients and Visits that should be eligible (KPI5) excluding
+    # dob as age determines calculation
+    eligible_criteria = {
+        # KPI5 base criteria
+        "visit__visit_date": AUDIT_START_DATE + relativedelta(days=2),
+        # KPI 5 specific eligibility are any of the following:
+        # Date of diagnosis NOT within the audit period
+        "diagnosis_date": AUDIT_START_DATE - relativedelta(days=2),
+        # Date of leaving service NOT within the audit period
+        # transfer date only not None if they have left
+        "transfer__date_leaving_service": None,
+        # Date of death NOT within the audit period"
+        "death_date": None,
+    }
+
+    # Create Patients < 12 yo
+    passing_pt_1 = PatientFactory(
+        postcode="passing_pt_1",
+        date_of_birth=AUDIT_START_DATE - relativedelta(years=11),
+        **eligible_criteria,
+        # HC 1
+        visit__hba1c=46,
+        visit__hba1c_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+    # Separate Visit has HC2 & 3
+    VisitFactory(
+        patient=passing_pt_1,
+        visit_date=AUDIT_START_DATE + relativedelta(months=3),
+        # HC 2
+        height=160.0,
+        weight=50.0,
+        # HC 3
+        height_weight_observation_date=AUDIT_START_DATE + relativedelta(months=3),
+        thyroid_function_date=AUDIT_START_DATE + relativedelta(months=3),
+    )
+
+    passing_pt_2 = PatientFactory(
+        postcode="passing_pt_2",
+        date_of_birth=AUDIT_START_DATE - relativedelta(years=11),
+        **eligible_criteria,
+        # HC 1
+        visit__hba1c=47,
+        visit__hba1c_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+    # Separate Visit has HC2
+    VisitFactory(
+        patient=passing_pt_2,
+        visit_date=AUDIT_START_DATE + relativedelta(months=3),
+        # HC 2
+        height=160.0,
+        weight=50.0,
+        height_weight_observation_date=AUDIT_START_DATE + relativedelta(months=3),
+    )
+    # Separate Visit has HC3
+    VisitFactory(
+        patient=passing_pt_2,
+        visit_date=AUDIT_START_DATE + relativedelta(months=6),
+        thyroid_function_date=AUDIT_START_DATE + relativedelta(months=6),
+    )
+
+    # Failing patients
+    failing_pt_only_2_HCs = PatientFactory(
+        postcode="failing_pt_only_2_HCs",
+        date_of_birth=AUDIT_START_DATE - relativedelta(years=11),
+        **eligible_criteria,
+        # HC 1
+        visit__hba1c=46,
+        visit__hba1c_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+    # Separate Visit has HC2 only
+    VisitFactory(
+        patient=failing_pt_only_2_HCs,
+        visit_date=AUDIT_START_DATE + relativedelta(months=3),
+        # HC 3
+        height_weight_observation_date=AUDIT_START_DATE + relativedelta(months=3),
+        thyroid_function_date=AUDIT_START_DATE + relativedelta(months=3),
+    )
+
+    failing_pt_only_1_HCs = PatientFactory(
+        postcode="failing_pt_only_1_HCs",
+        date_of_birth=AUDIT_START_DATE - relativedelta(years=11),
+        **eligible_criteria,
+    )
+    # Separate Visit has HC1 only
+    VisitFactory(
+        patient=failing_pt_only_1_HCs,
+        visit_date=AUDIT_START_DATE + relativedelta(months=3),
+        # HC 1
+        height_weight_observation_date=AUDIT_START_DATE + relativedelta(months=3),
+        thyroid_function_date=AUDIT_START_DATE + relativedelta(months=3),
+    )
+
+
+    # Create Patients and Visits that should be ineligble
+    # Visit date before audit period
+    ineligible_patient_visit_date = PatientFactory(
+        postcode="ineligible_patient_visit_date",
+        visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
+        visit__treatment=1,
+    )
+    # Above age 25 at start of audit period
+    ineligible_patient_too_old = PatientFactory(
+        postcode="ineligible_patient_too_old",
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
+        visit__treatment=1,
+    )
+    # KPI5 specific
+    ineligible_patient_diag_within_audit_period = PatientFactory(
+        postcode="ineligible_patient_diag_within_audit_period",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # Date of diagnosis within the audit period
+        diagnosis_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+    ineligible_patient_date_leaving_within_audit_period = PatientFactory(
+        postcode="ineligible_patient_date_leaving_within_audit_period",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # Date of leaving service within the audit period
+        transfer__date_leaving_service=AUDIT_START_DATE
+        + relativedelta(days=2),
+    )
+    ineligible_patient_death_within_audit_period = PatientFactory(
+        postcode="ineligible_patient_death_within_audit_period",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # Date of death within the audit period"
+        death_date=AUDIT_START_DATE + relativedelta(days=2),
+    )
+
+    # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
+    calc_kpis = CalculateKPIS(
+        pz_code="PZ130", calculation_date=AUDIT_START_DATE
+    )
+
+    EXPECTED_TOTAL_ELIGIBLE = 4
+    EXPECTED_TOTAL_INELIGIBLE = 5
+    EXPECTED_TOTAL_PASSED = 2
+    EXPECTED_TOTAL_FAILED = 2
+
+    EXPECTED_KPIRESULT = KPIResult(
+        total_eligible=EXPECTED_TOTAL_ELIGIBLE,
+        total_passed=EXPECTED_TOTAL_PASSED,
+        total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
+        total_failed=EXPECTED_TOTAL_FAILED,
+    )
+
+    assert_kpi_result_equal(
+        expected=EXPECTED_KPIRESULT,
+        actual=calc_kpis.calculate_kpi_32_2_health_check_lt_12yo(),
+    )
