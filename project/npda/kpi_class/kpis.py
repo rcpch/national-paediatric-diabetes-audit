@@ -3149,7 +3149,9 @@ class KPIAggregationForPDU(TemplateView):
         pz_code = kwargs.get("pz_code", None)
 
         start_time = time.time()  # Record the start time for calc
-        aggregated_data = CalculateKPIS(pz_code=pz_code).calculate_kpis_for_patients()
+        aggregated_data = CalculateKPIS(
+            pz_codes=[pz_code]
+        ).calculate_kpis_for_patients()
         end_time = time.time()  # Record the end time
         calculation_time = round(
             (end_time - start_time) * 1000, 2

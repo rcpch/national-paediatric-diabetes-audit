@@ -62,7 +62,7 @@ def assert_kpi_result_equal(expected: KPIResult, actual: KPIResult) -> None:
 def test_ensure_mocked_audit_date_range_is_correct(AUDIT_START_DATE):
     """Ensure that the mocked audit date range is correct."""
     calc_kpis = CalculateKPIS(
-        pz_code="mocked_pz_code", calculation_date=AUDIT_START_DATE
+        pz_codes=["mocked_pz_code"], calculation_date=AUDIT_START_DATE
     )
 
     assert calc_kpis.audit_start_date == date(
@@ -85,7 +85,7 @@ def test_kpi_calculations_dont_break_when_no_patients(AUDIT_START_DATE):
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
     kpi_calculations_object = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
+        pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE
     ).calculate_kpis_for_patients()
 
     for kpi, results in kpi_calculations_object["calculated_kpi_values"].items():
