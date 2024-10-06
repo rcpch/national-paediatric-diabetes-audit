@@ -170,7 +170,6 @@ class CalculateKPIS:
         # Else, calculate the KPI
         kpi_result = kpi_method()
 
-        logger.debug(f"{kpi_method_name=} and {kpi_result=}")
         # Validations
         if not is_dataclass(kpi_result):
             raise TypeError(
@@ -1799,10 +1798,13 @@ class CalculateKPIS:
         )
 
         # Sum the counts to get the total health checks
-        total_health_checks_lt_12yo = (
-            actual_health_checks_lt_12yo.get("total_hba1c_checks", 0)
-            + actual_health_checks_lt_12yo.get("total_bmi_checks", 0)
-            + actual_health_checks_lt_12yo.get("total_thyroid_checks", 0)
+        total_health_checks_lt_12yo = sum(
+            actual_health_checks_lt_12yo.get(key) or 0
+            for key in [
+                "total_hba1c_checks",
+                "total_bmi_checks",
+                "total_thyroid_checks",
+            ]
         )
 
         # Repeat the process for patients >= 12yo
@@ -1887,13 +1889,16 @@ class CalculateKPIS:
         )
 
         # Sum the counts to get the total health checks
-        total_health_checks_gte_12yo = (
-            actual_health_checks_gte_12yo["total_hba1c_checks"]
-            + actual_health_checks_gte_12yo["total_bmi_checks"]
-            + actual_health_checks_gte_12yo["total_thyroid_checks"]
-            + actual_health_checks_gte_12yo["total_bp_checks"]
-            + actual_health_checks_gte_12yo["total_urinary_albumin_checks"]
-            + actual_health_checks_gte_12yo["total_foot_exam_checks"]
+        total_health_checks_gte_12yo = sum(
+            actual_health_checks_gte_12yo.get(key) or 0
+            for key in [
+                "total_hba1c_checks",
+                "total_bmi_checks",
+                "total_thyroid_checks",
+                "total_bp_checks",
+                "total_urinary_albumin_checks",
+                "total_foot_exam_checks",
+            ]
         )
 
         actual_health_checks_overall = (
@@ -1975,7 +1980,7 @@ class CalculateKPIS:
 
         total_passed = annotated_eligible_pts.aggregate(
             total_pts_all_hcs_completed=Sum("all_3_hcs_completed")
-        ).get("total_pts_all_hcs_completed", 0)
+        ).get("total_pts_all_hcs_completed") or 0
 
         return KPIResult(
             total_eligible=total_eligible,
@@ -2081,7 +2086,7 @@ class CalculateKPIS:
 
         total_passed = annotated_eligible_pts.aggregate(
             total_pts_all_hcs_completed=Sum("all_6_hcs_completed")
-        ).get("total_pts_all_hcs_completed", 0)
+        ).get("total_pts_all_hcs_completed") or 0
 
         return KPIResult(
             total_eligible=total_eligible,
