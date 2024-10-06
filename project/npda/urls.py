@@ -99,6 +99,11 @@ urlpatterns = [
     ),
     # KPI views
     path(
+        "paediatric_diabetes_unit/<str:pz_code>/dashboard",
+        view=dashboard,
+        name="dashboard",
+    ),
+    path(
         "kpis/aggregation/pdu/<str:pz_code>",
         view=KPIAggregationForPDU.as_view(),
         name="aggregation-pdu",

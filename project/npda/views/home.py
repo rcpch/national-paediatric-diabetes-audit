@@ -150,3 +150,12 @@ def view_preference(request):
         params={"method": "GET", "url": patients_list_view_url},
     )  # reloads the patients table
     return response
+
+
+@login_and_otp_required()
+def dashboard(request, pz_code):
+    """
+    Dashboard view for the KPIs.
+    """
+    context = {"pz_code": pz_code}
+    return render(request, "dashboard.html", context)
