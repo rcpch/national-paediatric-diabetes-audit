@@ -8,6 +8,7 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.shortcuts import render
 from django.urls import reverse
+from django.shortcuts import redirect
 
 # HTMX imports
 from django_htmx.http import trigger_client_event
@@ -133,6 +134,7 @@ def view_preference(request):
     patients_list_view_url = reverse("patients")
     submissions_list_view_url = reverse("submissions")
     npdauser_list_view_url = reverse("npda_users")
+    dashboard_url = reverse("dashboard")
 
     trigger_client_event(
         response=response,
@@ -151,14 +153,26 @@ def view_preference(request):
         name="patients",
         params={"method": "GET", "url": patients_list_view_url},
     )  # reloads the patients table
+
+    trigger_client_event(
+        response=response,
+        name="dashboard",
+        params={"method": "GET", "url": dashboard_url},
+    )  # reloads the dashboard
     return response
 
 
 @login_and_otp_required()
-def dashboard(request, pz_code):
+def dashboard(request):
     """
     Dashboard view for the KPIs.
     """
+    template = "dashboard.html"
+    pz_code = request.session.get("pz_code")
+    if request.htmx:
+        # If the request is an htmx request, we want to return the partial template
+        template = "partials/kpi_table.html"
+
     PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
     try:
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
@@ -167,12 +181,13 @@ def dashboard(request, pz_code):
             request=request,
             message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
         )
-        return render(request, "dashboard.html", {"pz_code": pz_code})
+        return render(request, "dashboard.html")
 
     # accepts a list of PZ codes
     pdu_kpis = CalculateKPIS(
         pz_codes=[pz_code], calculation_date=datetime.date.today()
     )  # accepts a list of PZ codes
 
-    context = {"pdu": pdu, "pdu_kpis": pdu_kpis.calculate_kpis_for_patients()}
-    return render(request, "dashboard.html", context)
+    context = {"pdu": pdu, "kpi_results": pdu_kpis.calculate_kpis_for_patients()}
+
+    return render(request, template_name=template, context=context)
