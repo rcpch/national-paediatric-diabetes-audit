@@ -174,6 +174,65 @@ class CalculateKPIS:
 
         return kpis
 
+    def title_for_kpi(self, kpi_number: int) -> str:
+        """Returns a readable title for a given KPI number"""
+        # Hard coding these for simplicty and readability
+        kpi_titles = {
+            1: "Total number of eligible patients",
+            2: "Total number of new diagnoses within the audit period",
+            3: "Total number of eligible patients with Type 1 diabetes",
+            4: "Number of patients aged 12+ with Type 1 diabetes",
+            5: "Total number of patients with T1DM who have completed a year of care",
+            6: "Total number of patients with T1DM who have completed a year of care and are aged 12 or older",
+            7: "Total number of new diagnoses of T1DM",
+            8: "Number of patients who died within audit period",
+            9: "Number of patients who transitioned/left service within audit period",
+            10: "Total number of coeliacs",
+            11: "Number of patients with thyroid disease",
+            12: "Number of patients with ketone test equipment",
+            13: "Number of patients on one to three injections per day",
+            14: "Number of patients on four or more injections per day",
+            15: "Number of patients on insulin pump",
+            16: "Number of patients on one to three injections plus other medication",
+            17: "Number of patients on four or more injections plus other medication",
+            18: "Number of patients on insulin pump plus other medication",
+            19: "Number of patients on dietary management alone",
+            20: "Number of patients on dietary management plus other medication",
+            21: "Number of patients on flash glucose monitor",
+            22: "Number of patients on real-time CGM with alarms",
+            23: "Number of patients on Type 1 real-time CGM with alarms",
+            24: "Number of patients on hybrid closed loop system",
+            25: "Number of patients with HbA1c",
+            26: "Number of patients with BMI",
+            27: "Number of patients with thyroid screen",
+            28: "Number of patients with blood pressure",
+            29: "Number of patients with urinary albumin",
+            30: "Number of patients with retinal screening",
+            31: "Number of patients with foot examination",
+            321: "Care processes completion rate",
+            322: "Care processes in patients < 12 years old",
+            323: "Care processes in patients ≥ 12 years old",
+            33: "Number of patients with 4 or more HbA1c measurements",
+            34: "Number of patients offered a psychological assessment",
+            35: "Number of patients asked about smoking status",
+            36: "Number of patients referred to a smoking cessation service",
+            37: "Number of patients offered an additional dietetic appointment",
+            38: "Number of patients attending an additional dietetic appointment",
+            39: "Number of patients recommended influenza immunisation",
+            40: "Number of patients given sick day rules advice",
+            41: "Number of patients with coeliac disease screening",
+            42: "Number of patients with thyroid disease screening",
+            43: "Number of patients with carbohydrate counting education",
+            44: "Mean HbA1c",
+            45: "Median HbA1c",
+            46: "Number of admissions",
+            47: "Number of DKA admissions",
+            48: "Number of patients requiring additional psychological support",
+            49: "Number of patients with albuminuria",
+        }
+
+        return kpi_titles.get(kpi_number, "Unknown KPI")
+
     def _run_kpi_calculation_method(
         self, kpi_method_name: str
     ) -> Union[KPIResult | str]:
@@ -248,6 +307,9 @@ class CalculateKPIS:
         return_obj["calculated_kpi_values"] = {}
         for kpi_name, kpi_result in calculated_kpis.items():
             return_obj["calculated_kpi_values"][kpi_name] = kpi_result
+            return_obj["calculated_kpi_values"][kpi_name]["kpi_label"] = (
+                self.title_for_kpi(int(kpi_name.split("_")[1]))
+            )
 
         return return_obj
 

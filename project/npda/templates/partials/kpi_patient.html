@@ -13,7 +13,7 @@
             {% for kpi_key, kpi_value in kpi_results.calculated_kpi_values.items %}
                 {% if not kpi_key|slice:":6" == "kpi_32" %}
                     <tr class="bg-white border-b">
-                        <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{{ kpi_key }}</td>
+                        <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{{ kpi_value.kpi_label }}</td>
                         <td class="px-6 py-4">
                             {% if kpi_value.total_failed == 1 %}
                                 <span class="text-red-500 tooltip" data-tip="{{patient.nhs_number}} has failed this measure">✖</span>
