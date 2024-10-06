@@ -1,7 +1,16 @@
 {% extends "base.html" %}
 {% load static %}
 {% block content %}
-<div class="">
-    <strong>Dahsboard for {{pz_code}}</strong>
+<div class="flex flex-col justify-center px-10" >
+    <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
+      <div class="inline-block min-w-full py-2 sm:px-6 lg:px-8">
+          <div class="relative overflow-x-auto">
+            <div class="py-8 px-4 mx-auto max-w-screen-xl text-center lg:py-16 lg:px-12">
+                <strong>Dashboard for {{pdu.lead_organisation_name}}({{pdu.pz_code}} - {{pdu.parent_name}}) - {{pdu.paediatric_diabetes_network_name}}({{pdu.paediatric_diabetes_network_code}}) </strong>
+            </div>
+                {% include "partials/kpi_table.html" with kpi_results=pdu_kpis pdu=pdu aggregation_level="Paediatric Diabetes Unit" %}
+          </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

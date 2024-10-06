@@ -1,4 +1,5 @@
 # Python imports
+import datetime
 import logging
 
 # Django imports
@@ -12,12 +13,13 @@ from django.urls import reverse
 from django_htmx.http import trigger_client_event
 
 # RCPCH imports
+from .decorators import login_and_otp_required
 from ..general_functions.csv_upload import csv_upload, read_csv
 from ..general_functions.session import get_new_session_fields
 from ..general_functions.view_preference import get_or_update_view_preference
 from ..general_functions.csv_summarize import csv_summarize
 from ..forms.upload import UploadFileForm
-from .decorators import login_and_otp_required
+from ..kpi_class.kpis import CalculateKPIS
 
 
 # Logging
@@ -157,5 +159,17 @@ def dashboard(request, pz_code):
     """
     Dashboard view for the KPIs.
     """
-    context = {"pz_code": pz_code}
+    PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+    try:
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+    except PaediatricDiabetesUnit.DoesNotExist:
+        messages.error(
+            request=request,
+            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
+        )
+        return render(request, "dashboard.html", {"pz_code": pz_code})
+
+    pdu_kpis = CalculateKPIS(pz_code=pz_code, calculation_date=datetime.date.today())
+
+    context = {"pdu": pdu, "pdu_kpis": pdu_kpis.calculate_kpis_for_patients()}
     return render(request, "dashboard.html", context)
