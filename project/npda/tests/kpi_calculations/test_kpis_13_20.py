@@ -1,13 +1,15 @@
 """Tests for the Treatment Regimen KPIS."""
+
 import pytest
 from dateutil.relativedelta import relativedelta
 
 from project.constants.diabetes_treatment import TREATMENT_TYPES
-from project.npda.general_functions.kpis import CalculateKPIS, KPIResult
+from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
 from project.npda.tests.factories.patient_factory import PatientFactory
-from project.npda.tests.kpi_calculations.test_kpi_calculations import \
-    assert_kpi_result_equal
+from project.npda.tests.kpi_calculations.test_kpi_calculations import (
+    assert_kpi_result_equal,
+)
 
 # Set up test params for kpis 13-20, as they all have the same denominator
 # and the only thing being changed is value for visit__treatment
@@ -77,13 +79,7 @@ def test_kpi_calculations_13_to_20(
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
-
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     # Dynamically get the kpi calc method based on treatment type
     #   `treatment` is an int between 1-8

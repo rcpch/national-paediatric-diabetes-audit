@@ -6,11 +6,13 @@ import pytest
 from dateutil.relativedelta import relativedelta
 
 from project.constants.diabetes_types import DIABETES_TYPES
-from project.npda.general_functions.kpis import CalculateKPIS, KPIResult
+from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
 from project.npda.tests.factories.patient_factory import PatientFactory
-from project.npda.tests.kpi_calculations.test_kpi_calculations import \
-    assert_kpi_result_equal
+from project.npda.tests.factories.visit_factory import VisitFactory
+from project.npda.tests.kpi_calculations.test_kpi_calculations import (
+    assert_kpi_result_equal,
+)
 
 
 @pytest.mark.django_db
@@ -32,11 +34,9 @@ def test_kpi_calculation_1(AUDIT_START_DATE):
 
     # Create Patients and Visits that should FAIL KPI1
     # Visit date before audit period
-    ineligible_patients_visit_date: List[Patient] = (
-        PatientFactory.create_batch(
-            size=N_PATIENTS_INELIGIBLE,
-            visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
-        )
+    ineligible_patients_visit_date: List[Patient] = PatientFactory.create_batch(
+        size=N_PATIENTS_INELIGIBLE,
+        visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
     )
     # Above age 25 at start of audit period
     ineligible_patients_too_old: List[Patient] = PatientFactory.create_batch(
@@ -45,9 +45,7 @@ def test_kpi_calculation_1(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=N_PATIENTS_ELIGIBLE,
@@ -86,18 +84,14 @@ def test_kpi_calculation_2(AUDIT_START_DATE):
 
     # Create Patients and Visits that should FAIL KPI2
     # Visit date before audit period
-    ineligible_patients_visit_date: List[Patient] = (
-        PatientFactory.create_batch(
-            size=N_PATIENTS_INELIGIBLE,
-            visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
-        )
+    ineligible_patients_visit_date: List[Patient] = PatientFactory.create_batch(
+        size=N_PATIENTS_INELIGIBLE,
+        visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
     )
     # Diagnosis date before audit period
-    ineligible_patients_diagnosis_date: List[Patient] = (
-        PatientFactory.create_batch(
-            size=N_PATIENTS_INELIGIBLE,
-            diagnosis_date=AUDIT_START_DATE - relativedelta(days=10),
-        )
+    ineligible_patients_diagnosis_date: List[Patient] = PatientFactory.create_batch(
+        size=N_PATIENTS_INELIGIBLE,
+        diagnosis_date=AUDIT_START_DATE - relativedelta(days=10),
     )
     # Above age 25 at start of audit period
     ineligible_patients_too_old: List[Patient] = PatientFactory.create_batch(
@@ -106,9 +100,7 @@ def test_kpi_calculation_2(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=N_PATIENTS_ELIGIBLE,
@@ -117,9 +109,6 @@ def test_kpi_calculation_2(AUDIT_START_DATE):
         total_ineligible=N_PATIENTS_INELIGIBLE * 3,
         total_failed=N_PATIENTS_FAIL * 3,
     )
-
-    # First set kpi1 result of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
 
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
@@ -152,11 +141,9 @@ def test_kpi_calculation_3(AUDIT_START_DATE):
 
     # Create Patients and Visits that should FAIL KPI3
     # Visit date before audit period
-    ineligible_patients_visit_date: List[Patient] = (
-        PatientFactory.create_batch(
-            size=N_PATIENTS_INELIGIBLE,
-            visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
-        )
+    ineligible_patients_visit_date: List[Patient] = PatientFactory.create_batch(
+        size=N_PATIENTS_INELIGIBLE,
+        visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
     )
     # Above age 25 at start of audit period
     ineligible_patients_too_old: List[Patient] = PatientFactory.create_batch(
@@ -169,9 +156,7 @@ def test_kpi_calculation_3(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=N_PATIENTS_ELIGIBLE,
@@ -180,10 +165,6 @@ def test_kpi_calculation_3(AUDIT_START_DATE):
         total_ineligible=N_PATIENTS_INELIGIBLE * 3,
         total_failed=N_PATIENTS_FAIL * 3,
     )
-
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
 
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
@@ -219,11 +200,9 @@ def test_kpi_calculation_4(AUDIT_START_DATE):
 
     # Create Patients and Visits that should FAIL KPI4
     # Visit date before audit period
-    ineligible_patients_visit_date: List[Patient] = (
-        PatientFactory.create_batch(
-            size=N_PATIENTS_INELIGIBLE,
-            visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
-        )
+    ineligible_patients_visit_date: List[Patient] = PatientFactory.create_batch(
+        size=N_PATIENTS_INELIGIBLE,
+        visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
     )
     # Above age 25 at start of audit period
     ineligible_patients_too_old: List[Patient] = PatientFactory.create_batch(
@@ -241,9 +220,7 @@ def test_kpi_calculation_4(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=N_PATIENTS_ELIGIBLE,
@@ -252,10 +229,6 @@ def test_kpi_calculation_4(AUDIT_START_DATE):
         total_ineligible=N_PATIENTS_INELIGIBLE * 4,
         total_failed=N_PATIENTS_FAIL * 4,
     )
-
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
 
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
@@ -334,8 +307,7 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving service within the audit period
-        transfer__date_leaving_service=AUDIT_START_DATE
-        + relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
     )
     ineligible_patient_death_within_audit_period = PatientFactory(
         postcode="ineligible_patient_death_within_audit_period",
@@ -347,9 +319,7 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 3
     EXPECTED_TOTAL_INELIGIBLE = 5
@@ -360,10 +330,6 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
         total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
         total_failed=EXPECTED_TOTAL_INELIGIBLE,
     )
-
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
 
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
@@ -406,7 +372,7 @@ def test_kpi_calculation_6(AUDIT_START_DATE):
     for field_name in observation_field_names:
         eligible_patient_pt_obs = PatientFactory(
             # string field without validation, just using for debugging
-            # postcode=f"eligible_patient_{field_name}",
+            postcode=f"eligible_patient_{field_name}",
             # KPI1 eligible
             # Age 12 and above at the start of the audit period
             date_of_birth=AUDIT_START_DATE - relativedelta(years=12),
@@ -414,10 +380,39 @@ def test_kpi_calculation_6(AUDIT_START_DATE):
             diabetes_type=DIABETES_TYPES[0][0],
             # an observation within the audit period
             **{
-                f"visit__{field_name}": AUDIT_START_DATE
-                + relativedelta(days=2)
+                f"visit__{field_name}": AUDIT_START_DATE + relativedelta(days=2),
+                f"visit__visit_date": AUDIT_START_DATE + relativedelta(days=2),
             },
         )
+
+    # Additionally create a patient where first visit observations are None
+    # but the second visit has an observation
+    eligible_patient_second_visit_observation = PatientFactory(
+        postcode="eligible_patient_second_visit_observation",
+        # KPI1 eligible
+        # Age 12 and above at the start of the audit period
+        date_of_birth=AUDIT_START_DATE - relativedelta(years=12),
+        # Diagnosis of Type 1 diabetes
+        diabetes_type=DIABETES_TYPES[0][0],
+        # observations all None
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        visit__height_weight_observation_date=None,
+        visit__hba1c_date=None,
+        visit__blood_pressure_observation_date=None,
+        visit__albumin_creatinine_ratio_date=None,
+        visit__total_cholesterol_date=None,
+        visit__thyroid_function_date=None,
+        visit__coeliac_screen_date=None,
+        visit__psychological_screening_assessment_date=None,
+    )
+    # 2nd visit has observations
+    VisitFactory(
+        patient=eligible_patient_second_visit_observation,
+        visit_date=AUDIT_START_DATE + relativedelta(months=2),
+        height_weight_observation_date=AUDIT_START_DATE + relativedelta(months=2),
+        psychological_screening_assessment_date=AUDIT_START_DATE
+        + relativedelta(months=2),
+    )
 
     # Create Patients and Visits that should FAIL KPI3
     ineligible_patient_diag_within_audit_period = PatientFactory(
@@ -434,8 +429,7 @@ def test_kpi_calculation_6(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving service within the audit period
-        transfer__date_leaving_service=AUDIT_START_DATE
-        + relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
     )
     ineligible_patient_death_within_audit_period = PatientFactory(
         postcode="ineligible_patient_death_within_audit_period",
@@ -447,11 +441,9 @@ def test_kpi_calculation_6(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
-    EXPECTED_TOTAL_ELIGIBLE = len(observation_field_names)
+    EXPECTED_TOTAL_ELIGIBLE = len(observation_field_names) + 1
     EXPECTED_TOTAL_INELIGIBLE = 3
 
     EXPECTED_KPIRESULT = KPIResult(
@@ -506,10 +498,7 @@ def test_kpi_calculation_7(AUDIT_START_DATE):
             # Diagnosis date within audit date range
             diagnosis_date=AUDIT_START_DATE + relativedelta(days=2),
             # an observation within the audit period
-            **{
-                f"visit__{field_name}": AUDIT_START_DATE
-                + relativedelta(days=2)
-            },
+            **{f"visit__{field_name}": AUDIT_START_DATE + relativedelta(days=2)},
         )
 
     # Create Patients and Visits that should BE EXCLUDED
@@ -533,12 +522,7 @@ def test_kpi_calculation_7(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = len(observation_field_names)
     EXPECTED_TOTAL_INELIGIBLE = 2
@@ -600,9 +584,7 @@ def test_kpi_calculation_8(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 1
     EXPECTED_TOTAL_INELIGIBLE = 3
@@ -613,10 +595,6 @@ def test_kpi_calculation_8(AUDIT_START_DATE):
         total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
         total_failed=EXPECTED_TOTAL_INELIGIBLE,
     )
-
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
 
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
@@ -642,8 +620,7 @@ def test_kpi_calculation_9(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # leaving_date within the audit period
-        transfer__date_leaving_service=AUDIT_START_DATE
-        + relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
     )
 
     # Create Patients and Visits that should be excluded
@@ -673,14 +650,11 @@ def test_kpi_calculation_9(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving_date outside the audit period"
-        transfer__date_leaving_service=AUDIT_START_DATE
-        - relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE - relativedelta(days=2),
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 1
     EXPECTED_TOTAL_INELIGIBLE = 4
@@ -691,10 +665,6 @@ def test_kpi_calculation_9(AUDIT_START_DATE):
         total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
         total_failed=EXPECTED_TOTAL_INELIGIBLE,
     )
-
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
 
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
@@ -747,9 +717,7 @@ def test_kpi_calculation_10(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 1
     EXPECTED_TOTAL_INELIGIBLE = 3
@@ -760,10 +728,6 @@ def test_kpi_calculation_10(AUDIT_START_DATE):
         total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
         total_failed=EXPECTED_TOTAL_INELIGIBLE,
     )
-
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
 
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
@@ -825,9 +789,7 @@ def test_kpi_calculation_11(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 2
     EXPECTED_TOTAL_INELIGIBLE = 3
@@ -838,10 +800,6 @@ def test_kpi_calculation_11(AUDIT_START_DATE):
         total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
         total_failed=EXPECTED_TOTAL_INELIGIBLE,
     )
-
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
 
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
@@ -894,9 +852,7 @@ def test_kpi_calculation_12(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(
-        pz_code="PZ130", calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
 
     EXPECTED_TOTAL_ELIGIBLE = 1
     EXPECTED_TOTAL_INELIGIBLE = 3
@@ -907,10 +863,6 @@ def test_kpi_calculation_12(AUDIT_START_DATE):
         total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
         total_failed=EXPECTED_TOTAL_INELIGIBLE,
     )
-
-    # First set self.total_kpi_1_eligible_pts_base_query_set result
-    # of total eligible
-    calc_kpis.calculate_kpi_1_total_eligible()
 
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,

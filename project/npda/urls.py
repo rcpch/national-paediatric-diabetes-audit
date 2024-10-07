@@ -1,7 +1,7 @@
 from django.urls import path, include
 from django.contrib.auth.views import PasswordResetConfirmView
 from django.contrib.auth import urls as auth_urls
-from project.npda.general_functions.kpis import KPIAggregationForPDU
+from project.npda.kpi_class.kpis import KPIAggregationForPDU
 from project.npda.views import (
     VisitCreateView,
     VisitDeleteView,
@@ -98,6 +98,11 @@ urlpatterns = [
         name="password_reset_confirm",
     ),
     # KPI views
+    path(
+        "dashboard",
+        view=dashboard,
+        name="dashboard",
+    ),
     path(
         "kpis/aggregation/pdu/<str:pz_code>",
         view=KPIAggregationForPDU.as_view(),

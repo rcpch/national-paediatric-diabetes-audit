@@ -7,7 +7,8 @@ from datetime import date
 
 import pytest
 
-from project.npda.general_functions.kpis import CalculateKPIS, KPIResult
+from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
+from project.npda.models.patient import Patient
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -28,9 +29,7 @@ def assert_kpi_result_equal(expected: KPIResult, actual: KPIResult) -> None:
             f"expected must be of type KPIResult (current: {type(expected)}"
         )
     if isinstance(actual, KPIResult) is False:
-        raise TypeError(
-            f"actual must be of type KPIResult (current: {type(actual)}"
-        )
+        raise TypeError(f"actual must be of type KPIResult (current: {type(actual)}")
 
     mismatches = []
 
@@ -63,7 +62,7 @@ def assert_kpi_result_equal(expected: KPIResult, actual: KPIResult) -> None:
 def test_ensure_mocked_audit_date_range_is_correct(AUDIT_START_DATE):
     """Ensure that the mocked audit date range is correct."""
     calc_kpis = CalculateKPIS(
-        pz_code="mocked_pz_code", calculation_date=AUDIT_START_DATE
+        pz_codes=["mocked_pz_code"], calculation_date=AUDIT_START_DATE
     )
 
     assert calc_kpis.audit_start_date == date(
@@ -72,3 +71,29 @@ def test_ensure_mocked_audit_date_range_is_correct(AUDIT_START_DATE):
     assert calc_kpis.audit_end_date == date(
         2025, 3, 31
     ), f"Mocked audit end date incorrect!"
+
+
+@pytest.mark.django_db
+def test_kpi_calculations_dont_break_when_no_patients(AUDIT_START_DATE):
+    """Tests none of the KPIs break when no patients are present.
+
+    Just runs all KPI calculations with no patients present.
+    """
+
+    # Ensure starting with clean pts in test db
+    Patient.objects.all().delete()
+
+    # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
+    kpi_calculations_object = CalculateKPIS(
+        pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE
+    ).calculate_kpis_for_patients()
+
+    for kpi, results in kpi_calculations_object["calculated_kpi_values"].items():
+        # remove the kpi_label key from the results
+        results.pop("kpi_label", None)
+
+        values = list(results.values())
+
+        assert all(
+            [isinstance(value, int) or isinstance(value, float) for value in values]
+        ), f"KPI {kpi} has non-integer values: {results}"

@@ -3,54 +3,58 @@
 {% load npda_tags %}
 {% block content %}
 <div class="flex flex-row min-h-screen justify-center px-10">
-  <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
+  <div class="overflow-x-auto sm:-mx-2 lg:-mx-2">
     <div class="inline-block min-w-full py-2 sm:px-6 lg:px-8">
         <div class="relative overflow-x-auto">
         <strong>All {{submission.audit_year}} Audit Visits for {{patient.nhs_number}} (NPDA ID-{{patient.pk}})</strong>
           
         {% if visits %}
-          <table class="table-fixed w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
+          <table class="table-auto w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
                   <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">
                     <tr>
-                      <th class="w-1/8" class="px-6 py-3">Visit ID</th>
-                      <th class="w-1/8" class="px-6 py-3">Visit Date</th>
-                      <th class="w-2/4">Categories Addressed</th>
-                      <th class="w-1/4"></th>
+                      <th class="px-2 py-3">Visit ID</th>
+                      <th class="px-2 py-3">Visit Date</th>
+                      <th class="px-2 py-3">Categories Addressed</th>
+                      <th class="px-2 py-3"></th>
                     </tr>
                   </thead>
                   <tbody>
                         {% for visit in visits %}
                         <tr 
                         {% if visit.visit.is_valid %} 
-                          class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white"
+                          class="border-b bg-white text-rcpch_light_blue border-gray-100"
                         {% else %} 
-                          class="border-b bg-rcpch_red_light_tint3 text-black border-gray-100 hover:bg-rcpch_red_light_tint1 hover:text-white"
+                          class="border-b bg-white text-black border-gray-100"
                         {% endif %}>
                               <td  class="px-5">
                                     <strong>{{ visit.visit.pk }}</strong>
                               </td>
                               <td class="px-6 py-4">{{ visit.visit.visit_date }}</td>
                               <td class="py-5 flex flex-wrap">
-                                  {% for item in visit.categories %}
+                                {% for item in visit.categories %}
+                                  {% with item.category|colour_for_category as background_colour %}
                                     {% if item.present %}  
                                         <span 
                                           {% if item.has_error %}
                                             class="bg-rcpch_red hover:bg-rcpch_red_dark_tint px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white"
                                           {% else %}
-                                            class="bg-rcpch_dark_blue px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white"
+                                            class="bg-{{background_colour}} px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white"
                                           {% endif  %}
                                           >
                                           <small>
                                             {% if item.has_error %}
-                                              <div class='tooltip tooltip-bottom visible px-2 py-2 text-white -mt-20 text-center hover:text-white' data-tip='{{ item.category|errors_for_category:visit.visit.errors }}'>
+                                              <div class='tooltip tooltip-bottom visible text-white -mt-20 text-center hover:text-white' data-tip='{{ item.category|errors_for_category:visit.visit.errors|safe|linebreaksbr }}'>
                                               {{item.category}}
                                               </div>
                                             {% else %}
-                                              {{item.category}}
+                                              <div class='tooltip tooltip-top visible text-white text-center hover:text-white' data-tip='{{ item.category }} data complete'>
+                                                {{item.category}}
+                                            </div>
                                             {% endif %}
                                           </small>
                                         </span>
                                         {% endif %}
+                                      {% endwith %}
                                   {% endfor %}
                               </td>
                               <td>
@@ -93,8 +97,8 @@
             </div>
           </div>
           
-          <div class="row mt-20">
-            <strong>Patient KPIs will go here...</strong>
+          <div class="row mt-1">
+            {% include 'partials/kpi_patient.html' with kpi_results=kpi_results patient=patient %}
           </div>
       </div>
       </div>

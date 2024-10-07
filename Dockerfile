@@ -37,8 +37,13 @@ COPY . /app/
 # Ensure the media directory exists - csv files are stored here
 RUN mkdir -p /media/submissions/csv/
 
+
 # Install Tailwind CSS and DaisyUI
 RUN npm install
+
+# Set correct permissions for npm directories using root user
+RUN chown -R root:root /app/node_modules
+RUN chmod -R 755 /app/node_modules
 
 # Build Tailwind CSS
 RUN npm run build:css
