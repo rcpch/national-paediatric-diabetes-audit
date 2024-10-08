@@ -29,7 +29,9 @@ def assert_kpi_result_equal(expected: KPIResult, actual: KPIResult) -> None:
             f"expected must be of type KPIResult (current: {type(expected)}"
         )
     if isinstance(actual, KPIResult) is False:
-        raise TypeError(f"actual must be of type KPIResult (current: {type(actual)}")
+        raise TypeError(
+            f"actual must be of type KPIResult (current: {type(actual)}"
+        )
 
     mismatches = []
 
@@ -61,9 +63,7 @@ def assert_kpi_result_equal(expected: KPIResult, actual: KPIResult) -> None:
 @pytest.mark.django_db
 def test_ensure_mocked_audit_date_range_is_correct(AUDIT_START_DATE):
     """Ensure that the mocked audit date range is correct."""
-    calc_kpis = CalculateKPIS(
-        pz_codes=["mocked_pz_code"], calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
 
     assert calc_kpis.audit_start_date == date(
         2024, 4, 1
@@ -73,8 +73,19 @@ def test_ensure_mocked_audit_date_range_is_correct(AUDIT_START_DATE):
     ), f"Mocked audit end date incorrect!"
 
 
+@pytest.mark.parametrize(
+    "calculation_method, calculation_args",
+    [
+        ("calculate_kpis_for_patients", {"patients": Patient.objects.all()}),
+        ("calculate_kpis_for_pdus", {"pz_codes": ["mocked_pz_code"]}),
+    ],
+)
 @pytest.mark.django_db
-def test_kpi_calculations_dont_break_when_no_patients(AUDIT_START_DATE):
+def test_kpi_calculations_dont_break_when_no_patients(
+    calculation_method,
+    calculation_args,
+    AUDIT_START_DATE,
+):
     """Tests none of the KPIs break when no patients are present.
 
     Just runs all KPI calculations with no patients present.
@@ -84,16 +95,23 @@ def test_kpi_calculations_dont_break_when_no_patients(AUDIT_START_DATE):
     Patient.objects.all().delete()
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    kpi_calculations_object = CalculateKPIS(
-        pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE
-    ).calculate_kpis_for_patients()
+    kpi_calculator = CalculateKPIS(calculation_date=AUDIT_START_DATE)
 
-    for kpi, results in kpi_calculations_object["calculated_kpi_values"].items():
+    # Run each calculation method
+    kpi_calculation_method = getattr(kpi_calculator, calculation_method)
+    kpi_calculations_object = kpi_calculation_method(**calculation_args)
+
+    for kpi, results in kpi_calculations_object[
+        "calculated_kpi_values"
+    ].items():
         # remove the kpi_label key from the results
         results.pop("kpi_label", None)
 
         values = list(results.values())
 
         assert all(
-            [isinstance(value, int) or isinstance(value, float) for value in values]
+            [
+                isinstance(value, int) or isinstance(value, float)
+                for value in values
+            ]
         ), f"KPI {kpi} has non-integer values: {results}"
