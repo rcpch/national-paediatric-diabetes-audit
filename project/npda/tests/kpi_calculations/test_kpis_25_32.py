@@ -1025,7 +1025,6 @@ def test_kpi_calculation_32_1(AUDIT_START_DATE):
     )
 
     # Create Patients and Visits that should be ineligble
-    # Create Patients and Visits that should be ineligble
     # Visit date before audit period
     ineligible_patient_visit_date = PatientFactory(
         postcode="ineligible_patient_visit_date",
@@ -1069,6 +1068,7 @@ def test_kpi_calculation_32_1(AUDIT_START_DATE):
     # Need to be mocked as not using public `calculate_kpis_for_*` methods
     calc_kpis.patients = Patient.objects.all()
     calc_kpis.total_patients_count = Patient.objects.count()
+
 
     EXPECTED_TOTAL_ELIGIBLE = 18  # (2*3) + (2*6)
     EXPECTED_TOTAL_INELIGIBLE = 5

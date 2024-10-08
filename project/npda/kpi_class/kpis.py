@@ -342,7 +342,11 @@ class CalculateKPIS:
                 date_of_birth__gt=self.audit_start_date
                 - relativedelta(years=25)
             )
-        )
+        ).distinct() # When you filter on a related model field
+        # (visit__visit_date__range), Django performs a join between the
+        # Patient model and the Visit model. If a patient has multiple visits
+        # that fall within the specified date range, the patient will appear
+        # multiple times in the filtered queryset—once for each matching visit.
 
         # Count eligible patients and set as attribute
         # to be used in subsequent KPI calculations
