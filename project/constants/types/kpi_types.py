@@ -14,7 +14,6 @@ class KPIResult:
 
 @dataclass
 class KPICalculationsObject:
-    pz_code: str
     calculation_datetime: datetime
     audit_start_date: date
     audit_end_date: date
