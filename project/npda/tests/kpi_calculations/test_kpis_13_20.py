@@ -7,9 +7,8 @@ from project.constants.diabetes_treatment import TREATMENT_TYPES
 from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
 from project.npda.tests.factories.patient_factory import PatientFactory
-from project.npda.tests.kpi_calculations.test_kpi_calculations import (
-    assert_kpi_result_equal,
-)
+from project.npda.tests.kpi_calculations.test_kpi_calculations import \
+    assert_kpi_result_equal
 
 # Set up test params for kpis 13-20, as they all have the same denominator
 # and the only thing being changed is value for visit__treatment
@@ -79,7 +78,10 @@ def test_kpi_calculations_13_to_20(
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    # Need to be mocked as not using public `calculate_kpis_for_*` methods
+    calc_kpis.patients = Patient.objects.all()
+    calc_kpis.total_patients_count = Patient.objects.count()
 
     # Dynamically get the kpi calc method based on treatment type
     #   `treatment` is an int between 1-8
