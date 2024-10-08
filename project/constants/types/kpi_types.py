@@ -1,7 +1,7 @@
 # Object types
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Dict, Union
+from typing import Dict
 
 
 @dataclass
@@ -21,5 +21,5 @@ class KPICalculationsObject:
     total_patients_count: int
     calculated_kpi_values: Dict[
         str,
-        Union[KPIResult, str],
-    ] # looks like { 'kpi_name' : KPIResult OR "Not implemented"}
+        KPIResult,
+    ]
