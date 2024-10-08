@@ -76,8 +76,6 @@ class CalculateKPIS:
         # Sets the KPI attribute names map
         self.kpis_names_map = self._get_kpi_attribute_names()
 
-
-
     def calculate_kpis_for_patients(
         self,
         patients: list[QuerySet[Patient]],
@@ -106,8 +104,8 @@ class CalculateKPIS:
             for KPI calculations and aggregations."""
 
         self.patients = Patient.objects.filter(
-                paediatric_diabetes_units__paediatric_diabetes_unit__pz_code__in=pz_codes
-            )
+            paediatric_diabetes_units__paediatric_diabetes_unit__pz_code__in=pz_codes
+        )
         self.total_patients_count = self.patients.count()
 
         return self._calculate_kpis()
@@ -155,7 +153,6 @@ class CalculateKPIS:
             )
 
         return return_obj
-
 
     def _get_audit_start_and_end_dates(self) -> tuple[date, date]:
         return get_audit_period_for_date(input_date=self.calculation_date)
