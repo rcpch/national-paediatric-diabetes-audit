@@ -78,13 +78,13 @@ class CalculateKPIS:
 
     def calculate_kpis_for_patients(
         self,
-        patients: list[QuerySet[Patient]],
+        patients: QuerySet[Patient],
     ) -> KPICalculationsObject:
         """Calculate KPIs 1 - 49 for given patients and cohort range
         (self.audit_start_date and self.audit_end_date).
 
         Params:
-            * patients (list[QuerySet[Patient]]) - List of patients
+            * patients (QuerySet[Patient]) - Queryset of patients
             for KPI calculations and aggregations."""
 
         self.patients = patients
