@@ -51,7 +51,7 @@ class CalculateKPIS:
             audit period
 
         Exposes 2 methods:
-            1) calculate_kpis_for_patients (list[QuerySet[Patient]])
+            1) calculate_kpis_for_patients (QuerySet[Patient])
                 - Calculate KPIs for given patients.
             2) calculate_kpis_for_pdus (list[str])
                 - Calculate KPIs for given PZ codes.
@@ -60,7 +60,8 @@ class CalculateKPIS:
             `self.total_patients_count` attributes used throughout all
             calculations.
 
-            Both methods return a KPICalculationsObject dataclass instance.
+            Both methods return a KPICalculationsObject dataclass instance,
+            containing all KPIAggregation results.
         """
 
         # Set various attributes used in calculations
