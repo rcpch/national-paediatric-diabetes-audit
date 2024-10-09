@@ -1,17 +1,11 @@
-from django.urls import path, include
-from django.contrib.auth.views import PasswordResetConfirmView
 from django.contrib.auth import urls as auth_urls
-from project.npda.kpi_class.kpis import KPIAggregationForPDU
-from project.npda.views import (
-    VisitCreateView,
-    VisitDeleteView,
-    VisitUpdateView,
-    PatientListView,
-    PatientVisitsListView,
-    SubmissionsListView,
-)
+from django.contrib.auth.views import PasswordResetConfirmView
+from django.urls import include, path
+
 from project.npda.forms.npda_user_form import NPDAUpdatePasswordForm
-from project.npda.general_functions.csv_download import download_csv
+from project.npda.views import (PatientListView, PatientVisitsListView,
+                                SubmissionsListView, VisitCreateView,
+                                VisitDeleteView, VisitUpdateView)
 
 from .views import *
 
@@ -102,10 +96,5 @@ urlpatterns = [
         "dashboard",
         view=dashboard,
         name="dashboard",
-    ),
-    path(
-        "kpis/aggregation/pdu/<str:pz_code>",
-        view=KPIAggregationForPDU.as_view(),
-        name="aggregation-pdu",
     ),
 ]
