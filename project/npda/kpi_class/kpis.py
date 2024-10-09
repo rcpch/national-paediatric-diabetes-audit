@@ -343,7 +343,7 @@ class CalculateKPIS:
                 date_of_birth__gt=self.audit_start_date
                 - relativedelta(years=25)
             )
-        ).distinct() # When you filter on a related model field
+        ).distinct()  # When you filter on a related model field
         # (visit__visit_date__range), Django performs a join between the
         # Patient model and the Visit model. If a patient has multiple visits
         # that fall within the specified date range, the patient will appear
@@ -758,7 +758,7 @@ class CalculateKPIS:
                     )
                 )
             )
-        ).distinct() # the reason for distinct is same as KPI1 (see comments).
+        ).distinct()  # the reason for distinct is same as KPI1 (see comments).
         # This time, was failing tests for KPI 41-42.
 
         # Count eligible patients
@@ -3301,27 +3301,3 @@ def queryset_median_value(queryset: QuerySet, column_name: str):
         return values[int(round(count / 2))]
     else:
         return sum(values[count / 2 - 1 : count / 2 + 1]) / Decimal(2.0)
-
-
-# WIP simply return KPI Agg result for given PDU
-class KPIAggregationForPDU(TemplateView):
-
-    template_name = "kpi_aggregations.html"
-
-    def get(self, request, *args, **kwargs):
-
-        pz_code = kwargs.get("pz_code", None)
-
-        start_time = time.time()  # Record the start time for calc
-        aggregated_data = CalculateKPIS(
-            pz_codes=[pz_code]
-        ).calculate_kpis_for_patients()
-        end_time = time.time()  # Record the end time
-        calculation_time = round(
-            (end_time - start_time) * 1000, 2
-        )  # Calculate the time taken in milliseconds, rounded to 2dp
-
-        # Add to context
-        aggregated_data["calculation_time"] = calculation_time
-
-        return render(request, self.template_name, context=aggregated_data)
