@@ -758,7 +758,8 @@ class CalculateKPIS:
                     )
                 )
             )
-        )
+        ).distinct() # the reason for distinct is same as KPI1 (see comments).
+        # This time, was failing tests for KPI 41-42.
 
         # Count eligible patients
         total_eligible = eligible_patients.count()
