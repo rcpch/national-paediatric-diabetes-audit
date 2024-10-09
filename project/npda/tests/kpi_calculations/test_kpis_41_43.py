@@ -12,9 +12,8 @@ from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.tests.kpi_calculations.test_kpi_calculations import (
-    assert_kpi_result_equal,
-)
+from project.npda.tests.kpi_calculations.test_kpi_calculations import \
+    assert_kpi_result_equal
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -126,10 +125,11 @@ def test_kpi_calculation_41(AUDIT_START_DATE, AUDIT_END_DATE):
         visit__coeliac_screen_date=AUDIT_END_DATE - relativedelta(days=90),
     )
 
-    calc_kpis = CalculateKPIS(
-        pz_codes=["PZ130"],
-        calculation_date=AUDIT_START_DATE,
-    )
+    # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    # Need to be mocked as not using public `calculate_kpis_for_*` methods
+    calc_kpis.patients = Patient.objects.all()
+    calc_kpis.total_patients_count = Patient.objects.count()
 
     EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 3
@@ -254,10 +254,11 @@ def test_kpi_calculation_42(AUDIT_START_DATE, AUDIT_END_DATE):
         visit__thyroid_function_date=AUDIT_END_DATE - relativedelta(days=90),
     )
 
-    calc_kpis = CalculateKPIS(
-        pz_codes=["PZ130"],
-        calculation_date=AUDIT_START_DATE,
-    )
+    # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    # Need to be mocked as not using public `calculate_kpis_for_*` methods
+    calc_kpis.patients = Patient.objects.all()
+    calc_kpis.total_patients_count = Patient.objects.count()
 
     EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 3
@@ -390,10 +391,11 @@ def test_kpi_calculation_43(AUDIT_START_DATE, AUDIT_END_DATE):
         - relativedelta(days=14),
     )
 
-    calc_kpis = CalculateKPIS(
-        pz_codes=["PZ130"],
-        calculation_date=AUDIT_START_DATE,
-    )
+    # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    # Need to be mocked as not using public `calculate_kpis_for_*` methods
+    calc_kpis.patients = Patient.objects.all()
+    calc_kpis.total_patients_count = Patient.objects.count()
 
     EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 3

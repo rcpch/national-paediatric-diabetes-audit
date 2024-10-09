@@ -8,16 +8,16 @@ from dateutil.relativedelta import relativedelta
 
 from project.constants.albuminuria_stage import ALBUMINURIA_STAGES
 from project.constants.diabetes_types import DIABETES_TYPES
-from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
+from project.constants.hospital_admission_reasons import \
+    HOSPITAL_ADMISSION_REASONS
 from project.constants.smoking_status import SMOKING_STATUS
 from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.tests.kpi_calculations.test_kpi_calculations import (
-    assert_kpi_result_equal,
-)
+from project.npda.tests.kpi_calculations.test_kpi_calculations import \
+    assert_kpi_result_equal
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -119,7 +119,10 @@ def test_kpi_calculation_44(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    # Need to be mocked as not using public `calculate_kpis_for_*` methods
+    calc_kpis.patients = Patient.objects.all()
+    calc_kpis.total_patients_count = Patient.objects.count()
 
     medians = list(map(calculate_median, [pt_1_hba1cs, pt_2_hba1cs]))
     EXPECTED_MEAN = sum(medians) / len(medians)
@@ -239,7 +242,10 @@ def test_kpi_calculation_45(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    # Need to be mocked as not using public `calculate_kpis_for_*` methods
+    calc_kpis.patients = Patient.objects.all()
+    calc_kpis.total_patients_count = Patient.objects.count()
 
     medians = list(map(calculate_median, [pt_1_hba1cs, pt_2_hba1cs]))
     EXPECTED_MEDIAN = calculate_median(medians)
@@ -335,7 +341,10 @@ def test_kpi_calculation_46(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    # Need to be mocked as not using public `calculate_kpis_for_*` methods
+    calc_kpis.patients = Patient.objects.all()
+    calc_kpis.total_patients_count = Patient.objects.count()
 
     EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 2
@@ -428,7 +437,10 @@ def test_kpi_calculation_47(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    # Need to be mocked as not using public `calculate_kpis_for_*` methods
+    calc_kpis.patients = Patient.objects.all()
+    calc_kpis.total_patients_count = Patient.objects.count()
 
     EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 2
@@ -526,7 +538,10 @@ def test_kpi_calculation_48(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    # Need to be mocked as not using public `calculate_kpis_for_*` methods
+    calc_kpis.patients = Patient.objects.all()
+    calc_kpis.total_patients_count = Patient.objects.count()
 
     EXPECTED_TOTAL_ELIGIBLE = 5
     EXPECTED_TOTAL_INELIGIBLE = 2
@@ -624,7 +639,10 @@ def test_kpi_calculation_49(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    # Need to be mocked as not using public `calculate_kpis_for_*` methods
+    calc_kpis.patients = Patient.objects.all()
+    calc_kpis.total_patients_count = Patient.objects.count()
 
     EXPECTED_TOTAL_ELIGIBLE = 5
     EXPECTED_TOTAL_INELIGIBLE = 2

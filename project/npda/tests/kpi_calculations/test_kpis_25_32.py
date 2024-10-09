@@ -5,14 +5,14 @@ from dateutil.relativedelta import relativedelta
 
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.constants.hba1c_format import HBA1C_FORMATS
-from project.constants.retinal_screening_results import RETINAL_SCREENING_RESULTS
+from project.constants.retinal_screening_results import \
+    RETINAL_SCREENING_RESULTS
 from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.tests.kpi_calculations.test_kpi_calculations import (
-    assert_kpi_result_equal,
-)
+from project.npda.tests.kpi_calculations.test_kpi_calculations import \
+    assert_kpi_result_equal
 
 
 @pytest.mark.django_db
@@ -116,7 +116,10 @@ def test_kpi_calculation_25(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    # Need to be mocked as not using public `calculate_kpis_for_*` methods
+    calc_kpis.patients = Patient.objects.all()
+    calc_kpis.total_patients_count = Patient.objects.count()
 
     EXPECTED_TOTAL_ELIGIBLE = 3
     EXPECTED_TOTAL_INELIGIBLE = 5
@@ -245,7 +248,10 @@ def test_kpi_calculation_26(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    # Need to be mocked as not using public `calculate_kpis_for_*` methods
+    calc_kpis.patients = Patient.objects.all()
+    calc_kpis.total_patients_count = Patient.objects.count()
 
     EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 5
@@ -366,7 +372,10 @@ def test_kpi_calculation_27(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    # Need to be mocked as not using public `calculate_kpis_for_*` methods
+    calc_kpis.patients = Patient.objects.all()
+    calc_kpis.total_patients_count = Patient.objects.count()
 
     EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 5
@@ -486,7 +495,10 @@ def test_kpi_calculation_28(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    # Need to be mocked as not using public `calculate_kpis_for_*` methods
+    calc_kpis.patients = Patient.objects.all()
+    calc_kpis.total_patients_count = Patient.objects.count()
 
     EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 3
@@ -604,7 +616,10 @@ def test_kpi_calculation_29(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    # Need to be mocked as not using public `calculate_kpis_for_*` methods
+    calc_kpis.patients = Patient.objects.all()
+    calc_kpis.total_patients_count = Patient.objects.count()
 
     EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 3
@@ -734,7 +749,10 @@ def test_kpi_calculation_30(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    # Need to be mocked as not using public `calculate_kpis_for_*` methods
+    calc_kpis.patients = Patient.objects.all()
+    calc_kpis.total_patients_count = Patient.objects.count()
 
     EXPECTED_TOTAL_ELIGIBLE = 5
     EXPECTED_TOTAL_INELIGIBLE = 3
@@ -851,7 +869,10 @@ def test_kpi_calculation_31(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    # Need to be mocked as not using public `calculate_kpis_for_*` methods
+    calc_kpis.patients = Patient.objects.all()
+    calc_kpis.total_patients_count = Patient.objects.count()
 
     EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 3
@@ -1004,7 +1025,6 @@ def test_kpi_calculation_32_1(AUDIT_START_DATE):
     )
 
     # Create Patients and Visits that should be ineligble
-    # Create Patients and Visits that should be ineligble
     # Visit date before audit period
     ineligible_patient_visit_date = PatientFactory(
         postcode="ineligible_patient_visit_date",
@@ -1044,7 +1064,11 @@ def test_kpi_calculation_32_1(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    # Need to be mocked as not using public `calculate_kpis_for_*` methods
+    calc_kpis.patients = Patient.objects.all()
+    calc_kpis.total_patients_count = Patient.objects.count()
+
 
     EXPECTED_TOTAL_ELIGIBLE = 18  # (2*3) + (2*6)
     EXPECTED_TOTAL_INELIGIBLE = 5
@@ -1208,7 +1232,10 @@ def test_kpi_calculation_32_2(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    # Need to be mocked as not using public `calculate_kpis_for_*` methods
+    calc_kpis.patients = Patient.objects.all()
+    calc_kpis.total_patients_count = Patient.objects.count()
 
     EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 5
@@ -1408,7 +1435,10 @@ def test_kpi_calculation_32_3(AUDIT_START_DATE):
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    # Need to be mocked as not using public `calculate_kpis_for_*` methods
+    calc_kpis.patients = Patient.objects.all()
+    calc_kpis.total_patients_count = Patient.objects.count()
 
     EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 5

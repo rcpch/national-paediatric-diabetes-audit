@@ -1,22 +1,18 @@
-import pytest
-import pandas as pd
-import nhs_number
-
 from functools import partial
-from dateutil.relativedelta import relativedelta
 from unittest.mock import Mock, patch
-from requests import RequestException
 
+import nhs_number
+import pandas as pd
+import pytest
+from dateutil.relativedelta import relativedelta
 from django.apps import apps
 from django.core.exceptions import ValidationError
+from requests import RequestException
 
+from project.npda.general_functions.csv_upload import csv_upload, read_csv
 from project.npda.models import NPDAUser, Patient, Visit
-from project.npda.general_functions.csv_upload import read_csv, csv_upload
 from project.npda.tests.factories.patient_factory import (
-    TODAY,
-    VALID_FIELDS,
-    INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE
-)
+    INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE, TODAY, VALID_FIELDS)
 
 
 # We don't want to call remote services in unit tests
@@ -75,7 +71,7 @@ def test_create_patient(test_user, single_row_valid_df):
     csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
     patient = Patient.objects.first()
 
-    assert(patient.nhs_number == nhs_number.normalise_number(single_row_valid_df["NHS Number"][0]))
+    assert(patient.nhs_number == nhs_number.standardise_format(single_row_valid_df["NHS Number"][0]))
     assert(patient.date_of_birth == single_row_valid_df["Date of Birth"][0].date())
     assert(patient.diabetes_type == single_row_valid_df["Diabetes Type"][0])
     assert(patient.diagnosis_date == single_row_valid_df["Date of Diabetes Diagnosis"][0].date())
@@ -108,12 +104,12 @@ def test_multiple_patients(test_user, two_patients_first_with_two_visits_second_
     assert(Visit.objects.filter(patient=first_patient).count() == 2)
     assert(Visit.objects.filter(patient=second_patient).count() == 1)
 
-    assert(first_patient.nhs_number == nhs_number.normalise_number(df["NHS Number"][0]))
+    assert(first_patient.nhs_number == nhs_number.standardise_format(df["NHS Number"][0]))
     assert(first_patient.date_of_birth == df["Date of Birth"][0].date())
     assert(first_patient.diabetes_type == df["Diabetes Type"][0])
     assert(first_patient.diagnosis_date == df["Date of Diabetes Diagnosis"][0].date())
 
-    assert(second_patient.nhs_number == nhs_number.normalise_number(df["NHS Number"][2]))
+    assert(second_patient.nhs_number == nhs_number.standardise_format(df["NHS Number"][2]))
     assert(second_patient.date_of_birth == df["Date of Birth"][2].date())
     assert(second_patient.diabetes_type == df["Diabetes Type"][2])
     assert(second_patient.diagnosis_date == df["Date of Diabetes Diagnosis"][2].date())
@@ -205,7 +201,7 @@ def test_multiple_patients_with_visit_errors():
 @pytest.mark.django_db
 def test_invalid_nhs_number(test_user, single_row_valid_df):
     invalid_nhs_number = "123456789"
-    single_row_valid_df["NHS Number"] = invalid_nhs_number 
+    single_row_valid_df["NHS Number"] = invalid_nhs_number
 
     with pytest.raises(ValidationError) as e_info:
         csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
@@ -255,7 +251,7 @@ def test_over_25(test_user, single_row_valid_df):
 
 @pytest.mark.django_db
 def test_invalid_diabetes_type(test_user, single_row_valid_df):
-    single_row_valid_df["Diabetes Type"] = 45 
+    single_row_valid_df["Diabetes Type"] = 45
 
     with pytest.raises(ValidationError) as e_info:
         csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
@@ -305,7 +301,7 @@ def test_diagnosis_date_before_date_of_birth(test_user, single_row_valid_df):
 
 @pytest.mark.django_db
 def test_invalid_sex(test_user, single_row_valid_df):
-    single_row_valid_df["Stated gender"] = 45 
+    single_row_valid_df["Stated gender"] = 45
 
     with pytest.raises(ValidationError) as e_info:
         csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
@@ -318,7 +314,7 @@ def test_invalid_sex(test_user, single_row_valid_df):
 
 @pytest.mark.django_db
 def test_invalid_ethnicity(test_user, single_row_valid_df):
-    single_row_valid_df["Ethnic Category"] = "45" 
+    single_row_valid_df["Ethnic Category"] = "45"
 
     with pytest.raises(ValidationError) as e_info:
         csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
@@ -331,7 +327,7 @@ def test_invalid_ethnicity(test_user, single_row_valid_df):
 
 @pytest.mark.django_db
 def test_missing_gp_ods_code(test_user, single_row_valid_df):
-    single_row_valid_df["GP Practice Code"] = None 
+    single_row_valid_df["GP Practice Code"] = None
 
     with pytest.raises(ValidationError) as e_info:
         csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
@@ -339,7 +335,7 @@ def test_missing_gp_ods_code(test_user, single_row_valid_df):
     patient = Patient.objects.first()
 
     assert("gp_practice_ods_code" in patient.errors)
-    
+
     error_message = patient.errors["gp_practice_ods_code"][0]['message']
     # TODO MRB: why does this have entity encoding issues?
     assert(error_message == "&#x27;GP Practice ODS code&#x27; and &#x27;GP Practice postcode&#x27; cannot both be empty")
@@ -391,7 +387,7 @@ def test_invalid_postcode(test_user, single_row_valid_df):
 
     with pytest.raises(ValidationError) as e_info:
         csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
-    
+
     patient = Patient.objects.first()
 
     assert(patient.postcode == "not a postcode")
@@ -404,7 +400,7 @@ def test_error_validating_postcode(test_user, single_row_valid_df):
     single_row_valid_df["Postcode of usual address"] = "WC1X 8SH"
 
     csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
-    
+
     patient = Patient.objects.first()
     assert(patient.postcode == "WC1X8SH")
 
@@ -416,7 +412,7 @@ def test_invalid_gp_ods_code(test_user, single_row_valid_df):
 
     with pytest.raises(ValidationError) as e_info:
         csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
-    
+
     patient = Patient.objects.first()
 
     assert(patient.gp_practice_ods_code == "not a GP code")
@@ -429,7 +425,7 @@ def test_error_validating_gp_ods_code(test_user, single_row_valid_df):
     single_row_valid_df["GP Practice Code"] = "G85023"
 
     csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
-    
+
     patient = Patient.objects.first()
     assert(patient.gp_practice_ods_code == "G85023")
 
@@ -437,7 +433,7 @@ def test_error_validating_gp_ods_code(test_user, single_row_valid_df):
 @pytest.mark.django_db
 def test_lookup_index_of_multiple_deprivation(test_user, single_row_valid_df):
     csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
-    
+
     patient = Patient.objects.first()
     assert(patient.index_of_multiple_deprivation_quintile == INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE)
 
@@ -446,6 +442,6 @@ def test_lookup_index_of_multiple_deprivation(test_user, single_row_valid_df):
 @patch("project.npda.models.patient.imd_for_postcode", Mock(side_effect=RequestException("oopsie!")))
 def test_error_looking_up_index_of_multiple_deprivation(test_user, single_row_valid_df):
     csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
-    
+
     patient = Patient.objects.first()
     assert(patient.index_of_multiple_deprivation_quintile is None)
