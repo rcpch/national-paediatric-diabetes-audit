@@ -46,7 +46,7 @@ class CalculateKPIS:
     ):
         """Calculates KPIs for given pz_code
 
-        Params:
+        Initialise with:
             * calculation_date (date) - used to define start and end date of
             audit period
 
