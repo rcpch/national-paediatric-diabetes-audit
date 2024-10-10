@@ -13,6 +13,7 @@ echo "Select your operating system:"
 echo "1. Windows"
 echo "2. Linux"
 echo "3. macOS"
+echo "4. WSL2 (run from within a WSL2 terminal)"
 
 # Read user's choice
 read -p "Enter the number of your choice: " choice
@@ -42,6 +43,15 @@ case $choice in
     /tmp/root.crt &&
     sudo security add-trusted-cert -d -r trustRoot \
       -k /Library/Keychains/System.keychain /tmp/root.crt
+  ;;
+4)
+  echo "You chose WSL2."
+  export WINTEMP=$(wslpath $(cmd.exe /C "echo %TEMP%" 2>/dev/null | tr -d '\r'))
+  export USERNAME=$(wslpath $(cmd.exe /C "echo %USERNAME%" 2>/dev/null | tr -d '\r'))
+  echo "Windows temp directory (automatically found): ${WINTEMP}"
+  echo "Logged in Windows user (automatically found): ${USERNAME}"
+  docker compose cp caddy:"/data/caddy/pki/authorities/local/root.crt" "${WINTEMP}/root.crt"
+  runas.exe /user:${USERNAME} "cmd.exe /C %CD%\certutil -addstore -f "ROOT" %TEMP%/root.crt %CD%"
   ;;
 *)
   echo "Invalid choice. Please select a valid option (1, 2, or 3)."
