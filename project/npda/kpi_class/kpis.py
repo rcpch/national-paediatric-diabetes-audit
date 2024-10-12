@@ -659,11 +659,20 @@ class CalculateKPIS:
         total_passed = total_eligible
         total_failed = total_ineligible
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=eligible_patients,
+            failed=eligible_patients,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_6_total_t1dm_complete_year_gte_12yo(self) -> dict:
@@ -791,11 +800,20 @@ class CalculateKPIS:
         total_passed = total_eligible
         total_failed = total_ineligible
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=eligible_patients,
+            failed=eligible_patients,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_7_total_new_diagnoses_t1dm(self) -> dict:
@@ -892,11 +910,20 @@ class CalculateKPIS:
         total_passed = total_eligible
         total_failed = total_ineligible
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=eligible_patients,
+            failed=eligible_patients,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_8_total_deaths(self) -> dict:
@@ -929,11 +956,20 @@ class CalculateKPIS:
         total_passed = total_eligible
         total_failed = total_ineligible
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=eligible_patients,
+            failed=eligible_patients,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_9_total_service_transitions(self) -> dict:
@@ -971,11 +1007,20 @@ class CalculateKPIS:
         total_passed = total_eligible
         total_failed = total_ineligible
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=eligible_patients,
+            failed=eligible_patients,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_10_total_coeliacs(self) -> dict:
@@ -1022,11 +1067,20 @@ class CalculateKPIS:
         total_passed = total_eligible
         total_failed = total_ineligible
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=eligible_patients,
+            failed=eligible_patients,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_11_total_thyroids(self) -> dict:
@@ -1075,11 +1129,20 @@ class CalculateKPIS:
         total_passed = total_eligible
         total_failed = total_ineligible
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=eligible_patients,
+            failed=eligible_patients,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_12_total_ketone_test_equipment(self) -> dict:
@@ -1128,11 +1191,20 @@ class CalculateKPIS:
         total_passed = total_eligible
         total_failed = total_ineligible
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=eligible_patients,
+            failed=eligible_patients,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_13_one_to_three_injections_per_day(self) -> dict:
