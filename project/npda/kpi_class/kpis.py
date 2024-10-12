@@ -2350,7 +2350,7 @@ class CalculateKPIS:
 
         # Also set pt querysets to be returned if required
         patient_querysets = self._get_pt_querysets_object(
-            eligible=eligible_patients_lt_12yo.union(eligible_patients_gte_12yo),
+            eligible=base_eligible_query_set,
             passed=eligible_patients_lt_12yo,
         )
 
