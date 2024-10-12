@@ -442,6 +442,14 @@ class CalculateKPIS:
         * a visit date or admission date within the audit period
         * Below the age of 25 at the start of the audit period
         * Date of diagnosis within the audit period"
+
+        NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
+
+        NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
 
         base_eligible_patients, _ = (
@@ -497,6 +505,10 @@ class CalculateKPIS:
             * Diagnosis of Type 1 diabetes"
 
         (1, Type 1 Insulin-Dependent Diabetes Mellitus)
+
+        NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
         base_eligible_patients, _ = (
             self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
@@ -518,11 +530,20 @@ class CalculateKPIS:
         total_passed = total_eligible
         total_failed = total_ineligible
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=eligible_patients,
+            failed=eligible_patients,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_4_total_t1dm_gte_12yo(self) -> KPIResult:
@@ -536,6 +557,10 @@ class CalculateKPIS:
             * Below the age of 25 at the start of the audit period
             * Age 12 and above years at the start of the audit period
             * Diagnosis of Type 1 diabetes"
+
+            NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
 
         base_eligible_patients, _ = (
@@ -563,11 +588,20 @@ class CalculateKPIS:
         total_passed = total_eligible
         total_failed = total_ineligible
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=eligible_patients,
+            failed=eligible_patients,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_5_total_t1dm_complete_year(self) -> KPIResult:
@@ -584,6 +618,10 @@ class CalculateKPIS:
         * Date of diagnosis within the audit period
         * Date of leaving service within the audit period
         * Date of death within the audit period"
+
+        NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
         # If we have not already calculated KPI 1, do so now to set
         total_kpi_1_eligible_pts_base_query_set, total_eligible_kpi_1 = (
@@ -643,6 +681,10 @@ class CalculateKPIS:
         * Date of death within the audit period
 
         NOTE: exclusion same as KPI5
+
+        NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
 
         # We cannot simply use KPI1 base queryset as that includes a filter
@@ -765,6 +807,10 @@ class CalculateKPIS:
         * Age 0-24 years at the start of the audit period
         * Diagnosis of Type 1 diabetes
         * Date of diagnosis within the audit period
+
+        NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
 
         # total_kpi_1_eligible_pts_base_query_set is slightly different
@@ -858,6 +904,10 @@ class CalculateKPIS:
         Calculates KPI 8: Number of patients who died within audit period
         Number of eligible patients (measure 1) with:
             * a death date in the audit period
+
+            NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
         base_eligible_patients, _ = (
             self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
@@ -892,6 +942,10 @@ class CalculateKPIS:
 
         Number of eligible patients (measure 1) with
         * a leaving date in the audit period
+
+        NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
         base_eligible_patients, _ = (
             self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
@@ -931,6 +985,10 @@ class CalculateKPIS:
 
         * most recent observation for item 37 (based on visit date) is 1 = Yes
         // NOTE: item37 is _Has the patient been recommended a Gluten-free diet? _
+
+        NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
         # Define the subquery to find the latest visit where visit__gluten_free_diet = 1
         latest_visit_subquery = (
@@ -978,6 +1036,10 @@ class CalculateKPIS:
         who:
             * most recent observation for item 35 (based on visit date) is either 2 = Thyroxine for hypothyroidism or 3 = Antithyroid medication for hyperthyroidism
             // NOTE: item35 is _At time of, or following measurement of thyroid function, was the patient prescribed any thyroid treatment?_
+
+            NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
         # Define the subquery to find the latest visit where thyroid_treatment_status__in = 2 or 3
         latest_visit_subquery = (
@@ -1027,6 +1089,10 @@ class CalculateKPIS:
         Number of eligible patients (measure 1) whose
             * most recent observation for item 45 (based on visit date) is 1 = Yes
             // NOTE: item45 is _Was the patient using (or trained to use) blood ketone testing equipment at time of visit? _
+
+            NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
         # Define the subquery to find the latest visit where ketone_meter_training = 1
         latest_visit_subquery = (
