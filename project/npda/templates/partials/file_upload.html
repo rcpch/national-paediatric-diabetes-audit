@@ -1,4 +1,8 @@
+{% load static %}
 <div class="max-w-xl w-full">
+    <a href="{% static 'npda_base.csv' %}" download="npda_base.csv">
+        <p class="text-center text-xl font-semibold font-montserrat mb-4 text-rcpch_dark_blue">Download the NPDA CSV template here</p>
+    </a>
     {% if file_uploaded %}
         <h5 class="font-montserrat mb-2"><strong>File uploaded - Thank you!</strong></h5>
         <div class="border-rcpch_light_blue font-montserrat rounded-none flex flex-col justify-start">
