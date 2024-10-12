@@ -70,9 +70,7 @@ def test_kpi_calculation_1(AUDIT_START_DATE):
                 postcode__startswith="ineligible_patients"
             ),
             "passed": Patient.objects.filter(postcode="eligible_patients"),
-            "failed": Patient.objects.filter(
-                postcode__startswith="ineligible_patients"
-            ),
+            "failed": Patient.objects.filter(postcode="eligible_patients"),
         },
     )
     ACTUAL_KPIRESULT = calc_kpis.calculate_kpi_1_total_eligible()

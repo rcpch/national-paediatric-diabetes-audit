@@ -7,7 +7,7 @@ from datetime import date, datetime, timedelta
 # Python imports
 from decimal import Decimal
 from pprint import pformat
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
 
 from dateutil.relativedelta import relativedelta
 # Django imports
@@ -322,6 +322,52 @@ class CalculateKPIS:
 
         return kpi_result
 
+    def _get_pt_querysets_object(
+        self,
+        eligible: QuerySet[Patient],
+        passed: QuerySet[Patient],
+        ineligible: Optional[QuerySet[Patient]] = None,
+        failed: Optional[QuerySet[Patient]] = None,
+    ) -> Optional[dict[str, QuerySet[Patient]]]:
+        """Helper method to get a dictionary of querysets for patients.
+
+        if `self.return_pt_querysets` is False, will return None
+
+        NOTE:
+            - eligible and passed are required
+            - ineligible if not provided is found from filtering out eligible
+                patients from self.patients
+            - failed if not provided is found from filtering out passed
+                patients from eligible patients
+        """
+
+        if self.return_pt_querysets is False:
+            return None
+
+        if eligible is None or passed is None:
+            raise ValueError(
+                "at least both of eligible and passed are required"
+            )
+
+        if ineligible is None:
+            ineligible = self.patients.exclude(
+                # Subquery will execute on db level rather than python level
+                pk__in=Subquery(eligible.values("pk"))
+            )
+
+        if failed is None:
+            failed = eligible.exclude(
+                # Subquery will execute on db level rather than python level
+                pk__in=Subquery(passed.values("pk"))
+            )
+
+        return {
+            "eligible": eligible,
+            "ineligible": ineligible,
+            "passed": passed,
+            "failed": failed,
+        }
+
     def calculate_kpi_1_total_eligible(self) -> KPIResult:
         """
         Calculates KPI 1: Total number of eligible patients
@@ -331,6 +377,10 @@ class CalculateKPIS:
             * a valid PDU number
             * a visit date or admission date within the audit period
             * Below the age of 25 at the start of the audit period
+
+        NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
 
         # Set the query set as an attribute to be used in subsequent KPI calculations
@@ -366,22 +416,12 @@ class CalculateKPIS:
         total_failed = total_ineligible
 
         # Also set pt querysets to be returned if required
-        patient_querysets = None
-        # Subquery will execute on db level rather than python level
-        if self.return_pt_querysets:
-            pt_queryset_eligible = self.total_kpi_1_eligible_pts_base_query_set
-            pt_queryset_ineligible = self.patients.exclude(
-                pk__in=Subquery(self.total_kpi_1_eligible_pts_base_query_set.values("pk"))
-            )
-            # Just a count so pass/fail doesn't make sense; just set to same
-            pt_queryset_passed = pt_queryset_eligible
-            pt_queryset_failed = pt_queryset_ineligible
-            patient_querysets = {
-                'eligible': pt_queryset_eligible,
-                'ineligible': pt_queryset_ineligible,
-                'passed': pt_queryset_passed,
-                'failed': pt_queryset_failed,
-            }
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=self.total_kpi_1_eligible_pts_base_query_set,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=self.total_kpi_1_eligible_pts_base_query_set,
+            failed=self.total_kpi_1_eligible_pts_base_query_set,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
@@ -429,11 +469,30 @@ class CalculateKPIS:
         total_passed = total_eligible
         total_failed = total_ineligible
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = None
+        # Subquery will execute on db level rather than python level
+        if self.return_pt_querysets:
+            pt_queryset_eligible = self.total_kpi_2_eligible_pts_base_query_set
+            pt_queryset_ineligible = self.patients.exclude(
+                pk__in=Subquery(pt_queryset_eligible.values("pk"))
+            )
+            # Just a count so pass/fail doesn't make sense; just set to same
+            pt_queryset_passed = pt_queryset_eligible
+            pt_queryset_failed = pt_queryset_ineligible
+            patient_querysets = {
+                "eligible": pt_queryset_eligible,
+                "ineligible": pt_queryset_ineligible,
+                "passed": pt_queryset_passed,
+                "failed": pt_queryset_failed,
+            }
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_3_total_t1dm(self) -> KPIResult:
