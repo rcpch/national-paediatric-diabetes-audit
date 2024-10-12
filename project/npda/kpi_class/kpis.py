@@ -305,7 +305,6 @@ class CalculateKPIS:
 
         kpi_method = getattr(self, f"calculate_{kpi_method_name}", None)
 
-        # Else, calculate the KPI
         kpi_result = kpi_method()
 
         # Validations
