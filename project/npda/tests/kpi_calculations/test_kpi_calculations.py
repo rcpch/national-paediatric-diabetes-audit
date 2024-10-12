@@ -106,6 +106,8 @@ def test_kpi_calculations_dont_break_when_no_patients(
     ].items():
         # remove the kpi_label key from the results
         results.pop("kpi_label", None)
+        # also remove the patient_querysets key from the results
+        results.pop("patient_querysets", None)
 
         values = list(results.values())
 
