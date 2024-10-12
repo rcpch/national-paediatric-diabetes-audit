@@ -15,7 +15,10 @@ logger = logging.getLogger(__name__)
 
 
 # HELPERS
-def assert_kpi_result_equal(expected: KPIResult, actual: KPIResult) -> None:
+def assert_kpi_result_equal(
+    expected: KPIResult,
+    actual: KPIResult,
+) -> None:
     """
     Asserts that two KPIResult objects are equal by comparing their fields and provides
     a detailed error message if they are not.
@@ -54,6 +57,31 @@ def assert_kpi_result_equal(expected: KPIResult, actual: KPIResult) -> None:
         mismatches.append(
             f"total_failed: expected {expected.total_failed}, got {actual.total_failed}"
         )
+
+    # Queryset checks
+    if expected.patient_querysets is not None:
+        # If actual.patient_querysets is None, we can't compare the querysets
+        if actual.patient_querysets is None:
+            mismatches.append(
+                f"patient_querysets: expected {expected.patient_querysets}, got None"
+            )
+        else:
+            # For each pt queryset in expected, check if the actual queryset is
+            # the same
+            for key, expected_queryset in expected.patient_querysets.items():
+
+                actual_queryset = actual.patient_querysets.get(key)
+
+                # Convert to list and order by id to compare
+                expected_queryset = list(expected_queryset.order_by("id"))
+                actual_queryset = list(actual_queryset.order_by("id"))
+
+                if expected_queryset != actual_queryset:
+                    mismatches.append(
+                        f"patient_querysets[{key}]:"
+                        f"\nexpected_queryset\n\t{expected_queryset}"
+                        f"\nactual_queryset\n\t{actual_queryset}\n"
+                    )
 
     if mismatches:
         mismatch_details = "\n".join(mismatches)
