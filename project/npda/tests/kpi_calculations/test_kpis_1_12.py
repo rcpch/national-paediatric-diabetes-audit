@@ -29,22 +29,30 @@ def test_kpi_calculation_1(AUDIT_START_DATE):
         size=N_PATIENTS_ELIGIBLE,
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=1),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        postcode="eligible_patients",
     )
 
     # Create Patients and Visits that should FAIL KPI1
     # Visit date before audit period
-    ineligible_patients_visit_date: List[Patient] = PatientFactory.create_batch(
-        size=N_PATIENTS_INELIGIBLE,
-        visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
+    ineligible_patients_visit_date: List[Patient] = (
+        PatientFactory.create_batch(
+            size=N_PATIENTS_INELIGIBLE,
+            visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
+            postcode="ineligible_patients_visit_date",
+        )
     )
     # Above age 25 at start of audit period
     ineligible_patients_too_old: List[Patient] = PatientFactory.create_batch(
         size=N_PATIENTS_INELIGIBLE,
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
+        postcode="ineligible_patients_too_old",
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(
+        calculation_date=AUDIT_START_DATE,
+        return_pt_querysets=True,
+    )
     # Need to be mocked as not using public `calculate_kpis_for_*` methods
     calc_kpis.patients = Patient.objects.all()
     calc_kpis.total_patients_count = Patient.objects.count()
@@ -55,12 +63,26 @@ def test_kpi_calculation_1(AUDIT_START_DATE):
         # We have 2 sets of ineligible patients
         total_ineligible=N_PATIENTS_INELIGIBLE * 2,
         total_failed=N_PATIENTS_FAIL * 2,
+        # Check correct patient querysets are returned
+        patient_querysets={
+            "eligible": Patient.objects.filter(postcode="eligible_patients"),
+            "ineligible": Patient.objects.filter(
+                postcode__startswith="ineligible_patients"
+            ),
+            "passed": Patient.objects.filter(postcode="eligible_patients"),
+            "failed": Patient.objects.filter(
+                postcode__startswith="ineligible_patients"
+            ),
+        },
     )
+    ACTUAL_KPIRESULT = calc_kpis.calculate_kpi_1_total_eligible()
 
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
-        actual=calc_kpis.calculate_kpi_1_total_eligible(),
+        actual=ACTUAL_KPIRESULT,
     )
+
+    # Check correct patient querysets are returned
 
 
 @pytest.mark.django_db
@@ -86,14 +108,18 @@ def test_kpi_calculation_2(AUDIT_START_DATE):
 
     # Create Patients and Visits that should FAIL KPI2
     # Visit date before audit period
-    ineligible_patients_visit_date: List[Patient] = PatientFactory.create_batch(
-        size=N_PATIENTS_INELIGIBLE,
-        visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
+    ineligible_patients_visit_date: List[Patient] = (
+        PatientFactory.create_batch(
+            size=N_PATIENTS_INELIGIBLE,
+            visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
+        )
     )
     # Diagnosis date before audit period
-    ineligible_patients_diagnosis_date: List[Patient] = PatientFactory.create_batch(
-        size=N_PATIENTS_INELIGIBLE,
-        diagnosis_date=AUDIT_START_DATE - relativedelta(days=10),
+    ineligible_patients_diagnosis_date: List[Patient] = (
+        PatientFactory.create_batch(
+            size=N_PATIENTS_INELIGIBLE,
+            diagnosis_date=AUDIT_START_DATE - relativedelta(days=10),
+        )
     )
     # Above age 25 at start of audit period
     ineligible_patients_too_old: List[Patient] = PatientFactory.create_batch(
@@ -146,9 +172,11 @@ def test_kpi_calculation_3(AUDIT_START_DATE):
 
     # Create Patients and Visits that should FAIL KPI3
     # Visit date before audit period
-    ineligible_patients_visit_date: List[Patient] = PatientFactory.create_batch(
-        size=N_PATIENTS_INELIGIBLE,
-        visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
+    ineligible_patients_visit_date: List[Patient] = (
+        PatientFactory.create_batch(
+            size=N_PATIENTS_INELIGIBLE,
+            visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
+        )
     )
     # Above age 25 at start of audit period
     ineligible_patients_too_old: List[Patient] = PatientFactory.create_batch(
@@ -208,9 +236,11 @@ def test_kpi_calculation_4(AUDIT_START_DATE):
 
     # Create Patients and Visits that should FAIL KPI4
     # Visit date before audit period
-    ineligible_patients_visit_date: List[Patient] = PatientFactory.create_batch(
-        size=N_PATIENTS_INELIGIBLE,
-        visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
+    ineligible_patients_visit_date: List[Patient] = (
+        PatientFactory.create_batch(
+            size=N_PATIENTS_INELIGIBLE,
+            visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
+        )
     )
     # Above age 25 at start of audit period
     ineligible_patients_too_old: List[Patient] = PatientFactory.create_batch(
@@ -318,7 +348,8 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving service within the audit period
-        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE
+        + relativedelta(days=2),
     )
     ineligible_patient_death_within_audit_period = PatientFactory(
         postcode="ineligible_patient_death_within_audit_period",
@@ -394,7 +425,8 @@ def test_kpi_calculation_6(AUDIT_START_DATE):
             diabetes_type=DIABETES_TYPES[0][0],
             # an observation within the audit period
             **{
-                f"visit__{field_name}": AUDIT_START_DATE + relativedelta(days=2),
+                f"visit__{field_name}": AUDIT_START_DATE
+                + relativedelta(days=2),
                 f"visit__visit_date": AUDIT_START_DATE + relativedelta(days=2),
             },
         )
@@ -423,7 +455,8 @@ def test_kpi_calculation_6(AUDIT_START_DATE):
     VisitFactory(
         patient=eligible_patient_second_visit_observation,
         visit_date=AUDIT_START_DATE + relativedelta(months=2),
-        height_weight_observation_date=AUDIT_START_DATE + relativedelta(months=2),
+        height_weight_observation_date=AUDIT_START_DATE
+        + relativedelta(months=2),
         psychological_screening_assessment_date=AUDIT_START_DATE
         + relativedelta(months=2),
     )
@@ -443,7 +476,8 @@ def test_kpi_calculation_6(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving service within the audit period
-        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE
+        + relativedelta(days=2),
     )
     ineligible_patient_death_within_audit_period = PatientFactory(
         postcode="ineligible_patient_death_within_audit_period",
@@ -515,7 +549,10 @@ def test_kpi_calculation_7(AUDIT_START_DATE):
             # Diagnosis date within audit date range
             diagnosis_date=AUDIT_START_DATE + relativedelta(days=2),
             # an observation within the audit period
-            **{f"visit__{field_name}": AUDIT_START_DATE + relativedelta(days=2)},
+            **{
+                f"visit__{field_name}": AUDIT_START_DATE
+                + relativedelta(days=2)
+            },
         )
 
     # Create Patients and Visits that should BE EXCLUDED
@@ -643,7 +680,8 @@ def test_kpi_calculation_9(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # leaving_date within the audit period
-        transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE
+        + relativedelta(days=2),
     )
 
     # Create Patients and Visits that should be excluded
@@ -673,7 +711,8 @@ def test_kpi_calculation_9(AUDIT_START_DATE):
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving_date outside the audit period"
-        transfer__date_leaving_service=AUDIT_START_DATE - relativedelta(days=2),
+        transfer__date_leaving_service=AUDIT_START_DATE
+        - relativedelta(days=2),
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory

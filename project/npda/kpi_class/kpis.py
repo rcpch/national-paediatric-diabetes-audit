@@ -366,19 +366,29 @@ class CalculateKPIS:
         total_failed = total_ineligible
 
         # Also set pt querysets to be returned if required
+        patient_querysets = None
         # Subquery will execute on db level rather than python level
         if self.return_pt_querysets:
-            self.kpi_1_pts_total_eligible = self.total_kpi_1_eligible_pts_base_query_set
-            self.kpi_1_pts_total_ineligible = self.patients.exclude(
+            pt_queryset_eligible = self.total_kpi_1_eligible_pts_base_query_set
+            pt_queryset_ineligible = self.patients.exclude(
                 pk__in=Subquery(self.total_kpi_1_eligible_pts_base_query_set.values("pk"))
             )
-            self.kpi_1_pts_total_passed = self.kpi_1_pts_total_eligible
+            # Just a count so pass/fail doesn't make sense; just set to same
+            pt_queryset_passed = pt_queryset_eligible
+            pt_queryset_failed = pt_queryset_ineligible
+            patient_querysets = {
+                'eligible': pt_queryset_eligible,
+                'ineligible': pt_queryset_ineligible,
+                'passed': pt_queryset_passed,
+                'failed': pt_queryset_failed,
+            }
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_2_total_new_diagnoses(self) -> KPIResult:
