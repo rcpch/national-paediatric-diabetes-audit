@@ -2,8 +2,7 @@
 """
 
 import logging
-import time
-from dataclasses import asdict, dataclass, is_dataclass
+from dataclasses import asdict, is_dataclass
 from datetime import date, datetime, timedelta
 # Python imports
 from decimal import Decimal
@@ -15,8 +14,6 @@ from dateutil.relativedelta import relativedelta
 from django.apps import apps
 from django.db.models import (Avg, Case, Count, Exists, F, Func, IntegerField,
                               OuterRef, Q, QuerySet, Subquery, Sum, When)
-from django.shortcuts import render
-from django.views.generic import TemplateView
 
 # NPDA Imports
 from project.constants.albuminuria_stage import ALBUMINURIA_STAGES
@@ -43,12 +40,15 @@ class CalculateKPIS:
     def __init__(
         self,
         calculation_date: date = None,
+        return_pt_querysets: bool = False,
     ):
         """Calculates KPIs for given pz_code
 
         Initialise with:
             * calculation_date (date) - used to define start and end date of
             audit period
+            * return_pt_querysets (bool) - if True, will return the querysets
+            of patients for each kpi calculation
 
         Exposes 2 methods:
             1) calculate_kpis_for_patients (QuerySet[Patient])
@@ -73,6 +73,9 @@ class CalculateKPIS:
             self._get_audit_start_and_end_dates()
         )
         self.AUDIT_DATE_RANGE = (self.audit_start_date, self.audit_end_date)
+
+        # Set the return_pt_querysets attribute
+        self.return_pt_querysets = return_pt_querysets
 
         # Sets the KPI attribute names map
         self.kpis_names_map = self._get_kpi_attribute_names()
@@ -361,6 +364,15 @@ class CalculateKPIS:
         # Assuming total_passed is equal to total_number_of_eligible_patients_kpi_1 and total_failed is equal to total_ineligible
         total_passed = total_eligible
         total_failed = total_ineligible
+
+        # Also set pt querysets to be returned if required
+        # Subquery will execute on db level rather than python level
+        if self.return_pt_querysets:
+            self.kpi_1_pts_total_eligible = self.total_kpi_1_eligible_pts_base_query_set
+            self.kpi_1_pts_total_ineligible = self.patients.exclude(
+                pk__in=Subquery(self.total_kpi_1_eligible_pts_base_query_set.values("pk"))
+            )
+            self.kpi_1_pts_total_passed = self.kpi_1_pts_total_eligible
 
         return KPIResult(
             total_eligible=total_eligible,
