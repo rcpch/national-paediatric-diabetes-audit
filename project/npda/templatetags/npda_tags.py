@@ -210,3 +210,14 @@ def join_by_comma(queryset):
     if len(queryset) == 0:
         return "No patients"
     return ", ".join(map(str, queryset.values_list("nhs_number", flat=True)))
+
+
+@register.filter
+def extract_digits(value):
+    """
+    Extracts all digits between the first pair of _ characters in the string.
+    """
+    match = re.search(r"_(\d+)_", value)
+    if match:
+        return int(match.group(1))
+    return 0
