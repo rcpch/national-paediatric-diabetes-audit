@@ -96,7 +96,8 @@ def test_npda_user_list_view_rcpch_audit_team_can_view_all_users(
     assert non_ah_users.count() > 0
 
     ah_audit_team_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE, role=RCPCH_AUDIT_TEAM
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=RCPCH_AUDIT_TEAM,
     ).first()
 
     client = login_and_verify_user(client, ah_audit_team_user)

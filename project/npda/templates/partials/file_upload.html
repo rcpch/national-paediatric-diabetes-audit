@@ -1,53 +1,22 @@
+{% load static %}
 <div class="max-w-xl w-full">
-    {% if file_uploaded %}
-        <h5 class="font-montserrat mb-2"><strong>File uploaded - Thank you!</strong></h5>
-        <div class="border-rcpch_light_blue font-montserrat rounded-none flex flex-col justify-start">
-            {% if errors %}
-                <div class="mt-2 mb-2 bg-rcpch_light_blue-300 border border-rcpch_light_blue text-sm text-rcpch_dark_blue p-4" role="alert" tabindex="-1" aria-labelledby="hs-soft-color-info-label">
-                    <span class="hs-soft-color-dark-label">
-                        <h3 class="font-bold">Some rows in the CSV file have failed validation!</h3>
-                        These errors have been included in the submission but will be exluded from any analysis. Note that only the fields with errors will be excluded - any valid fields within records containing errors will still be used. To fix any errors please use the summary below to correct the data and re-upload the file.
-                        You can download what you have just submitted with this data quality summary attached on the submissions page. If you need help please contact the NPDA team.
-                    </span>
-                </div>
-                {% for error in errors %}
-                    <div class="text-md">
-                            Row <strong>{{error.original_row_index|add:1}}</strong>: "{{error.field}}". {{error.message}}
-                    </div>
-                {% endfor %}
-            {% endif %}
-            {% if summary %}
-                <h3 class="font-bold">Summary</h3>
-                <div class="text-md">Total uploaded rows: <strong>{{summary.total_records}}</strong></div>
-                <div class="text-md">Number of unique patients: <strong>{{summary.number_unique_nhs_numbers}}</strong></div>
-                {% if summary.count_of_records_per_nhs_number|length > 0 %}
-                    <div class="text-md">The breakdown of records per NHS number are:</div>
-                        {% for nhs_number, visit_count in summary.count_of_records_per_nhs_number %}
-                            <p class="text-md">- <i>{{nhs_number}}</i>: <strong>{{visit_count}}</strong> records/visits
-                            <p>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-                {% if summary.matching_patients_in_current_cohort > 0 %}
-                    <div class="font-bold">{{summary.matching_patients_in_current_cohort}} patients already exist in the NPDA database
-                        for this audit year.</div>
-                    <div class="text-md">This data will become the active submission but the previous submission will be retained.</div>
-                {% else %}
-                    <a href='submissions'><button
-                        class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue"
-                        type="submit">View Submissions</button></a>
-                {% endif %}
-            {% endif %}
-        </div>
-    {% else %}
+    <a href="{% static 'npda_base.csv' %}" download="npda_base.csv">
+        <p class="text-center text-xl font-semibold font-montserrat mb-4 text-rcpch_dark_blue">Download the NPDA CSV template here</p>
+    </a>
+    
         <form method="POST" enctype="multipart/form-data" action="home"
-            class="w-full max-w-xl p-8 border-4 border-dashed border-gray-400">
+            class="w-full max-w-xl p-8 border-4 border-dashed border-gray-400"
+            _="on dragover or dragenter halt the event then
+                        add .bg-rcpch_light_grey
+                on dragleave or drop remove .bg-rcpch_light_grey
+                on drop halt the event then
+                    get event.dataTransfer.files then put it into #upload_input.files then call updateFilename(#upload_input)">
             <p class="text-center text-xl font-semibold font-montserrat mb-4 text-rcpch_dark_blue">Please drop your NPDA CSV
                 file here, or</p>
             <div class="flex justify-center items-center bg-rcpch_dark_blue py-4 px-6 mb-4">
                 <label class="mr-4 bg-gray-600 text-white font-montserrat py-2 px-4 cursor-pointer">
                     Choose file
-                    <input id="upload_input" type="file" name="csv_upload" class="hidden" onchange="updateFilename(event)">
+                    <input id="upload_input" type="file" name="csv_upload" class="hidden" onchange="updateFilename(this)" accept='''.csv'>
                 </label>
                 <span id="file-name-display" class="text-white font-montserrat">No file chosen</span>
 
@@ -76,22 +45,32 @@
                 </div>
             </div>
         </form>
-    {% endif %}
+    
 </div>
 
 <script>
-    function updateFilename(event) {
-        const fileInput = event.target;
+    function updateFilename(input) {
         const fileNameDisplay = document.getElementById('file-name-display');
         const submitButton = document.getElementById('submit-button');
 
-        if (fileInput.files.length > 0) {
-            fileNameDisplay.textContent = fileInput.files[0].name;
-            submitButton.classList.replace('bg-gray-400', 'bg-rcpch_light_blue');
-            submitButton.removeAttribute('disabled');
+        if (input.files.length > 0) {
+            const file = input.files[0];
+            const fileName = file.name;
+            const fileExtension = fileName.split('.').pop().toLowerCase();
+
+            if (fileExtension === 'csv') {
+                fileNameDisplay.textContent = fileName;
+                submitButton.classList.replace('bg-gray-400', 'bg-rcpch_light_blue');
+                submitButton.removeAttribute('disabled');
+            } else {
+                fileNameDisplay.textContent = 'Invalid file type. Please upload a CSV file.';
+                submitButton.classList.add('bg-gray-400');
+                submitButton.setAttribute('disabled', 'disabled');
+            }
         } else {
             fileNameDisplay.textContent = 'No file chosen';
             submitButton.classList.add('bg-gray-400');
+            submitButton.setAttribute('disabled', 'disabled');
         }
     }
 </script>

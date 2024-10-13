@@ -9,6 +9,7 @@ from django.core.exceptions import ValidationError
 from django.shortcuts import redirect, render
 from django.urls import reverse
 
+
 # HTMX imports
 from django_htmx.http import trigger_client_event
 
@@ -53,7 +54,7 @@ def home(request):
         file = request.FILES["csv_upload"]
         pz_code = request.session.get("pz_code")
 
-        summary = csv_summarize(csv_file=file)
+        # summary = csv_summarize(csv_file=file)
 
         # You can't read the same file twice without resetting it
         file.seek(0)
@@ -66,7 +67,11 @@ def home(request):
                 csv_file=file,
                 pdu_pz_code=pz_code,
             )
-            messages.success(request=request, message="File uploaded successfully")
+            messages.success(
+                request=request,
+                message="File uploaded successfully. There are no errors,",
+            )
+
             VisitActivity = apps.get_model("npda", "VisitActivity")
             try:
                 VisitActivity.objects.create(
@@ -78,17 +83,14 @@ def home(request):
                 logger.error(f"Failed to log user activity: {e}")
         except ValidationError as error:
             errors = error_list(error)
+            for error in errors:
+                messages.error(
+                    request=request,
+                    message=f"CSV has been uploaded, but errors have been found. These include error in row {error['original_row_index']}: {error['message']}",
+                )
+            pass
 
-        return render(
-            request=request,
-            template_name="home.html",
-            context={
-                "file_uploaded": True,
-                "summary": summary,
-                "form": form,
-                "errors": errors,
-            },
-        )
+        return redirect("submissions")
     else:
         form = UploadFileForm()
 
@@ -187,10 +189,6 @@ def dashboard(request):
     )
 
     kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
-
-    from pprint import pprint
-
-    pprint(kpi_calculations_object)
 
     context = {
         "pdu": pdu,
