@@ -213,11 +213,11 @@ def join_by_comma(queryset):
 
 
 @register.filter
-def extract_digits(value):
+def extract_digits(value, underscore_index=0):
     """
-    Extracts all digits between the first pair of _ characters in the string.
+    Extracts all digits between the second or subsequent pair of _ characters in the string.
     """
-    match = re.search(r"_(\d+)_", value)
-    if match:
-        return int(match.group(1))
+    matches = re.findall(r"_(\d+)", value)
+    if len(matches) > 0:
+        return int(matches[underscore_index])
     return 0

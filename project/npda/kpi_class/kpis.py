@@ -142,8 +142,12 @@ class CalculateKPIS:
 
         # Standard KPIs (all excluding KPI32)
         kpi_idxs = list(range(1, 32)) + (list(range(33, 50)))
-        # Now add kpi32 which has 3 sub kpis
-        kpi_idxs.extend([321, 322, 323])
+        # Now add kpi32 which has 3 sub kpis (321, 322, 323) in the middle
+        kpi_idxs = (
+            kpi_idxs[: kpi_idxs.index(31) + 1]
+            + [321, 322, 323]
+            + kpi_idxs[kpi_idxs.index(31) + 1 :]
+        )
         for i in kpi_idxs:
             # Dynamically get the method name from the kpis_names_map
             kpi_method_name = self.kpis_names_map[i]
@@ -165,9 +169,14 @@ class CalculateKPIS:
         return_obj["calculated_kpi_values"] = {}
         for kpi_name, kpi_result in calculated_kpis.items():
             return_obj["calculated_kpi_values"][kpi_name] = kpi_result
-            return_obj["calculated_kpi_values"][kpi_name]["kpi_label"] = (
-                self.title_for_kpi(int(kpi_name.split("_")[1]))
-            )
+            if int(kpi_name.split("_")[1]) == 32:
+                return_obj["calculated_kpi_values"][kpi_name]["kpi_label"] = (
+                    self.title_for_kpi(320 + int(kpi_name.split("_")[2]))
+                )
+            else:
+                return_obj["calculated_kpi_values"][kpi_name]["kpi_label"] = (
+                    self.title_for_kpi(int(kpi_name.split("_")[1]))
+                )
 
         return return_obj
 
