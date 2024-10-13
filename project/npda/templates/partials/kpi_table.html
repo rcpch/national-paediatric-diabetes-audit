@@ -2,7 +2,7 @@
 
 <div class="w-100">
 <strong>
-    Key Performance Indicators for {{aggregation_level}} for {{pdu.lead_organisation_name}} ({{pdu.pz_code}} - {{pdu.parent_name}}) - {{pdu.paediatric_diabetes_network_name}} ({{pdu.paediatric_diabetes_network_code}})
+    {{aggregation_level}}-Level Key Performance Indicators for {{pdu.lead_organisation_name}} ({{pdu.pz_code}}{% if pdu.parent_name is not None %} - {{pdu.parent_name}}) - {{pdu.paediatric_diabetes_network_name}} ({{pdu.paediatric_diabetes_network_code}}){% else %}){% endif %}
 </strong>
 <table class="table-auto w-full text-sm text-left text-gray-500 mb-5 font-montserrat">
     <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">

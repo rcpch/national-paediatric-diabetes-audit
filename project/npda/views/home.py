@@ -193,6 +193,7 @@ def dashboard(request):
     context = {
         "pdu": pdu,
         "kpi_results": kpi_calculations_object,
+        "aggregation_level": "Paediatric Diabetes Unit",
     }
 
     return render(request, template_name=template, context=context)
