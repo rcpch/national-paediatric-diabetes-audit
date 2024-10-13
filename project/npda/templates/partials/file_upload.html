@@ -16,7 +16,7 @@
             <div class="flex justify-center items-center bg-rcpch_dark_blue py-4 px-6 mb-4">
                 <label class="mr-4 bg-gray-600 text-white font-montserrat py-2 px-4 cursor-pointer">
                     Choose file
-                    <input id="upload_input" type="file" name="csv_upload" class="hidden" onchange="updateFilename(this)">
+                    <input id="upload_input" type="file" name="csv_upload" class="hidden" onchange="updateFilename(this)" accept='''.csv'>
                 </label>
                 <span id="file-name-display" class="text-white font-montserrat">No file chosen</span>
 
@@ -50,17 +50,27 @@
 
 <script>
     function updateFilename(input) {
-       
         const fileNameDisplay = document.getElementById('file-name-display');
         const submitButton = document.getElementById('submit-button');
 
         if (input.files.length > 0) {
-            fileNameDisplay.textContent = input.files[0].name;
-            submitButton.classList.replace('bg-gray-400', 'bg-rcpch_light_blue');
-            submitButton.removeAttribute('disabled');
+            const file = input.files[0];
+            const fileName = file.name;
+            const fileExtension = fileName.split('.').pop().toLowerCase();
+
+            if (fileExtension === 'csv') {
+                fileNameDisplay.textContent = fileName;
+                submitButton.classList.replace('bg-gray-400', 'bg-rcpch_light_blue');
+                submitButton.removeAttribute('disabled');
+            } else {
+                fileNameDisplay.textContent = 'Invalid file type. Please upload a CSV file.';
+                submitButton.classList.add('bg-gray-400');
+                submitButton.setAttribute('disabled', 'disabled');
+            }
         } else {
             fileNameDisplay.textContent = 'No file chosen';
             submitButton.classList.add('bg-gray-400');
+            submitButton.setAttribute('disabled', 'disabled');
         }
     }
 </script>
