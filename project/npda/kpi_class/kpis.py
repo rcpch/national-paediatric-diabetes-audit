@@ -96,18 +96,21 @@ class CalculateKPIS:
     def calculate_kpis_for_patients(
         self,
         patients: QuerySet[Patient],
+        exclude_one_to_twelve: bool = False,
     ) -> KPICalculationsObject:
         """Calculate KPIs 1 - 49 for given patients and cohort range
         (self.audit_start_date and self.audit_end_date).
 
         Params:
             * patients (QuerySet[Patient]) - Queryset of patients
-            for KPI calculations and aggregations."""
+            for KPI calculations and aggregations.
+            * exclude_one_to_twelve (bool) - If True, will exclude KPIs 1-12 - this is because these are summary counts, and do not apply to individual patients.
+        """
 
         self.patients = patients
         self.total_patients_count = self.patients.count()
 
-        return self._calculate_kpis()
+        return self._calculate_kpis(exclude_one_to_twelve=exclude_one_to_twelve)
 
     def calculate_kpis_for_pdus(
         self,
@@ -125,9 +128,9 @@ class CalculateKPIS:
         )
         self.total_patients_count = self.patients.count()
 
-        return self._calculate_kpis()
+        return self._calculate_kpis(exclude_one_to_twelve=False)
 
-    def _calculate_kpis(self) -> KPICalculationsObject:
+    def _calculate_kpis(self, exclude_one_to_twelve=True) -> KPICalculationsObject:
         """Calculate KPIs 1 - 49 for set self.patients and cohort range
         (self.audit_start_date and self.audit_end_date).
 
@@ -136,6 +139,8 @@ class CalculateKPIS:
 
         Incrementally build the query, which will be executed in a single
         transaction once a value is evaluated.
+
+        if exclude_one_to_twelve is True, will exclude KPIs 1-12 - this is because these are summary counts, and do not apply to individual patients.
         """
         # Init dict to store calc results
         calculated_kpis = {}
@@ -148,6 +153,7 @@ class CalculateKPIS:
             + [321, 322, 323]
             + kpi_idxs[kpi_idxs.index(31) + 1 :]
         )
+
         for i in kpi_idxs:
             # Dynamically get the method name from the kpis_names_map
             kpi_method_name = self.kpis_names_map[i]
@@ -167,7 +173,14 @@ class CalculateKPIS:
 
         # Finally, add in the kpis
         return_obj["calculated_kpi_values"] = {}
+
         for kpi_name, kpi_result in calculated_kpis.items():
+
+            if exclude_one_to_twelve:
+                # Exclude KPIs 1-12 - these are summary counts, and do not apply to individual patients
+                if int(kpi_name.split("_")[1]) in range(1, 13):
+                    continue
+
             return_obj["calculated_kpi_values"][kpi_name] = kpi_result
             if int(kpi_name.split("_")[1]) == 32:
                 return_obj["calculated_kpi_values"][kpi_name]["kpi_label"] = (
