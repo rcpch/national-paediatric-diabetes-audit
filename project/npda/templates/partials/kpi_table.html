@@ -1,58 +1,120 @@
+{% load npda_tags %}
+
 <div class="w-100">
 <strong>
-    Key Performance Indicators for {{aggregation_level}} for {{pdu.lead_organisation_name}} ({{pdu.pz_code}} - {{pdu.parent_name}}) - {{pdu.paediatric_diabetes_network_name}} ({{pdu.paediatric_diabetes_network_code}})
+    {{aggregation_level}}-Level Key Performance Indicators for {{pdu.lead_organisation_name}} ({{pdu.pz_code}}{% if pdu.parent_name is not None %} - {{pdu.parent_name}}) - {{pdu.paediatric_diabetes_network_name}} ({{pdu.paediatric_diabetes_network_code}}){% else %}){% endif %}
 </strong>
 <table class="table-auto w-full text-sm text-left text-gray-500 mb-5 font-montserrat">
     <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">
         <tr>
             <th class="px-6 py-3">KPI</th>
             <th class="px-6 py-3">Total Eligible</th>
+            <th class="px-6 py-3">Total Ineligible</th>
             <th class="px-6 py-3">Total Passed</th>
             <th class="px-6 py-3">Total Failed</th>
-            <th class="px-6 py-3">Total Ineligible</th>
         </tr>
     </thead>
     <tbody>
         {% for kpi_key, kpi_value in kpi_results.calculated_kpi_values.items %}
-            {% if not kpi_key|slice:":6" == "kpi_32" %}
+       
+            {% if kpi_key|extract_digits:0 < 13  %}
                 <tr class="bg-white border-b">
-                    <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{{ kpi_value.kpi_label }}</td>
-                    <td class="px-6 py-4">{{ kpi_value.total_eligible }}</td>
-                    <td class="px-6 py-4">{{ kpi_value.total_passed }}</td>
-                    <td class="px-6 py-4">{{ kpi_value.total_failed }}</td>
-                    <td class="px-6 py-4">{{ kpi_value.total_ineligible }}</td>
+                    <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap"><span class="text-rcpch_light_blue">
+                        {{ kpi_key|extract_digits:0 }}.
+                    </span>{{ kpi_value.kpi_label }}</td>
+                    <td class="px-6 py-4">
+                        <span class="tooltip" data-tip="Patients: {{kpi_value.patient_querysets.eligible|join_by_comma}}">
+                             {{ kpi_value.total_eligible }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="tooltip" data-tip="Patients: {{kpi_value.patient_querysets.ineligible|join_by_comma}}">
+                             {{ kpi_value.total_ineligible }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="tooltip" data-tip="Does not apply to this measure">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12px" height="12px" viewBox="0 0 24 24" fill="none">
+                            <path d="M6 12C6 12.5523 6.44772 13 7 13L17 13C17.5523 13 18 12.5523 18 12C18 11.4477 17.5523 11 17 11H7C6.44772 11 6 11.4477 6 12Z" fill="#d9d9d9"/>
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 23C18.0751 23 23 18.0751 23 12C23 5.92487 18.0751 1 12 1C5.92487 1 1 5.92487 1 12C1 18.0751 5.92487 23 12 23ZM12 20.9932C7.03321 20.9932 3.00683 16.9668 3.00683 12C3.00683 7.03321 7.03321 3.00683 12 3.00683C16.9668 3.00683 20.9932 7.03321 20.9932 12C20.9932 16.9668 16.9668 20.9932 12 20.9932Z" fill="#d9d9d9"/>
+                            </svg>
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="tooltip" data-tip="Does not apply to this measure">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12px" height="12px" viewBox="0 0 24 24" fill="none">
+                            <path d="M6 12C6 12.5523 6.44772 13 7 13L17 13C17.5523 13 18 12.5523 18 12C18 11.4477 17.5523 11 17 11H7C6.44772 11 6 11.4477 6 12Z" fill="#d9d9d9"/>
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 23C18.0751 23 23 18.0751 23 12C23 5.92487 18.0751 1 12 1C5.92487 1 1 5.92487 1 12C1 18.0751 5.92487 23 12 23ZM12 20.9932C7.03321 20.9932 3.00683 16.9668 3.00683 12C3.00683 7.03321 7.03321 3.00683 12 3.00683C16.9668 3.00683 20.9932 7.03321 20.9932 12C20.9932 16.9668 16.9668 20.9932 12 20.9932Z" fill="#d9d9d9"/>
+                            </svg>
+                        </span>
+                    </td>
                 </tr>
+       
+            {% else %}
+
+                {% with extracted_value=kpi_key|extract_digits:0 %}
+                    {% if extracted_value == 32 %}
+                        <tr class="bg-gray-50 border-b">
+                            <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+                                <span class="text-rcpch_light_blue">
+                                    {{ kpi_key|extract_digits:0 }} - {{ kpi_key|extract_digits:1 }}.
+                                </span> {{ kpi_value.kpi_label }}</td>
+                            <td class="px-6 py-4">
+                                <span class="tooltip" data-tip="Patients: {{kpi_value.patient_querysets.eligible|join_by_comma}}">
+                                    {{ kpi_value.total_eligible }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="tooltip" data-tip="Patients: {{kpi_value.patient_querysets.ineligible|join_by_comma}}">
+                                    {{ kpi_value.total_ineligible }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="tooltip" data-tip="Patients: {{kpi_value.patient_querysets.passed|join_by_comma}}">
+                                    {{ kpi_value.total_passed }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="tooltip" data-tip="Patients: {{kpi_value.patient_querysets.failed|join_by_comma}}">
+                                    {{ kpi_value.total_failed }}
+                                </span>
+                            </td>
+                        </tr>
+                    {% else %}
+                    <tr class="bg-white border-b">
+                        <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+                            <span class="text-rcpch_light_blue">
+                                {{ kpi_key|extract_digits:0 }}.
+                            </span> {{ kpi_value.kpi_label }}</td>
+                        <td class="px-6 py-4">
+                            <span class="tooltip" data-tip="Patients: {{kpi_value.patient_querysets.eligible|join_by_comma}}">
+                                {{ kpi_value.total_eligible }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="tooltip" data-tip="Patients: {{kpi_value.patient_querysets.ineligible|join_by_comma}}">
+                                {{ kpi_value.total_ineligible }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="tooltip" data-tip="Patients: {{kpi_value.patient_querysets.passed|join_by_comma}}">
+                                {{ kpi_value.total_passed }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="tooltip" data-tip="Patients: {{kpi_value.patient_querysets.failed|join_by_comma}}">
+                                {{ kpi_value.total_failed }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endif %}
+                {% endwith %}
+
             {% endif %}
+
         {% endfor %}
-        <!-- Sub-rows for KPI 32 -->
-        <tr class="bg-white border-b">
-            <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">KPI 32</td>
-            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_1_health_check_completion_rate.total_eligible }}</td>
-            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_1_health_check_completion_rate.total_passed }}</td>
-            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_1_health_check_completion_rate.total_failed }}</td>
-            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_1_health_check_completion_rate.total_ineligible }}</td>
-        </tr>
-        <tr class="bg-gray-50 border-b">
-            <td class="px-6 py-4 pl-12 font-medium text-gray-900 whitespace-nowrap">Care Process Completion Rate</td>
-            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_1_health_check_completion_rate.total_eligible }}</td>
-            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_1_health_check_completion_rate.total_passed }}</td>
-            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_1_health_check_completion_rate.total_failed }}</td>
-            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_1_health_check_completion_rate.total_ineligible }}</td>
-        </tr>
-        <tr class="bg-gray-50 border-b">
-            <td class="px-6 py-4 pl-12 font-medium text-gray-900 whitespace-nowrap">Health Check &lt; 12yo</td>
-            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_2_health_check_lt_12yo.total_eligible }}</td>
-            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_2_health_check_lt_12yo.total_passed }}</td>
-            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_2_health_check_lt_12yo.total_failed }}</td>
-            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_2_health_check_lt_12yo.total_ineligible }}</td>
-        </tr>
-        <tr class="bg-gray-50 border-b">
-            <td class="px-6 py-4 pl-12 font-medium text-gray-900 whitespace-nowrap">Health Check &gt;= 12yo</td>
-            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_3_health_check_gte_12yo.total_eligible }}</td>
-            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_3_health_check_gte_12yo.total_passed }}</td>
-            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_3_health_check_gte_12yo.total_failed }}</td>
-            <td class="px-6 py-4">{{ kpi_results.calculated_kpi_values.kpi_32_3_health_check_gte_12yo.total_ineligible }}</td>
-        </tr>
+        
     </tbody>
 </table>
 </div>
+

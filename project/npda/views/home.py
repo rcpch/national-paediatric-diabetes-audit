@@ -9,6 +9,7 @@ from django.core.exceptions import ValidationError
 from django.shortcuts import redirect, render
 from django.urls import reverse
 
+
 # HTMX imports
 from django_htmx.http import trigger_client_event
 
@@ -70,6 +71,7 @@ def home(request):
                 request=request,
                 message="File uploaded successfully. There are no errors,",
             )
+
             VisitActivity = apps.get_model("npda", "VisitActivity")
             try:
                 VisitActivity.objects.create(
@@ -182,13 +184,16 @@ def dashboard(request):
         )
         return render(request, "dashboard.html")
 
-    calculate_kpis = CalculateKPIS(calculation_date=datetime.date.today())
+    calculate_kpis = CalculateKPIS(
+        calculation_date=datetime.date.today(), return_pt_querysets=True
+    )
 
     kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
 
     context = {
         "pdu": pdu,
         "kpi_results": kpi_calculations_object,
+        "aggregation_level": "Paediatric Diabetes Unit",
     }
 
     return render(request, template_name=template, context=context)

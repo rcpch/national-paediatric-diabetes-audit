@@ -10,8 +10,9 @@ from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.tests.kpi_calculations.test_kpi_calculations import \
-    assert_kpi_result_equal
+from project.npda.tests.kpi_calculations.test_kpi_calculations import (
+    assert_kpi_result_equal,
+)
 
 
 @pytest.mark.django_db
@@ -29,6 +30,7 @@ def test_kpi_calculation_1(AUDIT_START_DATE):
         size=N_PATIENTS_ELIGIBLE,
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=1),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        postcode="eligible_patients",
     )
 
     # Create Patients and Visits that should FAIL KPI1
@@ -36,31 +38,48 @@ def test_kpi_calculation_1(AUDIT_START_DATE):
     ineligible_patients_visit_date: List[Patient] = PatientFactory.create_batch(
         size=N_PATIENTS_INELIGIBLE,
         visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
+        postcode="ineligible_patients_visit_date",
     )
     # Above age 25 at start of audit period
     ineligible_patients_too_old: List[Patient] = PatientFactory.create_batch(
         size=N_PATIENTS_INELIGIBLE,
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
+        postcode="ineligible_patients_too_old",
     )
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    calc_kpis = CalculateKPIS(
+        calculation_date=AUDIT_START_DATE,
+        return_pt_querysets=True,
+    )
     # Need to be mocked as not using public `calculate_kpis_for_*` methods
     calc_kpis.patients = Patient.objects.all()
     calc_kpis.total_patients_count = Patient.objects.count()
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=N_PATIENTS_ELIGIBLE,
-        total_passed=N_PATIENTS_PASS,
+        total_passed=None,
         # We have 2 sets of ineligible patients
         total_ineligible=N_PATIENTS_INELIGIBLE * 2,
-        total_failed=N_PATIENTS_FAIL * 2,
+        total_failed=None,
+        # Check correct patient querysets are returned
+        patient_querysets={
+            "eligible": Patient.objects.filter(postcode="eligible_patients"),
+            "ineligible": Patient.objects.filter(
+                postcode__startswith="ineligible_patients"
+            ),
+            "passed": Patient.objects.filter(postcode="eligible_patients"),
+            "failed": Patient.objects.filter(postcode="eligible_patients"),
+        },
     )
+    ACTUAL_KPIRESULT = calc_kpis.calculate_kpi_1_total_eligible()
 
     assert_kpi_result_equal(
         expected=EXPECTED_KPIRESULT,
-        actual=calc_kpis.calculate_kpi_1_total_eligible(),
+        actual=ACTUAL_KPIRESULT,
     )
+
+    # Check correct patient querysets are returned
 
 
 @pytest.mark.django_db
@@ -109,10 +128,10 @@ def test_kpi_calculation_2(AUDIT_START_DATE):
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=N_PATIENTS_ELIGIBLE,
-        total_passed=N_PATIENTS_PASS,
+        total_passed=None,
         # We have 3 sets of ineligible patients
         total_ineligible=N_PATIENTS_INELIGIBLE * 3,
-        total_failed=N_PATIENTS_FAIL * 3,
+        total_failed=None,
     )
 
     assert_kpi_result_equal(
@@ -168,10 +187,10 @@ def test_kpi_calculation_3(AUDIT_START_DATE):
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=N_PATIENTS_ELIGIBLE,
-        total_passed=N_PATIENTS_PASS,
+        total_passed=None,
         # We have 3 sets of ineligible patients
         total_ineligible=N_PATIENTS_INELIGIBLE * 3,
-        total_failed=N_PATIENTS_FAIL * 3,
+        total_failed=None,
     )
 
     assert_kpi_result_equal(
@@ -235,10 +254,10 @@ def test_kpi_calculation_4(AUDIT_START_DATE):
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=N_PATIENTS_ELIGIBLE,
-        total_passed=N_PATIENTS_PASS,
+        total_passed=None,
         # We have 4 sets of ineligible patients
         total_ineligible=N_PATIENTS_INELIGIBLE * 4,
-        total_failed=N_PATIENTS_FAIL * 4,
+        total_failed=None,
     )
 
     assert_kpi_result_equal(
@@ -340,9 +359,9 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=EXPECTED_TOTAL_ELIGIBLE,
-        total_passed=EXPECTED_TOTAL_ELIGIBLE,
+        total_passed=None,
         total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
-        total_failed=EXPECTED_TOTAL_INELIGIBLE,
+        total_failed=None,
     )
 
     assert_kpi_result_equal(
@@ -465,9 +484,9 @@ def test_kpi_calculation_6(AUDIT_START_DATE):
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=EXPECTED_TOTAL_ELIGIBLE,
-        total_passed=EXPECTED_TOTAL_ELIGIBLE,
+        total_passed=None,
         total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
-        total_failed=EXPECTED_TOTAL_INELIGIBLE,
+        total_failed=None,
     )
 
     assert_kpi_result_equal(
@@ -549,9 +568,9 @@ def test_kpi_calculation_7(AUDIT_START_DATE):
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=EXPECTED_TOTAL_ELIGIBLE,
-        total_passed=EXPECTED_TOTAL_ELIGIBLE,
+        total_passed=None,
         total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
-        total_failed=EXPECTED_TOTAL_INELIGIBLE,
+        total_failed=None,
     )
 
     assert_kpi_result_equal(
@@ -614,9 +633,9 @@ def test_kpi_calculation_8(AUDIT_START_DATE):
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=EXPECTED_TOTAL_ELIGIBLE,
-        total_passed=EXPECTED_TOTAL_ELIGIBLE,
+        total_passed=None,
         total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
-        total_failed=EXPECTED_TOTAL_INELIGIBLE,
+        total_failed=None,
     )
 
     assert_kpi_result_equal(
@@ -687,9 +706,9 @@ def test_kpi_calculation_9(AUDIT_START_DATE):
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=EXPECTED_TOTAL_ELIGIBLE,
-        total_passed=EXPECTED_TOTAL_ELIGIBLE,
+        total_passed=None,
         total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
-        total_failed=EXPECTED_TOTAL_INELIGIBLE,
+        total_failed=None,
     )
 
     assert_kpi_result_equal(
@@ -753,9 +772,9 @@ def test_kpi_calculation_10(AUDIT_START_DATE):
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=EXPECTED_TOTAL_ELIGIBLE,
-        total_passed=EXPECTED_TOTAL_ELIGIBLE,
+        total_passed=None,
         total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
-        total_failed=EXPECTED_TOTAL_INELIGIBLE,
+        total_failed=None,
     )
 
     assert_kpi_result_equal(
@@ -828,9 +847,9 @@ def test_kpi_calculation_11(AUDIT_START_DATE):
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=EXPECTED_TOTAL_ELIGIBLE,
-        total_passed=EXPECTED_TOTAL_ELIGIBLE,
+        total_passed=None,
         total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
-        total_failed=EXPECTED_TOTAL_INELIGIBLE,
+        total_failed=None,
     )
 
     assert_kpi_result_equal(
@@ -894,9 +913,9 @@ def test_kpi_calculation_12(AUDIT_START_DATE):
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=EXPECTED_TOTAL_ELIGIBLE,
-        total_passed=EXPECTED_TOTAL_ELIGIBLE,
+        total_passed=None,
         total_ineligible=EXPECTED_TOTAL_INELIGIBLE,
-        total_failed=EXPECTED_TOTAL_INELIGIBLE,
+        total_failed=None,
     )
 
     assert_kpi_result_equal(
