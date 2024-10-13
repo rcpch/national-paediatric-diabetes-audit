@@ -32,9 +32,7 @@ def assert_kpi_result_equal(
             f"expected must be of type KPIResult (current: {type(expected)}"
         )
     if isinstance(actual, KPIResult) is False:
-        raise TypeError(
-            f"actual must be of type KPIResult (current: {type(actual)}"
-        )
+        raise TypeError(f"actual must be of type KPIResult (current: {type(actual)}")
 
     mismatches = []
 
@@ -129,9 +127,7 @@ def test_kpi_calculations_dont_break_when_no_patients(
     kpi_calculation_method = getattr(kpi_calculator, calculation_method)
     kpi_calculations_object = kpi_calculation_method(**calculation_args)
 
-    for kpi, results in kpi_calculations_object[
-        "calculated_kpi_values"
-    ].items():
+    for kpi, results in kpi_calculations_object["calculated_kpi_values"].items():
         # remove the kpi_label key from the results
         results.pop("kpi_label", None)
         # also remove the patient_querysets key from the results
@@ -139,9 +135,11 @@ def test_kpi_calculations_dont_break_when_no_patients(
 
         values = list(results.values())
 
+        # if this is one of measures 1-12, the pass and failed keys will contain None - remove them
         assert all(
             [
                 isinstance(value, int) or isinstance(value, float)
                 for value in values
+                if value is not None
             ]
         ), f"KPI {kpi} has non-integer values: {results}"
