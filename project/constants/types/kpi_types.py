@@ -39,9 +39,10 @@ class KPIResult:
 
     total_eligible: int
     total_ineligible: int
-    total_passed: int
-    total_failed: int
-    patient_querysets: Optional[Dict[str, QuerySet[Patient]]] = None
+    total_passed: Union[int | None]  # E.g. KPIs 1-12 would be None as counts
+    total_failed: Union[int | None]  # E.g. KPIs 1-12 would be None as counts
+    kpi_label: str
+    patient_querysets: Union[Dict[str, QuerySet[Patient]], None] = None
 
 
 @dataclass
@@ -52,7 +53,7 @@ class KPICalculationsObject:
     total_patients_count: int
     calculated_kpi_values: Dict[
         str,
-        Union[KPIResult | None],
+        KPIResult,
     ]
 
 
