@@ -7,8 +7,9 @@ from project.constants.diabetes_treatment import TREATMENT_TYPES
 from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
 from project.npda.tests.factories.patient_factory import PatientFactory
-from project.npda.tests.kpi_calculations.test_kpi_calculations import \
-    assert_kpi_result_equal
+from project.npda.tests.kpi_calculations.test_kpi_calculations import (
+    assert_kpi_result_equal,
+)
 
 # Set up test params for kpis 13-20, as they all have the same denominator
 # and the only thing being changed is value for visit__treatment
@@ -88,7 +89,7 @@ def test_kpi_calculations_13_to_20(
     #   these kpi calulations start at 13
     #   so just offset by 12 to get kpi number
     kpi_number = treatment + 12
-    kpi_method_name = calc_kpis.kpis_names_map[kpi_number]
+    kpi_method_name = calc_kpis.kpi_name_registry.get_attribute_name(kpi_number)
     kpi_calc_method = getattr(calc_kpis, f"calculate_{kpi_method_name}")
     assert_kpi_result_equal(
         expected=expected_result,
