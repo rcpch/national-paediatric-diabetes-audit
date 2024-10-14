@@ -7,7 +7,7 @@ from datetime import date
 
 import pytest
 
-from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
+from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult, kpi_registry
 from project.npda.models.patient import Patient
 
 # Logging
@@ -143,3 +143,41 @@ def test_kpi_calculations_dont_break_when_no_patients(
                 if value is not None
             ]
         ), f"KPI {kpi} has non-integer values: {results}"
+
+
+@pytest.mark.django_db
+def test_calculate_kpis_return_obj_has_correct_kpi_labels(AUDIT_START_DATE):
+    """Tests that the CalculateKPIS object has the correct KPI label for each
+    KPI.
+
+    Do this by taking the kpi_registry and comparing it to the result object.
+
+    The CalculateKPIS is a pretty thin wrapper around the kpi_registry anyway but this is to ensure
+    that the KPI labels are correctly set.
+    """
+    kpi_calculator = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+
+    kpi_calc_obj = kpi_calculator.calculate_kpis_for_patients(Patient.objects.all())
+
+    kpi_results_obj = kpi_calc_obj["calculated_kpi_values"]
+
+    for actual_kpi_attribute_name, result_obj in kpi_results_obj.items():
+        actual_kpi_label = result_obj["kpi_label"]
+
+        # Get the expected KPI label from the registry
+        kpi_names_split = actual_kpi_attribute_name.split("_")
+
+        kpi_number = int(kpi_names_split[1])
+        if kpi_number == 32:
+            kpi_number = 320 + int(kpi_names_split[2])  # offset for subkpis
+
+        EXPECTED_KPI_NAMES = kpi_registry.get_kpi(kpi_number)
+
+        assert (
+            actual_kpi_attribute_name == EXPECTED_KPI_NAMES.attribute_name
+        ), f"KPI {actual_kpi_attribute_name} has incorrect attribute name: "
+        "{actual_kpi_attribute_name}"
+
+        assert (
+            actual_kpi_label == EXPECTED_KPI_NAMES.rendered_label
+        ), f"KPI {actual_kpi_attribute_name} has incorrect label: {actual_kpi_label}"
