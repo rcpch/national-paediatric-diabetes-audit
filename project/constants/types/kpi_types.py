@@ -1,7 +1,7 @@
 # Object types
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 from django.db.models import QuerySet
 
@@ -52,7 +52,7 @@ class KPICalculationsObject:
     total_patients_count: int
     calculated_kpi_values: Dict[
         str,
-        KPIResult,
+        Union[KPIResult | None],
     ]
 
 
