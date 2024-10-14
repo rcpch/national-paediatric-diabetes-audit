@@ -41,7 +41,7 @@ class KPIResult:
     total_ineligible: int
     total_passed: Union[int | None]  # E.g. KPIs 1-12 would be None as counts
     total_failed: Union[int | None]  # E.g. KPIs 1-12 would be None as counts
-    kpi_label: str
+    kpi_label: str = "KPI Name not found"
     patient_querysets: Union[Dict[str, QuerySet[Patient]], None] = None
 
 
