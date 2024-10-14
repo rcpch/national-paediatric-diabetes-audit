@@ -42,7 +42,7 @@ class Patient(models.Model):
     """
 
     nhs_number = CharField(  # the NHS number for England and Wales
-        "NHS Number", unique=True, validators=[validate_nhs_number]
+        "NHS Number", unique=False, validators=[validate_nhs_number]
     )
 
     sex = models.IntegerField("Stated gender", choices=SEX_TYPE, blank=True, null=True)
@@ -144,8 +144,12 @@ class Patient(models.Model):
     def save(self, *args, **kwargs) -> None:
         if self.postcode:
             try:
-                self.index_of_multiple_deprivation_quintile = imd_for_postcode(self.postcode)
+                self.index_of_multiple_deprivation_quintile = imd_for_postcode(
+                    self.postcode
+                )
             except RequestException as err:
-                logger.warning(f"Cannot calculate deprivation score for {self.postcode} {err}")
-        
+                logger.warning(
+                    f"Cannot calculate deprivation score for {self.postcode} {err}"
+                )
+
         return super().save(*args, **kwargs)
