@@ -71,18 +71,22 @@ class CalculateKPIS:
             * return_pt_querysets (bool) - if True, will return the querysets
             of patients for each kpi calculation
 
-        Exposes 2 methods:
+        Exposes methods:
             1) calculate_kpis_for_patients (QuerySet[Patient])
                 - Calculate KPIs for given patients.
             2) calculate_kpis_for_pdus (list[str])
                 - Calculate KPIs for given PZ codes.
 
-            Each method works to set the `self.patients` and
+            Each calculation method works to set the `self.patients` and
             `self.total_patients_count` attributes used throughout all
             calculations.
 
             Both methods return a KPICalculationsObject dataclass instance,
             containing all KPIAggregation results.
+
+        Exposes attributes:
+            * kpi_name_registry (KPINameRegistry) - used to get the kpi method name / label from
+            the kpi number
         """
 
         # Set various attributes used in calculations
