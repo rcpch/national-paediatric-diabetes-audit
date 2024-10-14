@@ -16,6 +16,7 @@ from django.contrib.auth import login, authenticate
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.utils.html import strip_tags
 from django.conf import settings
+from django.core.exceptions import PermissionDenied
 
 # third party imports
 from two_factor.views import LoginView as TwoFactorLoginView

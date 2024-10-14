@@ -1,0 +1,11 @@
+{% extends "errors/error_base.html" %}
+
+{% block error_number %}
+400
+{% endblock %}
+
+{% block error_msg %}
+<p class="mb-8 text-lg font-normal lg:text-xl sm:px-16 xl:px-48 text-white">We're sorry about this, but the server will
+  not/cannot process your request. This may be due to a client error or a malformed request. <br> Please try again.
+</p>
+{% endblock %}
