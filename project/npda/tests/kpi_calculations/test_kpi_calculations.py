@@ -15,7 +15,10 @@ logger = logging.getLogger(__name__)
 
 
 # HELPERS
-def assert_kpi_result_equal(expected: KPIResult, actual: KPIResult) -> None:
+def assert_kpi_result_equal(
+    expected: KPIResult,
+    actual: KPIResult,
+) -> None:
     """
     Asserts that two KPIResult objects are equal by comparing their fields and provides
     a detailed error message if they are not.
@@ -53,6 +56,31 @@ def assert_kpi_result_equal(expected: KPIResult, actual: KPIResult) -> None:
             f"total_failed: expected {expected.total_failed}, got {actual.total_failed}"
         )
 
+    # Queryset checks
+    if expected.patient_querysets is not None:
+        # If actual.patient_querysets is None, we can't compare the querysets
+        if actual.patient_querysets is None:
+            mismatches.append(
+                f"patient_querysets: expected {expected.patient_querysets}, got None"
+            )
+        else:
+            # For each pt queryset in expected, check if the actual queryset is
+            # the same
+            for key, expected_queryset in expected.patient_querysets.items():
+
+                actual_queryset = actual.patient_querysets.get(key)
+
+                # Convert to list and order by id to compare
+                expected_queryset = list(expected_queryset.order_by("id"))
+                actual_queryset = list(actual_queryset.order_by("id"))
+
+                if expected_queryset != actual_queryset:
+                    mismatches.append(
+                        f"patient_querysets[{key}]:"
+                        f"\nexpected_queryset\n\t{expected_queryset}"
+                        f"\nactual_queryset\n\t{actual_queryset}\n"
+                    )
+
     if mismatches:
         mismatch_details = "\n".join(mismatches)
         raise AssertionError(f"KPIResult mismatch:\n{mismatch_details}")
@@ -61,9 +89,7 @@ def assert_kpi_result_equal(expected: KPIResult, actual: KPIResult) -> None:
 @pytest.mark.django_db
 def test_ensure_mocked_audit_date_range_is_correct(AUDIT_START_DATE):
     """Ensure that the mocked audit date range is correct."""
-    calc_kpis = CalculateKPIS(
-        pz_codes=["mocked_pz_code"], calculation_date=AUDIT_START_DATE
-    )
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
 
     assert calc_kpis.audit_start_date == date(
         2024, 4, 1
@@ -73,8 +99,19 @@ def test_ensure_mocked_audit_date_range_is_correct(AUDIT_START_DATE):
     ), f"Mocked audit end date incorrect!"
 
 
+@pytest.mark.parametrize(
+    "calculation_method, calculation_args",
+    [
+        ("calculate_kpis_for_patients", {"patients": Patient.objects.all()}),
+        ("calculate_kpis_for_pdus", {"pz_codes": ["mocked_pz_code"]}),
+    ],
+)
 @pytest.mark.django_db
-def test_kpi_calculations_dont_break_when_no_patients(AUDIT_START_DATE):
+def test_kpi_calculations_dont_break_when_no_patients(
+    calculation_method,
+    calculation_args,
+    AUDIT_START_DATE,
+):
     """Tests none of the KPIs break when no patients are present.
 
     Just runs all KPI calculations with no patients present.
@@ -84,16 +121,25 @@ def test_kpi_calculations_dont_break_when_no_patients(AUDIT_START_DATE):
     Patient.objects.all().delete()
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
-    kpi_calculations_object = CalculateKPIS(
-        pz_codes=["PZ130"], calculation_date=AUDIT_START_DATE
-    ).calculate_kpis_for_patients()
+    kpi_calculator = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+
+    # Run each calculation method
+    kpi_calculation_method = getattr(kpi_calculator, calculation_method)
+    kpi_calculations_object = kpi_calculation_method(**calculation_args)
 
     for kpi, results in kpi_calculations_object["calculated_kpi_values"].items():
         # remove the kpi_label key from the results
         results.pop("kpi_label", None)
+        # also remove the patient_querysets key from the results
+        results.pop("patient_querysets", None)
 
         values = list(results.values())
 
+        # if this is one of measures 1-12, the pass and failed keys will contain None - remove them
         assert all(
-            [isinstance(value, int) or isinstance(value, float) for value in values]
+            [
+                isinstance(value, int) or isinstance(value, float)
+                for value in values
+                if value is not None
+            ]
         ), f"KPI {kpi} has non-integer values: {results}"

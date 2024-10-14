@@ -1,28 +1,23 @@
 # python imports
-from datetime import date
 import logging
-
-# django imports
-from django.apps import apps
-from django.core.exceptions import ValidationError
-from django import forms
-
-# third-party imports
-from dateutil.relativedelta import relativedelta
-from requests import RequestException
+from datetime import date
 
 # project imports
 import nhs_number
-from ..models import Patient
-from ...constants.styles.form_styles import *
-from ..general_functions import (
-    validate_postcode,
-    gp_ods_code_for_postcode,
-    gp_details_for_ods_code,
-    imd_for_postcode
-)
-from ..validators import not_in_the_future_validator
+# third-party imports
+from dateutil.relativedelta import relativedelta
+from django import forms
+# django imports
+from django.apps import apps
+from django.core.exceptions import ValidationError
+from requests import RequestException
 
+from ...constants.styles.form_styles import *
+from ..general_functions import (gp_details_for_ods_code,
+                                 gp_ods_code_for_postcode, imd_for_postcode,
+                                 validate_postcode)
+from ..models import Patient
+from ..validators import not_in_the_future_validator
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +29,7 @@ class DateInput(forms.DateInput):
 class NHSNumberField(forms.CharField):
     def to_python(self, value):
         number = super().to_python(value)
-        normalised = nhs_number.normalise_number(number)
+        normalised = nhs_number.standardise_format(number)
 
         # For some combinations we get back an empty string (eg '719-573 0220')
         return normalised or value
@@ -103,13 +98,13 @@ class PatientForm(forms.ModelForm):
                 )
 
         return date_of_birth
-    
+
     def clean_postcode(self):
         postcode = self.cleaned_data["postcode"]
 
         try:
             result = validate_postcode(postcode)
-            
+
             if not result:
                 self.add_error(
                     "postcode",

@@ -1,15 +1,15 @@
 import pytest
 import pandas as pd
 import nhs_number
-
 from dateutil.relativedelta import relativedelta
 from unittest.mock import Mock, patch
 from requests import RequestException
 
 from django.core.exceptions import ValidationError
+from requests import RequestException
 
+from project.npda.general_functions.csv_upload import csv_upload, read_csv
 from project.npda.models import NPDAUser, Patient, Visit
-from project.npda.general_functions.csv_upload import read_csv, csv_upload
 from project.npda.tests.factories.patient_factory import (
     TODAY,
     VALID_FIELDS,

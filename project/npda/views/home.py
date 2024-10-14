@@ -6,22 +6,22 @@ import logging
 from django.apps import apps
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.urls import reverse
-from django.shortcuts import redirect
+
 
 # HTMX imports
 from django_htmx.http import trigger_client_event
 
-# RCPCH imports
-from .decorators import login_and_otp_required
+from ..forms.upload import UploadFileForm
+from ..general_functions.csv_summarize import csv_summarize
 from ..general_functions.csv_upload import csv_upload, read_csv
 from ..general_functions.session import get_new_session_fields
 from ..general_functions.view_preference import get_or_update_view_preference
-from ..general_functions.csv_summarize import csv_summarize
-from ..forms.upload import UploadFileForm
 from ..kpi_class.kpis import CalculateKPIS
 
+# RCPCH imports
+from .decorators import login_and_otp_required
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ def home(request):
         file = request.FILES["csv_upload"]
         pz_code = request.session.get("pz_code")
 
-        summary = csv_summarize(csv_file=file)
+        # summary = csv_summarize(csv_file=file)
 
         # You can't read the same file twice without resetting it
         file.seek(0)
@@ -67,7 +67,11 @@ def home(request):
                 csv_file=file,
                 pdu_pz_code=pz_code,
             )
-            messages.success(request=request, message="File uploaded successfully")
+            messages.success(
+                request=request,
+                message="File uploaded successfully. There are no errors,",
+            )
+
             VisitActivity = apps.get_model("npda", "VisitActivity")
             try:
                 VisitActivity.objects.create(
@@ -79,17 +83,14 @@ def home(request):
                 logger.error(f"Failed to log user activity: {e}")
         except ValidationError as error:
             errors = error_list(error)
+            for error in errors:
+                messages.error(
+                    request=request,
+                    message=f"CSV has been uploaded, but errors have been found. These include error in row {error['original_row_index']}: {error['message']}",
+                )
+            pass
 
-        return render(
-            request=request,
-            template_name="home.html",
-            context={
-                "file_uploaded": True,
-                "summary": summary,
-                "form": form,
-                "errors": errors,
-            },
-        )
+        return redirect("submissions")
     else:
         form = UploadFileForm()
 
@@ -183,11 +184,16 @@ def dashboard(request):
         )
         return render(request, "dashboard.html")
 
-    # accepts a list of PZ codes
-    pdu_kpis = CalculateKPIS(
-        pz_codes=[pz_code], calculation_date=datetime.date.today()
-    )  # accepts a list of PZ codes
+    calculate_kpis = CalculateKPIS(
+        calculation_date=datetime.date.today(), return_pt_querysets=True
+    )
 
-    context = {"pdu": pdu, "kpi_results": pdu_kpis.calculate_kpis_for_patients()}
+    kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
+
+    context = {
+        "pdu": pdu,
+        "kpi_results": kpi_calculations_object,
+        "aggregation_level": "Paediatric Diabetes Unit",
+    }
 
     return render(request, template_name=template, context=context)

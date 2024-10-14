@@ -2,14 +2,13 @@
 """
 
 import logging
-import time
-from dataclasses import asdict, dataclass, is_dataclass
+from dataclasses import asdict, is_dataclass
 from datetime import date, datetime, timedelta
 
 # Python imports
 from decimal import Decimal
 from pprint import pformat
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
 
 from dateutil.relativedelta import relativedelta
 
@@ -30,8 +29,6 @@ from django.db.models import (
     Sum,
     When,
 )
-from django.shortcuts import render
-from django.views.generic import TemplateView
 
 # NPDA Imports
 from project.constants.albuminuria_stage import ALBUMINURIA_STAGES
@@ -44,7 +41,6 @@ from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 from project.npda.general_functions import get_audit_period_for_date
 from project.npda.models import Patient, Visit
 
-
 # Logging
 logger = logging.getLogger(__name__)
 
@@ -55,19 +51,33 @@ class CalculateKPIS:
     """
 
     def __init__(
-        self, pz_codes: list[str], calculation_date: date = None, patients=None
+        self,
+        calculation_date: date = None,
+        return_pt_querysets: bool = False,
     ):
         """Calculates KPIs for given pz_code
 
-        Params:
-            * pz_code (str) - PZ code for KPIS: accepts a list of PZ codes as this allows aggregation of KPIs across multiple PZ codes to calculate KPIs for a region or the whole country
-            * calculation_date (date) - used to define start and end date of audit period
-            * patients (QuerySet) - optional, used to define patients for KPI calculations: this can be used to calculate KPIs for a subset of patients or an individual patient - if not provided, all patients for the given PZ code will be used
+        Initialise with:
+            * calculation_date (date) - used to define start and end date of
+            audit period
+            * return_pt_querysets (bool) - if True, will return the querysets
+            of patients for each kpi calculation
+
+        Exposes 2 methods:
+            1) calculate_kpis_for_patients (QuerySet[Patient])
+                - Calculate KPIs for given patients.
+            2) calculate_kpis_for_pdus (list[str])
+                - Calculate KPIs for given PZ codes.
+
+            Each method works to set the `self.patients` and
+            `self.total_patients_count` attributes used throughout all
+            calculations.
+
+            Both methods return a KPICalculationsObject dataclass instance,
+            containing all KPIAggregation results.
         """
-        if not pz_codes or len(pz_codes) == 0:
-            raise AttributeError("pz_code must be provided")
+
         # Set various attributes used in calculations
-        self.pz_codes = pz_codes
         self.calculation_date = (
             calculation_date if calculation_date is not None else date.today()
         )
@@ -77,22 +87,111 @@ class CalculateKPIS:
         )
         self.AUDIT_DATE_RANGE = (self.audit_start_date, self.audit_end_date)
 
+        # Set the return_pt_querysets attribute
+        self.return_pt_querysets = return_pt_querysets
+
         # Sets the KPI attribute names map
         self.kpis_names_map = self._get_kpi_attribute_names()
 
-        # Sets relevant patients for this PZ code
-        # NOTE: the first `paediatric_diabetes_units` uses the `related_name` from the
-        # `Transfer` link table, the second `paediatric_diabetes_unit` actually
-        # accesses the `PaediatricDiabetesUnit` model.
-        # TODO: should this filter out patients who have left the service?
-        if patients is None:
-            self.patients = Patient.objects.filter(
-                paediatric_diabetes_units__paediatric_diabetes_unit__pz_code__in=pz_codes
-            ).distinct()
-            self.total_patients_count = self.patients.count()
-        else:
-            self.patients = patients
-            self.total_patients_count = self.patients.count()
+    def calculate_kpis_for_patients(
+        self,
+        patients: QuerySet[Patient],
+        exclude_one_to_twelve: bool = False,
+    ) -> KPICalculationsObject:
+        """Calculate KPIs 1 - 49 for given patients and cohort range
+        (self.audit_start_date and self.audit_end_date).
+
+        Params:
+            * patients (QuerySet[Patient]) - Queryset of patients
+            for KPI calculations and aggregations.
+            * exclude_one_to_twelve (bool) - If True, will exclude KPIs 1-12 - this is because these are summary counts, and do not apply to individual patients.
+        """
+
+        self.patients = patients
+        self.total_patients_count = self.patients.count()
+
+        return self._calculate_kpis(exclude_one_to_twelve=exclude_one_to_twelve)
+
+    def calculate_kpis_for_pdus(
+        self,
+        pz_codes: list[str],
+    ) -> KPICalculationsObject:
+        """Calculate KPIs 1 - 49 for given pz_codes and cohort range
+        (self.audit_start_date and self.audit_end_date).
+
+        Params:
+            * pz_codes (list[str]) - List of PZ codes used to filter patients
+            for KPI calculations and aggregations."""
+
+        self.patients = Patient.objects.filter(
+            paediatric_diabetes_units__paediatric_diabetes_unit__pz_code__in=pz_codes
+        )
+        self.total_patients_count = self.patients.count()
+
+        return self._calculate_kpis(exclude_one_to_twelve=False)
+
+    def _calculate_kpis(self, exclude_one_to_twelve=True) -> KPICalculationsObject:
+        """Calculate KPIs 1 - 49 for set self.patients and cohort range
+        (self.audit_start_date and self.audit_end_date).
+
+        We dynamically set these attributes using names set in self.kpis, done
+        in the self._get_kpi_attribute_names method during object init.
+
+        Incrementally build the query, which will be executed in a single
+        transaction once a value is evaluated.
+
+        if exclude_one_to_twelve is True, will exclude KPIs 1-12 - this is because these are summary counts, and do not apply to individual patients.
+        """
+        # Init dict to store calc results
+        calculated_kpis = {}
+
+        # Standard KPIs (all excluding KPI32)
+        kpi_idxs = list(range(1, 32)) + (list(range(33, 50)))
+        # Now add kpi32 which has 3 sub kpis (321, 322, 323) in the middle
+        kpi_idxs = (
+            kpi_idxs[: kpi_idxs.index(31) + 1]
+            + [321, 322, 323]
+            + kpi_idxs[kpi_idxs.index(31) + 1 :]
+        )
+
+        for i in kpi_idxs:
+            # Dynamically get the method name from the kpis_names_map
+            kpi_method_name = self.kpis_names_map[i]
+
+            kpi_result = self._run_kpi_calculation_method(kpi_method_name)
+
+            # Each kpi method returns a KPIResult object
+            # so we convert it first to a dictionary
+            calculated_kpis[kpi_method_name] = asdict(kpi_result)
+
+        # Add in used attributes for calculations
+        return_obj = {}
+        return_obj["calculation_datetime"] = datetime.now()
+        return_obj["audit_start_date"] = self.audit_start_date
+        return_obj["audit_end_date"] = self.audit_end_date
+        return_obj["total_patients_count"] = self.total_patients_count
+
+        # Finally, add in the kpis
+        return_obj["calculated_kpi_values"] = {}
+
+        for kpi_name, kpi_result in calculated_kpis.items():
+
+            if exclude_one_to_twelve:
+                # Exclude KPIs 1-12 - these are summary counts, and do not apply to individual patients
+                if int(kpi_name.split("_")[1]) in range(1, 13):
+                    continue
+
+            return_obj["calculated_kpi_values"][kpi_name] = kpi_result
+            if int(kpi_name.split("_")[1]) == 32:
+                return_obj["calculated_kpi_values"][kpi_name]["kpi_label"] = (
+                    self.title_for_kpi(320 + int(kpi_name.split("_")[2]))
+                )
+            else:
+                return_obj["calculated_kpi_values"][kpi_name]["kpi_label"] = (
+                    self.title_for_kpi(int(kpi_name.split("_")[1]))
+                )
+
+        return return_obj
 
     def _get_audit_start_and_end_dates(self) -> tuple[date, date]:
         return get_audit_period_for_date(input_date=self.calculation_date)
@@ -239,18 +338,11 @@ class CalculateKPIS:
         self, kpi_method_name: str
     ) -> Union[KPIResult | str]:
         """Will find and run kpi calculation method
-        (name schema is calculation_KPI_NAME_MAP_VALUE) if found, else returns
-        the string "Not implemented".
+        (name schema is calculation_KPI_NAME_MAP_VALUE)
         """
 
         kpi_method = getattr(self, f"calculate_{kpi_method_name}", None)
 
-        # If the method is not implemented, set the value to "Not implemented"
-        # and skip
-        if kpi_method is None:
-            return "Not implemented"
-
-        # Else, calculate the KPI
         kpi_result = kpi_method()
 
         # Validations
@@ -265,55 +357,49 @@ class CalculateKPIS:
 
         return kpi_result
 
-    def calculate_kpis_for_patients(self) -> KPICalculationsObject:
-        """Calculate KPIs 1 - 49 for given self.pz_code and cohort range
-        (self.audit_start_date and self.audit_end_date).
+    def _get_pt_querysets_object(
+        self,
+        eligible: QuerySet[Patient],
+        passed: QuerySet[Patient],
+        ineligible: Optional[QuerySet[Patient]] = None,
+        failed: Optional[QuerySet[Patient]] = None,
+    ) -> Optional[dict[str, QuerySet[Patient]]]:
+        """Helper method to get a dictionary of querysets for patients.
 
-        We dynamically set these attributes using names set in self.kpis, done in
-        the self._get_kpi_attribute_names method during object init.
+        if `self.return_pt_querysets` is False, will return None
 
-        Incrementally build the query, which will be executed in a single
-        transaction once a value is evaluated.
+        NOTE:
+            - eligible and passed are required
+            - ineligible if not provided is found from filtering out eligible
+                patients from self.patients
+            - failed if not provided is found from filtering out passed
+                patients from eligible patients
         """
-        # Init dict to store calc results
-        calculated_kpis = {}
 
-        # Standard KPIs (all excluding KPI32)
-        kpi_idxs = list(range(1, 32)) + (list(range(33, 50)))
-        # Now add kpi32 which has 3 sub kpis
-        kpi_idxs.extend([321, 322, 323])
-        for i in kpi_idxs:
-            # Dynamically get the method name from the kpis_names_map
-            kpi_method_name = self.kpis_names_map[i]
+        if self.return_pt_querysets is False:
+            return None
 
-            kpi_result = self._run_kpi_calculation_method(kpi_method_name)
+        if eligible is None or passed is None:
+            raise ValueError("at least both of eligible and passed are required")
 
-            # If calculation_method name not found, kpi_result will be
-            # "Not implemented"
-            if type(kpi_result) == str:
-                calculated_kpis[kpi_method_name] = kpi_result
-            else:
-                # Each kpi method returns a KPIResult object
-                # so we convert it first to a dictionary
-                calculated_kpis[kpi_method_name] = asdict(kpi_result)
-
-        # Add in used attributes for calculations
-        return_obj = {}
-        return_obj["pz_codes"] = self.pz_codes
-        return_obj["calculation_datetime"] = datetime.now()
-        return_obj["audit_start_date"] = self.audit_start_date
-        return_obj["audit_end_date"] = self.audit_end_date
-        return_obj["total_patients_count"] = self.total_patients_count
-
-        # Finally, add in the kpis
-        return_obj["calculated_kpi_values"] = {}
-        for kpi_name, kpi_result in calculated_kpis.items():
-            return_obj["calculated_kpi_values"][kpi_name] = kpi_result
-            return_obj["calculated_kpi_values"][kpi_name]["kpi_label"] = (
-                self.title_for_kpi(int(kpi_name.split("_")[1]))
+        if ineligible is None:
+            ineligible = self.patients.exclude(
+                # Subquery will execute on db level rather than python level
+                pk__in=Subquery(eligible.values("pk"))
             )
 
-        return return_obj
+        if failed is None:
+            failed = eligible.exclude(
+                # Subquery will execute on db level rather than python level
+                pk__in=Subquery(passed.values("pk"))
+            )
+
+        return {
+            "eligible": eligible,
+            "ineligible": ineligible,
+            "passed": passed,
+            "failed": failed,
+        }
 
     def calculate_kpi_1_total_eligible(self) -> KPIResult:
         """
@@ -324,6 +410,10 @@ class CalculateKPIS:
             * a valid PDU number
             * a visit date or admission date within the audit period
             * Below the age of 25 at the start of the audit period
+
+        NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
 
         # Set the query set as an attribute to be used in subsequent KPI calculations
@@ -335,7 +425,11 @@ class CalculateKPIS:
             & Q(visit__visit_date__range=(self.AUDIT_DATE_RANGE))
             # Below the age of 25 at the start of the audit period
             & Q(date_of_birth__gt=self.audit_start_date - relativedelta(years=25))
-        )
+        ).distinct()  # When you filter on a related model field
+        # (visit__visit_date__range), Django performs a join between the
+        # Patient model and the Visit model. If a patient has multiple visits
+        # that fall within the specified date range, the patient will appear
+        # multiple times in the filtered queryset—once for each matching visit.
 
         # Count eligible patients and set as attribute
         # to be used in subsequent KPI calculations
@@ -346,14 +440,23 @@ class CalculateKPIS:
         total_ineligible = self.total_patients_count - total_eligible
 
         # Assuming total_passed is equal to total_number_of_eligible_patients_kpi_1 and total_failed is equal to total_ineligible
-        total_passed = total_eligible
-        total_failed = total_ineligible
+        total_passed = None
+        total_failed = None
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=self.total_kpi_1_eligible_pts_base_query_set,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=self.total_kpi_1_eligible_pts_base_query_set,
+            failed=self.total_kpi_1_eligible_pts_base_query_set,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_2_total_new_diagnoses(self) -> KPIResult:
@@ -367,6 +470,14 @@ class CalculateKPIS:
         * a visit date or admission date within the audit period
         * Below the age of 25 at the start of the audit period
         * Date of diagnosis within the audit period"
+
+        NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
+
+        NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
 
         base_eligible_patients, _ = (
@@ -387,14 +498,23 @@ class CalculateKPIS:
 
         # This is just a count so pass/fail doesn't make sense; just set to same
         # as eligible/ineligible
-        total_passed = total_eligible
-        total_failed = total_ineligible
+        total_passed = None
+        total_failed = None
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=self.total_kpi_2_eligible_pts_base_query_set,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=self.total_kpi_1_eligible_pts_base_query_set,
+            failed=self.total_kpi_1_eligible_pts_base_query_set,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_3_total_t1dm(self) -> KPIResult:
@@ -409,6 +529,10 @@ class CalculateKPIS:
             * Diagnosis of Type 1 diabetes"
 
         (1, Type 1 Insulin-Dependent Diabetes Mellitus)
+
+        NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
         base_eligible_patients, _ = (
             self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
@@ -427,14 +551,23 @@ class CalculateKPIS:
 
         # This is just a count so pass/fail doesn't make sense; just set to same
         # as eligible/ineligible
-        total_passed = total_eligible
-        total_failed = total_ineligible
+        total_passed = None
+        total_failed = None
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=eligible_patients,
+            failed=eligible_patients,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_4_total_t1dm_gte_12yo(self) -> KPIResult:
@@ -448,6 +581,10 @@ class CalculateKPIS:
             * Below the age of 25 at the start of the audit period
             * Age 12 and above years at the start of the audit period
             * Diagnosis of Type 1 diabetes"
+
+            NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
 
         base_eligible_patients, _ = (
@@ -469,14 +606,23 @@ class CalculateKPIS:
 
         # This is just a count so pass/fail doesn't make sense; just set to same
         # as eligible/ineligible
-        total_passed = total_eligible
-        total_failed = total_ineligible
+        total_passed = None
+        total_failed = None
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=eligible_patients,
+            failed=eligible_patients,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_5_total_t1dm_complete_year(self) -> KPIResult:
@@ -493,6 +639,10 @@ class CalculateKPIS:
         * Date of diagnosis within the audit period
         * Date of leaving service within the audit period
         * Date of death within the audit period"
+
+        NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
         # If we have not already calculated KPI 1, do so now to set
         total_kpi_1_eligible_pts_base_query_set, total_eligible_kpi_1 = (
@@ -527,14 +677,23 @@ class CalculateKPIS:
 
         # This is just a count so pass/fail doesn't make sense; just set to same
         # as eligible/ineligible
-        total_passed = total_eligible
-        total_failed = total_ineligible
+        total_passed = None
+        total_failed = None
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=eligible_patients,
+            failed=eligible_patients,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_6_total_t1dm_complete_year_gte_12yo(self) -> dict:
@@ -552,6 +711,10 @@ class CalculateKPIS:
         * Date of death within the audit period
 
         NOTE: exclusion same as KPI5
+
+        NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
 
         # We cannot simply use KPI1 base queryset as that includes a filter
@@ -632,14 +795,23 @@ class CalculateKPIS:
 
         # This is just a count so pass/fail doesn't make sense; just set to same
         # as eligible/ineligible
-        total_passed = total_eligible
-        total_failed = total_ineligible
+        total_passed = None
+        total_failed = None
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=eligible_patients,
+            failed=eligible_patients,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_7_total_new_diagnoses_t1dm(self) -> dict:
@@ -651,6 +823,10 @@ class CalculateKPIS:
         * Age 0-24 years at the start of the audit period
         * Diagnosis of Type 1 diabetes
         * Date of diagnosis within the audit period
+
+        NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
 
         # total_kpi_1_eligible_pts_base_query_set is slightly different
@@ -697,7 +873,8 @@ class CalculateKPIS:
                     )
                 )
             )
-        )
+        ).distinct()  # the reason for distinct is same as KPI1 (see comments).
+        # This time, was failing tests for KPI 41-42.
 
         # Count eligible patients
         total_eligible = eligible_patients.count()
@@ -711,14 +888,23 @@ class CalculateKPIS:
 
         # This is just a count so pass/fail doesn't make sense; just set to same
         # as eligible/ineligible
-        total_passed = total_eligible
-        total_failed = total_ineligible
+        total_passed = None
+        total_failed = None
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=eligible_patients,
+            failed=eligible_patients,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_8_total_deaths(self) -> dict:
@@ -726,6 +912,10 @@ class CalculateKPIS:
         Calculates KPI 8: Number of patients who died within audit period
         Number of eligible patients (measure 1) with:
             * a death date in the audit period
+
+            NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
         base_eligible_patients, _ = (
             self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
@@ -744,14 +934,23 @@ class CalculateKPIS:
 
         # This is just a count so pass/fail doesn't make sense; just set to same
         # as eligible/ineligible
-        total_passed = total_eligible
-        total_failed = total_ineligible
+        total_passed = None
+        total_failed = None
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=eligible_patients,
+            failed=eligible_patients,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_9_total_service_transitions(self) -> dict:
@@ -760,6 +959,10 @@ class CalculateKPIS:
 
         Number of eligible patients (measure 1) with
         * a leaving date in the audit period
+
+        NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
         base_eligible_patients, _ = (
             self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
@@ -782,14 +985,23 @@ class CalculateKPIS:
 
         # This is just a count so pass/fail doesn't make sense; just set to same
         # as eligible/ineligible
-        total_passed = total_eligible
-        total_failed = total_ineligible
+        total_passed = None
+        total_failed = None
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=eligible_patients,
+            failed=eligible_patients,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_10_total_coeliacs(self) -> dict:
@@ -799,6 +1011,10 @@ class CalculateKPIS:
 
         * most recent observation for item 37 (based on visit date) is 1 = Yes
         // NOTE: item37 is _Has the patient been recommended a Gluten-free diet? _
+
+        NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
         # Define the subquery to find the latest visit where visit__gluten_free_diet = 1
         latest_visit_subquery = (
@@ -827,14 +1043,23 @@ class CalculateKPIS:
 
         # This is just a count so pass/fail doesn't make sense; just set to same
         # as eligible/ineligible
-        total_passed = total_eligible
-        total_failed = total_ineligible
+        total_passed = None
+        total_failed = None
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=eligible_patients,
+            failed=eligible_patients,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_11_total_thyroids(self) -> dict:
@@ -844,6 +1069,10 @@ class CalculateKPIS:
         who:
             * most recent observation for item 35 (based on visit date) is either 2 = Thyroxine for hypothyroidism or 3 = Antithyroid medication for hyperthyroidism
             // NOTE: item35 is _At time of, or following measurement of thyroid function, was the patient prescribed any thyroid treatment?_
+
+            NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
         # Define the subquery to find the latest visit where thyroid_treatment_status__in = 2 or 3
         latest_visit_subquery = (
@@ -874,14 +1103,23 @@ class CalculateKPIS:
 
         # This is just a count so pass/fail doesn't make sense; just set to same
         # as eligible/ineligible
-        total_passed = total_eligible
-        total_failed = total_ineligible
+        total_passed = None
+        total_failed = None
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=eligible_patients,
+            failed=eligible_patients,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_12_total_ketone_test_equipment(self) -> dict:
@@ -891,6 +1129,10 @@ class CalculateKPIS:
         Number of eligible patients (measure 1) whose
             * most recent observation for item 45 (based on visit date) is 1 = Yes
             // NOTE: item45 is _Was the patient using (or trained to use) blood ketone testing equipment at time of visit? _
+
+            NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
         """
         # Define the subquery to find the latest visit where ketone_meter_training = 1
         latest_visit_subquery = (
@@ -919,14 +1161,23 @@ class CalculateKPIS:
 
         # This is just a count so pass/fail doesn't make sense; just set to same
         # as eligible/ineligible
-        total_passed = total_eligible
-        total_failed = total_ineligible
+        total_passed = None
+        total_failed = None
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=eligible_patients,
+            failed=eligible_patients,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_13_one_to_three_injections_per_day(self) -> dict:
@@ -951,20 +1202,28 @@ class CalculateKPIS:
             .values("pk")[:1]
         )
         # Filter the Patient queryset based on the subquery
-        total_passed = eligible_patients.filter(
+        passed_patients = eligible_patients.filter(
             Q(
                 id__in=Subquery(
                     Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
                 )
             )
-        ).count()
+        )
+        total_passed = passed_patients.count()
         total_failed = total_eligible - total_passed
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=passed_patients,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_14_four_or_more_injections_per_day(self) -> dict:
@@ -989,20 +1248,28 @@ class CalculateKPIS:
             .values("pk")[:1]
         )
         # Filter the Patient queryset based on the subquery
-        total_passed = eligible_patients.filter(
+        passed_patients = eligible_patients.filter(
             Q(
                 id__in=Subquery(
                     Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
                 )
             )
-        ).count()
+        )
+        total_passed = passed_patients.count()
         total_failed = total_eligible - total_passed
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=passed_patients,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_15_insulin_pump(self) -> dict:
@@ -1027,20 +1294,28 @@ class CalculateKPIS:
             .values("pk")[:1]
         )
         # Filter the Patient queryset based on the subquery
-        total_passed = eligible_patients.filter(
+        passed_patients = eligible_patients.filter(
             Q(
                 id__in=Subquery(
                     Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
                 )
             )
-        ).count()
+        )
+        total_passed = passed_patients.count()
         total_failed = total_eligible - total_passed
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=passed_patients,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_16_one_to_three_injections_plus_other_medication(
@@ -1066,20 +1341,28 @@ class CalculateKPIS:
             .values("pk")[:1]
         )
         # Filter the Patient queryset based on the subquery
-        total_passed = eligible_patients.filter(
+        passed_patients = eligible_patients.filter(
             Q(
                 id__in=Subquery(
                     Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
                 )
             )
-        ).count()
+        )
+        total_passed = passed_patients.count()
         total_failed = total_eligible - total_passed
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=passed_patients,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_17_four_or_more_injections_plus_other_medication(
@@ -1104,20 +1387,28 @@ class CalculateKPIS:
             .values("pk")[:1]
         )
         # Filter the Patient queryset based on the subquery
-        total_passed = eligible_patients.filter(
+        passed_patients = eligible_patients.filter(
             Q(
                 id__in=Subquery(
                     Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
                 )
             )
-        ).count()
+        )
+        total_passed = passed_patients.count()
         total_failed = total_eligible - total_passed
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=passed_patients,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_18_insulin_pump_plus_other_medication(
@@ -1142,20 +1433,28 @@ class CalculateKPIS:
             .values("pk")[:1]
         )
         # Filter the Patient queryset based on the subquery
-        total_passed = eligible_patients.filter(
+        passed_patients = eligible_patients.filter(
             Q(
                 id__in=Subquery(
                     Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
                 )
             )
-        ).count()
+        )
+        total_passed = passed_patients.count()
         total_failed = total_eligible - total_passed
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=passed_patients,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_19_dietary_management_alone(
@@ -1180,20 +1479,28 @@ class CalculateKPIS:
             .values("pk")[:1]
         )
         # Filter the Patient queryset based on the subquery
-        total_passed = eligible_patients.filter(
+        passed_patients = eligible_patients.filter(
             Q(
                 id__in=Subquery(
                     Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
                 )
             )
-        ).count()
+        )
+        total_passed = passed_patients.count()
         total_failed = total_eligible - total_passed
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=passed_patients,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_20_dietary_management_plus_other_medication(
@@ -1218,20 +1525,28 @@ class CalculateKPIS:
             .values("pk")[:1]
         )
         # Filter the Patient queryset based on the subquery
-        total_passed = eligible_patients.filter(
+        passed_patients = eligible_patients.filter(
             Q(
                 id__in=Subquery(
                     Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
                 )
             )
-        ).count()
+        )
+        total_passed = passed_patients.count()
         total_failed = total_eligible - total_passed
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=passed_patients,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_21_flash_glucose_monitor(
@@ -1256,20 +1571,28 @@ class CalculateKPIS:
             .values("pk")[:1]
         )
         # Filter the Patient queryset based on the subquery
-        total_passed = eligible_patients.filter(
+        passed_patients = eligible_patients.filter(
             Q(
                 id__in=Subquery(
                     Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
                 )
             )
-        ).count()
+        )
+        total_passed = passed_patients.count()
         total_failed = total_eligible - total_passed
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=passed_patients,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_22_real_time_cgm_with_alarms(
@@ -1294,20 +1617,28 @@ class CalculateKPIS:
             .values("pk")[:1]
         )
         # Filter the Patient queryset based on the subquery
-        total_passed = eligible_patients.filter(
+        passed_patients = eligible_patients.filter(
             Q(
                 id__in=Subquery(
                     Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
                 )
             )
-        ).count()
+        )
+        total_passed = passed_patients.count()
         total_failed = total_eligible - total_passed
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=passed_patients,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_23_type1_real_time_cgm_with_alarms(
@@ -1333,29 +1664,34 @@ class CalculateKPIS:
             .values("pk")[:1]
         )
         # Filter the Patient queryset based on the subquery
-        total_passed = eligible_patients.filter(
+        passed_patients = eligible_patients.filter(
             Q(
                 id__in=Subquery(
                     Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
                 )
             )
-        ).count()
+        )
+        total_passed = passed_patients.count()
         total_failed = total_eligible - total_passed
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=passed_patients,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_24_hybrid_closed_loop_system(
         self,
     ) -> dict:
         """
-        TODO: this was a little confusing, should be rechecked
-                but tests are passing. # Issue 269 https://github.com/orgs/rcpch/projects/13/views/1?pane=issue&itemId=78574146
-
         Calculates KPI 24: Hybrid closed loop system (HCL)
 
         Denominator: Total number of eligible patients (measure 1)
@@ -1424,17 +1760,18 @@ class CalculateKPIS:
         total_passed = passing_patients.count()
         total_failed = eligible_patients_kpi_24.count() - total_passed
 
-        # logger.debug(f"passing_patients: {passing_patients.values_list('postcode')}")
-        # logger.debug(f'{eligible_patients_kpi_24.values_list("postcode")=}')
-        # logger.debug(
-        #     f"{total_eligible_kpi_24, total_ineligible,total_passed,total_failed=}"
-        # )
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients_kpi_24,
+            passed=passing_patients,
+        )
 
         return KPIResult(
             total_eligible=total_eligible_kpi_24,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_25_hba1c(
@@ -1458,26 +1795,31 @@ class CalculateKPIS:
 
         # Find patients with at least one valid entry for HbA1c value (item 17) with an observation date (item 19) within the audit period
         # This is simply patients with a visit with a valid HbA1c value
-        total_passed = eligible_patients.filter(
+        passed_patients = eligible_patients.filter(
             Q(visit__hba1c__isnull=False),
             Q(visit__hba1c_date__range=(self.AUDIT_DATE_RANGE)),
-        ).count()
+        )
+        total_passed = passed_patients.count()
         total_failed = total_eligible - total_passed
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=passed_patients,
+        )
 
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_26_bmi(
         self,
     ) -> dict:
         """
-        # TODO: query - for 7 key processes KPIs (25-32), should we be
-        # querying all visits for a patient? or is current implementation fine?
-
         Calculates KPI 26: BMI (%)
 
         Numerator: Number of eligible patients at least one valid entry for Patient Height (item 14) and for Patient Weight (item 15) with an observation date (item 16) within the audit period
@@ -1503,11 +1845,18 @@ class CalculateKPIS:
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=total_passed_query_set,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_27_thyroid_screen(
@@ -1537,11 +1886,18 @@ class CalculateKPIS:
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=total_passed_query_set,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_28_blood_pressure(
@@ -1574,11 +1930,18 @@ class CalculateKPIS:
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=total_passed_query_set,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_29_urinary_albumin(
@@ -1610,11 +1973,18 @@ class CalculateKPIS:
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=total_passed_query_set,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_30_retinal_screening(
@@ -1650,11 +2020,18 @@ class CalculateKPIS:
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=total_passed_query_set,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_31_foot_examination(
@@ -1684,13 +2061,21 @@ class CalculateKPIS:
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=total_passed_query_set,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
+    # TODO: get actual querysets for patients who passed and failed
     def calculate_kpi_32_1_health_check_completion_rate(
         self,
     ) -> dict:
@@ -1884,13 +2269,21 @@ class CalculateKPIS:
             + eligible_patients_gte_12yo.count() * 6
         )
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=base_eligible_query_set,
+            passed=eligible_patients_lt_12yo,
+        )
+
         return KPIResult(
             total_eligible=expected_total_health_checks,
             total_ineligible=total_ineligible,
             total_passed=actual_health_checks_overall,
             total_failed=expected_total_health_checks - actual_health_checks_overall,
+            patient_querysets=patient_querysets,
         )
 
+    # TODO: get actual querysets for patients who passed and failed
     def calculate_kpi_32_2_health_check_lt_12yo(self) -> dict:
         """
         Calculates KPI 32.2: Health Checks (Less than 12 years)
@@ -1958,13 +2351,21 @@ class CalculateKPIS:
             or 0
         )
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=eligible_patients,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_eligible - total_passed,
+            patient_querysets=patient_querysets,
         )
 
+    # TODO: get actual querysets for patients who passed and failed
     def calculate_kpi_32_3_health_check_gte_12yo(self) -> dict:
         """
         Calculates KPI 32.3: Health Checks (12 years and over)
@@ -2067,11 +2468,18 @@ class CalculateKPIS:
             or 0
         )
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=eligible_patients,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_eligible - total_passed,
+            patient_querysets=patient_querysets,
         )
 
     def _get_eligible_pts_measure_5_lt_12yo(self):
@@ -2146,11 +2554,18 @@ class CalculateKPIS:
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=total_passed_query_set,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_34_psychological_assessment(
@@ -2190,11 +2605,18 @@ class CalculateKPIS:
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=total_passed_query_set,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_35_smoking_status_screened(
@@ -2240,11 +2662,18 @@ class CalculateKPIS:
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=total_passed_query_set,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_36_referral_to_smoking_cessation_service(
@@ -2283,11 +2712,18 @@ class CalculateKPIS:
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=total_passed_query_set,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_37_additional_dietetic_appointment_offered(
@@ -2325,11 +2761,18 @@ class CalculateKPIS:
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=total_passed_query_set,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_38_patients_attending_additional_dietetic_appointment(
@@ -2370,11 +2813,18 @@ class CalculateKPIS:
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=total_passed_query_set,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_39_influenza_immunisation_recommended(
@@ -2415,11 +2865,18 @@ class CalculateKPIS:
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=total_passed_query_set,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_40_sick_day_rules_advice(
@@ -2459,11 +2916,18 @@ class CalculateKPIS:
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=total_passed_query_set,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_41_coeliac_disease_screening(
@@ -2506,11 +2970,18 @@ class CalculateKPIS:
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=total_passed_query_set,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_42_thyroid_disease_screening(
@@ -2551,11 +3022,18 @@ class CalculateKPIS:
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=total_passed_query_set,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_43_carbohydrate_counting_education(
@@ -2613,11 +3091,18 @@ class CalculateKPIS:
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=total_passed_query_set,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_44_mean_hba1c(
@@ -2633,8 +3118,11 @@ class CalculateKPIS:
 
         Denominator: Total number of eligible patients (measure 1)
 
-        NOTE: Django does not support Median aggregation function. We can do
-        manually.
+        NOTE: Django does not support Median aggregation function. We do
+        manually through custom `Median` class.
+
+        NOTE: for pt querysets, only `eligible` and `ineligible` are valid, the
+            others should be discarded.
         """
         eligible_patients, total_eligible = (
             self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
@@ -2676,6 +3164,12 @@ class CalculateKPIS:
             or 0
         )
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=eligible_patients,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
@@ -2683,6 +3177,7 @@ class CalculateKPIS:
             total_passed=median_of_median_hba1cs,
             # Failed is not used
             total_failed=-1,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_45_median_hba1c(
@@ -2698,6 +3193,9 @@ class CalculateKPIS:
         median of the medians.
 
         Denominator: Total number of eligible patients (measure 1)
+
+        NOTE: for pt querysets, only `eligible` and `ineligible` are valid, the
+            others should be discarded.
         """
         eligible_patients, total_eligible = (
             self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
@@ -2739,6 +3237,12 @@ class CalculateKPIS:
             or 0
         )
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=eligible_patients,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
@@ -2746,6 +3250,7 @@ class CalculateKPIS:
             total_passed=mean_of_median_hba1cs,
             # Failed is not used
             total_failed=-1,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_46_number_of_admissions(
@@ -2797,11 +3302,18 @@ class CalculateKPIS:
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=total_passed_query_set,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_47_number_of_dka_admissions(
@@ -2851,11 +3363,18 @@ class CalculateKPIS:
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=total_passed_query_set,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_48_required_additional_psychological_support(
@@ -2897,11 +3416,18 @@ class CalculateKPIS:
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=total_passed_query_set,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def calculate_kpi_49_albuminuria_present(
@@ -2946,11 +3472,18 @@ class CalculateKPIS:
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
 
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            passed=total_passed_query_set,
+        )
+
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
+            patient_querysets=patient_querysets,
         )
 
     def _debug_helper_print_postcode_and_attrs(self, patient_queryset, *attrs):
@@ -3137,27 +3670,3 @@ def queryset_median_value(queryset: QuerySet, column_name: str):
         return values[int(round(count / 2))]
     else:
         return sum(values[count / 2 - 1 : count / 2 + 1]) / Decimal(2.0)
-
-
-# WIP simply return KPI Agg result for given PDU
-class KPIAggregationForPDU(TemplateView):
-
-    template_name = "kpi_aggregations.html"
-
-    def get(self, request, *args, **kwargs):
-
-        pz_code = kwargs.get("pz_code", None)
-
-        start_time = time.time()  # Record the start time for calc
-        aggregated_data = CalculateKPIS(
-            pz_codes=[pz_code]
-        ).calculate_kpis_for_patients()
-        end_time = time.time()  # Record the end time
-        calculation_time = round(
-            (end_time - start_time) * 1000, 2
-        )  # Calculate the time taken in milliseconds, rounded to 2dp
-
-        # Add to context
-        aggregated_data["calculation_time"] = calculation_time
-
-        return render(request, self.template_name, context=aggregated_data)
