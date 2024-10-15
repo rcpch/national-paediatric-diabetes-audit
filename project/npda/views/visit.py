@@ -56,12 +56,9 @@ class PatientVisitsListView(
         calculate_kpis = CalculateKPIS(
             calculation_date=datetime.date.today(), return_pt_querysets=False
         )
-        # calculate_kpis_for_patients expects a queryset of patients, so
-        # convert patient object to a queryset
-        patient_as_queryset = Patient.objects.filter(pk=patient.pk)
-        kpi_calculations_object = calculate_kpis.calculate_kpis_for_patients(
-            patients=patient_as_queryset, exclude_one_to_twelve=True
-        )
+        # Calculate the KPIs for this patient, returning only subset relevant
+        # for a single patient's calculation
+        kpi_calculations_object = calculate_kpis.calculate_kpis_for_single_patient(patient)
 
         context["kpi_results"] = kpi_calculations_object
 
