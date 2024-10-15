@@ -55,7 +55,7 @@ logger = logging.getLogger(__name__)
 
 class CalculateKPIS:
     """
-    Calculates KPIs for a given PZ code
+    Calculates KPIs
     """
 
     def __init__(
