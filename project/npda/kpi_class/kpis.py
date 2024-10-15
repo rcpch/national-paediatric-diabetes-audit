@@ -108,7 +108,6 @@ class CalculateKPIS:
     def calculate_kpis_for_patients(
         self,
         patients: QuerySet[Patient],
-        exclude_one_to_twelve: bool = False,
     ) -> KPICalculationsObject:
         """Calculate KPIs 1 - 49 for given patients and cohort range
         (self.audit_start_date and self.audit_end_date).
@@ -116,13 +115,12 @@ class CalculateKPIS:
         Params:
             * patients (QuerySet[Patient]) - Queryset of patients
             for KPI calculations and aggregations.
-            * exclude_one_to_twelve (bool) - If True, will exclude KPIs 1-12 - this is because these are summary counts, and do not apply to individual patients.
         """
 
         self.patients = patients
         self.total_patients_count = self.patients.count()
 
-        return self._calculate_kpis(exclude_one_to_twelve=exclude_one_to_twelve)
+        return self._calculate_kpis()
 
     def calculate_kpis_for_pdus(
         self,
@@ -140,9 +138,32 @@ class CalculateKPIS:
         )
         self.total_patients_count = self.patients.count()
 
-        return self._calculate_kpis(exclude_one_to_twelve=False)
+        return self._calculate_kpis()
 
-    def _calculate_kpis(self, exclude_one_to_twelve=True) -> KPICalculationsObject:
+    def calculate_kpis_for_single_patient(
+        self, patient: Patient
+    ) -> KPICalculationsObject:
+        """Calculate KPIs 13 - 49 for a single patient.
+
+        Params:
+            * patient (Patient) - Single patient for KPI calculations and aggregations.
+        """
+
+        self.patients = Patient.objects.filter(pk=patient.pk)
+        self.total_patients_count = self.patients.count()
+
+        # Individual patients should exclude KPIs 1 - 12 (counts)
+        individual_pt_kpi_subset = (
+            list(range(13, 32)) + [321, 322, 323] + (list(range(33, 50)))
+        )
+        return self._calculate_kpis(
+            kpi_idx_subset=individual_pt_kpi_subset,
+        )
+
+    def _calculate_kpis(
+        self,
+        kpi_idx_subset: list[int] | None = None,
+    ) -> KPICalculationsObject:
         """Calculate KPIs 1 - 49 for set self.patients and cohort range
         (self.audit_start_date and self.audit_end_date).
 
@@ -152,18 +173,20 @@ class CalculateKPIS:
         Incrementally build the query, which will be executed in a single
         transaction once a value is evaluated.
 
-        if exclude_one_to_twelve is True, will exclude KPIs 1-12 - this is
-        because these are summary counts, and do not apply to individual
-        patients.
+        Params:
+            * kpi_idx_subset (list[int]) - If provided, will only calculate
+            the KPIs with the given indices. Otherwise, will calculate all
+            KPIs.
         """
         # Init dict to store calc results
         calculated_kpis = {}
 
         # Standard KPIs plus 32 which has 3 sub KPIs
-        if exclude_one_to_twelve:
-            kpi_idxs = list(range(13, 32)) + [321, 322, 323] + (list(range(33, 50)))
-        else:
+        if kpi_idx_subset is None:
             kpi_idxs = list(range(1, 32)) + [321, 322, 323] + (list(range(33, 50)))
+        else:
+            # Otherwise subset, e.g. for single patient
+            kpi_idxs = kpi_idx_subset
         # breakpoint()
         for i in kpi_idxs:
             # Dynamically get the method name from the kpis_names_map
