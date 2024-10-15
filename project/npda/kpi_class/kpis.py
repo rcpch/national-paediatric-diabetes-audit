@@ -143,7 +143,7 @@ class CalculateKPIS:
     def calculate_kpis_for_single_patient(
         self, patient: Patient
     ) -> KPICalculationsObject:
-        """Calculate KPIs 13 - 49 for a single patient.
+        """Calculate relevant KPIs subset for a single patient.
 
         Params:
             * patient (Patient) - Single patient for KPI calculations and aggregations.
@@ -152,17 +152,33 @@ class CalculateKPIS:
         self.patients = Patient.objects.filter(pk=patient.pk)
         self.total_patients_count = self.patients.count()
 
+        # Because the calculations require KPIs 1-12 to act as denominators,
+        # we need to run all of them still. And at the end, just filter out
+        # the ones we don't need.
+        calculations_object = self._calculate_kpis()
+
         # Individual patients should exclude KPIs 1 - 12 (counts)
-        individual_pt_kpi_subset = (
-            list(range(13, 32)) + [321, 322, 323] + (list(range(33, 50)))
+        # First set the KPIs to exclude
+        exclude_kpis_subset = list(range(1, 13))
+        # Get the kpi_attribute_names from those indexes
+        exclude_kpi_keys = set(
+            [self.kpi_name_registry.get_attribute_name(i) for i in exclude_kpis_subset]
         )
-        return self._calculate_kpis(
-            kpi_idx_subset=individual_pt_kpi_subset,
-        )
+
+        # Create new filtered dict
+        current_calculated_kpi_values = calculations_object["calculated_kpi_values"]
+        filtered_calculated_kpi_values = {}
+        for kpi_name, kpi_result in current_calculated_kpi_values.items():
+
+            if kpi_name not in exclude_kpi_keys:
+                filtered_calculated_kpi_values[kpi_name] = kpi_result
+
+        calculations_object["calculated_kpi_values"] = filtered_calculated_kpi_values
+
+        return calculations_object
 
     def _calculate_kpis(
         self,
-        kpi_idx_subset: list[int] | None = None,
     ) -> KPICalculationsObject:
         """Calculate KPIs 1 - 49 for set self.patients and cohort range
         (self.audit_start_date and self.audit_end_date).
@@ -172,22 +188,13 @@ class CalculateKPIS:
 
         Incrementally build the query, which will be executed in a single
         transaction once a value is evaluated.
-
-        Params:
-            * kpi_idx_subset (list[int]) - If provided, will only calculate
-            the KPIs with the given indices. Otherwise, will calculate all
-            KPIs.
         """
         # Init dict to store calc results
         calculated_kpis = {}
 
         # Standard KPIs plus 32 which has 3 sub KPIs
-        if kpi_idx_subset is None:
-            kpi_idxs = list(range(1, 32)) + [321, 322, 323] + (list(range(33, 50)))
-        else:
-            # Otherwise subset, e.g. for single patient
-            kpi_idxs = kpi_idx_subset
-        # breakpoint()
+        kpi_idxs = list(range(1, 32)) + [321, 322, 323] + (list(range(33, 50)))
+
         for i in kpi_idxs:
             # Dynamically get the method name from the kpis_names_map
             kpi_method_name = self.kpi_name_registry.get_attribute_name(i)
@@ -197,7 +204,7 @@ class CalculateKPIS:
             # Each kpi method returns a KPIResult object
             # so we convert it first to a dictionary
             calculated_kpis[kpi_method_name] = asdict(kpi_result)
-        # breakpoint()
+
         # Add in used attributes for calculations
         return_obj = {}
         return_obj["calculation_datetime"] = datetime.now()
