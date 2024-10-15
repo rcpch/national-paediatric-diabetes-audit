@@ -76,6 +76,8 @@ class CalculateKPIS:
                 - Calculate KPIs for given patients.
             2) calculate_kpis_for_pdus (list[str])
                 - Calculate KPIs for given PZ codes.
+            3) calculate_kpis_for_single_patient (Patient)
+                - Calculate KPIs for a single patient.
 
             Each calculation method works to set the `self.patients` and
             `self.total_patients_count` attributes used throughout all
