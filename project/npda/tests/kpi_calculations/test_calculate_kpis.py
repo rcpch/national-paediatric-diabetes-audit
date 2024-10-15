@@ -1,4 +1,5 @@
 """Tests for the CalculateKPIS class.
+
 Also contains utils / helper functions for testing the CalculateKPIS class.
 """
 
@@ -181,3 +182,4 @@ def test_calculate_kpis_return_obj_has_correct_kpi_labels(AUDIT_START_DATE):
         assert (
             actual_kpi_label == EXPECTED_KPI_NAMES.rendered_label
         ), f"KPI {actual_kpi_attribute_name} has incorrect label: {actual_kpi_label}"
+
