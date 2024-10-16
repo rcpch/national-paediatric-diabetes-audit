@@ -147,7 +147,15 @@ nav:
     - 'developer/organisations.md'
     - 'developer/users.md'
     - 'developer/testing.md'
-    - KPIs:
-      # - KPI Definitions: 'developer/kpis/kpi_definitions.md'
-      - KPI Class: 'developer/kpis/kpi_class.md'
+    - KPI Definitions:
+      - 'developer/kpis/kpi_definitions.md'
+      - 'developer/kpis/patient_characteristics.md'
+      - 'developer/kpis/treatment_regimen.md'
+      - 'developer/kpis/glucose_monitoring.md'
+      - 'developer/kpis/hybrid_closed_loop_system.md'
+      - 'developer/kpis/7_key_processes.md'
+      - 'developer/kpis/additional_processes.md'
+      - 'developer/kpis/care_at_diagnosis.md'
+      - 'developer/kpis/outcomes.md'
+    - KPI Class: 'developer/kpis/kpi_class.md'
       # - Tests: 'developer/kpis/tests.md'
