@@ -50,5 +50,5 @@ class PatientSubmission(models.Model):
             )
 
     def save(self, args, kwargs) -> None:
-        self.validate_unique_patient(self.patient)
+        self.validate_unique_nhs_number(self.patient)
         return super().save(args, kwargs)
