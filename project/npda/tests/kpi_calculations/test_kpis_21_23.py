@@ -6,7 +6,7 @@ from dateutil.relativedelta import relativedelta
 from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
 from project.npda.tests.factories.patient_factory import PatientFactory
-from project.npda.tests.kpi_calculations.test_kpi_calculations import \
+from project.npda.tests.kpi_calculations.test_calculate_kpis import \
     assert_kpi_result_equal
 
 

@@ -147,3 +147,7 @@ nav:
     - 'developer/organisations.md'
     - 'developer/users.md'
     - 'developer/testing.md'
+    - KPIs:
+      # - KPI Definitions: 'developer/kpis/kpi_definitions.md'
+      - KPI Class: 'developer/kpis/kpi_class.md'
+      # - Tests: 'developer/kpis/tests.md'
