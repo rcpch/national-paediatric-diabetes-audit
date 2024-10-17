@@ -26,29 +26,20 @@ class PatientSubmission(models.Model):
     class Meta:
         verbose_name = "PatientSubmission"
         verbose_name_plural = "PatientSubmissions"
-        unique_together = ["patient", "submission"]
 
     def __str__(self) -> str:
         return f"{self.submission} for {self.patient}"
 
-    def validate_unique_nhs_number(self, patient):
-        """
-        Check that the patient does not already exist in the submission
-        """
-        if self.submission.patients.filter(nhs_number=patient.nhs_number).exists():
-            raise ValidationError(
-                f"Patient with NHS number {patient.nhs_number} already exists in this submission"
-            )
 
-    def validate_unique_patient(self, patient):
-        """
-        Check that the patient does not already exist in the submission
-        """
-        if self.submission.patients.filter(pk=patient.pk).exists():
-            raise ValidationError(
-                f"Patient with id {patient.pk} already exists in this submission"
-            )
-
-    def save(self, args, kwargs) -> None:
-        self.validate_unique_nhs_number(self.patient)
-        return super().save(args, kwargs)
+def save(self, *args, **kwargs):
+    # Check for existing submissions for the same patient and audit year
+    if (
+        PatientSubmission.objects.filter(
+            patient=self.patient,
+            submission__audit_year=self.submission.audit_year,
+        )
+        .exclude(pk=self.pk)
+        .exists()
+    ):
+        raise ValidationError("A patient can have only one submission per audit year.")
+    super().save(*args, **kwargs)

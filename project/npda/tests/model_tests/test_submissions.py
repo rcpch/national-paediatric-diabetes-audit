@@ -29,6 +29,7 @@ from project.constants.user import RCPCH_AUDIT_TEAM
 from project.npda.models import NPDAUser, Submission
 from project.npda.tests.utils import login_and_verify_user
 from project.npda.tests.factories import PatientFactory, PaediatricsDiabetesUnitFactory
+from project.npda.general_functions import audit_period
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,8 @@ ALDER_HEY_ODS_CODE = "RBS25"
 
 GOSH_PZ_CODE = "PZ196"
 GOSH_ODS_CODE = "RP401"
+
+audit_dates = audit_period.get_audit_period_for_date(date.today())
 
 
 @pytest.mark.django_db
@@ -65,7 +68,7 @@ def test_npda_user_can_create_submission(
     # Create a submission
     new_submission = Submission.objects.create(
         paediatric_diabetes_unit=pdu,
-        audit_year=date.today().year,
+        audit_year=audit_dates[0].year,
         submission_date=timezone.now(),
         submission_by=ah_user,  # user is the user who is logged in. Passed in as a parameter
         submission_active=True,
@@ -83,7 +86,7 @@ def test_npda_user_can_create_submission(
 
 
 @pytest.mark.django_db
-def test_npda_user_cannot_submit_same_patient_twice(
+def test_npda_user_cannot_submit_same_patient_twice_within_the_same_submission(
     seed_groups_fixture,
     seed_patients_fixture,
     client,
@@ -101,20 +104,18 @@ def test_npda_user_cannot_submit_same_patient_twice(
     # Get Alder Hey PDU
     pdu = PaediatricsDiabetesUnitFactory(pz_code=ALDER_HEY_PZ_CODE)
 
-    pdu_2 = PaediatricsDiabetesUnitFactory(pz_code="PZ999")
-
     # Create a submission
     new_submission = Submission.objects.create(
         paediatric_diabetes_unit=pdu,
-        audit_year=date.today().year,
+        audit_year=audit_dates[0].year,
         submission_date=timezone.now(),
         submission_by=ah_user,  # user is the user who is logged in. Passed in as a parameter
         submission_active=True,
     )
 
-    another_submission = Submission.objects.create(
-        paediatric_diabetes_unit=pdu_2,
-        audit_year=date.today().year,
+    submission_last_audit_year = Submission.objects.create(
+        paediatric_diabetes_unit=pdu,
+        audit_year=audit_dates[0].year - 1,
         submission_date=timezone.now(),
         submission_by=ah_user,  # user is the user who is logged in. Passed in as a parameter
         submission_active=True,
@@ -123,12 +124,24 @@ def test_npda_user_cannot_submit_same_patient_twice(
     # Create a patient
     patient = PatientFactory()
 
+    # Add patient to previous year's submission
+    submission_last_audit_year.patients.add(patient)
+
     # Add patient to submission
     new_submission.patients.add(patient)
 
-    # Try to add the same patient to the submission
-    another_submission.patients.add(patient)
+    # Try to add the same patient to this year's submission a second time
+    new_submission.patients.add(patient)
 
-    # Check patient was not added to submission
+    # Check patient was not added to submission twice
     assert new_submission.patients.count() == 1
-    assert another_submission.patients.count() == 0
+    assert patient in new_submission.patients.all()
+    assert new_submission.patients.filter(pk=patient.pk).count() == 1
+    assert (  # There should be only one submission for the patient in this audit year and PDU
+        Submission.objects.filter(
+            audit_year=audit_dates[0].year, paediatric_diabetes_unit=pdu
+        ).count()
+        == 1
+    )
+    # This patient should be in the previous year's submission as well as this year's submission
+    assert Submission.objects.filter(paediatric_diabetes_unit=pdu).count() == 2
