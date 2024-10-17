@@ -35,7 +35,7 @@ def save(self, *args, **kwargs):
     # Check for existing submissions for the same patient and audit year
     if (
         PatientSubmission.objects.filter(
-            patient=self.patient,
+            patient__nhs_number=self.patient__nhs_number,
             submission__audit_year=self.submission.audit_year,
         )
         .exclude(pk=self.pk)
