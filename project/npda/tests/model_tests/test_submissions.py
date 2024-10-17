@@ -50,6 +50,7 @@ audit_dates = audit_period.get_audit_period_for_date(date.today())
 def test_npda_user_can_create_submission(
     seed_groups_fixture,
     seed_patients_fixture,
+    seed_users_fixture,
     client,
 ):
     """Test NPDAUser can create a submission for their PDU code."""
