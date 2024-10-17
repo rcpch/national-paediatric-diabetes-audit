@@ -16,11 +16,9 @@ from ..forms.visit_form import VisitForm
 from ..general_functions import get_visit_categories
 from ..kpi_class.kpis import CalculateKPIS
 from ..models import Patient, Transfer, Visit
-from .mixins import (CheckPDUInstanceMixin, CheckPDUListMixin,
-                     LoginAndOTPRequiredMixin)
+from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
 
 # Third party imports
-
 
 
 class PatientVisitsListView(
@@ -55,13 +53,13 @@ class PatientVisitsListView(
         # If the patient has left the PDU, the date_leaving_service will be set and it will be possible to view KPIs for the PDU up until transfer,
         # if this happened during the audit period. This is TODO
 
-        calculate_kpis = CalculateKPIS(calculation_date=datetime.date.today())
-        # calculate_kpis_for_patients expects a queryset of patients, so
-        # convert patient object to a queryset
-        patient_as_queryset = Patient.objects.filter(pk=patient.pk)
-        kpi_calculations_object = calculate_kpis.calculate_kpis_for_patients(
-            patients=patient_as_queryset
+        calculate_kpis = CalculateKPIS(
+            calculation_date=datetime.date.today(), return_pt_querysets=False
         )
+        # Calculate the KPIs for this patient, returning only subset relevant
+        # for a single patient's calculation
+        kpi_calculations_object = calculate_kpis.calculate_kpis_for_single_patient(patient)
+
         context["kpi_results"] = kpi_calculations_object
 
         return context
