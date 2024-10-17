@@ -42,7 +42,9 @@ class Submission(models.Model):
         null=True,  # submissions that are not active will have their csv file deleted
     )
 
-    patients = models.ManyToManyField(to="npda.Patient", related_name="submissions")
+    patients = models.ManyToManyField(
+        to="npda.Patient", through="npda.PatientSubmission", related_name="submissions"
+    )
 
     paediatric_diabetes_unit = models.ForeignKey(
         on_delete=models.CASCADE,
