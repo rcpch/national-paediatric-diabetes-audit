@@ -28,7 +28,11 @@ from project.constants.user import RCPCH_AUDIT_TEAM
 # NPDA imports
 from project.npda.models import NPDAUser, Submission
 from project.npda.tests.utils import login_and_verify_user
-from project.npda.tests.factories import PatientFactory, PaediatricsDiabetesUnitFactory
+from project.npda.tests.factories import (
+    PatientFactory,
+    PaediatricsDiabetesUnitFactory,
+    NPDAUserFactory,
+)
 from project.npda.general_functions import audit_period
 
 logger = logging.getLogger(__name__)
@@ -89,6 +93,7 @@ def test_npda_user_can_create_submission(
 def test_npda_user_cannot_submit_same_patient_twice_within_the_same_submission(
     seed_groups_fixture,
     seed_patients_fixture,
+    seed_users_fixture,
     client,
 ):
     """Test NPDAUser cannot submit the same patient twice in the same submission."""
