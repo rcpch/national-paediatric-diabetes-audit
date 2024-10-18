@@ -31,7 +31,7 @@ def error_500(request):
     )
 
 
-def csrf_fail(request):
+def csrf_fail(request, reason=""):
     context = {}
     return render(
         request=request,
