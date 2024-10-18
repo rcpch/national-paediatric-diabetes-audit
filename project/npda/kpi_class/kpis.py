@@ -33,10 +33,18 @@ from django.db.models import (
 # NPDA Imports
 from project.constants.albuminuria_stage import ALBUMINURIA_STAGES
 from project.constants.diabetes_types import DIABETES_TYPES
-from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
-from project.constants.retinal_screening_results import RETINAL_SCREENING_RESULTS
+from project.constants.hospital_admission_reasons import (
+    HOSPITAL_ADMISSION_REASONS,
+)
+from project.constants.retinal_screening_results import (
+    RETINAL_SCREENING_RESULTS,
+)
 from project.constants.smoking_status import SMOKING_STATUS
-from project.constants.types.kpi_types import KPICalculationsObject, KPIResult
+from project.constants.types.kpi_types import (
+    KPICalculationsObject,
+    KPIResult,
+    kpi_registry,
+)
 from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 from project.npda.general_functions import get_audit_period_for_date
 from project.npda.models import Patient, Visit
@@ -47,7 +55,7 @@ logger = logging.getLogger(__name__)
 
 class CalculateKPIS:
     """
-    Calculates KPIs for a given PZ code
+    Calculates KPIs
     """
 
     def __init__(
@@ -63,18 +71,24 @@ class CalculateKPIS:
             * return_pt_querysets (bool) - if True, will return the querysets
             of patients for each kpi calculation
 
-        Exposes 2 methods:
+        Exposes methods:
             1) calculate_kpis_for_patients (QuerySet[Patient])
                 - Calculate KPIs for given patients.
             2) calculate_kpis_for_pdus (list[str])
                 - Calculate KPIs for given PZ codes.
+            3) calculate_kpis_for_single_patient (Patient)
+                - Calculate KPIs for a single patient.
 
-            Each method works to set the `self.patients` and
+            Each calculation method works to set the `self.patients` and
             `self.total_patients_count` attributes used throughout all
             calculations.
 
             Both methods return a KPICalculationsObject dataclass instance,
             containing all KPIAggregation results.
+
+        Exposes attributes:
+            * kpi_name_registry (KPINameRegistry) - used to get the kpi method name / label from
+            the kpi number
         """
 
         # Set various attributes used in calculations
@@ -91,12 +105,11 @@ class CalculateKPIS:
         self.return_pt_querysets = return_pt_querysets
 
         # Sets the KPI attribute names map
-        self.kpis_names_map = self._get_kpi_attribute_names()
+        self.kpi_name_registry = kpi_registry
 
     def calculate_kpis_for_patients(
         self,
         patients: QuerySet[Patient],
-        exclude_one_to_twelve: bool = False,
     ) -> KPICalculationsObject:
         """Calculate KPIs 1 - 49 for given patients and cohort range
         (self.audit_start_date and self.audit_end_date).
@@ -104,13 +117,12 @@ class CalculateKPIS:
         Params:
             * patients (QuerySet[Patient]) - Queryset of patients
             for KPI calculations and aggregations.
-            * exclude_one_to_twelve (bool) - If True, will exclude KPIs 1-12 - this is because these are summary counts, and do not apply to individual patients.
         """
 
         self.patients = patients
         self.total_patients_count = self.patients.count()
 
-        return self._calculate_kpis(exclude_one_to_twelve=exclude_one_to_twelve)
+        return self._calculate_kpis()
 
     def calculate_kpis_for_pdus(
         self,
@@ -128,9 +140,48 @@ class CalculateKPIS:
         )
         self.total_patients_count = self.patients.count()
 
-        return self._calculate_kpis(exclude_one_to_twelve=False)
+        return self._calculate_kpis()
 
-    def _calculate_kpis(self, exclude_one_to_twelve=True) -> KPICalculationsObject:
+    def calculate_kpis_for_single_patient(
+        self, patient: Patient
+    ) -> KPICalculationsObject:
+        """Calculate relevant KPIs subset for a single patient.
+
+        Params:
+            * patient (Patient) - Single patient for KPI calculations and aggregations.
+        """
+
+        self.patients = Patient.objects.filter(pk=patient.pk)
+        self.total_patients_count = self.patients.count()
+
+        # Because the calculations require KPIs 1-12 to act as denominators,
+        # we need to run all of them still. And at the end, just filter out
+        # the ones we don't need.
+        calculations_object = self._calculate_kpis()
+
+        # Individual patients should exclude KPIs 1 - 12 (counts)
+        # First set the KPIs to exclude
+        exclude_kpis_subset = list(range(1, 13))
+        # Get the kpi_attribute_names from those indexes
+        exclude_kpi_keys = set(
+            [self.kpi_name_registry.get_attribute_name(i) for i in exclude_kpis_subset]
+        )
+
+        # Create new filtered dict
+        current_calculated_kpi_values = calculations_object["calculated_kpi_values"]
+        filtered_calculated_kpi_values = {}
+        for kpi_name, kpi_result in current_calculated_kpi_values.items():
+
+            if kpi_name not in exclude_kpi_keys:
+                filtered_calculated_kpi_values[kpi_name] = kpi_result
+
+        calculations_object["calculated_kpi_values"] = filtered_calculated_kpi_values
+
+        return calculations_object
+
+    def _calculate_kpis(
+        self,
+    ) -> KPICalculationsObject:
         """Calculate KPIs 1 - 49 for set self.patients and cohort range
         (self.audit_start_date and self.audit_end_date).
 
@@ -139,24 +190,16 @@ class CalculateKPIS:
 
         Incrementally build the query, which will be executed in a single
         transaction once a value is evaluated.
-
-        if exclude_one_to_twelve is True, will exclude KPIs 1-12 - this is because these are summary counts, and do not apply to individual patients.
         """
         # Init dict to store calc results
         calculated_kpis = {}
 
-        # Standard KPIs (all excluding KPI32)
-        kpi_idxs = list(range(1, 32)) + (list(range(33, 50)))
-        # Now add kpi32 which has 3 sub kpis (321, 322, 323) in the middle
-        kpi_idxs = (
-            kpi_idxs[: kpi_idxs.index(31) + 1]
-            + [321, 322, 323]
-            + kpi_idxs[kpi_idxs.index(31) + 1 :]
-        )
+        # Standard KPIs plus 32 which has 3 sub KPIs
+        kpi_idxs = list(range(1, 32)) + [321, 322, 323] + (list(range(33, 50)))
 
         for i in kpi_idxs:
             # Dynamically get the method name from the kpis_names_map
-            kpi_method_name = self.kpis_names_map[i]
+            kpi_method_name = self.kpi_name_registry.get_attribute_name(i)
 
             kpi_result = self._run_kpi_calculation_method(kpi_method_name)
 
@@ -176,163 +219,35 @@ class CalculateKPIS:
 
         for kpi_name, kpi_result in calculated_kpis.items():
 
-            if exclude_one_to_twelve:
-                # Exclude KPIs 1-12 - these are summary counts, and do not apply to individual patients
-                if int(kpi_name.split("_")[1]) in range(1, 13):
-                    continue
-
+            # First assign the kpi_name : kpi_result
             return_obj["calculated_kpi_values"][kpi_name] = kpi_result
-            if int(kpi_name.split("_")[1]) == 32:
-                return_obj["calculated_kpi_values"][kpi_name]["kpi_label"] = (
-                    self.title_for_kpi(320 + int(kpi_name.split("_")[2]))
-                )
-            else:
-                return_obj["calculated_kpi_values"][kpi_name]["kpi_label"] = (
-                    self.title_for_kpi(int(kpi_name.split("_")[1]))
-                )
+
+            # Then we need to get the rendered KPI label, based on the kpi
+            # number.
+            # Split the kpi_name which includes
+            # kpi_idx (and sub-idx if KPI32)
+            name_split: list[str] = kpi_name.split("_")
+
+            kpi_number = int(name_split[1])
+
+            # If KPI32, offset to get sub-index
+            if kpi_number == 32:
+                kpi_number = 320 + int(name_split[2])
+
+            # Assign the KPI label
+            return_obj["calculated_kpi_values"][kpi_name]["kpi_label"] = (
+                self._get_kpi_label(kpi_number)
+            )
 
         return return_obj
 
     def _get_audit_start_and_end_dates(self) -> tuple[date, date]:
         return get_audit_period_for_date(input_date=self.calculation_date)
 
-    def _get_kpi_attribute_names(self) -> dict[int, str]:
-        """
-        Hard coding these for simplicty and readability
-
-        KPIS
-        1-12
-            - used as denominators for subsequent
-        13-20
-            - treatment regimen
-        21-23
-            - glucose monitoring
-        24
-            - Hybrid closed loop system (HCL)
-        25-32
-            - 7 key processes
-        33-40
-            - additional processes
-        41-43
-            - care at diagnosis
-        44-49
-            - outcomes
-        """
-
-        kpis = {
-            1: "kpi_1_total_eligible",
-            2: "kpi_2_total_new_diagnoses",
-            3: "kpi_3_total_t1dm",
-            4: "kpi_4_total_t1dm_gte_12yo",
-            5: "kpi_5_total_t1dm_complete_year",
-            6: "kpi_6_total_t1dm_complete_year_gte_12yo",
-            7: "kpi_7_total_new_diagnoses_t1dm",
-            8: "kpi_8_total_deaths",
-            9: "kpi_9_total_service_transitions",
-            10: "kpi_10_total_coeliacs",
-            11: "kpi_11_total_thyroids",
-            12: "kpi_12_total_ketone_test_equipment",
-            13: "kpi_13_one_to_three_injections_per_day",
-            14: "kpi_14_four_or_more_injections_per_day",
-            15: "kpi_15_insulin_pump",
-            16: "kpi_16_one_to_three_injections_plus_other_medication",
-            17: "kpi_17_four_or_more_injections_plus_other_medication",
-            18: "kpi_18_insulin_pump_plus_other_medication",
-            19: "kpi_19_dietary_management_alone",
-            20: "kpi_20_dietary_management_plus_other_medication",
-            21: "kpi_21_flash_glucose_monitor",
-            22: "kpi_22_real_time_cgm_with_alarms",
-            23: "kpi_23_type1_real_time_cgm_with_alarms",
-            24: "kpi_24_hybrid_closed_loop_system",
-            25: "kpi_25_hba1c",
-            26: "kpi_26_bmi",
-            27: "kpi_27_thyroid_screen",
-            28: "kpi_28_blood_pressure",
-            29: "kpi_29_urinary_albumin",
-            30: "kpi_30_retinal_screening",
-            31: "kpi_31_foot_examination",
-            321: "kpi_32_1_health_check_completion_rate",
-            322: "kpi_32_2_health_check_lt_12yo",
-            323: "kpi_32_3_health_check_gte_12yo",
-            33: "kpi_33_hba1c_4plus",
-            34: "kpi_34_psychological_assessment",
-            35: "kpi_35_smoking_status_screened",
-            36: "kpi_36_referral_to_smoking_cessation_service",
-            37: "kpi_37_additional_dietetic_appointment_offered",
-            38: "kpi_38_patients_attending_additional_dietetic_appointment",
-            39: "kpi_39_influenza_immunisation_recommended",
-            40: "kpi_40_sick_day_rules_advice",
-            41: "kpi_41_coeliac_disease_screening",
-            42: "kpi_42_thyroid_disease_screening",
-            43: "kpi_43_carbohydrate_counting_education",
-            44: "kpi_44_mean_hba1c",
-            45: "kpi_45_median_hba1c",
-            46: "kpi_46_number_of_admissions",
-            47: "kpi_47_number_of_dka_admissions",
-            48: "kpi_48_required_additional_psychological_support",
-            49: "kpi_49_albuminuria_present",
-        }
-
-        return kpis
-
-    def title_for_kpi(self, kpi_number: int) -> str:
+    def _get_kpi_label(self, kpi_number: int) -> str:
         """Returns a readable title for a given KPI number"""
-        # Hard coding these for simplicty and readability
-        kpi_titles = {
-            1: "Total number of eligible patients",
-            2: "Total number of new diagnoses within the audit period",
-            3: "Total number of eligible patients with Type 1 diabetes",
-            4: "Number of patients aged 12+ with Type 1 diabetes",
-            5: "Total number of patients with T1DM who have completed a year of care",
-            6: "Total number of patients with T1DM who have completed a year of care and are aged 12 or older",
-            7: "Total number of new diagnoses of T1DM",
-            8: "Number of patients who died within audit period",
-            9: "Number of patients who transitioned/left service within audit period",
-            10: "Total number of coeliacs",
-            11: "Number of patients with thyroid disease",
-            12: "Number of patients with ketone test equipment",
-            13: "Number of patients on one to three injections per day",
-            14: "Number of patients on four or more injections per day",
-            15: "Number of patients on insulin pump",
-            16: "Number of patients on one to three injections plus other medication",
-            17: "Number of patients on four or more injections plus other medication",
-            18: "Number of patients on insulin pump plus other medication",
-            19: "Number of patients on dietary management alone",
-            20: "Number of patients on dietary management plus other medication",
-            21: "Number of patients on flash glucose monitor",
-            22: "Number of patients on real-time CGM with alarms",
-            23: "Number of patients on Type 1 real-time CGM with alarms",
-            24: "Number of patients on hybrid closed loop system",
-            25: "Number of patients with HbA1c",
-            26: "Number of patients with BMI",
-            27: "Number of patients with thyroid screen",
-            28: "Number of patients with blood pressure",
-            29: "Number of patients with urinary albumin",
-            30: "Number of patients with retinal screening",
-            31: "Number of patients with foot examination",
-            321: "Care processes completion rate",
-            322: "Care processes in patients < 12 years old",
-            323: "Care processes in patients ≥ 12 years old",
-            33: "Number of patients with 4 or more HbA1c measurements",
-            34: "Number of patients offered a psychological assessment",
-            35: "Number of patients asked about smoking status",
-            36: "Number of patients referred to a smoking cessation service",
-            37: "Number of patients offered an additional dietetic appointment",
-            38: "Number of patients attending an additional dietetic appointment",
-            39: "Number of patients recommended influenza immunisation",
-            40: "Number of patients given sick day rules advice",
-            41: "Number of patients with coeliac disease screening",
-            42: "Number of patients with thyroid disease screening",
-            43: "Number of patients with carbohydrate counting education",
-            44: "Mean HbA1c",
-            45: "Median HbA1c",
-            46: "Number of admissions",
-            47: "Number of DKA admissions",
-            48: "Number of patients requiring additional psychological support",
-            49: "Number of patients with albuminuria",
-        }
 
-        return kpi_titles.get(kpi_number, "Unknown KPI")
+        return kpi_registry.get_rendered_label(kpi_number)
 
     def _run_kpi_calculation_method(
         self, kpi_method_name: str
