@@ -116,14 +116,24 @@ class PatientFactory(factory.django.DjangoModelFactory):
 
     @factory.lazy_attribute
     def date_of_birth(self):
-        """Set date_of_birth based on the selected age_range."""
+        """Set date_of_birth based on the selected age_range.
+
+
+        """
         min_age, max_age = self.age_range.value
-        today = date.today()
+
+        # Has to be at least 0 years old to be in the audit
+        today = self.audit_start_date
         # Pick a random age within the range
         age = random.randint(min_age, max_age)
 
-        # Rough calculation for years to date
-        return today - relativedelta(days=age * 365)
+        # if 0 years, then age needs to be in months
+        if age == 0:
+            age = random.randint(0, 11)
+            return today - relativedelta(months=age)
+        else:
+            # Otherwise, age is in years
+            return today - relativedelta(years=age)
 
     @factory.lazy_attribute
     def diagnosis_date(self):
