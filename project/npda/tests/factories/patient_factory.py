@@ -127,9 +127,9 @@ class PatientFactory(factory.django.DjangoModelFactory):
         # Pick a random age within the range
         age = random.randint(min_age, max_age)
 
-        # if 0 years, then age needs to be in months
+        # if 0 years, then age needs to be in months (minimum 1 month)
         if age == 0:
-            age = random.randint(0, 11)
+            age = random.randint(1, 11)
             return today - relativedelta(months=age)
         else:
             # Otherwise, age is in years
