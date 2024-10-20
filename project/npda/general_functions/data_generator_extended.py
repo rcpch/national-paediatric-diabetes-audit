@@ -137,7 +137,6 @@ class FakePatientCreator:
             # Step 2: Build 4 visits per patient
             visits = []
             for patient in patients:
-                print(patient.postcode)
                 audit_quarters = get_quarters_for_audit_period(
                     self.audit_start_date, self.audit_end_date
                 )
