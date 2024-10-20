@@ -35,7 +35,7 @@ def test_user_creation(
             "first_name": "Test",
             "surname": "User",
             "email": "test@test.com",
-            # "organisation_employers": test_user.organisation_employers.first(),
+            "organisation_employers": test_user.organisation_employers.first(),
         }
 
         # Login and OTP ENABLE

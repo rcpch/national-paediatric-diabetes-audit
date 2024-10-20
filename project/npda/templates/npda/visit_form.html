@@ -3,15 +3,16 @@
 {% csrf_token %}
 {% block content %}
 <div class="flex justify-center bg-white py-8">
-  <div class="w-full mx-96 px-2 py-4 m-2 shadow-md bg-white font-montserrat">
+  <div class="w-full mx-96 px-2 bg-white font-montserrat">
     <strong>{{ title }} - NPDA Patient {{ patient_id }} {% if visit_id %}- NPDA Visit No. {{ visit_id }} {% endif %}</strong>
     <form id="update-form" method="post" {% if form_method == "create" %} action="{% url 'visit-create' patient_id %}" {% else %} action="{% url 'visit-update' patient_id=patient_id pk=visit.pk %}" {% endif %}>
       {% csrf_token %}
       {% for field in form %}
         {% if field.field.category is None %}
-          <div class="md:flex md:items-center mb-6 {% if background_colour %} bg-{{background_colour}} {% endif %}">
+        <!-- visit date box -->
+          <div class="md:flex md:items-center mb-6 mt-2 {% if background_colour %} bg-{{background_colour}} {% endif %}" >
             <div class="md:w-1/3">
-                <label for="{{ field.id_for_label }}" class="block text-gray-700 font-bold md:text-center mb-1 md:mb-0 pr-4"><small>{{ field.label }}</small></label>
+                <label for="{{ field.id_for_label }}" class="block text-gray-700 font-bold md:text-right mb-1 md:mb-0 pr-4"><small>{{ field.label }}</small></label>
             </div>
             <div class="flex space-between md:w-2/3">
               {% if field.id_for_label == "id_visit_date" %}
@@ -28,33 +29,38 @@
         {% endif %}
       {% endfor %}
 
-      <div role="tablist" class="tabs tabs-bordered">
-        <input type="radio" name="my_tabs_1" role="tab" class="tab font-bold
+      <div role="tablist" class="tabs">
+        <input type="radio" name="my_tabs_1" role="tab" 
+          class="tab font-bold mb-2 text-black
+          
           {% if routine_measurements_categories_with_errors and form_method == 'update' %} 
-            bg-rcpch_red 
-          {% elif form_method == 'create' %} 
-            bg-white 
-          {% else %} 
-            bg-rcpch_pink
+            bg-rcpch_red
+            {% else %} 
+            bg-rcpch_light_blue
           {% endif %}" 
           aria-label="Routine&nbsp;Measurements" checked
         />
-        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-none mt-4">
+        <!-- This is the Routine measurements tab -->
+        <div role="tabpanel" class="tab-content rounded-none">
         {% for field_category in form.categories %}
           {% with field_category|colour_for_category as background_colour %}
-          {% if field_category == "Measurements" or field_category == "HBA1c" or field_category == "Treatment" or field_category == "CGM" or field_category == "BP"%}
+          {% if field_category == "Measurements" or field_category == "HBA1c" or field_category == "Treatment" or field_category == "CGM" or field_category == "BP"%} 
             <div class="flex flex-col mb-6 
               {% if background_colour %} 
-                bg-{{background_colour}} 
+                bg-white
               {% endif %} 
               {% if field_category in routine_measurements_categories_with_errors %}
-                outline outline-8 outline-rcpch_red
-              {% endif %}"
+                outline outline-4 outline-rcpch_red
+              {% endif %}
+              border-4 border-{{background_colour}}
+              "
             >
+            <div class="badge badge-outline p-2 {% if background_colour %} bg-{{background_colour}} {% endif %} text-white">{{field_category}}</div>
+
               {% for field in form %}
                 {% if field.field.category == field_category %}
                   <div class="flex flex-row my-2 mx-2">
-                    <div class="flex items-center justify-center md:w-1/3">
+                    <div class="flex items-center justify-end md:w-1/3">
                       <label for="{{ field.id_for_label }}" class="block text-gray-700 font-bold md:text-center mb-1 md:mb-0 pr-4"><small>{{ field.label }}</small></label>
                     </div>
                     <div class="flex space-between md:w-2/3">
@@ -83,7 +89,7 @@
               {% if field_category in categories_with_errors %}
                 <div>
                   <p class="text-rcpch_red_dark_tint italic font-bold">Errors for category:</p>
-                  <p class="text-rcpch_red_dark_tint italic">{{ field_category|errors_for_category:visit_instance.errors }}</p>
+                  <p class="text-rcpch_red_dark_tint italic">{{ field_category|errors_for_category:visit_instance.errors|safe|linebreaksbr }}</p>
                 </div>
               {% endif %}
             </div>
@@ -92,47 +98,45 @@
         {% endfor %}
         </div>
         
-        <input type="radio" name="my_tabs_1" role="tab" class="tab rounded-none font-bold
-          {% if annual_review_categories_with_errors %} 
-            bg-rcpch_red 
-          {% elif form_method == 'create' %} 
-            bg-white 
-          {% else %} 
-            bg-rcpch_pink
-          {% endif %}" 
-          aria-label="Annual&nbsp;Review"
-        />
-        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-none p-6">
+          <input type="radio" name="my_tabs_1" role="tab" 
+            class="tab rounded-none font-bold mb-2 text-black
+            {% if annual_review_categories_with_errors and form_method == 'update' %} 
+            bg-rcpch_red
+            {% else %} 
+              bg-rcpch_light_blue
+            {% endif %}" 
+            aria-label="Annual&nbsp;Review"
+          />
+          <!-- This is the the annual review tab -->
+        <div role="tabpanel" class="tab-content rounded-none" >
           {% for field_category in form.categories %}
             {% with field_category|colour_for_category as background_colour %}
             {% if field_category == "Foot Care" or field_category == "DECS" or field_category == "ACR" or field_category == "Cholesterol" or field_category == "Thyroid" or field_category == "Coeliac" or field_category == "Psychology" or field_category == "Smoking" or field_category == "Dietician" or field_category == "Sick Day Rules" or field_category == "Immunisation (flu)" %}
-              <div class="collapse collapse-arrow my-2 bg-base-200 rounded-none 
+              <div class="collapse collapse-arrow mb-2 rounded-none 
                 {% if field_category in categories_with_errors %} 
-                  bg-rcpch_red 
-                {% elif field_category in categories_without_errors %} 
-                  bg-rcpch_pink 
+                  border-4 border-rcpch_red
                 {% else %} 
-                  bg-rcpch_dark_blue 
+                  border-4 border-{{background_colour}}
                 {% endif %}
               ">
                 <input type="radio" name="my-accordion-3" checked="checked" /> 
-                <div class="collapse-title text-xl font-medium text-white">
-                  <strong>{{field_category}}</strong>
-                </div>
-                <div class="collapse-content flex flex-col mb-6 text-lg 
-                  {% if field_category in categories_with_errors %} 
-                    bg-rcpch_red 
-                  {% elif field_category in categories_without_errors %} 
-                    bg-rcpch_pink 
-                  {% else %} 
-                    bg-rcpch_dark_blue 
+                <div class="collapse-title p-1 pt-0 pl-0 m-0" >
+                  {% if field_category in categories_with_errors %}
+                    <div class="badge badge-outline badge-rcpch_red text-white bg-rcpch_red">
+                      {{field_category}}
+                      </div>
+                  {% else %}
+                    <div class="badge badge-outline bg-{{background_colour}} text-white">
+                      {{field_category}}
+                      </div>
                   {% endif %}
-                ">
+                </div>
+                <div class="collapse-content flex flex-col mb-6 bg-white">
                   {% for field in form %}
                     {% if field.field.category == field_category %}
                     <div class="flex flex-row my-2 mx-2">
                       <div class="flex items-center justify-center md:w-1/3">
-                        <label for="{{ field.id_for_label }}" class="text-white block font-bold mb-1 md:mb-0 pr-4 text-left"><small>{{ field.label }}</small></label>
+                        <label for="{{ field.id_for_label }}" class="text-black block font-bold mb-1 md:mb-0 pr-4 text-left"><small>{{ field.label }}</small></label>
                       </div>
                       <div class="flex space-between md:w-2/3">
                       {% if field.field.widget|is_select %}
@@ -150,7 +154,7 @@
                       {% endif %}
                       {% for error in field.errors %}
                           <p>
-                            <strong class="text-gray-700">{{ error|escape }}</strong>
+                            <strong class="text-rcpch_red">{{ error|escape }}</strong>
                           </p>  
                       {% endfor %}
                       </div>
@@ -159,8 +163,8 @@
                   {% endfor %}
                   {% if field_category in categories_with_errors %}
                     <div>
-                      <p class="text-white italic font-bold">Errors for category:</p>
-                      <p class="text-white italic">{{ field_category|errors_for_category:visit_instance.errors }}</p>
+                      <small class="text-rcpch_red italic font-bold">Errors for category:</small>
+                      <small class="text-rcpch_red italic">{{ field_category|errors_for_category:visit_instance.errors|safe|linebreaksbr }}</small>
                     </div>
                   {% endif %}
                 </div>
@@ -170,30 +174,36 @@
           {% endfor %}
         </div>
 
-        <input type="radio" name="my_tabs_1" role="tab" aria-label="Inpatient&nbsp;Entry" class="tab w font-bold
-          {% if "Hospital Admission" in categories_with_errors %}
+        <input type="radio" name="my_tabs_1" role="tab" aria-label="Inpatient&nbsp;Entry" 
+          class="tab font-bold mb-2 text-black
+          {% if 'Hospital Admission' in categories_with_errors %}
             bg-rcpch_red
-          {% elif "Hospital Admission" in categories_without_errors %}
-            bg-rcpch_pink
+          {% else %}
+            bg-rcpch_light_blue
           {% endif %}
         "/>
-        <div role="tabpanel" class="
-          tab-content bg-base-100 border-base-300 rounded-none p-6">
+        <div 
+          role="tabpanel"
+          class="tab-content rounded-none">
           {% for field_category in form.categories %}
             {% with field_category|colour_for_category as background_colour %}
               {% if field_category == "Hospital Admission" %}
-                <div class="flex flex-col mb-6 
+              <!-- This is the inpatient entry  -->
+                <div class="flex flex-col mb-6
                   {% if background_colour %} 
-                    bg-{{background_colour}} 
+                    border-4 border-{{background_colour}} bg-white
                   {% endif %}
-                  {% if "Hospital Admission" in categories_with_errors %}
-                    outline outline-8 outline-rcpch_red
+                  {% if 'Hospital Admission' in categories_with_errors %}
+                    outline outline-4 outline-rcpch_red
                   {% endif %}"
                 >
+
+                <div class="badge badge-outline p-2 {% if background_colour %} bg-{{background_colour}} {% endif %} text-white">{{field_category}}</div>
+                
                 {% for field in form %}
                     {% if field.field.category == field_category %}
                     <div class="flex flex-row my-2 mx-2">
-                      <div class="flex items-center justify-center md:w-1/3">
+                      <div class="flex flex-row align-items-center justify-end md:w-1/3">
                         <label for="{{ field.id_for_label }}" class="block text-gray-700 font-bold md:text-center mb-1 md:mb-0 pr-4"><small>{{ field.label }}</small></label>
                       </div>
                       <div class="flex space-between md:w-2/3">
@@ -222,7 +232,7 @@
                 {% if field_category in categories_with_errors %}
                   <div>
                     <p class="text-rcpch_red_dark_tint italic font-bold">Errors for category:</p>
-                    <p class="text-rcpch_red_dark_tint italic">{{ field_category|errors_for_category:visit_instance.errors }}</p>
+                    <p class="text-rcpch_red_dark_tint italic">{{ field_category|errors_for_category:visit_instance.errors|safe|linebreaksbr }}</p>
                   </div>
                 {% endif %}
                 </div>

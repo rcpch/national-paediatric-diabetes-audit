@@ -22,9 +22,3 @@ class VisitFactory(factory.django.DjangoModelFactory):
 
     # Once Patient instance made, it will attach to this instance
     patient = None
-    
-    class Params:
-        """Factory parameters for VisitFactory.
-        """
-
-        # KPI 1

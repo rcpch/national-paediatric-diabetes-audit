@@ -1,23 +1,27 @@
 # Python imports
+import datetime
 import logging
 
 # Django imports
-from django.urls import reverse
+from django.apps import apps
 from django.contrib import messages
-from django.shortcuts import render
 from django.core.exceptions import ValidationError
+from django.shortcuts import redirect, render
+from django.urls import reverse
+
 
 # HTMX imports
 from django_htmx.http import trigger_client_event
 
-# RCPCH imports
-from ..general_functions.csv_upload import csv_upload
+from ..forms.upload import UploadFileForm
+from ..general_functions.csv_summarize import csv_summarize
+from ..general_functions.csv_upload import csv_upload, read_csv
 from ..general_functions.session import get_new_session_fields
 from ..general_functions.view_preference import get_or_update_view_preference
-from ..general_functions.csv_summarize import csv_summarize
-from ..forms.upload import UploadFileForm
-from .decorators import login_and_otp_required
+from ..kpi_class.kpis import CalculateKPIS
 
+# RCPCH imports
+from .decorators import login_and_otp_required
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -50,7 +54,7 @@ def home(request):
         file = request.FILES["csv_upload"]
         pz_code = request.session.get("pz_code")
 
-        summary = csv_summarize(csv_file=file)
+        # summary = csv_summarize(csv_file=file)
 
         # You can't read the same file twice without resetting it
         file.seek(0)
@@ -59,23 +63,34 @@ def home(request):
         try:
             csv_upload(
                 user=request.user,
+                dataframe=read_csv(file),
                 csv_file=file,
                 pdu_pz_code=pz_code,
             )
-            messages.success(request=request, message="File uploaded successfully")
+            messages.success(
+                request=request,
+                message="File uploaded successfully. There are no errors,",
+            )
+
+            VisitActivity = apps.get_model("npda", "VisitActivity")
+            try:
+                VisitActivity.objects.create(
+                    activity=8,
+                    ip_address=request.META.get("REMOTE_ADDR"),
+                    npdauser=request.user,
+                )  # uploaded csv - activity 8
+            except Exception as e:
+                logger.error(f"Failed to log user activity: {e}")
         except ValidationError as error:
             errors = error_list(error)
+            for error in errors:
+                messages.error(
+                    request=request,
+                    message=f"CSV has been uploaded, but errors have been found. These include error in row {error['original_row_index']}: {error['message']}",
+                )
+            pass
 
-        return render(
-            request=request,
-            template_name="home.html",
-            context={
-                "file_uploaded": True,
-                "summary": summary,
-                "form": form,
-                "errors": errors,
-            },
-        )
+        return redirect("submissions")
     else:
         form = UploadFileForm()
 
@@ -120,6 +135,7 @@ def view_preference(request):
     patients_list_view_url = reverse("patients")
     submissions_list_view_url = reverse("submissions")
     npdauser_list_view_url = reverse("npda_users")
+    dashboard_url = reverse("dashboard")
 
     trigger_client_event(
         response=response,
@@ -138,4 +154,46 @@ def view_preference(request):
         name="patients",
         params={"method": "GET", "url": patients_list_view_url},
     )  # reloads the patients table
+
+    trigger_client_event(
+        response=response,
+        name="dashboard",
+        params={"method": "GET", "url": dashboard_url},
+    )  # reloads the dashboard
     return response
+
+
+@login_and_otp_required()
+def dashboard(request):
+    """
+    Dashboard view for the KPIs.
+    """
+    template = "dashboard.html"
+    pz_code = request.session.get("pz_code")
+    if request.htmx:
+        # If the request is an htmx request, we want to return the partial template
+        template = "partials/kpi_table.html"
+
+    PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+    try:
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+    except PaediatricDiabetesUnit.DoesNotExist:
+        messages.error(
+            request=request,
+            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
+        )
+        return render(request, "dashboard.html")
+
+    calculate_kpis = CalculateKPIS(
+        calculation_date=datetime.date.today(), return_pt_querysets=True
+    )
+
+    kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
+
+    context = {
+        "pdu": pdu,
+        "kpi_results": kpi_calculations_object,
+        "aggregation_level": "Paediatric Diabetes Unit",
+    }
+
+    return render(request, template_name=template, context=context)

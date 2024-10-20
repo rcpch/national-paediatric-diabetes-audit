@@ -40,6 +40,8 @@ from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequire
 from project.constants import VIEW_PREFERENCES
 from .mixins import LoginAndOTPRequiredMixin
 
+# from ..signals import password_reset_sent
+
 logger = logging.getLogger(__name__)
 
 """
@@ -450,6 +452,10 @@ Authentication and password change
 
 
 class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
+    """
+    Custom password reset view that sends a password reset email to the user
+    """
+
     template_name = "registration/password_reset.html"
     html_email_template_name = "registration/password_reset_email.html"
     email_template_name = strip_tags("registration/password_reset_email.html")
@@ -468,8 +474,16 @@ class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
 
     # extend form_valid to set user.password_last_set
     def form_valid(self, form):
-        self.request.user.password_last_set = timezone.now()
-
+        # self.request.user.password_last_set = timezone.now()
+        user_email_to_reset_password = form.cleaned_data["email"]
+        # check if user exists
+        if NPDAUser.objects.filter(email=user_email_to_reset_password).exists():
+            user = NPDAUser.objects.get(email=user_email_to_reset_password)
+            VisitActivity.objects.create(
+                npdauser=user,
+                activity=4,
+                ip_address=self.request.META.get("REMOTE_ADDR"),
+            )  # password reset link sent
         return super().form_valid(form)
 
 

@@ -14,21 +14,18 @@ Tests for NPDAUser model actions.
 - NPDAUser can be reactivated.
 """
 
-# Python imports
-import pytest
 import logging
 from http import HTTPStatus
 
+# Python imports
+import pytest
 # 3rd party imports
 from django.urls import reverse
-from django.test import Client
 
+from project.constants.user import RCPCH_AUDIT_TEAM
 # E12 imports
 from project.npda.models import NPDAUser
 from project.npda.tests.utils import login_and_verify_user
-from project.npda.tests.UserDataClasses import test_user_rcpch_audit_team_data
-from project.npda.views.npda_users import NPDAUserListView
-from project.constants.user import RCPCH_AUDIT_TEAM
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +96,8 @@ def test_npda_user_list_view_rcpch_audit_team_can_view_all_users(
     assert non_ah_users.count() > 0
 
     ah_audit_team_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE, role=RCPCH_AUDIT_TEAM
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=RCPCH_AUDIT_TEAM,
     ).first()
 
     client = login_and_verify_user(client, ah_audit_team_user)

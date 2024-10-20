@@ -45,26 +45,29 @@ def match_category(value):
 def colour_for_category(category):
     # returns a colour for a given category
     colours = [
-        {"category": VisitCategories.HBA1, "colour": "rcpch_red_light_tint2"},
-        {"category": VisitCategories.MEASUREMENT, "colour": "rcpch_vivid_green"},
-        {"category": VisitCategories.TREATMENT, "colour": "rcpch_orange"},
-        {"category": VisitCategories.CGM, "colour": "rcpch_orange_light_tint2"},
-        {"category": VisitCategories.BP, "colour": "rcpch_yellow"},
-        {"category": VisitCategories.FOOT, "colour": "rcpch_yellow_light_tint2"},
-        {"category": VisitCategories.DECS, "colour": "rcpch_strong_green"},
-        {"category": VisitCategories.ACR, "colour": "rcpch_strong_green_light_tint2"},
-        {"category": VisitCategories.CHOLESTEROL, "colour": "rcpch_aqua_green"},
+        {"category": VisitCategories.HBA1, "colour": "rcpch_dark_grey"},
+        {"category": VisitCategories.MEASUREMENT, "colour": "rcpch_yellow"},
+        {
+            "category": VisitCategories.TREATMENT,
+            "colour": "rcpch_strong_green_light_tint1",
+        },
+        {"category": VisitCategories.CGM, "colour": "rcpch_aqua_green_light_tint1"},
+        {"category": VisitCategories.BP, "colour": "rcpch_orange_light_tint1"},
+        {"category": VisitCategories.FOOT, "colour": "rcpch_gold"},
+        {"category": VisitCategories.DECS, "colour": "rcpch_vivid_green"},
+        {"category": VisitCategories.ACR, "colour": "rcpch_red_light_tint2"},
+        {"category": VisitCategories.CHOLESTEROL, "colour": "rcpch_orange_dark_tint"},
         {
             "category": VisitCategories.THYROID,
-            "colour": "rcpch_aqua_green_light_tint2",
+            "colour": "rcpch_red_dark_tint",
         },
-        {"category": VisitCategories.COELIAC, "colour": "rcpch_purple"},
-        {"category": VisitCategories.PSYCHOLOGY, "colour": "rcpch_purple_light_tint2"},
-        {"category": VisitCategories.SMOKING, "colour": "rcpch_gold"},
-        {"category": VisitCategories.DIETETIAN, "colour": "rcpch_vivid_green"},
-        {"category": VisitCategories.SICK_DAY, "colour": "rcpch_pink"},
-        {"category": VisitCategories.FLU, "colour": "rcpch_dark_blue"},
-        {"category": VisitCategories.HOSPITAL_ADMISSION, "colour": "rcpch_light_blue"},
+        {"category": VisitCategories.COELIAC, "colour": "rcpch_purple_light_tint2"},
+        {"category": VisitCategories.PSYCHOLOGY, "colour": "rcpch_yellow_dark_tint"},
+        {"category": VisitCategories.SMOKING, "colour": "rcpch_strong_green_dark_tint"},
+        {"category": VisitCategories.DIETETIAN, "colour": "rcpch_aqua_green_dark_tint"},
+        {"category": VisitCategories.SICK_DAY, "colour": "rcpch_purple_dark_tint"},
+        {"category": VisitCategories.FLU, "colour": "rcpch_orange"},
+        {"category": VisitCategories.HOSPITAL_ADMISSION, "colour": "rcpch_red"},
     ]
     for colour in colours:
         if colour["category"].value == category:
@@ -176,7 +179,6 @@ def errors_for_category(selected_category, errors_by_field):
     errors = itertools.chain(*errors)
 
     error_messages = [error["message"] for error in errors]
-
     return "\n".join(error_messages)
 
 
@@ -192,7 +194,30 @@ def patient_valid(patient):
     else:
         return True
 
+
 # Used to keep text highlighted in navbar for the tab that has been selected
 @register.simple_tag
 def active_navbar_tab(request, url_name):
-    return 'text-rcpch_light_blue' if request.resolver_match.url_name == url_name else 'text-gray-700'
+    return (
+        "text-rcpch_light_blue"
+        if request.resolver_match.url_name == url_name
+        else "text-gray-700"
+    )
+
+
+@register.filter
+def join_by_comma(queryset):
+    if len(queryset) == 0:
+        return "No patients"
+    return ", ".join(map(str, queryset.values_list("nhs_number", flat=True)))
+
+
+@register.filter
+def extract_digits(value, underscore_index=0):
+    """
+    Extracts all digits between the second or subsequent pair of _ characters in the string.
+    """
+    matches = re.findall(r"_(\d+)", value)
+    if len(matches) > 0:
+        return int(matches[underscore_index])
+    return 0

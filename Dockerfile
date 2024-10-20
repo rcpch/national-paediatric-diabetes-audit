@@ -8,7 +8,8 @@ ENV PYTHONUNBUFFERED 1
 # Setup GDAL + PILLOW required for CAPTCHA
 RUN apt-get update &&\
     apt-get install -y binutils libproj-dev gdal-bin libgdal-dev python3-gdal &&\
-    apt-get install -y  libz-dev libjpeg-dev libfreetype6-dev
+    apt-get install -y  libz-dev libjpeg-dev libfreetype6-dev\
+    && apt-get install -y nodejs npm
 
 # Extra packages required for Material for MkDocs plugins (dependency for git and pdf plugins)
 RUN apt install -y git python3-cffi python3-brotli libpango-1.0-0 libpangoft2-1.0-0
@@ -34,7 +35,18 @@ WORKDIR /app/
 COPY . /app/
 
 # Ensure the media directory exists - csv files are stored here
-RUN mkdir -p /app/media/submissions/csv/
+RUN mkdir -p /media/submissions/csv/
+
+
+# Install Tailwind CSS and DaisyUI
+RUN npm install
+
+# Set correct permissions for npm directories using root user
+RUN chown -R root:root /app/node_modules
+RUN chmod -R 755 /app/node_modules
+
+# Build Tailwind CSS
+RUN npm run build:css
 
 # Collect and compress static files into image
 RUN python manage.py collectstatic --no-input

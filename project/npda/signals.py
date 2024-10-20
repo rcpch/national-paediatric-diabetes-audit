@@ -8,7 +8,9 @@ from django.contrib.auth.signals import (
     user_login_failed,
 )
 from django.dispatch import receiver
-from django.apps import apps
+
+# third party imports
+from two_factor.signals import user_verified
 
 # RCPCH
 from .models import VisitActivity, NPDAUser
@@ -16,6 +18,15 @@ from .general_functions.session import create_session_object
 
 # Logging setup
 logger = logging.getLogger(__name__)
+
+"""
+This file contains signals that are triggered when a user logs in, logs out, or fails to log in.
+These signals are used to log user activity in the VisitActivity model.
+They are also used to track if users have touched patient records.
+"""
+
+# Custom signals
+from django.dispatch import Signal
 
 
 @receiver(user_logged_in)
@@ -64,6 +75,21 @@ def log_user_logout(sender, request, user, **kwargs):
     VisitActivity.objects.create(
         activity=3, ip_address=get_client_ip(request), npdauser=user
     )
+
+
+# Two factor auth receiver
+@receiver(user_verified)
+def two_factor_auth_setup(request, user, device, **kwargs):
+    if (
+        user_verified
+        and VisitActivity.objects.filter(npdauser=user, activity=7).count() < 1
+    ):
+        logger.info(
+            f"{user} ({user.email}) has logged in the for the first time with two factor authentication."
+        )
+        VisitActivity.objects.create(
+            activity=7, ip_address=get_client_ip(request), npdauser=user
+        )  # Two factor authentication set up
 
 
 # helper functions

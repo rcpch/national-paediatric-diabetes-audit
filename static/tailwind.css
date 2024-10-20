@@ -1,15 +1,9 @@
+
+
 * {
   border-radius: 0 !important; /* completely remove rounded corners */
 }
 
-.tooltip{
-    visibility: hidden;
-    position: absolute;
-  }
-  .has-tooltip:hover .tooltip {
-    visibility: visible;
-    z-index: 100;
-  }
   .dropdown:hover .dropdown-menu {
     display: block;
     background-color: white;
@@ -54,4 +48,15 @@
 
 .hidden {
   display: none;
+}
+
+.nhs-number-column {
+  white-space: nowrap;
+  width: auto;
+}
+
+.nhs-number-column .flex {
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Optional: Center horizontally as well */
 }

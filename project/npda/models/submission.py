@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.conf import settings
 
 
 class Submission(models.Model):
@@ -35,12 +36,15 @@ class Submission(models.Model):
     )
 
     csv_file = models.FileField(
-        upload_to="submissions/csv/",
+        upload_to=f"submissions/csv/",
         help_text="CSV file containing the audit data for this submission",
         default="submissions/csv/default.csv",
+        null=True,  # submissions that are not active will have their csv file deleted
     )
 
-    patients = models.ManyToManyField(to="npda.Patient", related_name="submissions")
+    patients = models.ManyToManyField(
+        to="npda.Patient", through="npda.PatientSubmission", related_name="submissions"
+    )
 
     paediatric_diabetes_unit = models.ForeignKey(
         on_delete=models.CASCADE,
@@ -60,3 +64,14 @@ class Submission(models.Model):
         if self.submission_active:
             raise ValidationError("Cannot delete an active submission.")
         super().delete(*args, **kwargs)
+
+    def save(self, *args, **kwargs):
+        if self.submission_active == False:
+            self.csv_file.delete(
+                save=True
+            )  # delete the csv file if the submission is not active
+            self.csv_file = (
+                None  # set the csv file to None if the submission is not active
+            )
+
+        super().save(*args, **kwargs)

@@ -1,11 +1,33 @@
+{% load static %}
 {% load npda_tags %}
-<h1 class="text-md font-montserrat font-semibold text-rcpch_dark_blue">Patients under the care of {{pz_code}}</h1>
+{% url 'patients' as patients_url %}
+{% if request.user.view_preference == 1 %}
+    <!-- PDU view   -->
+    <h1 class="text-md font-montserrat font-semibold text-rcpch_dark_blue">Patients under the care of {{pz_code}}</h1>
+{% elif request.user.view_preference == 2 %}
+    <!-- national view -->
+    <h1 class="text-md font-montserrat font-semibold text-rcpch_dark_blue">All patients nationally</h1>
+{% endif %}
+
 {% if patient_list %}
 <table class="table table-md w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
     <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">
             <tr>
-                <th scope="col" class="px-2 py-3 text-center">NPDA ID</th>
-                <th scope="col" class="px-2 py-3 text-center">NHS Number</th>
+                <th scope="col" class="px-2 py-3 text-center cursor-pointer">
+                        <span class="flex flex-row">
+                            {% include 'partials/page_elements/filter_icon.html' with hx_get=asc_url hx_target="#patient_table" filter_direction="asc" current_page=current_page sort_field="pk" %}
+                            NPDA ID
+                            {% include 'partials/page_elements/filter_icon.html' with hx_get=desc_url hx_target="#patient_table" filter_direction="desc" current_page=current_page sort_field="pk" %}
+                        </span>
+                </th>
+                <th scope="col" class="px-2 py-3 text-center cursor-pointer nhs-number-column">
+                        <span class="flex flex-row">
+                            {% include 'partials/page_elements/filter_icon.html' with hx_get=asc_url hx_target="#patient_table" filter_direction="asc" current_page=current_page sort_field="nhs_number" %}
+                            NHS Number
+                            {% include 'partials/page_elements/filter_icon.html' with hx_get=desc_url hx_target="#patient_table" filter_direction="desc" current_page=current_page sort_field="nhs_number" %}
+                        </span>
+                </th>
+
                 <th scope="col" class="px-2 py-3 text-center">Sex</th>
                 <th scope="col" class="px-2 py-3 text-center">Date of Birth</th>
                 <th scope="col" class="px-2 py-3 text-center">Postcode</th>
@@ -35,71 +57,76 @@
                     </thead>
                     {% endif %}
                 {% endif %}
-                <tr 
-                    {% if patient.is_valid and patient.visit_error_count < 1 %} 
-                    class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white"  
-                    {% else %} 
-                    class="border-b bg-rcpch_red_light_tint3 text-rcpch_red border-gray-100 hover:bg-r hover:bg-rcpch_red_light_tint2 hover:text-white" 
-                    {% endif %}>
-                    <td><a href="{% url 'patient-update' patient.pk %}" class="px-2 flex text-center hover:text-rcpch_pink"><strong>{{ patient.pk }}</strong></a></td>
-                    <td class="px-6 py-4 text-center items-center">
-                        {% if patient.errors|error_for_field:"nhs_number" %}
-                        <div class="relative has-tooltip items-center">
-                            <span class='absolute tooltip rounded shadow-lg px-2 py-2 bg-gray-500 text-white -mt-24'>{{patient.errors|error_for_field:"nhs_number"}}</span>
-                            <svg class="mt-5 mr-2" height="16" style="overflow:visible;enable-background:new 0 0 32 32" viewBox="0 0 32 32" width="16" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><g><g id="Error_1_"><g id="Error"><circle cx="16" cy="16" id="BG" r="16" style="fill:#D72828;"/><path d="M14.5,25h3v-3h-3V25z M14.5,6v13h3V6H14.5z" id="Exclamatory_x5F_Sign" style="fill:#E6E6E6;"/></g></g></g></svg>
-                        </div>&nbsp;
+                <tr>
+                    <td>
+                        <span class="tooltip tooltip-right" data-tip="View patient details">
+                            <a href="{% url 'patient-update' patient.pk %}" class="px-2 flex text-center hover:text-rcpch_pink"><strong>{{ patient.pk }}</strong></a>
+                        </span>
+                    </td>
+                    <td class="nhs-number-column {% if patient.errors|error_for_field:'nhs_number' or patient.errors|error_for_field:'gp_practice_ods_code' %} text-rcpch_red {% endif %}">
+                        {% if patient.errors|error_for_field:"nhs_number" or patient.errors|error_for_field:"gp_practice_ods_code" %}
+                          {% if patient.errors|error_for_field:"gp_practice_ods_code" %}
+                            <span class="tooltip tooltip-right" data-tip="{{patient.errors|error_for_field:'gp_practice_ods_code'}}">
+                            <svg class="mr-2" height="16" style="overflow:visible;enable-background:new 0 0 32 32" viewBox="0 0 32 32" width="16" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><g><g id="Error_1_"><g id="Error"><circle cx="16" cy="16" id="BG" r="16" style="fill:#D72828;"/><path d="M14.5,25h3v-3h-3V25z M14.5,6v13h3V6H14.5z" id="Exclamatory_x5F_Sign" style="fill:#E6E6E6;"/></g></g></g></svg>
+                            </span>
+                          {% endif %}
+                          {% if patient.errors|error_for_field:"nhs_number" %}
+                            <span class="tooltip tooltip-right" data-tip="{{patient.errors|error_for_field:'nhs_number'}}">
+                            <svg class="mr-2" height="16" style="overflow:visible;enable-background:new 0 0 32 32" viewBox="0 0 32 32" width="16" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><g><g id="Error_1_"><g id="Error"><circle cx="16" cy="16" id="BG" r="16" style="fill:#D72828;"/><path d="M14.5,25h3v-3h-3V25z M14.5,6v13h3V6H14.5z" id="Exclamatory_x5F_Sign" style="fill:#E6E6E6;"/></g></g></g></svg>
+                            </span>
+                          {% endif %}
                         {% endif %}
                         {{ patient.nhs_number }}
                     </td>
-                    <td class="px-6 py-4 text-center items-center">
+                    <td class="px-6 py-4 text-center items-center {% if patient.errors|error_for_field:'sex' %} text-rcpch_red {% endif %}">
                         {% if patient.errors|error_for_field:"sex" %}
-                            <div class="has-tooltip items-center">
-                                <span class='tooltip rounded shadow-lg px-2 py-2 bg-gray-500 text-white -mt-4'>{{patient.errors|error_for_field:"sex"}}</span>
+                                <div class="tooltip tooltip-right" data-tip="{{patient.errors|error_for_field:'sex'}}">
                                 <svg height="16" style="overflow:visible;enable-background:new 0 0 32 32" viewBox="0 0 32 32" width="16" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><g><g id="Error_1_"><g id="Error"><circle cx="16" cy="16" id="BG" r="16" style="fill:#D72828;"/><path d="M14.5,25h3v-3h-3V25z M14.5,6v13h3V6H14.5z" id="Exclamatory_x5F_Sign" style="fill:#E6E6E6;"/></g></g></g></svg>
                             </div>&nbsp;
                         {% endif %}
                         {{ patient.get_sex_display }}
                     </td>
-                    <td class="px-6 py-4 items-center">
+                    <td class="px-6 py-4 items-center {% if patient.errors|error_for_field:'date_of_birth' %} text-rcpch_red {% endif %}">
                         {% if patient.errors|error_for_field:"date_of_birth" %}
-                        <div class="has-tooltip items-center">
-                        <span class='tooltip rounded shadow-lg px-2 py-2 bg-gray-500 text-white -mt-4'>{{patient.errors|error_for_field:"date_of_birth"}}</span>
-                        <svg height="16" style="overflow:visible;enable-background:new 0 0 32 32" viewBox="0 0 32 32" width="16" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><g><g id="Error_1_"><g id="Error"><circle cx="16" cy="16" id="BG" r="16" style="fill:#D72828;"/><path d="M14.5,25h3v-3h-3V25z M14.5,6v13h3V6H14.5z" id="Exclamatory_x5F_Sign" style="fill:#E6E6E6;"/></g></g></g></svg>
+                        <div class="tooltip tooltip-top" data-tip="{{patient.errors|error_for_field:'date_of_birth'}}">
+                            <svg 
+                                height="16" 
+                                style="overflow:visible;enable-background:new 0 0 32 32" 
+                                viewBox="0 0 32 32" width="16" 
+                                xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><g>
+                                    <g id="Error_1_"><g id="Error"><circle cx="16" cy="16" id="BG" r="16" style="fill:#D72828;"/><path d="M14.5,25h3v-3h-3V25z M14.5,6v13h3V6H14.5z" id="Exclamatory_x5F_Sign" style="fill:#E6E6E6;"/></g></g></g>
+                                </svg>
                         </div>&nbsp;
                         {% endif %}
                         {{ patient.date_of_birth }}
                     </td>
-                    <td class="px-6 py-4 text-center">
+                    <td class="px-6 py-4 text-center {% if patient.errors|error_for_field:'postcode' %} text-rcpch_red {% endif %}">
                         {% if patient.errors|error_for_field:"postcode" %}
-                        <div class="has-tooltip items-center">
-                        <span class='tooltip rounded shadow-lg px-2 py-2 bg-gray-500 text-white -mt-4'>{{patient.errors|error_for_field:"postcode"}}</span>
+                        <div class="tooltip tooltip-top" data-tip="{{patient.errors|error_for_field:'postcode'}}">
                         <svg height="16" style="overflow:visible;enable-background:new 0 0 32 32" viewBox="0 0 32 32" width="16" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><g><g id="Error_1_"><g id="Error"><circle cx="16" cy="16" id="BG" r="16" style="fill:#D72828;"/><path d="M14.5,25h3v-3h-3V25z M14.5,6v13h3V6H14.5z" id="Exclamatory_x5F_Sign" style="fill:#E6E6E6;"/></g></g></g></svg>
                         </div>&nbsp;
                         {% endif %}
                         {{ patient.postcode }}
                     </td>
-                    <td class="px-6 py-4 text-center">
+                    <td class="px-6 py-4 text-center {% if patient.errors|error_for_field:'ethnicity' %} text-rcpch_red {% endif %}">
                         {% if patient.errors|error_for_field:"ethnicity" %}
-                        <div class="has-tooltip items-center">
-                        <span class='tooltip rounded shadow-lg px-2 py-2 bg-gray-500 text-white -mt-4'>{{patient.errors|error_for_field:"ethnicity"}}</span>
+                        <div class="tooltip tooltip-top" data-tip="{{patient.errors|error_for_field:'ethnicity'}}">
                         <svg height="16" style="overflow:visible;enable-background:new 0 0 32 32" viewBox="0 0 32 32" width="16" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><g><g id="Error_1_"><g id="Error"><circle cx="16" cy="16" id="BG" r="16" style="fill:#D72828;"/><path d="M14.5,25h3v-3h-3V25z M14.5,6v13h3V6H14.5z" id="Exclamatory_x5F_Sign" style="fill:#E6E6E6;"/></g></g></g></svg>
                         </div>&nbsp;
                         {% endif %}
                         {{ patient.get_ethnicity_display }}
                     </td>
-                    <td class="px-6 py-4 text-center">
+                    <td class="px-6 py-4 text-center {% if patient.errors|error_for_field:'diabetes_type' %} text-rcpch_red {% endif %}">
                         {% if patient.errors|error_for_field:"diabetes_type" %}
-                        <div class="has-tooltip items-center">
-                        <span class='tooltip rounded shadow-lg px-2 py-2 bg-gray-500 text-white -mt-4'>{{patient.errors|error_for_field:"diabetes_type"}}</span>
+                        <div class="tooltip tooltip-top" data-tip="{{patient.errors|error_for_field:'diabetes_type'}}">
                         <svg height="16" style="overflow:visible;enable-background:new 0 0 32 32" viewBox="0 0 32 32" width="16" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><g><g id="Error_1_"><g id="Error"><circle cx="16" cy="16" id="BG" r="16" style="fill:#D72828;"/><path d="M14.5,25h3v-3h-3V25z M14.5,6v13h3V6H14.5z" id="Exclamatory_x5F_Sign" style="fill:#E6E6E6;"/></g></g></g></svg>
                         </div>&nbsp;
                         {% endif %}
                         {{ patient.get_diabetes_type_display }}
                     </td>
-                    <td class="px-6 py-4 text-center">
+                    <td class="px-6 py-4 text-center {% if patient.errors|error_for_field:'diagnosis_date' %} text-rcpch_red {% endif %}">
                         {% if patient.errors|error_for_field:"diagnosis_date" %}
-                        <div class="has-tooltip items-center">
-                        <span class='tooltip rounded shadow-lg px-2 py-2 bg-gray-500 text-white -mt-4'>{{patient.errors|error_for_field:"diagnosis_date"}}</span>
+                        <div class="tooltip tooltip-top" data-tip="{{patient.errors|error_for_field:'diagnosis_date'}}">
                         <svg height="16" style="overflow:visible;enable-background:new 0 0 32 32" viewBox="0 0 32 32" width="16" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><g><g id="Error_1_"><g id="Error"><circle cx="16" cy="16" id="BG" r="16" style="fill:#D72828;"/><path d="M14.5,25h3v-3h-3V25z M14.5,6v13h3V6H14.5z" id="Exclamatory_x5F_Sign" style="fill:#E6E6E6;"/></g></g></g></svg>
                         </div>&nbsp;
                         {% endif %}
@@ -114,7 +141,7 @@
                     <td class="px-6 py-4 text-center">
                             {{ patient.latest_quarter|default:'-' }}</td>
                     <td class="px-2 text-right w-80 relative group">
-                        <!-- <div class="has-tooltip"> -->
+                        
                         <a 
                         href="{% url 'patient_visits' patient.pk %}" 
                         {% if patient.is_valid and patient.visit_error_count < 1 %} 
@@ -123,32 +150,30 @@
                         class="text-rcpch_red hover:text-white flex justify-end"
                         {% endif %}
                         >
-                        <!-- <span class='tooltip '></span>  -->
-                            {% if not patient.is_valid or patient.visit_error_count > 0 %}
-                            <strong class="text-rcpch_red hover:text-white px-2 self-center">Visits ({{patient.visit_set.all.count}})</strong>
-                            <!-- info icon -->
-                            <svg 
-                                class="self-center hover:text-white text-rcpch_red" 
-                                height="16" style="overflow:visible;enable-background:new 0 0 32 32" 
-                                viewBox="0 0 32 32" width="16" 
-                                xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-                                <g><g id="Error_1_"><g id="Error">
-                                <circle cx="16" cy="16" id="BG" r="16" fill="currentColor"/>
-                                <path d="M14.5,25h3v-3h-3V25z M14.5,6v13h3V6H14.5z" id="Exclamatory_x5F_Sign" style="fill:#E6E6E6;"/>
-                                </g></g></g>
+                            {% if patient.visit_error_count > 0 %}
+                                <strong class="text-rcpch_red px-2 self-center">Visits ({{patient.visit_set.all.count}})</strong>
+                                <svg 
+                                    class="self-center text-rcpch_red" 
+                                    height="16" style="overflow:visible;enable-background:new 0 0 32 32" 
+                                    viewBox="0 0 32 32" width="16" 
+                                    xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                    <g><g id="Error_1_"><g id="Error">
+                                    <circle cx="16" cy="16" id="BG" r="16" fill="currentColor"/>
+                                    <path d="M14.5,25h3v-3h-3V25z M14.5,6v13h3V6H14.5z" id="Exclamatory_x5F_Sign" style="fill:#E6E6E6;"/>
+                                    </g></g></g>
                                 </svg>
-                            <div class="tooltip-content hidden group-hover:block absolute rounded shadow-lg px-2 py-2 bg-gray-800 text-white -mt-20 text-left hover:text-white font-montserrat">
+                            <div class="tooltip-content hidden group-hover:block absolute rounded shadow-lg px-2 py-2 bg-gray-800 text-white -mt-20 text-left font-montserrat">
                                 {{patient.visit_error_count}} visit{{patient.visit_error_count|pluralize}} {{patient.visit_error_count|pluralize:'has, have'}} errors that need addressing.<br>Items have been saved but will not be included until rectified.
                             </div>
                             {% else %}
-                            <strong class="text-rcpch_pink hover:text-white self-center">Visits ({{patient.visit_set.all.count}})</strong>
+                            <strong class="text-rcpch_pink self-center">Visits ({{patient.visit_set.all.count}})</strong>
                             {% endif %}
                             <!-- caret -->
                             <svg
                                 {% if patient.is_valid and patient.visit_error_count < 1 %}
-                                class="h-8 w-8 text-rcpch_pink self-center hover:text-white"
+                                class="h-8 w-8 text-rcpch_pink self-center"
                                 {% else %}
-                                class="h-8 w-8 text-rcpch_red hover:text-white self-center hover:text-white"
+                                class="h-8 w-8 text-rcpch_red self-center"
                                 {% endif %}
                                 width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">  
                                 <path stroke="none" d="M0 0h24v24H0z"/>  <polyline points="9 6 15 12 9 18" />
@@ -160,10 +185,30 @@
             </tbody>
             <tfoot>
                 <tr class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white py-5">
-                    <th colspan="12" class="px-2">
+                    <th colspan="10" class="px-2">
                         <strong>
                         Total: {{patient_list.count}} patients
                         </strong>
+                    </th>
+                    <th colspan="2">
+                        <!-- Pagination controls -->
+                        <div class="pagination text-right">
+                            <span class="step-links">
+                                {% if page_obj.has_previous %}
+                                    <a href="?page=1" >&laquo; first</a>
+                                    <a href="?page={{ page_obj.previous_page_number }}" >previous</a>
+                                {% endif %}
+
+                                <span class="current">
+                                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+                                </span>
+
+                                {% if page_obj.has_next %}
+                                    <a href="?page={{ page_obj.next_page_number }}" >next</a>
+                                    <a href="?page={{ page_obj.paginator.num_pages }}" >last &raquo;</a>
+                                {% endif %}
+                            </span>
+                        </div>
                     </th>
                 </tr>
             </tfoot>

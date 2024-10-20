@@ -1,21 +1,24 @@
+# python imports
+import datetime
+
 # Django imports
-from django.contrib.messages.views import SuccessMessageMixin
-from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.contrib import messages
+from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.contrib.messages.views import SuccessMessageMixin
 from django.forms import BaseModelForm
 from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import render
-from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django.urls import reverse, reverse_lazy
 from django.views.generic import ListView
-from django.urls import reverse_lazy, reverse
-
-# Third party imports
+from django.views.generic.edit import CreateView, DeleteView, UpdateView
 
 # RCPCH imports
-from ..models import Visit, Patient
 from ..forms.visit_form import VisitForm
 from ..general_functions import get_visit_categories
+from ..kpi_class.kpis import CalculateKPIS
+from ..models import Patient, Transfer, Visit
 from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
+
+# Third party imports
 
 
 class PatientVisitsListView(
@@ -39,6 +42,26 @@ class PatientVisitsListView(
         context["visits"] = calculated_visits
         context["patient"] = patient
         context["submission"] = submission
+
+        # calculate the KPIs for this patient
+        pdu = (
+            Transfer.objects.filter(patient=patient, date_leaving_service__isnull=True)
+            .first()
+            .paediatric_diabetes_unit
+        )
+        # get the PDU for this patient - this is the PDU that the patient is currently under.
+        # If the patient has left the PDU, the date_leaving_service will be set and it will be possible to view KPIs for the PDU up until transfer,
+        # if this happened during the audit period. This is TODO
+
+        calculate_kpis = CalculateKPIS(
+            calculation_date=datetime.date.today(), return_pt_querysets=False
+        )
+        # Calculate the KPIs for this patient, returning only subset relevant
+        # for a single patient's calculation
+        kpi_calculations_object = calculate_kpis.calculate_kpis_for_single_patient(patient)
+
+        context["kpi_results"] = kpi_calculations_object
+
         return context
 
 

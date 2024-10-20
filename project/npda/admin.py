@@ -5,14 +5,15 @@ from .models import (
     NPDAUser,
     OrganisationEmployer,
     Patient,
-    Transfer,
     Visit,
+    Transfer,
     VisitActivity,
     Submission,
 )
 from django.contrib.sessions.models import Session
 
 PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+
 
 
 @admin.register(OrganisationEmployer)

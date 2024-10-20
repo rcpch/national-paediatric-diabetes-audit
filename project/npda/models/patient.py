@@ -3,6 +3,8 @@ from datetime import date
 import logging
 from enum import Enum
 
+from requests import RequestException
+
 # django imports
 from django.contrib.gis.db import models
 from django.contrib.gis.db.models import CharField, DateField, PositiveSmallIntegerField
@@ -29,18 +31,6 @@ from ..general_functions import (
 logger = logging.getLogger(__name__)
 
 
-class PatientError(Enum):
-    """NOT including nhs number as that error should prevent saving"""
-
-    DOB_IN_FUTURE = "Date of birth cannot be in the future."
-    PT_OLDER_THAN_19yo = "Patient is too old for the NPDA."
-    INVALID_POSTCODE = "Postcode is invalid."
-    DEPRIVATION_CALCULATION_FAILED = "Cannot calculate deprivation score."
-    INVALID_DIABETES_TYPE = "Diabetes type is invalid."
-    DIAGNOSIS_DATE_BEFORE_DOB = "Diagnosis date is before date of birth."
-    DIAGNOSIS_DATE_IN_FUTURE = "Diagnosis date cannot be in the future."
-
-
 class Patient(models.Model):
     """
     The Patient class.
@@ -52,7 +42,7 @@ class Patient(models.Model):
     """
 
     nhs_number = CharField(  # the NHS number for England and Wales
-        "NHS Number", unique=True, validators=[validate_nhs_number]
+        "NHS Number", unique=False, validators=[validate_nhs_number]
     )
 
     sex = models.IntegerField("Stated gender", choices=SEX_TYPE, blank=True, null=True)
@@ -152,19 +142,14 @@ class Patient(models.Model):
         return stringify_time_elapsed(self.date_of_birth, today_date)
 
     def save(self, *args, **kwargs) -> None:
-        # calculate the index of multiple deprivation quintile if the postcode is present
-        # Skips the calculation if the postcode is on the 'unknown' list
         if self.postcode:
             try:
                 self.index_of_multiple_deprivation_quintile = imd_for_postcode(
                     self.postcode
                 )
-            except Exception as error:
-                # Deprivation score not persisted if deprivation score server down
-                self.index_of_multiple_deprivation_quintile = None
-                print(
-                    f"Cannot calculate deprivation score for {self.postcode}: {error}"
+            except RequestException as err:
+                logger.warning(
+                    f"Cannot calculate deprivation score for {self.postcode} {err}"
                 )
 
-        self.full_clean()  # Trigger validation
         return super().save(*args, **kwargs)

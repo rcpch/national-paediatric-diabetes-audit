@@ -16,6 +16,7 @@
                             <th>Audit Year</th>
                             <th>Patient Number</th>
                             <th>Active</th>
+                            {% if request.user.view_preference == 2 %}<th>PDU</th>{% endif %}
                             <th>Download</th>
                         </tr>
                     </thead>
@@ -39,29 +40,29 @@
                                         <span class="bg-rcpch_dark_blue px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white">
                                             <small>INACTIVE</small>
                                         </span>
-                                        <span class="bg-rcpch_dark_blue px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white">
-                                            <small>INACTIVE</small>
                                     {% endif %}
                                 </td>
+                                {% if request.user.view_preference == 2 %}<td>{{ submission.paediatric_diabetes_unit.pz_code }} ({{submission.paediatric_diabetes_unit.lead_organisation_name}})</td>{% endif %}
                                 <td class="flex flex-row">
                                     <form method="post" action="{% url 'submissions' %}" class="join">
                                         {% csrf_token %}
                                         <input type="hidden" name="audit_id" value="{{submission.pk}}">
-                                        <button 
-                                            name="submit-data" 
-                                            value="download-data" 
-                                            type="submit" 
-                                            class="join-item bg-rcpch_light_blue text-white font-semibold hover:text-white py-1 px-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue btn-sm rounded-none">Download</button>
-                                        <button 
-                                            name="submit-data"
-                                            {% if submission.submission_active %}
-                                            disabled="true"
-                                            {% endif %}
-                                            value="delete-data"  
-                                            type="submit" 
-                                            class="join-item bg-rcpch_red text-white font-semibold hover:text-white py-1 px-2 border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint btn-sm rounded-none {% if submission.submission_active %}opacity-50 cursor-not-allowed {% endif %}">Delete</button>
+                                        {% if submission.submission_active %}
+                                            <button 
+                                                name="submit-data" 
+                                                value="download-data" 
+                                                type="submit" 
+                                                class="join-item bg-rcpch_light_blue text-white font-semibold hover:text-white py-1 px-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue btn-sm rounded-none">Download</button>
+                                        {% else %}
+                                            <button 
+                                                name="submit-data"
+                                                disabled="true"
+                                                value="delete-data"  
+                                                type="submit" 
+                                                class="join-item bg-rcpch_red text-white font-semibold hover:text-white py-1 px-2 border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint btn-sm rounded-none {% if submission.submission_active %}opacity-50 cursor-not-allowed {% endif %}">Delete</button>
+                                        {% endif %}
                                     </form>
-                                    {% if forloop.first %}
+                                    {% if submission.submission_active %}
                                         <a href="{% url 'patients' %}">
                                             <svg
                                                 class="h-8 w-8 text-rcpch_pink self-center hover:text-white"

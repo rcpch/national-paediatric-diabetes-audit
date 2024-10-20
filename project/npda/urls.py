@@ -1,16 +1,11 @@
-from django.urls import path, include
-from django.contrib.auth.views import PasswordResetConfirmView
 from django.contrib.auth import urls as auth_urls
-from project.npda.views import (
-    VisitCreateView,
-    VisitDeleteView,
-    VisitUpdateView,
-    PatientListView,
-    PatientVisitsListView,
-    SubmissionsListView,
-)
+from django.contrib.auth.views import PasswordResetConfirmView
+from django.urls import include, path
+
 from project.npda.forms.npda_user_form import NPDAUpdatePasswordForm
-from project.npda.general_functions.csv_download import download_csv
+from project.npda.views import (PatientListView, PatientVisitsListView,
+                                SubmissionsListView, VisitCreateView,
+                                VisitDeleteView, VisitUpdateView)
 
 from .views import *
 
@@ -95,5 +90,11 @@ urlpatterns = [
             template_name="registration/password_reset_confirm.html",
         ),
         name="password_reset_confirm",
+    ),
+    # KPI views
+    path(
+        "dashboard",
+        view=dashboard,
+        name="dashboard",
     ),
 ]
