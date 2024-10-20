@@ -137,7 +137,7 @@ class FakePatientCreator:
             # Step 2: Build 4 visits per patient
             visits = []
             for patient in patients:
-
+                print(patient.postcode)
                 audit_quarters = get_quarters_for_audit_period(
                     self.audit_start_date, self.audit_end_date
                 )
@@ -147,19 +147,26 @@ class FakePatientCreator:
                 ):
                     visit_date = get_random_date(quarter_start_date, quarter_end_date)
 
-                    print(
-                        self._clinic_measures(
+                    # Get the correct kwarg measurements for the visit type
+                    # These will be fed into this VisitFactory's.build() call
+                    if visit_type == VisitType.CLINIC:
+
+                        measurements = self._clinic_measures(
                             age_range,
                             visit_date,
                             patient.diabetes_type,
                             hb1ac_target_range,
                         )
-                    )
+                    elif visit_type == VisitType.ANNUAL_REVIEW:
+                        measurements = self._annual_review_measures(visit_date)
+                    elif visit_type == VisitType.DIETICIAN:
+                        measurements = self._dietician_observations(visit_date)
 
+                    # Now build the visit instance
                     visit = VisitFactory.build(
                         patient=patient,
                         visit_date=visit_date,
-                        visit_type=visit_type,
+                        **measurements,
                     )
                     visits.append(visit)
 
@@ -205,37 +212,44 @@ class FakePatientCreator:
             blood_pressure_observation_date,
         ) = self._bp_observations(age_range=age_range, visit_date=visit_date)
 
-        return (
-            height,
-            weight,
-            height_weight_observation_date,
-            hba1c,
-            hba1c_format,
-            hba1c_date,
-            glucose_monitoring,
-            treatment,
-            closed_loop_system,
-            diastolic_blood_pressure,
-            systolic_blood_pressure,
-            blood_pressure_observation_date,
-        )
+        return {
+            "height": height,
+            "weight": weight,
+            "height_weight_observation_date": height_weight_observation_date,
+            "hba1c": hba1c,
+            "hba1c_format": hba1c_format,
+            "hba1c_date": hba1c_date,
+            "glucose_monitoring": glucose_monitoring,
+            "treatment": treatment,
+            "closed_loop_system": closed_loop_system,
+            "diastolic_blood_pressure": diastolic_blood_pressure,
+            "systolic_blood_pressure": systolic_blood_pressure,
+            "blood_pressure_observation_date": blood_pressure_observation_date,
+        }
 
     def _annual_review_measures(self, visit_date: date):
         """
         Gather all the measures for an annual review visit.
-        These include:
-            foot
-            DECS
-            ACR
-            cholesterol
-            thyroid
-            coeliac
-            smoking
-            carbohydrate counting
-            sick day rules
-            flu
-            ketone meter training
-            carbohydrate counting
+        These dictate the measures that are taken for an annual review visit:
+            - "foot_examination_observation_date"
+            - "retinal_screening_result"
+            - "retinal_screening_observation_date"
+            - "albumin_creatinine_ratio"
+            - "albumin_creatinine_ratio_date"
+            - "albuminuria_stage"
+            - "total_cholesterol"
+            - "total_cholesterol_date"
+            - "thyroid_function_date"
+            - "thyroid_treatment_status"
+            - "coeliac_screen_date"
+            - "gluten_free_diet"
+            - "smoking_status"
+            - "smoking_cessation_referral_date"
+            - "carbohydrate_counting_level_three_education_date"
+            - "flu_immunisation_recommended_date"
+            - "ketone_meter_training"
+            - "sick_day_rules_training_date"
+
         """
         foot_examination_observation_date = self._foot_observations(
             visit_date=visit_date
@@ -266,31 +280,47 @@ class FakePatientCreator:
         flu_immunisation_recommended_date = self._flu_immunisation_observations(
             visit_date=visit_date
         )
-        ketone_meter_training = self._ketone_meter_observations(visit_date=visit_date)
+        ketone_meter_training = self._ketone_meter_observations()
         sick_day_rules_training_date = self._sick_day_rules_observations(
             visit_date=visit_date
         )
 
-        return (
-            foot_examination_observation_date,
-            retinal_screening_result,
-            retinal_screening_observation_date,
-            albumin_creatinine_ratio,
-            albumin_creatinine_ratio_date,
-            albuminuria_stage,
-            total_cholesterol,
-            total_cholesterol_date,
-            thyroid_function_date,
-            thyroid_treatment_status,
-            coeliac_screen_date,
-            gluten_free_diet,
-            smoking_status,
-            smoking_cessation_referral_date,
-            carbohydrate_counting_level_three_education_date,
-            flu_immunisation_recommended_date,
-            ketone_meter_training,
-            sick_day_rules_training_date,
-        )
+        return {
+            "foot_examination_observation_date": foot_examination_observation_date,
+            "retinal_screening_result": retinal_screening_result,
+            "retinal_screening_observation_date": retinal_screening_observation_date,
+            "albumin_creatinine_ratio": albumin_creatinine_ratio,
+            "albumin_creatinine_ratio_date": albumin_creatinine_ratio_date,
+            "albuminuria_stage": albuminuria_stage,
+            "total_cholesterol": total_cholesterol,
+            "total_cholesterol_date": total_cholesterol_date,
+            "thyroid_function_date": thyroid_function_date,
+            "thyroid_treatment_status": thyroid_treatment_status,
+            "coeliac_screen_date": coeliac_screen_date,
+            "gluten_free_diet": gluten_free_diet,
+            "smoking_status": smoking_status,
+            "smoking_cessation_referral_date": smoking_cessation_referral_date,
+            "carbohydrate_counting_level_three_education_date": carbohydrate_counting_level_three_education_date,
+            "flu_immunisation_recommended_date": flu_immunisation_recommended_date,
+            "ketone_meter_training": ketone_meter_training,
+            "sick_day_rules_training_date": sick_day_rules_training_date,
+        }
+
+    def _dietician_observations(self, visit_date: date):
+        """
+        Generates random dietician observations for a child.
+        Allocate the visit date to the date of the observation.
+
+        Returns dict of:
+            dietician_additional_appointment_offered: int
+            dietician_additional_appointment_date: date
+        """
+        dietician_additional_appointment_offered = random.choice(YES_NO_UNKNOWN)[0]
+        dietician_additional_appointment_date = visit_date
+        return {
+            "dietician_additional_appointment_offered": dietician_additional_appointment_offered,
+            "dietician_additional_appointment_date": dietician_additional_appointment_date,
+        }
 
     def _height_weight_observations(
         self,
@@ -550,22 +580,6 @@ class FakePatientCreator:
         carbohydrate_counting_level_three_education_date = visit_date
         return carbohydrate_counting_level_three_education_date
 
-    def _dietician_observations(self, visit_date: date):
-        """
-        Generates random dietician observations for a child.
-        Allocate the visit date to the date of the observation.
-
-        Returns tuple of:
-            dietician_additional_appointment_offered: int
-            dietician_additional_appointment_date: date
-        """
-        dietician_additional_appointment_offered = random.choice(YES_NO_UNKNOWN)[0]
-        dietician_additional_appointment_date = visit_date
-        return (
-            dietician_additional_appointment_offered,
-            dietician_additional_appointment_date,
-        )
-
     def _flu_immunisation_observations(self, visit_date: date):
         """
         Generates random flu immunisation observations for a child.
@@ -577,7 +591,7 @@ class FakePatientCreator:
         flu_immunisation_recommended_date = visit_date
         return flu_immunisation_recommended_date
 
-    def _ketone_meter_observations():
+    def _ketone_meter_observations(self):
         """
         Generates random ketone meter observations for a child.
 
