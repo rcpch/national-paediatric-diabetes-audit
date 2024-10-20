@@ -1,6 +1,5 @@
 from .csv_download import *
 from .csv_summarize import *
-from .data_generator import *
 from .email import *
 from .group_for_group import *
 from .index_multiple_deprivation import *

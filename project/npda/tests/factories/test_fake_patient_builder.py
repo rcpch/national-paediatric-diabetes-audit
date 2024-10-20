@@ -3,6 +3,7 @@
 from datetime import date, timedelta
 import pytest
 
+from project.npda.general_functions.audit_period import get_audit_period_for_date
 from project.npda.general_functions.data_generator_extended import (
     FakePatientCreator,
     VisitType,
@@ -28,7 +29,11 @@ def test_fake_patient_creator_ages_all_appropriate(age_range_enum):
     """
 
     DATE_IN_AUDIT = date(2024, 4, 1)
-    fake_patient_creator = FakePatientCreator(date_in_audit=DATE_IN_AUDIT)
+    audit_start_date, audit_end_date = get_audit_period_for_date(DATE_IN_AUDIT)
+    fake_patient_creator = FakePatientCreator(
+        audit_start_date=audit_start_date,
+        audit_end_date=audit_end_date,
+    )
 
     # Create patients within the specified age range
     new_pts = fake_patient_creator.create_and_save_fake_patients(
