@@ -97,6 +97,7 @@ class FakePatientCreator:
         age_range: AgeRange,
         hb1ac_target_range: HbA1cTargetRange = HbA1cTargetRange.TARGET,
         visit_types: list[VisitType] = DEFAULT_VISIT_TYPE,
+        **patient_kwargs,
     ):
         """Creates and saves `n` fake patients, with the given `age_range` to
         the db.
@@ -115,6 +116,8 @@ class FakePatientCreator:
 
         Will sequentially go through list creating visit
         type according to those characteristics.
+
+        *patient_kwargs -> Any additional kwargs to pass to the PatientFactory
         """
 
         if len(visit_types) != 4:
@@ -130,6 +133,7 @@ class FakePatientCreator:
                 audit_end_date=self.audit_end_date,
                 # We're going to manually create visits for each patient
                 visit=None,
+                **patient_kwargs,
             )
 
             # Step 2: Build 4 visits per patient
