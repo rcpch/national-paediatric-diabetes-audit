@@ -24,7 +24,9 @@ def get_audit_period_for_date(input_date: date) -> tuple[date, date]:
         )
 
     # Audit year is the year of the input date if the month is April or later, otherwise it is the previous year
-    audit_year = input_date.year if input_date.month >= 4 else input_date.year - 1
+    audit_year = (
+        input_date.year if input_date.month >= 4 else input_date.year - 1
+    )
 
     # Start date is always 1st April
     audit_start_date = date(audit_year, 4, 1)
@@ -56,7 +58,9 @@ def get_quarters_for_audit_period(
     current_start = audit_start_date
     while current_start < audit_end_date:
         # Calculate the quarter end date by adding 3 months
-        current_end = current_start + relativedelta(months=3) - relativedelta(days=1)
+        current_end = (
+            current_start + relativedelta(months=3) - relativedelta(days=1)
+        )
 
         # If the quarter end date exceeds the audit end date, use the audit end date
         if current_end > audit_end_date:
@@ -68,3 +72,17 @@ def get_quarters_for_audit_period(
         current_start = current_end + relativedelta(days=1)
 
     return quarters
+
+
+def get_quarter_for_visit(
+    visit_date: date,
+) -> int:
+    """Returns quarter for the visit date"""
+    audit_start_date, audit_end_date = get_audit_period_for_date(visit_date)
+    quarters = get_quarters_for_audit_period(audit_start_date, audit_end_date)
+
+    for i, (quarter_start, quarter_end) in enumerate(quarters, start=1):
+        if quarter_start <= visit_date <= quarter_end:
+            return i
+
+    raise ValueError("Visit date is not within the audit period.")
