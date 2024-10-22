@@ -77,7 +77,10 @@ class FakePatientCreator:
     def __init__(self, audit_start_date: date, audit_end_date: date):
         """Uses audit dates to determine the audit period for the fake patient(s)."""
 
-        self.audit_start_date, self.audit_end_date = audit_start_date, audit_end_date
+        self.audit_start_date, self.audit_end_date = (
+            audit_start_date,
+            audit_end_date,
+        )
 
         self.fake_patients_built: list[Patient] = []
 
@@ -102,16 +105,16 @@ class FakePatientCreator:
         """Creates and saves `n` fake patients, with the given `age_range` to
         the db.
 
-        Each Patient created will have 4 associated Visits, randomly allocated
+        Each Patient created will have associated Visits, randomly allocated
         throughout each quarter of the audit period.
 
         * `visit_types` -> A list of VisitTypes to create for each patient.
-        Len must be 4. e.g.
             [
                 VisitType.CLINIC,
                 VisitType.ANNUAL_REVIEW,
                 VisitType.DIETICIAN,
-                VisitType.DIETICIAN
+                VisitType.DIETICIAN,
+                ...
             ]
 
         Will sequentially go through list creating visit
@@ -120,13 +123,10 @@ class FakePatientCreator:
         *patient_kwargs -> Any additional kwargs to pass to the PatientFactory
         """
 
-        if len(visit_types) != 4:
-            raise ValueError("The len of visit_types must be 4")
-
         # Use a transaction to speed up bulk insertions
         with transaction.atomic():
             # Step 1: Create `n` patients in batch
-            patients = PatientFactory.create_batch(
+            patients: list[Patient] = PatientFactory.create_batch(
                 size=n,
                 age_range=age_range,
                 audit_start_date=self.audit_start_date,
@@ -146,22 +146,19 @@ class FakePatientCreator:
                 for visit_type, (quarter_start_date, quarter_end_date) in zip(
                     visit_types, audit_quarters
                 ):
-                    visit_date = get_random_date(quarter_start_date, quarter_end_date)
+                    visit_date = get_random_date(
+                        quarter_start_date, quarter_end_date
+                    )
 
                     # Get the correct kwarg measurements for the visit type
                     # These will be fed into this VisitFactory's.build() call
-                    if visit_type == VisitType.CLINIC:
-
-                        measurements = self._clinic_measures(
-                            age_range,
-                            visit_date,
-                            patient.diabetes_type,
-                            hb1ac_target_range,
-                        )
-                    elif visit_type == VisitType.ANNUAL_REVIEW:
-                        measurements = self._annual_review_measures(visit_date)
-                    elif visit_type == VisitType.DIETICIAN:
-                        measurements = self._dietician_observations(visit_date)
+                    measurements = self.get_measures_for_visit_type(
+                        visit_type=visit_type,
+                        age_range=age_range,
+                        visit_date=visit_date,
+                        diabetes_type=patient.diabetes_type,
+                        hba1_target_range=hb1ac_target_range,
+                    )
 
                     # Now build the visit instance
                     visit = VisitFactory.build(
@@ -175,6 +172,31 @@ class FakePatientCreator:
             Visit.objects.bulk_create(visits)
 
         return patients
+
+    def get_measures_for_visit_type(
+        self,
+        visit_type: VisitType,
+        age_range: AgeRange,
+        visit_date: date,
+        diabetes_type: int,
+        hba1_target_range: int,
+    ):
+        """Returns a dictionary of measures for a given visit type."""
+        visit_measure_map = {
+            VisitType.CLINIC: self._clinic_measures(
+                age_range=age_range,
+                visit_date=visit_date,
+                diabetes_type=diabetes_type,
+                hba1_target_range=hba1_target_range,
+            ),
+            VisitType.ANNUAL_REVIEW: self._annual_review_measures(
+                visit_date=visit_date,
+            ),
+            VisitType.DIETICIAN: self._dietician_observations(
+                visit_date=visit_date,
+            ),
+        }
+        return visit_measure_map[visit_type]
 
     def _clinic_measures(
         self,
@@ -193,7 +215,9 @@ class FakePatientCreator:
         - BP
         """
         height, weight, height_weight_observation_date = (
-            self._height_weight_observations(age_range=age_range, visit_date=visit_date)
+            self._height_weight_observations(
+                age_range=age_range, visit_date=visit_date
+            )
         )
 
         hba1c, hba1c_format, hba1c_date = self._hba1c_observations(
@@ -263,23 +287,23 @@ class FakePatientCreator:
             albumin_creatinine_ratio_date,
             albuminuria_stage,
         ) = self._acr_observations(visit_date=visit_date)
-        total_cholesterol, total_cholesterol_date = self._cholesterol_observations(
-            visit_date=visit_date
+        total_cholesterol, total_cholesterol_date = (
+            self._cholesterol_observations(visit_date=visit_date)
         )
-        thyroid_function_date, thyroid_treatment_status = self._thyroid_observations(
-            visit_date=visit_date
+        thyroid_function_date, thyroid_treatment_status = (
+            self._thyroid_observations(visit_date=visit_date)
         )
         coeliac_screen_date, gluten_free_diet = self._coeliac_observations(
             visit_date=visit_date
         )
-        smoking_status, smoking_cessation_referral_date = self._smoking_observations(
-            visit_date=visit_date
+        smoking_status, smoking_cessation_referral_date = (
+            self._smoking_observations(visit_date=visit_date)
         )
         carbohydrate_counting_level_three_education_date = (
             self._carbohydrate_counting_observations(visit_date=visit_date)
         )
-        flu_immunisation_recommended_date = self._flu_immunisation_observations(
-            visit_date=visit_date
+        flu_immunisation_recommended_date = (
+            self._flu_immunisation_observations(visit_date=visit_date)
         )
         ketone_meter_training = self._ketone_meter_observations()
         sick_day_rules_training_date = self._sick_day_rules_observations(
@@ -316,7 +340,9 @@ class FakePatientCreator:
             dietician_additional_appointment_offered: int
             dietician_additional_appointment_date: date
         """
-        dietician_additional_appointment_offered = random.choice(YES_NO_UNKNOWN)[0]
+        dietician_additional_appointment_offered = random.choice(
+            YES_NO_UNKNOWN
+        )[0]
         dietician_additional_appointment_date = visit_date
         return {
             "dietician_additional_appointment_offered": dietician_additional_appointment_offered,
@@ -346,8 +372,8 @@ class FakePatientCreator:
             AgeRange.AGE_20_25: (170, 190, 60, 90),
         }
 
-        height_min, height_max, weight_min, weight_max = height_weight_observations.get(
-            AgeRange(age_range.value)
+        height_min, height_max, weight_min, weight_max = (
+            height_weight_observations.get(AgeRange(age_range.value))
         )
 
         height = round(random.uniform(height_min, height_max), 2)
@@ -410,7 +436,9 @@ class FakePatientCreator:
             closed_loop_system:
         """
         if diabetes_type == 1:
-            treatment = random.choice(TREATMENT_TYPES[0:6])[0]  # MDI or pump options
+            treatment = random.choice(TREATMENT_TYPES[0:6])[
+                0
+            ]  # MDI or pump options
         else:
             treatment = random.choice(
                 [1, 2, 4, 5, 7, 8, 9]
@@ -551,7 +579,9 @@ class FakePatientCreator:
             psychological_additional_support_status: int
         """
         psychological_screening_assessment_date = visit_date
-        psychological_additional_support_status = random.choice(YES_NO_UNKNOWN)[0]
+        psychological_additional_support_status = random.choice(
+            YES_NO_UNKNOWN
+        )[0]
         return (
             psychological_screening_assessment_date,
             psychological_additional_support_status,
@@ -624,7 +654,9 @@ class FakePatientCreator:
         """
         hospital_admission_date = visit_date
         hospital_discharge_date = visit_date
-        hospital_admission_reason = random.choice(HOSPITAL_ADMISSION_REASONS)[0]
+        hospital_admission_reason = random.choice(HOSPITAL_ADMISSION_REASONS)[
+            0
+        ]
         dka_additional_therapies = random.choice(DKA_ADDITIONAL_THERAPIES)[0]
         hospital_admission_other = None
         return (
