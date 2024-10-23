@@ -5,6 +5,10 @@ CSRF Failure
 {% endblock %}
 
 {% block error_msg %}
-<p class="mb-8 text-lg font-normal lg:text-xl sm:px-16 xl:px-48 text-white">We're sorry about this, but validation of
-  the CSRF token failed. <br> Please log out and retry your request. </p>
+<p class="mb-8 text-lg font-normal lg:text-xl sm:px-16 xl:px-48 text-white">
+  Sorry but your login session is invalid or out of date
+  <br />
+  Please log out, log in again and retry your request.
+  <br />
+  If the problem persists, please report to the NPDA team quoting "CSRF token validation error".
 {% endblock %}
