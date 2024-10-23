@@ -36,7 +36,7 @@ def error_list(wrapper_error: ValidationError):
                 {
                     "field": field,
                     "message": error.message,
-                    "original_row_index": error.original_row_index,
+                    "original_row_index": getattr(error, "original_row_index", None),
                 }
             )
 
@@ -82,13 +82,15 @@ async def home(request):
             except Exception as e:
                 logger.error(f"Failed to log user activity: {e}")
         except ValidationError as error:
-            errors = error_list(error)
-            for error in errors:
-                messages.error(
-                    request=request,
-                    message=f"CSV has been uploaded, but errors have been found. These include error in row {error['original_row_index']}: {error['message']}",
-                )
-            pass
+            # TODO MRB: put this back after testing
+            raise error
+            # errors = error_list(error)
+            # for error in errors:
+            #     messages.error(
+            #         request=request,
+            #         message=f"CSV has been uploaded, but errors have been found. These include error in row {error['original_row_index']}: {error['message']}",
+            #     )
+            # pass
 
         return redirect("submissions")
     else:

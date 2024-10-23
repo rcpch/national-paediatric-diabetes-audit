@@ -2,8 +2,9 @@
 from datetime import date
 import logging
 from enum import Enum
+import traceback
 
-from requests import RequestException
+from httpx import HTTPError
 
 # django imports
 from django.contrib.gis.db import models
@@ -142,12 +143,14 @@ class Patient(models.Model):
         return stringify_time_elapsed(self.date_of_birth, today_date)
 
     def save(self, *args, **kwargs) -> None:
+        traceback.print_stack()
+
         if self.postcode:
             try:
                 self.index_of_multiple_deprivation_quintile = imd_for_postcode(
                     self.postcode
                 )
-            except RequestException as err:
+            except HTTPError as err:
                 logger.warning(
                     f"Cannot calculate deprivation score for {self.postcode} {err}"
                 )

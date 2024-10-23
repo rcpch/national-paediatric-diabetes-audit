@@ -8,6 +8,7 @@ from unittest.mock import Mock, patch
 from django.core.exceptions import ValidationError
 from dateutil.relativedelta import relativedelta
 from requests import RequestException
+from httpx import HTTPError
 
 # NPDA Imports
 from project.npda.models.patient import Patient
@@ -322,7 +323,7 @@ def test_lookup_index_of_multiple_deprivation():
 
 
 @pytest.mark.django_db
-@patch("project.npda.models.patient.imd_for_postcode", Mock(side_effect=RequestException("oopsie!")))
+@patch("project.npda.models.patient.imd_for_postcode", Mock(side_effect=HTTPError("oopsie!")))
 def test_error_looking_up_index_of_multiple_deprivation():
     # TODO MRB: report this back somehow rather than just eat it in the log?
     form = PatientForm(VALID_FIELDS)
