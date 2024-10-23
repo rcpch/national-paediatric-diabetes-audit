@@ -82,21 +82,117 @@ class FakePatientCreator:
             audit_end_date,
         )
 
-        self.built_patients: list[Patient] = None
-        self.built_visits: list[Visit] = None
+    def build_fake_patients(
+        self,
+        n: int,
+        age_range: AgeRange,
+        **patient_kwargs,
+    ) -> list[Patient]:
+        """Returns list of `n` fake patients, that are NOT yet stored to db.
 
-        self.saved_patients = None
-        self.saved_visits = None
-
-    def build_fake_patients(self, n: int, age_range: AgeRange):
-        """Builds `n` fake patients, that are NOT yet stored to db."""
+        Can additionally pass in any kwargs to the PatientFactory e.g.
+        `postcode="123". Values not explicity passed in will be set to defaults
+        defined in the PatientFactory.
+        """
         new_pts = PatientFactory.build_batch(
             size=n,
             age_range=age_range,
             audit_start_date=self.audit_start_date,
             audit_end_date=self.audit_end_date,
+            **patient_kwargs,
         )
-        self.built_patients.extend(new_pts)
+        return new_pts
+
+    def build_fake_visits(
+        self,
+        patients: list[Patient],
+        age_range: AgeRange,
+        hb1ac_target_range: HbA1cTargetRange = HbA1cTargetRange.TARGET,
+        visit_types: list[VisitType] = DEFAULT_VISIT_TYPE,
+        **visit_kwargs,
+    ) -> list[Visit]:
+        """Returns a list of fake Visit objects for the given patients.
+
+        Can additionally pass in any kwargs to the VisitFactory e.g.
+        `is_valid=True`.
+
+        Method:
+            1) For each patient, assign every visit type in `visit_types`,
+                filled with appropriate values relevant to that VisitType.
+            2) Visit.visit_dates are spread evenly across the audit period, per
+                quarter.
+
+                E.g. if 12 VisitTypes are assigned, 3 will be in each
+                quarter.
+
+                Within each quarter, the visit_dates are randomly
+                assigned within that quarter's date range.
+        """
+        visits = []
+        # Each patient is assigned n visits, defined by `visit_types`
+        for patient in patients:
+
+            # Need to evenly batch inputted visits into 4 buckets, 1 for
+            # each quarter
+            total_visits = len(visit_types)
+            n_visits_per_quarter = total_visits // 4
+
+            # Store visits per quarter, where visits_batched_by_quarter[i]
+            # stores the visits in the ith(+1) quarter i.e.
+            # visits_batched_by_quarter[2] has Q3 visits
+            if total_visits < 4:
+                visits_batched_by_quarter = [[v] for v in visit_types]
+            else:
+                visits_batched_by_quarter = [
+                    # q1
+                    visit_types[0:n_visits_per_quarter],
+                    # q2
+                    visit_types[
+                        n_visits_per_quarter : n_visits_per_quarter * 2
+                    ],
+                    # q3
+                    visit_types[
+                        n_visits_per_quarter * 2 : n_visits_per_quarter * 3
+                    ],
+                    # q4 - all remaining
+                    visit_types[n_visits_per_quarter * 3 :],
+                ]
+
+            # Get dates for quarters
+            audit_quarters = get_quarters_for_audit_period(
+                self.audit_start_date, self.audit_end_date
+            )
+
+            for q, visits_in_q in enumerate(visits_batched_by_quarter):
+
+                # For this quarter, get date bounds
+                quarter_start_date, quarter_end_date = audit_quarters[q]
+
+                # For each visit, randomly assign a date within quarter
+                for visit_type in visits_in_q:
+                    visit_date = get_random_date(
+                        quarter_start_date, quarter_end_date
+                    )
+
+                    # Get the correct kwarg measurements for the visit type
+                    # These will be fed into this VisitFactory's.build() call
+                    measurements = self.get_measures_for_visit_type(
+                        visit_type=visit_type,
+                        age_range=age_range,
+                        visit_date=visit_date,
+                        diabetes_type=patient.diabetes_type,
+                        hba1_target_range=hb1ac_target_range,
+                    )
+
+                    # Build the Visit instance
+                    visit = VisitFactory.build(
+                        patient=patient,
+                        visit_date=visit_date,
+                        **measurements,
+                        **visit_kwargs,
+                    )
+                    visits.append(visit)
+        return visits
 
     def create_and_save_fake_patients(
         self,
@@ -130,81 +226,24 @@ class FakePatientCreator:
         # Use a transaction to speed up bulk insertions
         with transaction.atomic():
             # Step 1: Create `n` patients in batch
-            patients: list[Patient] = PatientFactory.create_batch(
-                size=n,
+            patients = self.build_fake_patients(
+                n=n,
                 age_range=age_range,
-                audit_start_date=self.audit_start_date,
-                audit_end_date=self.audit_end_date,
                 # We're going to manually create visits for each patient
                 visit=None,
                 **patient_kwargs,
             )
 
+            # Save them
+            Patient.objects.bulk_create(patients)
+
             # Step 2: Build visits
-            visits = []
-
-            # Each patient is assigned n visits, defined by `visit_types`
-            for patient in patients:
-
-                # Need to evenly batch inputted visits into 4 buckets, 1 for
-                # each quarter
-                total_visits = len(visit_types)
-                n_visits_per_quarter = total_visits // 4
-
-                # Store visits per quarter, where visits_batched_by_quarter[i]
-                # stores the visits in the ith(+1) quarter i.e.
-                # visits_batched_by_quarter[2] has Q3 visits
-                if total_visits < 4:
-                    visits_batched_by_quarter = [[v] for v in visit_types]
-                else:
-                    visits_batched_by_quarter = [
-                        # q1
-                        visit_types[0:n_visits_per_quarter],
-                        # q2
-                        visit_types[
-                            n_visits_per_quarter : n_visits_per_quarter * 2
-                        ],
-                        # q3
-                        visit_types[
-                            n_visits_per_quarter * 2 : n_visits_per_quarter * 3
-                        ],
-                        # q4 - all remaining
-                        visit_types[n_visits_per_quarter * 3 :],
-                    ]
-
-                # Get dates for quarters
-                audit_quarters = get_quarters_for_audit_period(
-                    self.audit_start_date, self.audit_end_date
-                )
-
-                for q, visits_in_q in enumerate(visits_batched_by_quarter):
-
-                    # For this quarter, get date bounds
-                    quarter_start_date, quarter_end_date = audit_quarters[q]
-
-                    # For each visit, randomly assign a date within quarter
-                    for visit_type in visits_in_q:
-                        visit_date = get_random_date(
-                            quarter_start_date, quarter_end_date
-                        )
-
-                        # Get the correct kwarg measurements for the visit type
-                        # These will be fed into this VisitFactory's.build() call
-                        measurements = self.get_measures_for_visit_type(
-                            visit_type=visit_type,
-                            age_range=age_range,
-                            visit_date=visit_date,
-                            diabetes_type=patient.diabetes_type,
-                            hba1_target_range=hb1ac_target_range,
-                        )
-
-                        # Build the Visit instance
-                        visit = VisitFactory.build(
-                            patient=patient,
-                            visit_date=visit_date,
-                            **measurements,
-                        )
-                        visits.append(visit)
+            visits = self.build_fake_visits(
+                patients=patients,
+                age_range=age_range,
+                hb1ac_target_range=hb1ac_target_range,
+                visit_types=visit_types,
+            )
 
             # Step 3: Bulk create all visits at once
             Visit.objects.bulk_create(visits)

@@ -3,13 +3,19 @@
 from datetime import date, timedelta
 import pytest
 
-from project.npda.general_functions.audit_period import get_audit_period_for_date
+from project.npda.general_functions.audit_period import (
+    get_audit_period_for_date,
+    get_quarter_for_visit,
+)
 from project.npda.general_functions.data_generator_extended import (
     FakePatientCreator,
     VisitType,
 )
 from project.npda.models.patient import Patient
-from project.npda.tests.factories.patient_factory import PatientFactory, AgeRange
+from project.npda.tests.factories.patient_factory import (
+    PatientFactory,
+    AgeRange,
+)
 
 
 @pytest.mark.django_db
@@ -41,11 +47,28 @@ def test_fake_patient_creator_ages_all_appropriate(age_range_enum):
         age_range=age_range_enum,
         visit_types=[
             VisitType.CLINIC,
+            VisitType.CLINIC,
+            VisitType.CLINIC,
+            VisitType.CLINIC,
+            VisitType.DIETICIAN,
+            VisitType.DIETICIAN,
             VisitType.DIETICIAN,
             VisitType.DIETICIAN,
             VisitType.ANNUAL_REVIEW,
+            VisitType.CLINIC,
+            VisitType.CLINIC,
+            VisitType.CLINIC,
+            VisitType.CLINIC,
         ],
     )
+
+    # PRINT FOR DEBUGGING
+    # patients = Patient.objects.prefetch_related("visit_set").all()
+    # for patient in patients:
+    #     print(f"Patient PK: {patient.pk}")
+    #     for visit in patient.visit_set.all().order_by("visit_date"):
+    #         print(f"Visit: {visit} (Q{get_quarter_for_visit(visit.visit_date)})")
+    #     print()
 
     # Get the min and max of the current AgeRange enum
     min_age, max_age = age_range_enum.value
