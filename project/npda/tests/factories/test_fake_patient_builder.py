@@ -11,6 +11,7 @@ from project.npda.general_functions.audit_period import (
 )
 from project.npda.general_functions.data_generator_extended import (
     FakePatientCreator,
+    HbA1cTargetRange,
     VisitType,
 )
 from project.npda.models.patient import Patient
@@ -18,6 +19,24 @@ from project.npda.tests.factories.patient_factory import (
     PatientFactory,
     AgeRange,
 )
+
+
+def generate_random_visit_types(n: int) -> list[VisitType]:
+    """Generate a list of random visit types"""
+
+    # Generate visit types - randomly choose between clinic / dietician and
+    # finally 1 annual review
+    visit_types = [
+        random.choice(
+            [
+                VisitType.CLINIC,
+                VisitType.DIETICIAN,
+            ]
+        )
+        for _ in range(n - 1)
+    ] + [VisitType.ANNUAL_REVIEW]
+
+    return visit_types
 
 
 @pytest.mark.django_db
@@ -99,8 +118,60 @@ def test_fake_patient_creator_ages_all_appropriate(age_range_enum):
         ), f"Patient {pt.id} is out of the age range: {patient_age_years:.2f} years"
 
 
+@pytest.mark.django_db
+def test_example_use_fake_patient_creator():
+    """Tests that the ages of all fake patients fall into the appropriate
+    age range.
+
+    NOTE:
+    We initialise the FakePatientCreator with a specific audit period as
+    this is used throughout the creation of fake patients and visits
+    including:
+        - setting random date of birth so max age by audit_start_date is valid
+            for the given AgeRange. Also, diagnosis_date is between
+            date_of_birth and audit_start_date.
+
+        - setting random diagnosis date so it is before audit_start_date
+
+        - Visit dates are spread evenly throughout each quarter of the audit
+            period. For each Visit, the date is randomly set within its
+            quarter's date range.
+    """
+
+    # Set necessary attributes to calibrate all dates
+    DATE_IN_AUDIT = date(2024, 4, 1)
+    audit_start_date, audit_end_date = get_audit_period_for_date(DATE_IN_AUDIT)
+    fake_patient_creator = FakePatientCreator(
+        audit_start_date=audit_start_date,
+        audit_end_date=audit_end_date,
+    )
+    age_range = AgeRange.AGE_0_4
+
+    # Build fake patient instances
+    pts = fake_patient_creator.build_fake_patients(
+        n=10,
+        age_range=age_range,
+        # Can additionally pass in extra PatientFactory kwargs here
+        postcode="fake_postcode",
+    )
+
+    # Build fake Visit instances for each patient
+    VISIT_TYPES = generate_random_visit_types(n=12)
+    visits = fake_patient_creator.build_fake_visits(
+        patients=pts,
+        visit_types=VISIT_TYPES,
+        hb1ac_target_range=HbA1cTargetRange.WELL_ABOVE,
+        age_range=age_range,
+        # Can additionally pass in extra VisitFactory kwargs here
+        is_valid=True,
+    )
+
+    assert len(pts) == 10
+    assert len(visits) == 120  # 10 patients * 12 visits
+
+
 # pytest project/npda/tests/factories/test_fake_patient_builder.py::test_performance_check_for_fake_patient_creator
-@pytest.mark.skip(reason="Just a test for performance checking")
+@pytest.mark.skip(reason="only for performance checking")
 @pytest.mark.django_db
 @pytest.mark.parametrize("n_patients_to_make", [10, 100, 1000, 10000])
 def test_performance_check_for_fake_patient_creator(
@@ -122,18 +193,7 @@ def test_performance_check_for_fake_patient_creator(
     """
 
     N_VISITS_PER_PATIENT = 12
-
-    # Generate visit types - randomly choose between clinic / dietician and
-    # finally 1 annual review
-    visit_types = [
-        random.choice(
-            [
-                VisitType.CLINIC,
-                VisitType.DIETICIAN,
-            ]
-        )
-        for _ in range(N_VISITS_PER_PATIENT - 1)
-    ] + [VisitType.ANNUAL_REVIEW]
+    visit_types = generate_random_visit_types(n=N_VISITS_PER_PATIENT)
 
     DATE_IN_AUDIT = date(2024, 4, 1)
     audit_start_date, audit_end_date = get_audit_period_for_date(DATE_IN_AUDIT)
