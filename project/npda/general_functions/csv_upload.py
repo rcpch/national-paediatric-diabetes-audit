@@ -27,7 +27,7 @@ def read_csv(csv_file):
         csv_file, parse_dates=ALL_DATES, dayfirst=True, date_format="%d/%m/%Y"
     )
 
-def csv_upload(user, dataframe, csv_file, pdu_pz_code):
+async def csv_upload(user, dataframe, csv_file, pdu_pz_code):
     """
     Processes standardised NPDA csv file and persists results in NPDA tables
 

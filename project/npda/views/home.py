@@ -44,7 +44,7 @@ def error_list(wrapper_error: ValidationError):
 
 
 @login_and_otp_required()
-def home(request):
+async def home(request):
     """
     Home page view - contains the upload form.
     Only verified users can access this page.
@@ -61,7 +61,7 @@ def home(request):
         errors = []
 
         try:
-            csv_upload(
+            await csv_upload(
                 user=request.user,
                 dataframe=read_csv(file),
                 csv_file=file,
