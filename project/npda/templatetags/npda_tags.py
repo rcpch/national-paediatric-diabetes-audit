@@ -207,3 +207,21 @@ def active_navbar_tab(request, url_name):
     else:
         # Some routes, such as Error 404, do not have resolver_match property.
         return "text-gray-700"
+
+
+@register.filter
+def join_by_comma(queryset):
+    if len(queryset) == 0:
+        return "No patients"
+    return ", ".join(map(str, queryset.values_list("nhs_number", flat=True)))
+
+
+@register.filter
+def extract_digits(value, underscore_index=0):
+    """
+    Extracts all digits between the second or subsequent pair of _ characters in the string.
+    """
+    matches = re.findall(r"_(\d+)", value)
+    if len(matches) > 0:
+        return int(matches[underscore_index])
+    return 0
