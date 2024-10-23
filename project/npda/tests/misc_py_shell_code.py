@@ -10,6 +10,7 @@ from project.npda.tests.UserDataClasses import (
     test_user_rcpch_audit_team_data,
 )
 from project.npda.general_functions.rcpch_nhs_organisations import get_nhs_organisation
+from project.npda.models import OrganisationEmployer
 from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
 from project.constants.user import RCPCH_AUDIT_TEAM
 
@@ -31,7 +32,7 @@ NPDAUserFactory(
     is_staff=False,
     is_rcpch_audit_team_member=False,
     is_rcpch_staff=False,
-    organisation_employers=["RGT01"],
+    organisation_employers=['RGT01'],
     groups=[test_user_audit_centre_reader_data.group_name],
 )
 NPDAUserFactory(
@@ -42,7 +43,7 @@ NPDAUserFactory(
     is_staff=False,
     is_rcpch_audit_team_member=False,
     is_rcpch_staff=False,
-    organisation_employers=["RGT01"],
+    organisation_employers=['RGT01'],
     groups=[test_user_audit_centre_editor_data.group_name],
 )
 
@@ -54,7 +55,7 @@ NPDAUserFactory(
     is_staff=False,
     is_rcpch_audit_team_member=False,
     is_rcpch_staff=False,
-    organisation_employers=["RGT01"],
+    organisation_employers=['RGT01'],
     groups=[test_user_rcpch_audit_team_data.group_name],
 )
 
@@ -67,6 +68,6 @@ NPDAUserFactory(
     is_staff=False,
     is_rcpch_audit_team_member=False,
     is_rcpch_staff=False,
-    organisation_employers=["RGT01"],
+    organisation_employers=['RGT01'],
     groups=[test_user_audit_centre_coordinator_data.group_name],
 )

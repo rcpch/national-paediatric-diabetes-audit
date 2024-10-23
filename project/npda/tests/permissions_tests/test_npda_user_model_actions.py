@@ -19,15 +19,13 @@ from http import HTTPStatus
 
 # Python imports
 import pytest
-
 # 3rd party imports
 from django.urls import reverse
-from project.constants.user import RCPCH_AUDIT_TEAM
 
+from project.constants.user import RCPCH_AUDIT_TEAM
 # E12 imports
 from project.npda.models import NPDAUser
 from project.npda.tests.utils import login_and_verify_user
-from project.constants.user import RCPCH_AUDIT_TEAM
 
 logger = logging.getLogger(__name__)
 
@@ -50,14 +48,16 @@ def check_all_users_in_pdu(user, users, pz_code):
 
 @pytest.mark.django_db
 def test_npda_user_list_view_users_can_only_see_users_from_their_pdu(
+    seed_groups_fixture,
     seed_users_fixture,
+    seed_patients_fixture,
     client,
 ):
     """Except for RCPCH_AUDIT_TEAM, users should only see users from their own PDU."""
 
     ah_users = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE
-    ).only("id")
+    )
     # Check there are users from outside Alder Hey so this test doesn't pass by accident
     non_ah_users = NPDAUser.objects.exclude(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE
@@ -79,7 +79,9 @@ def test_npda_user_list_view_users_can_only_see_users_from_their_pdu(
 
 @pytest.mark.django_db
 def test_npda_user_list_view_rcpch_audit_team_can_view_all_users(
+    seed_groups_fixture,
     seed_users_fixture,
+    seed_patients_fixture,
     client,
 ):
     """RCPCH_AUDIT_TEAM users can view all users."""
@@ -118,8 +120,43 @@ def test_npda_user_list_view_rcpch_audit_team_can_view_all_users(
 
 
 @pytest.mark.django_db
-def test_npda_user_list_view_users_cannot_switch_outside_their_pdu(
+@pytest.mark.skip(
+    reason="This test is failing organisations have been removed and we nolonger use ods_code in view preference"
+)
+def test_npda_user_list_view_users_cannot_switch_outside_their_organisation(
+    seed_groups_fixture,
     seed_users_fixture,
+    seed_patients_fixture,
+    client,
+):
+    ah_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
+    ).first()
+    client = login_and_verify_user(client, ah_user)
+
+    url = reverse("npda_users")
+
+    set_view_preference_response = client.post(
+        url,
+        {"npdauser_ods_code_select_name": GOSH_ODS_CODE},
+        headers={"HX-Request": "true"},
+    )
+
+    assert set_view_preference_response.status_code == HTTPStatus.FORBIDDEN
+
+    # Check the session isn't modified anyway
+    response = client.get(url)
+    assert response.status_code == HTTPStatus.OK
+
+    users = response.context_data["object_list"]
+    check_all_users_in_pdu(ah_user, users, ALDER_HEY_PZ_CODE)
+
+
+@pytest.mark.django_db
+def test_npda_user_list_view_users_cannot_switch_outside_their_pdu(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_patients_fixture,
     client,
 ):
     ah_user = NPDAUser.objects.filter(
@@ -147,6 +184,9 @@ def test_npda_user_list_view_users_cannot_switch_outside_their_pdu(
 
 @pytest.mark.django_db  # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/189
 def test_npda_user_list_view_normal_users_cannot_set_their_view_preference_to_national(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_patients_fixture,
     client,
 ):
     ah_user = NPDAUser.objects.filter(
