@@ -76,6 +76,8 @@ if DEBUG is True:
 CAPTCHA_IMAGE_SIZE = (200, 50)
 CAPTCHA_FONT_SIZE = 40
 
+# CSRF failure view
+CSRF_FAILURE_VIEW = "project.npda.views.csrf_fail"
 
 # Application definition
 
@@ -249,7 +251,10 @@ STATICFILES_DIRS = (str(BASE_DIR.joinpath("static")),)
 STATIC_ROOT = str(BASE_DIR.joinpath("staticfiles"))
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 # enabled to allow daisy to be used in production
+# Ensure WHITENOISE_ROOT directory exists
 WHITENOISE_ROOT = os.path.join(BASE_DIR, "static/root")
+if not os.path.exists(WHITENOISE_ROOT):
+    os.makedirs(WHITENOISE_ROOT)
 
 SMTP_EMAIL_ENABLED = "False"
 
