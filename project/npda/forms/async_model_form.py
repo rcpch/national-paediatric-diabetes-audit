@@ -1,7 +1,7 @@
-from django.forms import ModelForm
+from django.forms import ModelForm, ValidationError
 from django.forms.utils import ErrorDict
 
-from asyncio import async_to_sync
+from asgiref.sync import async_to_sync
 
 """
 Opt in to support async form cleaning.
@@ -15,7 +15,7 @@ To define an async form .clean:
     async def aclean(self):
 
 You can't have both an async and a sync clean method for a given field or the whole form,
-you must pick one.
+the async one will take precendence.
 
 You can call afull_clean() to run them all asynchronously or use the existing Django
 API calling .errors, .is_valid to run them synchronously. The class keeps track of
@@ -50,14 +50,12 @@ class AsyncModelForm(ModelForm):
             try:
                 self.cleaned_data[name] = field._clean_bound_field(bf)
 
-                async_cleaner = getattr(self, f"aclean_{field_name}", None)
-                sync_cleaner = getattr(self, f"clean_{field_name}", None)
+                async_cleaner = getattr(self, f"aclean_{name}", None)
+                sync_cleaner = getattr(self, f"clean_{name}", None)
 
                 value = None
 
-                if async_cleaner and sync_cleaner:
-                    raise ValueError(f"Cannot have both async and sync cleaners for field {field_name}")
-                elif async_cleaner:
+                if async_cleaner:
                     value = await async_cleaner()
                 elif sync_cleaner:
                     value = sync_cleaner()
@@ -70,9 +68,6 @@ class AsyncModelForm(ModelForm):
     async def _aclean_form(self):
         async_cleaner = getattr(self, "aclean", None)
         sync_cleaner = getattr(self, "clean", None)
-
-        if async_cleaner and sync_cleaner:
-            raise ValueError(f"Cannot have both async and sync cleaners for field {field_name}")
 
         cleaned_data = None
         

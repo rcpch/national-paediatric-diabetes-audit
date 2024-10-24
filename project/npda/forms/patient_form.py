@@ -2,8 +2,6 @@
 import logging
 from datetime import date
 
-from asgiref.sync import async_to_sync
-
 # project imports
 import nhs_number
 import httpx
@@ -103,6 +101,24 @@ class PatientForm(AsyncModelForm):
 
         return date_of_birth
 
+    async def aclean_postcode(self):
+        postcode = self.cleaned_data["postcode"]
+
+        try:
+            result = await validate_postcode(postcode)
+
+            if not result:
+                self.add_error("postcode", ValidationError(
+                    "Invalid postcode %(postcode)s", params={"postcode":postcode}
+                ))
+
+                return postcode
+            else:
+                return result["normalised_postcode"]
+        except HTTPError as err:
+            logger.warning(f"Error validating postcode {err}")
+            return postcode
+
     def clean_diagnosis_date(self):
         diagnosis_date = self.cleaned_data["diagnosis_date"]
         not_in_the_future_validator(diagnosis_date)
@@ -114,8 +130,8 @@ class PatientForm(AsyncModelForm):
         not_in_the_future_validator(death_date)
 
         return death_date
-
-    def clean_sync(self):
+    
+    async def aclean(self):
         cleaned_data = self.cleaned_data
 
         date_of_birth = cleaned_data.get("date_of_birth")
@@ -154,73 +170,30 @@ class PatientForm(AsyncModelForm):
         
         return cleaned_data
 
-    # TODO MRB: move postcode back to async
-    # TODO MRB: use contextvars to avoid passing async client everywhere
-    async def clean_async(self, async_client):
-        postcode = self.data.get("postcode")
-        gp_practice_ods_code = self.data.get("gp_practice_ods_code")
-        gp_practice_postcode = self.data.get("gp_practice_postcode")
-
-        try:
-            result = await validate_postcode(postcode, async_client)
-
-            if not result:
-                self.async_errors["postcode"] = ValidationError(
-                    "Invalid postcode %(postcode)s", params={"postcode":postcode}
-                )
-
-                return postcode
-            else:
-                self.async_cleaned_data["postcode"] = result["normalised_postcode"]
-        except HTTPError as err:
-            logger.warning(f"Error validating postcode {err}")
-
         if gp_practice_postcode:
             try:
-                validation_result = await validate_postcode(gp_practice_postcode, async_client)
+                validation_result = await validate_postcode(gp_practice_postcode)
                 normalised_postcode = validation_result["normalised_postcode"]
 
-                ods_code = await gp_ods_code_for_postcode(normalised_postcode, async_client)
+                ods_code = await gp_ods_code_for_postcode(normalised_postcode)
 
                 if not ods_code:
-                    self.async_errors["gp_practice_postcode"] = ValidationError(
+                    self.add_error("gp_practice_postcode", ValidationError(
                         "Could not find GP practice with postcode %(postcode)s",
                         params={"postcode":gp_practice_postcode}
-                    )
+                    ))
                 else:
-                    self.async_cleaned_data["gp_practice_ods_code"] = ods_code
-                    self.async_cleaned_data["gp_practice_postcode"] = normalised_postcode
+                    self.cleaned_data["gp_practice_ods_code"] = ods_code
+                    self.cleaned_data["gp_practice_postcode"] = normalised_postcode
             except HTTPError as err:
                 logger.warning(f"Error looking up GP practice by postcode {err}")
 
         elif gp_practice_ods_code:
             try:
-                if not await gp_details_for_ods_code(gp_practice_ods_code, async_client):
-                    self.async_errors["gp_practice_ods_code"] = ValidationError(
+                if not await gp_details_for_ods_code(gp_practice_ods_code):
+                    self.add_error("gp_practice_ods_code", ValidationError(
                         "Could not find GP practice with ODS code %(ods_code)s",
                         params={"ods_code":gp_practice_ods_code}
-                    )
+                    ))
             except HTTPError as err:
                 logger.warning(f"Error looking up GP practice by ODS code {err}")
-        
-        self.async_cleaners_run = True
-    
-    @async_to_sync
-    async def run_clean_async_sync(self):
-        async with httpx.AsyncClient() as client:
-            await self.clean_async(client)
-
-    def clean(self):
-        super().clean()
-
-        self.clean_sync()
-        
-        if not self.async_cleaners_run:
-            self.run_clean_async_sync()
-        
-        for key, value in self.async_cleaned_data.items():
-            self.cleaned_data[key] = value
-        
-        for key, error in self.async_errors.items():
-            self.add_error(key, error)
-            

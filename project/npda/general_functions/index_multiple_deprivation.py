@@ -12,19 +12,20 @@ from asgiref.sync import async_to_sync
 from django.conf import settings
 
 # RCPCH imports
+from ..httpx_client import async_client
 
 # Logging setup
 logger = logging.getLogger(__name__)
 
 
-async def aimd_for_postcode(user_postcode: str, async_client: httpx.AsyncClient) -> int:
+async def aimd_for_postcode(user_postcode: str) -> int:
     """
     Makes an API call to the RCPCH Census Platform with postcode and quantile_type
     Postcode - can have spaces or not - this is processed by the API
     Quantile - this is an integer representing what quantiles are requested (eg quintile, decile etc)
     """
 
-    response = await async_client.get(
+    response = await async_client.get().get(
         url=f"{settings.RCPCH_CENSUS_PLATFORM_URL}/index_of_multiple_deprivation_quantile?postcode={user_postcode}&quantile=5",
         headers={"Subscription-Key": f"{settings.RCPCH_CENSUS_PLATFORM_TOKEN}"},
         timeout=10,  # times out after 10 seconds
@@ -39,10 +40,7 @@ async def aimd_for_postcode(user_postcode: str, async_client: httpx.AsyncClient)
     return response.json()["result"]["data_quantile"]
 
 
-def imd_for_postcode(postcode):
-    async def wrapper():
-        async with httpx.AsyncClient() as client:
-            imd = await aimd_for_postcode(postcode, client)
-            return imd
-
-    return async_to_sync(wrapper)()
+@async_to_sync
+async def imd_for_postcode(postcode):
+    imd = await aimd_for_postcode(postcode)
+    return imd

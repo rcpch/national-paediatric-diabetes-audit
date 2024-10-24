@@ -3,18 +3,18 @@ import logging
 from typing import Optional
 
 # django
+from django.conf import settings
 
 # third party libraries
-import httpx
 
 # npda imports
-from django.conf import settings
+from ..httpx_client import async_client
 
 # Logging
 logger = logging.getLogger(__name__)
 
 
-async def gp_ods_code_for_postcode(postcode: str, async_client: httpx.AsyncClient) -> Optional[str]:
+async def gp_ods_code_for_postcode(postcode: str) -> Optional[str]:
     """
     Returns GP practice as an object from NHS API against a postcode
     """
@@ -24,7 +24,7 @@ async def gp_ods_code_for_postcode(postcode: str, async_client: httpx.AsyncClien
         f"{url}/organisations/?PostCode={postcode}&Status=Active&PrimaryRoleId=RO177"
     )
 
-    response = await async_client.get(
+    response = await async_client.get().get(
         url=request_url,
         timeout=10,  # times out after 10 seconds
     )
@@ -36,14 +36,14 @@ async def gp_ods_code_for_postcode(postcode: str, async_client: httpx.AsyncClien
         return organisations[0]["OrgId"]
 
 
-async def gp_details_for_ods_code(ods_code: str, async_client: httpx.AsyncClient) -> Optional[dict]:
+async def gp_details_for_ods_code(ods_code: str) -> Optional[dict]:
     """
     Returns address, name and long/lat for ods code
     """
 
     url = f"{settings.NHS_SPINE_SERVICES_URL}/organisations/{ods_code}"
 
-    response = await async_client.get(
+    response = await async_client.get().get(
         url=url,
         timeout=10,  # times out after 10 seconds
     )

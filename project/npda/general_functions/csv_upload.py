@@ -157,7 +157,7 @@ async def csv_upload(user, dataframe, csv_file, pdu_pz_code):
             },
         ) | {"paediatric_diabetes_unit": pdu}
 
-    async def validate_patient_using_form(row, async_client):
+    async def validate_patient_using_form(row):
 
         fields = row_to_dict(
             row,
@@ -176,7 +176,7 @@ async def csv_upload(user, dataframe, csv_file, pdu_pz_code):
         )
         
         form = PatientForm(fields)
-        await form.clean_async(async_client) 
+        await form.afull_clean() 
 
         assign_original_row_indices_to_errors(form, row)
         return form
@@ -238,11 +238,11 @@ async def csv_upload(user, dataframe, csv_file, pdu_pz_code):
             for error in errors:
                 error.original_row_index = row["row_index"]
 
-    async def validate_rows(rows, async_client):
+    async def validate_rows(rows):
         first_row = rows.iloc[0]
 
         transfer_fields = validate_transfer(first_row)
-        patient_form = await validate_patient_using_form(first_row, async_client)
+        patient_form = await validate_patient_using_form(first_row)
 
         visits = rows.apply(
             lambda row: validate_visit_using_form(patient_form.instance, row),
@@ -290,12 +290,12 @@ async def csv_upload(user, dataframe, csv_file, pdu_pz_code):
 
     async def validate_rows_in_parallel(rows_by_patient):
         # TODO MRB: ensure a single unhandled error doesn't stop the whole process
-        async with httpx.AsyncClient() as async_client:
-            tasks = []
-            async with asyncio.TaskGroup() as tg:
-                for _, rows in visits_by_patient:
-                    task = tg.create_task(validate_rows(rows, async_client))
-                    tasks.append(task)
+        tasks = []
+
+        async with asyncio.TaskGroup() as tg:
+            for _, rows in visits_by_patient:
+                task = tg.create_task(validate_rows(rows))
+                tasks.append(task)
 
         return [task.result() for task in tasks]
 
