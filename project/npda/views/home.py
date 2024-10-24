@@ -82,15 +82,12 @@ async def home(request):
             except Exception as e:
                 logger.error(f"Failed to log user activity: {e}")
         except ValidationError as error:
-            # TODO MRB: put this back after testing
-            raise error
-            # errors = error_list(error)
-            # for error in errors:
-            #     messages.error(
-            #         request=request,
-            #         message=f"CSV has been uploaded, but errors have been found. These include error in row {error['original_row_index']}: {error['message']}",
-            #     )
-            # pass
+            errors = error_list(error)
+            for error in errors:
+                messages.error(
+                    request=request,
+                    message=f"CSV has been uploaded, but errors have been found. These include error in row {error['original_row_index']}: {error['message']}",
+                )
 
         return redirect("submissions")
     else:
