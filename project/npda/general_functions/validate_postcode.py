@@ -24,8 +24,6 @@ async def validate_postcode(postcode, async_client):
     )
     response.raise_for_status()
 
-    print(f"!! validate_postcode RESPONSE {response.json()}")
-
     return {
         "normalised_postcode": response.json()["data"]["id"]
     }

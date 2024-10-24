@@ -90,6 +90,7 @@ class PatientForm(forms.ModelForm):
 
         self.async_cleaners_run = False
         self.async_cleaned_data = {}
+        self.async_errors = {}
 
     def clean_date_of_birth(self):
         date_of_birth = self.cleaned_data["date_of_birth"]
@@ -168,10 +169,8 @@ class PatientForm(forms.ModelForm):
             result = await validate_postcode(postcode, async_client)
 
             if not result:
-                self.add_error(
-                    "postcode",
-                    ValidationError("Invalid postcode %(postcode)s",
-                        params={"postcode":postcode})
+                self.async_errors["postcode"] = ValidationError(
+                    "Invalid postcode %(postcode)s", params={"postcode":postcode}
                 )
 
                 return postcode
@@ -188,12 +187,9 @@ class PatientForm(forms.ModelForm):
                 ods_code = gp_ods_code_for_postcode(normalised_postcode, async_client)
 
                 if not ods_code:
-                    self.add_error(
-                        "gp_practice_postcode",
-                        ValidationError(
-                            "Could not find GP practice with postcode %(postcode)s",
-                            params={"postcode":gp_practice_postcode}
-                        )
+                    self.async_errors["gp_practice_postcode"] = ValidationError(
+                        "Could not find GP practice with postcode %(postcode)s",
+                        params={"postcode":gp_practice_postcode}
                     )
                 else:
                     self.async_cleaned_data["gp_practice_ods_code"] = ods_code
@@ -204,12 +200,9 @@ class PatientForm(forms.ModelForm):
         elif gp_practice_ods_code:
             try:
                 if not await gp_details_for_ods_code(gp_practice_ods_code, async_client):
-                    self.add_error(
-                        "gp_practice_ods_code",
-                        ValidationError(
-                            "Could not find GP practice with ODS code %(ods_code)s",
-                            params={"ods_code":gp_practice_ods_code}
-                        )
+                    self.async_errors["gp_practice_ods_code"] = ValidationError(
+                        "Could not find GP practice with ODS code %(ods_code)s",
+                        params={"ods_code":gp_practice_ods_code}
                     )
             except HTTPError as err:
                 logger.warning(f"Error looking up GP practice by ODS code {err}")
@@ -231,3 +224,6 @@ class PatientForm(forms.ModelForm):
         else:
             for key, value in self.async_cleaned_data.items():
                 self.cleaned_data[key] = value
+            
+            for key, error in self.async_errors.items():
+                self.add_error(key, error)
