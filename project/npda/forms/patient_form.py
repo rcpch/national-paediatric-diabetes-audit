@@ -21,6 +21,7 @@ from ..general_functions import (gp_details_for_ods_code,
                                  validate_postcode)
 from ..models import Patient
 from ..validators import not_in_the_future_validator
+from .async_model_form import AsyncModelForm
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ class PostcodeField(forms.CharField):
         if postcode:
             return postcode.upper().replace(" ", "").replace("-", "")
 
-class PatientForm(forms.ModelForm):
+class PatientForm(AsyncModelForm):
 
     class Meta:
         model = Patient
@@ -84,13 +85,6 @@ class PatientForm(forms.ModelForm):
             "gp_practice_ods_code": forms.TextInput(attrs={"class": TEXT_INPUT}),
             "gp_practice_postcode": forms.TextInput(attrs={"class": TEXT_INPUT}),
         }
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.async_cleaners_run = False
-        self.async_cleaned_data = {}
-        self.async_errors = {}
 
     def clean_date_of_birth(self):
         date_of_birth = self.cleaned_data["date_of_birth"]
@@ -160,6 +154,8 @@ class PatientForm(forms.ModelForm):
         
         return cleaned_data
 
+    # TODO MRB: move postcode back to async
+    # TODO MRB: use contextvars to avoid passing async client everywhere
     async def clean_async(self, async_client):
         postcode = self.data.get("postcode")
         gp_practice_ods_code = self.data.get("gp_practice_ods_code")
