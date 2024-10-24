@@ -211,7 +211,7 @@ class PatientForm(forms.ModelForm):
     
     @async_to_sync
     async def run_clean_async_sync(self):
-        async with httpx.AsyncClient as client:
+        async with httpx.AsyncClient() as client:
             await self.clean_async(client)
 
     def clean(self):
