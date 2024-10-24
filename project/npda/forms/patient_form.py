@@ -184,7 +184,7 @@ class PatientForm(forms.ModelForm):
                 validation_result = await validate_postcode(gp_practice_postcode, async_client)
                 normalised_postcode = validation_result["normalised_postcode"]
 
-                ods_code = gp_ods_code_for_postcode(normalised_postcode, async_client)
+                ods_code = await gp_ods_code_for_postcode(normalised_postcode, async_client)
 
                 if not ods_code:
                     self.async_errors["gp_practice_postcode"] = ValidationError(
@@ -221,9 +221,10 @@ class PatientForm(forms.ModelForm):
         
         if not self.async_cleaners_run:
             self.run_clean_async_sync()
-        else:
-            for key, value in self.async_cleaned_data.items():
-                self.cleaned_data[key] = value
+        
+        for key, value in self.async_cleaned_data.items():
+            self.cleaned_data[key] = value
+        
+        for key, error in self.async_errors.items():
+            self.add_error(key, error)
             
-            for key, error in self.async_errors.items():
-                self.add_error(key, error)
