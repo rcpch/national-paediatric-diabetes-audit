@@ -253,9 +253,9 @@ async def test_over_25(test_user, single_row_valid_df):
     single_row_valid_df["Date of Birth"] = pd.to_datetime(date_of_birth)
 
     with pytest.raises(ValidationError) as e_info:
-        csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
+        await csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
 
-    patient = Patient.objects.first()
+    patient = await Patient.objects.afirst()
 
     assert(patient.date_of_birth == date_of_birth)
     assert("date_of_birth" in patient.errors)
@@ -269,9 +269,9 @@ async def test_invalid_diabetes_type(test_user, single_row_valid_df):
     single_row_valid_df["Diabetes Type"] = 45
 
     with pytest.raises(ValidationError) as e_info:
-        csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
+        await csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
 
-    patient = Patient.objects.first()
+    patient = await Patient.objects.afirst()
 
     assert(patient.diabetes_type == 45)
     assert("diabetes_type" in patient.errors)
@@ -283,9 +283,9 @@ async def test_future_diagnosis_date(test_user, single_row_valid_df):
     single_row_valid_df["Date of Diabetes Diagnosis"] = pd.to_datetime(diagnosis_date)
 
     with pytest.raises(ValidationError) as e_info:
-        csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
+        await csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
 
-    patient = Patient.objects.first()
+    patient = await Patient.objects.afirst()
 
     assert(patient.diagnosis_date == diagnosis_date)
     assert("diagnosis_date" in patient.errors)
@@ -302,9 +302,9 @@ async def test_diagnosis_date_before_date_of_birth(test_user, single_row_valid_d
     single_row_valid_df["Date of Diabetes Diagnosis"] = pd.to_datetime(diagnosis_date)
 
     with pytest.raises(ValidationError) as e_info:
-        csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
+        await csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
 
-    patient = Patient.objects.first()
+    patient = await Patient.objects.afirst()
 
     assert(patient.diagnosis_date == diagnosis_date)
     assert("diagnosis_date" in patient.errors)
@@ -319,9 +319,9 @@ async def test_invalid_sex(test_user, single_row_valid_df):
     single_row_valid_df["Stated gender"] = 45
 
     with pytest.raises(ValidationError) as e_info:
-        csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
+        await csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
 
-    patient = Patient.objects.first()
+    patient = await Patient.objects.afirst()
 
     assert(patient.sex == 45)
     assert("sex" in patient.errors)
@@ -332,9 +332,9 @@ async def test_invalid_ethnicity(test_user, single_row_valid_df):
     single_row_valid_df["Ethnic Category"] = "45"
 
     with pytest.raises(ValidationError) as e_info:
-        csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
+        await csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
 
-    patient = Patient.objects.first()
+    patient = await Patient.objects.afirst()
 
     assert(patient.ethnicity == "45")
     assert("ethnicity" in patient.errors)
@@ -345,9 +345,9 @@ async def test_missing_gp_ods_code(test_user, single_row_valid_df):
     single_row_valid_df["GP Practice Code"] = None
 
     with pytest.raises(ValidationError) as e_info:
-        csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
+        await csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
 
-    patient = Patient.objects.first()
+    patient = await Patient.objects.afirst()
 
     assert("gp_practice_ods_code" in patient.errors)
 
@@ -364,9 +364,9 @@ async def test_future_death_date(test_user, single_row_valid_df):
     single_row_valid_df["Death Date"] = pd.to_datetime(death_date)
 
     with pytest.raises(ValidationError) as e_info:
-        csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
+        await csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
 
-    patient = Patient.objects.first()
+    patient = await Patient.objects.afirst()
 
     assert(patient.death_date == death_date)
     assert("death_date" in patient.errors)
@@ -383,9 +383,9 @@ async def test_death_date_before_date_of_birth(test_user, single_row_valid_df):
     single_row_valid_df["Death Date"] = pd.to_datetime(death_date)
 
     with pytest.raises(ValidationError) as e_info:
-        csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
+        await csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
 
-    patient = Patient.objects.first()
+    patient = await Patient.objects.afirst()
 
     assert(patient.death_date == death_date)
     assert("death_date" in patient.errors)
@@ -401,9 +401,9 @@ async def test_invalid_postcode(test_user, single_row_valid_df):
     single_row_valid_df["Postcode of usual address"] = "not a postcode"
 
     with pytest.raises(ValidationError) as e_info:
-        csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
+        await csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
 
-    patient = Patient.objects.first()
+    patient = await Patient.objects.afirst()
 
     assert(patient.postcode == "not a postcode")
     assert("postcode" in patient.errors)
@@ -414,9 +414,9 @@ async def test_invalid_postcode(test_user, single_row_valid_df):
 async def test_error_validating_postcode(test_user, single_row_valid_df):
     single_row_valid_df["Postcode of usual address"] = "WC1X 8SH"
 
-    csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
+    await csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
 
-    patient = Patient.objects.first()
+    patient = await Patient.objects.afirst()
     assert(patient.postcode == "WC1X8SH")
 
 
@@ -426,9 +426,9 @@ async def test_invalid_gp_ods_code(test_user, single_row_valid_df):
     single_row_valid_df["GP Practice Code"] = "not a GP code"
 
     with pytest.raises(ValidationError) as e_info:
-        csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
+        await csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
 
-    patient = Patient.objects.first()
+    patient = await Patient.objects.afirst()
 
     assert(patient.gp_practice_ods_code == "not a GP code")
     assert("gp_practice_ods_code" in patient.errors)
@@ -439,24 +439,24 @@ async def test_invalid_gp_ods_code(test_user, single_row_valid_df):
 async def test_error_validating_gp_ods_code(test_user, single_row_valid_df):
     single_row_valid_df["GP Practice Code"] = "G85023"
 
-    csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
+    await csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
 
-    patient = Patient.objects.first()
+    patient = await Patient.objects.afirst()
     assert(patient.gp_practice_ods_code == "G85023")
 
 
 @pytest.mark.django_db
 async def test_lookup_index_of_multiple_deprivation(test_user, single_row_valid_df):
-    csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
+    await csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
 
-    patient = Patient.objects.first()
+    patient = await Patient.objects.afirst()
     assert(patient.index_of_multiple_deprivation_quintile == INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE)
 
 
 @pytest.mark.django_db
 @patch("project.npda.models.patient.imd_for_postcode", Mock(side_effect=HTTPError("oopsie!")))
 async def test_error_looking_up_index_of_multiple_deprivation(test_user, single_row_valid_df):
-    csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
+    await csv_upload(test_user, single_row_valid_df, None, ALDER_HEY_PZ_CODE)
 
-    patient = Patient.objects.first()
+    patient = await Patient.objects.afirst()
     assert(patient.index_of_multiple_deprivation_quintile is None)

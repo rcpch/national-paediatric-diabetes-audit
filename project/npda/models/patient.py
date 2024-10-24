@@ -2,7 +2,6 @@
 from datetime import date
 import logging
 from enum import Enum
-import traceback
 
 from httpx import HTTPError
 
@@ -143,8 +142,6 @@ class Patient(models.Model):
         return stringify_time_elapsed(self.date_of_birth, today_date)
 
     def save(self, *args, **kwargs) -> None:
-        traceback.print_stack()
-
         if self.postcode:
             try:
                 self.index_of_multiple_deprivation_quintile = imd_for_postcode(
