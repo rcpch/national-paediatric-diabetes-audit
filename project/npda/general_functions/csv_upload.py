@@ -1,6 +1,7 @@
 # python imports
 from datetime import date
 import logging
+import asyncio
 
 # django imports
 from django.apps import apps
@@ -10,6 +11,7 @@ from django.core.exceptions import ValidationError
 # third part imports
 import pandas as pd
 import numpy as np
+import httpx
 
 # RCPCH imports
 from ...constants import (
@@ -155,7 +157,7 @@ async def csv_upload(user, dataframe, csv_file, pdu_pz_code):
             },
         ) | {"paediatric_diabetes_unit": pdu}
 
-    def validate_patient_using_form(row):
+    async def validate_patient_using_form(row, async_client):
 
         fields = row_to_dict(
             row,
@@ -172,7 +174,10 @@ async def csv_upload(user, dataframe, csv_file, pdu_pz_code):
                 "death_date": "Death Date",
             },
         )
+        
         form = PatientForm(fields)
+        await form.clean_async(async_client) 
+
         assign_original_row_indices_to_errors(form, row)
         return form
 
@@ -233,11 +238,11 @@ async def csv_upload(user, dataframe, csv_file, pdu_pz_code):
             for error in errors:
                 error.original_row_index = row["row_index"]
 
-    def validate_rows(rows):
+    async def validate_rows(rows, async_client):
         first_row = rows.iloc[0]
 
         transfer_fields = validate_transfer(first_row)
-        patient_form = validate_patient_using_form(first_row)
+        patient_form = await validate_patient_using_form(first_row, async_client)
 
         visits = rows.apply(
             lambda row: validate_visit_using_form(patient_form.instance, row),
@@ -283,6 +288,17 @@ async def csv_upload(user, dataframe, csv_file, pdu_pz_code):
 
         return instance
 
+    async def validate_rows_in_parallel(rows_by_patient):
+        # TODO MRB: ensure a single unhandled error doesn't stop the whole process
+        async with httpx.AsyncClient() as async_client:
+            tasks = []
+            async with asyncio.TaskGroup() as tg:
+                for _, rows in visits_by_patient:
+                    task = tg.create_task(validate_rows(rows, async_client))
+                    tasks.append(task)
+
+        return [task.result() for task in tasks]
+
     # We only one to create one patient per NHS number
     # Remember the original row number to help users find where the problem was in the CSV
     dataframe["row_index"] = np.arange(dataframe.shape[0])
@@ -291,9 +307,9 @@ async def csv_upload(user, dataframe, csv_file, pdu_pz_code):
 
     errors_to_return = {}
 
-    for _, rows in visits_by_patient:
-        (patient_form, transfer_fields, visits) = validate_rows(rows)
+    validation_results_by_patient = await validate_rows_in_parallel(visits_by_patient)
 
+    for (patient_form, transfer_fields, visits) in validation_results_by_patient:
         errors_to_return = errors_to_return | gather_errors(patient_form)
 
         for visit_form in visits:
