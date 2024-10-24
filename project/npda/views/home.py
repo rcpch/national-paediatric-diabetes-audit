@@ -74,7 +74,7 @@ async def home(request):
 
             VisitActivity = apps.get_model("npda", "VisitActivity")
             try:
-                VisitActivity.objects.create(
+                await VisitActivity.objects.acreate(
                     activity=8,
                     ip_address=request.META.get("REMOTE_ADDR"),
                     npdauser=request.user,
