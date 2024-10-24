@@ -72,12 +72,8 @@ def test_user(seed_groups_fixture, seed_users_fixture):
     ).first()
 
 @sync_to_async
-def get_all_patients():
-    return list(Patient.objects.all())
-
-@sync_to_async
-def get_all_visits():
-    return list(Visit.objects.all().order_by('visit_date'))
+def async_get_all(query_set_fn):
+    return list(query_set_fn())
 
 
 @pytest.mark.django_db
@@ -113,7 +109,7 @@ async def test_multiple_patients(test_user, two_patients_first_with_two_visits_s
     await csv_upload(test_user, df, None, ALDER_HEY_PZ_CODE)
 
     assert(await Patient.objects.acount() == 2)
-    [first_patient, second_patient] = await get_all_patients()
+    [first_patient, second_patient] = await async_get_all(lambda: Patient.objects.all())
 
     assert(await Visit.objects.filter(patient=first_patient).acount() == 2)
     assert(await Visit.objects.filter(patient=second_patient).acount() == 1)
@@ -169,7 +165,7 @@ async def test_error_in_multiple_visits(test_user, one_patient_two_visits):
 
     assert(await Visit.objects.acount() == 2)
 
-    [first_visit, second_visit] = await get_all_visits()
+    [first_visit, second_visit] = await async_get_all(lambda: Visit.objects.all().order_by('visit_date'))
 
     assert(first_visit.treatment == 45)
     assert("treatment" in first_visit.errors)
@@ -190,12 +186,17 @@ async def test_multiple_patients_where_one_has_visit_errors_and_the_other_does_n
     with pytest.raises(ValidationError) as e_info:
         await csv_upload(test_user, df, None, ALDER_HEY_PZ_CODE)
 
-    [patient_one, patient_two] = await get_all_patients()
+    [patient_one, patient_two] = await async_get_all(lambda: Patient.objects.all())
 
     assert(await Visit.objects.acount() == 3)
 
-    [first_visit_for_first_patient, second_visit_for_first_patient] = Visit.objects.filter(patient=patient_one).order_by('visit_date')
-    [visit_for_second_patient] = Visit.objects.filter(patient=patient_two)
+    [first_visit_for_first_patient, second_visit_for_first_patient] = await async_get_all(
+        lambda: Visit.objects.filter(patient=patient_one).order_by('visit_date')
+    )
+
+    [visit_for_second_patient] = await async_get_all(
+        lambda: Visit.objects.filter(patient=patient_two)
+    )
 
     assert(first_visit_for_first_patient.treatment == 45)
     assert("treatment" in first_visit_for_first_patient.errors)
