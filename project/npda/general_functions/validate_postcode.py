@@ -5,12 +5,12 @@ import logging
 from django.conf import settings
 
 # third party libraries
+import httpx
 
 # npda imports
-from ..httpx_client import async_client
 
 
-async def validate_postcode(postcode):
+async def validate_postcode(postcode: str, async_client: httpx.AsyncClient):
     """
     Tests if postcode is valid
     Returns boolean
@@ -18,7 +18,7 @@ async def validate_postcode(postcode):
 
     request_url = f"{settings.POSTCODE_API_BASE_URL}/postcodes/{postcode}.json"
 
-    response = await async_client.get().get(
+    response = await async_client.get(
         url=request_url,
         timeout=10,  # times out after 10 seconds
     )

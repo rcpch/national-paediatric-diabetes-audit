@@ -101,11 +101,11 @@ class PatientForm(AsyncModelForm):
 
         return date_of_birth
 
-    async def aclean_postcode(self):
+    async def aclean_postcode(self, async_client):
         postcode = self.cleaned_data["postcode"]
 
         try:
-            result = await validate_postcode(postcode)
+            result = await validate_postcode(postcode, async_client)
 
             if not result:
                 self.add_error("postcode", ValidationError(
@@ -131,7 +131,7 @@ class PatientForm(AsyncModelForm):
 
         return death_date
     
-    async def aclean(self):
+    async def aclean(self, async_client):
         cleaned_data = self.cleaned_data
 
         date_of_birth = cleaned_data.get("date_of_birth")
@@ -172,10 +172,10 @@ class PatientForm(AsyncModelForm):
 
         if gp_practice_postcode:
             try:
-                validation_result = await validate_postcode(gp_practice_postcode)
+                validation_result = await validate_postcode(gp_practice_postcode, async_client)
                 normalised_postcode = validation_result["normalised_postcode"]
 
-                ods_code = await gp_ods_code_for_postcode(normalised_postcode)
+                ods_code = await gp_ods_code_for_postcode(normalised_postcode, async_client)
 
                 if not ods_code:
                     self.add_error("gp_practice_postcode", ValidationError(
@@ -190,7 +190,7 @@ class PatientForm(AsyncModelForm):
 
         elif gp_practice_ods_code:
             try:
-                if not await gp_details_for_ods_code(gp_practice_ods_code):
+                if not await gp_details_for_ods_code(gp_practice_ods_code, async_client):
                     self.add_error("gp_practice_ods_code", ValidationError(
                         "Could not find GP practice with ODS code %(ods_code)s",
                         params={"ods_code":gp_practice_ods_code}

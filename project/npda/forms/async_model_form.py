@@ -3,16 +3,22 @@ from django.forms.utils import ErrorDict
 
 from asgiref.sync import async_to_sync
 
+import httpx
+
 """
-Opt in to support async form cleaning.
+Opt in to support form cleaning by making async HTTP requests with httpx. 
 
 To define an async per field cleaner:
-    async def aclean_field_name(self):
+    async def aclean_field_name(self, async_client):
 
 You can mix async and sync per field cleaners and all will be run.
 
 To define an async form .clean:
-    async def aclean(self):
+    async def aclean(self, async_client):
+
+We have to pass the async_client as a parameter otherwise it will stop working on
+subsequent requests as they can't be re-used across event loops and we are still running
+under WSGI so have a new async event loop for each request.
 
 You can't have both an async and a sync clean method for a given field or the whole form,
 the async one will take precendence.
@@ -28,7 +34,7 @@ However you should unit test anything using this to ensure it works across updat
 class AsyncModelForm(ModelForm):
     # Must be called before anything else that triggers full_clean, otherwise it's a no-op
     #  eg .errors, .is_valid
-    async def afull_clean(self):
+    async def afull_clean(self, async_client):
         if self._errors is not None:
             return
         
@@ -41,10 +47,10 @@ class AsyncModelForm(ModelForm):
         if self.empty_permitted and not self.has_changed():
             return
 
-        await self._aclean_fields()
-        await self._aclean_form()
+        await self._aclean_fields(async_client)
+        await self._aclean_form(async_client)
 
-    async def _aclean_fields(self):
+    async def _aclean_fields(self, async_client):
         for name, bf in self._bound_items():
             field = bf.field
             try:
@@ -56,7 +62,7 @@ class AsyncModelForm(ModelForm):
                 value = None
 
                 if async_cleaner:
-                    value = await async_cleaner()
+                    value = await async_cleaner(async_client)
                 elif sync_cleaner:
                     value = sync_cleaner()
                 
@@ -65,7 +71,7 @@ class AsyncModelForm(ModelForm):
             except ValidationError as e:
                 self.add_error(name, e)
     
-    async def _aclean_form(self):
+    async def _aclean_form(self, async_client):
         async_cleaner = getattr(self, "aclean", None)
         sync_cleaner = getattr(self, "clean", None)
 
@@ -73,7 +79,7 @@ class AsyncModelForm(ModelForm):
         
         try:
             if async_cleaner:
-                cleaned_data = await async_cleaner()
+                cleaned_data = await async_cleaner(async_client)
             elif sync_cleaner:
                 cleaned_data = sync_cleaner()
         except ValidationError as e:
@@ -84,7 +90,15 @@ class AsyncModelForm(ModelForm):
 
     # Wire up to the existing Django internals
     def _clean_fields(self):
-        return async_to_sync(self._aclean_fields)()
+        async def wrapper():
+            async with httpx.AsyncClient() as async_client:
+                return self.aclean_fields(async_client)
+
+        return async_to_sync(wrapper)()
     
     def _clean_form(self):
-        return async_to_sync(self._aclean_form)()
+        async def wrapper():
+            async with httpx.AsyncClient() as async_client:
+                return self.aclean_form(async_client)
+        
+        return async_to_sync(wrapper)()

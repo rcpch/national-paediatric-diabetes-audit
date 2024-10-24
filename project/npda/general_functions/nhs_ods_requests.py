@@ -6,15 +6,15 @@ from typing import Optional
 from django.conf import settings
 
 # third party libraries
+import httpx
 
 # npda imports
-from ..httpx_client import async_client
 
 # Logging
 logger = logging.getLogger(__name__)
 
 
-async def gp_ods_code_for_postcode(postcode: str) -> Optional[str]:
+async def gp_ods_code_for_postcode(postcode: str, async_client: httpx.AsyncClient) -> Optional[str]:
     """
     Returns GP practice as an object from NHS API against a postcode
     """
@@ -24,7 +24,7 @@ async def gp_ods_code_for_postcode(postcode: str) -> Optional[str]:
         f"{url}/organisations/?PostCode={postcode}&Status=Active&PrimaryRoleId=RO177"
     )
 
-    response = await async_client.get().get(
+    response = await async_client.get(
         url=request_url,
         timeout=10,  # times out after 10 seconds
     )
