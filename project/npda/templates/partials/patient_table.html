@@ -3,28 +3,83 @@
 {% url 'patients' as patients_url %}
 {% if request.user.view_preference == 1 %}
     <!-- PDU view   -->
-    <h1 class="text-md font-montserrat font-semibold text-rcpch_dark_blue">Patients under the care of {{pz_code}}</h1>
+     <div role="alert" class="mt-2 alert bg-slate-200">
+        <p><i class="fa-solid fa-users-viewfinder"></i> Showing patients filtered by:</p>
+            <ul>
+                <li>
+                    <b>Patient Diabetic Unit </b>[<span class="font-mono bg-gray-300 p-1 mx-1">{{pz_code}} only</span>].
+                </li>
+            </ul>
+    </div>
 {% elif request.user.view_preference == 2 %}
     <!-- national view -->
-    <h1 class="text-md font-montserrat font-semibold text-rcpch_dark_blue">All patients nationally</h1>
+         <!-- PDU view   -->
+     <div role="alert" class="mt-2 alert bg-slate-200">
+        <p><i class="fa-solid fa-users-viewfinder"></i> Showing patients filtered by:</p>
+            <ul>
+                <li>
+                    <b>National patients</b> [<span class="font-mono bg-gray-300 p-1 mx-1">show all</span>].
+                </li>
+            </ul>
+    </div>
 {% endif %}
 
 {% if patient_list %}
-<table class="table table-md w-full text-sm text-left rtl:text-right text-gray-500 text-gray-400 mb-5 font-montserrat">
-    <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">
+<table class="mt-2 table table-md w-full text-sm text-left rtl:text-right  text-gray-400 mb-5 font-montserrat">
+    <thead class="text-xs uppercase  bg-rcpch_dark_blue text-white">
             <tr>
-                <th scope="col" class="px-2 py-3 text-center cursor-pointer">
-                        <span class="flex flex-row">
-                            {% include 'partials/page_elements/filter_icon.html' with hx_get=asc_url hx_target="#patient_table" filter_direction="asc" current_page=current_page sort_field="pk" %}
-                            NPDA ID
-                            {% include 'partials/page_elements/filter_icon.html' with hx_get=desc_url hx_target="#patient_table" filter_direction="desc" current_page=current_page sort_field="pk" %}
+                <th scope="col" class="px-2 py-3 text-center">
+                     <span class="flex flex-row">
+                        <div id="npda_id_sort_label"  hx-preserve  class="swap swap-rotate">
+                            <button  hx-preserve hx-get="{{asc_url}}?sort_by=pk&page={{current_page}}&sort=asc"
+                                hx-on:htmx:after-request="document.getElementById('npda_id_sort_label').classList.toggle('swap-active');"
+                                hx-trigger="click throttle:1s"
+                                hx-target="#patient_table"
+                                hx-swap="innerHTML swap:100ms"
+                                class="swap-on">
+                                <i class="fa-solid fa-arrow-up-z-a"> </i>
+                            </button>
+                            <button  hx-preserve hx-get="{{desc_url}}?sort_by=pk&page={{current_page}}&sort=desc"
+                                hx-on:htmx:after-request="document.getElementById('npda_id_sort_label').classList.toggle('swap-active');"
+                                hx-trigger="click throttle:1s"
+                                hx-target="#patient_table"
+                                hx-swap="innerHTML swap:100ms"
+                                class="swap-off"
+                                >
+                                <i  class="fa-solid fa-arrow-down-a-z"
+                                ></i>
+                            </button>
+
+                        </div>
+                                               
+                            NPDA Patient ID
                         </span>
                 </th>
-                <th scope="col" class="px-2 py-3 text-center cursor-pointer nhs-number-column">
-                        <span class="flex flex-row">
-                            {% include 'partials/page_elements/filter_icon.html' with hx_get=asc_url hx_target="#patient_table" filter_direction="asc" current_page=current_page sort_field="nhs_number" %}
+                <th scope="col" class="px-2 py-3 text-center nhs-number-column">
+                    <span class="flex flex-row">
+                        <div id="nhs_num_sort_label"  hx-preserve  class="swap swap-rotate">
+                            <button  hx-preserve hx-get="{{asc_url}}?sort_by=nhs_number&page={{current_page}}&sort=asc"
+                                hx-on:htmx:after-request="document.getElementById('nhs_num_sort_label').classList.toggle('swap-active');"
+                                hx-trigger="click throttle:1s"
+                                hx-target="#patient_table"
+                                hx-swap="innerHTML swap:100ms"
+                                class="swap-on">
+                                <i class="fa-solid fa-arrow-up-z-a"> </i>
+                            </button>
+                            <button  hx-preserve hx-get="{{desc_url}}?sort_by=nhs_number&page={{current_page}}&sort=desc"
+                                hx-on:htmx:after-request="document.getElementById('nhs_num_sort_label').classList.toggle('swap-active');"
+                                hx-trigger="click throttle:1s"
+                                hx-target="#patient_table"
+                                hx-swap="innerHTML swap:100ms"
+                                class="swap-off"
+                                >
+                                <i  class="fa-solid fa-arrow-down-a-z"
+                                ></i>
+                            </button>
+
+                        </div>
+                        
                             NHS Number
-                            {% include 'partials/page_elements/filter_icon.html' with hx_get=desc_url hx_target="#patient_table" filter_direction="desc" current_page=current_page sort_field="nhs_number" %}
                         </span>
                 </th>
 
