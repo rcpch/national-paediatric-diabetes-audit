@@ -368,19 +368,19 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "Europe/London"
 
-CELERY_BEAT_SCHEDULE = {
-    "run-daily-at-six-am": {
-        "task": "project.npda.tasks.hello",
-        "schedule": crontab(hour="6", minute=0),
-        "options": {
-            "expires": 15.0,
-        },
-    },
-    "run-ever-10-seconds": {
-        "task": "project.npda.tasks.hello",
-        "schedule": 10,
-        "options": {
-            "expires": 15.0,
-        },
-    },
-}
+# CELERY_BEAT_SCHEDULE = {
+#     "run-daily-at-six-am": {
+#         "task": "project.npda.tasks.hello",
+#         "schedule": crontab(hour="6", minute=0),
+#         "options": {
+#             "expires": 15.0,
+#         },
+#     },
+#     "run-ever-10-seconds": {
+#         "task": "project.npda.tasks.hello",
+#         "schedule": 10,
+#         "options": {
+#             "expires": 15.0,
+#         },
+#     },
+# }

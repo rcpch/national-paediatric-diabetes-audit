@@ -20,7 +20,8 @@ from django.conf import settings
 # HTMX imports
 from django_htmx.http import trigger_client_event
 
-from project.npda.general_functions.csv import csv_upload, csv_parse, csv_header
+from project.npda.general_functions.csv import csv_parse, csv_header
+from project.npda.general_functions.csv.csv_upload_celery import csv_upload
 from ..forms.upload import UploadFileForm
 from ..general_functions.session import refresh_session_filters
 from ..general_functions.view_preference import get_or_update_view_preference
@@ -33,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 @login_and_otp_required()
-async def home(request):
+def home(request):
     """
     Home page view - contains the upload form.
     Only verified users can access this page.
@@ -85,18 +86,18 @@ async def home(request):
             audit_year = request.session.get("selected_audit_year")
 
             # CSV is valid, parse any errors and store the data in the tables.
-            errors_by_row_index = await csv_upload(
+            errors_by_row_index = csv_upload(
                 user=request.user,
                 dataframe=parsed_csv.df,
                 csv_file_name=user_csv_filename,
                 csv_file_bytes=user_csv_bytes,
-                pdu_pz_code=pz_code,
+                pz_code=pz_code,
                 audit_year=audit_year,
             )
             # log user activity
             VisitActivity = apps.get_model("npda", "VisitActivity")
             try:
-                await VisitActivity.objects.acreate(
+                VisitActivity.objects.create(
                     activity=8,
                     ip_address=request.META.get("REMOTE_ADDR"),
                     npdauser=request.user,
@@ -105,7 +106,8 @@ async def home(request):
                 logger.error(f"Failed to log user activity: {e}")
 
             # update the session fields - this stores that the user has uploaded a csv and disables the ability to use the questionnaire
-            await sync_to_async(refresh_session_filters)(request)
+            # await sync_to_async(refresh_session_filters)(request)
+            refresh_session_filters(request)
 
             if errors_by_row_index:
                 messages.error(
@@ -159,7 +161,7 @@ def view_preference(request):
         request.user, view_preference_selection
     )
     selected_pz_code = request.POST.get("pz_code_select_name", None)
-    
+
     # includes a validation step
     refresh_session_filters(request, pz_code=selected_pz_code)
 
@@ -174,7 +176,7 @@ def audit_year(request):
     """
     if request.method == "POST":
         audit_year = request.POST.get("audit_year_select_name", None)
-        
+
         refresh_session_filters(request, audit_year=audit_year)
 
         # Reload the page to apply the new view preference

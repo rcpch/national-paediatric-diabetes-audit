@@ -1158,7 +1158,7 @@ class VisitForm(forms.ModelForm):
         # I haven't implemented it here. The risk is that future versions of Django will add more
         # behaviour that we miss out on.
 
-        if getattr(self, "async_validation_results"):
+        if hasattr(self, "async_validation_results"):
             self.instance.bmi = self.async_validation_results.bmi
 
             for field_prefix in ["height", "weight", "bmi"]:
@@ -1169,6 +1169,10 @@ class VisitForm(forms.ModelForm):
                 if result and not type(result) is ValidationError:
                     setattr(self.instance, f"{field_prefix}_centile", result.centile)
                     setattr(self.instance, f"{field_prefix}_sds", result.sds)
+
+        self.instance.patient = (
+            self.patient
+        )  # This is the patient object that is passed to the form
 
         if commit:
             self.instance.save()

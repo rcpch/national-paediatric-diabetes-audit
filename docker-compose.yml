@@ -88,3 +88,4 @@ volumes:
   npda-caddy-data:
   npda-postgis-data:
   npda-flower-data:
+  npda-django-data:
