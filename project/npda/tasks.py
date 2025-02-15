@@ -1,6 +1,6 @@
 # Python Imports
 import collections
-from io import StringIO
+from collections import defaultdict
 import json
 import logging
 
@@ -163,9 +163,13 @@ def save_patient_and_visits_to_submission(
 
     patient = patient_form.save()
 
+    transfer_fields = row_to_dict(
+        patient_row, Transfer, csv_headings=get_csv_headings(pdu.pz_code)
+    )
+
     # Save or update the patient transfer record
     Transfer.objects.update_or_create(
-        patient=patient, paediatric_diabetes_unit=pdu, date_leaving_service=None
+        patient=patient, paediatric_diabetes_unit=pdu, defaults=transfer_fields
     )
 
     # Add the patient to the submission
@@ -190,20 +194,31 @@ def save_patient_and_visits_to_submission(
         visit.is_valid = visit_form.is_valid()
         visit.save()
 
-    if errors_to_return:
-        # Update the submission with the errors - merge them with any existing errors
-        errors_to_return = convert_numpy_types(errors_to_return)
-        existing_errors = submission.errors or {}
-        merged_errors = merge_errors(existing_errors, errors_to_return)
-        submission.errors = json.dumps(merged_errors)
-        submission.save()
+    return errors_to_return
 
 
 @shared_task
-def gather_errors(submission_id):
+def gather_errors(results, submission_id):
     """
-    Retrieve all errors from a submission and return them
+    Gather errors from all tasks and store them in the submission.
     """
+    errors_to_return = defaultdict(lambda: defaultdict(list))
+
+    # Combine errors from all tasks
+    for task_errors in results:
+        for row_index, field_errors in task_errors.items():
+            for field, errors in field_errors.items():
+                errors_to_return[row_index][field].extend(errors)
+
+    # Get the Submission model
     Submission = apps.get_model("npda", "Submission")
-    submission = Submission.objects.get(pk=submission_id)
-    return submission.errors
+
+    # Get the submission instance
+    submission = Submission.objects.get(id=submission_id)
+
+    # Store the errors in the submission
+    if errors_to_return:
+        submission.errors = json.dumps(errors_to_return)
+        submission.save()
+
+    return errors_to_return
