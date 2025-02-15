@@ -1,9 +1,8 @@
 from datetime import date
 from asgiref.sync import sync_to_async
 import logging
-import asyncio
-import collections
 import json
+import timeit
 
 # django imports
 from django.apps import apps
@@ -13,7 +12,6 @@ from django.core.exceptions import ValidationError
 # third part imports
 import pandas as pd
 import numpy as np
-import httpx
 
 # RCPCH imports
 from project.constants import (
@@ -21,6 +19,7 @@ from project.constants import (
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
 )
+from project.npda.tasks import save_patient_and_visits_to_submission
 
 # Logging setup
 logger = logging.getLogger(__name__)
@@ -40,6 +39,8 @@ def csv_upload(user, dataframe, csv_file_name, csv_file_bytes, pz_code, audit_ye
     Submission = apps.get_model("npda", "Submission")
     PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
 
+    start = timeit.default_timer()
+
     # Helper functions
     def csv_value_to_model_value(model_field, value):
         if pd.isnull(value):
@@ -52,10 +53,10 @@ def csv_upload(user, dataframe, csv_file_name, csv_file_bytes, pz_code, audit_ye
         # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/425
         return value.item() if isinstance(value, np.generic) else value
 
-    def row_to_dict(row, model):
+    def row_to_dict(row, model, csv_headings):
         ret = {}
 
-        for entry in CSV_HEADINGS:
+        for entry in csv_headings:
             if "model" in entry and apps.get_model("npda", entry["model"]) == model:
                 model_field_name = entry["model_field"]
                 model_field_definition = model._meta.get_field(model_field_name)
@@ -71,26 +72,6 @@ def csv_upload(user, dataframe, csv_file_name, csv_file_bytes, pz_code, audit_ye
 
     def validate_transfer(row):
         return row_to_dict(row, Transfer)
-
-    def retain_errors_and_invalid_field_data(form):
-        # We want to retain fields even if they're invalid so that we can return them to the user
-        # Use the field value from cleaned_data, falling back to data if it's not there
-        for key, value in form.cleaned_data.items():
-            setattr(form.instance, key, value)
-
-        for key, value in form.data.items():
-            if key not in form.cleaned_data:
-                setattr(form.instance, key, value)
-
-        form.instance.is_valid = form.is_valid()
-        form.instance.errors = (
-            None if form.is_valid() else form.errors.get_json_data(escape_html=True)
-        )
-
-    def record_errors_from_form(errors_to_return, row_index, form):
-        for field, errors in form.errors.as_data().items():
-            for error in errors:
-                errors_to_return[row_index][field].extend(error.messages)
 
     if pz_code == "PZ248":
         CSV_HEADINGS = UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
@@ -185,75 +166,25 @@ def csv_upload(user, dataframe, csv_file_name, csv_file_bytes, pz_code, audit_ye
     else:
         visits_by_patient = dataframe.groupby("NHS Number", sort=False, dropna=False)
 
-    # Gather all error messages indexed by row number and the field that caused them (__all__ if we don't know which one)
-    # dict[number, dict[str, list[str]]]
-    errors_to_return = collections.defaultdict(lambda: collections.defaultdict(list))
-
     # Process each patient and their visits
     for patient_index, patient_group in visits_by_patient:
         patient_row = patient_group.iloc[0]
+        patient_dict = row_to_dict(patient_row, Patient, csv_headings=CSV_HEADINGS)
 
-        patient_dict = row_to_dict(patient_row, Patient)
-        # patient_dict["submissions"] = [new_submission]
-
-        patient_form = PatientForm(data=patient_dict)
-
-        if not patient_form.is_valid():
-            retain_errors_and_invalid_field_data(patient_form)
-            record_errors_from_form(
-                errors_to_return, patient_row["row_index"], patient_form
-            )
-
-        patient = patient_form.save()
-
-        # Save or update the patient transfer record
-        Transfer.objects.update_or_create(
-            patient=patient, paediatric_diabetes_unit=pdu, date_leaving_service=None
+        patients_submission = save_patient_and_visits_to_submission.delay(
+            patient_row.to_dict(),
+            patient_dict,
+            patient_group.to_dict(orient="records"),
+            pdu.id,
+            new_submission.id,
         )
 
-        # Add the patient to the submission
-        new_submission.patients.add(patient)
+    end = timeit.default_timer()
 
-        # Process each visit for the patient
-        for visit_index, visit_row in patient_group.iterrows():
-            visit_dict = row_to_dict(visit_row, Visit)
-            visit_dict["patient"] = patient
+    logger.debug(f"Time taken to process the CSV file: {end - start} seconds")
 
-            visit_form = VisitForm(data=visit_dict, initial={"patient": patient})
+    return 0
 
-            if not visit_form.is_valid():
-                retain_errors_and_invalid_field_data(visit_form)
-                record_errors_from_form(
-                    errors_to_return, visit_row["row_index"], visit_form
-                )
+    # # Store the errors to report back to the user in the Data Quality Report
 
-            visit = visit_form.save()
-            visit.is_valid = visit_form.is_valid()
-            visit.save()
-
-    # Store the errors to report back to the user in the Data Quality Report
-    if errors_to_return:
-        errors_to_return = convert_numpy_types(errors_to_return)
-        new_submission.errors = json.dumps(errors_to_return)
-        new_submission.save()
-
-    return errors_to_return
-
-
-def convert_numpy_types(data):
-    """
-    Recursively convert numpy types to native Python types.
-    """
-    if isinstance(data, dict):
-        return {
-            convert_numpy_types(key): convert_numpy_types(value)
-            for key, value in data.items()
-        }
-    elif isinstance(data, list):
-        return [convert_numpy_types(element) for element in data]
-    elif isinstance(data, np.generic):
-        return data.item()
-    elif isinstance(data, np.ndarray):
-        return data.tolist()
-    else:
-        return data
+    # return errors_to_return
