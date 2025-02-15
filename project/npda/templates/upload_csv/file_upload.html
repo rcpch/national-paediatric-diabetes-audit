@@ -47,6 +47,7 @@
           <button id="submit-button"
                   class="font-montserrat tooltip-trigger w-full px-4 py-2 text-white bg-gray-400"
                   type="submit"
+                  {% if grouped_tasks_id %} hx-post="{% url 'task_status' grouped_tasks_id=grouped_tasks_id %}" hx-swap="innerHTML" hx-target="#upload-spinner" hx-indicator="#upload-spinner" {% endif %}
                   disabled
                   _="on click remove .hidden from #upload-spinner">
             Submit data

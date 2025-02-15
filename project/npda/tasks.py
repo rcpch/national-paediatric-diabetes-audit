@@ -98,7 +98,6 @@ def save_patient_and_visits_to_submission(
 
     def row_to_dict(row, model, csv_headings):
         ret = {}
-        print(model, csv_headings)
         for entry in csv_headings:
             if "model" in entry and apps.get_model("npda", entry["model"]) == model:
                 model_field_name = entry["model_field"]
@@ -198,3 +197,13 @@ def save_patient_and_visits_to_submission(
         merged_errors = merge_errors(existing_errors, errors_to_return)
         submission.errors = json.dumps(merged_errors)
         submission.save()
+
+
+@shared_task
+def gather_errors(submission_id):
+    """
+    Retrieve all errors from a submission and return them
+    """
+    Submission = apps.get_model("npda", "Submission")
+    submission = Submission.objects.get(pk=submission_id)
+    return submission.errors

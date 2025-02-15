@@ -1,7 +1,4 @@
-from datetime import date
-from asgiref.sync import sync_to_async
 import logging
-import json
 import timeit
 
 # django imports
@@ -10,6 +7,7 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 
 # third part imports
+from celery import chord
 import pandas as pd
 import numpy as np
 
@@ -19,13 +17,10 @@ from project.constants import (
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
 )
-from project.npda.tasks import save_patient_and_visits_to_submission
+from project.npda.tasks import save_patient_and_visits_to_submission, gather_errors
 
 # Logging setup
 logger = logging.getLogger(__name__)
-
-from project.npda.forms.patient_form import PatientForm
-from project.npda.forms.visit_form import VisitForm
 
 
 def csv_upload(user, dataframe, csv_file_name, csv_file_bytes, pz_code, audit_year):
@@ -69,9 +64,6 @@ def csv_upload(user, dataframe, csv_file_name, csv_file_bytes, pz_code, audit_ye
                 ret[model_field_name] = model_field_value
 
         return ret
-
-    def validate_transfer(row):
-        return row_to_dict(row, Transfer)
 
     if pz_code == "PZ248":
         CSV_HEADINGS = UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
@@ -167,24 +159,24 @@ def csv_upload(user, dataframe, csv_file_name, csv_file_bytes, pz_code, audit_ye
         visits_by_patient = dataframe.groupby("NHS Number", sort=False, dropna=False)
 
     # Process each patient and their visits
+    tasks = []
     for patient_index, patient_group in visits_by_patient:
         patient_row = patient_group.iloc[0]
         patient_dict = row_to_dict(patient_row, Patient, csv_headings=CSV_HEADINGS)
 
-        patients_submission = save_patient_and_visits_to_submission.delay(
+        patients_submission_task = save_patient_and_visits_to_submission.s(
             patient_row.to_dict(),
             patient_dict,
             patient_group.to_dict(orient="records"),
             pdu.id,
             new_submission.id,
         )
+        tasks.append(patients_submission_task)
+
+    grouped_tasks = chord(tasks)(gather_errors.s(new_submission.id))
 
     end = timeit.default_timer()
 
     logger.debug(f"Time taken to process the CSV file: {end - start} seconds")
 
-    return 0
-
-    # # Store the errors to report back to the user in the Data Quality Report
-
-    # return errors_to_return
+    return grouped_tasks.id
