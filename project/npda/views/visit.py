@@ -50,6 +50,7 @@ class PatientVisitsListView(
     template_name = "visits.html"
 
     def get_context_data(self, **kwargs):
+        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
         patient_id = self.kwargs.get("patient_id")
         context = super(PatientVisitsListView, self).get_context_data(**kwargs)
         patient = Patient.objects.get(pk=patient_id)
@@ -67,16 +68,34 @@ class PatientVisitsListView(
         context["submission"] = submission
 
         if patient.is_in_transfer_in_the_last_year():
-            pz_code = (
-                Transfer.objects.filter(
-                    patient=patient,
-                )
+            previous_transfer = (
+                Transfer.objects.filter(patient=patient)
                 .order_by("-date_leaving_service")
                 .first()
-                .previous_pz_code
             )
-            PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-            pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+            if hasattr(previous_transfer, "previous_pz_code"):
+                if previous_transfer.previous_pz_code is not None:
+                    pz_code = (
+                        Transfer.objects.filter(
+                            patient=patient,
+                        )
+                        .order_by("-date_leaving_service")
+                        .first()
+                        .previous_pz_code
+                    )
+                else:
+                    # this patient has been transferred but not yet received at a new PDU
+                    # Use the existing PDU in session
+                    pz_code = self.request.session.get("pz_code")
+                    print("pz_code", pz_code)
+                pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+            else:
+                # this patient has been transferred but not yet received at a new PDU
+                # Use the existing PDU
+                PaediatricDiabetesUnit = apps.get_model(
+                    "npda", "PaediatricDiabetesUnit"
+                )
+                pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
         # get the PDU for this patient - this is the PDU that the patient is currently under.
         # If the patient has left the PDU, the date_leaving_service will be set and it will be possible to view KPIs for the PDU up until transfer,
         # if this happened during the audit period. This is TODO

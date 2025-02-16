@@ -38,7 +38,7 @@ def csv_upload(user, dataframe, csv_file_name, csv_file_bytes, pz_code, audit_ye
 
     # Helper functions
     def csv_value_to_model_value(model_field, value):
-        if pd.isnull(value):
+        if pd.isnull(value) or value == pd.NaT:
             return None
 
         if isinstance(value, pd.Timestamp):
@@ -165,7 +165,7 @@ def csv_upload(user, dataframe, csv_file_name, csv_file_bytes, pz_code, audit_ye
         patient_dict = row_to_dict(patient_row, Patient, csv_headings=CSV_HEADINGS)
 
         patients_submission_task = save_patient_and_visits_to_submission.s(
-            patient_row.to_dict(),
+            patient_row.to_json(date_format="iso"),
             patient_dict,
             patient_group.to_dict(orient="records"),
             pdu.id,

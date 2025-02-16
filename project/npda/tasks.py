@@ -1,6 +1,7 @@
 # Python Imports
 import collections
 from collections import defaultdict
+from datetime import datetime
 import json
 import logging
 
@@ -33,7 +34,7 @@ def hello():
 
 @shared_task
 def save_patient_and_visits_to_submission(
-    patient_row_dict, patient_dict, patient_group_dict, pdu_id, submission_id
+    patient_row_json, patient_dict, patient_group_dict, pdu_id, submission_id
 ):
     """
     Accepts a list of patient visits, creates a patient instance (validating using a patient form), then iterates
@@ -64,38 +65,6 @@ def save_patient_and_visits_to_submission(
             for error in errors:
                 errors_to_return[row_index][field].extend(error.messages)
 
-    def convert_numpy_types(data):
-        """
-        Recursively convert numpy types to native Python types.
-        """
-        if isinstance(data, dict):
-            return {
-                convert_numpy_types(key): convert_numpy_types(value)
-                for key, value in data.items()
-            }
-        elif isinstance(data, list):
-            return [convert_numpy_types(element) for element in data]
-        elif isinstance(data, np.generic):
-            return data.item()
-        elif isinstance(data, np.ndarray):
-            return data.tolist()
-        else:
-            return data
-
-    def merge_errors(existing_errors, new_errors):
-        """
-        Merge new errors into existing errors.
-        """
-        for key, value in new_errors.items():
-            if key in existing_errors:
-                if isinstance(value, dict):
-                    merge_errors(existing_errors[key], value)
-                else:
-                    existing_errors[key].extend(value)
-            else:
-                existing_errors[key] = value
-        return existing_errors
-
     def row_to_dict(row, model, csv_headings):
         ret = {}
         for entry in csv_headings:
@@ -108,6 +77,9 @@ def save_patient_and_visits_to_submission(
                     model_field_definition, csv_value
                 )
 
+                if model_field_name in ['diabetes_type','reason_leaving_service','hba1c_format','closed_loop_system','glucose_monitoring','retinal_screening_result','albuminuria_stage','thyroid_treatment_status','gluten_free_diet','psychological_additional_support_status','smoking_status','dietician_additional_appointment_offered','ketone_meter_training','hospital_admission_reason','dka_additional_therapies']:
+                    # this is a workaround - these fields are integer fields but the csv sometimes has them as floats
+                    model_field_value = int(model_field_value) if model_field_value else None
                 ret[model_field_name] = model_field_value
 
         return ret
@@ -128,28 +100,72 @@ def save_patient_and_visits_to_submission(
             return UNIQUE_IDENTIFIER_ENGLAND + CSV_HEADING_OBJECTS
 
     def csv_value_to_model_value(model_field, value):
-        if pd.isnull(value):
+        if pd.isnull(value) or value == pd.NaT:
             return None
 
+        if type(value) == datetime:
+            if value == datetime(1, 1, 1, 0, 0):
+                return None
+            return value.date()
+
         if isinstance(value, pd.Timestamp):
+            # Convert datetime(1, 1, 1, 0, 0) to None - this is an invalid date
+            # A workaround because in the process of converting the DataFrame to a dictionary
+            # datefields that are empty are converted to datetime(1, 1, 1, 0, 0) which is invalid
             return value.to_pydatetime().date()
 
         # Pass Django forms native Python values not numpy ones
         # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/425
-        return value.item() if isinstance(value, np.generic) else value
+        if isinstance(value, np.generic):
+            return value.item()
+
+        return value
+
+    def convert_invalid_dates_to_none(data):
+        """
+        Recursively convert datetime(1, 1, 1, 0, 0) to None in the given data.
+        """
+        if isinstance(data, dict):
+            return {
+                key: convert_invalid_dates_to_none(value) for key, value in data.items()
+            }
+        elif isinstance(data, list):
+            return [convert_invalid_dates_to_none(element) for element in data]
+        elif isinstance(data, datetime) and data == datetime(1, 1, 1, 0, 0):
+            return None
+        else:
+            return data
+
+    def convert_iso_dates(obj):
+        """Recursively converts ISO 8601 date strings in a JSON-like object to datetime."""
+        if isinstance(obj, dict):
+            return {k: convert_iso_dates(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [convert_iso_dates(i) for i in obj]
+        elif isinstance(obj, str):
+            try:
+                return (
+                    pd.to_datetime(obj) if "T" in obj else obj
+                )  # Check for ISO format
+            except ValueError:
+                return obj
+        return obj
 
     """
     Main function
     """
     Submission = apps.get_model("npda", "Submission")
     PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+    Transfer = apps.get_model("npda", "Transfer")
 
     print("running save patient in celery...")
 
     # Gather all error messages indexed by row number and the field that caused them (__all__ if we don't know which one)
     # dict[number, dict[str, list[str]]]
     errors_to_return = collections.defaultdict(lambda: collections.defaultdict(list))
-    patient_row = pd.Series(patient_row_dict)
+    deserialized_patient_row = json.loads(patient_row_json)
+
+    patient_row = pd.Series(convert_iso_dates(deserialized_patient_row))
     patient_group = pd.DataFrame(patient_group_dict)
     patient_form = PatientForm(data=patient_dict)
     pdu = PaediatricDiabetesUnit.objects.get(pk=pdu_id)
@@ -167,9 +183,9 @@ def save_patient_and_visits_to_submission(
         patient_row, Transfer, csv_headings=get_csv_headings(pdu.pz_code)
     )
 
-    # Save or update the patient transfer record
-    Transfer.objects.update_or_create(
-        patient=patient, paediatric_diabetes_unit=pdu, defaults=transfer_fields
+    # Save the patient transfer record
+    Transfer.objects.create(
+        **transfer_fields, patient=patient, paediatric_diabetes_unit=pdu
     )
 
     # Add the patient to the submission
@@ -180,6 +196,8 @@ def save_patient_and_visits_to_submission(
         visit_dict = row_to_dict(
             visit_row, Visit, csv_headings=get_csv_headings(pdu.pz_code)
         )
+        # Convert invalid numpy types to None
+        visit_dict = convert_invalid_dates_to_none(visit_dict)
         visit_dict["patient"] = patient
 
         visit_form = VisitForm(data=visit_dict, initial={"patient": patient})
