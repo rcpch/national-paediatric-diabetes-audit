@@ -109,12 +109,10 @@ def home(request):
             # update the session fields - this stores that the user has uploaded a csv and disables the ability to use the questionnaire
             # await sync_to_async(refresh_session_filters)(request)
             refresh_session_filters(request)
-            context = {
-                "grouped_tasks_id": str(grouped_tasks_id),
-                "file_uploaded": True,
-                "form": form,
-            }
-            return render(request=request, template_name="home.html", context=context)
+            context = {"grouped_tasks_id": str(grouped_tasks_id)}
+            return render(
+                request=request, template_name="patients.html", context=context
+            )
         else:
             # If the user does not have permission to upload csvs, redirect them to the dashboard page
             messages.error(
@@ -214,8 +212,14 @@ def task_status(request, grouped_tasks_id):
             request=request,
             message="An error occurred while processing the CSV file. Please try again.",
         )
-        return JsonResponse({"state": "FAILURE", "redirect_url": reverse("home")})
+        return render(
+            request=request,
+            template_name="partials/page_elements/progress.html",
+            context={"state": "FAILURE", "grouped_tasks_id": grouped_tasks_id},
+        )
     else:
-        return JsonResponse(
-            {"state": task_result.state, "grouped_tasks_id": grouped_tasks_id}
+        return render(
+            request=request,
+            template_name="partials/page_elements/progress.html",
+            context={"state": task_result.state, "grouped_tasks_id": grouped_tasks_id},
         )

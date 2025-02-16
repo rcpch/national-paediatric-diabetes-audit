@@ -6,9 +6,20 @@
        hx-trigger="patients from:body"
        hx-target="#patient_table">
     <div class="flex flex-col justify-center px-1 mt-5">
-      {% if submission %}
-        {% include 'partials/page_elements/patient_table_actions.html' %}
-        <div id="patient_table">{% include 'partials/patient_table.html' %}</div>
+      {% if submission or grouped_tasks_id %}
+        {% if grouped_tasks_id %}
+          <div hx-get="{% url 'task_status' grouped_tasks_id=grouped_tasks_id %}"
+               hx-trigger="load, every 2s"
+               hx-target="#task-placeholder"
+               hx-swap="innerHTML">
+            <div id="task-placeholder">
+              {% include 'partials/page_elements/progress.html' %}
+            </div>
+          </div>
+        {% else %}
+          {% include 'partials/page_elements/patient_table_actions.html' %}
+          <div id="patient_table">{% include 'partials/patient_table.html' %}</div>
+        {% endif %}
       {% else %}
         <div class="flex w-full justify-center mt-5 mb-5">
           <div class="alert alert-info w-2/5 text-white" role="alert">
