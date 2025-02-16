@@ -1,4 +1,5 @@
 # Python imports
+import json
 import logging
 import io
 
@@ -19,6 +20,7 @@ from project.npda.general_functions.csv.csv_upload_celery import csv_upload
 from ..forms.upload import UploadFileForm
 from ..general_functions.session import refresh_session_filters
 from ..general_functions.view_preference import get_or_update_view_preference
+from ..general_functions.csv.progress_recorder import ProgressTracker
 
 # RCPCH imports
 from .decorators import login_and_otp_required
@@ -103,10 +105,8 @@ def home(request):
             # update the session fields - this stores that the user has uploaded a csv and disables the ability to use the questionnaire
             # await sync_to_async(refresh_session_filters)(request)
             refresh_session_filters(request)
-            context = {"grouped_tasks_id": grouped_tasks_id}
-            return render(
-                request=request, template_name="patients.html", context=context
-            )
+            
+            return redirect("task_status", grouped_tasks_id=grouped_tasks_id)
         else:
             # If the user does not have permission to upload csvs, redirect them to the dashboard page
             messages.error(
@@ -190,62 +190,71 @@ def task_status(request, grouped_tasks_id):
     if task_results is None:
         task_results = GroupResult(grouped_tasks_id)
 
-    all_successful = False
+    all_successful = True
     progress_data = []
 
-    if task_results.results is not None:
+    for task in task_results.results:
+        progress_tracker = ProgressTracker(task.id)
+        errors = 0
+        if task.state == "SUCCESS":
+            progress_data.append(progress_tracker.get_progress())
+            errors_by_row_index = task.result
+            if errors_by_row_index:
+                errors = len(errors_by_row_index.items())
+                progress_tracker.set_errors(errors)
 
-        for task in task_results.results:
-            errors = 0
-            if task.state == "SUCCESS":
-                progress_data.append(task.result)
-                errors_by_row_index = task.result
-                if errors_by_row_index:
-                    errors = len(errors_by_row_index.items())
-
-            elif task.state == "FAILURE":
-                all_successful = False
-                progress_data.append({"state": task.state, "task_id": task.task_id})
-                messages.error(
-                    request=request,
-                    message="An error occurred while processing some of the rows of the CSV file. Please try again.",
-                )
-                return redirect("home")
-            else:
-                print("helloo....")
-
-                all_successful = False
-                progress_data.append({"state": task.state, "task_id": task.task_id})
-                return render(
-                    request=request,
-                    template_name="partials/page_elements/progress.html",
-                    context={
-                        "state": task.state,
-                        "progress_data": progress_data,
-                    },
-                )
-    else:
-
-        return render(
-            request=request,
-            template_name="partials/page_elements/progress.html",
-            context={
-                "state": "PENDING",
-                "progress_data": progress_data,
-            },
-        )
+        elif task.state == "FAILURE":
+            all_successful = False
+            progress_data.append({"state": task.state, "task_id": task.task_id})
+            messages.error(
+                request=request,
+                message="An error occurred while processing some of the rows of the CSV file. Please try again.",
+            )
+            return redirect("home")
+        else:
+            all_successful = False
+            progress_data.append(progress_tracker.get_progress())
 
     if all_successful:
+        print("All tasks successful")
         messages.success(
             request=request, message="Submission completed. There were no errors."
         )
-        return redirect("patients")
+        if request.htmx:
+            response = HttpResponse(status=204)
+            response["HX-Redirect"] = "/patients"
+            return response
+        else:
+            return redirect("patients")
     else:
-        return render(
-            request=request,
-            template_name="partials/page_elements/progress.html",
-            context={
-                "state": task.state,
-                "progress_data": progress_data,
-            },
-        )
+        if request.htmx:
+            print("HTMX request")
+            total = len(progress_data)
+            value = len([ task for task in task_results.results if task.state == "SUCCESS" ]  )
+            print(f"Total: {total}, Value: {value}")
+            return render(
+                request=request,
+                template_name="partials/page_elements/progress.html",
+                context={
+                    "grouped_tasks_id": grouped_tasks_id,
+                    "state": task.state,
+                    "progress_data": progress_data,
+                    "total": total,
+                    "value": value,
+                    "percentage": int((value / total) * 100),
+                },
+            )
+        else:
+            print("Non-HTMX request")
+            return render(
+                request=request,
+                template_name="progress_temp.html",
+                context={
+                    "grouped_tasks_id": grouped_tasks_id,
+                    "state": task.state,
+                    "progress_data": progress_data,
+                },
+            )
+
+
+

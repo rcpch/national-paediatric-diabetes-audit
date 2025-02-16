@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+  <div class="flex flex-col justify-center px-1 mt-40">
+    <div hx-get="{% url 'task_status' grouped_tasks_id=grouped_tasks_id %}"
+         hx-trigger="load, every 0.3s"
+         hx-target="#task-placeholder"
+         hx-swap="innerHTML">
+      <div id="task-placeholder">
+        {% include 'partials/page_elements/progress.html' with progress_data=progress_data %}
+      </div>
+    </div>
+  </div>
+{% endblock %}

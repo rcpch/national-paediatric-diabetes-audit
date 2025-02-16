@@ -1,8 +1,7 @@
-<div id="csv-loading-progress"
-     class="loading loading-spinner text-rcpch_dark_blue flex flex-grow-2 justify-center items-center h-full w-1/5 mx-auto bg-center">
-     {% for data in progress_data %}
-          <li>
-               {{ data.patient_id }}: {{ data.current }} / {{ data.total }} ({{ data.percent }}%) {{ data.status }} {{ data.result }}
-          </li>
-     {% endfor %}
+{% load static %}
+<div class="text-center">
+     <div id="csv-loading-progress"
+          class="radial-progress text-primary"
+          style="--value:{{ percentage }}"
+          role="progressbar">{{ percentage }}</div>
 </div>

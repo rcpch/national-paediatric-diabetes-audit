@@ -30,4 +30,13 @@ class ProgressTracker:
         progress_data = self.redis_client.get(self.task_id)
         if progress_data:
             return json.loads(progress_data)
-        return None
+    
+    def get_task_id(self):
+        return self.task_id
+    
+    def set_errors(self, errors):
+        progress_data = self.get_progress()
+        progress_data.update({
+            "errors": errors
+        })
+        self.redis_client.set(self.task_id, json.dumps(progress_data))
