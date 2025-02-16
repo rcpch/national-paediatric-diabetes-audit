@@ -47,7 +47,6 @@ from .mixins import (
     LoginAndOTPRequiredMixin,
 )
 from ..general_functions.session import refresh_session_filters
-from ..tasks import fuck
 
 logger = logging.getLogger(__name__)
 
@@ -87,8 +86,6 @@ class PatientListView(
         patient_queryset = super().get_queryset()
 
         PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-
-        fuck.delay()
 
         # apply filters and annotations to the queryset
         pz_code = self.request.session.get("pz_code")
