@@ -18,6 +18,7 @@ import pandas as pd
 from .models import Patient, Transfer, Visit
 from .forms.patient_form import PatientForm
 from .forms.visit_form import VisitForm
+from .general_functions.csv.progress_recorder import ProgressTracker
 
 # Logging setup
 logger = logging.getLogger(__name__)
@@ -32,9 +33,9 @@ def hello():
     logger.debug("0600 cron check task ran successfully")
 
 
-@shared_task
+@shared_task(bind=True)
 def save_patient_and_visits_to_submission(
-    patient_row_json, patient_dict, patient_group_dict, pdu_id, submission_id
+    self, patient_row_json, patient_dict, patient_group_dict, pdu_id, submission_id
 ):
     """
     Accepts a list of patient visits, creates a patient instance (validating using a patient form), then iterates
@@ -77,9 +78,27 @@ def save_patient_and_visits_to_submission(
                     model_field_definition, csv_value
                 )
 
-                if model_field_name in ['diabetes_type','reason_leaving_service','hba1c_format','closed_loop_system','glucose_monitoring','retinal_screening_result','albuminuria_stage','thyroid_treatment_status','gluten_free_diet','psychological_additional_support_status','smoking_status','dietician_additional_appointment_offered','ketone_meter_training','hospital_admission_reason','dka_additional_therapies']:
+                if model_field_name in [
+                    "diabetes_type",
+                    "reason_leaving_service",
+                    "hba1c_format",
+                    "closed_loop_system",
+                    "glucose_monitoring",
+                    "retinal_screening_result",
+                    "albuminuria_stage",
+                    "thyroid_treatment_status",
+                    "gluten_free_diet",
+                    "psychological_additional_support_status",
+                    "smoking_status",
+                    "dietician_additional_appointment_offered",
+                    "ketone_meter_training",
+                    "hospital_admission_reason",
+                    "dka_additional_therapies",
+                ]:
                     # this is a workaround - these fields are integer fields but the csv sometimes has them as floats
-                    model_field_value = int(model_field_value) if model_field_value else None
+                    model_field_value = (
+                        int(model_field_value) if model_field_value else None
+                    )
                 ret[model_field_name] = model_field_value
 
         return ret
@@ -154,6 +173,12 @@ def save_patient_and_visits_to_submission(
     """
     Main function
     """
+
+    # Create a progress tracker
+    progress_tracker = ProgressTracker(self.request.id)
+    total_visits = len(patient_group_dict)
+
+    # import the models
     Submission = apps.get_model("npda", "Submission")
     PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
     Transfer = apps.get_model("npda", "Transfer")
@@ -212,6 +237,9 @@ def save_patient_and_visits_to_submission(
         visit.is_valid = visit_form.is_valid()
         visit.save()
 
+        # Update the progress tracker
+        progress_tracker.set_progress(visit_index + 1, total_visits, patient.id)
+
     return errors_to_return
 
 
@@ -219,6 +247,9 @@ def save_patient_and_visits_to_submission(
 def gather_errors(results, submission_id):
     """
     Gather errors from all tasks and store them in the submission.
+    Note: This function is called by a chord (a group of tasks that run in parallel) so it will only be called once all
+    tasks have completed.
+    We do not need access to each task object, just the results, so do not need to bind the function (bind=True).
     """
     errors_to_return = defaultdict(lambda: defaultdict(list))
 

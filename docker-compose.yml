@@ -43,6 +43,7 @@ services:
   celeryworker:
     <<: *global # this will inherit config from x-global-environment
     image: npda-django:built
+    container_name: npda-celery-worker
     command: celery -A project worker -l info
     restart: always
 
@@ -54,6 +55,7 @@ services:
       - 8888:8888
     volumes:
       - npda-flower-data:/data
+    container_name: npda-flower
     command: celery -A project flower --persistent=True -url_prefix=/flower
     restart: always
     depends_on:
@@ -64,6 +66,7 @@ services:
   celerybeat:
     <<: *global # this will inherit config from x-global-environment
     image: npda-django:built
+    container_name: npda-celery-beat
     command: celery -A project beat -l info
     restart: always
 
@@ -79,6 +82,7 @@ services:
     <<: *django # this will inherit all the settings from the django service
     ports:
       - 8007:8007
+    container_name: npda-mkdocs
     command: >
       sh -c "mkdocs build --config-file documentation/mkdocs.yml &&
         mkdocs serve --config-file documentation/mkdocs.yml"
@@ -88,3 +92,4 @@ volumes:
   npda-caddy-data:
   npda-postgis-data:
   npda-flower-data:
+  npda-redis-data:

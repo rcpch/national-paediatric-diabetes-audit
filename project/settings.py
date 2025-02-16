@@ -368,6 +368,10 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "Europe/London"
 
+# Redis settings for use with progress_recorder.py
+REDIS_HOST = os.getenv("REDIS_HOST")
+REDIS_PORT = os.getenv("REDIS_PORT")
+
 # CELERY_BEAT_SCHEDULE = {
 #     "run-daily-at-six-am": {
 #         "task": "project.npda.tasks.hello",

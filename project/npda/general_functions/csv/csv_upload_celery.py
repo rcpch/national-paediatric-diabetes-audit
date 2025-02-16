@@ -7,7 +7,8 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 
 # third part imports
-from celery import chord
+from celery import chord, group
+from celery.result import GroupResult
 import pandas as pd
 import numpy as np
 
@@ -165,18 +166,26 @@ def csv_upload(user, dataframe, csv_file_name, csv_file_bytes, pz_code, audit_ye
         patient_dict = row_to_dict(patient_row, Patient, csv_headings=CSV_HEADINGS)
 
         patients_submission_task = save_patient_and_visits_to_submission.s(
-            patient_row.to_json(date_format="iso"),
-            patient_dict,
-            patient_group.to_dict(orient="records"),
-            pdu.id,
-            new_submission.id,
+            patient_row_json=patient_row.to_json(date_format="iso"),
+            patient_dict=patient_dict,
+            patient_group_dict=patient_group.to_dict(orient="records"),
+            pdu_id=pdu.id,
+            submission_id=new_submission.id,
         )
         tasks.append(patients_submission_task)
 
-    grouped_tasks = chord(tasks)(gather_errors.s(new_submission.id))
+    chords = chord(tasks)(
+        gather_errors.s(new_submission.id)
+    )  # gather_errors is a task that will be run after all the tasks in the chord have completed
+
+    # Additionally, we can store all the tasks in a group to get the status of the group if we access it in the view
+    # We will not apply the gather_errors task to this group as it will be applied to the chord
+    group_id = chords.parent.id
+    group_result = GroupResult(id=group_id, results=chords.parent.results)
+    group_result.save()
 
     end = timeit.default_timer()
 
     logger.debug(f"Time taken to process the CSV file: {end - start} seconds")
 
-    return grouped_tasks.id
+    return str(group_id)

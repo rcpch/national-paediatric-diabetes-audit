@@ -26,7 +26,7 @@ urlpatterns = [
     path("view_preference", view=view_preference, name="view_preference"),
     path("audit-year", view=audit_year, name="audit-year"),
     path("upload_csv", view=upload_csv, name="upload_csv"),
-    path("task_status/<uuid:grouped_tasks_id>", view=task_status, name="task_status"),
+    path("task_status/<str:grouped_tasks_id>", view=task_status, name="task_status"),
     # Submission views
     path(
         "submissions",
