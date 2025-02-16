@@ -53,10 +53,11 @@ def write_errors_to_xlsx(
         errors=errors,
         original_data=df,
         identifier_field="Unique Reference Number" if is_jersey else "NHS Number",
-        csv_headings=(UNIQUE_IDENTIFIER_JERSEY if is_jersey else UNIQUE_IDENTIFIER_ENGLAND) + CSV_HEADING_OBJECTS
+        csv_headings=(
+            UNIQUE_IDENTIFIER_JERSEY if is_jersey else UNIQUE_IDENTIFIER_ENGLAND
+        )
+        + CSV_HEADING_OBJECTS,
     )
-
-    print(df_errors.to_string())
 
     # Add sheet that lists the errors.
     with pd.ExcelWriter(xlsx_file, mode="a", engine="openpyxl") as writer:
@@ -87,8 +88,8 @@ def write_errors_to_xlsx(
 
         column_index = find_column_index_by_name(field_name, styled_sheet)
         if column_index:
-            styled_sheet.cell(row=row_index, column=column_index).fill = (
-                PatternFill(patternType="solid", fgColor="FFC9C9")
+            styled_sheet.cell(row=row_index, column=column_index).fill = PatternFill(
+                patternType="solid", fgColor="FFC9C9"
             )  # Change color to red.
             styled_sheet.cell(row=row_index, column=column_index).comment = Comment(
                 field_errors,
@@ -124,14 +125,18 @@ def find_column_index_by_name(column_name: str, ws: Worksheet) -> int | None:
 
 def model_field_to_csv_heading(model_field: str) -> str:
     match model_field:
-        case 'nhs_number':
-            return 'NHS Number'
-        case 'unique_reference_number':
-            return 'Unique Reference Number'
+        case "nhs_number":
+            return "NHS Number"
+        case "unique_reference_number":
+            return "Unique Reference Number"
         case _:
             return next(
-                (item["heading"] for item in CSV_HEADING_OBJECTS if item["model_field"] == model_field),
-                model_field
+                (
+                    item["heading"]
+                    for item in CSV_HEADING_OBJECTS
+                    if item["model_field"] == model_field
+                ),
+                model_field,
             )
 
 
@@ -148,16 +153,21 @@ def flatten_errors(
 
     for row_ix, row_errors in errors.items():
         for field, errors in row_errors.items():
-            rows.append({
-                "Original CSV Row": int(row_ix) + 1,
-                identifier_field: original_data.loc[int(row_ix), identifier_column],
-                "Column": model_field_to_csv_heading(field),
-                "Errors": "; ".join(errors),
-            })
+            rows.append(
+                {
+                    "Original CSV Row": int(row_ix) + 1,
+                    identifier_field: original_data.loc[int(row_ix), identifier_column],
+                    "Column": model_field_to_csv_heading(field),
+                    "Errors": "; ".join(errors),
+                }
+            )
 
-    return pd.DataFrame(rows, columns=[
-        "Original CSV Row",
-        model_field_to_csv_heading(identifier_field),
-        "Column",
-        "Errors"
-    ])
+    return pd.DataFrame(
+        rows,
+        columns=[
+            "Original CSV Row",
+            model_field_to_csv_heading(identifier_field),
+            "Column",
+            "Errors",
+        ],
+    )

@@ -351,8 +351,6 @@ def test_error_in_multiple_visits(test_user, one_patient_two_visits):
 
     [first_visit, second_visit] = Visit.objects.all().order_by("visit_date")
 
-    print(second_visit.patient.nhs_number)
-
     assert first_visit.treatment == 45
     assert "treatment" in first_visit.errors
 

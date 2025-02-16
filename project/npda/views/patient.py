@@ -313,8 +313,6 @@ class PatientCreateView(
             patient.errors = None
             patient.save()
 
-            print("patient", patient.is_valid)
-
             # add the PDU to the patient record
             # get or create the paediatric diabetes unit object
             PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")

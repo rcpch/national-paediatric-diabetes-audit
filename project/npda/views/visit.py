@@ -87,7 +87,6 @@ class PatientVisitsListView(
                     # this patient has been transferred but not yet received at a new PDU
                     # Use the existing PDU in session
                     pz_code = self.request.session.get("pz_code")
-                    print("pz_code", pz_code)
                 pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
             else:
                 # this patient has been transferred but not yet received at a new PDU
@@ -214,7 +213,6 @@ class VisitUpdateView(
         return initial
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
-        print("form_valid is called int he view")
         if "delete" in self.request.POST:
             return redirect(reverse("visit-delete", kwargs={"pk": self.kwargs["pk"]}))
         visit = form.save(commit=True)
