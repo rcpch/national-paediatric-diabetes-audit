@@ -40,7 +40,7 @@ audit_dates = audit_period.get_audit_period_for_date(date.today())
 class TestQuestionnaireView:
     @pytest.fixture(autouse=True)
     def setup(
-        self, seed_groups_fixture, seed_users_fixture, seed_patients_fixture, client
+        self, seed_groups_fixture, seed_users_fixture, client
     ):
         self.client = client
 

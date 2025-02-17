@@ -1,5 +1,4 @@
 from .seed_groups_permissions import *
-from .seed_patients import *
 from .seed_users import *
 from .npda_user_factory import *
 from .patient_factory import *
