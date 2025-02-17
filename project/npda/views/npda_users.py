@@ -196,7 +196,7 @@ class NPDAUserCreateView(
         new_user.set_unusable_password()
         new_user.is_active = True
         new_user.email_confirmed = False
-        new_user.view_preference = 0
+        new_user.view_preference = 1 # PDU level view preference
         new_user.save()
 
         # add the user to the appropriate organisation
