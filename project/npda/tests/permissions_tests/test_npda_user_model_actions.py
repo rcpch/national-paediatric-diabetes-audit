@@ -48,7 +48,6 @@ def check_all_users_in_pdu(user, users, pz_code):
 def test_npda_user_list_view_users_can_only_see_users_from_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
-    seed_patients_fixture,
     client,
 ):
     """Except for RCPCH_AUDIT_TEAM, users should only see users from their own PDU."""
@@ -79,7 +78,6 @@ def test_npda_user_list_view_users_can_only_see_users_from_their_pdu(
 def test_npda_user_list_view_rcpch_audit_team_can_view_all_users(
     seed_groups_fixture,
     seed_users_fixture,
-    seed_patients_fixture,
     client,
 ):
     """RCPCH_AUDIT_TEAM users can view all users."""
@@ -118,43 +116,9 @@ def test_npda_user_list_view_rcpch_audit_team_can_view_all_users(
 
 
 @pytest.mark.django_db
-@pytest.mark.skip(
-    reason="This test is failing organisations have been removed and we nolonger use ods_code in view preference"
-)
-def test_npda_user_list_view_users_cannot_switch_outside_their_organisation(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_patients_fixture,
-    client,
-):
-    ah_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
-    ).first()
-    client = login_and_verify_user(client, ah_user)
-
-    url = reverse("npda_users")
-
-    set_view_preference_response = client.post(
-        url,
-        {"npdauser_ods_code_select_name": GOSH_ODS_CODE},
-        headers={"HX-Request": "true"},
-    )
-
-    assert set_view_preference_response.status_code == HTTPStatus.FORBIDDEN
-
-    # Check the session isn't modified anyway
-    response = client.get(url)
-    assert response.status_code == HTTPStatus.OK
-
-    users = response.context_data["object_list"]
-    check_all_users_in_pdu(ah_user, users, ALDER_HEY_PZ_CODE)
-
-
-@pytest.mark.django_db
 def test_npda_user_list_view_users_cannot_switch_outside_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
-    seed_patients_fixture,
     client,
 ):
     ah_user = NPDAUser.objects.filter(
@@ -184,7 +148,6 @@ def test_npda_user_list_view_users_cannot_switch_outside_their_pdu(
 def test_npda_user_list_view_normal_users_cannot_set_their_view_preference_to_national(
     seed_groups_fixture,
     seed_users_fixture,
-    seed_patients_fixture,
     client,
 ):
     ah_user = NPDAUser.objects.filter(

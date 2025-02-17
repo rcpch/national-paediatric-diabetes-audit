@@ -49,7 +49,6 @@ audit_dates = audit_period.get_audit_period_for_date(date.today())
 @pytest.mark.django_db
 def test_npda_user_can_create_submission(
     seed_groups_fixture,
-    seed_patients_fixture,
     seed_users_fixture,
     client,
 ):
@@ -93,7 +92,6 @@ def test_npda_user_can_create_submission(
 @pytest.mark.django_db
 def test_npda_user_cannot_submit_same_patient_twice_within_the_same_submission(
     seed_groups_fixture,
-    seed_patients_fixture,
     seed_users_fixture,
     client,
 ):

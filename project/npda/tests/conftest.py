@@ -18,7 +18,6 @@ from project.npda.tests.factories import (NPDAUserFactory,
                                           PaediatricsDiabetesUnitFactory,
                                           PatientFactory, TransferFactory,
                                           VisitFactory, seed_groups_fixture,
-                                          seed_patients_fixture,
                                           seed_users_fixture,
                                           seed_groups_per_function_fixture,
                                           seed_users_per_function_fixture,
@@ -45,3 +44,19 @@ def AUDIT_START_DATE():
 def AUDIT_END_DATE():
     """AUDIT_END_DATE"""
     return date(year=2025, month=3, day=31)
+
+@pytest.fixture(scope="session")
+def test_pz_codes_fixture():
+    return [
+        "PZ196", # GOSH
+        "PZ074", # Alder Hey
+        "PZ248" # Jersey
+    ]
+
+@pytest.fixture(scope="function")
+def test_pz_codes_function_fixture():
+    return [
+        "PZ196", # GOSH
+        "PZ074", # Alder Hey
+        "PZ248" # Jersey
+    ]
