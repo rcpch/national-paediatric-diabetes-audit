@@ -166,7 +166,7 @@ def test_npda_user_list_view_normal_users_cannot_set_their_view_preference_to_na
 
 
 @pytest.mark.django_db
-def test_npda_user_list_view_users_cannot_set_their_view_preference_to_anything_they_want(
+def test_npda_user_list_view_users_cannot_set_their_view_preference_to_organisation(
     seed_groups_fixture,
     seed_users_fixture,
     client,
@@ -178,13 +178,13 @@ def test_npda_user_list_view_users_cannot_set_their_view_preference_to_anything_
     client = login_and_verify_user(client, ah_user)
 
     set_view_preference_response = client.post(
-        reverse("view_preference"), {"view_preference": 999}, headers={"HX-Request": "true"}
+        reverse("view_preference"), {"view_preference": 0}, headers={"HX-Request": "true"}
     )
 
     assert set_view_preference_response.status_code == HTTPStatus.BAD_REQUEST
 
     ah_user.refresh_from_db()
-    assert ah_user.view_preference == 0
+    assert ah_user.view_preference == 1
 
     # Check the session isn't modified anyway
     response = client.get(reverse("npda_users"))
