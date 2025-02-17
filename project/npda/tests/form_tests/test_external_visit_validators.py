@@ -1,7 +1,7 @@
 from datetime import date
 
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import Mock, AsyncMock, patch
 
 from httpx import HTTPError
 from django.core.exceptions import ValidationError
@@ -96,6 +96,15 @@ async def test_missing_weight():
         assert(result.bmi_result is None)
 
         assert(mock.call_count == 1)
+
+
+async def test_invalid_bmi():
+    with patch("project.npda.forms.external_visit_validators.calculate_centiles_z_scores", AsyncMock(return_value=(1,2))):
+        with patch("project.npda.forms.external_visit_validators.calculate_bmi", Mock(return_value=None)):
+            result = await validate_visit_async(**VALID_FIELDS)
+
+            assert(result.bmi is None)
+            assert(result.bmi_result is None)
 
 
 async def test_validation_error():
