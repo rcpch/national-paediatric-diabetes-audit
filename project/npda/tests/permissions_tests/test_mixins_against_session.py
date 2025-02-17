@@ -50,8 +50,6 @@ class TestQuestionnaireView:
             groups__name=test_user_audit_centre_editor_data.group_name,
         ).first()
 
-        print(f"!! role={self.ah_user.role} is_rcpch_audit_team_member={self.ah_user.is_rcpch_audit_team_member}")
-
         self.client = login_and_verify_user(self.client, self.ah_user)
 
         # Initialize the session
