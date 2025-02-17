@@ -111,7 +111,7 @@ class PatientListView(
             )
 
         # filter patients to the view preference of the user
-        if self.request.user.view_preference == 1:
+        if self.request.user.view_preference < 2:
             # PDU view
             filtered_patients &= Q(
                 submissions__paediatric_diabetes_unit__pz_code=pz_code
@@ -312,8 +312,6 @@ class PatientCreateView(
             patient.is_valid = True
             patient.errors = None
             patient.save()
-
-            print("patient", patient.is_valid)
 
             # add the PDU to the patient record
             # get or create the paediatric diabetes unit object
