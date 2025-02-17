@@ -8,6 +8,7 @@ from project.constants.user import RCPCH_AUDIT_TEAM
 from project.npda.models import Patient, Submission, NPDAUser
 from project.npda.tests.utils import login_and_verify_user
 from project.npda.tests.factories.patient_factory import PatientFactory
+from project.npda.tests.factories.visit_factory import VisitFactory
 
 
 GOSH_PZ_CODE = "PZ196"
@@ -251,4 +252,62 @@ def test_rcpch_audit_team_can_see_visits_from_all_pdus(
     assert(client.get(gosh_url).status_code == HTTPStatus.OK)
 
     ah_url = reverse("patient_visits", args=[ah_patient.pk])
+    assert(client.get(ah_url).status_code == HTTPStatus.OK)
+
+
+@pytest.mark.django_db
+def test_users_can_only_edit_patient_visits_from_their_own_pdu(
+    seed_groups_fixture,
+    seed_users_fixture,
+    client,
+):
+    gosh_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=GOSH_PZ_CODE
+    ).first()
+
+    ah_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
+    ).first()
+
+    ah_patient = create_submission_with_patient(ah_user)
+    ah_visit = VisitFactory(patient=ah_patient)
+
+    client = login_and_verify_user(client, gosh_user)
+
+    url = reverse("visit-update", args=[ah_patient.pk, ah_visit.pk])
+    response = client.get(url)
+
+    assert(response.status_code == HTTPStatus.FORBIDDEN)
+
+
+@pytest.mark.django_db
+def test_rcpch_audit_team_can_edit_visits_from_all_pdus(
+    seed_groups_fixture,
+    seed_users_fixture,
+    client,
+):
+    gosh_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=GOSH_PZ_CODE
+    ).first()
+
+    ah_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
+    ).first()
+
+    rcpch_user = NPDAUser.objects.filter(
+        is_rcpch_audit_team_member=True
+    ).first()
+
+    gosh_patient = create_submission_with_patient(gosh_user)
+    gosh_visit = VisitFactory(patient=gosh_patient)
+
+    ah_patient = create_submission_with_patient(ah_user)
+    ah_visit = VisitFactory(patient=ah_patient)
+
+    client = login_and_verify_user(client, rcpch_user)
+
+    gosh_url = reverse("visit-update", args=[gosh_patient.pk, gosh_visit.pk])
+    assert(client.get(gosh_url).status_code == HTTPStatus.OK)
+
+    ah_url = reverse("visit-update", args=[ah_patient.pk, ah_visit.pk])
     assert(client.get(ah_url).status_code == HTTPStatus.OK)
