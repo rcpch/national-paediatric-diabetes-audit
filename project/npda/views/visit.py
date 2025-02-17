@@ -66,42 +66,6 @@ class PatientVisitsListView(
         context["patient"] = patient
         context["submission"] = submission
 
-        if patient.is_in_transfer_in_the_last_year():
-            pz_code = (
-                Transfer.objects.filter(
-                    patient=patient,
-                )
-                .order_by("-date_leaving_service")
-                .first()
-                .previous_pz_code
-            )
-            PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-            pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-        # get the PDU for this patient - this is the PDU that the patient is currently under.
-        # If the patient has left the PDU, the date_leaving_service will be set and it will be possible to view KPIs for the PDU up until transfer,
-        # if this happened during the audit period. This is TODO
-        else:
-            #  this patient has been transferred but not yet received at a new PDU
-            pdu = (
-                Transfer.objects.filter(
-                    patient=patient, date_leaving_service__isnull=True
-                )
-                .first()
-                .paediatric_diabetes_unit
-            )
-
-        calculate_kpis = CalculateKPIS(
-            calculation_date=datetime.date.today(), return_pt_querysets=False
-        )
-        # Calculate the KPIs for this patient, returning only subset relevant
-        # for a single patient's calculation
-        kpi_calculations_object = calculate_kpis.calculate_kpis_for_single_patient(
-            patient,
-            pdu,
-        )
-
-        context["kpi_calculations_object"] = kpi_calculations_object
-
         return context
 
 
