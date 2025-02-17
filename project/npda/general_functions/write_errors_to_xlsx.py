@@ -56,8 +56,6 @@ def write_errors_to_xlsx(
         csv_headings=(UNIQUE_IDENTIFIER_JERSEY if is_jersey else UNIQUE_IDENTIFIER_ENGLAND) + CSV_HEADING_OBJECTS
     )
 
-    print(df_errors.to_string())
-
     # Add sheet that lists the errors.
     with pd.ExcelWriter(xlsx_file, mode="a", engine="openpyxl") as writer:
         df_errors.to_excel(writer, sheet_name="Errors - Overview", index=False)
