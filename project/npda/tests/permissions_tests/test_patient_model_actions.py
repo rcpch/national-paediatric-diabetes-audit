@@ -1,6 +1,7 @@
 import pytest
 
 from django.urls import reverse
+from django.utils.timezone import make_aware
 from http import HTTPStatus
 
 from project.constants.user import RCPCH_AUDIT_TEAM
@@ -16,7 +17,7 @@ ALDER_HEY_PZ_CODE = "PZ074"
 def create_submission_with_patient(user):
     submission = Submission.objects.create(
         audit_year=2024,
-        submission_date="2024-04-01",
+        submission_date="2024-04-01T00:00:00Z",
         submission_active=True,
         submission_by=user,
         paediatric_diabetes_unit=user.organisation_employers.first(),
