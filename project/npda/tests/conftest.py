@@ -45,3 +45,19 @@ def AUDIT_START_DATE():
 def AUDIT_END_DATE():
     """AUDIT_END_DATE"""
     return date(year=2025, month=3, day=31)
+
+@pytest.fixture(scope="session")
+def test_pz_codes_fixture():
+    return [
+        "PZ196", # GOSH
+        "PZ074", # Alder Hey
+        "PZ248" # Jersey
+    ]
+
+@pytest.fixture(scope="function")
+def test_pz_codes_function_fixture():
+    return [
+        "PZ196", # GOSH
+        "PZ074", # Alder Hey
+        "PZ248" # Jersey
+    ]

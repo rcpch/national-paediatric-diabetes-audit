@@ -24,7 +24,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def _seed_users_fixture(django_db_setup, django_db_blocker):
+def _seed_users_fixture(django_db_setup, django_db_blocker, test_pz_codes_fixture):
 
 
     # Define user data to seed
@@ -38,86 +38,38 @@ def _seed_users_fixture(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
 
         if NPDAUser.objects.exists():
-            # logger.info("Test users already seeded. Deleting all users.")
-            # NPDAUser.objects.all().delete()
             logger.info('NOTE: Test users already seeded! Not re-seeding.')
             return
 
-        # Otherwise, seed the users
-        is_active = True
-        is_staff = False
-        is_rcpch_audit_team_member = False
-        is_rcpch_staff = False
+        logger.info(f"Seeding test users at {', '.join(test_pz_codes_fixture)}.")
 
-        GOSH_PZ_CODE = "PZ196"
-        ALDER_HEY_PZ_CODE = "PZ074"
-        JERSEY_PZ_CODE = "PZ248"
+        for pz_code in test_pz_codes_fixture:
+            # Seed a user of each type
+            for user in users:
+                first_name = user.role_str
+                new_user = NPDAUserFactory(
+                    first_name=first_name,
+                    role=user.role,
+                    is_active=True,
+                    is_staff=False,
+                    is_rcpch_audit_team_member=user.is_rcpch_audit_team_member,
+                    is_rcpch_staff=user.is_rcpch_staff,
+                    groups=[user.group_name],
+                    view_preference=(
+                        VIEW_PREFERENCES[2][0]
+                        if user.role == RCPCH_AUDIT_TEAM
+                        else VIEW_PREFERENCES[0][0]
+                    ),
+                    organisation_employers=[pz_code],
+                )
 
-        logger.info(f"Seeding test users at {GOSH_PZ_CODE=}, {ALDER_HEY_PZ_CODE=} and {JERSEY_PZ_CODE=}.")
-        # Seed a user of each type
-        for user in users:
-            first_name = user.role_str
-
-            if user.role == RCPCH_AUDIT_TEAM:
-                is_rcpch_audit_team_member = True
-                is_rcpch_staff = True
-
-            if user.is_clinical_audit_team:
-                is_rcpch_audit_team_member = True
-
-            # GOSH User
-            new_user_gosh = NPDAUserFactory(
-                first_name=first_name,
-                role=user.role,
-                # Assign flags based on user role
-                is_active=is_active,
-                is_staff=is_staff,
-                is_rcpch_audit_team_member=is_rcpch_audit_team_member,
-                is_rcpch_staff=is_rcpch_staff,
-                groups=[user.group_name],
-                view_preference=(
-                    VIEW_PREFERENCES[2][0]
-                    if user.role == RCPCH_AUDIT_TEAM
-                    else VIEW_PREFERENCES[0][0]
-                ),
-                organisation_employers=[GOSH_PZ_CODE],
-            )
-
-            # Alder hey user
-            new_user_alder_hey = NPDAUserFactory(
-                first_name=first_name,
-                role=user.role,
-                # Assign flags based on user role
-                is_active=is_active,
-                is_staff=is_staff,
-                is_rcpch_audit_team_member=is_rcpch_audit_team_member,
-                is_rcpch_staff=is_rcpch_staff,
-                groups=[user.group_name],
-                organisation_employers=[ALDER_HEY_PZ_CODE],
-            )
-
-            # Jersey user
-            new_user_jersey = NPDAUserFactory(
-                first_name=first_name,
-                role=user.role,
-                # Assign flags based on user role
-                is_active=is_active,
-                is_staff=is_staff,
-                is_rcpch_audit_team_member=is_rcpch_audit_team_member,
-                is_rcpch_staff=is_rcpch_staff,
-                groups=[user.group_name],
-                organisation_employers=[JERSEY_PZ_CODE],
-            )
-
-            logger.info(f"Seeded users: \n{new_user_gosh=} and \n{new_user_alder_hey=}")
-
-        assert NPDAUser.objects.count() == len(users) * 3
+        assert NPDAUser.objects.count() == len(users) * len(test_pz_codes_fixture)
 
 @pytest.fixture(scope="session")
-def seed_users_fixture(django_db_setup, django_db_blocker):
-    _seed_users_fixture(django_db_setup, django_db_blocker)
+def seed_users_fixture(django_db_setup, django_db_blocker, test_pz_codes_fixture):
+    _seed_users_fixture(django_db_setup, django_db_blocker, test_pz_codes_fixture)
 
 # Required if multiple tests use transactional_db
 @pytest.fixture(scope="function")
-def seed_users_per_function_fixture(django_db_setup, django_db_blocker):
-    _seed_users_fixture(django_db_setup, django_db_blocker)
+def seed_users_per_function_fixture(django_db_setup, django_db_blocker, test_pz_codes_function_fixture):
+    _seed_users_fixture(django_db_setup, django_db_blocker, test_pz_codes_function_fixture)
