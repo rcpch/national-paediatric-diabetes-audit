@@ -150,6 +150,7 @@ class CalculateKPIS:
     def calculate_kpis_for_pdus(
         self,
         pz_codes: list[str],
+        kpi_idxs: list[int] = None,
     ) -> KPICalculationsObject:
         """Calculate KPIs 1 - 49 for given pz_codes and cohort range
         (self.audit_start_date and self.audit_end_date).
@@ -163,7 +164,7 @@ class CalculateKPIS:
         )
         self.total_patients_count = self.patients.count()
 
-        return self._calculate_kpis()
+        return self._calculate_kpis(kpi_idxs=kpi_idxs)
 
     def _calculate_kpis(
         self,
