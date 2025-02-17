@@ -111,7 +111,7 @@ class PatientListView(
             )
 
         # filter patients to the view preference of the user
-        if self.request.user.view_preference < 2:
+        if not self.request.user.viewing_data_nationally():
             # PDU view
             filtered_patients &= Q(
                 submissions__paediatric_diabetes_unit__pz_code=pz_code

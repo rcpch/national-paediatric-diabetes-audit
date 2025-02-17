@@ -58,7 +58,7 @@ def _seed_users_fixture(django_db_setup, django_db_blocker, test_pz_codes_fixtur
                     view_preference=(
                         VIEW_PREFERENCES[2][0]
                         if user.role == RCPCH_AUDIT_TEAM
-                        else VIEW_PREFERENCES[0][0]
+                        else VIEW_PREFERENCES[1][0]
                     ),
                     organisation_employers=[pz_code],
                 )

@@ -98,17 +98,15 @@ def test_npda_user_list_view_rcpch_audit_team_can_view_all_users(
 
     client = login_and_verify_user(client, ah_audit_team_user)
 
-    url = reverse("npda_users")
-
     # The user still defaults to seeing users from just their PDU
     # This is the request made when you click the "All" button on the switcher in the UI
     set_view_preference_response = client.post(
-        url, {"view_preference": 2}, headers={"HX-Request": "true"}
+        reverse("view_preference"), {"view_preference": 2}, headers={"HX-Request": "true"}
     )
 
-    assert set_view_preference_response.status_code == HTTPStatus.OK
+    assert set_view_preference_response.status_code == HTTPStatus.NO_CONTENT
 
-    response = client.get(url)
+    response = client.get(reverse("npda_users"))
     assert response.status_code == HTTPStatus.OK
 
     users = response.context_data["object_list"]
@@ -126,18 +124,16 @@ def test_npda_user_list_view_users_cannot_switch_outside_their_pdu(
     ).first()
     client = login_and_verify_user(client, ah_user)
 
-    url = reverse("npda_users")
-
     set_view_preference_response = client.post(
-        url,
-        {"npdauser_pz_code_select_name": GOSH_PZ_CODE},
+        reverse("view_preference"),
+        {"pz_code_select_name": GOSH_PZ_CODE},
         headers={"HX-Request": "true"},
     )
 
     assert set_view_preference_response.status_code == HTTPStatus.FORBIDDEN
 
     # Check the session isn't modified anyway
-    response = client.get(url)
+    response = client.get(reverse("npda_users"))
     assert response.status_code == HTTPStatus.OK
 
     users = response.context_data["object_list"]
@@ -155,16 +151,43 @@ def test_npda_user_list_view_normal_users_cannot_set_their_view_preference_to_na
     ).first()
     client = login_and_verify_user(client, ah_user)
 
-    url = reverse("npda_users")
-
     set_view_preference_response = client.post(
-        url, {"view_preference": 2}, headers={"HX-Request": "true"}
+        reverse("view_preference"), {"view_preference": 2}, headers={"HX-Request": "true"}
     )
 
     assert set_view_preference_response.status_code == HTTPStatus.FORBIDDEN
 
     # Check the session isn't modified anyway
-    response = client.get(url)
+    response = client.get(reverse("npda_users"))
+    assert response.status_code == HTTPStatus.OK
+
+    users = response.context_data["object_list"]
+    check_all_users_in_pdu(ah_user, users, ALDER_HEY_PZ_CODE)
+
+
+@pytest.mark.django_db
+def test_npda_user_list_view_users_cannot_set_their_view_preference_to_organisation(
+    seed_groups_fixture,
+    seed_users_fixture,
+    client,
+):
+    ah_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
+    ).first()
+
+    client = login_and_verify_user(client, ah_user)
+
+    set_view_preference_response = client.post(
+        reverse("view_preference"), {"view_preference": 0}, headers={"HX-Request": "true"}
+    )
+
+    assert set_view_preference_response.status_code == HTTPStatus.BAD_REQUEST
+
+    ah_user.refresh_from_db()
+    assert ah_user.view_preference == 1
+
+    # Check the session isn't modified anyway
+    response = client.get(reverse("npda_users"))
     assert response.status_code == HTTPStatus.OK
 
     users = response.context_data["object_list"]
