@@ -37,10 +37,10 @@ def get_patient_list(client):
     return response.context_data["object_list"]
 
 
-def set_view_preference(client, pz_code):
+def set_view_preference(client, view_preference, pz_code):
     url = reverse("view_preference")
     params = {
-        "view_preference": 1,
+        "view_preference": view_preference,
         "pz_code_select_name": pz_code
     }
 
@@ -98,15 +98,48 @@ def test_rcpch_audit_team_can_see_patients_from_all_pdus(
     client = login_and_verify_user(client, rcpch_user)
 
     # GOSH
-    set_view_preference(client, GOSH_PZ_CODE)
+    set_view_preference(client, view_preference=1, pz_code=GOSH_PZ_CODE)
     patients = get_patient_list(client)
     
     assert(len(patients) == 1)
     assert(patients.first().pk == gosh_patient.pk)
 
     # Alder Hey
-    set_view_preference(client, ALDER_HEY_PZ_CODE)
+    set_view_preference(client, view_preference=1, pz_code=ALDER_HEY_PZ_CODE)
     patients = get_patient_list(client)
     
     assert(len(patients) == 1)
     assert(patients.first().pk == ah_patient.pk)
+
+
+@pytest.mark.django_db
+def test_rcpch_audit_team_can_see_all_patients(
+    seed_groups_fixture,
+    seed_users_fixture,
+    client,
+):
+    gosh_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=GOSH_PZ_CODE
+    ).first()
+
+    ah_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
+    ).first()
+
+    rcpch_user = NPDAUser.objects.filter(
+        is_rcpch_audit_team_member=True
+    ).first()
+
+    gosh_patient = create_submission_with_patient(gosh_user)
+    ah_patient = create_submission_with_patient(ah_user)
+
+    client = login_and_verify_user(client, rcpch_user)
+
+    set_view_preference(client, view_preference=2, pz_code=GOSH_PZ_CODE)
+    patients = get_patient_list(client)
+    
+    assert(len(patients) == 2)
+    
+    pks = [patient.pk for patient in patients]
+    assert(gosh_patient.pk in pks)
+    assert(ah_patient.pk in pks)
