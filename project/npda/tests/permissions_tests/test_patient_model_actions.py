@@ -47,7 +47,7 @@ def set_view_preference(client, view_preference, pz_code):
     }
 
     response = client.post(url, params, headers={"HX-Request": "true"})
-    assert response.status_code == HTTPStatus.NO_CONTENT    
+    assert response.status_code == HTTPStatus.NO_CONTENT
 
 
 @pytest.mark.django_db
@@ -112,6 +112,42 @@ def test_rcpch_audit_team_can_see_patients_from_all_pdus(
     
     assert(len(patients) == 1)
     assert(patients.first().pk == ah_patient.pk)
+
+
+@pytest.mark.django_db
+def test_user_with_unexpected_view_preference(
+    seed_groups_fixture,
+    seed_users_fixture,
+    client,
+):
+    gosh_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=GOSH_PZ_CODE
+    ).first()
+
+    ah_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
+    ).first()
+
+    rcpch_user = NPDAUser.objects.filter(
+        is_rcpch_audit_team_member=True
+    ).first()
+
+    gosh_patient = create_submission_with_patient(gosh_user)
+    ah_patient = create_submission_with_patient(ah_user)
+
+    client = login_and_verify_user(client, gosh_user)
+
+    # We test that you can't change your view preference to something unexpected in
+    #   test_npda_user_list_view_users_cannot_set_their_view_preference_to_anything_they_want
+    # but for safety's sake we test the behaviour again here
+    gosh_user.view_preference = 999
+    gosh_user.save()
+
+    # Triple check we can still only see our own patients
+    patients = get_patient_list(client)
+    
+    assert(len(patients) == 1)
+    assert(patients.first().pk == gosh_patient.pk)
 
 
 @pytest.mark.django_db

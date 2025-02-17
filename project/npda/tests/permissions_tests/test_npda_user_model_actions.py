@@ -169,3 +169,24 @@ def test_npda_user_list_view_normal_users_cannot_set_their_view_preference_to_na
 
     users = response.context_data["object_list"]
     check_all_users_in_pdu(ah_user, users, ALDER_HEY_PZ_CODE)
+
+
+@pytest.mark.django_db
+def test_npda_user_list_view_users_cannot_set_their_view_preference_to_anything_they_want(
+    seed_groups_fixture,
+    seed_users_fixture,
+    client,
+):
+    ah_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
+    ).first()
+
+    client = login_and_verify_user(client, ah_user)
+
+    url = reverse("npda_users")
+
+    set_view_preference_response = client.post(
+        url, {"view_preference": 999}, headers={"HX-Request": "true"}
+    )
+
+    assert set_view_preference_response.status_code == HTTPStatus.BAD_REQUEST
