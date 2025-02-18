@@ -943,6 +943,22 @@ def test_dates_with_short_year(one_patient_two_visits):
     assert df.equals(one_patient_two_visits)
 
 
+@pytest.mark.django_db
+def test_urine_albumin_value_is_rounded_to_one_decimal(test_user, single_row_valid_df):
+    single_row_valid_df["Urinary Albumin Level (ACR)"] = 0.73
+    csv = single_row_valid_df.to_csv(index=False, date_format="%d/%m/%Y")
+
+    df = read_csv_from_str(csv).df
+    csv_upload_sync(test_user, df)
+
+    visit = Visit.objects.first()
+
+    assert visit.albumin_creatinine_ratio == round(
+        Decimal("0.73"), 1
+    )
+    assert "albumin_creatinine_ratio" not in (visit.errors or {})
+
+
 @pytest.mark.parametrize(
     "column",
     [
