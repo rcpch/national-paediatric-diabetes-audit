@@ -39,7 +39,7 @@ def test_dashboard_view_response_time(
     """Basic performance test for the dashboard view response time with lots of patients."""
 
     # Define constants
-    N_PATIENTS = 100
+    N_PATIENTS = 1000
     VISIT_TYPES = [
         VisitType.CLINIC,
         VisitType.CLINIC,
@@ -60,6 +60,7 @@ def test_dashboard_view_response_time(
             audit_start_date=AUDIT_START_DATE,
             audit_end_date=AUDIT_END_DATE,
         )
+        logger.info(f'Seeding {N_PATIENTS} patients with {len(VISIT_TYPES)} visit types...')
         new_pts = fake_patient_creator.create_and_save_fake_patients(
             n=N_PATIENTS,
             age_range=AgeRange.AGE_11_15,
@@ -70,7 +71,8 @@ def test_dashboard_view_response_time(
             visit_types=VISIT_TYPES,
             visit_kwargs={"is_valid": True},
         )
-
+        logger.info('DONE!')
+        logger.info('Creating submission...')
         new_submission = Submission.objects.create(
             paediatric_diabetes_unit=ah_user.organisation_employers.first(),
             audit_year=AUDIT_START_DATE.year,
@@ -81,9 +83,11 @@ def test_dashboard_view_response_time(
 
         # Add patients to submission
         new_submission.patients.add(*new_pts)
+        logger.info('DONE!')
 
     def get_top_level_dashboard_view_response():
         start_dashboard = time.time()
+        logger.info("\t⏳ Getting top-level dashboard view response...")
         response = client.get("/dashboard")
         elapsed_dashboard = time.time() - start_dashboard
 
@@ -117,6 +121,7 @@ def test_dashboard_view_response_time(
         total_htmx_time = 0
         for htmx_request in htmx_requests:
             url: str = htmx_request["url"]
+            print(f"\t ✅ {url.ljust(10)} response in ", end="")
             hx_vals = htmx_request.get("hx_vals", {})
             logger.debug(f"HTMX Request: {url} with hx-vals: {hx_vals}")
 
@@ -152,7 +157,7 @@ def test_dashboard_view_response_time(
             #     url, 1
             # ), f"HTMX request {url} took too long: {elapsed_htmx:.3f} seconds"
             request_times.append((elapsed_htmx, url))
-            logger.info(f"\t ✅ {url.ljust(10)} response in {elapsed_htmx:.3f} seconds")
+            print(f"{elapsed_htmx:.3f} seconds", flush=True)
 
             total_htmx_time += elapsed_htmx
         return request_times, total_htmx_time
