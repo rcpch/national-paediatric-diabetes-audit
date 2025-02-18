@@ -1258,6 +1258,24 @@ def test_psychological_screen_date_none_form_fails_validation():
     assert form.is_valid() == False, f"No psychological date offered but test passed"
 
 
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/628
+@pytest.mark.django_db
+def test_psychological_screen_date_none_with_status_unknown_passes_validation():
+    patient = PatientFactory()
+
+    form = VisitForm(
+        data={
+            "visit_date": "2025-01-01",  # Required for validation
+            "psychological_additional_support_status": 99,  # Unknown
+            "psychological_screening_assessment_date": None,
+        },
+        initial={"patient": patient},
+    )
+    # Trigger the cleaners
+    assert "psychological_screening_assessment_date" not in form.errors
+    assert form.is_valid()
+
+
 """
 Smoking tests
 """
