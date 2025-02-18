@@ -70,6 +70,9 @@ def test_dashboard_view_response_time(
         n=N_PATIENTS,
         age_range=AgeRange.AGE_11_15,
         hb1ac_target_range=HbA1cTargetRange.TARGET,
+        patient_kwargs={
+            "transfer__paediatric_diabetes_unit": ah_user.organisation_employers.first(),
+        },
         visit_types=VISIT_TYPES,
         visit_kwargs={"is_valid": True},
     )
