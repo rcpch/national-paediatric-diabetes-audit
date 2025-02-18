@@ -1,8 +1,10 @@
 """Performance testing views"""
 
 from datetime import date
+import json
 import time
 
+from bs4 import BeautifulSoup
 import pytest
 from project.npda.general_functions.data_generator_extended import (
     AgeRange,
@@ -31,13 +33,25 @@ def test_dashboard_view_response_time(
     seed_patients_fixture,
     client,
 ):
-    """Basic performance test for the dashboard view response time with lots of patients.
-
-    NOTE: this view uses many HTMX async requests for each viz's partial, so this test only checks the initial load time of the overall view.
-    """
+    """Basic performance test for the dashboard view response time with lots of patients."""
 
     N_PATIENTS = 100
-    UPPERBOUND_LOAD_TIME_SECONDS = 1
+    VISIT_TYPES = [
+        VisitType.CLINIC,
+        VisitType.CLINIC,
+        VisitType.ANNUAL_REVIEW,
+        VisitType.DIETICIAN,
+        VisitType.CLINIC,
+        VisitType.CLINIC,
+        VisitType.DIETICIAN,
+        VisitType.CLINIC,
+        VisitType.CLINIC,
+        VisitType.HOSPITAL_ADMISSION,
+        VisitType.PSYCHOLOGY,
+    ]
+    RESPONSE_TIME_UPPERBOUND_SECONDS = {
+        "/get_map_chart_partial": 10,
+    }
 
     # First get user
     ah_user = NPDAUser.objects.filter(
@@ -56,12 +70,7 @@ def test_dashboard_view_response_time(
         n=N_PATIENTS,
         age_range=AgeRange.AGE_11_15,
         hb1ac_target_range=HbA1cTargetRange.TARGET,
-        visit_types=[
-            VisitType.CLINIC,
-            VisitType.CLINIC,
-            VisitType.ANNUAL_REVIEW,
-            VisitType.DIETICIAN,
-        ],
+        visit_types=VISIT_TYPES,
         visit_kwargs={"is_valid": True},
     )
 
@@ -76,13 +85,60 @@ def test_dashboard_view_response_time(
     # Add patients to submission
     new_submission.patients.add(*new_pts)
 
-    # GET the view
-    start_time = time.time()
+    # GET the top level view
+    start_dashboard = time.time()
     response = client.get("/dashboard")
-    end_time = time.time()
-    response_time = end_time - start_time
+    elapsed_dashboard = time.time() - start_dashboard
 
-    # Check valid response within some leeway upperbound
+    logger.info(f"N_PATIENTS: {N_PATIENTS} * VISIT_TYPES: {len(VISIT_TYPES)}".center(80, "*"))
+
+    # Check valid overall response within some leeway upperbound
     assert response.status_code == 200
-    assert response_time < UPPERBOUND_LOAD_TIME_SECONDS
-    logger.info(f"Dashboard view response time for {N_PATIENTS=} is {response_time} seconds")
+    assert (
+        elapsed_dashboard < 1
+    ), f"Dashboard response time took too long (> 1 seconds), took: {elapsed_dashboard} seconds"
+    logger.info(f"\tDashboard view response time: {elapsed_dashboard} seconds")
+
+    # Check sub-views
+    # Extract All HTMX Requests + hx-vals from the rendered HTML
+    soup = BeautifulSoup(response.content, "html.parser")
+    htmx_requests = []
+
+    # Find all HTMX elements
+    for tag in soup.find_all(attrs={"hx-get": True}):
+        url = tag["hx-get"]
+        hx_vals = tag.get("hx-vals", "{}")
+        try:
+            hx_vals_json = json.loads(hx_vals)
+        except json.JSONDecodeError:
+            hx_vals_json = {}
+
+        htmx_requests.append({"url": url, "hx_vals": hx_vals_json})
+
+    # Measure All HTMX Requests (with hx-vals)
+    total_htmx_time = 0
+
+    for htmx_request in htmx_requests:
+        url, hx_vals = htmx_request["url"], htmx_request["hx_vals"]
+        logger.info(f"HTMX Request: {url} with hx-vals: {hx_vals}")
+
+        start_htmx = time.time()
+        response_htmx = client.post(
+            url,
+            data=hx_vals,  # Send hx-vals data as JSON payload
+            content_type="application/json",
+            HTTP_HX_REQUEST="true",  # Simulate an HTMX request
+        )
+        elapsed_htmx = time.time() - start_htmx
+
+        assert response_htmx.status_code == 200
+        assert elapsed_htmx < RESPONSE_TIME_UPPERBOUND_SECONDS.get(
+            url, 1
+        ), f"HTMX request {url} took too long: {elapsed_htmx:.3f} seconds"
+        logger.info(f"\tDashboard HTMX partial {url} took {elapsed_htmx:.3f} seconds")
+
+        total_htmx_time += elapsed_htmx
+
+    # Compute Total Page Load Time (Dashboard + HTMX Requests)
+    total_elapsed = elapsed_dashboard + total_htmx_time
+    assert total_elapsed < 12, f"Total load time too high: {total_elapsed:.3f} seconds"
