@@ -1144,11 +1144,9 @@ def test_coeliac_treatment_status_unrecognized_form_fails_validation():
     ), f"Invalid coeliac function status offered but test passed"
 
 
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/628
 @pytest.mark.django_db
-def test_coeliac_treatment_status_none_form_fails_validation():
-    """
-    Test that missing coeliac function status is invalid
-    """
+def test_coeliac_treatment_status_none_form_passes_validation():
     patient = PatientFactory()
 
     form = VisitForm(
@@ -1159,16 +1157,12 @@ def test_coeliac_treatment_status_none_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert (
-        form.is_valid() == False
-    ), f"No coeliac function status offered but test passed"
+    assert "gluten_free_diet" not in form.errors
 
 
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/628
 @pytest.mark.django_db
 def test_coeliac_screen_date_none_form_fails_validation():
-    """
-    Test that missing coeliac function date is invalid
-    """
     patient = PatientFactory()
 
     form = VisitForm(
@@ -1179,7 +1173,7 @@ def test_coeliac_screen_date_none_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, f"No coeliac function date offered but test passed"
+    assert "gluten_free_diet" not in form.errors
 
 
 """

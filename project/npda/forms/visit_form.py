@@ -943,15 +943,6 @@ class VisitForm(forms.ModelForm):
                 [{"thyroid_treatment_status": thyroid_treatment_status}],
             )
 
-        coeliac_screen_date = cleaned_data.get("coeliac_screen_date")
-        gluten_free_diet = cleaned_data.get("gluten_free_diet")
-        if any([coeliac_screen_date, gluten_free_diet]):
-            measure_must_have_date_and_value(
-                coeliac_screen_date,
-                "coeliac_screen_date",
-                [{"gluten_free_diet": gluten_free_diet}],
-            )
-
         psychological_screening_assessment_date = cleaned_data.get(
             "psychological_screening_assessment_date"
         )

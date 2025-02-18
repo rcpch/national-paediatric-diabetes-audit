@@ -2054,11 +2054,9 @@ def test_coeliac_screening_impossible_value_fails_validation(
     assert visit.gluten_free_diet == 94
 
 
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/628
 @pytest.mark.django_db
 def test_coeliac_screening_missing_fails_validation(test_user, single_row_valid_df):
-    """
-    Test that a missing coeliac screening value is rejected
-    """
     single_row_valid_df.loc[0, "Observation Date: Coeliac Disease Screening"] = (
         "01/01/2022"
     )
@@ -2068,7 +2066,7 @@ def test_coeliac_screening_missing_fails_validation(test_user, single_row_valid_
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
 
-    assert "gluten_free_diet" in errors[0]
+    assert "gluten_free_diet" not in errors[0]
 
     visit = Visit.objects.first()
 
@@ -2076,13 +2074,11 @@ def test_coeliac_screening_missing_fails_validation(test_user, single_row_valid_
     assert visit.gluten_free_diet is None
 
 
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/628
 @pytest.mark.django_db
-def test_coeliac_screening_date_missing_fails_validation(
+def test_coeliac_screening_date_missing_passes_validation(
     test_user, single_row_valid_df
 ):
-    """
-    Test that a missing coeliac screening date is rejected
-    """
     single_row_valid_df.loc[0, "Observation Date: Coeliac Disease Screening"] = None
     single_row_valid_df.loc[
         0, "Has the patient been recommended a Gluten-free diet?"
@@ -2090,7 +2086,7 @@ def test_coeliac_screening_date_missing_fails_validation(
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
 
-    assert "coeliac_screen_date" in errors[0]
+    assert "coeliac_screen_date" not in errors[0]
 
     visit = Visit.objects.first()
 
