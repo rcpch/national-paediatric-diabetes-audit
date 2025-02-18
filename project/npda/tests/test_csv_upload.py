@@ -2195,6 +2195,29 @@ def test_psychological_support_date_missing_fails_validation(
     assert visit.psychological_additional_support_status == 1
 
 
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/628
+@pytest.mark.django_db
+def test_psychological_support_date_missing_fails_validation(
+    test_user, single_row_valid_df
+):
+    single_row_valid_df.loc[
+        0, "Observation Date - Psychological Screening Assessment"
+    ] = None
+    single_row_valid_df.loc[
+        0,
+        "Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?",
+    ] = 99 # Unknown
+
+    errors = csv_upload_sync(test_user, single_row_valid_df)
+
+    assert "psychological_screening_assessment_date" not in errors[0]
+
+    visit = Visit.objects.first()
+
+    assert visit.psychological_screening_assessment_date is None
+    assert visit.psychological_additional_support_status == 99
+
+
 """
 Smoking status tests
 """
