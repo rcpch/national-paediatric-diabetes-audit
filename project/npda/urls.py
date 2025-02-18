@@ -14,6 +14,7 @@ from project.npda.views import (
 from project.npda.views.dashboard.dashboard import temp_set_eligible_kpi_7
 
 from .views import *
+from .views.dashboard import dashboard, partials
 
 urlpatterns = [
     path("", view=home, name="home"),
@@ -104,52 +105,56 @@ urlpatterns = [
         ),
         name="password_reset_confirm",
     ),
-    # Dashboard views
+    path("csrf_fail/", csrf_fail, name="csrf_fail"),
+]
+
+dashboard_urlpatterns = [
     path(
         "dashboard",
-        view=dashboard,
+        view=dashboard.dashboard,
         name="dashboard",
     ),
     path(
         "get_patient_level_report_partial",
-        view=get_patient_level_report_partial,
+        view=partials.get_patient_level_report_partial,
         name="get_patient_level_report_partial",
     ),
     path(
         "get_waffle_chart_partial",
-        view=get_waffle_chart_partial,
+        view=partials.get_waffle_chart_partial,
         name="get_waffle_chart_partial",
     ),
     path(
         "get_map_chart_partial",
-        view=get_map_chart_partial,
+        view=partials.get_map_chart_partial,
         name="get_map_chart_partial",
     ),
     path(
         "get_progress_bar_chart_partial",
-        view=get_progress_bar_chart_partial,
+        view=partials.get_progress_bar_chart_partial,
         name="get_progress_bar_chart_partial",
     ),
     path(
         "get_simple_bar_chart_pcts_partial",
-        view=get_simple_bar_chart_pcts_partial,
+        view=partials.get_simple_bar_chart_pcts_partial,
         name="get_simple_bar_chart_pcts_partial",
     ),
     path(
         "get_hcl_scatter_plot",
-        view=get_hcl_scatter_plot,
+        view=partials.get_hcl_scatter_plot,
         name="get_hcl_scatter_plot",
     ),
     path(
         "get_treemap_chart_partial",
-        view=get_treemap_chart_partial,
+        view=partials.get_treemap_chart_partial,
         name="get_treemap_chart_partial",
     ),
     path(
         "temp_set_eligible_kpi_7",
-        view=temp_set_eligible_kpi_7,
+        view=dashboard.temp_set_eligible_kpi_7,
         name="temp_set_eligible_kpi_7",
     ),
-    # End dashboard views
-    path("csrf_fail/", csrf_fail, name="csrf_fail"),
 ]
+
+# Collate all URL patterns
+urlpatterns += dashboard_urlpatterns
