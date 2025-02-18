@@ -1974,7 +1974,7 @@ def test_thyroid_treatment_date_missing_fails_validation(
     single_row_valid_df.loc[
         0,
         "At time of, or following measurement of thyroid function, was the patient prescribed any thyroid treatment?",
-    ] = 1
+    ] = 2
     single_row_valid_df.loc[0, "Observation Date: Thyroid Function"] = None
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
@@ -1983,7 +1983,7 @@ def test_thyroid_treatment_date_missing_fails_validation(
 
     visit = Visit.objects.first()
 
-    assert visit.thyroid_treatment_status == 1
+    assert visit.thyroid_treatment_status == 2
     assert visit.thyroid_function_date is None
 
 
