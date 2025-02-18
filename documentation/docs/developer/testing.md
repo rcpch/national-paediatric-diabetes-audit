@@ -80,7 +80,6 @@ Every first test in a file should include the following fixtures to ensure the t
 def test_npda_user_list_view_users_can_only_see_users_from_their_pdu(
     seed_users_fixture,
     seed_groups_fixture,
-    seed_patients_fixture,
 ):
 ```
 
@@ -109,10 +108,6 @@ users = [
 ### `seed_groups_fixture`
 
 Uses the `groups_seeder` to set `Groups` for `NPDAUsers`.
-
-### `seed_patients_fixture`
-
-_not yet implemented_
 
 ## Factories
 

@@ -23,7 +23,6 @@ from project.constants.user import (
 class TestUser:
     role: int
     role_str: str
-    is_clinical_audit_team: bool = False
     is_active: bool = False
     is_staff: bool = False
     is_rcpch_audit_team_member: bool = False

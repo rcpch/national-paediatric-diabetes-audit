@@ -51,15 +51,15 @@ class SubmissionsListView(
         pdu = PaediatricDiabetesUnit.objects.get(
             pz_code=self.request.session.get("pz_code"),
         )
-        if self.request.user.view_preference == 1:
+        if self.request.user.viewing_data_nationally():
+            base_queryset = self.model.objects.filter(
+                audit_year=self.request.session.get("selected_audit_year")
+            ).all()
+        else:
             base_queryset = self.model.objects.filter(
                 paediatric_diabetes_unit=pdu,
                 audit_year=self.request.session.get("selected_audit_year"),
             )
-        else:
-            base_queryset = self.model.objects.filter(
-                audit_year=self.request.session.get("selected_audit_year")
-            ).all()
 
         final = base_queryset.annotate(
             patient_count=Count("patients"),

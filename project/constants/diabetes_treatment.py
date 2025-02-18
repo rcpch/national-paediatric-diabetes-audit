@@ -10,5 +10,5 @@ TREATMENT_TYPES = [
         8,
         "Dietary management plus other blood glucose lowering medication (non Type-1 diabetes)",
     ),
-    (9, "Unknown"),
+    (99, "Unknown"),
 ]

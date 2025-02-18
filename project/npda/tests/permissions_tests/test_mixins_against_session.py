@@ -31,10 +31,7 @@ from project.npda.tests.factories.visit_factory import VisitFactory, COMPLETED_V
 logger = logging.getLogger(__name__)
 
 ALDER_HEY_PZ_CODE = "PZ074"
-ALDER_HEY_ODS_CODE = "RBS25"
-
 GOSH_PZ_CODE = "PZ196"
-GOSH_ODS_CODE = "RP401"
 
 audit_dates = audit_period.get_audit_period_for_date(date.today())
 
@@ -43,7 +40,7 @@ audit_dates = audit_period.get_audit_period_for_date(date.today())
 class TestQuestionnaireView:
     @pytest.fixture(autouse=True)
     def setup(
-        self, seed_groups_fixture, seed_users_fixture, seed_patients_fixture, client
+        self, seed_groups_fixture, seed_users_fixture, client
     ):
         self.client = client
 
@@ -52,6 +49,7 @@ class TestQuestionnaireView:
             organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
             groups__name=test_user_audit_centre_editor_data.group_name,
         ).first()
+
         self.client = login_and_verify_user(self.client, self.ah_user)
 
         # Initialize the session

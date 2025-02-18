@@ -34,11 +34,9 @@ from ..general_functions import (
     send_email_to_recipients,
     group_for_role,
     organisations_adapter,
-    get_or_update_view_preference,
     refresh_session_filters
 )
 from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
-from project.constants import VIEW_PREFERENCES
 from .mixins import LoginAndOTPRequiredMixin
 
 # from ..signals import password_reset_sent
@@ -59,27 +57,14 @@ class NPDAUserListView(
 
     def get_queryset(self):
         # scope the queryset to filter only those users in organisations in the same PDU. This is to prevent users from seeing all users in the system
+        pz_code = self.request.session.get("pz_code")
 
-        # Organisation level
-        if self.request.user.view_preference == VIEW_PREFERENCES[0][0]:
-            # Organisation view - this is now deprecated
-            return NPDAUser.objects.filter(
-                organisation_employers__pz_code=self.request.session.get("pz_code")
-            ).order_by("surname")
-
-        # The user's organisation, PDU and siblings are stored in the session when they log in
-        elif self.request.user.view_preference == VIEW_PREFERENCES[1][0]:
-            # PDU view
-            # create a list of sibling organisations' ODS codes who share the same PDU as the user
-            pz_code = self.request.session.get("pz_code")
-            return NPDAUser.objects.filter(
-                organisation_employers__pz_code=pz_code
-            ).order_by("surname")
-        elif self.request.user.view_preference == VIEW_PREFERENCES[2][0]:
-            # RCPCH user/national view - get all users
+        if self.request.user.viewing_data_nationally():
             return NPDAUser.objects.all().order_by("surname")
-        else:
-            raise ValueError("Invalid view preference")
+        
+        return NPDAUser.objects.filter(
+            organisation_employers__pz_code=pz_code
+        ).order_by("surname")
 
     def get_context_data(self, **kwargs):
         context = super(NPDAUserListView, self).get_context_data(**kwargs)
@@ -110,44 +95,6 @@ class NPDAUserListView(
                 context=self.get_context_data(),
             )
         return response
-
-    def post(self, request, *args: str, **kwargs) -> HttpResponse:
-        """
-        Override POST method to requery the database for the list of users if view preference changes
-        """
-        if request.htmx:
-            view_preference = request.POST.get("view_preference", None)
-            selected_pz_code = request.POST.get("npdauser_pz_code_select_name", None)
-
-            refresh_session_filters(self.request, pz_code=selected_pz_code)
-
-            view_preference = get_or_update_view_preference(
-                self.request.user, view_preference
-            )
-
-            context = {
-                "view_preference": int(view_preference),
-                "pz_code": request.session.get("pz_code"),
-                "hx_post": reverse_lazy("npda_users"),
-                "organisation_choices": self.request.session.get(
-                    "organisation_choices"
-                ),
-                "pdu_choices": organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
-                    requesting_user=self.request.user, user_instance=self.request.user
-                ),
-                "chosen_pdu": request.session.get("pz_code"),
-                "pz_code_select_name": "npdauser_pz_code_select_name",
-                "hx_target": "#npdauser_view_preference",
-            }
-
-            response = render(request, "partials/view_preference.html", context=context)
-
-            trigger_client_event(
-                response=response, name="npda_users", params={}
-            )  # reloads the form to show the active steps
-            return response
-
-        return super().post(request, *args, **kwargs)
 
 
 class NPDAUserCreateView(
