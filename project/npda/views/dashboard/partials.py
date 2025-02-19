@@ -4,8 +4,10 @@ from datetime import date
 
 import plotly.graph_objects as go
 import plotly.io as pio
+
 # Django imports
 from django.http import HttpResponseBadRequest
+
 # Django imports
 from django.shortcuts import render
 
@@ -13,15 +15,18 @@ import project.constants.colors as colors
 from project.npda.general_functions.map import (
     generate_dataframe_and_aggregated_distance_data_from_cases,
     generate_distance_from_organisation_scatterplot_figure,
-    get_children_by_pdu_audit_year)
-from project.npda.general_functions.rcpch_nhs_organisations import \
-    fetch_organisation_by_ods_code
+    get_children_by_pdu_audit_year,
+)
+from project.npda.general_functions.rcpch_nhs_organisations import fetch_organisation_by_ods_code
 from project.npda.kpi_class.kpis import CalculateKPIS
-from project.npda.models.paediatric_diabetes_unit import \
-    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass
-from project.npda.views.dashboard.dashboard import (KPI_CATEGORY_ATTR_MAP,
-                                                    TEXT,
-                                                    get_pt_level_table_data)
+from project.npda.models.paediatric_diabetes_unit import (
+    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
+)
+from project.npda.views.dashboard.dashboard import (
+    KPI_CATEGORY_ATTR_MAP,
+    TEXT,
+    get_pt_level_table_data,
+)
 from project.npda.views.decorators import login_and_otp_required
 
 logger = logging.getLogger(__name__)
@@ -107,7 +112,12 @@ def get_waffle_chart_partial(request):
         # Fetch data from query parameters
         data = {}
         for key, value in request.GET.items():
-            data[key] = int(value)
+            pct = float(value)
+            # If pct is above 1%, round to nearest integer
+            # otherwise, keep the 0.1% precision
+            if pct >= 1:
+                pct = int(pct)
+            data[key] = pct
 
         # Handle empty data (eg. if no eligible pts)
         if not data:
@@ -115,6 +125,7 @@ def get_waffle_chart_partial(request):
 
         # Ensure percentages sum to 100
         total = sum(data.values())
+        print(data)
         if total != 100:
             first_category = list(data.keys())[0]
             data[first_category] += 100 - total
@@ -167,6 +178,7 @@ def get_waffle_chart_partial(request):
         # For each label, add the appropriate number of squares to the chart data
         for idx, (label, num_squares) in enumerate(data):
             # For each square, append its data as current r,c, and colour
+            num_squares = int(max(1, num_squares))  # Ensure at least 1 square
             for _ in range(num_squares):
                 square_data = {
                     "x": X,

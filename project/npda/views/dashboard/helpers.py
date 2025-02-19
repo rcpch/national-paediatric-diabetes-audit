@@ -1049,6 +1049,7 @@ def convert_value_counts_dict_to_pct(value_counts_dict: dict):
     value_counts_dict_pct = {}
 
     for key, value in value_counts_dict.items():
-        value_counts_dict_pct[key] = int(value / total * 100)
+        pct = value / total * 100
+        value_counts_dict_pct[key] = int(pct) if pct >= 1 else round(pct,1)
 
     return value_counts_dict_pct
