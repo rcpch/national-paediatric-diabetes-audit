@@ -133,23 +133,25 @@ def get_waffle_chart_partial(request):
         if "quintile" in list(data.keys())[0].lower():
             # IMD quintiles - sort by IMD, given the keys are [1st Quintile, 2nd Quintile,
             # ..., 5th Quintile]
-            data = sorted(
+            data_sorted = sorted(
                 data.items(),
                 key=lambda item: (
                     int(item[0][0]) if item[0].lower() not in ["unknown", "null"] else 6
                 ),
                 reverse=False,
             )
-            imd_color_map = {
-                "1st Quintile": colors.RCPCH_DARK_BLUE,
-                "2nd Quintile": colors.RCPCH_STRONG_BLUE,
-                "3rd Quintile": colors.RCPCH_LIGHT_BLUE,
-                "4th Quintile": colors.RCPCH_ORANGE,
-                "5th Quintile": colors.RCPCH_RED,
-                "Unknown": colors.RCPCH_LIGHT_GREY,
-                "Null": colors.RCPCH_LIGHT_GREY,
+            # Map labels and colors
+            imd_label_color_map = {
+                "1st Quintile": {"color": colors.RCPCH_DARK_BLUE, "label": "Most deprived"},
+                "2nd Quintile": {"color": colors.RCPCH_STRONG_BLUE, "label": "Second most"},
+                "3rd Quintile": {"color": colors.RCPCH_LIGHT_BLUE, "label": "Third most"},
+                "4th Quintile": {"color": colors.RCPCH_ORANGE, "label": "Fourth most"},
+                "5th Quintile": {"color": colors.RCPCH_RED, "label": "Least deprived"},
+                "Unknown": {"color": colors.RCPCH_LIGHT_GREY, "label": "Unknown"},
+                "Null": {"color": colors.RCPCH_LIGHT_GREY, "label": "Unknown"},
             }
-            colours = [imd_color_map[item[0]] for item in data]
+            data = [(imd_label_color_map[item[0]]["label"], item[1]) for item in data_sorted]
+            colours = [imd_label_color_map[item[0]]["color"] for item in data_sorted]
         # Default behaviour - sort data by pct ascending so we put the smallest category top left
         else:
             data = sorted(data.items(), key=lambda item: item[1], reverse=False)
