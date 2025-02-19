@@ -140,8 +140,19 @@ def get_waffle_chart_partial(request):
             first_category = list(data.keys())[0]
             data[first_category] += 100 - total
 
-        # Sort data by pct ascending so we put the smallest category top left
-        data = sorted(data.items(), key=lambda item: item[1], reverse=False)
+        if "quintile" in list(data.keys())[0].lower():
+            # IMD quintiles - sort by IMD, given the keys are [1st Quintile, 2nd Quintile,
+            # ..., 5th Quintile]
+            data = sorted(
+                data.items(),
+                key=lambda item: (
+                    int(item[0][0]) if item[0].lower() not in ["unknown", "null"] else 6
+                ),
+                reverse=False,
+            )
+        # Default behaviour - sort data by pct ascending so we put the smallest category top left
+        else:
+            data = sorted(data.items(), key=lambda item: item[1], reverse=False)
 
         # Prepare waffle chart
         # TODO: ADD IN A BUNCH OF COLORS HERE. ?COULD SPECIFY COLORS IN GET REQUEST
