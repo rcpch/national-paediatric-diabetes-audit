@@ -1,49 +1,28 @@
 import json
+import logging
+from datetime import date
 
 import plotly.graph_objects as go
 import plotly.io as pio
-
 # Django imports
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.http import HttpResponseBadRequest
+# Django imports
 from django.shortcuts import render
 
 import project.constants.colors as colors
-from project.npda.models.paediatric_diabetes_unit import (
-    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
-)
-
-import json
-from datetime import date
-
-# Django imports
-from django.shortcuts import render
-
-from project.npda.models.paediatric_diabetes_unit import (
-    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
-)
-
-
-from project.npda.kpi_class.kpis import CalculateKPIS
-
-
 from project.npda.general_functions.map import (
-    get_children_by_pdu_audit_year,
-    generate_distance_from_organisation_scatterplot_figure,
     generate_dataframe_and_aggregated_distance_data_from_cases,
-)
-from project.npda.general_functions.rcpch_nhs_organisations import (
-    fetch_organisation_by_ods_code,
-)
-
-
+    generate_distance_from_organisation_scatterplot_figure,
+    get_children_by_pdu_audit_year)
+from project.npda.general_functions.rcpch_nhs_organisations import \
+    fetch_organisation_by_ods_code
+from project.npda.kpi_class.kpis import CalculateKPIS
+from project.npda.models.paediatric_diabetes_unit import \
+    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass
+from project.npda.views.dashboard.dashboard import (KPI_CATEGORY_ATTR_MAP,
+                                                    TEXT,
+                                                    get_pt_level_table_data)
 from project.npda.views.decorators import login_and_otp_required
-from project.npda.views.dashboard.dashboard import (
-    KPI_CATEGORY_ATTR_MAP,
-    TEXT,
-    get_pt_level_table_data,
-)
-
-import logging
 
 logger = logging.getLogger(__name__)
 

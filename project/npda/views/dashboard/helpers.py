@@ -1,21 +1,19 @@
 """Helper functions for dashboard views including calculations and data manipulation."""
 
 # Python imports
+import logging
 from collections import Counter, defaultdict
 from decimal import Decimal
-import logging
-from dateutil.relativedelta import relativedelta
 from typing import Literal
 
-
-from django.db.models import QuerySet, Count
+from dateutil.relativedelta import relativedelta
+from django.db.models import Count, QuerySet
 
 from project.constants.ethnicities import ETHNICITIES
 from project.constants.sex_types import SEX_TYPE
 from project.constants.types.kpi_types import KPIRegistry
-from project.npda.models.patient import Patient
-
 from project.npda.kpi_class.kpis import CalculateKPIS
+from project.npda.models.patient import Patient
 from project.npda.views.dashboard.template_data import *
 
 # LOGGING
