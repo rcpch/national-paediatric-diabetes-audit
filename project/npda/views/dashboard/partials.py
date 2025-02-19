@@ -529,19 +529,25 @@ def get_simple_bar_chart_pcts_partial(request):
         )
 
         # Adjust x-axis labels to avoid overlap
-        if len(x) > 3:
-            ticktext = []
-            CUT_OFF_CHAR_LEN = 10
-            for label in x:
-                if len(label) > CUT_OFF_CHAR_LEN:
-                    # Label too long, cut off at CUT_OFF_CHAR_LEN characters
-                    ticktext.append(label[:CUT_OFF_CHAR_LEN] + "...")
-                else:
-                    ticktext.append(label)
-        else:
-            # # Wrap text with <br>
-            ticktext = [label.replace(" ", "<br>") for label in x]
-        
+        xaxis_args = {}
+        CUT_OFF_CHAR_LEN = 10
+        shortened_ticktext_labels = []
+        for label in x:
+            if len(label) > CUT_OFF_CHAR_LEN:
+                # Don't want to cut off in middle of word so split on spaces,
+                # and keep as many full words as possible until we reach the cut off
+                shortened_label = []
+                current_len = 0
+                for word in label.split(" "):
+                    shortened_label.append(word)
+                    current_len += len(word)
+                    if current_len > CUT_OFF_CHAR_LEN:
+                        break
+                # More efficient to join the list of words than to keep concatenating strings
+                shortened_ticktext_labels.append(" ".join(shortened_label) + "...")
+            else:
+                shortened_ticktext_labels.append(label)
+        xaxis_args["ticktext"] = shortened_ticktext_labels
 
         # Update layout for labels and formatting
         fig.update_layout(
@@ -556,15 +562,14 @@ def get_simple_bar_chart_pcts_partial(request):
             template="simple_white",  # Clean grid style
             # Wrap text
             xaxis=dict(
+                **xaxis_args,
                 tickmode="array",
                 tickvals=list(range(len(x))),
-                ticktext=ticktext,
                 # Rotate labels if they are too long
-                tickangle=45 if len(x) > 3 else 0,
+                tickangle=-30,
                 automargin=True,  # Adjust margins for label space
             ),
             margin=dict(l=0, r=0, t=0, b=0),
-            
         )
 
         chart_html = fig.to_html(
