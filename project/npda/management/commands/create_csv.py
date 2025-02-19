@@ -1,6 +1,3 @@
-import numpy as np
-from django.core.management.base import CommandError
-
 """TODO:
     - [ ] Move constants to a separate file. Currently importing from `seed_submission.py`.
     - [ ] Generalise the parsing of inputs and share between this and `seed_submission.py`.
@@ -118,42 +115,33 @@ Implementation notes:
     need to additionally add the `Transfer` column values manually.
 """
 
-from collections import defaultdict
-from datetime import datetime
+import logging
 import os
 import random
-import logging
+from collections import defaultdict
+from datetime import datetime
 
-from django.utils import timezone
-from django.core.management.base import BaseCommand
+import numpy as np
 import pandas as pd
+from django.core.management.base import BaseCommand, CommandError
+from django.utils import timezone
 
-from project.constants.csv_headings import (
-    ALL_DATES,
-    CSV_DATA_TYPES_MINUS_DATES,
-    CSV_HEADING_OBJECTS,
-    UNIQUE_IDENTIFIER_JERSEY,
-    UNIQUE_IDENTIFIER_ENGLAND,
-    ENGLAND_CSV_DATA_TYPES,
-    JERSEY_CSV_DATA_TYPES,
-)
-from project.npda.general_functions.audit_period import (
-    get_audit_period_for_date,
-)
+from project.constants.csv_headings import (ALL_DATES,
+                                            CSV_DATA_TYPES_MINUS_DATES,
+                                            CSV_HEADING_OBJECTS,
+                                            ENGLAND_CSV_DATA_TYPES,
+                                            JERSEY_CSV_DATA_TYPES,
+                                            UNIQUE_IDENTIFIER_ENGLAND,
+                                            UNIQUE_IDENTIFIER_JERSEY)
+from project.npda.general_functions.audit_period import \
+    get_audit_period_for_date
 from project.npda.general_functions.data_generator_extended import (
-    AgeRange,
-    FakePatientCreator,
-    HbA1cTargetRange,
-)
-from project.npda.general_functions.csv import csv_header
-from project.npda.management.commands.seed_submission import (
-    letter_name_map,
-    hb_target_map,
-    age_range_map,
-    CYAN,
-    RESET,
-    GREEN,
-)
+    AgeRange, FakePatientCreator, HbA1cTargetRange)
+from project.npda.management.commands.seed_submission import (CYAN, GREEN,
+                                                              RESET,
+                                                              age_range_map,
+                                                              hb_target_map,
+                                                              letter_name_map)
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -309,9 +297,7 @@ class Command(BaseCommand):
         self.print_info(f"\n--- Visit Types Provided ---\n")
 
         # Divide the list into chunks of 4 for a compact table
-        visit_types_chunks = [
-            visit_types[i : i + 4] for i in range(0, len(visit_types), 4)
-        ]
+        visit_types_chunks = [visit_types[i : i + 4] for i in range(0, len(visit_types), 4)]
         for chunk in visit_types_chunks:
             self.print_info("    ".join(f"{CYAN}{visit}{RESET}" for visit in chunk))
 
@@ -572,11 +558,7 @@ class Command(BaseCommand):
                         .astype(dtype)  # Cast to nullable Int dtype
                     )
                 elif dtype == "string":  # Handle strings
-                    df[column] = (
-                        df[column]
-                        .replace({np.nan: pd.NA, None: pd.NA})
-                        .astype("string")
-                    )
+                    df[column] = df[column].replace({np.nan: pd.NA, None: pd.NA}).astype("string")
                 elif dtype.startswith("float"):  # Handle floats
                     df[column] = df[column].replace({None: np.nan}).astype(dtype)
                 else:
@@ -587,9 +569,7 @@ class Command(BaseCommand):
         # Cant continue
         except Exception as e:
             logger.error(f"ERROR in clean_and_cast: {e}")
-            logger.error(
-                f"CSV_DATA_TYPES_MINUS_DATES {column=} {dtype=}\n{df[column].dtype=}"
-            )
+            logger.error(f"CSV_DATA_TYPES_MINUS_DATES {column=} {dtype=}\n{df[column].dtype=}")
             raise e
 
         return df
@@ -668,9 +648,7 @@ class Command(BaseCommand):
         building_str = ""
         if build:
             # First count the number of existing files to use this as filename prefix
-            existing_files = [
-                f for f in os.listdir(output_path) if f.startswith("build")
-            ]
+            existing_files = [f for f in os.listdir(output_path) if f.startswith("build")]
 
             # Set the building string filename prefix
             building_str = f"build__{len(existing_files) + 1}_"
