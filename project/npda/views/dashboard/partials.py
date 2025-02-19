@@ -140,32 +140,42 @@ def get_waffle_chart_partial(request):
                 ),
                 reverse=False,
             )
+            imd_color_map = {
+                "1st Quintile": colors.RCPCH_DARK_BLUE,
+                "2nd Quintile": colors.RCPCH_STRONG_BLUE,
+                "3rd Quintile": colors.RCPCH_LIGHT_BLUE,
+                "4th Quintile": colors.RCPCH_ORANGE,
+                "5th Quintile": colors.RCPCH_RED,
+                "Unknown": colors.RCPCH_LIGHT_GREY,
+                "Null": colors.RCPCH_LIGHT_GREY,
+            }
+            colours = [imd_color_map[item[0]] for item in data]
         # Default behaviour - sort data by pct ascending so we put the smallest category top left
         else:
             data = sorted(data.items(), key=lambda item: item[1], reverse=False)
+            # TODO: ADD IN A BUNCH OF COLORS HERE. ?COULD SPECIFY COLORS IN GET REQUEST
+            colours = [
+                colors.RCPCH_DARK_BLUE,
+                colors.RCPCH_PINK,
+                colors.RCPCH_MID_GREY,
+                colors.RCPCH_CHARCOAL_DARK,
+                colors.RCPCH_RED,
+                colors.RCPCH_ORANGE,
+                colors.RCPCH_YELLOW,
+                colors.RCPCH_STRONG_GREEN,
+                colors.RCPCH_AQUA_GREEN,
+                colors.RCPCH_PURPLE,
+                colors.RCPCH_PURPLE_LIGHT_TINT2,
+                colors.RCPCH_PURPLE_DARK_TINT,
+                colors.RCPCH_RED_LIGHT_TINT3,
+                colors.RCPCH_ORANGE_LIGHT_TINT3,
+                colors.RCPCH_STRONG_GREEN_LIGHT_TINT3,
+                colors.RCPCH_AQUA_GREEN_LIGHT_TINT3,
+                colors.RCPCH_ORANGE_LIGHT_TINT3,
+                colors.RCPCH_DARK_GREY,
+            ][: len(data)]
 
         # Prepare waffle chart
-        # TODO: ADD IN A BUNCH OF COLORS HERE. ?COULD SPECIFY COLORS IN GET REQUEST
-        colours = [
-            colors.RCPCH_DARK_BLUE,
-            colors.RCPCH_PINK,
-            colors.RCPCH_MID_GREY,
-            colors.RCPCH_CHARCOAL_DARK,
-            colors.RCPCH_RED,
-            colors.RCPCH_ORANGE,
-            colors.RCPCH_YELLOW,
-            colors.RCPCH_STRONG_GREEN,
-            colors.RCPCH_AQUA_GREEN,
-            colors.RCPCH_PURPLE,
-            colors.RCPCH_PURPLE_LIGHT_TINT2,
-            colors.RCPCH_PURPLE_DARK_TINT,
-            colors.RCPCH_RED_LIGHT_TINT3,
-            colors.RCPCH_ORANGE_LIGHT_TINT3,
-            colors.RCPCH_STRONG_GREEN_LIGHT_TINT3,
-            colors.RCPCH_AQUA_GREEN_LIGHT_TINT3,
-            colors.RCPCH_ORANGE_LIGHT_TINT3,
-            colors.RCPCH_DARK_GREY,
-        ][: len(data)]
 
         # Create Plotly waffle chart
         GRID_SIZE = 10  # 10x10 grid
