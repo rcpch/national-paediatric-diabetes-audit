@@ -373,6 +373,8 @@ def get_progress_bar_chart_partial(
         labels = [values[attr]["label"] for attr in values]
         percentages = [values[attr]["pct"] for attr in values]
         counts = [f"{values[attr]['count']} / {values[attr]['total']}" for attr in values]
+        passed = [values[attr]["count"] for attr in values]
+        eligible = [values[attr]["total"] for attr in values]
 
         # Add background bars (grey) representing 100% width
         fig.add_trace(
@@ -412,6 +414,8 @@ def get_progress_bar_chart_partial(
                 textposition=["inside" if pct > 5 else "outside" for pct in percentages],
                 insidetextanchor="end",
                 name="Progress",
+                hovertemplate="Eligible passed: %{customdata[0]} / %{customdata[1]}<extra></extra>",
+                customdata=list(zip(passed, eligible)),
             )
         )
 
