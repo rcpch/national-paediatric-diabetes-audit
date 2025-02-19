@@ -44,18 +44,35 @@ Example use:
         --visits="CDCD DHPC ACDC CDCD" \
         --hb_target=T \
         --age_range=11_15 \
+        --imd=1 \
         --build \
     && python manage.py create_csv \
         --pts=15 \
         --visits="CDCCD DDCC CACC" \
         --hb_target=A \
         --age_range=16_19 \
+        --imd=2 \
         --build \
     && python manage.py create_csv \
         --pts=15 \
         --visits="CDC ACDC CDCD" \
         --hb_target=T \
         --age_range=0_4 \
+        --imd=3 \
+        --build \
+    && python manage.py create_csv \
+        --pts=15 \
+        --visits="CDC ACDC CDCD" \
+        --hb_target=T \
+        --age_range=0_4 \
+        --imd=4 \
+        --build \
+    && python manage.py create_csv \
+        --pts=15 \
+        --visits="CDC ACDC CDCD" \
+        --hb_target=T \
+        --age_range=0_4 \
+        --imd=5 \
         --build \
     && python manage.py create_csv \
        --coalesce
@@ -99,6 +116,10 @@ Example use:
             - 11_15
             - 16_19
             - 20_25
+    
+    --imd (int, optional):
+        The IMD value used to assign a postcode. Defaults to 1.
+        Must be one of 1, 2, 3, 4, 5.
 
     --submission_date (str, optional):
         The submission date in YYYY-MM-DD format. Defaults to today. This
