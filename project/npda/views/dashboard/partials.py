@@ -531,6 +531,8 @@ def get_simple_bar_chart_pcts_partial(request):
         # Adjust x-axis labels to avoid overlap
         xaxis_args = {}
         CUT_OFF_CHAR_LEN = 10
+        # If more than 3 labels, don't <br> as not enough space
+        JOIN_CHAR = "<br>" if len(x) <= 3 else " "
         shortened_ticktext_labels = []
         for label in x:
             if len(label) > CUT_OFF_CHAR_LEN:
@@ -544,7 +546,7 @@ def get_simple_bar_chart_pcts_partial(request):
                     if current_len > CUT_OFF_CHAR_LEN:
                         break
                 # More efficient to join the list of words than to keep concatenating strings
-                shortened_ticktext_labels.append(" ".join(shortened_label) + "...")
+                shortened_ticktext_labels.append(JOIN_CHAR.join(shortened_label) + "...")
             else:
                 shortened_ticktext_labels.append(label)
         xaxis_args["ticktext"] = shortened_ticktext_labels
