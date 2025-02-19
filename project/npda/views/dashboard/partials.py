@@ -506,9 +506,12 @@ def get_simple_bar_chart_pcts_partial(request):
         data_raw = json.loads(request.GET.get("data"))
 
         x, y = [], []
+        passed, eligible = [], []
         for _, values in data_raw.items():
             x.append(values["label"])
             y.append(values["pct"])
+            passed.append(values["count"])
+            eligible.append(values["total"])
 
         # Create the bar chart
         fig = go.Figure()
@@ -517,25 +520,45 @@ def get_simple_bar_chart_pcts_partial(request):
             go.Bar(
                 x=x,
                 y=y,
-                text=y,
+                texttemplate="%{y:.0f}%",
                 textposition="outside",
                 marker=dict(color=bar_color),
+                # We're rendering custom shorter x axis labels so we want the full label here,
+                # therefore passing in as customdata
+                hovertemplate="<em>%{customdata[0]}</em><br>Eligible passed: %{customdata[1]} / %{customdata[2]}<extra></extra>",
+                customdata=list(zip(x, passed, eligible)),
             )
         )
 
         # Adjust x-axis labels to avoid overlap
-        if len(x) > 3:
-            ticktext = []
-            CUT_OFF_CHAR_LEN = 10
-            for label in x:
-                if len(label) > CUT_OFF_CHAR_LEN:
-                    # Label too long, cut off at CUT_OFF_CHAR_LEN characters
-                    ticktext.append(label[:CUT_OFF_CHAR_LEN] + "...")
+        xaxis_args = {}
+        CUT_OFF_CHAR_LEN = 10
+
+        N = len(x)
+        shortened_ticktext_labels = []
+        for label in x:
+            if len(label) > CUT_OFF_CHAR_LEN:
+                # Don't want to cut off in middle of word so split on spaces,
+                # and keep as many full words as possible until we reach the cut off
+                shortened_label = []
+                current_len = 0
+                for word in label.split(" "):
+                    shortened_label.append(word)
+                    current_len += len(word)
+                    if current_len > CUT_OFF_CHAR_LEN:
+                        break
+                # More efficient to join the list of words than to keep concatenating strings
+                if N > 3:
+                    # If more than 3 labels, don't <br> as not enough space
+                    shortened_ticktext_labels.append(" ".join(shortened_label) + " ...")
                 else:
-                    ticktext.append(label)
-        else:
-            # # Wrap text with <br>
-            ticktext = [label.replace(" ", "<br>") for label in x]
+                    # Otherwise, just <br> right before last word
+                    shortened_ticktext_labels.append(
+                        " ".join(shortened_label[:-1]) + "<br>" + shortened_label[-1] + " ..."
+                    )
+            else:
+                shortened_ticktext_labels.append(label)
+        xaxis_args["ticktext"] = shortened_ticktext_labels
 
         # Update layout for labels and formatting
         fig.update_layout(
@@ -550,11 +573,11 @@ def get_simple_bar_chart_pcts_partial(request):
             template="simple_white",  # Clean grid style
             # Wrap text
             xaxis=dict(
+                **xaxis_args,
                 tickmode="array",
                 tickvals=list(range(len(x))),
-                ticktext=ticktext,
                 # Rotate labels if they are too long
-                tickangle=45 if len(x) > 3 else 0,
+                tickangle=-30,
                 automargin=True,  # Adjust margins for label space
             ),
             margin=dict(l=0, r=0, t=0, b=0),
