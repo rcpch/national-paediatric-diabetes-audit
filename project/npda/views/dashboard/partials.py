@@ -113,7 +113,7 @@ def get_waffle_chart_partial(request):
         data = {}
         for key, value in request.GET.items():
             pct = float(value)
-            # If pct is above 1%, round to nearest integer
+            # If pct is above 1%, take only integer part
             # otherwise, keep the 0.1% precision
             if pct >= 1:
                 pct = int(pct)
@@ -125,10 +125,10 @@ def get_waffle_chart_partial(request):
 
         # Ensure percentages sum to 100
         total = sum(data.values())
-        print(data)
         if total != 100:
+            remainder = int(100 - total)
             first_category = list(data.keys())[0]
-            data[first_category] += 100 - total
+            data[first_category] += remainder
 
         if "quintile" in list(data.keys())[0].lower():
             # IMD quintiles - sort by IMD, given the keys are [1st Quintile, 2nd Quintile,
