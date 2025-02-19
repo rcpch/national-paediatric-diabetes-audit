@@ -1,49 +1,33 @@
 import json
+import logging
+from datetime import date
 
 import plotly.graph_objects as go
 import plotly.io as pio
 
 # Django imports
-from django.http import HttpResponse, HttpResponseBadRequest
-from django.shortcuts import render
-
-import project.constants.colors as colors
-from project.npda.models.paediatric_diabetes_unit import (
-    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
-)
-
-import json
-from datetime import date
+from django.http import HttpResponseBadRequest
 
 # Django imports
 from django.shortcuts import render
 
+import project.constants.colors as colors
+from project.npda.general_functions.map import (
+    generate_dataframe_and_aggregated_distance_data_from_cases,
+    generate_distance_from_organisation_scatterplot_figure,
+    get_children_by_pdu_audit_year,
+)
+from project.npda.general_functions.rcpch_nhs_organisations import fetch_organisation_by_ods_code
+from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.models.paediatric_diabetes_unit import (
     PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
 )
-
-
-from project.npda.kpi_class.kpis import CalculateKPIS
-
-
-from project.npda.general_functions.map import (
-    get_children_by_pdu_audit_year,
-    generate_distance_from_organisation_scatterplot_figure,
-    generate_dataframe_and_aggregated_distance_data_from_cases,
-)
-from project.npda.general_functions.rcpch_nhs_organisations import (
-    fetch_organisation_by_ods_code,
-)
-
-
-from project.npda.views.decorators import login_and_otp_required
 from project.npda.views.dashboard.dashboard import (
     KPI_CATEGORY_ATTR_MAP,
     TEXT,
     get_pt_level_table_data,
 )
-
-import logging
+from project.npda.views.decorators import login_and_otp_required
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +112,12 @@ def get_waffle_chart_partial(request):
         # Fetch data from query parameters
         data = {}
         for key, value in request.GET.items():
-            data[key] = int(value)
+            pct = float(value)
+            # If pct is above 1%, take only integer part
+            # otherwise, keep the 0.1% precision
+            if pct >= 1:
+                pct = int(pct)
+            data[key] = pct
 
         # Handle empty data (eg. if no eligible pts)
         if not data:
@@ -137,34 +126,58 @@ def get_waffle_chart_partial(request):
         # Ensure percentages sum to 100
         total = sum(data.values())
         if total != 100:
+            remainder = int(100 - total)
             first_category = list(data.keys())[0]
-            data[first_category] += 100 - total
+            data[first_category] += remainder
 
-        # Sort data by pct ascending so we put the smallest category top left
-        data = sorted(data.items(), key=lambda item: item[1], reverse=False)
+        if "quintile" in list(data.keys())[0].lower():
+            # IMD quintiles - sort by IMD, given the keys are [1st Quintile, 2nd Quintile,
+            # ..., 5th Quintile]
+            data_sorted = sorted(
+                data.items(),
+                key=lambda item: (
+                    int(item[0][0]) if item[0].lower() not in ["unknown", "null"] else 6
+                ),
+                reverse=False,
+            )
+            # Map labels and colors
+            imd_label_color_map = {
+                "1st Quintile": {"color": colors.RCPCH_RED, "label": "Most deprived"},
+                "2nd Quintile": {"color": colors.RCPCH_ORANGE, "label": "Second most"},
+                "3rd Quintile": {"color": colors.RCPCH_LIGHT_BLUE, "label": "Third most"},
+                "4th Quintile": {"color": colors.RCPCH_STRONG_BLUE, "label": "Fourth most"},
+                "5th Quintile": {"color": colors.RCPCH_DARK_BLUE, "label": "Least deprived"},
+                "Unknown": {"color": colors.RCPCH_LIGHT_GREY, "label": "Unknown"},
+                "Null": {"color": colors.RCPCH_LIGHT_GREY, "label": "Unknown"},
+            }
+            data = [(imd_label_color_map[item[0]]["label"], item[1]) for item in data_sorted]
+            colours = [imd_label_color_map[item[0]]["color"] for item in data_sorted]
+        # Default behaviour - sort data by pct ascending so we put the smallest category top left
+        else:
+            data = sorted(data.items(), key=lambda item: item[1], reverse=False)
+            # TODO: ADD IN A BUNCH OF COLORS HERE. ?COULD SPECIFY COLORS IN GET REQUEST
+            colours = [
+                colors.RCPCH_DARK_BLUE,
+                colors.RCPCH_PINK,
+                colors.RCPCH_MID_GREY,
+                colors.RCPCH_CHARCOAL_DARK,
+                colors.RCPCH_RED,
+                colors.RCPCH_ORANGE,
+                colors.RCPCH_YELLOW,
+                colors.RCPCH_STRONG_GREEN,
+                colors.RCPCH_AQUA_GREEN,
+                colors.RCPCH_PURPLE,
+                colors.RCPCH_PURPLE_LIGHT_TINT2,
+                colors.RCPCH_PURPLE_DARK_TINT,
+                colors.RCPCH_RED_LIGHT_TINT3,
+                colors.RCPCH_ORANGE_LIGHT_TINT3,
+                colors.RCPCH_STRONG_GREEN_LIGHT_TINT3,
+                colors.RCPCH_AQUA_GREEN_LIGHT_TINT3,
+                colors.RCPCH_ORANGE_LIGHT_TINT3,
+                colors.RCPCH_DARK_GREY,
+            ][: len(data)]
 
         # Prepare waffle chart
-        # TODO: ADD IN A BUNCH OF COLORS HERE. ?COULD SPECIFY COLORS IN GET REQUEST
-        colours = [
-            colors.RCPCH_DARK_BLUE,
-            colors.RCPCH_PINK,
-            colors.RCPCH_MID_GREY,
-            colors.RCPCH_CHARCOAL_DARK,
-            colors.RCPCH_RED,
-            colors.RCPCH_ORANGE,
-            colors.RCPCH_YELLOW,
-            colors.RCPCH_STRONG_GREEN,
-            colors.RCPCH_AQUA_GREEN,
-            colors.RCPCH_PURPLE,
-            colors.RCPCH_PURPLE_LIGHT_TINT2,
-            colors.RCPCH_PURPLE_DARK_TINT,
-            colors.RCPCH_RED_LIGHT_TINT3,
-            colors.RCPCH_ORANGE_LIGHT_TINT3,
-            colors.RCPCH_STRONG_GREEN_LIGHT_TINT3,
-            colors.RCPCH_AQUA_GREEN_LIGHT_TINT3,
-            colors.RCPCH_ORANGE_LIGHT_TINT3,
-            colors.RCPCH_DARK_GREY,
-        ][: len(data)]
 
         # Create Plotly waffle chart
         GRID_SIZE = 10  # 10x10 grid
@@ -177,6 +190,7 @@ def get_waffle_chart_partial(request):
         # For each label, add the appropriate number of squares to the chart data
         for idx, (label, num_squares) in enumerate(data):
             # For each square, append its data as current r,c, and colour
+            num_squares = int(max(1, num_squares))  # Ensure at least 1 square
             for _ in range(num_squares):
                 square_data = {
                     "x": X,

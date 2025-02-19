@@ -1,21 +1,19 @@
 """Helper functions for dashboard views including calculations and data manipulation."""
 
 # Python imports
+import logging
 from collections import Counter, defaultdict
 from decimal import Decimal
-import logging
-from dateutil.relativedelta import relativedelta
 from typing import Literal
 
-
-from django.db.models import QuerySet, Count
+from dateutil.relativedelta import relativedelta
+from django.db.models import Count, QuerySet
 
 from project.constants.ethnicities import ETHNICITIES
 from project.constants.sex_types import SEX_TYPE
 from project.constants.types.kpi_types import KPIRegistry
-from project.npda.models.patient import Patient
-
 from project.npda.kpi_class.kpis import CalculateKPIS
+from project.npda.models.patient import Patient
 from project.npda.views.dashboard.template_data import *
 
 # LOGGING
@@ -713,7 +711,7 @@ def get_pt_demographic_value_counts(
         5: "5th Quintile",
     }
     imd_counts = Counter(
-        imd_map.get(item["index_of_multiple_deprivation_quintile"]) for item in all_values
+        imd_map.get(item["index_of_multiple_deprivation_quintile"], 'Unknown') for item in all_values
     )
 
     return (
@@ -1051,6 +1049,7 @@ def convert_value_counts_dict_to_pct(value_counts_dict: dict):
     value_counts_dict_pct = {}
 
     for key, value in value_counts_dict.items():
-        value_counts_dict_pct[key] = int(value / total * 100)
+        pct = value / total * 100
+        value_counts_dict_pct[key] = int(pct) if pct >= 1 else round(pct,1)
 
     return value_counts_dict_pct

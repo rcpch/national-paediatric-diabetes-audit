@@ -1,27 +1,24 @@
 # Python imports
 import json
 import logging
-from dateutil.relativedelta import relativedelta
 from datetime import date
 
-
+from dateutil.relativedelta import relativedelta
 from django.apps import apps
 from django.contrib import messages
 from django.shortcuts import render
 
 from project import constants
-from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
-from project.npda.models.paediatric_diabetes_unit import (
-    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
-)
-from project.npda.models.patient import Patient
-from .helpers import *
-
+from project.npda.general_functions.quarter_for_date import \
+    retrieve_quarter_for_date
 from project.npda.kpi_class.kpis import CalculateKPIS
-
-from project.npda.views.decorators import login_and_otp_required
+from project.npda.models.paediatric_diabetes_unit import \
+    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass
+from project.npda.models.patient import Patient
 from project.npda.views.dashboard.template_data import *
+from project.npda.views.decorators import login_and_otp_required
 
+from .helpers import *
 
 # LOGGING
 logger = logging.getLogger(__name__)
