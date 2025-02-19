@@ -126,22 +126,29 @@ import pandas as pd
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
-from project.constants.csv_headings import (ALL_DATES,
-                                            CSV_DATA_TYPES_MINUS_DATES,
-                                            CSV_HEADING_OBJECTS,
-                                            ENGLAND_CSV_DATA_TYPES,
-                                            JERSEY_CSV_DATA_TYPES,
-                                            UNIQUE_IDENTIFIER_ENGLAND,
-                                            UNIQUE_IDENTIFIER_JERSEY)
-from project.npda.general_functions.audit_period import \
-    get_audit_period_for_date
+from project.constants.csv_headings import (
+    ALL_DATES,
+    CSV_DATA_TYPES_MINUS_DATES,
+    CSV_HEADING_OBJECTS,
+    ENGLAND_CSV_DATA_TYPES,
+    JERSEY_CSV_DATA_TYPES,
+    UNIQUE_IDENTIFIER_ENGLAND,
+    UNIQUE_IDENTIFIER_JERSEY,
+)
+from project.npda.general_functions.audit_period import get_audit_period_for_date
 from project.npda.general_functions.data_generator_extended import (
-    AgeRange, FakePatientCreator, HbA1cTargetRange)
-from project.npda.management.commands.seed_submission import (CYAN, GREEN,
-                                                              RESET,
-                                                              age_range_map,
-                                                              hb_target_map,
-                                                              letter_name_map)
+    AgeRange,
+    FakePatientCreator,
+    HbA1cTargetRange,
+)
+from project.npda.management.commands.seed_submission import (
+    CYAN,
+    GREEN,
+    RESET,
+    age_range_map,
+    hb_target_map,
+    letter_name_map,
+)
 
 # Logging
 logger = logging.getLogger(__name__)
