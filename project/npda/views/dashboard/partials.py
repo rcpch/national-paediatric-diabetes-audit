@@ -520,11 +520,13 @@ def get_simple_bar_chart_pcts_partial(request):
             go.Bar(
                 x=x,
                 y=y,
-                texttemplate="%{y:.1f}%",
+                texttemplate="%{y:.0f}%",
                 textposition="outside",
                 marker=dict(color=bar_color),
-                hovertemplate="Eligible passed: %{customdata[0]} / %{customdata[1]}<extra></extra>",
-                customdata=list(zip(passed, eligible)),
+                # We're rendering custom shorter x axis labels so we want the full label here,
+                # therefore passing in as customdata
+                hovertemplate="<em>%{customdata[0]}</em><br>Eligible passed: %{customdata[1]} / %{customdata[2]}<extra></extra>",
+                customdata=list(zip(x, passed, eligible)),
             )
         )
 
