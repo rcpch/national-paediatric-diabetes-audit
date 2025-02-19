@@ -14,6 +14,7 @@ Example use:
         --hb_target=T \
         --age_range=11_15 \
         --pz_code="PZ999" \
+        --imd=2 \
         --build
     
     # Jersey
@@ -176,6 +177,17 @@ GP_ODS_CODES = [
     "A81025",
 ]
 
+# IMD -> example postcode
+IMD_POSTCODE_MAP = {
+    5: "AL5 2SL",
+    4: "SW1A1AA",
+    3: "DA8 1QJ",
+    2: "GU21 5JG",
+    1: "B18 6PU",
+}
+
+POSTCODES = []
+
 
 class Command(BaseCommand):
     help = "Creates a csv file that can be uploaded to the NPDA platform."
@@ -231,6 +243,13 @@ class Command(BaseCommand):
             choices=["0_4", "5_10", "11_15", "16_19", "20_25"],
             help="Age range for patients to be seeded.",
         )
+        parser.add_argument(
+            "--imd",
+            type=int,
+            help="Requested IMD value used to assign a postcode.",
+            default=1,
+            choices=[1, 2, 3, 4, 5],
+        )
 
         # Mutually exclusive group for --build and --coalesce
         mutex_group = parser.add_mutually_exclusive_group(required=True)
@@ -270,6 +289,8 @@ class Command(BaseCommand):
         visit_types = parsed_values["visit_types"]
         submission_date = parsed_values["submission_date"]
         age_range = parsed_values["age_range"]
+        imd = parsed_values["imd"]
+        postcode = parsed_values["postcode"]
         pdu = parsed_values["pz_code"]
         output_path = parsed_values["output_path"]
         build_flag = parsed_values["build_flag"]
@@ -295,6 +316,9 @@ class Command(BaseCommand):
             ["Total Rows in Resulting CSV", n_pts_to_seed * len(visit_types)],
             ["HbA1c Target Range", hba1c_target.name],
             ["Age Range", f"{age_range.name}"],
+            ["IMD Value", imd],
+            ["Postcode", postcode],
+            ["PZ Code", pdu],
         ]
         self.print_info("-" * 45)
         for item in seeding_info:
@@ -319,6 +343,7 @@ class Command(BaseCommand):
             visit_types,
             output_path,
             build_flag,
+            postcode,
         )
         self.print_success(f"✨ CSV generated successfully at {self.csv_name}.\n")
         if build_flag:
@@ -336,6 +361,7 @@ class Command(BaseCommand):
         visit_types,
         output_path,
         build_flag,
+        postcode,
     ):
 
         # Start csv logic
@@ -350,6 +376,7 @@ class Command(BaseCommand):
         new_pts = fake_patient_creator.build_fake_patients(
             n=n_pts_to_seed,
             age_range=age_range,
+            postcode=postcode,
         )
 
         # For each pt, add visits
@@ -618,6 +645,12 @@ class Command(BaseCommand):
         # age range
         age_range = age_range_map[options["age_range"]]
 
+        # imds
+        imd = options["imd"]
+        if not (postcode := IMD_POSTCODE_MAP.get(imd)):
+            self.print_error(f"Invalid IMD value: {imd}")
+            return
+
         # pdu
         pz_code = options["pz_code"]
 
@@ -638,6 +671,8 @@ class Command(BaseCommand):
             "submission_date": submission_date,
             "output_path": output_path,
             "age_range": age_range,
+            "imd": imd,
+            "postcode": postcode,
             "build_flag": build_flag,
         }
 
