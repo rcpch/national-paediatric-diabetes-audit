@@ -713,7 +713,7 @@ def get_pt_demographic_value_counts(
         5: "5th Quintile",
     }
     imd_counts = Counter(
-        imd_map.get(item["index_of_multiple_deprivation_quintile"]) for item in all_values
+        imd_map.get(item["index_of_multiple_deprivation_quintile"], 'Unknown') for item in all_values
     )
 
     return (
