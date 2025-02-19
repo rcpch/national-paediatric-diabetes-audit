@@ -142,11 +142,11 @@ def get_waffle_chart_partial(request):
             )
             # Map labels and colors
             imd_label_color_map = {
-                "1st Quintile": {"color": colors.RCPCH_DARK_BLUE, "label": "Most deprived"},
-                "2nd Quintile": {"color": colors.RCPCH_STRONG_BLUE, "label": "Second most"},
+                "1st Quintile": {"color": colors.RCPCH_RED, "label": "Most deprived"},
+                "2nd Quintile": {"color": colors.RCPCH_ORANGE, "label": "Second most"},
                 "3rd Quintile": {"color": colors.RCPCH_LIGHT_BLUE, "label": "Third most"},
-                "4th Quintile": {"color": colors.RCPCH_ORANGE, "label": "Fourth most"},
-                "5th Quintile": {"color": colors.RCPCH_RED, "label": "Least deprived"},
+                "4th Quintile": {"color": colors.RCPCH_STRONG_BLUE, "label": "Fourth most"},
+                "5th Quintile": {"color": colors.RCPCH_DARK_BLUE, "label": "Least deprived"},
                 "Unknown": {"color": colors.RCPCH_LIGHT_GREY, "label": "Unknown"},
                 "Null": {"color": colors.RCPCH_LIGHT_GREY, "label": "Unknown"},
             }
