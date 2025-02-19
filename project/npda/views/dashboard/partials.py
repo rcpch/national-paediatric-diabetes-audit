@@ -506,9 +506,12 @@ def get_simple_bar_chart_pcts_partial(request):
         data_raw = json.loads(request.GET.get("data"))
 
         x, y = [], []
+        passed, eligible = [], []
         for _, values in data_raw.items():
             x.append(values["label"])
             y.append(values["pct"])
+            passed.append(values["count"])
+            eligible.append(values["total"])
 
         # Create the bar chart
         fig = go.Figure()
@@ -517,9 +520,11 @@ def get_simple_bar_chart_pcts_partial(request):
             go.Bar(
                 x=x,
                 y=y,
-                text=y,
+                texttemplate="%{y:.1f}%",
                 textposition="outside",
                 marker=dict(color=bar_color),
+                hovertemplate="Eligible passed: %{customdata[0]} / %{customdata[1]}<extra></extra>",
+                customdata=list(zip(passed, eligible)),
             )
         )
 
@@ -536,6 +541,7 @@ def get_simple_bar_chart_pcts_partial(request):
         else:
             # # Wrap text with <br>
             ticktext = [label.replace(" ", "<br>") for label in x]
+        
 
         # Update layout for labels and formatting
         fig.update_layout(
@@ -558,6 +564,7 @@ def get_simple_bar_chart_pcts_partial(request):
                 automargin=True,  # Adjust margins for label space
             ),
             margin=dict(l=0, r=0, t=0, b=0),
+            
         )
 
         chart_html = fig.to_html(

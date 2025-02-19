@@ -159,8 +159,8 @@ def get_care_at_diagnosis_vcs_pct(
     data = {}
 
     data["coeliac_disease_screening"] = {
-        "total_passed": kpi_41_values["total_passed"],
-        "total_eligible": kpi_41_values["total_eligible"],
+        "count": kpi_41_values["total_passed"],
+        "total": kpi_41_values["total_eligible"],
         "pct": (
             int(kpi_41_values["total_passed"] / kpi_41_values["total_eligible"] * 100)
             if kpi_41_values["total_eligible"]
@@ -170,8 +170,8 @@ def get_care_at_diagnosis_vcs_pct(
     }
 
     data["thyroid_disease_screening"] = {
-        "total_passed": kpi_42_values["total_passed"],
-        "total_eligible": kpi_42_values["total_eligible"],
+        "count": kpi_42_values["total_passed"],
+        "total": kpi_42_values["total_eligible"],
         "pct": (
             int(kpi_42_values["total_passed"] / kpi_42_values["total_eligible"] * 100)
             if kpi_42_values["total_eligible"]
@@ -181,8 +181,8 @@ def get_care_at_diagnosis_vcs_pct(
     }
 
     data["carbohydrate_counting_education"] = {
-        "total_passed": kpi_43_values["total_passed"],
-        "total_eligible": kpi_43_values["total_eligible"],
+        "count": kpi_43_values["total_passed"],
+        "total": kpi_43_values["total_eligible"],
         "pct": (
             int(kpi_43_values["total_passed"] / kpi_43_values["total_eligible"] * 100)
             if kpi_43_values["total_eligible"]
@@ -262,8 +262,8 @@ def get_hc_completion_rate_vcs(
             kpi_label = "Overall"
 
         vcs[f"kpi_32_{ix}_values"] = {
-            "total_passed": kpi_values["total_passed"],
-            "total_eligible": kpi_values["total_eligible"],
+            "count": kpi_values["total_passed"],
+            "total": kpi_values["total_eligible"],
             "pct": (
                 int(kpi_values["total_passed"] / kpi_values["total_eligible"] * 100)
                 if kpi_values["total_passed"]

@@ -279,15 +279,15 @@ def dashboard(request):
                 "no_eligible_patients": all(
                     [
                         care_at_diagnosis_value_counts_pct["coeliac_disease_screening"][
-                            "total_eligible"
+                            "total"
                         ]
                         == 0,
                         care_at_diagnosis_value_counts_pct["thyroid_disease_screening"][
-                            "total_eligible"
+                            "total"
                         ]
                         == 0,
                         care_at_diagnosis_value_counts_pct["carbohydrate_counting_education"][
-                            "total_eligible"
+                            "total"
                         ]
                         == 0,
                     ]
