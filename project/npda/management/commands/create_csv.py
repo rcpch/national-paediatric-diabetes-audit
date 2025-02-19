@@ -294,7 +294,7 @@ class Command(BaseCommand):
             self.print_info(f"{CYAN}{item[0]:<30}{RESET} {item[1]}")
         # Visit types table
 
-        self.print_info(f"\n--- Visit Types Provided ---\n")
+        self.print_info("\n--- Visit Types Provided ---\n")
 
         # Divide the list into chunks of 4 for a compact table
         visit_types_chunks = [visit_types[i : i + 4] for i in range(0, len(visit_types), 4)]
@@ -315,7 +315,7 @@ class Command(BaseCommand):
         )
         self.print_success(f"✨ CSV generated successfully at {self.csv_name}.\n")
         if build_flag:
-            self.print_info(f"Coalesce the build csv files using the --coalesce flag.")
+            self.print_info("Coalesce the build csv files using the --coalesce flag.")
 
     def generate_csv(
         self,
