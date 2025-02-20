@@ -27,6 +27,7 @@ from project.npda.views.dashboard.dashboard import (
     TEXT,
     get_pt_level_table_data,
 )
+from project.npda.views.dashboard.helpers import get_list_of_shortened_ticktext_labels
 from project.npda.views.decorators import login_and_otp_required
 
 logger = logging.getLogger(__name__)
@@ -472,7 +473,7 @@ def get_progress_bar_chart_partial(
             {"chart_html": chart_html},
         )
     except Exception as e:
-        logger.error("Error generating colored figures chart", exc_info=True)
+        logger.error(f"Error generating colored figures chart: {e}", exc_info=True)
         return render(
             request,
             "dashboard/progress_bar_chart_partial.html",
@@ -500,8 +501,6 @@ def get_simple_bar_chart_pcts_partial(request):
 
     Optionally accepts:
         request.GET.get("color"): str, hex color code to use for the bars
-        request.GET.get("count"): bool, whether to show the count on the bars, defaults to pct
-        request.GET.get("y_label"): str, custom y-axis label
     """
     try:
 
@@ -550,41 +549,8 @@ def get_simple_bar_chart_pcts_partial(request):
 
         # Adjust x-axis labels to avoid overlap
         xaxis_args = {}
-        CUT_OFF_CHAR_LEN = 10
 
-        N = len(x)
-        shortened_ticktext_labels = []
-        for label in x:
-            if len(label) > CUT_OFF_CHAR_LEN:
-                # Don't want to cut off in middle of word so split on spaces,
-                # and keep as many full words as possible until we reach the cut off
-                shortened_label = []
-                current_len = 0
-                label_split = label.split(" ")
-                for word in label_split:
-                    shortened_label.append(word)
-                    current_len += len(word)
-                    if current_len > CUT_OFF_CHAR_LEN:
-                        break
-
-                # More efficient to join the list of words than to keep concatenating strings
-                # If more than 3 labels, don't <br> as not enough space
-                if N > 3:
-                    # If shorter, need to add ellipses as we've chopped off text
-                    if len(shortened_label) < len(label_split):
-                        shortened_label.append("...")
-                    shortened_ticktext_labels.append(" ".join(shortened_label))
-                else:
-                    # Otherwise, just <br> right before last word
-                    # If shorter, need to add ellipses as we've chopped off text
-                    if len(shortened_label) < len(label_split):
-                        shortened_label.append("...")
-                    shortened_ticktext_labels.append(
-                        " ".join(shortened_label[:-1]) + "<br>" + shortened_label[-1]
-                    )
-            else:
-                shortened_ticktext_labels.append(label)
-        xaxis_args["ticktext"] = shortened_ticktext_labels
+        xaxis_args["ticktext"] = get_list_of_shortened_ticktext_labels(x, cut_off_char_len=10)
 
         # Update layout for labels and formatting
 
@@ -636,6 +602,70 @@ def get_simple_bar_chart_pcts_partial(request):
         return render(
             request,
             "dashboard/simple_bar_chart_pcts_partial.html",
+            {"error": "Something went wrong!"},
+        )
+
+
+@login_and_otp_required()
+def get_simple_bar_chart_absolutes_partial(request):
+    """Returns a HTML simple bar chart with absolute counts for the given data.
+
+    Expects (same as get_simple_bar_chart_pcts_partial):
+    {
+        'attr_1': {
+            pct: float,
+            count: int,
+            total: int,
+            label: str,
+        },
+        'attr_2': {
+            ...
+        }
+        ...
+    }
+
+    Optionally accepts:
+        request.GET.get("color"): str, hex color code to use for the bars
+    """
+    try:
+
+        if not request.htmx:
+            return HttpResponseBadRequest("This view is only accessible via HTMX")
+
+        # Fetch data from query parameters
+
+        # Bar color
+        if bar_color := request.GET.get("color", None):
+            # Easier just to send the hex code as a string in request url
+            # so add the '#' if it's not there
+            bar_color = f"#{bar_color}" if bar_color[0] != "#" else bar_color
+        else:
+            bar_color = colors.RCPCH_DARK_BLUE
+
+        # NOTE: don't need to handle empty data as the template handles this
+        data_raw = json.loads(request.GET.get("data"))
+
+        x, y = [], []
+        passed, eligible = [], []
+        for _, values in data_raw.items():
+            x.append(values["label"])
+            y.append(values["count"])
+            passed.append(values["count"])
+            eligible.append(values["total"])
+
+        # Create the bar chart
+        fig = go.Figure()
+
+        return render(
+            request,
+            "dashboard/progress_bar_chart_partial.html",
+            {"chart_html": "hi"},
+        )
+    except Exception as e:
+        logger.error(f"Error generating colored figures chart: {e}", exc_info=True)
+        return render(
+            request,
+            "dashboard/progress_bar_chart_partial.html",
             {"error": "Something went wrong!"},
         )
 
