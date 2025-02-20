@@ -500,6 +500,8 @@ def get_simple_bar_chart_pcts_partial(request):
 
     Optionally accepts:
         request.GET.get("color"): str, hex color code to use for the bars
+        request.GET.get("count"): bool, whether to show the count on the bars, defaults to pct
+        request.GET.get("y_label"): str, custom y-axis label
     """
     try:
 
@@ -519,11 +521,13 @@ def get_simple_bar_chart_pcts_partial(request):
         # NOTE: don't need to handle empty data as the template handles this
         data_raw = json.loads(request.GET.get("data"))
 
+        absolute_counts = request.GET.get("count", False)
+
         x, y = [], []
         passed, eligible = [], []
         for _, values in data_raw.items():
             x.append(values["label"])
-            y.append(values["pct"])
+            y.append(values["pct"] if not absolute_counts else values["count"])
             passed.append(values["count"])
             eligible.append(values["total"])
 
@@ -534,7 +538,7 @@ def get_simple_bar_chart_pcts_partial(request):
             go.Bar(
                 x=x,
                 y=y,
-                texttemplate="%{y:.0f}%",
+                texttemplate="%{y:.0f}%" if not absolute_counts else "%{y}",
                 textposition="outside",
                 marker=dict(color=bar_color),
                 # We're rendering custom shorter x axis labels so we want the full label here,
@@ -556,34 +560,49 @@ def get_simple_bar_chart_pcts_partial(request):
                 # and keep as many full words as possible until we reach the cut off
                 shortened_label = []
                 current_len = 0
-                for word in label.split(" "):
+                label_split = label.split(" ")
+                for word in label_split:
                     shortened_label.append(word)
                     current_len += len(word)
                     if current_len > CUT_OFF_CHAR_LEN:
                         break
+
                 # More efficient to join the list of words than to keep concatenating strings
+                # If more than 3 labels, don't <br> as not enough space
                 if N > 3:
-                    # If more than 3 labels, don't <br> as not enough space
-                    shortened_ticktext_labels.append(" ".join(shortened_label) + " ...")
+                    # If shorter, need to add ellipses as we've chopped off text
+                    if len(shortened_label) < len(label_split):
+                        shortened_label.append("...")
+                    shortened_ticktext_labels.append(" ".join(shortened_label))
                 else:
                     # Otherwise, just <br> right before last word
+                    # If shorter, need to add ellipses as we've chopped off text
+                    if len(shortened_label) < len(label_split):
+                        shortened_label.append("...")
                     shortened_ticktext_labels.append(
-                        " ".join(shortened_label[:-1]) + "<br>" + shortened_label[-1] + " ..."
+                        " ".join(shortened_label[:-1]) + "<br>" + shortened_label[-1]
                     )
             else:
                 shortened_ticktext_labels.append(label)
         xaxis_args["ticktext"] = shortened_ticktext_labels
 
         # Update layout for labels and formatting
-        fig.update_layout(
-            title="",
-            xaxis_title="",
-            yaxis_title="% CYP with T1DM",
-            yaxis=dict(
+
+        if absolute_counts:
+            yaxis_args = dict(range=[0, max(y) * 1.2])
+            yaxis_title = request.GET.get("y_label")
+        else:
+            yaxis_args = dict(
                 range=[0, 120],  # Breathing room for percentages above 100
                 tickvals=[0, 25, 50, 75, 100],
                 ticktext=["0", "25", "50", "75", "100"],
-            ),
+            )
+            yaxis_title = "% CYP with T1DM"
+        fig.update_layout(
+            title="",
+            xaxis_title="",
+            yaxis_title=yaxis_title,
+            yaxis=yaxis_args,
             template="simple_white",  # Clean grid style
             # Wrap text
             xaxis=dict(
