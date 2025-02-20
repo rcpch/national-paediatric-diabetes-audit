@@ -10,7 +10,9 @@ logger = logging.getLogger(__name__)
 def audit_periods_seeder():
     AuditPeriod = apps.get_model("npda", "AuditPeriod")
 
-    this_year = datetime.now().year
+    today = datetime.now()
+
+    this_year = today.year
     next_year = this_year + 1
 
     if AuditPeriod.objects.count() > 0:
@@ -24,6 +26,8 @@ def audit_periods_seeder():
             audit_start_date = date(year, 4, 1)
             audit_end_date = date(year + 1, 3, 31)
 
+            is_open = today.date() >= audit_start_date and today.date() <= audit_end_date
+
             AuditPeriod.objects.create(
-                is_open=year == this_year, start_date=audit_start_date, end_date=audit_end_date
+                is_open=is_open, start_date=audit_start_date, end_date=audit_end_date
             )
