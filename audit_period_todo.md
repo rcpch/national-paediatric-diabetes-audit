@@ -2,7 +2,6 @@ Don't change URLs at all to start - do it after (can be query params if easier c
 
 project.npda.context_processors
     session_data
-        - requested_audit_year -> audit period id
         - audit_years -> all audit periods
             (do we need a visibility flag too? for testing new and old audit years)
     can_alter_this_audit_year_submission
@@ -31,6 +30,8 @@ project.npda.general_functions.quarter_for_date
 
 
 project.npda.general_functions.session
+    selected_audit_year
+
     get_submission_actions
         - filters submission: audit_year -> audit_period_id
     create_session_object
