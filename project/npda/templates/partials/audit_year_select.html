@@ -8,17 +8,16 @@
   <span class="loading loading-spinner loading-lg text-rcpch_pink htmx-indicator"
         id="spinner"></span>
   <select id="audit_year_select_id"
-          name="audit_year_select_name"
+          name="audit_period_select_name"
           class="order-last md:order-3 select rcpch-select rounded-none text-sm h-auto flex-grow w-max font-mono bg-gray-500 text-nowrap text-white border-2 border-rcpch_light_blue_tint1"
-          hx-post="{% url 'audit-year' %}"
+          hx-post="{% url 'audit-period' %}"
           hx-target="#global_audit_year"
           hx-trigger="change"
-          hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-          hx-include="[name='audit_year_select_name']">
-    {% for audit_year in audit_years %}
-      <option value="{{ audit_year|stringformat:'s' }}"
-              {% if selected_audit_year|stringformat:"s" == audit_year|stringformat:"s" %} selected {% endif %}>
-        {{ audit_year }}
+          hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    {% for audit_period in audit_periods %}
+      <option value="{{ audit_period.id }}"
+              {% if audit_period.id == selected_audit_period_id %} selected {% endif %}>
+        {{ audit_period.start_date|date:"Y" }} - {{ audit_period.end_date|date:"Y" }}
       </option>
     {% endfor %}
   </select>

@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from project.npda.general_functions import get_current_audit_year
+from project.npda.models import AuditPeriod
 
 
 def session_data(request):
@@ -11,8 +12,8 @@ def session_data(request):
         "can_upload_csv": request.session.get("can_upload_csv", False),
         "pz_code": request.session.get("pz_code", None),
         "lead_organisation": request.session.get("lead_organisation", None),
-        "audit_years": request.session.get("audit_years", []),
-        "lead_organisation": request.session.get("lead_organisation", None),
+        "selected_audit_period_id": request.session.get("selected_audit_period_id", None),
+        "audit_periods": AuditPeriod.objects.all()
     }
 
 

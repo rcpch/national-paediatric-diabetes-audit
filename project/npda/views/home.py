@@ -168,23 +168,18 @@ def view_preference(request):
 
 
 @login_and_otp_required()
-def audit_year(request):
+def audit_period(request):
     """
-    View to change the audit year for the KPIs and submissions.
+    View to change the audit period for the KPIs and submissions.
     """
     if request.method == "POST":
-        audit_year = request.POST.get("audit_year_select_name", None)
+        audit_period_id = request.POST.get("audit_period_select_name", None)
         
-        refresh_session_filters(request, audit_year=audit_year)
+        refresh_session_filters(request, audit_period_id=audit_period_id)
 
         # Reload the page to apply the new view preference
         return HttpResponse(status=204, headers={"HX-Refresh": "true"})
 
-    context = {
-        "audit_years": request.session.get("audit_years"),
-        "selected_audit_year": request.session.get("selected_audit_year"),
-    }
-
-    response = render(
-        request, template_name="partials/audit_year_select.html", context=context
+    return render(
+        request, template_name="partials/audit_year_select.html"
     )

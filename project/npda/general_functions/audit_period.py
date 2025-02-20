@@ -2,16 +2,6 @@ from datetime import date
 from dateutil.relativedelta import relativedelta
 
 
-# TODO MRB: How will we add new audit years (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/481)
-SUPPORTED_AUDIT_YEARS = [
-    # submitted on the old platform, re-uploaded to test this one
-    2023,
-    2024,
-    # first year submitted on this platform
-    2025,
-    2026
-]
-
 def get_audit_period_for_date(input_date: date) -> tuple[date, date]:
     """Get the start and end date of the audit period for the given date.
        Only use this method for generating test data. Audit Periods in the app are a model

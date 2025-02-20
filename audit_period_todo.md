@@ -6,10 +6,10 @@ project.npda.context_processors
             (do we need a visibility flag too? for testing new and old audit years)
     can_alter_this_audit_year_submission
         - get_current_audit_year -> audit_period.open
+        - dupe functionality of CheckCurrentAuditYearMixin?
 
 
 project.npda.general_functions.audit_period
-    SUPPORTED_AUDIT_YEARS -> all audit periods
     get_audit_period_for_date
         - TODO: check usage. still useful for tests, migrate to test folder
     get_current_audit_year
@@ -37,7 +37,6 @@ project.npda.general_functions.session
     create_session_object
     refresh_session_filters
         - get_current_audit_year -> earliest open audit period
-        - SUPPORTED_AUDIT_YEARS -> all audit periods
 
 
 project.npda.general_functions.csv_upload

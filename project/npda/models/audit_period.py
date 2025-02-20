@@ -1,7 +1,23 @@
 from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
 
+
+class AuditPeriodManager(models.Manager):
+    def get_default_audit_period(self):
+        audit_period = self.get_queryset().filter(is_open=True).earliest("start_date")
+
+        if not audit_period:
+            audit_period = self.get_queryset().first()
+
+            if not audit_period:
+                raise ValidationError("No audit periods. Restart or run `python manage.py seed --mode=seed_audit_periods` manually")
+
+        return audit_period
+
+
 class AuditPeriod(models.Model):
+    objects = AuditPeriodManager()
+
     is_open = models.BooleanField()
     start_date = models.DateField()
     end_date = models.DateField()
