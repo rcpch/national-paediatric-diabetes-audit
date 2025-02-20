@@ -589,7 +589,8 @@ def get_simple_bar_chart_pcts_partial(request):
         # Update layout for labels and formatting
 
         if absolute_counts:
-            yaxis_args = dict(range=[0, max(y) * 1.2])
+            # If absolute_counts, assuming common total for all bars
+            yaxis_args = dict(range=[0, max(eligible) * 1.2])
             yaxis_title = request.GET.get("y_label")
         else:
             yaxis_args = dict(
