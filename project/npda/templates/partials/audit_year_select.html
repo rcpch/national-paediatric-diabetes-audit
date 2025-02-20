@@ -16,8 +16,8 @@
           hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     {% for audit_period in audit_periods %}
       <option value="{{ audit_period.id }}"
-              {% if audit_period.id == selected_audit_period_id %} selected {% endif %}>
-        {{ audit_period.start_date|date:"Y" }} - {{ audit_period.end_date|date:"Y" }}
+              {% if audit_period.id == selected_audit_period.id %} selected {% endif %}>
+        {{ audit_period.display_name }}
       </option>
     {% endfor %}
   </select>

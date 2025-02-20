@@ -12,6 +12,7 @@ from django.http import HttpResponseForbidden
 from project.npda.general_functions.audit_period import get_audit_period_for_date
 from project.npda.models.npda_user import NPDAUser
 from project.npda.models.patient import Patient
+from project.npda.models.audit_period import AuditPeriod
 
 
 logger = logging.getLogger(__name__)
@@ -172,31 +173,23 @@ class CheckCurrentAuditYearMixin(AccessMixin):
     """
 
     def dispatch(self, request, *args, **kwargs):
-        # Check if the user is trying to access data for the current audit period
-        audit_start_date, audit_end_data = get_audit_period_for_date(
-            datetime.now().date()
-        )
-        selected_audit_year = int(request.session.get("selected_audit_year"))
-        if selected_audit_year < audit_start_date.year:
-            logger.warning(
-                f"User {request.user} tried to create/edit or delete data in a previous audit year."
-            )
-            if request.user.is_superuser or request.user.is_rcpch_audit_team_member:
-                # Allow superusers and RCPCH audit team members to create/edit or update  data for previous audit years
-                return super().dispatch(request, *args, **kwargs)
+        audit_period_id = request.session.get("selected_audit_period_id")
+        audit_period = AuditPeriod.objects.get(pk=audit_period_id)
 
+        is_allowed_to_edit = audit_period.is_allowed_to_edit(request.user)
+
+        if not is_allowed_to_edit:
+            logger.warning(
+                f"User {request.user} is not allowed to create/edit or delete data in audit period {audit_period}."
+            )
             raise PermissionDenied()
 
-        if selected_audit_year > audit_end_data.year:
+        
+        if not audit_period.is_open:
             logger.warning(
-                f"User {request.user} tried to create/edit or delete data in a future audit year."
+                f"User {request.user} will create/edit or delete data in a closed audit period {audit_period}."
             )
-            if request.user.is_superuser or request.user.is_rcpch_audit_team_member:
-                # Allow superusers and RCPCH audit team members to create/edit or update  data for future audit years
-                return super().dispatch(request, *args, **kwargs)
-
-            raise PermissionDenied()
-
+        
         return super().dispatch(request, *args, **kwargs)
 
 

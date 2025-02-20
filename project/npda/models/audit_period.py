@@ -22,6 +22,12 @@ class AuditPeriod(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
 
+    def display_name(self):
+        return f"{self.start_date.year} - {self.end_date.year}"
+
+    def is_allowed_to_edit(self, user):
+        return (user and (user.is_superuser or user.is_rcpch_audit_team_member)) or self.is_open
+
     def clean(self):
         if self.end_date <= self.start_date:
             raise ValidationError("Audit start date must be before the audit end date.")
