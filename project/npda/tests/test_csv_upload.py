@@ -2,6 +2,8 @@ import dataclasses
 import datetime
 import tempfile
 from decimal import Decimal
+from collections import defaultdict
+import time
 from unittest.mock import AsyncMock, patch
 
 from asgiref.sync import async_to_sync
@@ -13,10 +15,11 @@ from dateutil.relativedelta import relativedelta
 from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.contrib.gis.geos import Point
-from httpx import HTTPError
 
-from project.npda.general_functions.csv import csv_upload, csv_parse
-from project.constants import ALL_DATES
+from celery.result import GroupResult, AsyncResult
+
+from project.npda.general_functions.csv import csv_parse
+from project.npda.general_functions.csv.csv_upload_celery import csv_upload
 from project.npda.models import NPDAUser, Patient, Visit
 from project.npda.tests.factories.patient_factory import (
     INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
@@ -136,16 +139,30 @@ def test_user(seed_groups_fixture, seed_users_fixture):
 
 # The database is not rolled back if we used the built in async support for pytest
 # https://github.com/pytest-dev/pytest-asyncio/issues/226
-@async_to_sync
-async def csv_upload_sync(user, dataframe, pdu_pz_code=ALDER_HEY_PZ_CODE):
-    return await csv_upload(
+# @async_to_sync
+# async def csv_upload_sync(user, dataframe, pz_code=ALDER_HEY_PZ_CODE):
+#     return await csv_upload(
+#         user,
+#         dataframe,
+#         csv_file_name=None,
+#         csv_file_bytes=None,
+#         pz_code=pz_code,
+#         audit_year=2024,
+#     )
+
+
+def csv_upload_sync(user, dataframe, pz_code=ALDER_HEY_PZ_CODE):
+    grouped_tasks_id = csv_upload(
         user,
         dataframe,
         csv_file_name=None,
         csv_file_bytes=None,
-        pdu_pz_code=pdu_pz_code,
+        pz_code=pz_code,
         audit_year=2024,
     )
+
+    # get the result of the group of tasks
+    return grouped_tasks_id
 
 
 def read_csv_from_str(contents):
@@ -157,9 +174,18 @@ def read_csv_from_str(contents):
 
 
 @pytest.mark.django_db
+@pytest.mark.celery
 def test_create_patient(test_user, single_row_valid_df):
 
-    csv_upload_sync(test_user, single_row_valid_df)
+    group_id = csv_upload_sync(test_user, single_row_valid_df)
+    # Wait for the tasks to complete
+    saved_tasks = GroupResult.restore(group_id)
+
+    while not saved_tasks.ready():
+        time.sleep(0.1)
+
+    print("finished waiting for tasks to complete")
+
     patient = Patient.objects.first()
 
     assert patient.nhs_number == nhs_number.standardise_format(

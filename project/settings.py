@@ -22,6 +22,7 @@ from django.core.management.utils import get_random_secret_key
 
 # celery imports
 from celery.schedules import crontab
+from celery import Celery
 
 # RCPCH imports
 from .logging_settings import (
@@ -371,6 +372,9 @@ CELERY_TIMEZONE = "Europe/London"
 # Redis settings for use with progress_recorder.py
 REDIS_HOST = os.getenv("REDIS_HOST")
 REDIS_PORT = os.getenv("REDIS_PORT")
+
+# CELERY_TASK_ALWAYS_EAGER = True
+# CELERY_TASK_EAGER_PROPAGATES = True
 
 # CELERY_BEAT_SCHEDULE = {
 #     "run-daily-at-six-am": {

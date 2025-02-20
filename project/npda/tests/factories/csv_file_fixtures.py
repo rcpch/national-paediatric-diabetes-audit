@@ -1,4 +1,5 @@
 import pytest
+from celery import Celery
 
 @pytest.fixture
 def dummy_sheets_folder(request):

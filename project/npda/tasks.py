@@ -8,6 +8,8 @@ import logging
 # Django Imports
 from django.apps import apps
 from django.conf import settings
+import django
+import os
 
 # Third party imports
 from celery import shared_task
@@ -184,6 +186,18 @@ def save_patient_and_visits_to_submission(
     Transfer = apps.get_model("npda", "Transfer")
 
     print("running save patient in celery...")
+    print(
+        f"settings module: {os.environ.get("DJANGO_SETTINGS_MODULE")}"
+    )  # Print the settings module
+    print(f"version: {django.VERSION}")  # Print Django Version
+    try:
+        from project.npda.models import (
+            PaediatricDiabetesUnit,
+        )  # Try importing the model
+
+        print("Model imported successfully!")
+    except Exception as e:
+        print(f"Error importing model: {e}")
 
     # Gather all error messages indexed by row number and the field that caused them (__all__ if we don't know which one)
     # dict[number, dict[str, list[str]]]
@@ -263,7 +277,10 @@ def gather_errors(results, submission_id):
     Submission = apps.get_model("npda", "Submission")
 
     # Get the submission instance
-    submission = Submission.objects.get(id=submission_id)
+    try:
+        submission = Submission.objects.get(id=submission_id)
+    except Submission.DoesNotExist:
+        raise Exception("Submission not found or does not exist")
 
     # Store the errors in the submission
     if errors_to_return:
