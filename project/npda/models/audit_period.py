@@ -13,6 +13,14 @@ class AuditPeriodManager(models.Manager):
                 raise ValidationError("No audit periods. Restart or run `python manage.py seed --mode=seed_audit_periods` manually")
 
         return audit_period
+    
+    def get_audit_period_for_request(self, request):
+        # TODO MRB: cache all this
+        # TODO MRB: make backwards compatible with old sessions (audit year based rather than period)
+        selected_audit_period_id = request.session.get("selected_audit_period_id", None)
+
+        if selected_audit_period_id:
+            return AuditPeriod.objects.get(pk=selected_audit_period_id)
 
 
 class AuditPeriod(models.Model):

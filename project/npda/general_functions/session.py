@@ -35,6 +35,7 @@ def get_submission_actions(pz_code, audit_period):
         "can_complete_questionnaire": can_complete_questionnaire,
     }
 
+# TODO MRB: make these backwards compatible with old sessions (audit year) 
 
 def create_session_object(user):
     """

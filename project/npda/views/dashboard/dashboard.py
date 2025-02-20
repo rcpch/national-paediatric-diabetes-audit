@@ -1,7 +1,7 @@
 # Python imports
 import json
 import logging
-from datetime import date
+from datetime import date, timedelta
 
 from dateutil.relativedelta import relativedelta
 from django.apps import apps
@@ -88,14 +88,16 @@ def dashboard(request):
         )
         return render(request, "dashboard.html")
 
-    selected_audit_year = int(request.session.get("selected_audit_year"))
-
-    if selected_audit_year <= 2024:
-        # The day after the audit year end date
-        calculation_date = date(selected_audit_year, 4, 1)
+    AuditPeriod = apps.get_model("npda", "AuditPeriod")
+    
+    today = date.today()
+    selected_audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
+    
+    if today > selected_audit_period.end_date:
+        # The day after the audit period end date
+        calculation_date = selected_audit_period.end_date + timedelta(days=1)
     else:
-        today = date.today()
-        calculation_date = date(selected_audit_year, today.month, today.day)
+        calculation_date = today
 
     calculate_kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=True)
 
@@ -327,7 +329,8 @@ def dashboard(request):
             "map": json.dumps(
                 dict(
                     pdu_pk=pdu.pk,
-                    selected_audit_year=selected_audit_year,
+                    # TODO MRB: what is this used for?
+                    selected_audit_year=selected_audit_period.start_date.year,
                 )
             ),
         },
