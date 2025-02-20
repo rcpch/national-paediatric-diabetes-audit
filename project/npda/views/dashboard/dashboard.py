@@ -142,6 +142,7 @@ def dashboard(request):
         calculate_kpis.kpi_name_registry,
         kpi_calculations_object["calculated_kpi_values"],
     )
+
     glucose_monitoring_value_counts_pct = get_glucose_monitoring_value_counts_pcts(
         calculate_kpis.kpi_name_registry,
         kpi_calculations_object["calculated_kpi_values"],

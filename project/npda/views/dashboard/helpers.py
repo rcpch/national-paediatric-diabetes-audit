@@ -503,17 +503,14 @@ def get_tx_regimen_value_counts_pcts(
     value_counts = defaultdict(lambda: {"count": 0, "total": 0, "pct": 0})
 
     for label, kpi_attr in zip(labels, kpi_attr_names):
-        total_eligible = kpi_calculations_object[kpi_attr]["total_eligible"]
-        total_ineligible = kpi_calculations_object[kpi_attr]["total_ineligible"]
+
+        count = kpi_calculations_object[kpi_attr]["total_passed"]
+        total = kpi_calculations_object[kpi_attr]["total_eligible"]
 
         # Need these keys for bar chart partial
-        value_counts[kpi_attr]["count"] = total_eligible
-        value_counts[kpi_attr]["total"] = total_eligible + total_ineligible
-        value_counts[kpi_attr]["pct"] = (
-            int(total_eligible / value_counts[kpi_attr]["total"] * 100)
-            if value_counts[kpi_attr]["total"] > 0
-            else 0
-        )
+        value_counts[kpi_attr]["count"] = count
+        value_counts[kpi_attr]["total"] = total
+        value_counts[kpi_attr]["pct"] = int(count / total * 100) if total > 0 else 0
         value_counts[kpi_attr]["label"] = label
 
     return dict(value_counts)
@@ -711,7 +708,8 @@ def get_pt_demographic_value_counts(
         5: "5th Quintile",
     }
     imd_counts = Counter(
-        imd_map.get(item["index_of_multiple_deprivation_quintile"], 'Unknown') for item in all_values
+        imd_map.get(item["index_of_multiple_deprivation_quintile"], "Unknown")
+        for item in all_values
     )
 
     return (
@@ -1050,6 +1048,6 @@ def convert_value_counts_dict_to_pct(value_counts_dict: dict):
 
     for key, value in value_counts_dict.items():
         pct = value / total * 100
-        value_counts_dict_pct[key] = int(pct) if pct >= 1 else round(pct,1)
+        value_counts_dict_pct[key] = int(pct) if pct >= 1 else round(pct, 1)
 
     return value_counts_dict_pct
