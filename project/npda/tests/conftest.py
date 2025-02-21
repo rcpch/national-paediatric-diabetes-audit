@@ -93,3 +93,13 @@ def django_setup():
 @pytest.fixture(autouse=True)
 def enable_db_access_for_all_tests(db):
     pass  # This ensures that all tests have access to the database
+
+
+@pytest.fixture(scope="session")
+def test_pz_codes_fixture():
+    return ["PZ196", "PZ074", "PZ248"]  # GOSH  # Alder Hey  # Jersey
+
+
+@pytest.fixture(scope="function")
+def test_pz_codes_function_fixture():
+    return ["PZ196", "PZ074", "PZ248"]  # GOSH  # Alder Hey  # Jersey

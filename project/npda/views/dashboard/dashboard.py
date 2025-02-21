@@ -1,27 +1,23 @@
 # Python imports
 import json
 import logging
-from dateutil.relativedelta import relativedelta
 from datetime import date
 
-
+from dateutil.relativedelta import relativedelta
 from django.apps import apps
 from django.contrib import messages
 from django.shortcuts import render
 
 from project import constants
-from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
-from project.npda.models.paediatric_diabetes_unit import (
-    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
-)
-from project.npda.models.patient import Patient
-from .helpers import *
-
+from project.npda.general_functions.quarter_for_date import \
+    retrieve_quarter_for_date
 from project.npda.kpi_class.kpis import CalculateKPIS
-
+from project.npda.models.paediatric_diabetes_unit import \
+    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass
+from project.npda.models.patient import Patient
+from project.npda.views.dashboard import helpers as hp
+from project.npda.views.dashboard import template_data
 from project.npda.views.decorators import login_and_otp_required
-from project.npda.views.dashboard.template_data import *
-
 
 # LOGGING
 logger = logging.getLogger(__name__)
@@ -110,7 +106,7 @@ def dashboard(request):
 
     # Total eligible patients stratified by diabetes type
     total_eligible_pts_diabetes_type_value_counts = (
-        get_total_eligible_pts_diabetes_type_value_counts(
+        hp.get_total_eligible_pts_diabetes_type_value_counts(
             eligible_pts_queryset=kpi_calculations_object["calculated_kpi_values"][
                 "kpi_1_total_eligible"
             ]["patient_querysets"]["eligible"]
@@ -118,7 +114,7 @@ def dashboard(request):
     )
 
     # Patient characteristics -> KPI [4, 5, 6, 8, 9, 10, 11, 12]
-    pt_characteristics_value_counts = get_pt_characteristics_value_counts_pct(
+    pt_characteristics_value_counts = hp.get_pt_characteristics_value_counts_pct(
         calculate_kpis.kpi_name_registry,
         kpi_calculations_object["calculated_kpi_values"],
     )
@@ -141,11 +137,12 @@ def dashboard(request):
                 )
 
     # Get TreatmentRegimen / Glucose Monitoring
-    tx_regimen_value_counts_pct = get_tx_regimen_value_counts_pcts(
+    tx_regimen_value_counts_pct = hp.get_tx_regimen_value_counts_pcts(
         calculate_kpis.kpi_name_registry,
         kpi_calculations_object["calculated_kpi_values"],
     )
-    glucose_monitoring_value_counts_pct = get_glucose_monitoring_value_counts_pcts(
+
+    glucose_monitoring_value_counts_pct = hp.get_glucose_monitoring_value_counts_pcts(
         calculate_kpis.kpi_name_registry,
         kpi_calculations_object["calculated_kpi_values"],
     )
@@ -158,7 +155,7 @@ def dashboard(request):
     kpi_41_attr_name = calculate_kpis.kpi_name_registry.get_attribute_name(41)
     kpi_42_attr_name = calculate_kpis.kpi_name_registry.get_attribute_name(42)
     kpi_43_attr_name = calculate_kpis.kpi_name_registry.get_attribute_name(43)
-    care_at_diagnosis_value_counts_pct = get_care_at_diagnosis_vcs_pct(
+    care_at_diagnosis_value_counts_pct = hp.get_care_at_diagnosis_vcs_pct(
         kpi_41_values=kpi_calculations_object["calculated_kpi_values"][kpi_41_attr_name],
         kpi_42_values=kpi_calculations_object["calculated_kpi_values"][kpi_42_attr_name],
         kpi_43_values=kpi_calculations_object["calculated_kpi_values"][kpi_43_attr_name],
@@ -169,7 +166,7 @@ def dashboard(request):
     kpi_32_1_attr_name = calculate_kpis.kpi_name_registry.get_attribute_name(321)
     kpi_32_2_attr_name = calculate_kpis.kpi_name_registry.get_attribute_name(322)
     kpi_32_3_attr_name = calculate_kpis.kpi_name_registry.get_attribute_name(323)
-    hc_completion_rate_value_counts_pct = get_hc_completion_rate_vcs(
+    hc_completion_rate_value_counts_pct = hp.get_hc_completion_rate_vcs(
         kpi_32_1_values=kpi_calculations_object["calculated_kpi_values"][kpi_32_1_attr_name],
         kpi_32_2_values=kpi_calculations_object["calculated_kpi_values"][kpi_32_2_attr_name],
         kpi_32_3_values=kpi_calculations_object["calculated_kpi_values"][kpi_32_3_attr_name],
@@ -180,7 +177,7 @@ def dashboard(request):
     additional_care_processes_kpi_attr_names = [
         calculate_kpis.kpi_name_registry.get_attribute_name(kpi) for kpi in range(33, 41)
     ]
-    additional_care_processes_value_counts_pct = get_additional_care_processes_value_counts(
+    additional_care_processes_value_counts_pct = hp.get_additional_care_processes_value_counts(
         additional_care_processes_kpi_attr_names=additional_care_processes_kpi_attr_names,
         kpi_calculations_object=kpi_calculations_object["calculated_kpi_values"],
     )
@@ -189,7 +186,9 @@ def dashboard(request):
     # HbA1c 44+45 (mean, median)
     # Annoyingly have to do this sync inside view as need the calculate_kpis instance
     hba1c_value_counts_stratified_by_diabetes_type = (
-        get_hba1c_value_counts_stratified_by_diabetes_type(calculate_kpis_instance=calculate_kpis)
+        hp.get_hba1c_value_counts_stratified_by_diabetes_type(
+            calculate_kpis_instance=calculate_kpis
+        )
     )
 
     # Admissions
@@ -197,22 +196,22 @@ def dashboard(request):
     admissions_kpi_attr_names = [
         calculate_kpis.kpi_name_registry.get_attribute_name(kpi) for kpi in range(46, 48)
     ]
-    admissions_value_counts_absolute = get_admissions_value_counts_absolute(
+    admissions_value_counts_absolute = hp.get_admissions_value_counts_absolute(
         admissions_kpi_attr_names=admissions_kpi_attr_names,
         kpi_calculations_object=kpi_calculations_object["calculated_kpi_values"],
     )
 
     # Sex, Ethnicity, IMD
     pt_sex_value_counts, pt_ethnicity_value_counts, pt_imd_value_counts = (
-        get_pt_demographic_value_counts(
+        hp.get_pt_demographic_value_counts(
             all_eligible_pts_queryset=kpi_calculations_object["calculated_kpi_values"][
                 "kpi_1_total_eligible"
             ]["patient_querysets"]["eligible"]
         )
     )
     # Convert to pcts
-    pt_sex_value_counts_pct = convert_value_counts_dict_to_pct(pt_sex_value_counts)
-    pt_imd_value_counts_pct = convert_value_counts_dict_to_pct(pt_imd_value_counts)
+    pt_sex_value_counts_pct = hp.convert_value_counts_dict_to_pct(pt_sex_value_counts)
+    pt_imd_value_counts_pct = hp.convert_value_counts_dict_to_pct(pt_imd_value_counts)
 
     # Gather other context vars
     current_date = date.today()
@@ -222,10 +221,12 @@ def dashboard(request):
     current_quarter = retrieve_quarter_for_date(current_date)
 
     # Gather defaults for htmx partials pt level table
-    default_pt_level_menu_text = TEXT["health_checks"]
+    default_pt_level_menu_text = template_data.TEXT["health_checks"]
     default_pt_level_menu_tab_selected = "health_checks"
-    highlight = {f"{key}": key == default_pt_level_menu_tab_selected for key in TEXT.keys()}
-    default_pt_level_table_headers, default_pt_level_table_data = get_pt_level_table_data(
+    highlight = {
+        f"{key}": key == default_pt_level_menu_tab_selected for key in template_data.TEXT.keys()
+    }
+    default_pt_level_table_headers, default_pt_level_table_data = hp.get_pt_level_table_data(
         category="health_checks",
         calculate_kpis_object=calculate_kpis,
         kpi_calculations_object=kpi_calculations_object,
@@ -278,16 +279,12 @@ def dashboard(request):
             "care_at_diagnosis_value_count": {
                 "no_eligible_patients": all(
                     [
-                        care_at_diagnosis_value_counts_pct["coeliac_disease_screening"][
-                            "total_eligible"
-                        ]
+                        care_at_diagnosis_value_counts_pct["coeliac_disease_screening"]["total"]
                         == 0,
-                        care_at_diagnosis_value_counts_pct["thyroid_disease_screening"][
-                            "total_eligible"
-                        ]
+                        care_at_diagnosis_value_counts_pct["thyroid_disease_screening"]["total"]
                         == 0,
                         care_at_diagnosis_value_counts_pct["carbohydrate_counting_education"][
-                            "total_eligible"
+                            "total"
                         ]
                         == 0,
                     ]
@@ -341,7 +338,7 @@ def dashboard(request):
         "default_table_data": {
             "headers": default_pt_level_table_headers,
             "row_data": default_pt_level_table_data,
-            "ineligible_hover_reason": TEXT["health_checks"]["ineligible_hover_reason"],
+            "ineligible_hover_reason": template_data.TEXT["health_checks"]["ineligible_hover_reason"],
         },
         # TODO: this should be an enum but we're currently not doing benchmarking so can update
         # at that point

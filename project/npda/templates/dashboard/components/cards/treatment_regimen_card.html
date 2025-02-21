@@ -12,7 +12,7 @@
 {% else %}
 
     <div
-    hx-get="{% url 'get_simple_bar_chart_pcts_partial' %}?color=E00087"
+    hx-get="{% url 'get_simple_bar_chart_absolutes_partial' %}?color=E00087"
     hx-vals='{ "data" : {{ charts.tx_regimen_value_counts_pct.data }} }'
     hx-trigger="load" hx-swap="innerHTML"
     _="on htmx:afterSwap remove #loading-spinner-treatment-regimen-card"></div>

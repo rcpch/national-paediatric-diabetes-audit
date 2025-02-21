@@ -88,7 +88,7 @@ async def validate_visit_async(
     bmi = None
 
     if height is not None and weight is not None:
-        bmi = round(calculate_bmi(height, weight), 1)
+        bmi = calculate_bmi(height, weight)
         ret.bmi = bmi
     else:
         logger.warning(

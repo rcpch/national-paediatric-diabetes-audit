@@ -1005,7 +1005,7 @@ def test_thyroid_treatment_status_form_passes_validation():
     form = VisitForm(
         data={
             "visit_date": "2025-01-01",  # Required for validation
-            "thyroid_treatment_status": 1,  # Normal
+            "thyroid_treatment_status": 2,  # Thyroxine for hypothyroidism
             "thyroid_function_date": "2025-01-01",
         },
         initial={"patient": patient},
@@ -1033,7 +1033,8 @@ def test_thyroid_treatment_status_unrecognized_form_fails_validation():
     # Trigger the cleaners
     assert (
         form.is_valid() == False
-    ), f"Invalid thyroid function status offered but test passed"
+    ), f"Invalid thyroid treatment status offered but test passed"
+    assert "thyroid_treatment_status" in form.errors
 
 
 @pytest.mark.django_db
@@ -1053,7 +1054,8 @@ def test_thyroid_treatment_status_none_form_fails_validation():
     # Trigger the cleaners
     assert (
         form.is_valid() == False
-    ), f"No thyroid function status offered but test passed"
+    ), f"No thyroid treatment status offered but test passed"
+    assert "thyroid_treatment_status" in form.errors
 
 
 @pytest.mark.django_db
@@ -1065,14 +1067,36 @@ def test_thyroid_function_date_none_form_fails_validation():
 
     form = VisitForm(
         data={
-            "thyroid_treatment_status": 1,  # Normal
+            "thyroid_treatment_status": 2,
             "thyroid_function_date": None,
         },
         initial={"patient": patient},
     )
     # Trigger the cleaners
     assert form.is_valid() == False, f"No thyroid function date offered but test passed"
+    assert "thyroid_function_date" in form.errors
 
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/625
+@pytest.mark.django_db
+def test_thyroid_function_date_none_form_passes_validation_if_treatment_not_prescribed():
+    """
+    Test that missing thyroid function date is invalid
+    """
+    patient = PatientFactory()
+
+    form = VisitForm(
+        data={
+            "visit_date": "2025-01-01",  # Required for validation
+            "thyroid_treatment_status": 1,
+            "thyroid_function_date": None,
+        },
+        initial={"patient": patient},
+    )
+    # Trigger the cleaners
+    assert form.is_valid(), f"Form should be valid but got {form.errors}"
+    assert "thyroid_treatment_status" not in form.errors
+    assert "thyroid_function_date" not in form.errors
 
 """
 Coeliac tests
@@ -1120,11 +1144,9 @@ def test_coeliac_treatment_status_unrecognized_form_fails_validation():
     ), f"Invalid coeliac function status offered but test passed"
 
 
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/628
 @pytest.mark.django_db
-def test_coeliac_treatment_status_none_form_fails_validation():
-    """
-    Test that missing coeliac function status is invalid
-    """
+def test_coeliac_treatment_status_none_form_passes_validation():
     patient = PatientFactory()
 
     form = VisitForm(
@@ -1135,16 +1157,12 @@ def test_coeliac_treatment_status_none_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert (
-        form.is_valid() == False
-    ), f"No coeliac function status offered but test passed"
+    assert "gluten_free_diet" not in form.errors
 
 
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/628
 @pytest.mark.django_db
 def test_coeliac_screen_date_none_form_fails_validation():
-    """
-    Test that missing coeliac function date is invalid
-    """
     patient = PatientFactory()
 
     form = VisitForm(
@@ -1155,7 +1173,7 @@ def test_coeliac_screen_date_none_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, f"No coeliac function date offered but test passed"
+    assert "gluten_free_diet" not in form.errors
 
 
 """
@@ -1238,6 +1256,24 @@ def test_psychological_screen_date_none_form_fails_validation():
     )
     # Trigger the cleaners
     assert form.is_valid() == False, f"No psychological date offered but test passed"
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/628
+@pytest.mark.django_db
+def test_psychological_screen_date_none_with_status_unknown_passes_validation():
+    patient = PatientFactory()
+
+    form = VisitForm(
+        data={
+            "visit_date": "2025-01-01",  # Required for validation
+            "psychological_additional_support_status": 99,  # Unknown
+            "psychological_screening_assessment_date": None,
+        },
+        initial={"patient": patient},
+    )
+    # Trigger the cleaners
+    assert "psychological_screening_assessment_date" not in form.errors
+    assert form.is_valid()
 
 
 """

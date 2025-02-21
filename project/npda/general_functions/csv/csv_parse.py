@@ -141,6 +141,7 @@ def csv_parse(csv_file, is_jersey=False):
                 "Patient Height (cm)",
                 "Patient Weight (kg)",
                 "Total Cholesterol Level (mmol/l)",
+                "Urinary Albumin Level (ACR)"
             ]
             and column in df.columns
         ):

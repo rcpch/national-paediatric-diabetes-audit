@@ -11,7 +11,7 @@ Glucose Monitoring
 {% else %}
 
     <div
-    hx-get="{% url 'get_simple_bar_chart_pcts_partial' %}?color=E00087"
+    hx-get="{% url 'get_simple_bar_chart_absolutes_partial' %}?color=E00087"
     hx-vals='{ "data" : {{ charts.glucose_monitoring_value_counts_pct.data }} }'
     hx-trigger="load" hx-swap="innerHTML"
     _="on htmx:afterSwap remove #loading-spinner-glucose-monitoring-card"></div>

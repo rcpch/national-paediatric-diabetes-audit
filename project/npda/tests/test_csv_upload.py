@@ -967,6 +967,22 @@ def test_dates_with_short_year(one_patient_two_visits):
     assert df.equals(one_patient_two_visits)
 
 
+@pytest.mark.django_db
+def test_urine_albumin_value_is_rounded_to_one_decimal(test_user, single_row_valid_df):
+    single_row_valid_df["Urinary Albumin Level (ACR)"] = 0.73
+    csv = single_row_valid_df.to_csv(index=False, date_format="%d/%m/%Y")
+
+    df = read_csv_from_str(csv).df
+    csv_upload_sync(test_user, df)
+
+    visit = Visit.objects.first()
+
+    assert visit.albumin_creatinine_ratio == round(
+        Decimal("0.73"), 1
+    )
+    assert "albumin_creatinine_ratio" not in (visit.errors or {})
+
+
 @pytest.mark.parametrize(
     "column",
     [
@@ -1998,7 +2014,7 @@ def test_thyroid_treatment_date_missing_fails_validation(
     single_row_valid_df.loc[
         0,
         "At time of, or following measurement of thyroid function, was the patient prescribed any thyroid treatment?",
-    ] = 1
+    ] = 2
     single_row_valid_df.loc[0, "Observation Date: Thyroid Function"] = None
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
@@ -2007,7 +2023,7 @@ def test_thyroid_treatment_date_missing_fails_validation(
 
     visit = Visit.objects.first()
 
-    assert visit.thyroid_treatment_status == 1
+    assert visit.thyroid_treatment_status == 2
     assert visit.thyroid_function_date is None
 
 
@@ -2062,11 +2078,9 @@ def test_coeliac_screening_impossible_value_fails_validation(
     assert visit.gluten_free_diet == 94
 
 
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/628
 @pytest.mark.django_db
 def test_coeliac_screening_missing_fails_validation(test_user, single_row_valid_df):
-    """
-    Test that a missing coeliac screening value is rejected
-    """
     single_row_valid_df.loc[0, "Observation Date: Coeliac Disease Screening"] = (
         "01/01/2022"
     )
@@ -2076,7 +2090,7 @@ def test_coeliac_screening_missing_fails_validation(test_user, single_row_valid_
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
 
-    assert "gluten_free_diet" in errors[0]
+    assert "gluten_free_diet" not in errors[0]
 
     visit = Visit.objects.first()
 
@@ -2084,13 +2098,11 @@ def test_coeliac_screening_missing_fails_validation(test_user, single_row_valid_
     assert visit.gluten_free_diet is None
 
 
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/628
 @pytest.mark.django_db
-def test_coeliac_screening_date_missing_fails_validation(
+def test_coeliac_screening_date_missing_passes_validation(
     test_user, single_row_valid_df
 ):
-    """
-    Test that a missing coeliac screening date is rejected
-    """
     single_row_valid_df.loc[0, "Observation Date: Coeliac Disease Screening"] = None
     single_row_valid_df.loc[
         0, "Has the patient been recommended a Gluten-free diet?"
@@ -2098,7 +2110,7 @@ def test_coeliac_screening_date_missing_fails_validation(
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
 
-    assert "coeliac_screen_date" in errors[0]
+    assert "coeliac_screen_date" not in errors[0]
 
     visit = Visit.objects.first()
 
@@ -2205,6 +2217,29 @@ def test_psychological_support_date_missing_fails_validation(
 
     assert visit.psychological_screening_assessment_date is None
     assert visit.psychological_additional_support_status == 1
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/628
+@pytest.mark.django_db
+def test_psychological_support_date_missing_fails_validation(
+    test_user, single_row_valid_df
+):
+    single_row_valid_df.loc[
+        0, "Observation Date - Psychological Screening Assessment"
+    ] = None
+    single_row_valid_df.loc[
+        0,
+        "Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?",
+    ] = 99 # Unknown
+
+    errors = csv_upload_sync(test_user, single_row_valid_df)
+
+    assert "psychological_screening_assessment_date" not in errors[0]
+
+    visit = Visit.objects.first()
+
+    assert visit.psychological_screening_assessment_date is None
+    assert visit.psychological_additional_support_status == 99
 
 
 """

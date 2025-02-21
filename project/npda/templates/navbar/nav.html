@@ -44,13 +44,7 @@
   </div>
   {% comment %} RIGHT {% endcomment %}
   <div class="navbar-end h-full">
-    {% comment %}
-    unsure whether to keep this if we're not allowing audit years to change?
-    for now, placed behind superuser access
-    {% endcomment %}
-    {% if user.is_superuser %}
-      {% include 'navbar/components/filters.html' %}
-    {% endif %}
+    {% include 'navbar/components/filters.html' %}
     {% include 'navbar/components/avatar_dropdown.html' %}
   </div>
 </div>
