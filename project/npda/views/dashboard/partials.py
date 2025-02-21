@@ -22,12 +22,14 @@ from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.models.paediatric_diabetes_unit import (
     PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
 )
-from project.npda.views.dashboard.dashboard import (
+from project.npda.views.dashboard.template_data import (
     KPI_CATEGORY_ATTR_MAP,
     TEXT,
+)
+from project.npda.views.dashboard.helpers import (
+    get_list_of_shortened_ticktext_labels,
     get_pt_level_table_data,
 )
-from project.npda.views.dashboard.helpers import get_list_of_shortened_ticktext_labels
 from project.npda.views.decorators import login_and_otp_required
 
 logger = logging.getLogger(__name__)
