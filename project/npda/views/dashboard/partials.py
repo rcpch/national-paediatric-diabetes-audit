@@ -635,11 +635,13 @@ def get_simple_bar_chart_absolutes_partial(request):
 
         x, y = [], []
         passed, eligible = [], []
+        pct = []
         for _, values in data_raw.items():
             x.append(values["label"])
             y.append(values["count"])
             passed.append(values["count"])
             eligible.append(values["total"])
+            pct.append(values["pct"])
 
         # Create the bar chart
         fig = go.Figure()
@@ -653,20 +655,47 @@ def get_simple_bar_chart_absolutes_partial(request):
                 marker=dict(color=bar_color),
                 # We're rendering custom shorter x axis labels so we want the full label here,
                 # therefore passing in as customdata
-                hovertemplate="<em>%{customdata[0]}</em><br>Eligible passed: %{customdata[1]} / %{customdata[2]}<extra></extra>",
-                customdata=list(zip(x, passed, eligible)),
+                hovertemplate="<em>%{customdata[0]}</em><br>%{customdata[3]}% (%{customdata[1]} / %{customdata[2]})<extra></extra>",
+                customdata=list(zip(x, passed, eligible, pct)),
             )
         )
 
-        # Adjust x-axis labels to avoid overlap
-        xaxis_args = {}
+        # Update layout for labels and formatting
+        yaxis_args = dict(
+            range=[0, max(y) * 1.2],  # Breathing room
+        )
+        fig.update_layout(
+            title="",
+            xaxis_title="",
+            yaxis_title="N CYP with T1DM",
+            yaxis=yaxis_args,
+            template="simple_white",  # Clean grid style
+            # Wrap text
+            xaxis=dict(
+                # Adjust x-axis labels to avoid overlap
+                ticktext=get_list_of_shortened_ticktext_labels(x, cut_off_char_len=10),
+                tickmode="array",
+                tickvals=list(range(len(x))),
+                # Rotate labels
+                tickangle=-30,
+                automargin=True,  # Adjust margins for label space
+            ),
+            margin=dict(l=0, r=0, t=0, b=0),
+        )
 
-        xaxis_args["ticktext"] = get_list_of_shortened_ticktext_labels(x, cut_off_char_len=10)
+        chart_html = fig.to_html(
+            full_html=False,
+            include_plotlyjs=False,
+            config={
+                "displayModeBar": False,
+            },
+            default_height=DEFAULT_CHART_HTML_HEIGHT,
+        )
 
         return render(
             request,
             "dashboard/progress_bar_chart_partial.html",
-            {"chart_html": "hi"},
+            {"chart_html": chart_html},
         )
     except Exception as e:
         logger.error(f"Error generating colored figures chart: {e}", exc_info=True)
