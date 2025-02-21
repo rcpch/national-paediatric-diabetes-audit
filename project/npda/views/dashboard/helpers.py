@@ -1052,39 +1052,31 @@ def convert_value_counts_dict_to_pct(value_counts_dict: dict):
 
     return value_counts_dict_pct
 
-def get_list_of_shortened_ticktext_labels(x: list[str], cut_off_char_len=10,)->list[str]:
+
+def get_list_of_shortened_ticktext_labels(
+    x: list[str],
+    cut_off_char_len=10,
+) -> list[str]:
     """Takes in a list of labels and intelligently shortens,
     adding `...` if appropriate."""
-    N = len(x)
     shortened_ticktext_labels = []
     for label in x:
         if len(label) > cut_off_char_len:
             # Don't want to cut off in middle of word so split on spaces,
             # and keep as many full words as possible until we reach the cut off
-            shortened_label = []
+            shortened_label_parts = []
             current_len = 0
             label_split = label.split(" ")
             for word in label_split:
-                shortened_label.append(word)
+                shortened_label_parts.append(word)
                 current_len += len(word)
                 if current_len > cut_off_char_len:
                     break
 
-            # More efficient to join the list of words than to keep concatenating strings
-            # If more than 3 labels, don't <br> as not enough space
-            if N > 3:
-                # If shorter, need to add ellipses as we've chopped off text
-                if len(shortened_label) < len(label_split):
-                    shortened_label.append("...")
-                shortened_ticktext_labels.append(" ".join(shortened_label))
-            else:
-                # Otherwise, just <br> right before last word
-                # If shorter, need to add ellipses as we've chopped off text
-                if len(shortened_label) < len(label_split):
-                    shortened_label.append("...")
-                shortened_ticktext_labels.append(
-                    " ".join(shortened_label[:-1]) + "<br>" + shortened_label[-1]
-                )
+            shortened_label = f"{' '.join(shortened_label_parts)}"
+            if len(shortened_label_parts) < len(label_split):
+                shortened_label += "..."
+            shortened_ticktext_labels.append(shortened_label)
         else:
             shortened_ticktext_labels.append(label)
     return shortened_ticktext_labels

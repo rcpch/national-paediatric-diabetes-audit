@@ -520,13 +520,11 @@ def get_simple_bar_chart_pcts_partial(request):
         # NOTE: don't need to handle empty data as the template handles this
         data_raw = json.loads(request.GET.get("data"))
 
-        absolute_counts = request.GET.get("count", False)
-
         x, y = [], []
         passed, eligible = [], []
         for _, values in data_raw.items():
             x.append(values["label"])
-            y.append(values["pct"] if not absolute_counts else values["count"])
+            y.append(values["pct"])
             passed.append(values["count"])
             eligible.append(values["total"])
 
@@ -537,7 +535,7 @@ def get_simple_bar_chart_pcts_partial(request):
             go.Bar(
                 x=x,
                 y=y,
-                texttemplate="%{y:.0f}%" if not absolute_counts else "%{y}",
+                texttemplate="%{y:.0f}%",
                 textposition="outside",
                 marker=dict(color=bar_color),
                 # We're rendering custom shorter x axis labels so we want the full label here,
@@ -547,24 +545,13 @@ def get_simple_bar_chart_pcts_partial(request):
             )
         )
 
-        # Adjust x-axis labels to avoid overlap
-        xaxis_args = {}
-
-        xaxis_args["ticktext"] = get_list_of_shortened_ticktext_labels(x, cut_off_char_len=10)
-
         # Update layout for labels and formatting
-
-        if absolute_counts:
-            # If absolute_counts, assuming common total for all bars
-            yaxis_args = dict(range=[0, max(eligible) * 1.2])
-            yaxis_title = request.GET.get("y_label")
-        else:
-            yaxis_args = dict(
-                range=[0, 120],  # Breathing room for percentages above 100
-                tickvals=[0, 25, 50, 75, 100],
-                ticktext=["0", "25", "50", "75", "100"],
-            )
-            yaxis_title = "% CYP with T1DM"
+        yaxis_args = dict(
+            range=[0, 120],  # Breathing room for percentages above 100
+            tickvals=[0, 25, 50, 75, 100],
+            ticktext=["0", "25", "50", "75", "100"],
+        )
+        yaxis_title = "% CYP with T1DM"
         fig.update_layout(
             title="",
             xaxis_title="",
@@ -573,7 +560,8 @@ def get_simple_bar_chart_pcts_partial(request):
             template="simple_white",  # Clean grid style
             # Wrap text
             xaxis=dict(
-                **xaxis_args,
+                # Adjust x-axis labels to avoid overlap
+                ticktext=get_list_of_shortened_ticktext_labels(x, cut_off_char_len=10),
                 tickmode="array",
                 tickvals=list(range(len(x))),
                 # Rotate labels if they are too long
@@ -598,7 +586,7 @@ def get_simple_bar_chart_pcts_partial(request):
             {"chart_html": chart_html},
         )
     except Exception as e:
-        logger.error("Error generating simple bar chart pcts", exc_info=True)
+        logger.error(f"Error generating simple bar chart pcts: {e}", exc_info=True)
         return render(
             request,
             "dashboard/simple_bar_chart_pcts_partial.html",
@@ -655,6 +643,25 @@ def get_simple_bar_chart_absolutes_partial(request):
 
         # Create the bar chart
         fig = go.Figure()
+
+        fig.add_trace(
+            go.Bar(
+                x=x,
+                y=y,
+                texttemplate="%{y}",
+                textposition="outside",
+                marker=dict(color=bar_color),
+                # We're rendering custom shorter x axis labels so we want the full label here,
+                # therefore passing in as customdata
+                hovertemplate="<em>%{customdata[0]}</em><br>Eligible passed: %{customdata[1]} / %{customdata[2]}<extra></extra>",
+                customdata=list(zip(x, passed, eligible)),
+            )
+        )
+
+        # Adjust x-axis labels to avoid overlap
+        xaxis_args = {}
+
+        xaxis_args["ticktext"] = get_list_of_shortened_ticktext_labels(x, cut_off_char_len=10)
 
         return render(
             request,
