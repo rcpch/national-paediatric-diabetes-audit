@@ -1,49 +1,29 @@
 import json
+import logging
+from datetime import date
 
 import plotly.graph_objects as go
 import plotly.io as pio
-
 # Django imports
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.http import HttpResponseBadRequest
+# Django imports
 from django.shortcuts import render
 
 import project.constants.colors as colors
-from project.npda.models.paediatric_diabetes_unit import (
-    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
-)
-
-import json
-from datetime import date
-
-# Django imports
-from django.shortcuts import render
-
-from project.npda.models.paediatric_diabetes_unit import (
-    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
-)
-
-
-from project.npda.kpi_class.kpis import CalculateKPIS
-
-
 from project.npda.general_functions.map import (
-    get_children_by_pdu_audit_year,
-    generate_distance_from_organisation_scatterplot_figure,
     generate_dataframe_and_aggregated_distance_data_from_cases,
-)
-from project.npda.general_functions.rcpch_nhs_organisations import (
-    fetch_organisation_by_ods_code,
-)
-
-
+    generate_distance_from_organisation_scatterplot_figure,
+    get_children_by_pdu_audit_year)
+from project.npda.general_functions.rcpch_nhs_organisations import \
+    fetch_organisation_by_ods_code
+from project.npda.kpi_class.kpis import CalculateKPIS
+from project.npda.models.paediatric_diabetes_unit import \
+    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass
+from project.npda.views.dashboard.helpers import (
+    get_list_of_shortened_ticktext_labels, get_pt_level_table_data)
+from project.npda.views.dashboard.template_data import (KPI_CATEGORY_ATTR_MAP,
+                                                        TEXT)
 from project.npda.views.decorators import login_and_otp_required
-from project.npda.views.dashboard.dashboard import (
-    KPI_CATEGORY_ATTR_MAP,
-    TEXT,
-    get_pt_level_table_data,
-)
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +108,12 @@ def get_waffle_chart_partial(request):
         # Fetch data from query parameters
         data = {}
         for key, value in request.GET.items():
-            data[key] = int(value)
+            pct = float(value)
+            # If pct is above 1%, take only integer part
+            # otherwise, keep the 0.1% precision
+            if pct >= 1:
+                pct = int(pct)
+            data[key] = pct
 
         # Handle empty data (eg. if no eligible pts)
         if not data:
@@ -137,34 +122,58 @@ def get_waffle_chart_partial(request):
         # Ensure percentages sum to 100
         total = sum(data.values())
         if total != 100:
+            remainder = int(100 - total)
             first_category = list(data.keys())[0]
-            data[first_category] += 100 - total
+            data[first_category] += remainder
 
-        # Sort data by pct ascending so we put the smallest category top left
-        data = sorted(data.items(), key=lambda item: item[1], reverse=False)
+        if "quintile" in list(data.keys())[0].lower():
+            # IMD quintiles - sort by IMD, given the keys are [1st Quintile, 2nd Quintile,
+            # ..., 5th Quintile]
+            data_sorted = sorted(
+                data.items(),
+                key=lambda item: (
+                    int(item[0][0]) if item[0].lower() not in ["unknown", "null"] else 6
+                ),
+                reverse=False,
+            )
+            # Map labels and colors
+            imd_label_color_map = {
+                "1st Quintile": {"color": colors.RCPCH_RED, "label": "Most deprived"},
+                "2nd Quintile": {"color": colors.RCPCH_ORANGE, "label": "Second most"},
+                "3rd Quintile": {"color": colors.RCPCH_LIGHT_BLUE, "label": "Third most"},
+                "4th Quintile": {"color": colors.RCPCH_STRONG_BLUE, "label": "Fourth most"},
+                "5th Quintile": {"color": colors.RCPCH_DARK_BLUE, "label": "Least deprived"},
+                "Unknown": {"color": colors.RCPCH_LIGHT_GREY, "label": "Unknown"},
+                "Null": {"color": colors.RCPCH_LIGHT_GREY, "label": "Unknown"},
+            }
+            data = [(imd_label_color_map[item[0]]["label"], item[1]) for item in data_sorted]
+            colours = [imd_label_color_map[item[0]]["color"] for item in data_sorted]
+        # Default behaviour - sort data by pct ascending so we put the smallest category top left
+        else:
+            data = sorted(data.items(), key=lambda item: item[1], reverse=False)
+            # TODO: ADD IN A BUNCH OF COLORS HERE. ?COULD SPECIFY COLORS IN GET REQUEST
+            colours = [
+                colors.RCPCH_DARK_BLUE,
+                colors.RCPCH_PINK,
+                colors.RCPCH_MID_GREY,
+                colors.RCPCH_CHARCOAL_DARK,
+                colors.RCPCH_RED,
+                colors.RCPCH_ORANGE,
+                colors.RCPCH_YELLOW,
+                colors.RCPCH_STRONG_GREEN,
+                colors.RCPCH_AQUA_GREEN,
+                colors.RCPCH_PURPLE,
+                colors.RCPCH_PURPLE_LIGHT_TINT2,
+                colors.RCPCH_PURPLE_DARK_TINT,
+                colors.RCPCH_RED_LIGHT_TINT3,
+                colors.RCPCH_ORANGE_LIGHT_TINT3,
+                colors.RCPCH_STRONG_GREEN_LIGHT_TINT3,
+                colors.RCPCH_AQUA_GREEN_LIGHT_TINT3,
+                colors.RCPCH_ORANGE_LIGHT_TINT3,
+                colors.RCPCH_DARK_GREY,
+            ][: len(data)]
 
         # Prepare waffle chart
-        # TODO: ADD IN A BUNCH OF COLORS HERE. ?COULD SPECIFY COLORS IN GET REQUEST
-        colours = [
-            colors.RCPCH_DARK_BLUE,
-            colors.RCPCH_PINK,
-            colors.RCPCH_MID_GREY,
-            colors.RCPCH_CHARCOAL_DARK,
-            colors.RCPCH_RED,
-            colors.RCPCH_ORANGE,
-            colors.RCPCH_YELLOW,
-            colors.RCPCH_STRONG_GREEN,
-            colors.RCPCH_AQUA_GREEN,
-            colors.RCPCH_PURPLE,
-            colors.RCPCH_PURPLE_LIGHT_TINT2,
-            colors.RCPCH_PURPLE_DARK_TINT,
-            colors.RCPCH_RED_LIGHT_TINT3,
-            colors.RCPCH_ORANGE_LIGHT_TINT3,
-            colors.RCPCH_STRONG_GREEN_LIGHT_TINT3,
-            colors.RCPCH_AQUA_GREEN_LIGHT_TINT3,
-            colors.RCPCH_ORANGE_LIGHT_TINT3,
-            colors.RCPCH_DARK_GREY,
-        ][: len(data)]
 
         # Create Plotly waffle chart
         GRID_SIZE = 10  # 10x10 grid
@@ -177,6 +186,7 @@ def get_waffle_chart_partial(request):
         # For each label, add the appropriate number of squares to the chart data
         for idx, (label, num_squares) in enumerate(data):
             # For each square, append its data as current r,c, and colour
+            num_squares = int(max(1, num_squares))  # Ensure at least 1 square
             for _ in range(num_squares):
                 square_data = {
                     "x": X,
@@ -373,6 +383,8 @@ def get_progress_bar_chart_partial(
         labels = [values[attr]["label"] for attr in values]
         percentages = [values[attr]["pct"] for attr in values]
         counts = [f"{values[attr]['count']} / {values[attr]['total']}" for attr in values]
+        passed = [values[attr]["count"] for attr in values]
+        eligible = [values[attr]["total"] for attr in values]
 
         # Add background bars (grey) representing 100% width
         fig.add_trace(
@@ -412,6 +424,8 @@ def get_progress_bar_chart_partial(
                 textposition=["inside" if pct > 5 else "outside" for pct in percentages],
                 insidetextanchor="end",
                 name="Progress",
+                hovertemplate="Eligible passed: %{customdata[0]} / %{customdata[1]}<extra></extra>",
+                customdata=list(zip(passed, eligible)),
             )
         )
 
@@ -458,7 +472,7 @@ def get_progress_bar_chart_partial(
             {"chart_html": chart_html},
         )
     except Exception as e:
-        logger.error("Error generating colored figures chart", exc_info=True)
+        logger.error(f"Error generating colored figures chart: {e}", exc_info=True)
         return render(
             request,
             "dashboard/progress_bar_chart_partial.html",
@@ -506,9 +520,12 @@ def get_simple_bar_chart_pcts_partial(request):
         data_raw = json.loads(request.GET.get("data"))
 
         x, y = [], []
+        passed, eligible = [], []
         for _, values in data_raw.items():
             x.append(values["label"])
             y.append(values["pct"])
+            passed.append(values["count"])
+            eligible.append(values["total"])
 
         # Create the bar chart
         fig = go.Figure()
@@ -517,44 +534,37 @@ def get_simple_bar_chart_pcts_partial(request):
             go.Bar(
                 x=x,
                 y=y,
-                text=y,
+                texttemplate="%{y:.0f}%",
                 textposition="outside",
                 marker=dict(color=bar_color),
+                # We're rendering custom shorter x axis labels so we want the full label here,
+                # therefore passing in as customdata
+                hovertemplate="<em>%{customdata[0]}</em><br>Eligible passed: %{customdata[1]} / %{customdata[2]}<extra></extra>",
+                customdata=list(zip(x, passed, eligible)),
             )
         )
 
-        # Adjust x-axis labels to avoid overlap
-        if len(x) > 3:
-            ticktext = []
-            CUT_OFF_CHAR_LEN = 10
-            for label in x:
-                if len(label) > CUT_OFF_CHAR_LEN:
-                    # Label too long, cut off at CUT_OFF_CHAR_LEN characters
-                    ticktext.append(label[:CUT_OFF_CHAR_LEN] + "...")
-                else:
-                    ticktext.append(label)
-        else:
-            # # Wrap text with <br>
-            ticktext = [label.replace(" ", "<br>") for label in x]
-
         # Update layout for labels and formatting
+        yaxis_args = dict(
+            range=[0, 120],  # Breathing room for percentages above 100
+            tickvals=[0, 25, 50, 75, 100],
+            ticktext=["0", "25", "50", "75", "100"],
+        )
+        yaxis_title = "% CYP with T1DM"
         fig.update_layout(
             title="",
             xaxis_title="",
-            yaxis_title="% CYP with T1DM",
-            yaxis=dict(
-                range=[0, 120],  # Breathing room for percentages above 100
-                tickvals=[0, 25, 50, 75, 100],
-                ticktext=["0", "25", "50", "75", "100"],
-            ),
+            yaxis_title=yaxis_title,
+            yaxis=yaxis_args,
             template="simple_white",  # Clean grid style
             # Wrap text
             xaxis=dict(
+                # Adjust x-axis labels to avoid overlap
+                ticktext=get_list_of_shortened_ticktext_labels(x, cut_off_char_len=10),
                 tickmode="array",
                 tickvals=list(range(len(x))),
-                ticktext=ticktext,
                 # Rotate labels if they are too long
-                tickangle=45 if len(x) > 3 else 0,
+                tickangle=-30,
                 automargin=True,  # Adjust margins for label space
             ),
             margin=dict(l=0, r=0, t=0, b=0),
@@ -575,10 +585,124 @@ def get_simple_bar_chart_pcts_partial(request):
             {"chart_html": chart_html},
         )
     except Exception as e:
-        logger.error(f"Error generating simple bar chart pcts {e=}", exc_info=True)
+
+        logger.error(f"Error generating simple bar chart pcts: {e}", exc_info=True)
+
         return render(
             request,
             "dashboard/simple_bar_chart_pcts_partial.html",
+            {"error": "Something went wrong!"},
+        )
+
+
+@login_and_otp_required()
+def get_simple_bar_chart_absolutes_partial(request):
+    """Returns a HTML simple bar chart with absolute counts for the given data.
+
+    Expects (same as get_simple_bar_chart_pcts_partial):
+    {
+        'attr_1': {
+            pct: float,
+            count: int,
+            total: int,
+            label: str,
+        },
+        'attr_2': {
+            ...
+        }
+        ...
+    }
+
+    Optionally accepts:
+        request.GET.get("color"): str, hex color code to use for the bars
+    """
+    try:
+
+        if not request.htmx:
+            return HttpResponseBadRequest("This view is only accessible via HTMX")
+
+        # Fetch data from query parameters
+
+        # Bar color
+        if bar_color := request.GET.get("color", None):
+            # Easier just to send the hex code as a string in request url
+            # so add the '#' if it's not there
+            bar_color = f"#{bar_color}" if bar_color[0] != "#" else bar_color
+        else:
+            bar_color = colors.RCPCH_DARK_BLUE
+
+        # NOTE: don't need to handle empty data as the template handles this
+        data_raw = json.loads(request.GET.get("data"))
+
+        x, y = [], []
+        passed, eligible = [], []
+        pct = []
+        for _, values in data_raw.items():
+            x.append(values["label"])
+            y.append(values["count"])
+            passed.append(values["count"])
+            eligible.append(values["total"])
+            pct.append(values["pct"])
+
+        # Create the bar chart
+        fig = go.Figure()
+
+        fig.add_trace(
+            go.Bar(
+                x=x,
+                y=y,
+                texttemplate="%{y}",
+                textposition="outside",
+                marker=dict(color=bar_color),
+                # We're rendering custom shorter x axis labels so we want the full label here,
+                # therefore passing in as customdata
+                hovertemplate="<em>%{customdata[0]}</em><br>%{customdata[3]}% (%{customdata[1]} / %{customdata[2]})<extra></extra>",
+                customdata=list(zip(x, passed, eligible, pct)),
+            )
+        )
+
+        # Update layout for labels and formatting
+        yaxis_args = dict(
+            range=[0, max(y) * 1.2],  # Breathing room
+        )
+        fig.update_layout(
+            title="",
+            xaxis_title="",
+            yaxis_title="N CYP with T1DM",
+            yaxis=yaxis_args,
+            template="simple_white",  # Clean grid style
+            # Wrap text
+            xaxis=dict(
+                # Adjust x-axis labels to avoid overlap
+                ticktext=get_list_of_shortened_ticktext_labels(x, cut_off_char_len=10),
+                tickmode="array",
+                tickvals=list(range(len(x))),
+                # Rotate labels
+                tickangle=-30,
+                automargin=True,  # Adjust margins for label space
+            ),
+            margin=dict(l=0, r=0, t=0, b=0),
+        )
+
+        chart_html = fig.to_html(
+            full_html=False,
+            include_plotlyjs=False,
+            config={
+                "displayModeBar": False,
+            },
+            default_height=DEFAULT_CHART_HTML_HEIGHT,
+        )
+
+        return render(
+            request,
+            "dashboard/progress_bar_chart_partial.html",
+            {"chart_html": chart_html},
+        )
+    except Exception as e:
+        logger.error(f"Error generating colored figures chart: {e}", exc_info=True)
+        return render(
+            request,
+            "dashboard/progress_bar_chart_partial.html",
             {"error": "Something went wrong!"},
         )
 

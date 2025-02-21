@@ -140,6 +140,11 @@ dashboard_urlpatterns = [
         name="get_simple_bar_chart_pcts_partial",
     ),
     path(
+        "get_simple_bar_chart_absolutes_partial",
+        view=get_simple_bar_chart_absolutes_partial,
+        name="get_simple_bar_chart_absolutes_partial",
+    ),
+    path(
         "get_hcl_scatter_plot",
         view=partials.get_hcl_scatter_plot,
         name="get_hcl_scatter_plot",

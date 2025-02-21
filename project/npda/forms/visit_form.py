@@ -949,12 +949,13 @@ class VisitForm(forms.ModelForm):
         psychological_additional_support_status = cleaned_data.get(
             "psychological_additional_support_status"
         )
-        if any(
-            [
-                psychological_screening_assessment_date,
-                psychological_additional_support_status,
-            ]
-        ):
+
+        has_psychological_data = any([
+            psychological_screening_assessment_date,
+            psychological_additional_support_status
+        ])
+
+        if has_psychological_data and psychological_additional_support_status != 99:
             measure_must_have_date_and_value(
                 psychological_screening_assessment_date,
                 "psychological_screening_assessment_date",
