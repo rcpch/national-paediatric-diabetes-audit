@@ -15,12 +15,14 @@ from dateutil.relativedelta import relativedelta
 from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.contrib.gis.geos import Point
+from django.test import override_settings
 
 from celery.result import GroupResult, AsyncResult
 
+
 from project.npda.general_functions.csv import csv_parse
 from project.npda.general_functions.csv.csv_upload_celery import csv_upload
-from project.npda.models import NPDAUser, Patient, Visit
+from project.npda.models import NPDAUser, Patient, Visit, PaediatricDiabetesUnit
 from project.npda.tests.factories.patient_factory import (
     INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
     TODAY,
@@ -137,6 +139,11 @@ def test_user(seed_groups_fixture, seed_users_fixture):
     ).first()
 
 
+@pytest.fixture
+def test_alderhey():
+    return PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
+
+
 # The database is not rolled back if we used the built in async support for pytest
 # https://github.com/pytest-dev/pytest-asyncio/issues/226
 # @async_to_sync
@@ -174,7 +181,6 @@ def read_csv_from_str(contents):
 
 
 @pytest.mark.django_db
-@pytest.mark.celery
 def test_create_patient(test_user, single_row_valid_df):
 
     group_id = csv_upload_sync(test_user, single_row_valid_df)
@@ -977,9 +983,7 @@ def test_urine_albumin_value_is_rounded_to_one_decimal(test_user, single_row_val
 
     visit = Visit.objects.first()
 
-    assert visit.albumin_creatinine_ratio == round(
-        Decimal("0.73"), 1
-    )
+    assert visit.albumin_creatinine_ratio == round(Decimal("0.73"), 1)
     assert "albumin_creatinine_ratio" not in (visit.errors or {})
 
 
@@ -2230,7 +2234,7 @@ def test_psychological_support_date_missing_fails_validation(
     single_row_valid_df.loc[
         0,
         "Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?",
-    ] = 99 # Unknown
+    ] = 99  # Unknown
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
 

@@ -25,7 +25,6 @@ from project.npda.tests.factories import (
     TransferFactory,
     VisitFactory,
     seed_groups_fixture,
-    seed_patients_fixture,
     seed_users_fixture,
     seed_groups_per_function_fixture,
     seed_users_per_function_fixture,
@@ -44,8 +43,6 @@ register(NPDAUserFactory)  # => npdauser_factory
 register(OrganisationEmployerFactory)  # => npdauser_factory
 register(PaediatricsDiabetesUnitFactory)  # => npdauser_factory
 register(TransferFactory)  # => npdauser_factory
-
-pytest_plugins = ("celery.contrib.pytest",)
 
 
 @pytest.fixture

@@ -79,6 +79,8 @@ def csv_upload(user, dataframe, csv_file_name, csv_file_bytes, pz_code, audit_ye
     # TODO #249 MRB: handle case where PDU does not exist
     pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
 
+    print(f"Processing CSV for PDU: {pdu}")
+
     # Set previous submission to inactive
     if Submission.objects.filter(
         paediatric_diabetes_unit__pz_code=pdu.pz_code,
@@ -165,11 +167,13 @@ def csv_upload(user, dataframe, csv_file_name, csv_file_bytes, pz_code, audit_ye
         patient_row = patient_group.iloc[0]
         patient_dict = row_to_dict(patient_row, Patient, csv_headings=CSV_HEADINGS)
 
+        print(f"Submission ID: {new_submission.id} before saving patient")
+
         patients_submission_task = save_patient_and_visits_to_submission.s(
             patient_row_json=patient_row.to_json(date_format="iso"),
             patient_dict=patient_dict,
             patient_group_dict=patient_group.to_dict(orient="records"),
-            pdu_id=pdu.id,
+            pz_code=pz_code,
             submission_id=new_submission.id,
         )
         tasks.append(patients_submission_task)

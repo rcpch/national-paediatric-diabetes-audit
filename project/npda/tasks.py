@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 
 # Project Imports
-from .models import Patient, Transfer, Visit
+from .models import Patient, Transfer, Visit, NPDAUser
 from .forms.patient_form import PatientForm
 from .forms.visit_form import VisitForm
 from .general_functions.csv.progress_recorder import ProgressTracker
@@ -37,7 +37,7 @@ def hello():
 
 @shared_task(bind=True)
 def save_patient_and_visits_to_submission(
-    self, patient_row_json, patient_dict, patient_group_dict, pdu_id, submission_id
+    self, patient_row_json, patient_dict, patient_group_dict, pz_code, submission_id
 ):
     """
     Accepts a list of patient visits, creates a patient instance (validating using a patient form), then iterates
@@ -186,18 +186,20 @@ def save_patient_and_visits_to_submission(
     Transfer = apps.get_model("npda", "Transfer")
 
     print("running save patient in celery...")
-    print(
-        f"settings module: {os.environ.get("DJANGO_SETTINGS_MODULE")}"
-    )  # Print the settings module
-    print(f"version: {django.VERSION}")  # Print Django Version
-    try:
-        from project.npda.models import (
-            PaediatricDiabetesUnit,
-        )  # Try importing the model
 
-        print("Model imported successfully!")
-    except Exception as e:
-        print(f"Error importing model: {e}")
+    print(
+        f"{PaediatricDiabetesUnit.objects.all().count()} paediatric diabetes units exist"
+    )
+    print(
+        f"PDU PZ Code: {pz_code}, Paediatric Diabetes Unit exists: {PaediatricDiabetesUnit.objects.filter(pz_code=pz_code).exists()}"
+    )
+    print(f"{NPDAUser.objects.all().count()} users exist")
+    print(f"{Patient.objects.all().count()} patients exist")
+    print(
+        f"{Submission.objects.all().count()} submissions exist. Submission id: {Submission.objects.first().id}"
+    )
+    s = Submission.objects.first()
+    print(f"{s.submission_active} , {s.audit_year} , {s.paediatric_diabetes_unit}")
 
     # Gather all error messages indexed by row number and the field that caused them (__all__ if we don't know which one)
     # dict[number, dict[str, list[str]]]
@@ -207,8 +209,8 @@ def save_patient_and_visits_to_submission(
     patient_row = pd.Series(convert_iso_dates(deserialized_patient_row))
     patient_group = pd.DataFrame(patient_group_dict)
     patient_form = PatientForm(data=patient_dict)
-    pdu = PaediatricDiabetesUnit.objects.get(pk=pdu_id)
-    submission = Submission.objects.get(pk=submission_id)
+    pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+    submission = Submission.objects.get(id=submission_id)
 
     if not patient_form.is_valid():
         retain_errors_and_invalid_field_data(patient_form)
