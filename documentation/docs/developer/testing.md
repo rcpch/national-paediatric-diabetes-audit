@@ -121,7 +121,7 @@ Ideally, in all tests, if a model instance is being created, it should be done t
 
 Example usage below.
 
-NOTE: we do not need to manually create `OrganisationEmployer`s and `PaediatricsDiabetesUnit` with associations. 
+NOTE: we do not need to manually create `OrganisationEmployer`s and `PaediatricsDiabetesUnit` with associations.
 
 Once an instance of `NPDAUserFactory` is created, the related models will also be created and assigned the relations. These are set using the `organisation_employers` kwarg, with the value being an array of `pz_codes` as strings.
 
@@ -190,4 +190,12 @@ def _create(cls, model_class, *args, **kwargs):
         return pdu
 
     return super()._create(model_class, *args, **kwargs)
+```
+
+## Performance testing
+
+Use this command to run performance tests (off by default):
+
+```bash
+s/test -m performance -s
 ```

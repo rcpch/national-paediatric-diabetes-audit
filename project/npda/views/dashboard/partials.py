@@ -585,7 +585,9 @@ def get_simple_bar_chart_pcts_partial(request):
             {"chart_html": chart_html},
         )
     except Exception as e:
+
         logger.error(f"Error generating simple bar chart pcts: {e}", exc_info=True)
+
         return render(
             request,
             "dashboard/simple_bar_chart_pcts_partial.html",
