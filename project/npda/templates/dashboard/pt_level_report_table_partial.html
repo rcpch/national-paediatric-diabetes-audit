@@ -45,15 +45,15 @@
         <div class="flex gap-4">
           <div class="flex gap-2 items-center">
             <i class="fa-solid fa-circle-check text-success"></i>
-            <p>Pass</p>
+            <p>{{ text.key|get_item:"pass" }}</p>
           </div>
           <div class="flex gap-2 items-center">
             <i class="fa-solid fa-circle-exclamation text-error"></i>
-            <p>Fail</p>
+            <p>{{ text.key|get_item:"fail" }}</p>
           </div>
           <div class="flex gap-2 items-center">
             <i class="fa-solid fa-ban text-muted"></i>
-            <p>Ineligible</p>
+            <p>{{ text.key|get_item:"ineligible" }}</p>
           </div>
         </div>
       </div>
