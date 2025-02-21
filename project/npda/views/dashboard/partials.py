@@ -4,10 +4,8 @@ from datetime import date
 
 import plotly.graph_objects as go
 import plotly.io as pio
-
 # Django imports
 from django.http import HttpResponseBadRequest
-
 # Django imports
 from django.shortcuts import render
 
@@ -15,21 +13,16 @@ import project.constants.colors as colors
 from project.npda.general_functions.map import (
     generate_dataframe_and_aggregated_distance_data_from_cases,
     generate_distance_from_organisation_scatterplot_figure,
-    get_children_by_pdu_audit_year,
-)
-from project.npda.general_functions.rcpch_nhs_organisations import fetch_organisation_by_ods_code
+    get_children_by_pdu_audit_year)
+from project.npda.general_functions.rcpch_nhs_organisations import \
+    fetch_organisation_by_ods_code
 from project.npda.kpi_class.kpis import CalculateKPIS
-from project.npda.models.paediatric_diabetes_unit import (
-    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
-)
-from project.npda.views.dashboard.template_data import (
-    KPI_CATEGORY_ATTR_MAP,
-    TEXT,
-)
+from project.npda.models.paediatric_diabetes_unit import \
+    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass
 from project.npda.views.dashboard.helpers import (
-    get_list_of_shortened_ticktext_labels,
-    get_pt_level_table_data,
-)
+    get_list_of_shortened_ticktext_labels, get_pt_level_table_data)
+from project.npda.views.dashboard.template_data import (KPI_CATEGORY_ATTR_MAP,
+                                                        TEXT)
 from project.npda.views.decorators import login_and_otp_required
 
 logger = logging.getLogger(__name__)
