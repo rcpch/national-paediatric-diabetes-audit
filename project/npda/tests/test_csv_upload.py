@@ -196,7 +196,13 @@ def read_csv_from_str(contents):
 
 @pytest.fixture
 def mock_submission():
-    pdu = PaediatricsDiabetesUnitFactory(pz_code=ALDER_HEY_PZ_CODE)
+    # Check if a PaediatricDiabetesUnit with ALDER_HEY_PZ_CODE exists
+    pdu = PaediatricDiabetesUnit.objects.filter(pz_code=ALDER_HEY_PZ_CODE).first()
+
+    if not pdu:
+        # If it does not exist, create a new one
+        pdu = PaediatricDiabetesUnit.objects.create(pz_code=ALDER_HEY_PZ_CODE)
+
     mock_submission = Mock(spec=Submission)
     mock_submission.id = 123
     mock_submission.audit_year = 2024
@@ -235,17 +241,11 @@ Tests start here
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_create_patient(
     test_user,
+    mock_submission,
     single_row_valid_df,
 ):
-    mock_submission = Submission.objects.create(
-        audit_year=2024,
-        submission_date=datetime.datetime.now(),
-        submission_active=True,
-        paediatric_diabetes_unit=PaediatricsDiabetesUnitFactory(
-            pz_code=ALDER_HEY_PZ_CODE
-        ),
-        submission_by=test_user,
-    )
+    mock_submission.submission_by = test_user
+    mock_submission.save()
     # Run the function - Note this function is synchronous because we're using CELERY_TASK_ALWAYS_EAGER. This means we don't need to wait for the task to complete.
     process_dataframe_validate_save_patients_and_visits(
         submission=mock_submission,
@@ -1352,6 +1352,7 @@ def test_height_is_rounded_to_one_decimal(single_row_valid_df, mock_submission):
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 @patch(
     "project.npda.general_functions.csv.csv_upload.validate_patient_async",
     mock_patient_external_validation_result(
@@ -1359,7 +1360,7 @@ def test_height_is_rounded_to_one_decimal(single_row_valid_df, mock_submission):
     ),
 )
 def test_cleaned_fields_are_stored_when_other_fields_are_invalid(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     # PATIENT
     # - Valid, cleaning should remove the spaces
@@ -1375,7 +1376,9 @@ def test_cleaned_fields_are_stored_when_other_fields_are_invalid(
     # - Invalid - cannot be less than 40
     single_row_valid_df["Patient Height (cm)"] = 38
 
-    csv_upload_sync(test_user, single_row_valid_df)
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     patient = Patient.objects.first()
     visit = Visit.objects.first()
@@ -1388,8 +1391,11 @@ def test_cleaned_fields_are_stored_when_other_fields_are_invalid(
 
 
 @pytest.mark.django_db
-def test_async_visit_fields_are_saved(test_user, single_row_valid_df):
-    csv_upload_sync(test_user, single_row_valid_df)
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_async_visit_fields_are_saved(single_row_valid_df, mock_submission):
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
     visit = Visit.objects.first()
 
     assert (
@@ -1433,14 +1439,19 @@ def test_hba1c_value_ifcc_less_than_20(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_hba1c_value_ifcc_more_than_195(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_hba1c_value_ifcc_more_than_195(single_row_valid_df, mock_submission):
     single_row_valid_df.loc[0, "Hba1c Value"] = 196
     single_row_valid_df.loc[0, "HbA1c result format"] = 1  # IFCC (mmol/mol)
     single_row_valid_df.loc[0, "Observation Date: Hba1c Value"] = "01/01/2022"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
-    assert "hba1c" in errors[0]
+    visit = Visit.objects.first()
+
+    assert "hba1c" in visit.errors
 
     visit = Visit.objects.first()
 
@@ -1450,16 +1461,19 @@ def test_hba1c_value_ifcc_more_than_195(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_hba1c_value_dcct_more_than_20(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_hba1c_value_dcct_more_than_20(single_row_valid_df, mock_submission):
     single_row_valid_df.loc[0, "Hba1c Value"] = 21
     single_row_valid_df.loc[0, "HbA1c result format"] = 2  # DCCT (%)
     single_row_valid_df.loc[0, "Observation Date: Hba1c Value"] = "01/01/2022"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "hba1c" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
+
+    assert "hba1c" in visit.errors
 
     # This would be rejected in the questionnaire but saved if it was a csv upload
     assert visit.hba1c == 21
@@ -1467,34 +1481,37 @@ def test_hba1c_value_dcct_more_than_20(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_hba1c_value_dcct_less_than_3(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_hba1c_value_ifcc_less_than_3(single_row_valid_df, mock_submission):
     single_row_valid_df.loc[0, "Hba1c Value"] = 2
     single_row_valid_df.loc[0, "HbA1c result format"] = 2  # DCCT (%)
     single_row_valid_df.loc[0, "Observation Date: Hba1c Value"] = "01/01/2022"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "hba1c" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
 
+    assert "hba1c" in visit.errors
     # This would be rejected in the questionnaire but saved if it was a csv upload
     assert visit.hba1c == 2
     assert "hba1c" in visit.errors
 
 
 @pytest.mark.django_db
-def test_hba1c_missing(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_hba1c_missing(single_row_valid_df, mock_submission):
     single_row_valid_df.loc[0, "Hba1c Value"] = None
     single_row_valid_df.loc[0, "HbA1c result format"] = 2  # DCCT (%)
     single_row_valid_df.loc[0, "Observation Date: Hba1c Value"] = "01/01/2022"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "hba1c" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert "hba1c" in visit.errors
     # This would be rejected in the questionnaire but saved if it was a csv upload
     assert visit.hba1c == None
     assert "hba1c" in visit.errors
@@ -1506,7 +1523,8 @@ Diabetes treatment tests
 
 
 @pytest.mark.django_db
-def test_treatment_closed_loop_passes_validation(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_treatment_closed_loop_passes_validation(single_row_valid_df, mock_submission):
     """
     Test that both pump and closed loop system are accepted
     """
@@ -1516,17 +1534,20 @@ def test_treatment_closed_loop_passes_validation(test_user, single_row_valid_df)
         "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
     ] = 1
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert len(errors) == 0
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
+    visit.errors == None
     assert visit.treatment == 3
     assert visit.closed_loop_system == 1
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_treatment_missing_closed_loop_form_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that both closed loop system selected but treatment is None fail validation
@@ -1537,17 +1558,20 @@ def test_treatment_missing_closed_loop_form_fails_validation(
         "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
     ] = 1
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert "treatment" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
+    assert "treatment" in visit.errors
     assert visit.treatment is None
     assert visit.closed_loop_system == 1
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_treatment_mdi_but_closed_loop_selected_form_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that MDI selected but closed loop system is also selected
@@ -1560,10 +1584,11 @@ def test_treatment_mdi_but_closed_loop_selected_form_fails_validation(
         "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
     ] = 2  # Closed loop system (licensed)
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert "closed_loop_system" in errors[0]
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
     visit = Visit.objects.first()
+    assert "closed_loop_system" in visit.errors
     assert visit.treatment == 2
     assert visit.closed_loop_system == 2
     assert "closed_loop_system" in visit.errors
@@ -1575,6 +1600,7 @@ Blood pressure tests
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_blood_pressure_values_passes_validation(test_user, single_row_valid_df):
     """
     Test that both systolic and diastolic blood pressure values are accepted
@@ -1584,17 +1610,22 @@ def test_blood_pressure_values_passes_validation(test_user, single_row_valid_df)
         80  # Note that pressure has a lower case 'p'
     )
     single_row_valid_df.loc[0, "Observation Date (Blood Pressure)"] = "01/01/2022"
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert len(errors) == 0
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=Submission(user=test_user),
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
     visit = Visit.objects.first()
+    assert visit.errors == None
     assert visit.systolic_blood_pressure == 120
     assert visit.diastolic_blood_pressure == 80
 
 
 @pytest.mark.django_db
-def test_blood_pressure_missing_values_fails_validation(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_blood_pressure_missing_values_fails_validation(
+    single_row_valid_df, mock_submission
+):
     """
     Test that one missing systolic blood pressure value fails validation
     """
@@ -1604,19 +1635,24 @@ def test_blood_pressure_missing_values_fails_validation(test_user, single_row_va
     )
     single_row_valid_df.loc[0, "Observation Date (Blood Pressure)"] = "01/01/2022"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
+    visit = Visit.objects.first()
     assert (
-        "systolic_blood_pressure" in errors[0]
+        "systolic_blood_pressure" in visit.errors
     ), "Systolic Blood Pressure is None but passes validation."
 
-    visit = Visit.objects.first()
     assert visit.systolic_blood_pressure == None
     assert visit.diastolic_blood_pressure == 80
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_blood_pressure_missing_date_form_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that one missing blood pressure observation date fails validation
@@ -1628,12 +1664,15 @@ def test_blood_pressure_missing_date_form_fails_validation(
     )
     single_row_valid_df.loc[0, "Observation Date (Blood Pressure)"] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert (
-        "blood_pressure_observation_date" in errors[0]
-    ), "Blood Pressure observation date is None but passes validation."
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
     visit = Visit.objects.first()
+    assert (
+        "blood_pressure_observation_date" in visit.errors
+    ), "Blood Pressure observation date is None but passes validation."
     assert (
         visit.systolic_blood_pressure == 120
     ), f"Systolic blood pressure should be 120 but was {visit.systolic_blood_pressure}"
@@ -1646,8 +1685,9 @@ def test_blood_pressure_missing_date_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_systolic_blood_pressure_over_240_form_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that systolic blood pressure value > 240 fails validation
@@ -1659,12 +1699,15 @@ def test_systolic_blood_pressure_over_240_form_fails_validation(
     )
     single_row_valid_df.loc[0, "Observation Date (Blood Pressure)"] = "01/01/2022"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert (
-        "systolic_blood_pressure" in errors[0]
-    ), "Systolic Blood Pressure is >240 (so really dangerously high!) but passes validation."
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
     visit = Visit.objects.first()
+    assert (
+        "systolic_blood_pressure" in visit.errors
+    ), "Systolic Blood Pressure is >240 (so really dangerously high!) but passes validation."
     assert (
         visit.systolic_blood_pressure == 250
     ), f"Systolic blood pressure should be 250 (and really the child should be in hospital) but was {visit.systolic_blood_pressure}"
@@ -1677,8 +1720,9 @@ def test_systolic_blood_pressure_over_240_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_systolic_blood_pressure_below_80_form_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that systolic blood pressure value < 80 fails validation
@@ -1690,12 +1734,15 @@ def test_systolic_blood_pressure_below_80_form_fails_validation(
     )
     single_row_valid_df.loc[0, "Observation Date (Blood Pressure)"] = "01/01/2022"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert (
-        "systolic_blood_pressure" in errors[0]
-    ), "Systolic Blood Pressure is < 80 (so really dangerously low!) but passes validation."
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
     visit = Visit.objects.first()
+    assert (
+        "systolic_blood_pressure" in visit.errors
+    ), "Systolic Blood Pressure is < 80 (so really dangerously low!) but passes validation."
     assert (
         visit.systolic_blood_pressure == 60
     ), f"Systolic blood pressure should be 60 (and really the child should be in hospital) but was {visit.systolic_blood_pressure}"
@@ -1708,8 +1755,9 @@ def test_systolic_blood_pressure_below_80_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_diastolic_blood_pressure_over_120_form_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that diastolic blood pressure value > 120 fails validation
@@ -1720,13 +1768,15 @@ def test_diastolic_blood_pressure_over_120_form_fails_validation(
         125  # Note that pressure has a lower case 'p'
     )
     single_row_valid_df.loc[0, "Observation Date (Blood Pressure)"] = "01/01/2022"
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert (
-        "diastolic_blood_pressure" in errors[0]
-    ), "Diastolic Blood Pressure is >120 (so really dangerously high!) but passes validation."
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
     visit = Visit.objects.first()
+    assert (
+        "diastolic_blood_pressure" in visit.errors
+    ), "Diastolic Blood Pressure is >120 (so really dangerously high!) but passes validation."
     assert (
         visit.systolic_blood_pressure == 120
     ), f"Systolic blood pressure should be 120 but was {visit.systolic_blood_pressure}"
@@ -1739,8 +1789,9 @@ def test_diastolic_blood_pressure_over_120_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_diastolic_blood_pressure_below_20_form_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that diastolic blood pressure value < 20 fails validation
@@ -1751,13 +1802,15 @@ def test_diastolic_blood_pressure_below_20_form_fails_validation(
         15  # Note that pressure has a lower case 'p'
     )
     single_row_valid_df.loc[0, "Observation Date (Blood Pressure)"] = "01/01/2022"
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert (
-        "diastolic_blood_pressure" in errors[0]
-    ), "Diastolic Blood Pressure is < 20 (so really dangerously low!) but passes validation."
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
     visit = Visit.objects.first()
+    assert (
+        "diastolic_blood_pressure" in visit.errors
+    ), "Diastolic Blood Pressure is < 20 (so really dangerously low!) but passes validation."
     assert (
         visit.systolic_blood_pressure == 120
     ), f"Systolic blood pressure should be 120 but was {visit.systolic_blood_pressure}"
@@ -1775,18 +1828,20 @@ Retinal screening tests
 
 
 @pytest.mark.django_db
-def test_decs_value_form_passes_validation(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_decs_value_form_passes_validation(single_row_valid_df, mock_submission):
     """
     Test that DECS value is accepted
     """
     single_row_valid_df.loc[0, "Retinal Screening date"] = "01/01/2022"
     single_row_valid_df.loc[0, "Retinal Screening Result"] = 1  # Normal
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
+    visit = Visit.objects.first()
     assert (
-        len(errors) == 0
-    ), f"Retinal screening date and result should pass validation, but failed with errors: {errors}"
+        visit.errors == None
+    ), f"Retinal screening date and result should pass validation, but failed with errors: {visit.errors}"
 
     visit = Visit.objects.first()
     assert visit.retinal_screening_observation_date == datetime.date(
@@ -1798,20 +1853,22 @@ def test_decs_value_form_passes_validation(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_decs_value_unrecognized_form_fails_validation(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_decs_value_unrecognized_form_fails_validation(
+    single_row_valid_df, mock_submission
+):
     """
     Test that an impossible DECS value is invalid
     """
     single_row_valid_df.loc[0, "Retinal Screening date"] = "01/01/2022"
     single_row_valid_df.loc[0, "Retinal Screening Result"] = 94  # Impossible value
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert (
-        "retinal_screening_result" in errors[0]
-    ), f"Retinal screening result should fail validation, but passed."
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
     visit = Visit.objects.first()
+    assert (
+        "retinal_screening_result" in visit.errors
+    ), f"Retinal screening result should fail validation, but passed."
     assert visit.retinal_screening_observation_date == datetime.date(
         2022, 1, 1
     ), f"Saved Retinal screening date should be 1/1/2022, but was {visit.retinal_screening_observation_date}"
@@ -1821,20 +1878,21 @@ def test_decs_value_unrecognized_form_fails_validation(test_user, single_row_val
 
 
 @pytest.mark.django_db
-def test_decs_value_none_form_fails_validation(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_decs_value_none_form_fails_validation(single_row_valid_df, mock_submission):
     """
     Test that a missing DECS value is invalid
     """
     single_row_valid_df.loc[0, "Retinal Screening date"] = "01/01/2022"
     single_row_valid_df.loc[0, "Retinal Screening Result"] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert (
-        "retinal_screening_result" in errors[0]
-    ), f"Retinal screening result should fail validation due to missing result, but passed."
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
     visit = Visit.objects.first()
+    assert (
+        "retinal_screening_result" in visit.errors
+    ), f"Retinal screening result should fail validation due to missing result, but passed."
     assert visit.retinal_screening_observation_date == datetime.date(
         2022, 1, 1
     ), f"Saved Retinal screening date should be 1/1/2022, but was {visit.retinal_screening_observation_date}"
@@ -1844,20 +1902,21 @@ def test_decs_value_none_form_fails_validation(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_decs_date_none_form_fails_validation(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_decs_date_none_form_fails_validation(single_row_valid_df, mock_submission):
     """
     Test that a missing DECS date is invalid
     """
     single_row_valid_df.loc[0, "Retinal Screening date"] = None
     single_row_valid_df.loc[0, "Retinal Screening Result"] = 1  # Normal
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert (
-        "retinal_screening_observation_date" in errors[0]
-    ), f"Retinal screening date should fail validation due to missing date, but passed."
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
     visit = Visit.objects.first()
+    assert (
+        "retinal_screening_observation_date" in visit.errors
+    ), f"Retinal screening date should fail validation due to missing date, but passed."
     assert (
         visit.retinal_screening_observation_date == None
     ), f"Saved Retinal screening date should be None, but was {visit.retinal_screening_observation_date}"
@@ -1872,7 +1931,10 @@ Urine albumin tests
 
 
 @pytest.mark.django_db
-def test_urine_albumin_value_form_passes_validation(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_urine_albumin_value_form_passes_validation(
+    single_row_valid_df, mock_submission
+):
     """
     Test that urine albumin value is accepted
     """
@@ -1880,11 +1942,12 @@ def test_urine_albumin_value_form_passes_validation(test_user, single_row_valid_
     single_row_valid_df.loc[0, "Albuminuria Stage"] = 1  # Normal
     single_row_valid_df.loc[0, "Observation Date: Urinary Albumin Level"] = "01/01/2022"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert len(errors) == 0
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
+    assert visit.errors == None
 
     assert (
         visit.albumin_creatinine_ratio == 30
@@ -1898,8 +1961,9 @@ def test_urine_albumin_value_form_passes_validation(test_user, single_row_valid_
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_urine_albumin_impossible_value_form_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that urine albumin stage is rejected if impossible
@@ -1908,13 +1972,14 @@ def test_urine_albumin_impossible_value_form_fails_validation(
     single_row_valid_df.loc[0, "Albuminuria Stage"] = 94  # Impossible value
     single_row_valid_df.loc[0, "Observation Date: Urinary Albumin Level"] = "01/01/2022"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
+    visit = Visit.objects.first()
 
     assert (
-        "albuminuria_stage" in errors[0]
+        "albuminuria_stage" in visit.errors
     ), f"Urine albumin stage should fail validation as impossible, but passed."
-
-    visit = Visit.objects.first()
 
     assert (
         visit.albumin_creatinine_ratio == 30
@@ -1928,8 +1993,9 @@ def test_urine_albumin_impossible_value_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_urine_albumin_value_below_range_form_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that urine albumin value is rejected if below range
@@ -1937,14 +2003,14 @@ def test_urine_albumin_value_below_range_form_fails_validation(
     single_row_valid_df.loc[0, "Urinary Albumin Level (ACR)"] = -10
     single_row_valid_df.loc[0, "Albuminuria Stage"] = 1  # Normal
     single_row_valid_df.loc[0, "Observation Date: Urinary Albumin Level"] = "01/01/2022"
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert (
-        "albumin_creatinine_ratio" in errors[0]
-    ), f"Urine albumin creatinine ratio should fail validation as < 3, but passed."
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
+    assert (
+        "albumin_creatinine_ratio" in visit.errors
+    ), f"Urine albumin creatinine ratio should fail validation as < 3, but passed."
 
     assert visit.albumin_creatinine_ratio == Decimal(
         "-10"
@@ -1958,8 +2024,9 @@ def test_urine_albumin_value_below_range_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_urine_albumin_value_above_range_form_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that urine albumin value is rejected if above range
@@ -1968,13 +2035,14 @@ def test_urine_albumin_value_above_range_form_fails_validation(
     single_row_valid_df.loc[0, "Albuminuria Stage"] = 1  # Normal
     single_row_valid_df.loc[0, "Observation Date: Urinary Albumin Level"] = "01/01/2022"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert (
-        "albumin_creatinine_ratio" in errors[0]
-    ), f"Urine albumin creatinine ratio should fail validation as > 50, but passed."
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
+    assert (
+        "albumin_creatinine_ratio" in visit.errors
+    ), f"Urine albumin creatinine ratio should fail validation as > 50, but passed."
 
     assert (
         visit.albumin_creatinine_ratio == 1000
@@ -1988,8 +2056,9 @@ def test_urine_albumin_value_above_range_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_urine_albumin_value_missing_form_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that urine albumin value missing  is rejected
@@ -1998,13 +2067,14 @@ def test_urine_albumin_value_missing_form_fails_validation(
     single_row_valid_df.loc[0, "Albuminuria Stage"] = 1  # Normal
     single_row_valid_df.loc[0, "Observation Date: Urinary Albumin Level"] = "01/01/2022"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert (
-        "albumin_creatinine_ratio" in errors[0]
-    ), f"Urine albumin creatinine level should fail validation as None, but passed."
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
+    assert (
+        "albumin_creatinine_ratio" in visit.errors
+    ), f"Urine albumin creatinine level should fail validation as None, but passed."
 
     assert (
         visit.albumin_creatinine_ratio is None
@@ -2018,8 +2088,9 @@ def test_urine_albumin_value_missing_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_urine_albumin_stage_missing_form_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that urine albumin value missing  is rejected
@@ -2028,13 +2099,14 @@ def test_urine_albumin_stage_missing_form_fails_validation(
     single_row_valid_df.loc[0, "Albuminuria Stage"] = None
     single_row_valid_df.loc[0, "Observation Date: Urinary Albumin Level"] = "01/01/2022"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert (
-        "albuminuria_stage" in errors[0]
-    ), f"Urine albumin creatinine stage should fail validation as None, but passed."
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
+    assert (
+        "albuminuria_stage" in visit.errors
+    ), f"Urine albumin creatinine stage should fail validation as None, but passed."
 
     assert (
         visit.albumin_creatinine_ratio == 10
@@ -2048,8 +2120,9 @@ def test_urine_albumin_stage_missing_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_urine_albumin_date_missing_form_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that urine albumin date missing is rejected
@@ -2058,13 +2131,13 @@ def test_urine_albumin_date_missing_form_fails_validation(
     single_row_valid_df.loc[0, "Albuminuria Stage"] = 1  # Normal
     single_row_valid_df.loc[0, "Observation Date: Urinary Albumin Level"] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert (
-        "albumin_creatinine_ratio_date" in errors[0]
-    ), f"Urine albumin creatinine date should fail validation as None, but passed."
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
     visit = Visit.objects.first()
+    assert (
+        "albumin_creatinine_ratio_date" in visit.errors
+    ), f"Urine albumin creatinine date should fail validation as None, but passed."
 
     assert (
         visit.albumin_creatinine_ratio == 10
@@ -2083,7 +2156,10 @@ Total cholesterol tests
 
 
 @pytest.mark.django_db
-def test_total_cholesterol_value_form_passes_validation(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_total_cholesterol_value_form_passes_validation(
+    single_row_valid_df, mock_submission
+):
     """
     Test that total cholesterol value is accepted
     """
@@ -2091,13 +2167,11 @@ def test_total_cholesterol_value_form_passes_validation(test_user, single_row_va
     single_row_valid_df.loc[0, "Observation Date: Total Cholesterol Level"] = (
         "01/01/2022"
     )
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert len(errors) == 0
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
     visit = Visit.objects.first()
-
+    assert visit.errors == None
     assert (
         visit.total_cholesterol == 5
     ), f"Saved total cholesterol should be 5, but was {visit.total_cholesterol}"
@@ -2107,8 +2181,9 @@ def test_total_cholesterol_value_form_passes_validation(test_user, single_row_va
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_total_cholesterol_value_above_reference_form_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that total cholesterol value is rejected if impossible
@@ -2118,14 +2193,14 @@ def test_total_cholesterol_value_above_reference_form_fails_validation(
         "01/01/2022"
     )
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert (
-        "total_cholesterol" in errors[0]
-    ), f"Total cholesterol should fail validation as above reference range, but passed."
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
     visit = Visit.objects.first()
 
+    assert (
+        "total_cholesterol" in visit.errors
+    ), f"Total cholesterol should fail validation as above reference range, but passed."
     assert (
         visit.total_cholesterol == 20
     ), f"Saved total cholesterol should be 1000, but was {visit.total_cholesterol}"
@@ -2135,8 +2210,9 @@ def test_total_cholesterol_value_above_reference_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_total_cholesterol_value_below_reference_form_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that total cholesterol value is rejected if impossible
@@ -2146,14 +2222,14 @@ def test_total_cholesterol_value_below_reference_form_fails_validation(
         "01/01/2022"
     )
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert (
-        "total_cholesterol" in errors[0]
-    ), f"Total cholesterol should fail validation as impossible, but passed."
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
     visit = Visit.objects.first()
 
+    assert (
+        "total_cholesterol" in visit.errors
+    ), f"Total cholesterol should fail validation as impossible, but passed."
     assert visit.total_cholesterol == Decimal(
         "0.1"
     ), f"Saved total cholesterol should be 0, but was {visit.total_cholesterol}"
@@ -2163,8 +2239,9 @@ def test_total_cholesterol_value_below_reference_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_total_cholesterol_value_missing_form_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that total cholesterol value missing  is rejected
@@ -2174,14 +2251,14 @@ def test_total_cholesterol_value_missing_form_fails_validation(
         "01/01/2022"
     )
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert (
-        "total_cholesterol" in errors[0]
-    ), f"Total cholesterol should fail validation as None, but passed."
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
     visit = Visit.objects.first()
 
+    assert (
+        "total_cholesterol" in visit.errors
+    ), f"Total cholesterol should fail validation as None, but passed."
     assert (
         visit.total_cholesterol is None
     ), f"Saved total cholesterol should be None, but was {visit.total_cholesterol}"
@@ -2191,23 +2268,22 @@ def test_total_cholesterol_value_missing_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_total_cholesterol_date_missing_form_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that total cholesterol date missing is rejected
     """
     single_row_valid_df.loc[0, "Total Cholesterol Level (mmol/l)"] = 5
     single_row_valid_df.loc[0, "Observation Date: Total Cholesterol Level"] = None
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert (
-        "total_cholesterol_date" in errors[0]
-    ), f"Total cholesterol date should fail validation as None, but passed."
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
     visit = Visit.objects.first()
-
+    assert (
+        "total_cholesterol_date" in visit.errors
+    ), f"Total cholesterol date should fail validation as None, but passed."
     assert (
         visit.total_cholesterol == 5
     ), f"Saved total cholesterol should be 5, but was {visit.total_cholesterol}"
@@ -2222,7 +2298,8 @@ Thyroid treatment tests
 
 
 @pytest.mark.django_db
-def test_thyroid_treatment_passes_validation(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_thyroid_treatment_passes_validation(single_row_valid_df, mock_submission):
     """
     Test that thyroid treatment is accepted
     """
@@ -2232,10 +2309,11 @@ def test_thyroid_treatment_passes_validation(test_user, single_row_valid_df):
     ] = 1  # Normal
     single_row_valid_df.loc[0, "Observation Date: Thyroid Function"] = "01/01/2022"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert len(errors) == 0
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
+    visit = Visit.objects.first()
+    assert visit.errors == None
     visit = Visit.objects.first()
 
     assert visit.thyroid_treatment_status == 1
@@ -2243,8 +2321,9 @@ def test_thyroid_treatment_passes_validation(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_thyroid_treatment_impossible_value_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that an impossible thyroid treatment value is rejected
@@ -2254,19 +2333,20 @@ def test_thyroid_treatment_impossible_value_fails_validation(
         "At time of, or following measurement of thyroid function, was the patient prescribed any thyroid treatment?",
     ] = 94  # Impossible value
     single_row_valid_df.loc[0, "Observation Date: Thyroid Function"] = "01/01/2022"
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "thyroid_treatment_status" in errors[0]
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
     visit = Visit.objects.first()
-
+    assert "thyroid_treatment_status" in visit.errors
     assert visit.thyroid_treatment_status == 94
     assert visit.thyroid_function_date == datetime.date(2022, 1, 1)
 
 
 @pytest.mark.django_db
-def test_thyroid_treatment_missing_fails_validation(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_thyroid_treatment_missing_fails_validation(
+    single_row_valid_df, mock_submission
+):
     """
     Test that a missing thyroid treatment value is rejected
     """
@@ -2276,19 +2356,20 @@ def test_thyroid_treatment_missing_fails_validation(test_user, single_row_valid_
     ] = None
     single_row_valid_df.loc[0, "Observation Date: Thyroid Function"] = "01/01/2022"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "thyroid_treatment_status" in errors[0]
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
     visit = Visit.objects.first()
 
+    assert "thyroid_treatment_status" in visit.errors
     assert visit.thyroid_treatment_status is None
     assert visit.thyroid_function_date == datetime.date(2022, 1, 1)
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_thyroid_treatment_date_missing_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that a missing thyroid treatment date is rejected
@@ -2299,12 +2380,13 @@ def test_thyroid_treatment_date_missing_fails_validation(
     ] = 2
     single_row_valid_df.loc[0, "Observation Date: Thyroid Function"] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "thyroid_function_date" in errors[0]
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
     visit = Visit.objects.first()
 
+    visit = Visit.objects.first()
+    assert "thyroid_function_date" in visit.errors
     assert visit.thyroid_treatment_status == 2
     assert visit.thyroid_function_date is None
 
@@ -2315,7 +2397,8 @@ Coeliac screening tests
 
 
 @pytest.mark.django_db
-def test_coeliac_screening_passes_validation(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_coeliac_screening_passes_validation(single_row_valid_df, mock_submission):
     """
     Test that coeliac screening is accepted
     """
@@ -2326,19 +2409,19 @@ def test_coeliac_screening_passes_validation(test_user, single_row_valid_df):
         0, "Has the patient been recommended a Gluten-free diet?"
     ] = 1  # Yes
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert len(errors) == 0
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
     visit = Visit.objects.first()
-
+    assert visit.errors == None
     assert visit.coeliac_screen_date == datetime.date(2022, 1, 1)
     assert visit.gluten_free_diet == 1
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_coeliac_screening_impossible_value_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that an impossible coeliac screening value is rejected
@@ -2350,19 +2433,21 @@ def test_coeliac_screening_impossible_value_fails_validation(
         0, "Has the patient been recommended a Gluten-free diet?"
     ] = 94  # Impossible value
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "gluten_free_diet" in errors[0]
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
     visit = Visit.objects.first()
-
+    assert "gluten_free_diet" in visit.errors
     assert visit.coeliac_screen_date == datetime.date(2022, 1, 1)
     assert visit.gluten_free_diet == 94
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/628
 @pytest.mark.django_db
-def test_coeliac_screening_missing_fails_validation(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_coeliac_screening_missing_fails_validation(
+    single_row_valid_df, mock_submission
+):
     single_row_valid_df.loc[0, "Observation Date: Coeliac Disease Screening"] = (
         "01/01/2022"
     )
@@ -2370,32 +2455,32 @@ def test_coeliac_screening_missing_fails_validation(test_user, single_row_valid_
         0, "Has the patient been recommended a Gluten-free diet?"
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "gluten_free_diet" not in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert "gluten_free_diet" not in visit.errors
     assert visit.coeliac_screen_date == datetime.date(2022, 1, 1)
     assert visit.gluten_free_diet is None
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/628
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_coeliac_screening_date_missing_passes_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     single_row_valid_df.loc[0, "Observation Date: Coeliac Disease Screening"] = None
     single_row_valid_df.loc[
         0, "Has the patient been recommended a Gluten-free diet?"
     ] = 1
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "coeliac_screen_date" not in errors[0]
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
     visit = Visit.objects.first()
-
+    assert "coeliac_screen_date" not in visit.errors
     assert visit.coeliac_screen_date is None
     assert visit.gluten_free_diet == 1
 
@@ -2406,6 +2491,7 @@ Psychological support tests
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_psychological_support_passes_validation(test_user, single_row_valid_df):
     """
     Test that psychological support is accepted
@@ -2418,19 +2504,20 @@ def test_psychological_support_passes_validation(test_user, single_row_valid_df)
         "Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?",
     ] = 1
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert len(errors) == 0
+    process_dataframe_validate_save_patients_and_visits(
+        submission=test_user.submissions.first(), dataframe=single_row_valid_df
+    )
 
     visit = Visit.objects.first()
-
+    assert visit.errors == None
     assert visit.psychological_screening_assessment_date == datetime.date(2022, 1, 1)
     assert visit.psychological_additional_support_status == 1
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_psychological_support_impossible_value_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that an impossible psychological support value is rejected
@@ -2443,18 +2530,20 @@ def test_psychological_support_impossible_value_fails_validation(
         "Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?",
     ] = 94  # Impossible value
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "psychological_additional_support_status" in errors[0]
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
     visit = Visit.objects.first()
-
+    assert "psychological_additional_support_status" in visit.errors
     assert visit.psychological_screening_assessment_date == datetime.date(2022, 1, 1)
     assert visit.psychological_additional_support_status == 94
 
 
 @pytest.mark.django_db
-def test_psychological_support_missing_fails_validation(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_psychological_support_missing_fails_validation(
+    single_row_valid_df, mock_submission
+):
     """
     Test that a missing psychological support value is rejected
     """
@@ -2466,19 +2555,20 @@ def test_psychological_support_missing_fails_validation(test_user, single_row_va
         "Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?",
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "psychological_additional_support_status" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert "psychological_additional_support_status" in visit.errors
     assert visit.psychological_screening_assessment_date == datetime.date(2022, 1, 1)
     assert visit.psychological_additional_support_status is None
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_psychological_support_date_missing_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that a missing psychological support date is rejected
@@ -2491,20 +2581,21 @@ def test_psychological_support_date_missing_fails_validation(
         "Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?",
     ] = 1
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "psychological_screening_assessment_date" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert "psychological_screening_assessment_date" in visit.errors
     assert visit.psychological_screening_assessment_date is None
     assert visit.psychological_additional_support_status == 1
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/628
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_psychological_support_date_missing_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     single_row_valid_df.loc[
         0, "Observation Date - Psychological Screening Assessment"
@@ -2514,12 +2605,12 @@ def test_psychological_support_date_missing_fails_validation(
         "Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?",
     ] = 99  # Unknown
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "psychological_screening_assessment_date" not in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert "psychological_screening_assessment_date" not in visit.errors
     assert visit.psychological_screening_assessment_date is None
     assert visit.psychological_additional_support_status == 99
 
@@ -2530,7 +2621,8 @@ Smoking status tests
 
 
 @pytest.mark.django_db
-def test_smoking_status_passes_validation(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_smoking_status_passes_validation(single_row_valid_df, mock_submission):
     """
     Test that smoking status is accepted
     """
@@ -2540,18 +2632,21 @@ def test_smoking_status_passes_validation(test_user, single_row_valid_df):
     ] = "01/01/2022"
     single_row_valid_df.loc[0, "Does the patient smoke?"] = 2  # Current smoker
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert len(errors) == 0
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert visit.errors == None
     assert visit.smoking_cessation_referral_date == datetime.date(2022, 1, 1)
     assert visit.smoking_status == 2
 
 
 @pytest.mark.django_db
-def test_smoking_status_non_smoker_passes_validation(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_smoking_status_non_smoker_passes_validation(
+    mock_submission, single_row_valid_df
+):
     """
     Test that smoking status is accepted
     """
@@ -2561,17 +2656,18 @@ def test_smoking_status_non_smoker_passes_validation(test_user, single_row_valid
     ] = None
     single_row_valid_df.loc[0, "Does the patient smoke?"] = 1  # Non-smoker
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert len(errors) == 0
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert visit.errors == None
     assert visit.smoking_cessation_referral_date is None
     assert visit.smoking_status == 1
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_smoking_status_impossible_value_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -2584,19 +2680,20 @@ def test_smoking_status_impossible_value_fails_validation(
     ] = "01/01/2022"
     single_row_valid_df.loc[0, "Does the patient smoke?"] = 94  # Impossible value
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "smoking_status" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=test_user.submissions.first(), dataframe=single_row_valid_df
+    )
 
     visit = Visit.objects.first()
-
+    assert "smoking_status" in visit.errors
     assert visit.smoking_cessation_referral_date == datetime.date(2022, 1, 1)
     assert visit.smoking_status == 94
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_smoking_status_non_smoker_referral_date_provided_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that a non-smoker with a referral date is rejected
@@ -2607,18 +2704,19 @@ def test_smoking_status_non_smoker_referral_date_provided_fails_validation(
     ] = "01/01/2022"
     single_row_valid_df.loc[0, "Does the patient smoke?"] = 1  # Non-smoker
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "smoking_cessation_referral_date" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert "smoking_cessation_referral_date" in visit.errors
     assert visit.smoking_cessation_referral_date == datetime.date(2022, 1, 1)
     assert visit.smoking_status == 1
 
 
 @pytest.mark.django_db
-def test_smoking_status_missing_fails_validation(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_smoking_status_missing_fails_validation(single_row_valid_df, mock_submission):
     """
     Test that a missing smoking status value is rejected
     """
@@ -2627,19 +2725,21 @@ def test_smoking_status_missing_fails_validation(test_user, single_row_valid_df)
         "Date of offer of referral to smoking cessation service (if patient is a current smoker)",
     ] = "01/01/2022"
     single_row_valid_df.loc[0, "Does the patient smoke?"] = None
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "smoking_cessation_referral_date" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert "smoking_cessation_referral_date" in visit.errors
     assert visit.smoking_cessation_referral_date == datetime.date(2022, 1, 1)
     assert visit.smoking_status is None
 
 
 @pytest.mark.django_db
-def test_smoking_status_date_missing_fails_validation(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_smoking_status_date_missing_fails_validation(
+    single_row_valid_df, mock_submission
+):
     """
     Test that a missing smoking status date is rejected
     """
@@ -2648,13 +2748,12 @@ def test_smoking_status_date_missing_fails_validation(test_user, single_row_vali
         "Date of offer of referral to smoking cessation service (if patient is a current smoker)",
     ] = None
     single_row_valid_df.loc[0, "Does the patient smoke?"] = 2  # Current smoker
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "smoking_cessation_referral_date" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert "smoking_cessation_referral_date" in visit.errors
     assert visit.smoking_status is 2
     assert visit.smoking_cessation_referral_date is None
 
@@ -2665,8 +2764,9 @@ Dietitian referral tests
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_dietician_referral_status_additional_offered_form_passes_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that dietician referral status and date are accepted
@@ -2679,19 +2779,20 @@ def test_dietician_referral_status_additional_offered_form_passes_validation(
         "01/01/2022"
     )
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert len(errors) == 0
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert visit.errors == None
     assert visit.dietician_additional_appointment_offered == 1
     assert visit.dietician_additional_appointment_date == datetime.date(2022, 1, 1)
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_dietician_no_additional_offered_form_passes_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that dietician referral status and date are accepted
@@ -2701,20 +2802,20 @@ def test_dietician_no_additional_offered_form_passes_validation(
         "Was the patient offered an additional appointment with a paediatric dietitian?",
     ] = 2
     single_row_valid_df.loc[0, "Date of additional appointment with dietitian"] = None
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert len(errors) == 0
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert visit.errors == None
     assert visit.dietician_additional_appointment_offered == 2
     assert visit.dietician_additional_appointment_date is None
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_dietician_no_additional_offered_date_provided_fail_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that dietician extra appointment not offered but date provided should fail
@@ -2727,19 +2828,20 @@ def test_dietician_no_additional_offered_date_provided_fail_validation(
         "01/01/2022"
     )
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "dietician_additional_appointment_date" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert "dietician_additional_appointment_date" in visit.errors
     assert visit.dietician_additional_appointment_offered == 2
     assert visit.dietician_additional_appointment_date == datetime.date(2022, 1, 1)
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_dietician_additional_offered_date_missing_fail_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that dietician extra appointment offered but date missing should fail
@@ -2750,19 +2852,20 @@ def test_dietician_additional_offered_date_missing_fail_validation(
     ] = 1
     single_row_valid_df.loc[0, "Date of additional appointment with dietitian"] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "dietician_additional_appointment_date" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert "dietician_additional_appointment_date" in visit.errors
     assert visit.dietician_additional_appointment_offered == 1
     assert visit.dietician_additional_appointment_date is None
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_dietician_additional_offered_none_but_date_offered_fail_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that dietician additional appointment none but date offered should fail
@@ -2775,12 +2878,12 @@ def test_dietician_additional_offered_none_but_date_offered_fail_validation(
         "01/01/2022"
     )
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "dietician_additional_appointment_date" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert "dietician_additional_appointment_date" in visit.errors
     assert visit.dietician_additional_appointment_offered is None
     assert visit.dietician_additional_appointment_date == datetime.date(2022, 1, 1)
 
@@ -2791,7 +2894,10 @@ Sick day rules tests
 
 
 @pytest.mark.django_db
-def test_sick_day_rules_provided_passes_validation(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_sick_day_rules_provided_passes_validation(
+    single_row_valid_df, mock_submission
+):
     """
     Test that sick day rules are accepted
     """
@@ -2804,18 +2910,21 @@ def test_sick_day_rules_provided_passes_validation(test_user, single_row_valid_d
         "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?",
     ] = 1
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert len(errors) == 0
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert visit.errors == None
     assert visit.sick_day_rules_training_date == datetime.date(2022, 1, 1)
     assert visit.ketone_meter_training == 1
 
 
 @pytest.mark.django_db
-def test_sick_day_rules_not_provided_passes_validation(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_sick_day_rules_not_provided_passes_validation(
+    single_row_valid_df, mock_submission
+):
     """
     Test that sick day rules are accepted where not provided (date not required)
     """
@@ -2828,19 +2937,20 @@ def test_sick_day_rules_not_provided_passes_validation(test_user, single_row_val
         "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?",
     ] = 2
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert len(errors) == 0
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert visit.errors == None
     assert visit.sick_day_rules_training_date == None
     assert visit.ketone_meter_training == 2
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_sick_day_rules_not_provided_but_date_provided_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that sick day rules not provided but date provided fails validation
@@ -2854,21 +2964,22 @@ def test_sick_day_rules_not_provided_but_date_provided_fails_validation(
         "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?",
     ] = 2
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert (
-        "ketone_meter_training" in errors[0]
-    ), f"Expected error in sick_day_rules_training_date, but got None"
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert (
+        "ketone_meter_training" in visit.errors
+    ), f"Expected error in sick_day_rules_training_date, but got None"
     assert visit.sick_day_rules_training_date == datetime.date(2022, 1, 1)
     assert visit.ketone_meter_training == 2
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_sick_day_rules_none_but_date_provided_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that sick day rules not answered but date provided fails validation
@@ -2882,21 +2993,22 @@ def test_sick_day_rules_none_but_date_provided_fails_validation(
         "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?",
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert (
-        "ketone_meter_training" in errors[0]
-    ), f"Expected error in sick_day_rules_training_date, but got None"
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert (
+        "ketone_meter_training" in visit.errors
+    ), f"Expected error in sick_day_rules_training_date, but got None"
     assert visit.sick_day_rules_training_date == datetime.date(2022, 1, 1)
     assert visit.ketone_meter_training == None
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_sick_day_rules_provided_but_no_date_provided_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that sick day rules are provided but no date is rejected
@@ -2910,14 +3022,14 @@ def test_sick_day_rules_provided_but_no_date_provided_fails_validation(
         "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?",
     ] = 1
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert (
-        "sick_day_rules_training_date" in errors[0]
-    ), f"Expected error in sick_day_rules_training_date, but got None"
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert (
+        "sick_day_rules_training_date" in visit.errors
+    ), f"Expected error in sick_day_rules_training_date, but got None"
     assert visit.sick_day_rules_training_date == None
     assert visit.ketone_meter_training == 1
 
@@ -2928,8 +3040,9 @@ Inpatient admission tests
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_inpatient_admission_stabilisation_passes_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that inpatient admission for stabilisation is accepted
@@ -2949,12 +3062,12 @@ def test_inpatient_admission_stabilisation_passes_validation(
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert len(errors) == 0
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert visit.errors == None
     assert visit.hospital_admission_date == datetime.date(
         2022, 1, 1
     ), f"Admission date should be 1/1/2022, but was {visit.hospital_admission_date}"
@@ -2973,8 +3086,9 @@ def test_inpatient_admission_stabilisation_passes_validation(
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_inpatient_admission_stabilisation_missing_date_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that inpatient admission for stabilisation is rejected if date missing
@@ -2992,12 +3106,12 @@ def test_inpatient_admission_stabilisation_missing_date_fails_validation(
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "hospital_admission_date" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert "hospital_admission_date" in visit.errors
     assert visit.hospital_admission_date == None
     assert visit.hospital_discharge_date == datetime.date(year=2024, month=1, day=2)
     assert visit.hospital_admission_reason == 1
@@ -3006,8 +3120,9 @@ def test_inpatient_admission_stabilisation_missing_date_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_inpatient_admission_stabilisation_discharge_date_before_admission_date_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that inpatient admission for stabilisation is rejected if discharge date before admission date
@@ -3027,12 +3142,12 @@ def test_inpatient_admission_stabilisation_discharge_date_before_admission_date_
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "hospital_admission_date" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert "hospital_admission_date" in visit.errors
     assert visit.hospital_admission_date == datetime.date(year=2022, month=1, day=8)
     assert visit.hospital_discharge_date == datetime.date(year=2022, month=1, day=1)
     assert visit.hospital_admission_reason == 1
@@ -3041,8 +3156,9 @@ def test_inpatient_admission_stabilisation_discharge_date_before_admission_date_
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_inpatient_admission_stabilisation_discharge_date_before_diagnosis_date_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that inpatient admission for stabilisation is rejected if discharge date before admission date
@@ -3063,12 +3179,12 @@ def test_inpatient_admission_stabilisation_discharge_date_before_diagnosis_date_
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "hospital_discharge_date" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert "hospital_discharge_date" in visit.errors
     assert visit.patient.diagnosis_date == datetime.date(
         2022, 1, 10
     ), f"Diagnosis date should be 1/1/2022, but was {visit.patient.diagnosis_date}"
@@ -3090,8 +3206,9 @@ def test_inpatient_admission_stabilisation_discharge_date_before_diagnosis_date_
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_inpatient_admission_stabilisation_discharge_date_after_date_of_death_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that inpatient admission for stabilisation is rejected if discharge date before admission date
@@ -3110,12 +3227,12 @@ def test_inpatient_admission_stabilisation_discharge_date_after_date_of_death_fa
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "hospital_discharge_date" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert "hospital_discharge_date" in visit.errors
     assert visit.patient.death_date == datetime.date(
         2022, 1, 1
     ), f"Date of death should be 1/1/2022, but was {visit.patient.date_of_death}"
@@ -3137,8 +3254,9 @@ def test_inpatient_admission_stabilisation_discharge_date_after_date_of_death_fa
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_inpatient_admission_stabilisation_dka_additional_therapies_provided_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that inpatient admission for stabilisation is rejected if DKA additional therapies provided
@@ -3158,12 +3276,12 @@ def test_inpatient_admission_stabilisation_dka_additional_therapies_provided_fai
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "dka_additional_therapies" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert "dka_additional_therapies" in visit.errors
     assert visit.hospital_admission_date == datetime.date(
         2022, 1, 1
     ), f"Admission date should be 1/1/2022, but was {visit.hospital_admission_date}"
@@ -3182,8 +3300,9 @@ def test_inpatient_admission_stabilisation_dka_additional_therapies_provided_fai
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_inpatient_admission_stabilisation_hospital_admission_other_provided_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that inpatient admission for stabilisation is rejected if DKA additional therapies provided
@@ -3203,12 +3322,12 @@ def test_inpatient_admission_stabilisation_hospital_admission_other_provided_fai
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "dka_additional_therapies" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert "dka_additional_therapies" in visit.errors
     assert visit.hospital_admission_date == datetime.date(
         2022, 1, 1
     ), f"Admission date should be 1/1/2022, but was {visit.hospital_admission_date}"
@@ -3227,7 +3346,10 @@ def test_inpatient_admission_stabilisation_hospital_admission_other_provided_fai
 
 
 @pytest.mark.django_db
-def test_inpatient_admission_dka_passes_validation(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_inpatient_admission_dka_passes_validation(
+    single_row_valid_df, mock_submission
+):
     """
     Test that inpatient admission for DKA with additional therapies is accepted
     """
@@ -3246,12 +3368,12 @@ def test_inpatient_admission_dka_passes_validation(test_user, single_row_valid_d
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert len(errors) == 0
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert visit.errors == None
     assert visit.hospital_admission_date == datetime.date(
         2022, 1, 1
     ), f"Admission date should be 1/1/2022, but was {visit.hospital_admission_date}"
@@ -3270,8 +3392,9 @@ def test_inpatient_admission_dka_passes_validation(test_user, single_row_valid_d
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_inpatient_admission_dka_additional_therapies_missing_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that inpatient admission for DKA without additional therapies is rejected
@@ -3291,12 +3414,12 @@ def test_inpatient_admission_dka_additional_therapies_missing_fails_validation(
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "dka_additional_therapies" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert "dka_additional_therapies" in visit.errors
     assert visit.hospital_admission_date == datetime.date(
         2022, 1, 1
     ), f"Admission date should be 1/1/2022, but was {visit.hospital_admission_date}"
@@ -3315,8 +3438,9 @@ def test_inpatient_admission_dka_additional_therapies_missing_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_inpatient_admission_dka_additional_therapies_hospital_admission_also_provided_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Tests that a hospital admission for DKA with additional therapies is rejected if hospital admission other is provided
@@ -3336,12 +3460,11 @@ def test_inpatient_admission_dka_additional_therapies_hospital_admission_also_pr
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = "Other reason"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "hospital_admission_other" in errors[0]
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
     visit = Visit.objects.first()
-
+    assert "hospital_admission_other" in visit.errors
     assert visit.hospital_admission_date == datetime.date(
         2022, 1, 1
     ), f"Admission date should be 1/1/2022, but was {visit.hospital_admission_date}"
@@ -3360,7 +3483,10 @@ def test_inpatient_admission_dka_additional_therapies_hospital_admission_also_pr
 
 
 @pytest.mark.django_db
-def test_inpatient_admission_other_passes_validation(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_inpatient_admission_other_passes_validation(
+    single_row_valid_df, mock_submission
+):
     """
     Test that inpatient admission for other reason is accepted
     """
@@ -3379,12 +3505,12 @@ def test_inpatient_admission_other_passes_validation(test_user, single_row_valid
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = "Other reason"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert len(errors) == 0
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert visit.errors == None
     assert visit.hospital_admission_date == datetime.date(
         2022, 1, 1
     ), f"Admission date should be 1/1/2022, but was {visit.hospital_admission_date}"
@@ -3403,8 +3529,9 @@ def test_inpatient_admission_other_passes_validation(test_user, single_row_valid
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_inpatient_admission_other_missing_fails_validation(
-    test_user, single_row_valid_df
+    single_row_valid_df, mock_submission
 ):
     """
     Test that inpatient admission for other reason is rejected if reason missing
@@ -3425,12 +3552,11 @@ def test_inpatient_admission_other_missing_fails_validation(
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "hospital_admission_other" in errors[0]
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
     visit = Visit.objects.first()
-
+    assert "hospital_admission_other" in visit.errors
     assert visit.hospital_admission_date == datetime.date(
         2022, 1, 1
     ), f"Admission date should be 1/1/2022, but was {visit.hospital_admission_date}"
@@ -3454,55 +3580,58 @@ Visit date tests
 
 
 @pytest.mark.django_db
-def test_visit_date_provided_passes_validation(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_visit_date_provided_passes_validation(single_row_valid_df, mock_submission):
     """
     Test that a visit date is accepted
     """
     single_row_valid_df.loc[0, "Visit/Appointment Date"] = "01/01/2025"  # mm/dd/yyyy
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert len(errors) == 0
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert visit.errors == None
     assert visit.visit_date == datetime.date(
         2025, 1, 1
     ), f"Visit/Appointment Date should be 1/1/2025, but was {visit.visit_date}"
 
 
 @pytest.mark.django_db
-def test_visit_date_missing_fails_validation(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_visit_date_missing_fails_validation(single_row_valid_df, mock_submission):
     """
     Test that a missing Visit/Appointment Date is rejected
     """
     single_row_valid_df.loc[0, "Visit/Appointment Date"] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "visit_date" in errors[0], f"Expected error in visit_date, but got None"
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert "visit_date" in visit.errors, f"Expected error in visit_date, but got None"
     assert (
         visit.visit_date == None
     ), f"Visit/Appointment Date should be None, but was {visit.visit_date}"
 
 
 @pytest.mark.django_db
-def test_visit_date_not_before_date_of_birth(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_visit_date_not_before_date_of_birth(single_row_valid_df, mock_submission):
     """
     Test that a Visit/Appointment Date before the date of birth is rejected
     """
     single_row_valid_df.loc[0, "Date of Birth"] = "01/01/2022"
     single_row_valid_df.loc[0, "Visit/Appointment Date"] = "01/01/2021"  # mm/dd/yyyy
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "visit_date" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert "visit_date" in visit.errors
     assert visit.visit_date == datetime.date(
         2021, 1, 1
     ), f"Visit date should be 1/1/2021, but was {visit.visit_date}"
@@ -3512,19 +3641,20 @@ def test_visit_date_not_before_date_of_birth(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_visit_date_not_after_date_of_death(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_visit_date_not_after_date_of_death(single_row_valid_df, mock_submission):
     """
     Test that a Visit/Appointment Date after the date of death is rejected
     """
     single_row_valid_df.loc[0, "Death Date"] = "01/01/2022"  # mm/dd/yyyy
     single_row_valid_df.loc[0, "Visit/Appointment Date"] = "01/01/2023"  # mm/dd/yyyy
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "visit_date" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     visit = Visit.objects.first()
-
+    assert "visit_date" in visit.errors
     assert visit.visit_date == datetime.date(
         2023, 1, 1
     ), f"Visit date should be 1/1/2023, but was {visit.visit_date}"
@@ -3534,7 +3664,8 @@ def test_visit_date_not_after_date_of_death(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_visit_date_not_before_diagnosis_date(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_visit_date_not_before_diagnosis_date(single_row_valid_df, mock_submission):
     """
     Test that a Visit/Appointment Date before the date of diagnosis is rejected
     """
@@ -3543,12 +3674,11 @@ def test_visit_date_not_before_diagnosis_date(test_user, single_row_valid_df):
     )
     single_row_valid_df.loc[0, "Visit/Appointment Date"] = "01/01/2021"  # mm/dd/yyyy
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "visit_date" in errors[0]
-
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+    )
     visit = Visit.objects.first()
-
+    assert "visit_date" in visit.errors
     assert visit.visit_date == datetime.date(
         year=2021, month=1, day=1
     ), f"Visit date should be 1/1/2021, but was {visit.visit_date}"
