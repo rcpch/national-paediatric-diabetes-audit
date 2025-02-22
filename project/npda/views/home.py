@@ -105,7 +105,7 @@ def home(request):
             # update the session fields - this stores that the user has uploaded a csv and disables the ability to use the questionnaire
             # await sync_to_async(refresh_session_filters)(request)
             refresh_session_filters(request)
-            
+
             return redirect("task_status", grouped_tasks_id=grouped_tasks_id)
         else:
             # If the user does not have permission to upload csvs, redirect them to the dashboard page
@@ -216,7 +216,6 @@ def task_status(request, grouped_tasks_id):
             progress_data.append(progress_tracker.get_progress())
 
     if all_successful:
-        print("All tasks successful")
         messages.success(
             request=request, message="Submission completed. There were no errors."
         )
@@ -228,10 +227,10 @@ def task_status(request, grouped_tasks_id):
             return redirect("patients")
     else:
         if request.htmx:
-            print("HTMX request")
             total = len(progress_data)
-            value = len([ task for task in task_results.results if task.state == "SUCCESS" ]  )
-            print(f"Total: {total}, Value: {value}")
+            value = len(
+                [task for task in task_results.results if task.state == "SUCCESS"]
+            )
             return render(
                 request=request,
                 template_name="partials/page_elements/progress.html",
@@ -255,6 +254,3 @@ def task_status(request, grouped_tasks_id):
                     "progress_data": progress_data,
                 },
             )
-
-
-

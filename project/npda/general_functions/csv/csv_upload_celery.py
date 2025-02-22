@@ -37,40 +37,6 @@ def csv_upload(user, dataframe, csv_file_name, csv_file_bytes, pz_code, audit_ye
 
     start = timeit.default_timer()
 
-    # Helper functions
-    def csv_value_to_model_value(model_field, value):
-        if pd.isnull(value) or value == pd.NaT:
-            return None
-
-        if isinstance(value, pd.Timestamp):
-            return value.to_pydatetime().date()
-
-        # Pass Django forms native Python values not numpy ones
-        # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/425
-        return value.item() if isinstance(value, np.generic) else value
-
-    def row_to_dict(row, model, csv_headings):
-        ret = {}
-
-        for entry in csv_headings:
-            if "model" in entry and apps.get_model("npda", entry["model"]) == model:
-                model_field_name = entry["model_field"]
-                model_field_definition = model._meta.get_field(model_field_name)
-
-                csv_value = row[entry["heading"]]
-                model_field_value = csv_value_to_model_value(
-                    model_field_definition, csv_value
-                )
-
-                ret[model_field_name] = model_field_value
-
-        return ret
-
-    if pz_code == "PZ248":
-        CSV_HEADINGS = UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
-    else:
-        CSV_HEADINGS = UNIQUE_IDENTIFIER_ENGLAND + CSV_HEADING_OBJECTS
-
     """
     Work starts here - create a new submission and delete the previous one
     """
@@ -150,11 +116,77 @@ def csv_upload(user, dataframe, csv_file_name, csv_file_bytes, pz_code, audit_ye
     Process the csv file and validate and save the data in the tables, parsing any errors
     """
 
+    group_id = process_dataframe_validate_save_patients_and_visits(
+        submission=new_submission, dataframe=dataframe
+    )
+
+    end = timeit.default_timer()
+
+    logger.debug(f"Time taken to process the CSV file: {end - start} seconds")
+
+    return group_id
+
+
+"""
+This is a helper function to process the dataframe and validate and save the patients and visits
+This calls multiple celery tasks to save the patients and visits
+It returns the group_id of the tasks that were run to track progress
+It also calls a chord to run the gather_errors task after all the tasks have completed which are separately stored in the Submission model
+"""
+
+
+def process_dataframe_validate_save_patients_and_visits(
+    submission, dataframe: pd.DataFrame, TESTING=False
+):
+    """
+    Process the dataframe and validate and save the patients and visits
+    """
+
+    # Helper functions - these are nested as they are only used in this function. Note that they are duplicated in the celery task as they are not serializable
+    # We can't pass the dataframe to the celery task as it is not serializable
+    # Possibly there is a better way to do this but this is the simplest way to do it
+    def csv_value_to_model_value(model_field, value):
+        if pd.isnull(value) or value == pd.NaT:
+            return None
+
+        if isinstance(value, pd.Timestamp):
+            return value.to_pydatetime().date()
+
+        # Pass Django forms native Python values not numpy ones
+        # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/425
+        return value.item() if isinstance(value, np.generic) else value
+
+    def row_to_dict(row, model, csv_headings):
+        ret = {}
+
+        for entry in csv_headings:
+            if "model" in entry and apps.get_model("npda", entry["model"]) == model:
+                model_field_name = entry["model_field"]
+                model_field_definition = model._meta.get_field(model_field_name)
+
+                csv_value = row[entry["heading"]]
+                model_field_value = csv_value_to_model_value(
+                    model_field_definition, csv_value
+                )
+
+                ret[model_field_name] = model_field_value
+
+        return ret
+
+    # Get the models and set the CSV headings
+    Patient = apps.get_model("npda", "Patient")
+
+    if submission.paediatric_diabetes_unit.pz_code == "PZ248":
+        CSV_HEADINGS = UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
+    else:
+        CSV_HEADINGS = UNIQUE_IDENTIFIER_ENGLAND + CSV_HEADING_OBJECTS
+
+    # Group the dataframe by patient
     # Remember the original row number to help users find where the problem was in the CSV
     dataframe = dataframe.assign(row_index=np.arange(dataframe.shape[0]))
 
     # We only one to create one patient per NHS number (or URN if in Jersey) and we can't create their visits if we fail to save the patient model
-    if new_submission.paediatric_diabetes_unit.pz_code == "PZ248":
+    if submission.paediatric_diabetes_unit.pz_code == "PZ248":
         visits_by_patient = dataframe.groupby(
             "Unique Reference Number", sort=False, dropna=False
         )
@@ -167,29 +199,29 @@ def csv_upload(user, dataframe, csv_file_name, csv_file_bytes, pz_code, audit_ye
         patient_row = patient_group.iloc[0]
         patient_dict = row_to_dict(patient_row, Patient, csv_headings=CSV_HEADINGS)
 
-        print(f"Submission ID: {new_submission.id} before saving patient")
+        print(f"Submission ID: {submission.id} before saving patient")
 
         patients_submission_task = save_patient_and_visits_to_submission.s(
             patient_row_json=patient_row.to_json(date_format="iso"),
             patient_dict=patient_dict,
             patient_group_dict=patient_group.to_dict(orient="records"),
-            pz_code=pz_code,
-            submission_id=new_submission.id,
+            pz_code=submission.paediatric_diabetes_unit.pz_code,
+            submission_id=submission.id,
         )
         tasks.append(patients_submission_task)
 
     chords = chord(tasks)(
-        gather_errors.s(new_submission.id)
+        gather_errors.s(submission.id)
     )  # gather_errors is a task that will be run after all the tasks in the chord have completed
 
     # Additionally, we can store all the tasks in a group to get the status of the group if we access it in the view
     # We will not apply the gather_errors task to this group as it will be applied to the chord
-    group_id = chords.parent.id
-    group_result = GroupResult(id=group_id, results=chords.parent.results)
-    group_result.save()
-
-    end = timeit.default_timer()
-
-    logger.debug(f"Time taken to process the CSV file: {end - start} seconds")
+    # This will only happen in production, not in the tests
+    if not TESTING:
+        group_id = chords.parent.id
+        group_result = GroupResult(id=group_id, results=chords.parent.results)
+        group_result.save()
+    else:
+        group_id = None
 
     return str(group_id)

@@ -195,11 +195,11 @@ def save_patient_and_visits_to_submission(
     )
     print(f"{NPDAUser.objects.all().count()} users exist")
     print(f"{Patient.objects.all().count()} patients exist")
-    print(
-        f"{Submission.objects.all().count()} submissions exist. Submission id: {Submission.objects.first().id}"
-    )
-    s = Submission.objects.first()
-    print(f"{s.submission_active} , {s.audit_year} , {s.paediatric_diabetes_unit}")
+    print(f"{Submission.objects.all().count()} submissions exist")
+    if Submission.objects.all().count() > 0:
+        print(
+            f"Submission: {Submission.objects.all().first().id}, PDU: {Submission.objects.all().first().paediatric_diabetes_unit} is active: {Submission.objects.all().first().submission_active}"
+        )
 
     # Gather all error messages indexed by row number and the field that caused them (__all__ if we don't know which one)
     # dict[number, dict[str, list[str]]]
@@ -288,5 +288,7 @@ def gather_errors(results, submission_id):
     if errors_to_return:
         submission.errors = json.dumps(errors_to_return)
         submission.save()
+
+    print(f"Completing gather_errors: Errors to return: {errors_to_return}")
 
     return errors_to_return

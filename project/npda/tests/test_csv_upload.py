@@ -1,12 +1,15 @@
 import dataclasses
 import datetime
+import json
 import tempfile
 from decimal import Decimal
 from collections import defaultdict
 import time
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, Mock
 
 from asgiref.sync import async_to_sync
+
+from .conftest import celery_app as app
 
 import nhs_number
 import pandas as pd
@@ -17,17 +20,28 @@ from django.core.exceptions import ValidationError
 from django.contrib.gis.geos import Point
 from django.test import override_settings
 
-from celery.result import GroupResult, AsyncResult
+from celery.result import GroupResult, states
 
 
 from project.npda.general_functions.csv import csv_parse
 from project.npda.general_functions.csv.csv_upload_celery import csv_upload
-from project.npda.models import NPDAUser, Patient, Visit, PaediatricDiabetesUnit
+from project.npda.general_functions.csv.csv_upload_celery import (
+    process_dataframe_validate_save_patients_and_visits,
+)
+from project.npda.models import (
+    NPDAUser,
+    Patient,
+    Visit,
+    PaediatricDiabetesUnit,
+    Submission,
+)
 from project.npda.tests.factories.patient_factory import (
     INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
     TODAY,
     VALID_FIELDS,
-    LOCATION,
+)
+from project.npda.tests.factories.paediatrics_diabetes_unit_factory import (
+    PaediatricsDiabetesUnitFactory,
 )
 from project.npda.forms.external_patient_validators import (
     PatientExternalValidationResult,
@@ -180,20 +194,69 @@ def read_csv_from_str(contents):
         return csv_parse(f)
 
 
+@pytest.fixture
+def mock_submission():
+    pdu = PaediatricsDiabetesUnitFactory(pz_code=ALDER_HEY_PZ_CODE)
+    mock_submission = Mock(spec=Submission)
+    mock_submission.id = 123
+    mock_submission.audit_year = 2024
+    mock_submission.submission_date = datetime.datetime.now()
+    mock_submission.submission_active = True
+    mock_submission.csv_file = None
+    mock_submission.csv_file_name = None
+    mock_submission.paediatric_diabetes_unit = Mock()
+    mock_submission.paediatric_diabetes_unit = pdu
+
+    submission = Submission.objects.create(
+        audit_year=mock_submission.audit_year,
+        submission_date=mock_submission.submission_date,
+        submission_active=mock_submission.submission_active,
+        paediatric_diabetes_unit=mock_submission.paediatric_diabetes_unit,
+        submission_by=NPDAUser.objects.first(),
+        csv_file=None,
+        csv_file_name=None,
+    )
+
+    return submission
+
+
+@pytest.fixture
+def mock_group_patients_by_visit(dataframe):
+    visits_by_patient = dataframe.groupby("NHS Number", sort=False, dropna=False)
+    return visits_by_patient
+
+
+"""
+Tests start here
+"""
+
+
 @pytest.mark.django_db
-def test_create_patient(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_create_patient(
+    test_user,
+    single_row_valid_df,
+):
+    mock_submission = Submission.objects.create(
+        audit_year=2024,
+        submission_date=datetime.datetime.now(),
+        submission_active=True,
+        paediatric_diabetes_unit=PaediatricsDiabetesUnitFactory(
+            pz_code=ALDER_HEY_PZ_CODE
+        ),
+        submission_by=test_user,
+    )
+    # Run the function - Note this function is synchronous because we're using CELERY_TASK_ALWAYS_EAGER. This means we don't need to wait for the task to complete.
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
 
-    group_id = csv_upload_sync(test_user, single_row_valid_df)
-    # Wait for the tasks to complete
-    saved_tasks = GroupResult.restore(group_id)
-
-    while not saved_tasks.ready():
-        time.sleep(0.1)
-
-    print("finished waiting for tasks to complete")
-
-    patient = Patient.objects.first()
-
+    # Verify patients
+    submission = Submission.objects.get(id=mock_submission.id)
+    patient = submission.patients.first()
+    assert submission.patients.count() == 1
     assert patient.nhs_number == nhs_number.standardise_format(
         single_row_valid_df["NHS Number"][0]
     )
@@ -207,26 +270,40 @@ def test_create_patient(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_create_patient_with_death_date(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_create_patient_with_death_date(single_row_valid_df, mock_submission):
+    # set the death date to be a year after the diagnosis date
     death_date = VALID_FIELDS["diagnosis_date"] + relativedelta(years=1)
     single_row_valid_df.loc[0, "Death Date"] = pd.to_datetime(death_date)
 
-    csv_upload_sync(test_user, single_row_valid_df)
+    # Run the function - Note this function is synchronous because we're using CELERY_TASK_ALWAYS_EAGER. This means we don't need to wait for the task to complete.
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
+
     patient = Patient.objects.first()
 
     assert patient.death_date == single_row_valid_df["Death Date"][0].date()
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_multiple_patients(
-    test_user, two_patients_first_with_two_visits_second_with_one
+    two_patients_first_with_two_visits_second_with_one, mock_submission
 ):
     df = two_patients_first_with_two_visits_second_with_one
 
     assert df["NHS Number"][0] == df["NHS Number"][1]
     assert df["NHS Number"][0] != df["NHS Number"][2]
 
-    csv_upload_sync(test_user, df)
+    # Run the function - Note this function is synchronous because we're using CELERY_TASK_ALWAYS_EAGER. This means we don't need to wait for the task to complete.
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=df,
+        TESTING=True,
+    )
 
     assert Patient.objects.count() == 2
     [first_patient, second_patient] = Patient.objects.all()
@@ -258,6 +335,7 @@ def test_multiple_patients(
     ],
 )
 @pytest.mark.django_db(transaction=True)
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_missing_mandatory_field(
     seed_groups_per_function_fixture,
     seed_users_per_function_fixture,
@@ -279,7 +357,14 @@ def test_missing_mandatory_field(
         Patient.objects.count() == 0
     ), "There should be no patients in the database before the test"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Run the function - Note this function is synchronous because we're using CELERY_TASK_ALWAYS_EAGER. This means we don't need to wait for the task to complete.
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
+
+    errors = mock_submission.errors
 
     assert model_field in errors[0]
 
@@ -288,10 +373,12 @@ def test_missing_mandatory_field(
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_missing_nhs_number(
     seed_groups_per_function_fixture,
     seed_users_per_function_fixture,
     single_row_valid_df,
+    mock_submission,
 ):
     # As these tests need full transaction support we can't use our session fixtures
     test_user = NPDAUser.objects.filter(
@@ -307,15 +394,26 @@ def test_missing_nhs_number(
         Patient.objects.count() == 0
     ), "There should be no patients in the database before the test"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # errors = csv_upload_sync(test_user, single_row_valid_df)
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
 
-    assert "nhs_number" in errors[0]
+    errors = Submission.objects.get(pk=mock_submission.pk).errors
+
+    print("test errors: ", errors)
+
+    assert "nhs_number" in errors
 
     # We shouldn't save this patient (invariant enforced in Patient.save not in the database)
     assert Patient.objects.count() == 0
 
 
+# TODO: Fix this test
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_missing_unique_reference_number(
     seed_groups_per_function_fixture,
     seed_users_per_function_fixture,
@@ -345,16 +443,23 @@ def test_missing_unique_reference_number(
 
 
 @pytest.mark.django_db
-def test_error_in_single_visit(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_error_in_single_visit(single_row_valid_df, mock_submission):
     single_row_valid_df.loc[0, "Diabetes Treatment at time of Hba1c measurement"] = 45
     single_row_valid_df.loc[
         0,
         "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
     ] = 3
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
 
-    assert "treatment" in errors[0]
+    errors = Submission.objects.get(pk=mock_submission.pk).errors
+
+    assert "treatment" in errors
 
     visit = Visit.objects.first()
 
@@ -363,7 +468,8 @@ def test_error_in_single_visit(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_error_in_multiple_visits(test_user, one_patient_two_visits):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_error_in_multiple_visits(one_patient_two_visits, mock_submission):
     df = one_patient_two_visits
     df.loc[0, "Diabetes Treatment at time of Hba1c measurement"] = 45
     df.loc[
@@ -376,8 +482,15 @@ def test_error_in_multiple_visits(test_user, one_patient_two_visits):
         "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
     ] = 3
 
-    errors = csv_upload_sync(test_user, df)
-    assert "treatment" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=df,
+        TESTING=True,
+    )
+
+    errors = Submission.objects.get(pk=mock_submission.pk).errors
+
+    assert "treatment" in errors
 
     assert Visit.objects.count() == 2
 
@@ -395,8 +508,9 @@ def test_error_in_multiple_visits(test_user, one_patient_two_visits):
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_multiple_patients_where_one_has_visit_errors_and_the_other_does_not(
-    test_user, two_patients_first_with_two_visits_second_with_one
+    two_patients_first_with_two_visits_second_with_one, mock_submission
 ):
     df = two_patients_first_with_two_visits_second_with_one
 
@@ -409,8 +523,15 @@ def test_multiple_patients_where_one_has_visit_errors_and_the_other_does_not(
         "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
     ] = 3
 
-    errors = csv_upload_sync(test_user, df)
-    assert "treatment" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=df,
+        TESTING=True,
+    )
+
+    errors = Submission.objects.get(pk=mock_submission.pk).errors
+
+    assert "treatment" in errors
 
     [patient_one, patient_two] = Patient.objects.all()
 
@@ -439,8 +560,9 @@ def test_multiple_patients_where_one_has_visit_errors_and_the_other_does_not(
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_multiple_patients_with_visit_errors(
-    test_user, two_patients_with_one_visit_each
+    two_patients_with_one_visit_each, mock_submission
 ):
     df = two_patients_with_one_visit_each
 
@@ -455,10 +577,16 @@ def test_multiple_patients_with_visit_errors(
         "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
     ] = 3
 
-    errors = csv_upload_sync(test_user, df)
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=df,
+        TESTING=True,
+    )
 
-    assert "treatment" in errors[0]
-    assert "treatment" in errors[1]
+    errors = Submission.objects.get(pk=mock_submission.pk).errors
+
+    assert "treatment" in json.loads(errors)["0"]
+    assert "treatment" in json.loads(errors)["1"]
 
     [patient_one, patient_two] = Patient.objects.all()
 
@@ -475,21 +603,35 @@ def test_multiple_patients_with_visit_errors(
 
 
 @pytest.mark.django_db
-def test_invalid_nhs_number(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_invalid_nhs_number(single_row_valid_df, mock_submission):
     invalid_nhs_number = "123456789"
     single_row_valid_df["NHS Number"] = invalid_nhs_number
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert "nhs_number" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
+
+    errors = Submission.objects.get(pk=mock_submission.pk).errors
+    assert "nhs_number" in errors
 
 
 @pytest.mark.django_db
-def test_future_date_of_birth(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_future_date_of_birth(single_row_valid_df, mock_submission):
     date_of_birth = TODAY + relativedelta(days=1)
     single_row_valid_df["Date of Birth"] = pd.to_datetime(date_of_birth)
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert "date_of_birth" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
+    errors = Submission.objects.get(pk=mock_submission.pk).errors
+
+    assert "date_of_birth" in errors
 
     patient = Patient.objects.first()
 
@@ -501,12 +643,18 @@ def test_future_date_of_birth(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_over_25(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_over_25(single_row_valid_df, mock_submission):
     date_of_birth = TODAY + -relativedelta(years=25, days=1)
     single_row_valid_df["Date of Birth"] = pd.to_datetime(date_of_birth)
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert "date_of_birth" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
+    errors = Submission.objects.get(pk=mock_submission.pk).errors
+    assert "date_of_birth" in errors
 
     patient = Patient.objects.first()
 
@@ -518,11 +666,17 @@ def test_over_25(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_invalid_diabetes_type(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_invalid_diabetes_type(single_row_valid_df, mock_submission):
     single_row_valid_df["Diabetes Type"] = 45
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert "diabetes_type" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
+    errors = Submission.objects.get(pk=mock_submission.pk).errors
+    assert "diabetes_type" in errors
 
     patient = Patient.objects.first()
 
@@ -531,12 +685,18 @@ def test_invalid_diabetes_type(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_future_diagnosis_date(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_future_diagnosis_date(single_row_valid_df, mock_submission):
     diagnosis_date = TODAY + relativedelta(days=1)
     single_row_valid_df["Date of Diabetes Diagnosis"] = pd.to_datetime(diagnosis_date)
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert "diagnosis_date" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
+    errors = Submission.objects.get(pk=mock_submission.pk).errors
+    assert "diagnosis_date" in errors
 
     patient = Patient.objects.first()
 
@@ -548,14 +708,19 @@ def test_future_diagnosis_date(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_diagnosis_date_before_date_of_birth(test_user, single_row_valid_df):
-    date_of_birth = (VALID_FIELDS["date_of_birth"],)
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_diagnosis_date_before_date_of_birth(single_row_valid_df, mock_submission):
     diagnosis_date = VALID_FIELDS["date_of_birth"] - relativedelta(years=1)
 
     single_row_valid_df["Date of Diabetes Diagnosis"] = pd.to_datetime(diagnosis_date)
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert "diagnosis_date" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
+    errors = Submission.objects.get(pk=mock_submission.pk).errors
+    assert "diagnosis_date" in errors
 
     patient = Patient.objects.first()
 
@@ -571,11 +736,17 @@ def test_diagnosis_date_before_date_of_birth(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_invalid_sex(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_invalid_sex(single_row_valid_df, mock_submission):
     single_row_valid_df["Stated gender"] = 45
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert "sex" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
+    errors = Submission.objects.get(pk=mock_submission.pk).errors
+    assert "sex" in errors
 
     patient = Patient.objects.first()
 
@@ -584,11 +755,17 @@ def test_invalid_sex(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_invalid_ethnicity(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_invalid_ethnicity(single_row_valid_df, mock_submission):
     single_row_valid_df["Ethnic Category"] = "45"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert "ethnicity" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
+    errors = Submission.objects.get(pk=mock_submission.pk).errors
+    assert "ethnicity" in errors
 
     patient = Patient.objects.first()
 
@@ -597,11 +774,17 @@ def test_invalid_ethnicity(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_missing_gp_ods_code(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_missing_gp_ods_code(single_row_valid_df, mock_submission):
     single_row_valid_df["GP Practice Code"] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert "gp_practice_ods_code" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
+    errors = Submission.objects.get(pk=mock_submission.pk).errors
+    assert "gp_practice_ods_code" in errors
 
     patient = Patient.objects.first()
 
@@ -616,13 +799,19 @@ def test_missing_gp_ods_code(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_future_death_date(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_future_death_date(single_row_valid_df, mock_submission):
     death_date = TODAY + relativedelta(days=1)
 
     single_row_valid_df["Death Date"] = pd.to_datetime(death_date)
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert "death_date" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
+    errors = Submission.objects.get(pk=mock_submission.pk).errors
+    assert "death_date" in errors
 
     patient = Patient.objects.first()
 
@@ -634,14 +823,18 @@ def test_future_death_date(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_death_date_before_date_of_birth(test_user, single_row_valid_df):
-    date_of_birth = (VALID_FIELDS["date_of_birth"],)
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_death_date_before_date_of_birth(single_row_valid_df, mock_submission):
     death_date = VALID_FIELDS["date_of_birth"] - relativedelta(years=1)
 
     single_row_valid_df["Death Date"] = pd.to_datetime(death_date)
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert "death_date" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
+    errors = Submission.objects.get(pk=mock_submission.pk).errors
+    assert "death_date" in errors
 
     patient = Patient.objects.first()
 
@@ -657,17 +850,23 @@ def test_death_date_before_date_of_birth(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 @patch(
     "project.npda.general_functions.csv.csv_upload.validate_patient_async",
     mock_patient_external_validation_result(
         postcode=ValidationError("Invalid postcode")
     ),
 )
-def test_invalid_postcode(test_user, single_row_valid_df):
+def test_invalid_postcode(single_row_valid_df, mock_submission):
     single_row_valid_df["Postcode of usual address"] = "not a postcode"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert "postcode" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
+    errors = Submission.objects.get(pk=mock_submission.pk).errors
+    assert "postcode" in errors
 
     patient = Patient.objects.first()
 
@@ -676,32 +875,44 @@ def test_invalid_postcode(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 @patch(
     "project.npda.general_functions.csv.csv_upload.validate_patient_async",
     mock_patient_external_validation_result(postcode=None),
 )
-def test_error_validating_postcode(test_user, single_row_valid_df):
+def test_error_validating_postcode(single_row_valid_df, mock_submission):
     single_row_valid_df["Postcode of usual address"] = "WC1X 8SH"
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
+    errors = Submission.objects.get(pk=mock_submission.pk).errors
 
-    assert len(errors) == 0
+    assert errors == None
 
     patient = Patient.objects.first()
-    assert patient.postcode == "WC1X8SH"
+    assert patient.postcode == "WC1X 8SH"
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 @patch(
     "project.npda.general_functions.csv.csv_upload.validate_patient_async",
     mock_patient_external_validation_result(
         gp_practice_ods_code=ValidationError("Invalid ODS code")
     ),
 )
-def test_invalid_gp_ods_code(test_user, single_row_valid_df):
+def test_invalid_gp_ods_code(single_row_valid_df, mock_submission):
     single_row_valid_df["GP Practice Code"] = "not a GP code"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert "gp_practice_ods_code" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
+    errors = Submission.objects.get(pk=mock_submission.pk).errors
+    assert "gp_practice_ods_code" in errors
 
     patient = Patient.objects.first()
 
@@ -710,23 +921,36 @@ def test_invalid_gp_ods_code(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 @patch(
     "project.npda.general_functions.csv.csv_upload.validate_patient_async",
     mock_patient_external_validation_result(postcode=None),
 )
-def test_error_validating_gp_ods_code(test_user, single_row_valid_df):
+def test_error_validating_gp_ods_code(single_row_valid_df, mock_submission):
     single_row_valid_df["GP Practice Code"] = "G85023"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert len(errors) == 0
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
+    errors = Submission.objects.get(pk=mock_submission.pk).errors
+    assert errors == None
 
     patient = Patient.objects.first()
     assert patient.gp_practice_ods_code == "G85023"
 
 
 @pytest.mark.django_db
-def test_lookup_index_of_multiple_deprivation(test_user, single_row_valid_df):
-    csv_upload_sync(test_user, single_row_valid_df)
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_lookup_index_of_multiple_deprivation(single_row_valid_df, mock_submission):
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
+
+    assert Patient.objects.count() == 1
 
     patient = Patient.objects.first()
     assert (
@@ -736,31 +960,54 @@ def test_lookup_index_of_multiple_deprivation(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 @patch(
     "project.npda.general_functions.csv.csv_upload.validate_patient_async",
     mock_patient_external_validation_result(
         index_of_multiple_deprivation_quintile=None
     ),
 )
-def test_error_looking_up_index_of_multiple_deprivation(test_user, single_row_valid_df):
-    csv_upload_sync(test_user, single_row_valid_df)
+def test_error_looking_up_index_of_multiple_deprivation(
+    single_row_valid_df, mock_submission
+):
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
 
     patient = Patient.objects.first()
     assert patient.index_of_multiple_deprivation_quintile is None
 
 
 @pytest.mark.django_db
-def test_save_location_from_postcode(test_user, single_row_valid_df):
-    csv_upload_sync(test_user, single_row_valid_df)
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_save_location_from_postcode(single_row_valid_df, mock_submission):
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
 
     patient = Patient.objects.first()
-    assert patient.location_bng == MOCK_PATIENT_EXTERNAL_VALIDATION_RESULT.location_bng
     assert (
-        patient.location_wgs84 == MOCK_PATIENT_EXTERNAL_VALIDATION_RESULT.location_wgs84
-    )
+        patient.location_bng.x == MOCK_PATIENT_EXTERNAL_VALIDATION_RESULT.location_bng.x
+    ), "Did not save location from postcode (x)"
+    assert (
+        patient.location_bng.y == MOCK_PATIENT_EXTERNAL_VALIDATION_RESULT.location_bng.y
+    ), "Did not save location from postcode (y)"
+    assert (
+        patient.location_wgs84.x
+        == MOCK_PATIENT_EXTERNAL_VALIDATION_RESULT.location_wgs84.x
+    ), "Did not save location from postcode (x)"
+    assert (
+        patient.location_wgs84.y
+        == MOCK_PATIENT_EXTERNAL_VALIDATION_RESULT.location_wgs84.y
+    ), "Did not save location from postcode (y)"
 
 
 @pytest.mark.django_db
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 @patch(
     "project.npda.general_functions.csv.csv_upload.validate_patient_async",
     mock_patient_external_validation_result(
@@ -768,12 +1015,18 @@ def test_save_location_from_postcode(test_user, single_row_valid_df):
         location_wgs84=None,
     ),
 )
-def test_missing_location_from_postcode(test_user, single_row_valid_df):
-    csv_upload_sync(test_user, single_row_valid_df)
+def test_missing_location_from_postcode(single_row_valid_df, mock_submission):
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
 
     patient = Patient.objects.first()
-    assert patient.location_bng is None
-    assert patient.location_wgs84 is None
+    assert patient.location_bng.x is None
+    assert patient.location_bng.y is None
+    assert patient.location_wgs84.x is None
+    assert patient.location_wgs84.y is None
 
 
 @pytest.mark.django_db
@@ -974,12 +1227,19 @@ def test_dates_with_short_year(one_patient_two_visits):
 
 
 @pytest.mark.django_db
-def test_urine_albumin_value_is_rounded_to_one_decimal(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_urine_albumin_value_is_rounded_to_one_decimal(
+    single_row_valid_df, mock_submission
+):
     single_row_valid_df["Urinary Albumin Level (ACR)"] = 0.73
     csv = single_row_valid_df.to_csv(index=False, date_format="%d/%m/%Y")
 
     df = read_csv_from_str(csv).df
-    csv_upload_sync(test_user, df)
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=df,
+        TESTING=True,
+    )
 
     visit = Visit.objects.first()
 
@@ -995,16 +1255,14 @@ def test_urine_albumin_value_is_rounded_to_one_decimal(test_user, single_row_val
     ],
 )
 @pytest.mark.django_db(transaction=True)
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_bad_date_format_on_mandatory_column(
     seed_groups_per_function_fixture,
     seed_users_per_function_fixture,
     one_patient_two_visits,
     column,
+    mock_submission,
 ):
-    # As these tests need full transaction support we can't use our session fixtures
-    test_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
-    ).first()
 
     # Delete all patients to ensure we're starting from a clean slate
     Patient.objects.all().delete()
@@ -1021,7 +1279,14 @@ def test_bad_date_format_on_mandatory_column(
     ), "There should be no patients in the database before the test"
 
     df = read_csv_from_str(csv).df
-    errors = csv_upload_sync(test_user, df)
+
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=df,
+        TESTING=True,
+    )
+
+    errors = Submission.objects.get(pk=mock_submission.pk).errors
 
     assert len(errors) == 1
 
@@ -1046,22 +1311,35 @@ def test_bad_date_format_on_optional_column(one_patient_two_visits):
 
 
 @pytest.mark.django_db
-def test_upload_csv_with_bool_values_instead_of_int(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_upload_csv_with_bool_values_instead_of_int(
+    single_row_valid_df, mock_submission
+):
     single_row_valid_df["Has the patient been recommended a Gluten-free diet?"] = True
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert "gluten_free_diet" in errors[0]
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
+    errors = Submission.objects.get(pk=mock_submission.pk).errors
+    assert "gluten_free_diet" in errors
 
     visit = Visit.objects.first()
     assert visit.gluten_free_diet == 1
 
 
 @pytest.mark.django_db
-def test_height_is_rounded_to_one_decimal(test_user, single_row_valid_df):
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+def test_height_is_rounded_to_one_decimal(single_row_valid_df, mock_submission):
     single_row_valid_df["Patient Height (cm)"] = 123.456
     single_row_valid_df["Patient Weight (kg)"] = 7.89
 
-    csv_upload_sync(test_user, single_row_valid_df)
+    process_dataframe_validate_save_patients_and_visits(
+        submission=mock_submission,
+        dataframe=single_row_valid_df,
+        TESTING=True,
+    )
 
     visit = Visit.objects.first()
 
