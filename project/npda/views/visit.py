@@ -67,46 +67,8 @@ class PatientVisitsListView(
         context["patient"] = patient
         context["submission"] = submission
 
-        if patient.is_in_transfer_in_the_last_year():
-            previous_transfer = (
-                Transfer.objects.filter(patient=patient)
-                .order_by("-date_leaving_service")
-                .first()
-            )
-            if hasattr(previous_transfer, "previous_pz_code"):
-                if previous_transfer.previous_pz_code is not None:
-                    pz_code = (
-                        Transfer.objects.filter(
-                            patient=patient,
-                        )
-                        .order_by("-date_leaving_service")
-                        .first()
-                        .previous_pz_code
-                    )
-                else:
-                    # this patient has been transferred but not yet received at a new PDU
-                    # Use the existing PDU in session
-                    pz_code = self.request.session.get("pz_code")
-                pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-            else:
-                # this patient has been transferred but not yet received at a new PDU
-                # Use the existing PDU
-                PaediatricDiabetesUnit = apps.get_model(
-                    "npda", "PaediatricDiabetesUnit"
-                )
-                pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-        # get the PDU for this patient - this is the PDU that the patient is currently under.
-        # If the patient has left the PDU, the date_leaving_service will be set and it will be possible to view KPIs for the PDU up until transfer,
-        # if this happened during the audit period. This is TODO
-        else:
-            #  this patient has been transferred but not yet received at a new PDU
-            pdu = (
-                Transfer.objects.filter(
-                    patient=patient, date_leaving_service__isnull=True
-                )
-                .first()
-                .paediatric_diabetes_unit
-            )
+        # If the patient has left the PDU, they may appear in another one but we record that as a separate Patient instance
+        pdu = Transfer.objects.get(patient=patient).paediatric_diabetes_unit
 
         calculate_kpis = CalculateKPIS(
             calculation_date=datetime.date.today(), return_pt_querysets=False
