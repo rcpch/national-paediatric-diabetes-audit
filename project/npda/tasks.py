@@ -97,6 +97,11 @@ def save_patient_and_visits_to_submission(
                     "hospital_admission_reason",
                     "dka_additional_therapies",
                 ]:
+                    if model_field_value and (
+                        type(model_field_value) != float
+                        and type(model_field_value) != int
+                    ):
+                        model_field_value = None
                     # this is a workaround - these fields are integer fields but the csv sometimes has them as floats
                     model_field_value = (
                         int(model_field_value) if model_field_value else None
@@ -217,44 +222,50 @@ def save_patient_and_visits_to_submission(
         record_errors_from_form(
             errors_to_return, patient_row["row_index"], patient_form
         )
-
-    patient = patient_form.save()
+    try:
+        patient = patient_form.save()
+    except Exception as e:
+        logger.error(f"Error creating patient: {e}")
+        patient_row_index = patient_row["row_index"]
+        errors_to_return[patient_row_index]["__all__"].append(str(e))
+        return errors_to_return
 
     transfer_fields = row_to_dict(
         patient_row, Transfer, csv_headings=get_csv_headings(pdu.pz_code)
     )
 
-    # Save the patient transfer record
-    Transfer.objects.create(
-        **transfer_fields, patient=patient, paediatric_diabetes_unit=pdu
-    )
-
-    # Add the patient to the submission
-    submission.patients.add(patient)
-
-    # Process each visit for the patient
-    for visit_index, visit_row in patient_group.iterrows():
-        visit_dict = row_to_dict(
-            visit_row, Visit, csv_headings=get_csv_headings(pdu.pz_code)
+    if patient:
+        # Save the patient transfer record
+        Transfer.objects.create(
+            **transfer_fields, patient=patient, paediatric_diabetes_unit=pdu
         )
-        # Convert invalid numpy types to None
-        visit_dict = convert_invalid_dates_to_none(visit_dict)
-        visit_dict["patient"] = patient
 
-        visit_form = VisitForm(data=visit_dict, initial={"patient": patient})
+        # Add the patient to the submission
+        submission.patients.add(patient)
 
-        if not visit_form.is_valid():
-            retain_errors_and_invalid_field_data(visit_form)
-            record_errors_from_form(
-                errors_to_return, visit_row["row_index"], visit_form
+        # Process each visit for the patient
+        for visit_index, visit_row in patient_group.iterrows():
+            visit_dict = row_to_dict(
+                visit_row, Visit, csv_headings=get_csv_headings(pdu.pz_code)
             )
+            # Convert invalid numpy types to None
+            visit_dict = convert_invalid_dates_to_none(visit_dict)
+            visit_dict["patient"] = patient
 
-        visit = visit_form.save()
-        visit.is_valid = visit_form.is_valid()
-        visit.save()
+            visit_form = VisitForm(data=visit_dict, initial={"patient": patient})
 
-        # Update the progress tracker
-        progress_tracker.set_progress(visit_index + 1, total_visits, patient.id)
+            if not visit_form.is_valid():
+                retain_errors_and_invalid_field_data(visit_form)
+                record_errors_from_form(
+                    errors_to_return, visit_row["row_index"], visit_form
+                )
+
+            visit = visit_form.save()
+            visit.is_valid = visit_form.is_valid()
+            visit.save()
+
+            # Update the progress tracker
+            progress_tracker.set_progress(visit_index + 1, total_visits, patient.id)
 
     return errors_to_return
 
