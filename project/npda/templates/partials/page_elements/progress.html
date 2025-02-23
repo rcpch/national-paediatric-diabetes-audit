@@ -1,7 +1,12 @@
 {% load static %}
 <div class="text-center">
      <div id="csv-loading-progress"
-          class="radial-progress text-primary"
-          style="--value:{{ percentage }}"
-          role="progressbar">{{ percentage }}</div>
+          class="radial-progress text-rcpch_dark_blue  font-montserrat"
+          style="--value:{{ percentage }};
+                 --size:20rem;
+                 --thickness: 2rem;
+                 --font-size: 10rem"
+          role="progressbar">
+          Saving {{ percentage }} % ({{ value }}/{{ total }} patients)
+     </div>
 </div>

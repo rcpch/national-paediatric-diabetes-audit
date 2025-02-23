@@ -106,7 +106,10 @@ def home(request):
             # await sync_to_async(refresh_session_filters)(request)
             refresh_session_filters(request)
 
-            return redirect("task_status", grouped_tasks_id=grouped_tasks_id)
+            return redirect(
+                "task_status",
+                grouped_tasks_id=grouped_tasks_id,
+            )
         else:
             # If the user does not have permission to upload csvs, redirect them to the dashboard page
             messages.error(
