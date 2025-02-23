@@ -244,7 +244,21 @@ def save_patient_and_visits_to_submission(
                 field in errors_to_return[patient_row["row_index"]]
                 for field in critical_fields
             ):
-                return errors_to_return
+                # Any errors in these fields are critical and we can't continue with this row
+                # We have already gathered the errors from the patient form, so we can return them to the Submission and report them to the user
+                # The only exception here is if the patient is over 25 years old we can continue with the row
+                if "date_of_birth" in errors_to_return[patient_row["row_index"]]:
+                    # the error is in the date_of_birth field
+                    # check if the patient is over 25 years old
+                    if not (
+                        "NPDA patients cannot be 25+ years old."
+                        in errors_to_return[patient_row["row_index"]]["date_of_birth"][
+                            0
+                        ]
+                    ):
+                        return errors_to_return
+                else:
+                    return errors_to_return
         try:
             patient = patient_form.save()
         except Exception as e:

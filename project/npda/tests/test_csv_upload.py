@@ -732,6 +732,9 @@ def test_invalid_nhs_number(single_row_valid_df, mock_submission):
     errors = Submission.objects.get(pk=mock_submission.pk).errors
     assert "nhs_number" in errors
 
+    # catastrophic - we can't save this patient at all
+    assert Patient.objects.count() == 0
+
 
 @pytest.mark.django_db
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
@@ -746,29 +749,32 @@ def test_future_date_of_birth(single_row_valid_df, mock_submission):
     )
     errors = Submission.objects.get(pk=mock_submission.pk).errors
 
-    assert "date_of_birth" in errors
-
-    patient = Patient.objects.first()
-
-    assert patient.date_of_birth == date_of_birth
-    assert "date_of_birth" in patient.errors
-
-    error_message = patient.errors["date_of_birth"][0]["message"]
+    error_message = json.loads(errors)["0"]["date_of_birth"][0]
     assert error_message == "Cannot be in the future"
+    assert "date_of_birth" in errors
+    # Catastrophic - we can't save this patient at all
+    assert Patient.objects.count() == 0
 
 
 @pytest.mark.django_db
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
-def test_over_25(single_row_valid_df, mock_submission):
+def test_over_25(single_row_valid_df, mocked_submission, test_user):
     date_of_birth = TODAY + -relativedelta(years=25, days=1)
     single_row_valid_df["Date of Birth"] = pd.to_datetime(date_of_birth)
 
-    process_dataframe_validate_save_patients_and_visits(
-        submission=mock_submission,
-        dataframe=single_row_valid_df,
-        TESTING=True,
+    submission = Submission.objects.create(
+        audit_year=mocked_submission.audit_year,
+        submission_date=mocked_submission.submission_date,
+        submission_active=mocked_submission.submission_active,
+        csv_file=mocked_submission.csv_file,
+        csv_file_name=mocked_submission.csv_file_name,
+        paediatric_diabetes_unit=mocked_submission.paediatric_diabetes_unit,
+        submission_by=test_user,
     )
-    errors = Submission.objects.get(pk=mock_submission.pk).errors
+    process_dataframe_validate_save_patients_and_visits(
+        submission=submission, dataframe=single_row_valid_df, TESTING=True
+    )
+    errors = Submission.objects.get(pk=submission.pk).errors
     assert "date_of_birth" in errors
 
     patient = Patient.objects.first()
@@ -812,14 +818,11 @@ def test_future_diagnosis_date(single_row_valid_df, mock_submission):
     )
     errors = Submission.objects.get(pk=mock_submission.pk).errors
     assert "diagnosis_date" in errors
-
-    patient = Patient.objects.first()
-
-    assert patient.diagnosis_date == diagnosis_date
-    assert "diagnosis_date" in patient.errors
-
-    error_message = patient.errors["diagnosis_date"][0]["message"]
+    error_message = json.loads(errors)["0"]["diagnosis_date"][0]
     assert error_message == "Cannot be in the future"
+
+    # Catastrophic - we can't save this patient at all
+    assert Patient.objects.count() == 0
 
 
 @pytest.mark.django_db
@@ -837,17 +840,15 @@ def test_diagnosis_date_before_date_of_birth(single_row_valid_df, mock_submissio
     errors = Submission.objects.get(pk=mock_submission.pk).errors
     assert "diagnosis_date" in errors
 
-    patient = Patient.objects.first()
-
-    assert patient.diagnosis_date == diagnosis_date
-    assert "diagnosis_date" in patient.errors
-
-    error_message = patient.errors["diagnosis_date"][0]["message"]
+    error_message = json.loads(errors)["0"]["diagnosis_date"][0]
+    print(error_message)
     # TODO MRB: why does this have entity encoding issues? (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/333)
     assert (
-        error_message
-        == "&#x27;Date of Diabetes Diagnosis&#x27; cannot be before &#x27;Date of Birth&#x27;"
+        error_message == "'Date of Diabetes Diagnosis' cannot be before 'Date of Birth'"
     )
+
+    # Catastrophic - we can't save this patient at all
+    assert Patient.objects.count() == 0
 
 
 @pytest.mark.django_db
