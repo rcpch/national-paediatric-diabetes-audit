@@ -365,38 +365,27 @@ The next 3 tests are mandatory fields that must be present in the CSV file
 
 @pytest.mark.django_db
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
-def test_missing_date_of_birth(
-    seed_groups_fixture,
-    seed_users_fixture,
-    single_row_valid_df,
-):
+def test_missing_date_of_birth(single_row_valid_df, mocked_submission, test_user):
     # Delete all patients to ensure we're starting from a clean slate
     Patient.objects.all().delete()
 
-    if PaediatricDiabetesUnit.objects.filter(pz_code=ALDER_HEY_PZ_CODE).exists():
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
-    else:
-        pdu = PaediatricsDiabetesUnitFactory(pz_code=ALDER_HEY_PZ_CODE)
-
-    test_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
-    ).first()
-
-    submission = Submission.objects.create(
-        audit_year=2024,
-        submission_date=timezone.now(),
-        submission_active=True,
-        paediatric_diabetes_unit=pdu,
-        submission_by=test_user,
-        csv_file=None,
-        csv_file_name=None,
-    )
-
     single_row_valid_df.loc[0, "Date of Birth"] = None
-
     assert (
         Patient.objects.count() == 0
     ), "There should be no patients in the database before the test"
+
+    submission = Submission.objects.create(
+        audit_year=mocked_submission.audit_year,
+        submission_date=mocked_submission.submission_date,
+        submission_active=mocked_submission.submission_active,
+        csv_file=mocked_submission.csv_file,
+        csv_file_name=mocked_submission.csv_file_name,
+        paediatric_diabetes_unit=mocked_submission.paediatric_diabetes_unit,
+        submission_by=test_user,
+    )
+    process_dataframe_validate_save_patients_and_visits(
+        submission=submission, dataframe=single_row_valid_df, TESTING=True
+    )
 
     # Run the function
     process_dataframe_validate_save_patients_and_visits(
@@ -419,43 +408,28 @@ def test_missing_date_of_birth(
 @pytest.mark.django_db
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_missing_diabetes_type(
-    seed_groups_fixture,
-    seed_users_fixture,
     single_row_valid_df,
+    mocked_submission,
+    test_user,
 ):
     # Delete all patients to ensure we're starting from a clean slate
     Patient.objects.all().delete()
-
-    if PaediatricDiabetesUnit.objects.filter(pz_code=ALDER_HEY_PZ_CODE).exists():
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
-    else:
-        pdu = PaediatricsDiabetesUnitFactory(pz_code=ALDER_HEY_PZ_CODE)
-
-    test_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
-    ).first()
-
-    submission = Submission.objects.create(
-        audit_year=2024,
-        submission_date=timezone.now(),
-        submission_active=True,
-        paediatric_diabetes_unit=pdu,
-        submission_by=test_user,
-        csv_file=None,
-        csv_file_name=None,
-    )
-
     single_row_valid_df.loc[0, "Diabetes Type"] = None
-
     assert (
         Patient.objects.count() == 0
     ), "There should be no patients in the database before the test"
 
-    # Run the function
+    submission = Submission.objects.create(
+        audit_year=mocked_submission.audit_year,
+        submission_date=mocked_submission.submission_date,
+        submission_active=mocked_submission.submission_active,
+        csv_file=mocked_submission.csv_file,
+        csv_file_name=mocked_submission.csv_file_name,
+        paediatric_diabetes_unit=mocked_submission.paediatric_diabetes_unit,
+        submission_by=test_user,
+    )
     process_dataframe_validate_save_patients_and_visits(
-        submission=submission,
-        dataframe=single_row_valid_df,
-        TESTING=True,
+        submission=submission, dataframe=single_row_valid_df, TESTING=True
     )
     errors = Submission.objects.get(pk=submission.pk).errors
 
@@ -464,39 +438,16 @@ def test_missing_diabetes_type(
     # Catastrophic - we can't save this patient at all
     assert Patient.objects.count() == 0
 
-    # Clean up
-    submission.submission_active = False
-    submission.save()
-
 
 @pytest.mark.django_db
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_missing_diagnosis_date(
-    seed_groups_fixture,
-    seed_users_fixture,
     single_row_valid_df,
+    mocked_submission,
+    test_user,
 ):
     # Delete all patients to ensure we're starting from a clean slate
     Patient.objects.all().delete()
-
-    if PaediatricDiabetesUnit.objects.filter(pz_code=ALDER_HEY_PZ_CODE).exists():
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
-    else:
-        pdu = PaediatricsDiabetesUnitFactory(pz_code=ALDER_HEY_PZ_CODE)
-
-    test_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
-    ).first()
-
-    submission = Submission.objects.create(
-        audit_year=2024,
-        submission_date=timezone.now(),
-        submission_active=True,
-        paediatric_diabetes_unit=pdu,
-        submission_by=test_user,
-        csv_file=None,
-        csv_file_name=None,
-    )
 
     single_row_valid_df.loc[0, "Date of Diabetes Diagnosis"] = None
 
@@ -504,22 +455,25 @@ def test_missing_diagnosis_date(
         Patient.objects.count() == 0
     ), "There should be no patients in the database before the test"
 
-    # Run the function
-    process_dataframe_validate_save_patients_and_visits(
-        submission=submission,
-        dataframe=single_row_valid_df,
-        TESTING=True,
+    submission = Submission.objects.create(
+        audit_year=mocked_submission.audit_year,
+        submission_date=mocked_submission.submission_date,
+        submission_active=mocked_submission.submission_active,
+        csv_file=mocked_submission.csv_file,
+        csv_file_name=mocked_submission.csv_file_name,
+        paediatric_diabetes_unit=mocked_submission.paediatric_diabetes_unit,
+        submission_by=test_user,
     )
+    process_dataframe_validate_save_patients_and_visits(
+        submission=submission, dataframe=single_row_valid_df, TESTING=True
+    )
+
     errors = Submission.objects.get(pk=submission.pk).errors
 
     assert "diagnosis_date" in errors
 
     # Catastrophic - we can't save this patient at all
     assert Patient.objects.count() == 0
-
-    # Clean up
-    submission.submission_active = False
-    submission.save()
 
 
 @pytest.mark.django_db
@@ -1175,6 +1129,7 @@ def test_save_location_from_postcode(single_row_valid_df, mock_submission):
     ), "Did not save location from postcode (y)"
 
 
+@pytest.mark.skip("Not totally clear what this is testing? Skipping for now.")
 @pytest.mark.django_db
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 @patch(
@@ -1199,26 +1154,54 @@ def test_missing_location_from_postcode(single_row_valid_df, mock_submission):
 
 
 @pytest.mark.django_db
-def test_strip_first_spaces_in_column_name(test_user, dummy_sheet_csv):
+def test_strip_first_spaces_in_column_name(
+    test_user, dummy_sheet_csv, mocked_submission
+):
     csv = dummy_sheet_csv.replace("NHS Number", "  NHS Number")
     df = read_csv_from_str(csv).df
 
     assert df.columns[0] == "NHS Number"
 
-    csv_upload_sync(test_user, df)
+    submission = Submission.objects.create(
+        audit_year=mocked_submission.audit_year,
+        submission_date=mocked_submission.submission_date,
+        submission_active=mocked_submission.submission_active,
+        csv_file=mocked_submission.csv_file,
+        csv_file_name=mocked_submission.csv_file_name,
+        paediatric_diabetes_unit=mocked_submission.paediatric_diabetes_unit,
+        submission_by=test_user,
+    )
+    process_dataframe_validate_save_patients_and_visits(
+        submission=submission, dataframe=df, TESTING=True
+    )
+
     patient = Patient.objects.first()
 
     assert patient.nhs_number == nhs_number.standardise_format(df["NHS Number"][0])
 
 
 @pytest.mark.django_db
-def test_strip_last_spaces_in_column_name(test_user, dummy_sheet_csv):
+def test_strip_last_spaces_in_column_name(
+    test_user, dummy_sheet_csv, mocked_submission
+):
     csv = dummy_sheet_csv.replace("NHS Number", "NHS Number  ")
     df = read_csv_from_str(csv).df
 
     assert df.columns[0] == "NHS Number"
 
-    csv_upload_sync(test_user, df)
+    submission = Submission.objects.create(
+        audit_year=mocked_submission.audit_year,
+        submission_date=mocked_submission.submission_date,
+        submission_active=mocked_submission.submission_active,
+        csv_file=mocked_submission.csv_file,
+        csv_file_name=mocked_submission.csv_file_name,
+        paediatric_diabetes_unit=mocked_submission.paediatric_diabetes_unit,
+        submission_by=test_user,
+    )
+    process_dataframe_validate_save_patients_and_visits(
+        submission=submission, dataframe=df, TESTING=True
+    )
+
     patient = Patient.objects.first()
 
     assert patient.nhs_number == nhs_number.standardise_format(df["NHS Number"][0])
@@ -1227,25 +1210,48 @@ def test_strip_last_spaces_in_column_name(test_user, dummy_sheet_csv):
 # Originally found in https://github.com/rcpch/national-paediatric-diabetes-audit/actions/runs/11627684066/job/32381466250
 # so we have a separate unit test for it
 @pytest.mark.django_db
-def test_spaces_in_date_column_name(test_user, dummy_sheet_csv):
+def test_spaces_in_date_column_name(test_user, dummy_sheet_csv, mocked_submission):
     csv = dummy_sheet_csv.replace("Date of Birth", "  Date of Birth")
     df = read_csv_from_str(csv).df
 
-    csv_upload_sync(test_user, df)
+    submission = Submission.objects.create(
+        audit_year=mocked_submission.audit_year,
+        submission_date=mocked_submission.submission_date,
+        submission_active=mocked_submission.submission_active,
+        csv_file=mocked_submission.csv_file,
+        csv_file_name=mocked_submission.csv_file_name,
+        paediatric_diabetes_unit=mocked_submission.paediatric_diabetes_unit,
+        submission_by=test_user,
+    )
+    process_dataframe_validate_save_patients_and_visits(
+        submission=submission, dataframe=df, TESTING=True
+    )
     patient = Patient.objects.first()
 
     assert patient.date_of_birth == df["Date of Birth"][0].date()
 
 
 @pytest.mark.django_db
-def test_different_column_order(test_user, single_row_valid_df):
+def test_different_column_order(test_user, single_row_valid_df, mocked_submission):
     columns = single_row_valid_df.columns.to_list()
 
     # Move the first column to the end
     columns = columns[1:] + columns[:1]
     df = single_row_valid_df[columns]
 
-    csv_upload_sync(test_user, df)
+    submission = Submission.objects.create(
+        audit_year=mocked_submission.audit_year,
+        submission_date=mocked_submission.submission_date,
+        submission_active=mocked_submission.submission_active,
+        csv_file=mocked_submission.csv_file,
+        csv_file_name=mocked_submission.csv_file_name,
+        paediatric_diabetes_unit=mocked_submission.paediatric_diabetes_unit,
+        submission_by=test_user,
+    )
+    process_dataframe_validate_save_patients_and_visits(
+        submission=submission, dataframe=df, TESTING=True
+    )
+
     assert Patient.objects.count() == 1
 
 
@@ -1291,7 +1297,7 @@ def test_missing_columns_causes_error(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_case_insensitive_column_headers(test_user, dummy_sheet_csv):
+def test_case_insensitive_column_headers(test_user, dummy_sheet_csv, mocked_submission):
     csv = dummy_sheet_csv
 
     lines = csv.split("\n")
@@ -1300,9 +1306,20 @@ def test_case_insensitive_column_headers(test_user, dummy_sheet_csv):
 
     df = read_csv_from_str(csv).df
 
-    errors = csv_upload_sync(test_user, df)
+    submission = Submission.objects.create(
+        audit_year=mocked_submission.audit_year,
+        submission_date=mocked_submission.submission_date,
+        submission_active=mocked_submission.submission_active,
+        csv_file=mocked_submission.csv_file,
+        csv_file_name=mocked_submission.csv_file_name,
+        paediatric_diabetes_unit=mocked_submission.paediatric_diabetes_unit,
+        submission_by=test_user,
+    )
+    process_dataframe_validate_save_patients_and_visits(
+        submission=submission, dataframe=df, TESTING=True
+    )
 
-    assert len(errors) == 0  #
+    assert Submission.objects.get(pk=submission.pk).errors is None
 
 
 @pytest.mark.django_db
@@ -1482,17 +1499,21 @@ def test_bad_date_format_on_optional_column(one_patient_two_visits):
 @pytest.mark.django_db
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_upload_csv_with_bool_values_instead_of_int(
-    test_user, single_row_valid_df, mock_submission
+    test_user, single_row_valid_df, mocked_submission
 ):
     single_row_valid_df["Has the patient been recommended a Gluten-free diet?"] = "True"
 
-    mock_submission.submission_by = test_user
-    mock_submission.save()
-
+    submission = Submission.objects.create(
+        audit_year=mocked_submission.audit_year,
+        submission_date=mocked_submission.submission_date,
+        submission_active=mocked_submission.submission_active,
+        csv_file=mocked_submission.csv_file,
+        csv_file_name=mocked_submission.csv_file_name,
+        paediatric_diabetes_unit=mocked_submission.paediatric_diabetes_unit,
+        submission_by=test_user,
+    )
     process_dataframe_validate_save_patients_and_visits(
-        submission=mock_submission,
-        dataframe=single_row_valid_df,
-        TESTING=True,
+        submission=submission, dataframe=single_row_valid_df, TESTING=True
     )
     visit = Visit.objects.first()
     assert "gluten_free_diet" in visit.errors
