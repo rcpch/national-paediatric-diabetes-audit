@@ -2643,18 +2643,27 @@ def test_coeliac_screening_missing_fails_validation(
 @pytest.mark.django_db
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_coeliac_screening_date_missing_passes_validation(
-    single_row_valid_df, mock_submission
+    single_row_valid_df, mocked_submission, test_user
 ):
     single_row_valid_df.loc[0, "Observation Date: Coeliac Disease Screening"] = None
     single_row_valid_df.loc[
         0, "Has the patient been recommended a Gluten-free diet?"
     ] = 1
 
+    submission = Submission.objects.create(
+        audit_year=mocked_submission.audit_year,
+        submission_date=mocked_submission.submission_date,
+        submission_active=mocked_submission.submission_active,
+        csv_file=mocked_submission.csv_file,
+        csv_file_name=mocked_submission.csv_file_name,
+        paediatric_diabetes_unit=mocked_submission.paediatric_diabetes_unit,
+        submission_by=test_user,
+    )
     process_dataframe_validate_save_patients_and_visits(
-        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+        submission=submission, dataframe=single_row_valid_df, TESTING=True
     )
     visit = Visit.objects.first()
-    assert "coeliac_screen_date" not in visit.errors
+    assert visit.errors == None
     assert visit.coeliac_screen_date is None
     assert visit.gluten_free_diet == 1
 
@@ -2667,7 +2676,7 @@ Psychological support tests
 @pytest.mark.django_db
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_psychological_support_passes_validation(
-    test_user, single_row_valid_df, mock_submission
+    single_row_valid_df, mocked_submission, test_user
 ):
     """
     Test that psychological support is accepted
@@ -2680,8 +2689,17 @@ def test_psychological_support_passes_validation(
         "Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?",
     ] = 1
 
+    submission = Submission.objects.create(
+        audit_year=mocked_submission.audit_year,
+        submission_date=mocked_submission.submission_date,
+        submission_active=mocked_submission.submission_active,
+        csv_file=mocked_submission.csv_file,
+        csv_file_name=mocked_submission.csv_file_name,
+        paediatric_diabetes_unit=mocked_submission.paediatric_diabetes_unit,
+        submission_by=test_user,
+    )
     process_dataframe_validate_save_patients_and_visits(
-        submission=mock_submission, dataframe=single_row_valid_df
+        submission=submission, dataframe=single_row_valid_df, TESTING=True
     )
 
     visit = Visit.objects.first()
@@ -2690,10 +2708,10 @@ def test_psychological_support_passes_validation(
     assert visit.psychological_additional_support_status == 1
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_psychological_support_impossible_value_fails_validation(
-    single_row_valid_df, mock_submission
+    single_row_valid_df, mocked_submission, test_user
 ):
     """
     Test that an impossible psychological support value is rejected
@@ -2706,8 +2724,17 @@ def test_psychological_support_impossible_value_fails_validation(
         "Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?",
     ] = 94  # Impossible value
 
+    submission = Submission.objects.create(
+        audit_year=mocked_submission.audit_year,
+        submission_date=mocked_submission.submission_date,
+        submission_active=mocked_submission.submission_active,
+        csv_file=mocked_submission.csv_file,
+        csv_file_name=mocked_submission.csv_file_name,
+        paediatric_diabetes_unit=mocked_submission.paediatric_diabetes_unit,
+        submission_by=test_user,
+    )
     process_dataframe_validate_save_patients_and_visits(
-        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+        submission=submission, dataframe=single_row_valid_df, TESTING=True
     )
     visit = Visit.objects.first()
     assert "psychological_additional_support_status" in visit.errors
@@ -2715,10 +2742,10 @@ def test_psychological_support_impossible_value_fails_validation(
     assert visit.psychological_additional_support_status == 94
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_psychological_support_missing_fails_validation(
-    single_row_valid_df, mock_submission
+    single_row_valid_df, mocked_submission, test_user
 ):
     """
     Test that a missing psychological support value is rejected
@@ -2731,8 +2758,17 @@ def test_psychological_support_missing_fails_validation(
         "Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?",
     ] = None
 
+    submission = Submission.objects.create(
+        audit_year=mocked_submission.audit_year,
+        submission_date=mocked_submission.submission_date,
+        submission_active=mocked_submission.submission_active,
+        csv_file=mocked_submission.csv_file,
+        csv_file_name=mocked_submission.csv_file_name,
+        paediatric_diabetes_unit=mocked_submission.paediatric_diabetes_unit,
+        submission_by=test_user,
+    )
     process_dataframe_validate_save_patients_and_visits(
-        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+        submission=submission, dataframe=single_row_valid_df, TESTING=True
     )
 
     visit = Visit.objects.first()
@@ -2741,7 +2777,7 @@ def test_psychological_support_missing_fails_validation(
     assert visit.psychological_additional_support_status is None
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_psychological_support_date_missing_fails_validation(
     single_row_valid_df, mocked_submission, test_user
@@ -2863,7 +2899,7 @@ def test_smoking_status_non_smoker_passes_validation(
 @pytest.mark.django_db
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_smoking_status_impossible_value_fails_validation(
-    single_row_valid_df, mock_submission
+    single_row_valid_df, mocked_submission, test_user
 ):
     """
     Test that an impossible smoking status value is rejected
@@ -2874,8 +2910,17 @@ def test_smoking_status_impossible_value_fails_validation(
     ] = "01/01/2022"
     single_row_valid_df.loc[0, "Does the patient smoke?"] = 94  # Impossible value
 
+    submission = Submission.objects.create(
+        audit_year=mocked_submission.audit_year,
+        submission_date=mocked_submission.submission_date,
+        submission_active=mocked_submission.submission_active,
+        csv_file=mocked_submission.csv_file,
+        csv_file_name=mocked_submission.csv_file_name,
+        paediatric_diabetes_unit=mocked_submission.paediatric_diabetes_unit,
+        submission_by=test_user,
+    )
     process_dataframe_validate_save_patients_and_visits(
-        submission=mock_submission, dataframe=single_row_valid_df
+        submission=submission, dataframe=single_row_valid_df, TESTING=True
     )
 
     visit = Visit.objects.first()
