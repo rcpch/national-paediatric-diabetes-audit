@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+from io import BytesIO
 import json
 import tempfile
 from decimal import Decimal
@@ -1066,12 +1067,6 @@ def test_lookup_index_of_multiple_deprivation(single_row_valid_df, mock_submissi
     )
 
 
-# @patch(
-#     "project.npda.general_functions.csv.csv_upload.validate_patient_async",
-#     mock_patient_external_validation_result(
-#         index_of_multiple_deprivation_quintile=None
-#     ),
-# )
 @pytest.mark.django_db
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 def test_error_looking_up_index_of_multiple_deprivation(
@@ -1159,13 +1154,8 @@ def test_strip_first_spaces_in_column_name(
     assert df.columns[0] == "NHS Number"
 
 
-@pytest.mark.skip(
-    "Perhaps a better way to test this now that csv_upload is not being tested directly?"
-)
 @pytest.mark.django_db
-def test_strip_last_spaces_in_column_name(
-    test_user, dummy_sheet_csv, mocked_submission
-):
+def test_strip_last_spaces_in_column_name(dummy_sheet_csv):
     csv = dummy_sheet_csv.replace("NHS Number", "NHS Number  ")
     df = read_csv_from_str(csv).df
 
@@ -1174,21 +1164,15 @@ def test_strip_last_spaces_in_column_name(
 
 # Originally found in https://github.com/rcpch/national-paediatric-diabetes-audit/actions/runs/11627684066/job/32381466250
 # so we have a separate unit test for it
-@pytest.mark.skip(
-    "Perhaps a better way to test this now that csv_upload is not being tested directly?"
-)
 @pytest.mark.django_db
 def test_spaces_in_date_column_name(test_user, dummy_sheet_csv, mocked_submission):
     csv = dummy_sheet_csv.replace("Date of Birth", "  Date of Birth")
     df = read_csv_from_str(csv).df
+    read_csv_from_str(csv)
 
-    with pytest.raises(ValueError):
-        read_csv_from_str(csv)
+    assert df.columns[1] == "Date of Birth"
 
 
-@pytest.mark.skip(
-    "Perhaps a better way to test this now that csv_upload is not being tested directly?"
-)
 @pytest.mark.django_db
 def test_different_column_order(test_user, single_row_valid_df, mocked_submission):
     columns = single_row_valid_df.columns.to_list()
@@ -1196,10 +1180,6 @@ def test_different_column_order(test_user, single_row_valid_df, mocked_submissio
     # Move the first column to the end
     columns = columns[1:] + columns[:1]
     df = single_row_valid_df[columns]
-
-    csv = df.to_csv(index=False)
-    object = csv_parse(csv_file=csv)
-    print(object.df)
 
     submission = Submission.objects.create(
         audit_year=mocked_submission.audit_year,
@@ -1214,7 +1194,8 @@ def test_different_column_order(test_user, single_row_valid_df, mocked_submissio
         submission=submission, dataframe=df, TESTING=True
     )
 
-    assert Patient.objects.count() == 1
+    # Catastrophic - we can't save this patient at all
+    assert Patient.objects.count() == 0
 
 
 # TODO MRB: these should probably be calling the route directly? https://github.com/rcpch/national-paediatric-diabetes-audit/issues/353
@@ -1258,9 +1239,6 @@ def test_missing_columns_causes_error(test_user, single_row_valid_df):
     ]
 
 
-@pytest.mark.skip(
-    "Perhaps a better way to test this now that csv_upload is not being tested directly?"
-)
 @pytest.mark.django_db
 def test_case_insensitive_column_headers(test_user, dummy_sheet_csv, mocked_submission):
     csv = dummy_sheet_csv
@@ -1270,6 +1248,8 @@ def test_case_insensitive_column_headers(test_user, dummy_sheet_csv, mocked_subm
     csv = "\n".join(lines)
 
     df = read_csv_from_str(csv).df
+
+    assert df.columns[0] == "NHS Number"
 
     submission = Submission.objects.create(
         audit_year=mocked_submission.audit_year,
@@ -1347,9 +1327,6 @@ def test_second_row_with_extra_cell_on_the_end(test_user, one_patient_two_visits
         read_csv_from_str(csv)
 
 
-@pytest.mark.skip(
-    "Perhaps a better way to test this now that csv_upload is not being tested directly?"
-)
 @pytest.mark.django_db
 def test_upload_without_headers(one_patient_two_visits):
     """
@@ -1368,8 +1345,7 @@ def test_upload_without_headers(one_patient_two_visits):
         ValueError,
         match="The first row of the csv file does not match any of the predefined column names. Please include these and upload the file again.",
     ):
-        # df = read_csv_from_str(csv).df
-        csv_parse(csv_file=csv, is_jersey=False)
+        read_csv_from_str(csv)
 
 
 @pytest.mark.django_db
