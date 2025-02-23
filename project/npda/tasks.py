@@ -7,7 +7,6 @@ import logging
 
 # Django Imports
 from django.apps import apps
-from django.conf import settings
 from django.db import transaction
 
 # Third party imports
@@ -16,7 +15,7 @@ import numpy as np
 import pandas as pd
 
 # Project Imports
-from .models import Patient, Transfer, Visit, NPDAUser
+from .models import Visit
 from .forms.patient_form import PatientForm
 from .forms.visit_form import VisitForm
 from .general_functions.csv.progress_recorder import ProgressTracker
@@ -96,15 +95,18 @@ def save_patient_and_visits_to_submission(
                     "hospital_admission_reason",
                     "dka_additional_therapies",
                 ]:
-                    if model_field_value and (
-                        type(model_field_value) != float
-                        and type(model_field_value) != int
-                    ):
-                        model_field_value = None
-                    # this is a workaround - these fields are integer fields but the csv sometimes has them as floats
-                    model_field_value = (
-                        int(model_field_value) if model_field_value else None
-                    )
+                    if model_field_value:
+                        try:
+                            # this is a workaround - these fields are integer fields but the csv sometimes has them as floats
+                            # this is because pandas reads the csv and converts the integers to floats
+                            # so we need to convert them back to integers
+                            # equally though, we need to handle the case where the csv has a blank value or a string that can't be converted to an integer
+                            # and there are probably lots of edge cases that we haven't thought of so the best way to handle this is to try to convert the value to an integer
+                            model_field_value = int(model_field_value)
+                        except (TypeError, ValueError):
+                            model_field_value = model_field_value
+                            # if we can't convert it to an integer it is probably a blank value or a string that can't be converted to an integer
+                            # the form will not be able to save it so we need to set it to None
                 ret[model_field_name] = model_field_value
 
         return ret
@@ -176,6 +178,25 @@ def save_patient_and_visits_to_submission(
                 return obj
         return obj
 
+    def set_field_value_to_none_if_type_mismatch(form, visit_field):
+        """
+        Set the value of the field to None if the type is a mismatch
+        """
+        if form.fields[visit_field].widget.input_type == "select":
+            # expecting a key value
+            if field == "ethnicity":
+                # expecting a string
+                if type(visit_form.data[visit_field]) != str:
+                    setattr(visit_form.instance, field, None)
+            else:
+                # expecting an integer
+                if type(form.data[visit_field]) != int:
+                    setattr(form.instance, field, None)
+        elif form.fields[visit_field].widget.input_type == "date":
+            # expecting a date
+            if type(form.data[visit_field]) != datetime:
+                setattr(form.instance, field, None)
+
     """
     Main function
     """
@@ -202,12 +223,28 @@ def save_patient_and_visits_to_submission(
     pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
     submission = Submission.objects.get(id=submission_id)
 
+    # This protects the whole block of code from failing if there is an error and the database cannot be rolled back
+    # This is important because we are creating multiple objects in the database
+    # Hopefully it will never be needed, but it's good to have it just in case
     with transaction.atomic():
         if not patient_form.is_valid():
             retain_errors_and_invalid_field_data(patient_form)
             record_errors_from_form(
                 errors_to_return, patient_row["row_index"], patient_form
             )
+            # if the errors are in critical fields, we can't continue with this row
+            critical_fields = [
+                "nhs_number",
+                "unique_reference_number",
+                "date_of_birth",
+                "diabetes_type",
+                "diagnosis_date",
+            ]
+            if any(
+                field in errors_to_return[patient_row["row_index"]]
+                for field in critical_fields
+            ):
+                return errors_to_return
         try:
             patient = patient_form.save()
         except Exception as e:
@@ -246,7 +283,16 @@ def save_patient_and_visits_to_submission(
                     record_errors_from_form(
                         errors_to_return, visit_row["row_index"], visit_form
                     )
-
+                    # if the errors are critical (eg type mismatch) we should cast these values to None
+                    # so that we can continue with the row
+                    for field, errors in visit_form.errors.as_data().items():
+                        for error in errors:
+                            print(f"Critical Error {error.code}: {error.messages}")
+                            if error.code in ["invalid", "invalid_choice"]:
+                                # test if the error is a type mismatch - if so, set the value to None
+                                set_field_value_to_none_if_type_mismatch(
+                                    visit_form, field
+                                )
                 visit = visit_form.save()
                 visit.is_valid = visit_form.is_valid()
                 visit.save()

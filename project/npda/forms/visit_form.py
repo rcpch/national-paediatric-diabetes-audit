@@ -279,7 +279,6 @@ class VisitForm(forms.ModelForm):
         data = self.cleaned_data["gluten_free_diet"]
         # Convert the list of tuples to a dictionary
         gluten_free_diet_dict = dict(YES_NO_UNKNOWN)
-
         if data is None or data in gluten_free_diet_dict:
             return data
         else:
@@ -950,10 +949,12 @@ class VisitForm(forms.ModelForm):
             "psychological_additional_support_status"
         )
 
-        has_psychological_data = any([
-            psychological_screening_assessment_date,
-            psychological_additional_support_status
-        ])
+        has_psychological_data = any(
+            [
+                psychological_screening_assessment_date,
+                psychological_additional_support_status,
+            ]
+        )
 
         if has_psychological_data and psychological_additional_support_status != 99:
             measure_must_have_date_and_value(
@@ -1169,6 +1170,15 @@ class VisitForm(forms.ModelForm):
         self.instance.patient = (
             self.patient
         )  # This is the patient object that is passed to the form
+
+        # check if any of the fields have critical error codes
+        for field in self.errors:
+            if (
+                hasattr(self.errors[field][0], "code")
+                and self.errors[field][0].code == ErrorCode.CRITICAL_TYPE_MISMATCH
+            ):
+                # set the field value to None to allow it to be saved
+                setattr(self.instance, field, None)
 
         if commit:
             self.instance.save()
