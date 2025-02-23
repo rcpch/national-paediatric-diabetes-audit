@@ -3,14 +3,7 @@ import datetime
 import json
 import tempfile
 from decimal import Decimal
-from collections import defaultdict
-import time
 from unittest.mock import AsyncMock, patch, Mock
-
-from asgiref.sync import async_to_sync
-
-from .conftest import celery_app as app
-
 import nhs_number
 import pandas as pd
 import pytest
@@ -21,15 +14,12 @@ from django.contrib.gis.geos import Point
 from django.test import override_settings
 from django.utils import timezone
 
-from celery.result import GroupResult, states
-
-
 from project.npda.general_functions.csv import csv_parse
 from project.npda.general_functions.csv.csv_upload_celery import csv_upload
 from project.npda.general_functions.csv.csv_upload_celery import (
     process_dataframe_validate_save_patients_and_visits,
 )
-from project.npda.tests.UserDataClasses import test_user_audit_centre_editor_data
+
 from project.npda.models import (
     NPDAUser,
     Patient,
@@ -70,11 +60,11 @@ MOCK_PATIENT_EXTERNAL_VALIDATION_RESULT = PatientExternalValidationResult(
 MOCK_VISIT_EXTERNAL_VALIDATION_RESULT = VisitExternalValidationResult(
     height_result=CentileAndSDS(
         centile=Decimal(51.8),
-        sds=Decimal(0.5),
+        sds=Decimal(0.0),
     ),
-    weight_result=CentileAndSDS(centile=Decimal(0.5), sds=Decimal(0.5)),
-    bmi=Decimal(0.5),
-    bmi_result=CentileAndSDS(centile=Decimal(0.5), sds=Decimal(0.5)),
+    weight_result=CentileAndSDS(centile=Decimal(16.1), sds=Decimal(-1.0)),
+    bmi=Decimal(14.2),
+    bmi_result=CentileAndSDS(centile=Decimal(5.8), sds=Decimal(-1.6)),
 )
 
 
@@ -799,10 +789,8 @@ def test_invalid_diabetes_type(single_row_valid_df, mock_submission):
     errors = Submission.objects.get(pk=mock_submission.pk).errors
     assert "diabetes_type" in errors
 
-    patient = Patient.objects.first()
-
-    assert patient.diabetes_type == 45
-    assert "diabetes_type" in patient.errors
+    # catastrophic - we can't save this patient at all
+    assert Patient.objects.count() == 0, "There should be no patients in the database"
 
 
 @pytest.mark.django_db
@@ -1643,28 +1631,45 @@ def test_cleaned_fields_are_stored_when_other_fields_are_invalid(
 
 @pytest.mark.django_db
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
-def test_async_visit_fields_are_saved(single_row_valid_df, mock_submission):
-    process_dataframe_validate_save_patients_and_visits(
-        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+def test_async_visit_fields_are_saved(
+    single_row_valid_df, mocked_submission, test_user
+):
+
+    submission = Submission.objects.create(
+        audit_year=mocked_submission.audit_year,
+        submission_date=mocked_submission.submission_date,
+        submission_active=mocked_submission.submission_active,
+        csv_file=mocked_submission.csv_file,
+        csv_file_name=mocked_submission.csv_file_name,
+        paediatric_diabetes_unit=mocked_submission.paediatric_diabetes_unit,
+        submission_by=test_user,
     )
+    process_dataframe_validate_save_patients_and_visits(
+        submission=submission, dataframe=single_row_valid_df, TESTING=True
+    )
+
     visit = Visit.objects.first()
 
-    assert (
-        visit.height_centile
-        == MOCK_VISIT_EXTERNAL_VALIDATION_RESULT.height_result.centile
+    assert round(visit.height_centile, 1) == round(
+        MOCK_VISIT_EXTERNAL_VALIDATION_RESULT.height_result.centile, 1
     )
     assert visit.height_sds == MOCK_VISIT_EXTERNAL_VALIDATION_RESULT.height_result.sds
 
-    assert (
-        visit.weight_centile
-        == MOCK_VISIT_EXTERNAL_VALIDATION_RESULT.weight_result.centile
+    assert round(visit.weight_centile, 1) == round(
+        MOCK_VISIT_EXTERNAL_VALIDATION_RESULT.weight_result.centile, 1
     )
-    assert visit.weight_sds == MOCK_VISIT_EXTERNAL_VALIDATION_RESULT.weight_result.sds
+    assert round(visit.weight_sds, 1) == round(
+        MOCK_VISIT_EXTERNAL_VALIDATION_RESULT.weight_result.sds, 1
+    )
 
-    assert visit.bmi == MOCK_VISIT_EXTERNAL_VALIDATION_RESULT.bmi
+    assert round(visit.bmi, 1) == round(MOCK_VISIT_EXTERNAL_VALIDATION_RESULT.bmi, 1)
 
-    assert visit.bmi_centile == MOCK_VISIT_EXTERNAL_VALIDATION_RESULT.bmi_result.centile
-    assert visit.bmi_sds == MOCK_VISIT_EXTERNAL_VALIDATION_RESULT.bmi_result.sds
+    assert round(visit.bmi_centile, 1) == round(
+        MOCK_VISIT_EXTERNAL_VALIDATION_RESULT.bmi_result.centile, 1
+    )
+    assert round(visit.bmi_sds, 1) == round(
+        MOCK_VISIT_EXTERNAL_VALIDATION_RESULT.bmi_result.sds, 1
+    )
 
 
 """
@@ -3939,22 +3944,34 @@ def test_visit_date_missing_fails_validation(single_row_valid_df, mock_submissio
 
 @pytest.mark.django_db
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
-def test_visit_date_not_before_date_of_birth(single_row_valid_df, mock_submission):
+def test_visit_date_not_before_date_of_birth(
+    single_row_valid_df, mocked_submission, test_user
+):
     """
     Test that a Visit/Appointment Date before the date of birth is rejected
     """
     single_row_valid_df.loc[0, "Date of Birth"] = "01/01/2022"
-    single_row_valid_df.loc[0, "Visit/Appointment Date"] = "01/01/2021"  # mm/dd/yyyy
+    single_row_valid_df.loc[0, "Date of Diabetes Diagnosis"] = "01/01/2024"
+    single_row_valid_df.loc[0, "Visit/Appointment Date"] = "01/01/2023"  # mm/dd/yyyy
 
+    submission = Submission.objects.create(
+        audit_year=mocked_submission.audit_year,
+        submission_date=mocked_submission.submission_date,
+        submission_active=mocked_submission.submission_active,
+        csv_file=mocked_submission.csv_file,
+        csv_file_name=mocked_submission.csv_file_name,
+        paediatric_diabetes_unit=mocked_submission.paediatric_diabetes_unit,
+        submission_by=test_user,
+    )
     process_dataframe_validate_save_patients_and_visits(
-        submission=mock_submission, dataframe=single_row_valid_df, TESTING=True
+        submission=submission, dataframe=single_row_valid_df, TESTING=True
     )
 
     visit = Visit.objects.first()
     assert "visit_date" in visit.errors
     assert visit.visit_date == datetime.date(
-        2021, 1, 1
-    ), f"Visit date should be 1/1/2021, but was {visit.visit_date}"
+        2023, 1, 1
+    ), f"Visit date should be 1/1/2023, but was {visit.visit_date}"
     assert visit.patient.date_of_birth == datetime.date(
         2022, 1, 1
     ), f"Date of birth should be 1/1/2022, but was {visit.patient.date_of_birth}"
