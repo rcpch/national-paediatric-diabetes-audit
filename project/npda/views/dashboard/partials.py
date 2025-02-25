@@ -49,12 +49,13 @@ def get_patient_level_report_partial(request):
     # First need to get the relevant calculations
     pz_code = request.session.get("pz_code")
 
-    selected_audit_year = int(request.session.get("selected_audit_year"))
-    # TODO: remove min clamp once available audit year from preference filter sorted
-    selected_audit_year = max(selected_audit_year, 2024)
-    calculation_date = date(year=selected_audit_year, month=5, day=1)
+    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
 
-    calculate_kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=True)
+    calculate_kpis = CalculateKPIS(
+        audit_start_date=audit_period.start_date,
+        audit_end_date=audit_period.end_date,
+        return_pt_querysets=True
+    )
 
     # Set relevant patients
     calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])

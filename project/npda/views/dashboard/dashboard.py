@@ -88,17 +88,13 @@ def dashboard(request):
         return render(request, "dashboard.html")
 
     AuditPeriod = apps.get_model("npda", "AuditPeriod")
-    
-    today = date.today()
-    selected_audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
-    
-    if today > selected_audit_period.end_date:
-        # The day after the audit period end date
-        calculation_date = selected_audit_period.end_date + timedelta(days=1)
-    else:
-        calculation_date = today
+    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
 
-    calculate_kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=True)
+    calculate_kpis = CalculateKPIS(
+        audit_start_date=audit_period.start_date,
+        audit_end_date=audit_period.end_date,
+        return_pt_querysets=True
+    )
 
     kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
     # Extract helpers

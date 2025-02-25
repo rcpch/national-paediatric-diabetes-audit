@@ -67,14 +67,15 @@ class CalculateKPIS:
 
     def __init__(
         self,
-        calculation_date: date = None,
+        audit_start_date: date,
+        audit_end_date: date,
         return_pt_querysets: bool = False,
     ):
         """Calculates KPIs for given pz_code
 
         Initialise with:
-            * calculation_date (date) - used to define start and end date of
-            audit period
+            * audit_start_date (date)
+            * audit_end_date (date)
             * return_pt_querysets (bool) - if True, will return the querysets
             of patients for each kpi calculation
 
@@ -98,14 +99,9 @@ class CalculateKPIS:
             the kpi number
         """
 
-        # Set various attributes used in calculations
-        self.calculation_date = (
-            calculation_date if calculation_date is not None else date.today()
-        )
-        # Set the start and end audit dates
-        self.audit_start_date, self.audit_end_date = (
-            self._get_audit_start_and_end_dates()
-        )
+        self.audit_start_date = audit_start_date
+        self.audit_end_date = audit_end_date
+        
         self.AUDIT_DATE_RANGE = (self.audit_start_date, self.audit_end_date)
 
         # Set the return_pt_querysets attribute
@@ -218,6 +214,7 @@ class CalculateKPIS:
             )
 
         # Get values that are simple look ups
+        # TODO MRB: pin this to the correct audit year??
         calculation_datetime = datetime.now()
         audit_start_date = self.audit_start_date
         audit_end_date = self.audit_end_date

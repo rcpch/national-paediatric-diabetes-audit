@@ -17,7 +17,6 @@ from django.views.generic.edit import CreateView, DeleteView, UpdateView
 # RCPCH imports
 from ..forms.visit_form import VisitForm
 from ..general_functions import get_visit_categories, get_visit_tabs
-from ..kpi_class.kpis import CalculateKPIS
 from ..models import Patient, Transfer, Visit
 from .mixins import (
     CheckCanCompleteQuestionnaireMixin,
@@ -68,18 +67,6 @@ class PatientVisitsListView(
 
         # If the patient has left the PDU, they may appear in another one but we record that as a separate Patient instance
         pdu = Transfer.objects.get(patient=patient).paediatric_diabetes_unit
-
-        calculate_kpis = CalculateKPIS(
-            calculation_date=datetime.date.today(), return_pt_querysets=False
-        )
-        # Calculate the KPIs for this patient, returning only subset relevant
-        # for a single patient's calculation
-        kpi_calculations_object = calculate_kpis.calculate_kpis_for_single_patient(
-            patient,
-            pdu,
-        )
-
-        context["kpi_calculations_object"] = kpi_calculations_object
 
         return context
 
