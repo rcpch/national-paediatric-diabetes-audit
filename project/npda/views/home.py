@@ -82,7 +82,10 @@ async def home(request):
                 )
                 return redirect("home")
 
-            audit_year = request.session.get("selected_audit_year")
+            AuditPeriod = apps.get_model("npda", "AuditPeriod")
+            # TODO MRB: also crashes in use from context processor.
+            #           Fixed in https://github.com/rcpch/national-paediatric-diabetes-audit/pull/650 as this route is no longer async 
+            audit_period = await sync_to_async(AuditPeriod.objects.get_audit_period_for_request)(request)
 
             # CSV is valid, parse any errors and store the data in the tables.
             errors_by_row_index = await csv_upload(
@@ -91,7 +94,7 @@ async def home(request):
                 csv_file_name=user_csv_filename,
                 csv_file_bytes=user_csv_bytes,
                 pdu_pz_code=pz_code,
-                audit_year=audit_year,
+                audit_period=audit_period,
             )
             # log user activity
             VisitActivity = apps.get_model("npda", "VisitActivity")

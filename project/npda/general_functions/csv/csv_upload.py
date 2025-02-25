@@ -33,7 +33,7 @@ from project.npda.forms.external_visit_validators import validate_visit_async
 
 
 async def csv_upload(
-    user, dataframe, csv_file_name, csv_file_bytes, pdu_pz_code, audit_year
+    user, dataframe, csv_file_name, csv_file_bytes, pdu_pz_code, audit_period
 ):
     """
     Processes standardised NPDA csv file and persists results in NPDA tables
@@ -146,13 +146,13 @@ async def csv_upload(
     # Set previous submission to inactive
     if await Submission.objects.filter(
         paediatric_diabetes_unit__pz_code=pdu.pz_code,
-        audit_year=audit_year,
+        audit_period=audit_period,
         submission_active=True,
     ).aexists():
         original_submission = await Submission.objects.filter(
             submission_active=True,
             paediatric_diabetes_unit__pz_code=pdu.pz_code,
-            audit_year=audit_year,
+            audit_period=audit_period,
         ).aget()  # there can be only one of these - store it in a variable in case we need to revert
     else:
         original_submission = None
@@ -162,7 +162,7 @@ async def csv_upload(
     try:
         new_submission = await Submission.objects.acreate(
             paediatric_diabetes_unit=pdu,
-            audit_year=audit_year,
+            audit_period=audit_period,
             submission_date=timezone.now(),
             submission_by=user,  # user is the user who is logged in. Passed in as a parameter
             submission_active=True,

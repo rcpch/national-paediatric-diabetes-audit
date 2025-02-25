@@ -15,8 +15,7 @@ class Submission(models.Model):
     # TODO MRB: replace with audit period
     audit_year = models.IntegerField(
         "Audit year",
-        blank=False,
-        null=False,
+        null=True,
         help_text="Year the audit is being conducted",
     )
 
@@ -71,7 +70,7 @@ class Submission(models.Model):
     )
 
     def __str__(self) -> str:
-        return f"Submission from {self.paediatric_diabetes_unit} for {self.audit_year}"
+        return f"Submission from {self.paediatric_diabetes_unit} for {self.audit_period or self.audit_year}"
 
     class Meta:
         verbose_name = "Submission"
