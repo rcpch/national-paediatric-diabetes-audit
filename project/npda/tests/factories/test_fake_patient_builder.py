@@ -7,8 +7,8 @@ import time
 
 from project.npda.general_functions.audit_period import (
     get_audit_period_for_date,
-    get_quarter_for_visit,
 )
+from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
 from project.npda.general_functions.data_generator_extended import (
     FakePatientCreator,
     HbA1cTargetRange,
@@ -88,7 +88,7 @@ def test_fake_patient_creator_ages_all_appropriate(age_range_enum):
     # for patient in patients:
     #     print(f"Patient PK: {patient.pk}")
     #     for visit in patient.visit_set.all().order_by("visit_date"):
-    #         print(f"Visit: {visit} (Q{get_quarter_for_visit(visit.visit_date)})")
+    #         print(f"Visit: {visit} (Q{retrieve_quarter_for_date(visit.visit_date)})")
     #     print()
 
     # Get the min and max of the current AgeRange enum

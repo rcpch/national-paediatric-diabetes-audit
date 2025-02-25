@@ -5,18 +5,11 @@ project.npda.general_functions.audit_period
     get_audit_period_for_date
         - TODO: check usage. still useful for tests, migrate to test folder
     get_quarters_for_audit_period
-    get_quarter_for_visit
-        - probably don't need to change, TODO: check usage anyway though
 
 
 project.npda.general_functions.map
     get_children_by_pdu_audit_year
         - should take a submission instead, push up the audit filtering higher
-
-
-project.npda.general_functions.quarter_for_date
-    retrieve_quarter_for_date
-        - TODO: dupe of get_quarter_for_visit
 
 
 project.npda.general_functions.session
