@@ -49,7 +49,6 @@ from project.constants.types.kpi_types import (
     kpi_registry,
 )
 from project.constants.yes_no_unknown import YES_NO_UNKNOWN
-from project.npda.general_functions import get_audit_period_for_date
 from project.npda.general_functions.audit_period import get_quarters_for_audit_period
 from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
 from project.npda.models import Patient, Visit
@@ -377,9 +376,6 @@ class CalculateKPIS:
             )
 
         return return_obj
-
-    def _get_audit_start_and_end_dates(self) -> tuple[date, date]:
-        return get_audit_period_for_date(input_date=self.calculation_date)
 
     def _get_kpi_label(self, kpi_number: int) -> str:
         """Returns a readable title for a given KPI number"""
