@@ -11,7 +11,6 @@ from project.npda.views import (
     VisitDeleteView,
     VisitUpdateView,
 )
-from project.npda.views.dashboard.dashboard import temp_set_eligible_kpi_7
 
 from .views import *
 from .views.dashboard import dashboard, partials
@@ -153,11 +152,6 @@ dashboard_urlpatterns = [
         "get_treemap_chart_partial",
         view=partials.get_treemap_chart_partial,
         name="get_treemap_chart_partial",
-    ),
-    path(
-        "temp_set_eligible_kpi_7",
-        view=dashboard.temp_set_eligible_kpi_7,
-        name="temp_set_eligible_kpi_7",
     ),
 ]
 
