@@ -1,4 +1,5 @@
 # python imports
+import logging
 import json
 import os
 
@@ -43,6 +44,8 @@ from project.npda.general_functions.rcpch_nhs_organisations import (
     fetch_local_authorities_within_radius,
 )
 
+logger = logging.getLogger(__name__)
+
 """
 Functions to return scatter plot of children by postcode
 """
@@ -58,7 +61,9 @@ def get_children_by_pdu_audit_year(
     Submission = apps.get_model("npda", "Submission")
 
     submission = Submission.objects.filter(
-        audit_year=audit_year, paediatric_diabetes_unit=paediatric_diabetes_unit
+        audit_year=audit_year,
+        paediatric_diabetes_unit=paediatric_diabetes_unit,
+        submission_active=True,
     ).first()
 
     if submission is None:

@@ -4,10 +4,8 @@ from datetime import date
 
 import plotly.graph_objects as go
 import plotly.io as pio
-
 # Django imports
 from django.http import HttpResponseBadRequest
-
 # Django imports
 from django.shortcuts import render
 
@@ -15,18 +13,16 @@ import project.constants.colors as colors
 from project.npda.general_functions.map import (
     generate_dataframe_and_aggregated_distance_data_from_cases,
     generate_distance_from_organisation_scatterplot_figure,
-    get_children_by_pdu_audit_year,
-)
-from project.npda.general_functions.rcpch_nhs_organisations import fetch_organisation_by_ods_code
+    get_children_by_pdu_audit_year)
+from project.npda.general_functions.rcpch_nhs_organisations import \
+    fetch_organisation_by_ods_code
 from project.npda.kpi_class.kpis import CalculateKPIS
-from project.npda.models.paediatric_diabetes_unit import (
-    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
-)
-from project.npda.views.dashboard.dashboard import (
-    KPI_CATEGORY_ATTR_MAP,
-    TEXT,
-    get_pt_level_table_data,
-)
+from project.npda.models.paediatric_diabetes_unit import \
+    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass
+from project.npda.views.dashboard.helpers import (
+    get_list_of_shortened_ticktext_labels, get_pt_level_table_data)
+from project.npda.views.dashboard.template_data import (KPI_CATEGORY_ATTR_MAP,
+                                                        TEXT)
 from project.npda.views.decorators import login_and_otp_required
 
 logger = logging.getLogger(__name__)
@@ -476,7 +472,7 @@ def get_progress_bar_chart_partial(
             {"chart_html": chart_html},
         )
     except Exception as e:
-        logger.error("Error generating colored figures chart", exc_info=True)
+        logger.error(f"Error generating colored figures chart: {e}", exc_info=True)
         return render(
             request,
             "dashboard/progress_bar_chart_partial.html",
@@ -548,50 +544,23 @@ def get_simple_bar_chart_pcts_partial(request):
             )
         )
 
-        # Adjust x-axis labels to avoid overlap
-        xaxis_args = {}
-        CUT_OFF_CHAR_LEN = 10
-
-        N = len(x)
-        shortened_ticktext_labels = []
-        for label in x:
-            if len(label) > CUT_OFF_CHAR_LEN:
-                # Don't want to cut off in middle of word so split on spaces,
-                # and keep as many full words as possible until we reach the cut off
-                shortened_label = []
-                current_len = 0
-                for word in label.split(" "):
-                    shortened_label.append(word)
-                    current_len += len(word)
-                    if current_len > CUT_OFF_CHAR_LEN:
-                        break
-                # More efficient to join the list of words than to keep concatenating strings
-                if N > 3:
-                    # If more than 3 labels, don't <br> as not enough space
-                    shortened_ticktext_labels.append(" ".join(shortened_label) + " ...")
-                else:
-                    # Otherwise, just <br> right before last word
-                    shortened_ticktext_labels.append(
-                        " ".join(shortened_label[:-1]) + "<br>" + shortened_label[-1] + " ..."
-                    )
-            else:
-                shortened_ticktext_labels.append(label)
-        xaxis_args["ticktext"] = shortened_ticktext_labels
-
         # Update layout for labels and formatting
+        yaxis_args = dict(
+            range=[0, 120],  # Breathing room for percentages above 100
+            tickvals=[0, 25, 50, 75, 100],
+            ticktext=["0", "25", "50", "75", "100"],
+        )
+        yaxis_title = "% CYP with T1DM"
         fig.update_layout(
             title="",
             xaxis_title="",
-            yaxis_title="% CYP with T1DM",
-            yaxis=dict(
-                range=[0, 120],  # Breathing room for percentages above 100
-                tickvals=[0, 25, 50, 75, 100],
-                ticktext=["0", "25", "50", "75", "100"],
-            ),
+            yaxis_title=yaxis_title,
+            yaxis=yaxis_args,
             template="simple_white",  # Clean grid style
             # Wrap text
             xaxis=dict(
-                **xaxis_args,
+                # Adjust x-axis labels to avoid overlap
+                ticktext=get_list_of_shortened_ticktext_labels(x, cut_off_char_len=10),
                 tickmode="array",
                 tickvals=list(range(len(x))),
                 # Rotate labels if they are too long
@@ -616,10 +585,124 @@ def get_simple_bar_chart_pcts_partial(request):
             {"chart_html": chart_html},
         )
     except Exception as e:
-        logger.error("Error generating simple bar chart pcts", exc_info=True)
+
+        logger.error(f"Error generating simple bar chart pcts: {e}", exc_info=True)
+
         return render(
             request,
             "dashboard/simple_bar_chart_pcts_partial.html",
+            {"error": "Something went wrong!"},
+        )
+
+
+@login_and_otp_required()
+def get_simple_bar_chart_absolutes_partial(request):
+    """Returns a HTML simple bar chart with absolute counts for the given data.
+
+    Expects (same as get_simple_bar_chart_pcts_partial):
+    {
+        'attr_1': {
+            pct: float,
+            count: int,
+            total: int,
+            label: str,
+        },
+        'attr_2': {
+            ...
+        }
+        ...
+    }
+
+    Optionally accepts:
+        request.GET.get("color"): str, hex color code to use for the bars
+    """
+    try:
+
+        if not request.htmx:
+            return HttpResponseBadRequest("This view is only accessible via HTMX")
+
+        # Fetch data from query parameters
+
+        # Bar color
+        if bar_color := request.GET.get("color", None):
+            # Easier just to send the hex code as a string in request url
+            # so add the '#' if it's not there
+            bar_color = f"#{bar_color}" if bar_color[0] != "#" else bar_color
+        else:
+            bar_color = colors.RCPCH_DARK_BLUE
+
+        # NOTE: don't need to handle empty data as the template handles this
+        data_raw = json.loads(request.GET.get("data"))
+
+        x, y = [], []
+        passed, eligible = [], []
+        pct = []
+        for _, values in data_raw.items():
+            x.append(values["label"])
+            y.append(values["count"])
+            passed.append(values["count"])
+            eligible.append(values["total"])
+            pct.append(values["pct"])
+
+        # Create the bar chart
+        fig = go.Figure()
+
+        fig.add_trace(
+            go.Bar(
+                x=x,
+                y=y,
+                texttemplate="%{y}",
+                textposition="outside",
+                marker=dict(color=bar_color),
+                # We're rendering custom shorter x axis labels so we want the full label here,
+                # therefore passing in as customdata
+                hovertemplate="<em>%{customdata[0]}</em><br>%{customdata[3]}% (%{customdata[1]} / %{customdata[2]})<extra></extra>",
+                customdata=list(zip(x, passed, eligible, pct)),
+            )
+        )
+
+        # Update layout for labels and formatting
+        yaxis_args = dict(
+            range=[0, max(y) * 1.2],  # Breathing room
+        )
+        fig.update_layout(
+            title="",
+            xaxis_title="",
+            yaxis_title="N CYP with T1DM",
+            yaxis=yaxis_args,
+            template="simple_white",  # Clean grid style
+            # Wrap text
+            xaxis=dict(
+                # Adjust x-axis labels to avoid overlap
+                ticktext=get_list_of_shortened_ticktext_labels(x, cut_off_char_len=10),
+                tickmode="array",
+                tickvals=list(range(len(x))),
+                # Rotate labels
+                tickangle=-30,
+                automargin=True,  # Adjust margins for label space
+            ),
+            margin=dict(l=0, r=0, t=0, b=0),
+        )
+
+        chart_html = fig.to_html(
+            full_html=False,
+            include_plotlyjs=False,
+            config={
+                "displayModeBar": False,
+            },
+            default_height=DEFAULT_CHART_HTML_HEIGHT,
+        )
+
+        return render(
+            request,
+            "dashboard/progress_bar_chart_partial.html",
+            {"chart_html": chart_html},
+        )
+    except Exception as e:
+        logger.error(f"Error generating colored figures chart: {e}", exc_info=True)
+        return render(
+            request,
+            "dashboard/progress_bar_chart_partial.html",
             {"error": "Something went wrong!"},
         )
 

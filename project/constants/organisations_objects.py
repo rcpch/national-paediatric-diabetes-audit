@@ -2,9 +2,9 @@ from dataclasses import dataclass
 from typing import Optional, Dict, Any
 
 
-@dataclass
-class PaediatricDiabetesUnit:
-    pz_code: str
+# @dataclass
+# class PaediatricDiabetesUnit:
+#     pz_code: str
 
 
 @dataclass
