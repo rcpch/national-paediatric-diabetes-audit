@@ -328,7 +328,7 @@ class PatientCreateView(
 
             Submission = apps.get_model("npda", "Submission")
             submission, created = Submission.objects.update_or_create(
-                audit_year=self.request.session["selected_audit_year"],
+                audit_period=AuditPeriod.objects.get_audit_period_for_request(self.request),
                 paediatric_diabetes_unit=paediatric_diabetes_unit,
                 submission_active=True,
                 defaults={
