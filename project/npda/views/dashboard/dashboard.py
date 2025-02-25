@@ -279,14 +279,7 @@ def dashboard(request):
             },
             "pt_imd_value_counts_pct": {
                 "data": json.dumps(pt_imd_value_counts_pct),
-            },
-            "map": json.dumps(
-                dict(
-                    pdu_pk=pdu.pk,
-                    # TODO MRB: what is this used for?
-                    selected_audit_year=selected_audit_period.start_date.year,
-                )
-            ),
+            }
         },
         # Defaults for htmx partials
         "default_pt_level_menu_text": default_pt_level_menu_text,
