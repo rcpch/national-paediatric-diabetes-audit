@@ -1,6 +1,5 @@
 from datetime import datetime
 
-from project.npda.general_functions import get_current_audit_year
 from project.npda.models import AuditPeriod
 
 

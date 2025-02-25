@@ -9,7 +9,6 @@ from django.core.exceptions import PermissionDenied
 from django.contrib.auth.mixins import AccessMixin
 from django.http import HttpResponseForbidden
 
-from project.npda.general_functions.audit_period import get_audit_period_for_date
 from project.npda.models.npda_user import NPDAUser
 from project.npda.models.patient import Patient
 from project.npda.models.audit_period import AuditPeriod

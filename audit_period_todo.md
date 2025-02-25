@@ -4,8 +4,6 @@ Don't change URLs at all to start - do it after (can be query params if easier c
 project.npda.general_functions.audit_period
     get_audit_period_for_date
         - TODO: check usage. still useful for tests, migrate to test folder
-    get_current_audit_year
-        - TODO: check usage, should come from requested audit period
     get_quarters_for_audit_period
     get_quarter_for_visit
         - probably don't need to change, TODO: check usage anyway though
