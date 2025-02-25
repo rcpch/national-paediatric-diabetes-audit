@@ -34,6 +34,7 @@ from project.npda.models import (
     NPDAUser,
     Patient,
     Submission,
+    AuditPeriod
 )
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 
@@ -95,7 +96,7 @@ class PatientListView(
         )
         filtered_patients = Q(
             submissions__submission_active=True,
-            submissions__audit_year=self.request.session.get("selected_audit_year"),
+            submissions__audit_period=self.request.session.get("selected_audit_period_id"),
         )
 
         # filter by contents of the search bar
@@ -122,7 +123,8 @@ class PatientListView(
         a_year_ago = timezone.now() - timezone.timedelta(days=365)
 
         patient_queryset = patient_queryset.annotate(
-            audit_year=F("submissions__audit_year"),
+            # TODO MRB: do we need this?
+            # audit_year=F("submissions__audit_year"),
             visit_error_count=Count(Case(When(visit__is_valid=False, then=1))),
             incomplete_full_year_of_care=Case(When(diagnosis_date__gt=a_year_ago, then=True), default=False),
             last_upload_date=Max("submissions__submission_date"),
@@ -154,21 +156,22 @@ class PatientListView(
         context = super().get_context_data(**kwargs)
 
         pz_code = self.request.session.get("pz_code")
-        selected_audit_year = self.request.session.get("selected_audit_year")
-
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code) if pz_code else None
         context["pdu"] = pdu
+
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
 
         submission = None
         submission_error_count = 0
 
         # TODO MRB: this should probably be a method on the Submission model?
         #           https://github.com/rcpch/national-paediatric-diabetes-audit/issues/533
-        if pz_code and selected_audit_year:
+        if pz_code and audit_period:
             submission = (
                 Submission.objects.filter(
                     paediatric_diabetes_unit__pz_code=pz_code,
-                    audit_year=selected_audit_year,
+                    submission_active=True,
+                    audit_period=audit_period,
                 )
                 .order_by("-submission_date")
                 .first()
@@ -189,7 +192,6 @@ class PatientListView(
         context["submission_error_count"] = submission_error_count
 
         context["pz_code"] = pz_code
-        context["selected_audit_year"] = selected_audit_year or "None"
         context["pdu_choices"] = (
             organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
                 requesting_user=self.request.user,
