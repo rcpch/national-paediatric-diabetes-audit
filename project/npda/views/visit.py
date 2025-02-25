@@ -17,7 +17,7 @@ from django.views.generic.edit import CreateView, DeleteView, UpdateView
 # RCPCH imports
 from ..forms.visit_form import VisitForm
 from ..general_functions import get_visit_categories, get_visit_tabs
-from ..models import Patient, Transfer, Visit
+from ..models import Patient, Transfer, Visit, AuditPeriod
 from .mixins import (
     CheckCanCompleteQuestionnaireMixin,
     CheckCurrentAuditYearMixin,
@@ -52,10 +52,7 @@ class PatientVisitsListView(
         patient_id = self.kwargs.get("patient_id")
         context = super(PatientVisitsListView, self).get_context_data(**kwargs)
         patient = Patient.objects.get(pk=patient_id)
-        submission = patient.submissions.filter(
-            submission_active=True,
-            audit_year=self.request.session.get("selected_audit_year"),
-        ).first()
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
         visits = Visit.objects.filter(patient=patient).order_by("is_valid", "id")
         calculated_visits = []
         for visit in visits:
@@ -63,7 +60,7 @@ class PatientVisitsListView(
             calculated_visits.append({"visit": visit, "categories": visit_categories})
         context["visits"] = calculated_visits
         context["patient"] = patient
-        context["submission"] = submission
+        context["audit_period"] = audit_period
 
         # If the patient has left the PDU, they may appear in another one but we record that as a separate Patient instance
         pdu = Transfer.objects.get(patient=patient).paediatric_diabetes_unit
