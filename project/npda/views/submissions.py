@@ -51,14 +51,20 @@ class SubmissionsListView(
         pdu = PaediatricDiabetesUnit.objects.get(
             pz_code=self.request.session.get("pz_code"),
         )
+
+        AuditPeriod = apps.get_model(
+            app_label="npda", model_name="AuditPeriod"
+        )
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
+
         if self.request.user.viewing_data_nationally():
             base_queryset = self.model.objects.filter(
-                audit_year=self.request.session.get("selected_audit_year")
+                audit_period=audit_period
             ).all()
         else:
             base_queryset = self.model.objects.filter(
                 paediatric_diabetes_unit=pdu,
-                audit_year=self.request.session.get("selected_audit_year"),
+                audit_period=audit_period,
             )
 
         final = base_queryset.annotate(
@@ -79,18 +85,17 @@ class SubmissionsListView(
         Add data to the context.
         Includes the patient data for the active submission and the csv summary data.
         """
-        if self.request.session.get("pz_code") == "PZ248":
-            is_jersey = True
-        else:
-            is_jersey = False
         context = super().get_context_data(**kwargs)
         context["pz_code"] = self.request.session.get("pz_code")
-        context["selected_audit_year"] = self.request.session.get("selected_audit_year")
         Patient = apps.get_model("npda", "Patient")
+        AuditPeriod = apps.get_model(
+            app_label="npda", model_name="AuditPeriod"
+        )
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
         context["data"] = None  # data stores csv summary data if a submission exists
         requested_active_submission = self.object_list.filter(
             submission_active=True,
-            audit_year=self.request.session.get("selected_audit_year"),
+            audit_period=audit_period,
             paediatric_diabetes_unit__pz_code=self.request.session.get("pz_code"),
         ).first()  # there can be only one of these
         if requested_active_submission:
