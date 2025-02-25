@@ -173,9 +173,7 @@ class CheckCurrentAuditYearMixin(AccessMixin):
     """
 
     def dispatch(self, request, *args, **kwargs):
-        audit_period_id = request.session.get("selected_audit_period_id")
-        audit_period = AuditPeriod.objects.get(pk=audit_period_id)
-
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
         is_allowed_to_edit = audit_period.is_allowed_to_edit(request.user)
 
         if not is_allowed_to_edit:

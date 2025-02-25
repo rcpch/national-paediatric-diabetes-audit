@@ -1,13 +1,5 @@
 Don't change URLs at all to start - do it after (can be query params if easier code changes)
 
-project.npda.context_processors
-    session_data
-        - audit_years -> all audit periods
-            (do we need a visibility flag too? for testing new and old audit years)
-    can_alter_this_audit_year_submission
-        - get_current_audit_year -> audit_period.open
-        - dupe functionality of CheckCurrentAuditYearMixin?
-
 
 project.npda.general_functions.audit_period
     get_audit_period_for_date
