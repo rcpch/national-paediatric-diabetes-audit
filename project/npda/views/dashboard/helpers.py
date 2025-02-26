@@ -104,11 +104,11 @@ def get_hc_completion_rate_vcs(
     vcs = {}
     for ix, kpi_values in enumerate([kpi_32_1_values, kpi_32_2_values, kpi_32_3_values], start=1):
         if ix == 1:
-            kpi_label = "<12 years old"
-        elif ix == 2:
-            kpi_label = ">=12 years old"
-        else:
             kpi_label = "Overall"
+        elif ix == 2:
+            kpi_label = "<12 years old"
+        else:
+            kpi_label = ">=12 years old"
 
         vcs[f"kpi_32_{ix}_values"] = {
             "count": kpi_values["total_passed"],
@@ -120,7 +120,7 @@ def get_hc_completion_rate_vcs(
             ),
             "label": kpi_label,
         }
-
+    logger.debug(f'{vcs=}')
     return vcs
 
 
