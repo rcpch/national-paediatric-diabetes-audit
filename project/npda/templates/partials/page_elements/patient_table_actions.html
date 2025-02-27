@@ -58,14 +58,28 @@
                         class="btn {%if submission_error_count > 0 %} btn-warning {% else %} btn-success {% endif %} text-white"
                         name="submit-data"
                         value="download-report"
-                        type="submit">
+                        type="submit"
+                        onclick="my_modal_1.showModal()"
+                        >
                         <i class="fa-solid fa-file-excel"></i>
                         Data Quality Report
                         {% if submission_error_count > 0 %}
                             <span class="badge badge-error">{{submission_error_count}}</span>
                         {% endif %}
-                        </a>
                     </li>
+                    <!-- Pop up which shows data protection guidance for report -->
+                    <dialog id="my_modal_1" class="modal">
+                        <div class="modal-box">
+                            <h3 class="text-lg font-bold">Good Data Protection Practice</h3>
+                            <p class="py-4">
+                                The data quality report contains your original data annotated with errors using our validation rules.
+                                It contains personal information and must be stored securely and deleted after use.
+                            </p>
+                            <div class="modal-action">
+                                <button class="btn" onclick="my_modal_1.close()">Accept and close</button>
+                            </div>
+                        </div>
+                    </dialog>
                     <li>
                         <div tabindex="0" role="button" class="btn btn-info text-white">
                         <i class="fa-solid fa-chevron-down"></i>
