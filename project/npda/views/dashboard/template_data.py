@@ -27,7 +27,7 @@ TEXT = {
         },
     },
     "additional_care_processes": {
-        "title": "Additional Care Proccesses",
+        "title": "Additional Care Processes",
         "description": "These additional care processes are recommended by NICE for children and young people with Type 1 diabetes of all ages (and ineligible otherwise), with the exception of smoking status and referral to smoking cessation services, which apply to young people aged 12 and above.",
         "headers": [
             "NHS NUMBER",
