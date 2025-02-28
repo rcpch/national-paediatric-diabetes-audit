@@ -19,7 +19,7 @@ from project.npda.tests.kpi_calculations.test_calculate_kpis import \
 def test_kpi_calculation_33(AUDIT_START_DATE):
     """Tests that KPI33 is calculated correctly.
 
-    Calculates KPI 32: HbA1c 4+ (%)
+    Calculates KPI 33: HbA1c 4+ (%)
 
     Numerator: Number of eligible patients with at least four entries for HbA1c value (item 17) with an observation date (item 19) within the audit period
 
