@@ -102,25 +102,43 @@ def get_hc_completion_rate_vcs(
 
     # Just need pass and fail
     vcs = {}
-    for ix, kpi_values in enumerate([kpi_32_1_values, kpi_32_2_values, kpi_32_3_values], start=1):
-        if ix == 1:
-            kpi_label = "Overall"
-        elif ix == 2:
-            kpi_label = "<12 years old"
-        else:
-            kpi_label = ">=12 years old"
 
-        vcs[f"kpi_32_{ix}_values"] = {
-            "count": kpi_values["total_passed"],
-            "total": kpi_values["total_eligible"],
-            "pct": (
-                int(kpi_values["total_passed"] / kpi_values["total_eligible"] * 100)
-                if kpi_values["total_passed"]
-                else 0
-            ),
-            "label": kpi_label,
-        }
-    logger.debug(f'{vcs=}')
+    kpi_32_2_passed = kpi_32_2_values["total_passed"]
+    kpi_32_2_total = kpi_32_2_values["total_eligible"]
+    kpi_32_3_passed = kpi_32_3_values["total_passed"]
+    kpi_32_3_total = kpi_32_3_values["total_eligible"]
+
+    # Overall
+    # For overall, we need to sum total passed and total eligible for kpis 31_2 and 32_3.
+    # We IGNORE 32_1 as this is a count of health checks, not patients!
+    kpi_32_1_pct = (
+        int((kpi_32_2_passed + kpi_32_3_passed) / (kpi_32_2_total + kpi_32_3_total) * 100)
+        if kpi_32_2_total + kpi_32_3_total
+        else 0
+    )
+    vcs["kpi_32_1_values"] = {
+        "count": kpi_32_2_passed + kpi_32_3_passed,
+        "total": kpi_32_2_total + kpi_32_3_total,
+        "pct": kpi_32_1_pct,
+        "label": "Overall",
+    }
+
+    # <12 years old
+    vcs["kpi_32_2_values"] = {
+        "count": kpi_32_2_passed,
+        "total": kpi_32_2_total,
+        "pct": int(kpi_32_2_passed / kpi_32_2_total * 100) if kpi_32_2_total else 0,
+        "label": "<12 years old",
+    }
+
+    # >=12 years old
+    vcs["kpi_32_3_values"] = {
+        "count": kpi_32_3_passed,
+        "total": kpi_32_3_total,
+        "pct": int(kpi_32_3_passed / kpi_32_3_total * 100) if kpi_32_3_total else 0,
+        "label": ">=12 years old",
+    }
+
     return vcs
 
 
@@ -330,9 +348,7 @@ def get_additional_care_processes_value_counts(
         value_counts[kpi_attr]["count"] = total_passed
         value_counts[kpi_attr]["total"] = total_eligible
         value_counts[kpi_attr]["pct"] = (
-            round(total_passed / total_eligible * 100, 1)
-            if total_eligible > 0
-            else 0
+            round(total_passed / total_eligible * 100, 1) if total_eligible > 0 else 0
         )
         value_counts[kpi_attr]["label"] = labels[ix]
 
