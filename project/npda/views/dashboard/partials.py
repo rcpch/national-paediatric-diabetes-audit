@@ -247,7 +247,9 @@ def get_waffle_chart_partial(request):
             margin=dict(l=0, r=0, t=0, b=0),
             legend=dict(
                 orientation="h",
-                y=1.25,  # Move legend higher above the plot
+                # Move legend higher above the plot
+                # IMD plot has subtitle so move up less
+                y=1.15 if is_imd_plot else 1.2,  
                 x=0.5,
                 xanchor="center",
                 font=dict(size=10),
@@ -255,17 +257,6 @@ def get_waffle_chart_partial(request):
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
         )
-
-        if is_imd_plot:
-            fig.update_layout(
-                title=dict(
-                    text="1st Most Deprived - 5th Least Deprived",
-                    font=dict(size=11),
-                    y=0.9,
-                    x=0.5,
-                    xanchor="center"
-                )
-            )
 
         # Convert Plotly figure to HTML
         chart_html = fig.to_html(
