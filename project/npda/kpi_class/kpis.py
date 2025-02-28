@@ -1877,15 +1877,15 @@ class CalculateKPIS:
         )
 
         # Get quarter dates
-        quarter_dates = get_quarters_for_audit_period(
+        quarter_end_dates = [quarter[1] for quarter in get_quarters_for_audit_period(
             audit_start_date=self.audit_start_date,
             audit_end_date=self.audit_end_date,
-        )
+        )]
         # Only up to current quarter
         current_quarter = retrieve_quarter_for_date(date.today())
-        quarter_dates = quarter_dates[:current_quarter]
+        quarter_end_dates = quarter_end_dates[:current_quarter]
         result = {}
-        for q, (q_start_date, q_end_date) in enumerate(quarter_dates, start=1):
+        for q, q_end_date in enumerate(quarter_end_dates, start=1):
             # Eligible kpi24 patients are those who are either on an insulin pump or insulin pump
             # therapy
             eligible_kpi_24_latest_visit_subquery = (
@@ -1896,7 +1896,7 @@ class CalculateKPIS:
                     # or 6 = Insulin pump therapy plus other blood glucose lowering medication
                     Q(treatment__in=[3, 6]),
                     # Additionally, the visit must be within the quarter
-                    Q(visit_date__range=(q_start_date, q_end_date)),
+                    Q(visit_date__range=(self.audit_start_date, q_end_date)),
                 )
                 .order_by("-visit_date")
                 .values("pk")[:1]

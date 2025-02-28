@@ -15,9 +15,10 @@ from ...constants import (
 from django.contrib.gis.measure import D
 from datetime import date
 
+
 register = template.Library()
 
-# logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @register.filter
