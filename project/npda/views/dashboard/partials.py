@@ -126,7 +126,9 @@ def get_waffle_chart_partial(request):
             first_category = list(data.keys())[0]
             data[first_category] += remainder
 
-        if "quintile" in list(data.keys())[0].lower():
+        is_imd_plot = "quintile" in list(data.keys())[0].lower()
+
+        if is_imd_plot:
             # IMD quintiles - sort by IMD, given the keys are [1st Quintile, 2nd Quintile,
             # ..., 5th Quintile]
             data_sorted = sorted(
@@ -138,11 +140,11 @@ def get_waffle_chart_partial(request):
             )
             # Map labels and colors
             imd_label_color_map = {
-                "1st Quintile": {"color": colors.RCPCH_RED, "label": "Most deprived"},
-                "2nd Quintile": {"color": colors.RCPCH_ORANGE, "label": "Second most"},
-                "3rd Quintile": {"color": colors.RCPCH_LIGHT_BLUE, "label": "Third most"},
-                "4th Quintile": {"color": colors.RCPCH_STRONG_BLUE, "label": "Fourth most"},
-                "5th Quintile": {"color": colors.RCPCH_DARK_BLUE, "label": "Least deprived"},
+                "1st Quintile": {"color": colors.RCPCH_RED, "label": "1st"},
+                "2nd Quintile": {"color": colors.RCPCH_ORANGE, "label": "2nd"},
+                "3rd Quintile": {"color": colors.RCPCH_LIGHT_BLUE, "label": "3rd"},
+                "4th Quintile": {"color": colors.RCPCH_STRONG_BLUE, "label": "4th"},
+                "5th Quintile": {"color": colors.RCPCH_DARK_BLUE, "label": "5th"},
                 "Unknown": {"color": colors.RCPCH_LIGHT_GREY, "label": "Unknown"},
                 "Null": {"color": colors.RCPCH_LIGHT_GREY, "label": "Unknown"},
             }
@@ -253,6 +255,17 @@ def get_waffle_chart_partial(request):
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
         )
+
+        if is_imd_plot:
+            fig.update_layout(
+                title=dict(
+                    text="1st Most Deprived - 5th Least Deprived",
+                    font=dict(size=11),
+                    y=0.9,
+                    x=0.5,
+                    xanchor="center"
+                )
+            )
 
         # Convert Plotly figure to HTML
         chart_html = fig.to_html(
@@ -519,6 +532,8 @@ def get_simple_bar_chart_pcts_partial(request):
         # NOTE: don't need to handle empty data as the template handles this
         data_raw = json.loads(request.GET.get("data"))
 
+        yaxis_title = request.GET.get("yaxis_title", "% CYP with T1DM")
+
         x, y = [], []
         passed, eligible = [], []
         for _, values in data_raw.items():
@@ -550,7 +565,6 @@ def get_simple_bar_chart_pcts_partial(request):
             tickvals=[0, 25, 50, 75, 100],
             ticktext=["0", "25", "50", "75", "100"],
         )
-        yaxis_title = "% CYP with T1DM"
         fig.update_layout(
             title="",
             xaxis_title="",
