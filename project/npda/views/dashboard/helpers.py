@@ -324,14 +324,14 @@ def get_additional_care_processes_value_counts(
 
     for ix, kpi_attr in enumerate(additional_care_processes_kpi_attr_names):
         total_eligible = kpi_calculations_object[kpi_attr]["total_eligible"]
-        total_ineligible = kpi_calculations_object[kpi_attr]["total_ineligible"]
+        total_passed = kpi_calculations_object[kpi_attr]["total_passed"]
 
         # Need all 3 for front end chart
-        value_counts[kpi_attr]["count"] = total_eligible
-        value_counts[kpi_attr]["total"] = total_eligible + total_ineligible
+        value_counts[kpi_attr]["count"] = total_passed
+        value_counts[kpi_attr]["total"] = total_eligible
         value_counts[kpi_attr]["pct"] = (
-            round(total_eligible / value_counts[kpi_attr]["total"] * 100, 1)
-            if value_counts[kpi_attr]["total"] > 0
+            round(total_passed / total_eligible * 100, 1)
+            if total_eligible > 0
             else 0
         )
         value_counts[kpi_attr]["label"] = labels[ix]

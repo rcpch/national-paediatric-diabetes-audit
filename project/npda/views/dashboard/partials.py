@@ -532,6 +532,8 @@ def get_simple_bar_chart_pcts_partial(request):
         # NOTE: don't need to handle empty data as the template handles this
         data_raw = json.loads(request.GET.get("data"))
 
+        yaxis_title = request.GET.get("yaxis_title", "% CYP with T1DM")
+
         x, y = [], []
         passed, eligible = [], []
         for _, values in data_raw.items():
@@ -563,7 +565,6 @@ def get_simple_bar_chart_pcts_partial(request):
             tickvals=[0, 25, 50, 75, 100],
             ticktext=["0", "25", "50", "75", "100"],
         )
-        yaxis_title = "% CYP with T1DM"
         fig.update_layout(
             title="",
             xaxis_title="",
