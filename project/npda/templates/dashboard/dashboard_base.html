@@ -18,10 +18,8 @@
     <!-- Audit Details Card -->
     {% include 'dashboard/components/cards/audit_details_card.html' %}
     <div class="flex flex-col gap-3">
-      <!-- HBa1c CARD -->
-      {% include 'dashboard/components/cards/hba1c_card.html' %}
-      <!-- ADMISSIONS CARD -->
-      {% include 'dashboard/components/cards/admissions_card.html' %}
+      <!-- Total Eligible Patients Card -->
+      {% include 'dashboard/components/cards/total_eligible_patients_card.html' %}
     </div>
   </div>
   <!-- UNIT REPORT -->
@@ -35,9 +33,13 @@
       <!-- GLUCOSE MONITORING CARD -->
       {% include 'dashboard/components/cards/glucose_monitoring_card.html' %}
     </div>
-    <div class="flex flex-col gap-3">
-      <!-- Total Eligible Patients Card -->
-      {% include 'dashboard/components/cards/total_eligible_patients_card.html' %}
+    <div class="flex flex-col gap-4">
+      <div class="flex flex-col gap-3">
+        <!-- HBa1c CARD -->
+        {% include 'dashboard/components/cards/hba1c_card.html' %}
+        <!-- ADMISSIONS CARD -->
+        {% include 'dashboard/components/cards/admissions_card.html' %}
+      </div>
       <!-- HCL CARD -->
       {% include 'dashboard/components/cards/hcl_use_card.html' %}
     </div>
