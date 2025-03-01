@@ -8,22 +8,22 @@
 
   {% with data=charts.total_eligible_patients_stratified_by_diabetes_type.data %}
 
-  <div class="grid gap-y-4 h-full">
+  <div class="flex flex-col lg:flex-row h-full w-full gap-4">
 
-    <div class="flex flex-col justify-center items-center">
-      <div class="text-md font-semibold text-gray-700">T1DM</div>
+    <div class="flex flex-col justify-evenly items-center w-full h-full border-r  border-r-rcpch_mid_grey">
+      <div class="text-md text-center font-semibold text-gray-700 ">T1DM</div>
       <div class="text-2xl font-extrabold text-secondary">{{ data|get_item:"T1DM" }}</div>
       <div class="text-sm text-gray-500">patients</div>
     </div>
 
-    <div class="flex flex-col justify-center items-center">
-      <div class="text-md font-semibold text-gray-700">T2DM</div>
+    <div class="flex flex-col justify-evenly items-center w-full h-full border-r  border-r-rcpch_mid_grey">
+      <div class="text-md text-center font-semibold text-gray-700 ">T2DM</div>
       <div class="text-2xl font-extrabold text-secondary">{{ data|get_item:"T2DM" }}</div>
       <div class="text-sm text-gray-500">patients</div>
     </div>
 
-    <div class="flex flex-col justify-center items-center">
-      <div class="text-md font-semibold text-gray-700">Other rare forms</div>
+    <div class="flex flex-col justify-evenly items-center w-full h-full ">
+      <div class="text-md text-center font-semibold text-gray-700">Other rare forms</div>
       <div class="text-2xl font-extrabold text-secondary">{{ data|get_item:"Other rare forms" }}</div>
       <div class="text-sm text-gray-500">patients</div>
     </div>
