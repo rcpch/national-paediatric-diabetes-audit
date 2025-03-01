@@ -241,7 +241,7 @@ def dashboard(request):
         "days_remaining_until_audit_end_date": days_remaining_until_audit_end_date,
         "charts": {
             "total_eligible_patients_stratified_by_diabetes_type": {
-                "data": json.dumps(total_eligible_pts_diabetes_type_value_counts),
+                "data": total_eligible_pts_diabetes_type_value_counts,
                 "labels": list(total_eligible_pts_diabetes_type_value_counts.keys()),
             },
             "pt_characteristics_value_counts": {
