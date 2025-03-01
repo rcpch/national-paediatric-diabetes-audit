@@ -792,7 +792,7 @@ def get_hcl_scatter_plot(request):
             config={
                 "displayModeBar": False,
             },
-            default_height=DEFAULT_CHART_HTML_HEIGHT,
+            default_height="100%",
         )
 
         return render(
