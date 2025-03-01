@@ -89,24 +89,28 @@
                                       value="download-report"
                                       type="submit"
                                       class="bg-rcpch_light_blue btn-sm join-item h-auto px-2 py-1 mr-2 font-semibold text-white rounded-none hover:bg-rcpch_pink hover:text-white"
-                                      onclick="my_modal_1.showModal()">
+                                      onclick="quality_report_modal.showModal()">
                                 <div class="tooltip tooltip-bottom"
                                      data-tip="Download a spreadsheet (.xlsx) that shows your uploaded data with validation comments">
                                   <i class="fa-file-excel fa-solid"></i> Quality Report
                                 </div>
                               </button>
-                              {% include 'partials/page_elements/data_protection_popup_modal.html'%}
+                              <!-- Pop up which shows data protection guidance for quality report download -->
+                              {% include 'partials/page_elements/quality_report_popup.html' %}
                             {% endif %}
                             <button name="submit-data"
                                     value="download-data"
                                     type="submit"
-                                    class="bg-rcpch_light_blue btn-sm join-item h-auto px-2 py-1 font-semibold text-white rounded-none hover:bg-rcpch_pink hover:text-white">
+                                    class="bg-rcpch_light_blue btn-sm join-item h-auto px-2 py-1 font-semibold text-white rounded-none hover:bg-rcpch_pink hover:text-white"
+                                    onclick="original_data_modal.showModal()">
                               <div class="tooltip tooltip-bottom"
                                    data-tip="Download a copy of the uploaded .CSV file">
                                 <i class="fa-file-csv fa-solid"></i>
                                 Raw Data
                               </div>
                             </button>
+                            <!-- Pop up which shows data protection guidance for original data download -->
+                            {% include 'partials/page_elements/original_data_popup.html' %}
                           </div>
                         </div>
                       {% else %}

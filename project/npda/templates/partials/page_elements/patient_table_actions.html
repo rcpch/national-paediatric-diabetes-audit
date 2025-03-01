@@ -59,7 +59,7 @@
                         name="submit-data"
                         value="download-report"
                         type="submit"
-                        onclick="my_modal_1.showModal()"
+                        onclick="quality_report_modal.showModal()"
                         >
                         <i class="fa-solid fa-file-excel"></i>
                         Data Quality Report
@@ -68,7 +68,7 @@
                         {% endif %}
                     </li>
                     <!-- Pop up which shows data protection guidance for report -->
-                    {% include 'partials/page_elements/data_protection_popup_modal.html' %}
+                    {% include 'partials/page_elements/quality_report_popup.html' %}
                     <li>
                         <div tabindex="0" role="button" class="btn btn-info text-white">
                         <i class="fa-solid fa-chevron-down"></i>
@@ -79,11 +79,14 @@
                     <li>
                         <button name="submit-data"
                         value="download-data"
-                        type="submit">
+                        type="submit"
+                        onclick="original_data_modal.showModal()">
                         <i class="fa-solid fa-download"></i>
                         Download original file
                         </a>
                     </li>
+                    <!-- Pop up which shows data protection guidance for original data download -->
+                    {% include 'partials/page_elements/original_data_popup.html' %}
                     <li>
                         <a href="{% url 'submissions' %}">
                         <i class="fa-solid fa-timeline"></i>
