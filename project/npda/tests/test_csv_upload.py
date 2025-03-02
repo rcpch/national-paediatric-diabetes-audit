@@ -2432,11 +2432,12 @@ def test_dietician_no_additional_offered_date_provided_fail_validation(
 
 
 @pytest.mark.django_db
-def test_dietician_additional_offered_date_missing_fail_validation(
+def test_dietician_additional_offered_date_missing_passes_validation(
     test_user, single_row_valid_df
 ):
     """
-    Test that dietician extra appointment offered but date missing should fail
+    Test that dietician extra appointment offered but date missing should pass
+    https://github.com/rcpch/national-paediatric-diabetes-audit/issues/668
     """
     single_row_valid_df.loc[
         0,
@@ -2446,7 +2447,7 @@ def test_dietician_additional_offered_date_missing_fail_validation(
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
 
-    assert "dietician_additional_appointment_date" in errors[0]
+    assert "dietician_additional_appointment_date" not in errors[0]
 
     visit = Visit.objects.first()
 

@@ -1002,17 +1002,6 @@ class VisitForm(forms.ModelForm):
         dietician_additional_appointment_date = cleaned_data.get(
             "dietician_additional_appointment_date"
         )
-        if dietician_additional_appointment_offered is not None:
-            if dietician_additional_appointment_offered == 1:
-                measure_must_have_date_and_value(
-                    dietician_additional_appointment_date,
-                    "dietician_additional_appointment_date",
-                    [
-                        {
-                            "dietician_additional_appointment_offered": dietician_additional_appointment_offered
-                        }
-                    ],
-                )
 
         if dietician_additional_appointment_date is not None and (
             dietician_additional_appointment_offered is None
