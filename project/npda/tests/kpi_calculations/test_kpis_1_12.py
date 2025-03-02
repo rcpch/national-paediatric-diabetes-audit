@@ -292,6 +292,7 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of diagnosis within the audit period
         diagnosis_date=AUDIT_START_DATE - relativedelta(days=2),
+        diabetes_type=DIABETES_TYPES[0][0], # T1DM
     )
 
     eligible_patient_date_leaving_NOT_within_audit_period = PatientFactory(
@@ -302,6 +303,7 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
         # Date of leaving service within the audit period
         # transfer date only not None if they have left
         transfer__date_leaving_service=None,
+        diabetes_type=DIABETES_TYPES[0][0], # T1DM
     )
 
     eligible_patient_death_NOT_within_audit_period = PatientFactory(
@@ -311,21 +313,39 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of death within the audit period"
         death_date=None,
+        diabetes_type=DIABETES_TYPES[0][0], # T1DM
     )
 
-    # Create Patients and Visits that should FAIL KPI1
+    # Create Patients and Visits that should FAIL KPI1 (ineligible)
     # Visit date before audit period
     ineligible_patient_visit_date: List[Patient] = PatientFactory(
         postcode="ineligible_patient_visit_date",
-        visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
+        diabetes_type=DIABETES_TYPES[0][0], # T1DM
+        # other eligibilty criteria met
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # Date of diagnosis within the audit period
+        diagnosis_date=AUDIT_START_DATE - relativedelta(days=2),
+        
     )
     # Above age 25 at start of audit period
     ineligible_patient_too_old: List[Patient] = PatientFactory(
         postcode="ineligible_patient_too_old",
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
+         diabetes_type=DIABETES_TYPES[0][0], # T1DM
     )
 
-    # KPI5 specific
+    # KPI5 specific ineligible patients
+    ineligible_patient_diabetes_type_not_t1dm = PatientFactory(
+        postcode="ineligible_patient_diabetes_type_not_t1dm",
+        # KPI1 eligible
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # Date of diagnosis within the audit period
+        diagnosis_date=AUDIT_START_DATE + relativedelta(days=2),
+        diabetes_type=DIABETES_TYPES[1][0], # T2DM
+    )
     ineligible_patient_diag_within_audit_period = PatientFactory(
         postcode="ineligible_patient_diag_within_audit_period",
         # KPI1 eligible
@@ -333,6 +353,7 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of diagnosis within the audit period
         diagnosis_date=AUDIT_START_DATE + relativedelta(days=2),
+         diabetes_type=DIABETES_TYPES[0][0], # T1DM
     )
     ineligible_patient_date_leaving_within_audit_period = PatientFactory(
         postcode="ineligible_patient_date_leaving_within_audit_period",
@@ -341,6 +362,7 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of leaving service within the audit period
         transfer__date_leaving_service=AUDIT_START_DATE + relativedelta(days=2),
+         diabetes_type=DIABETES_TYPES[0][0], # T1DM
     )
     ineligible_patient_death_within_audit_period = PatientFactory(
         postcode="ineligible_patient_death_within_audit_period",
@@ -349,7 +371,9 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of death within the audit period"
         death_date=AUDIT_START_DATE + relativedelta(days=2),
+         diabetes_type=DIABETES_TYPES[0][0], # T1DM
     )
+    
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
@@ -358,7 +382,7 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
     calc_kpis.total_patients_count = Patient.objects.count()
 
     EXPECTED_TOTAL_ELIGIBLE = 3
-    EXPECTED_TOTAL_INELIGIBLE = 5
+    EXPECTED_TOTAL_INELIGIBLE = 6
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=EXPECTED_TOTAL_ELIGIBLE,
