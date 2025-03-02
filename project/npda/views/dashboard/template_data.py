@@ -94,6 +94,11 @@ TEXT = {
             "Albuminuria present",
         ],
         "ineligible_hover_reason": {},
+        "key": {
+            "pass": "Complete",
+            "fail": "Incomplete",
+            "ineligible": "Not required"
+        }
     },
     "treatment": {
         "title": "Treatment",
@@ -108,6 +113,11 @@ TEXT = {
             "cgm": "Does not fulfil criteria for KPI 1",
             "tx_regimen": "Does not fulfil criteria for any of KPIs 13-20",
         },
+        "key": {
+            "pass": "Complete",
+            "fail": "Incomplete",
+            "ineligible": "Not required"
+        }
     },
 }
 # TODO: might be nicer to move into above dict
