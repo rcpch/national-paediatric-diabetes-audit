@@ -1,9 +1,12 @@
 {% extends 'dashboard/components/bases/base_card.html' %}
 {% block card_title %}
-  Index of Multiple Deprivation <div class="tooltip" data-tip="1st Quintile = Most Deprived; 5th Quintile = Least Deprived">
-    <i class="fas fa-info-circle"></i>
-  </div>
+  Index of Multiple Deprivation (Quintile)
 {% endblock card_title%}
+
+{% block subtitle %}
+<p class="text-sm text-center">1st Most Deprived - 5th Least Deprived</p>
+{% endblock %}
+
 {% block card_body %}
 <div
 hx-get="{% url 'get_waffle_chart_partial' %}"

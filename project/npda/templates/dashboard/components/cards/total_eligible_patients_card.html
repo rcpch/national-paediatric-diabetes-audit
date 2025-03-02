@@ -1,20 +1,34 @@
 {% extends 'dashboard/components/bases/base_card.html' %}
+{% load npda_tags %}
 {% block card_title %}
   Total Eligible Patients
   {% include 'common/docs_icon_link_button.html' with rel_url="developer/kpis/patient_characteristics/#1-total-number-of-eligible-patients" fa_icon_class="fa-solid fa-eye" %}
 {% endblock card_title%}
 {% block card_body %}
 
-<!-- Waffle Chart Container -->
-<div
-hx-get="{% url 'get_waffle_chart_partial' %}"
-hx-vals='{{ charts.total_eligible_patients_stratified_by_diabetes_type.data }}'
-hx-trigger="load"
-hx-swap="innerHTML"
-_="on htmx:afterSwap remove #loading-spinner-total-eligible-patients-card">
-</div>
+  {% with data=charts.total_eligible_patients_stratified_by_diabetes_type.data %}
 
-<div id="loading-spinner-total-eligible-patients-card"
-class="loading loading-spinner text-rcpch_dark_blue flex flex-grow-1 justify-center items-center h-full w-1/5 mx-auto bg-center">
-</div>
+  <div class="flex flex-col lg:flex-row h-full w-full gap-4">
+
+    <div class="flex flex-col justify-evenly items-center w-full h-full border-r  border-r-rcpch_mid_grey">
+      <div class="text-md text-center font-semibold text-gray-700 ">T1DM</div>
+      <div class="text-2xl font-extrabold text-secondary">{{ data|get_item:"T1DM" }}</div>
+      <div class="text-sm text-gray-500">patients</div>
+    </div>
+
+    <div class="flex flex-col justify-evenly items-center w-full h-full border-r  border-r-rcpch_mid_grey">
+      <div class="text-md text-center font-semibold text-gray-700 ">T2DM</div>
+      <div class="text-2xl font-extrabold text-secondary">{{ data|get_item:"T2DM" }}</div>
+      <div class="text-sm text-gray-500">patients</div>
+    </div>
+
+    <div class="flex flex-col justify-evenly items-center w-full h-full ">
+      <div class="text-md text-center font-semibold text-gray-700">Other rare forms</div>
+      <div class="text-2xl font-extrabold text-secondary">{{ data|get_item:"Other rare forms" }}</div>
+      <div class="text-sm text-gray-500">patients</div>
+    </div>
+
+  </div>
+
+  {% endwith %}
 {% endblock %}

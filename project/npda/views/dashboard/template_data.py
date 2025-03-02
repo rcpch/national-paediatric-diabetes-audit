@@ -25,9 +25,14 @@ TEXT = {
             "kpi_30_retinal_screening": "Does not fulfil criteria for KPI 6",
             "kpi_31_foot_examination": "Does not fulfil criteria for KPI 6",
         },
+        "key": {
+            "pass": "Complete",
+            "fail": "Incomplete",
+            "ineligible": "Not required"
+        }
     },
     "additional_care_processes": {
-        "title": "Additional Care Proccesses",
+        "title": "Additional Care Processes",
         "description": "These additional care processes are recommended by NICE for children and young people with Type 1 diabetes of all ages (and ineligible otherwise), with the exception of smoking status and referral to smoking cessation services, which apply to young people aged 12 and above.",
         "headers": [
             "NHS NUMBER",
@@ -50,6 +55,11 @@ TEXT = {
             "kpi_39_influenza_immunisation_recommended": "Does not fulfil criteria for KPI 5",
             "kpi_40_sick_day_rules_advice": "Does not fulfil criteria for KPI 1",
         },
+        "key": {
+            "pass": "Complete",
+            "fail": "Incomplete",
+            "ineligible": "Not required"
+        }
     },
     "care_at_diagnosis": {
         "title": "Care at Diagnosis",
@@ -65,6 +75,11 @@ TEXT = {
             "kpi_42_thyroid_disease_screening": "Does not fulfil criteria for KPI 7, diagnosed at least 90 days before the end of the audit period",
             "kpi_43_carbohydrate_counting_education": "Does not fulfil criteria for KPI 7, diagnosed at least 90 days before the end of the audit period",
         },
+        "key": {
+            "pass": "Complete",
+            "fail": "Incomplete",
+            "ineligible": "Not required"
+        }
     },
     "outcomes": {
         "title": "Outcomes",

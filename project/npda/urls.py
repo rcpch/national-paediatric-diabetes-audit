@@ -116,6 +116,11 @@ dashboard_urlpatterns = [
         name="dashboard",
     ),
     path(
+        "patient-report",
+        view=dashboard.patient_report,
+        name="patient-report"
+    ),
+    path(
         "get_patient_level_report_partial",
         view=partials.get_patient_level_report_partial,
         name="get_patient_level_report_partial",

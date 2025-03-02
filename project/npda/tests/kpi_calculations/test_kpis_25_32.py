@@ -43,6 +43,8 @@ def test_kpi_calculation_25(AUDIT_START_DATE):
         "transfer__date_leaving_service": None,
         # Date of death NOT within the audit period"
         "death_date": None,
+        # T1DM
+        "diabetes_type": DIABETES_TYPES[0][0],
     }
 
     # Passing patients
@@ -164,6 +166,8 @@ def test_kpi_calculation_26(AUDIT_START_DATE):
         "transfer__date_leaving_service": None,
         # Date of death NOT within the audit period"
         "death_date": None,
+        # T1DM
+        "diabetes_type": DIABETES_TYPES[0][0],
     }
 
     # Passing patients
@@ -296,6 +300,8 @@ def test_kpi_calculation_27(AUDIT_START_DATE):
         "transfer__date_leaving_service": None,
         # Date of death NOT within the audit period"
         "death_date": None,
+        # T1DM
+        "diabetes_type": DIABETES_TYPES[0][0],
     }
 
     # Passing patients
@@ -926,6 +932,8 @@ def test_kpi_calculation_32_1(AUDIT_START_DATE):
         "transfer__date_leaving_service": None,
         # Date of death NOT within the audit period"
         "death_date": None,
+        # T1DM
+        "diabetes_type": DIABETES_TYPES[0][0],
     }
 
     # Create Patients < 12 yo
@@ -1113,6 +1121,8 @@ def test_kpi_calculation_32_2(AUDIT_START_DATE):
         "transfer__date_leaving_service": None,
         # Date of death NOT within the audit period"
         "death_date": None,
+        # T1DM
+        "diabetes_type": DIABETES_TYPES[0][0],
     }
 
     # Create Patients < 12 yo
@@ -1281,6 +1291,8 @@ def test_kpi_calculation_32_3(AUDIT_START_DATE):
         "transfer__date_leaving_service": None,
         # Date of death NOT within the audit period"
         "death_date": None,
+        # T1DM
+        "diabetes_type": DIABETES_TYPES[0][0],
     }
 
     # Create Patients >= 12 yo

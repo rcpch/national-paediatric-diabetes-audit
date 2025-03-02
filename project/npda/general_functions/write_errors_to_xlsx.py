@@ -81,8 +81,7 @@ def write_errors_to_xlsx(
     # Style the openpyxl worksheet to highlight in red erroneous/invalid cells.
     # Also add comments to annotate the actual error.
     for _, patient_errors in df_errors.iterrows():
-        # 0 based indexing and the column header. So +2
-        row_index = patient_errors["Original CSV Row"] + 2
+        row_index = patient_errors["Original CSV Row"]
 
         field_name = patient_errors["Column"]
         field_errors = patient_errors["Errors"]
@@ -156,7 +155,8 @@ def flatten_errors(
         for field, errors in row_errors.items():
             rows.append(
                 {
-                    "Original CSV Row": int(row_ix) + 1,
+                    # 0 based indexing and the column header. So + 2
+                    "Original CSV Row": int(row_ix) + 2,
                     identifier_field: original_data.loc[int(row_ix), identifier_column],
                     "Column": model_field_to_csv_heading(field),
                     "Errors": "; ".join(errors),

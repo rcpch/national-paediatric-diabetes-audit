@@ -3816,11 +3816,11 @@ def test_dietician_no_additional_offered_date_provided_fail_validation(
 
 @pytest.mark.django_db
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
-def test_dietician_additional_offered_date_missing_fail_validation(
+def test_dietician_additional_offered_date_missing_passes_validation(
     single_row_valid_df, mocked_submission, test_user
 ):
     """
-    Test that dietician extra appointment offered but date missing should fail
+    Test that dietician extra appointment offered but date missing should pass
     """
     single_row_valid_df.loc[
         0,
@@ -3840,9 +3840,12 @@ def test_dietician_additional_offered_date_missing_fail_validation(
     process_dataframe_validate_save_patients_and_visits(
         submission=submission, dataframe=single_row_valid_df, TESTING=True
     )
+    errors = csv_upload_sync(test_user, single_row_valid_df)
+
+    assert "dietician_additional_appointment_date" not in errors[0]
 
     visit = Visit.objects.first()
-    assert "dietician_additional_appointment_date" in visit.errors
+    assert "dietician_additional_appointment_date" not in visit.errors
     assert visit.dietician_additional_appointment_offered == 1
     assert visit.dietician_additional_appointment_date is None
 

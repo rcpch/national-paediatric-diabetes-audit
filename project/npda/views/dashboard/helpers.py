@@ -92,7 +92,6 @@ def get_care_at_diagnosis_vcs_pct(
 
 
 def get_hc_completion_rate_vcs(
-    kpi_32_1_values: dict,
     kpi_32_2_values: dict,
     kpi_32_3_values: dict,
 ):
@@ -102,24 +101,42 @@ def get_hc_completion_rate_vcs(
 
     # Just need pass and fail
     vcs = {}
-    for ix, kpi_values in enumerate([kpi_32_1_values, kpi_32_2_values, kpi_32_3_values], start=1):
-        if ix == 1:
-            kpi_label = "<12 years old"
-        elif ix == 2:
-            kpi_label = ">=12 years old"
-        else:
-            kpi_label = "Overall"
 
-        vcs[f"kpi_32_{ix}_values"] = {
-            "count": kpi_values["total_passed"],
-            "total": kpi_values["total_eligible"],
-            "pct": (
-                int(kpi_values["total_passed"] / kpi_values["total_eligible"] * 100)
-                if kpi_values["total_passed"]
-                else 0
-            ),
-            "label": kpi_label,
-        }
+    kpi_32_2_passed = kpi_32_2_values["total_passed"]
+    kpi_32_2_total = kpi_32_2_values["total_eligible"]
+    kpi_32_3_passed = kpi_32_3_values["total_passed"]
+    kpi_32_3_total = kpi_32_3_values["total_eligible"]
+
+    # Overall
+    # For overall, we need to sum total passed and total eligible for kpis 31_2 and 32_3.
+    # We IGNORE 32_1 as this is a count of health checks, not patients!
+    kpi_32_1_pct = (
+        int((kpi_32_2_passed + kpi_32_3_passed) / (kpi_32_2_total + kpi_32_3_total) * 100)
+        if kpi_32_2_total + kpi_32_3_total
+        else 0
+    )
+    vcs["kpi_32_1_values"] = {
+        "count": kpi_32_2_passed + kpi_32_3_passed,
+        "total": kpi_32_2_total + kpi_32_3_total,
+        "pct": kpi_32_1_pct,
+        "label": "Overall",
+    }
+
+    # <12 years old
+    vcs["kpi_32_2_values"] = {
+        "count": kpi_32_2_passed,
+        "total": kpi_32_2_total,
+        "pct": int(kpi_32_2_passed / kpi_32_2_total * 100) if kpi_32_2_total else 0,
+        "label": "<12 years old",
+    }
+
+    # >=12 years old
+    vcs["kpi_32_3_values"] = {
+        "count": kpi_32_3_passed,
+        "total": kpi_32_3_total,
+        "pct": int(kpi_32_3_passed / kpi_32_3_total * 100) if kpi_32_3_total else 0,
+        "label": ">=12 years old",
+    }
 
     return vcs
 
@@ -204,30 +221,22 @@ def get_total_eligible_pts_diabetes_type_value_counts(
 ) -> dict:
     """Gets value counts dict for total eligible patients stratified by diabetes type"""
 
-    eligible_pts_diabetes_type_counts = eligible_pts_queryset.values("diabetes_type").annotate(
-        count=Count("diabetes_type")
+    eligible_pts_diabetes_type_value_counts_raw = Counter(
+        eligible_pts_queryset.values_list("diabetes_type", flat=True)
     )
+
+    # Other types will be denoted as "Other rare forms"
+    diabetes_type_label_map = {
+        1: "T1DM",
+        2: "T2DM",
+    }
+
+    # Convert to labels
     eligible_pts_diabetes_type_value_counts = defaultdict(int)
-    for item in eligible_pts_diabetes_type_counts:
-        diabetes_type = item["diabetes_type"]
-        count = item["count"]
-
-        # These are T1/T2DM types
-        if diabetes_type == 1:
-            diabetes_type_str = "T1DM"
-            eligible_pts_diabetes_type_value_counts[diabetes_type_str] += count
-        elif diabetes_type == 2:
-            diabetes_type_str = "T2DM"
-            eligible_pts_diabetes_type_value_counts[diabetes_type_str] += count
-        else:
-            # Count as 'Other rare forms'
-            diabetes_type_str = "Other rare forms"
-            eligible_pts_diabetes_type_value_counts[diabetes_type_str] += count
-
-    # Convert to percentages
-    eligible_pts_diabetes_type_value_counts = convert_value_counts_dict_to_pct(
-        eligible_pts_diabetes_type_value_counts
-    )
+    for key, value in eligible_pts_diabetes_type_value_counts_raw.items():
+        eligible_pts_diabetes_type_value_counts[
+            diabetes_type_label_map.get(key, "Other rare forms")
+        ] += value
 
     return eligible_pts_diabetes_type_value_counts
 
@@ -324,15 +333,13 @@ def get_additional_care_processes_value_counts(
 
     for ix, kpi_attr in enumerate(additional_care_processes_kpi_attr_names):
         total_eligible = kpi_calculations_object[kpi_attr]["total_eligible"]
-        total_ineligible = kpi_calculations_object[kpi_attr]["total_ineligible"]
+        total_passed = kpi_calculations_object[kpi_attr]["total_passed"]
 
         # Need all 3 for front end chart
-        value_counts[kpi_attr]["count"] = total_eligible
-        value_counts[kpi_attr]["total"] = total_eligible + total_ineligible
+        value_counts[kpi_attr]["count"] = total_passed
+        value_counts[kpi_attr]["total"] = total_eligible
         value_counts[kpi_attr]["pct"] = (
-            round(total_eligible / value_counts[kpi_attr]["total"] * 100, 1)
-            if value_counts[kpi_attr]["total"] > 0
-            else 0
+            round(total_passed / total_eligible * 100, 1) if total_eligible > 0 else 0
         )
         value_counts[kpi_attr]["label"] = labels[ix]
 

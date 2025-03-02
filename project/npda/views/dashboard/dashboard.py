@@ -9,11 +9,11 @@ from django.contrib import messages
 from django.shortcuts import render
 
 from project import constants
-from project.npda.general_functions.quarter_for_date import \
-    retrieve_quarter_for_date
+from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
 from project.npda.kpi_class.kpis import CalculateKPIS
-from project.npda.models.paediatric_diabetes_unit import \
-    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass
+from project.npda.models.paediatric_diabetes_unit import (
+    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
+)
 from project.npda.models.patient import Patient
 from project.npda.views.dashboard import helpers as hp
 from project.npda.views.dashboard import template_data
@@ -163,11 +163,9 @@ def dashboard(request):
 
     # Health checks
     # Get attr names for KPIs 32.1, 32.2, 32.3
-    kpi_32_1_attr_name = calculate_kpis.kpi_name_registry.get_attribute_name(321)
     kpi_32_2_attr_name = calculate_kpis.kpi_name_registry.get_attribute_name(322)
     kpi_32_3_attr_name = calculate_kpis.kpi_name_registry.get_attribute_name(323)
     hc_completion_rate_value_counts_pct = hp.get_hc_completion_rate_vcs(
-        kpi_32_1_values=kpi_calculations_object["calculated_kpi_values"][kpi_32_1_attr_name],
         kpi_32_2_values=kpi_calculations_object["calculated_kpi_values"][kpi_32_2_attr_name],
         kpi_32_3_values=kpi_calculations_object["calculated_kpi_values"][kpi_32_3_attr_name],
     )
@@ -241,7 +239,7 @@ def dashboard(request):
         "days_remaining_until_audit_end_date": days_remaining_until_audit_end_date,
         "charts": {
             "total_eligible_patients_stratified_by_diabetes_type": {
-                "data": json.dumps(total_eligible_pts_diabetes_type_value_counts),
+                "data": total_eligible_pts_diabetes_type_value_counts,
                 "labels": list(total_eligible_pts_diabetes_type_value_counts.keys()),
             },
             "pt_characteristics_value_counts": {
@@ -338,11 +336,73 @@ def dashboard(request):
         "default_table_data": {
             "headers": default_pt_level_table_headers,
             "row_data": default_pt_level_table_data,
-            "ineligible_hover_reason": template_data.TEXT["health_checks"]["ineligible_hover_reason"],
+            "ineligible_hover_reason": template_data.TEXT["health_checks"][
+                "ineligible_hover_reason"
+            ],
         },
         # TODO: this should be an enum but we're currently not doing benchmarking so can update
         # at that point
         "aggregation_level": "pdu",
+    }
+
+    return render(request, template_name=template, context=context)
+
+
+@login_and_otp_required()
+def patient_report(request):
+    template = "patient-report.html"
+
+    pz_code = request.session.get("pz_code")
+
+    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
+        "npda", "PaediatricDiabetesUnit"
+    )
+    try:
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+    except PaediatricDiabetesUnit.DoesNotExist:
+        messages.error(
+            request=request,
+            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
+        )
+        return render(request, "patient-report.html")
+
+    selected_audit_year = int(request.session.get("selected_audit_year"))
+
+    if selected_audit_year <= 2024:
+        # The day after the audit year end date
+        calculation_date = date(selected_audit_year, 4, 1)
+    else:
+        today = date.today()
+        calculation_date = date(selected_audit_year, today.month, today.day)
+
+    calculate_kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=True)
+
+    kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
+
+    default_pt_level_menu_text = template_data.TEXT["health_checks"]
+    default_pt_level_menu_tab_selected = "health_checks"
+    highlight = {
+        f"{key}": key == default_pt_level_menu_tab_selected for key in template_data.TEXT.keys()
+    }
+    default_pt_level_table_headers, default_pt_level_table_data = hp.get_pt_level_table_data(
+        category="health_checks",
+        calculate_kpis_object=calculate_kpis,
+        kpi_calculations_object=kpi_calculations_object,
+    )
+
+    context = {
+        "pdu_object": pdu,
+        "kpi_calculations_object": kpi_calculations_object,
+        "default_pt_level_menu_text": default_pt_level_menu_text,
+        "default_pt_level_menu_tab_selected": default_pt_level_menu_tab_selected,
+        "default_highlight": highlight,
+        "default_table_data": {
+            "headers": default_pt_level_table_headers,
+            "row_data": default_pt_level_table_data,
+            "ineligible_hover_reason": template_data.TEXT["health_checks"][
+                "ineligible_hover_reason"
+            ],
+        },
     }
 
     return render(request, template_name=template, context=context)
