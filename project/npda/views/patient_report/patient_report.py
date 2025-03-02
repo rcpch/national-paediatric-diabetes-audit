@@ -19,12 +19,9 @@ logger = logging.getLogger(__name__)
 
 
 @login_and_otp_required()
-def get_patient_level_report_partial(request):
+def patient_report(request):
 
-    if not request.htmx:
-        return HttpResponseBadRequest("This view is only accessible via HTMX")
-
-    pt_level_menu_tab_selected = request.GET.get("selected")
+    pt_level_menu_tab_selected = request.GET.get("selected", "health_checks")
 
     # State vars
     # Colour the selected menu tab
@@ -67,17 +64,21 @@ def get_patient_level_report_partial(request):
         selected_table_headers = []
         selected_table_data = []
 
+    context = {
+        "text": selected_data,
+        "selected": pt_level_menu_tab_selected,
+        "highlight": highlight,
+        "table_data": {
+            "headers": selected_table_headers,
+            "row_data": selected_table_data,
+            "ineligible_hover_reason": selected_data.get("ineligible_hover_reason", {}),
+        },
+    }
+    
+    logger.debug(f"{context=}")
+
     return render(
         request,
-        template_name="dashboard/pt_level_report_table_container_partial.html",
-        context={
-            "text": selected_data,
-            "selected": pt_level_menu_tab_selected,
-            "highlight": highlight,
-            "table_data": {
-                "headers": selected_table_headers,
-                "row_data": selected_table_data,
-                "ineligible_hover_reason": selected_data.get("ineligible_hover_reason", {}),
-            },
-        },
+        template_name="patient_report/patient_report.html",
+        context=context,
     )

@@ -15,6 +15,7 @@ from project.npda.views.dashboard.dashboard import temp_set_eligible_kpi_7
 
 from .views import *
 from .views.dashboard import dashboard, partials
+from .views.patient_report.patient_report import patient_report
 
 urlpatterns = [
     path("", view=home, name="home"),
@@ -115,14 +116,9 @@ dashboard_urlpatterns = [
         name="dashboard",
     ),
     path(
-        "patient-report",
-        view=dashboard.patient_report,
-        name="patient-report"
-    ),
-    path(
-        "get_patient_level_report_partial",
-        view=partials.get_patient_level_report_partial,
-        name="get_patient_level_report_partial",
+        "patient_report",
+        view=patient_report,
+        name="patient_report"
     ),
     path(
         "get_waffle_chart_partial",
