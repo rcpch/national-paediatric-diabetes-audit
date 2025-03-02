@@ -58,7 +58,9 @@ def create_session_object(user):
         )
     )
 
-    audit_year = get_current_audit_year()
+    audit_year = (
+        get_current_audit_year()
+    )  # this is the year that that audit period starts in
     submission_actions = get_submission_actions(pz_code, audit_year)
 
     session = {

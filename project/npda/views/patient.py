@@ -124,7 +124,9 @@ class PatientListView(
         patient_queryset = patient_queryset.annotate(
             audit_year=F("submissions__audit_year"),
             visit_error_count=Count(Case(When(visit__is_valid=False, then=1))),
-            incomplete_full_year_of_care=Case(When(diagnosis_date__gt=a_year_ago, then=True), default=False),
+            incomplete_full_year_of_care=Case(
+                When(diagnosis_date__gt=a_year_ago, then=True), default=False
+            ),
             last_upload_date=Max("submissions__submission_date"),
             most_recent_visit_date=Max("visit__visit_date"),
             distance_from_lead_organisation=Distance(
@@ -143,9 +145,9 @@ class PatientListView(
             patient_queryset = patient_queryset.order_by(sort_by)
         else:
             patient_queryset = patient_queryset.order_by(
-                "is_valid", # Patient model has errors
-                "-visit_error_count", # Any Visits associated to the patient have errors
-                "incomplete_full_year_of_care"
+                "is_valid",  # Patient model has errors
+                "-visit_error_count",  # Any Visits associated to the patient have errors
+                "incomplete_full_year_of_care",
             )
 
         return patient_queryset
@@ -154,7 +156,9 @@ class PatientListView(
         context = super().get_context_data(**kwargs)
 
         pz_code = self.request.session.get("pz_code")
-        selected_audit_year = self.request.session.get("selected_audit_year")
+        selected_audit_year = self.request.session.get(
+            "selected_audit_year"
+        )  # this is the year that that audit period starts in
 
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code) if pz_code else None
         context["pdu"] = pdu
@@ -212,7 +216,7 @@ class PatientListView(
                 patient.latest_quarter = retrieve_quarter_for_date(
                     patient.most_recent_visit_date
                 )
-        
+
         seen_first_error = False
         seen_first_valid = False
         seen_first_valid_incomplete_full_year = False
@@ -228,7 +232,10 @@ class PatientListView(
                         patient.is_first_error = True
                         seen_first_error = True
                 else:
-                    if not seen_first_valid_incomplete_full_year and patient.incomplete_full_year_of_care:
+                    if (
+                        not seen_first_valid_incomplete_full_year
+                        and patient.incomplete_full_year_of_care
+                    ):
                         patient.is_first_valid_incomplete_full_year = True
 
                         seen_first_valid_incomplete_full_year = True
