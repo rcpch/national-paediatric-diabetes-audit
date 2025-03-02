@@ -92,7 +92,6 @@ def get_care_at_diagnosis_vcs_pct(
 
 
 def get_hc_completion_rate_vcs(
-    kpi_32_1_values: dict,
     kpi_32_2_values: dict,
     kpi_32_3_values: dict,
 ):

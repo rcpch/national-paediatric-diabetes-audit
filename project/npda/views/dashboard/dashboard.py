@@ -163,11 +163,9 @@ def dashboard(request):
 
     # Health checks
     # Get attr names for KPIs 32.1, 32.2, 32.3
-    kpi_32_1_attr_name = calculate_kpis.kpi_name_registry.get_attribute_name(321)
     kpi_32_2_attr_name = calculate_kpis.kpi_name_registry.get_attribute_name(322)
     kpi_32_3_attr_name = calculate_kpis.kpi_name_registry.get_attribute_name(323)
     hc_completion_rate_value_counts_pct = hp.get_hc_completion_rate_vcs(
-        kpi_32_1_values=kpi_calculations_object["calculated_kpi_values"][kpi_32_1_attr_name],
         kpi_32_2_values=kpi_calculations_object["calculated_kpi_values"][kpi_32_2_attr_name],
         kpi_32_3_values=kpi_calculations_object["calculated_kpi_values"][kpi_32_3_attr_name],
     )
