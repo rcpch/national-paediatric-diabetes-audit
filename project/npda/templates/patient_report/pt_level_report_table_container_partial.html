@@ -107,6 +107,7 @@
                             <i class="fa-solid fa-circle-exclamation text-error"></i>
                           {% else %}
                           {% comment %} INELIGIBLE {% endcomment %}
+
                             <span class="tooltip tooltip-top block" data-tip="{{ table_data.ineligible_hover_reason|get_item:kpi_attr_name|default:"Ineligible" }}">
                               <i class="fa-solid fa-ban text-muted"></i>
                             </span>
