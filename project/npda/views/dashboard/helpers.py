@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import Literal
 
 from dateutil.relativedelta import relativedelta
-from django.db.models import Count, QuerySet
+from django.db.models import QuerySet
 
 from project.constants.ethnicities import ETHNICITIES
 from project.constants.sex_types import SEX_TYPE
