@@ -166,6 +166,8 @@ def test_kpi_calculation_26(AUDIT_START_DATE):
         "transfer__date_leaving_service": None,
         # Date of death NOT within the audit period"
         "death_date": None,
+        # T1DM
+        "diabetes_type": DIABETES_TYPES[0][0],
     }
 
     # Passing patients
