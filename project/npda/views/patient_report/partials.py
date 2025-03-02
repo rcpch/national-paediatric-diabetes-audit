@@ -3,6 +3,7 @@ from datetime import date
 
 
 # Django imports
+from django.http import HttpResponseBadRequest
 
 # Django imports
 from django.shortcuts import render
@@ -18,9 +19,12 @@ logger = logging.getLogger(__name__)
 
 
 @login_and_otp_required()
-def patient_report(request):
+def get_patient_level_report_partial(request):
 
-    pt_level_menu_tab_selected = request.GET.get("selected", "health_checks")
+    if not request.htmx:
+        return HttpResponseBadRequest("This view is only accessible via HTMX")
+
+    pt_level_menu_tab_selected = request.GET.get("selected")
 
     # State vars
     # Colour the selected menu tab
@@ -73,9 +77,12 @@ def patient_report(request):
             "ineligible_hover_reason": selected_data.get("ineligible_hover_reason", {}),
         },
     }
+    
+    logger.debug(f'{context["text"]=}')
+
 
     return render(
         request,
-        template_name="patient_report/patient_report.html",
+        template_name="patient_report/pt_level_report_table_container_partial.html",
         context=context,
     )
