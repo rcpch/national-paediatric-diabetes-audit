@@ -221,30 +221,22 @@ def get_total_eligible_pts_diabetes_type_value_counts(
 ) -> dict:
     """Gets value counts dict for total eligible patients stratified by diabetes type"""
 
-    eligible_pts_diabetes_type_counts = eligible_pts_queryset.values("diabetes_type").annotate(
-        count=Count("diabetes_type")
+    eligible_pts_diabetes_type_value_counts_raw = Counter(
+        eligible_pts_queryset.values_list("diabetes_type", flat=True)
     )
+
+    # Other types will be denoted as "Other rare forms"
+    diabetes_type_label_map = {
+        1: "T1DM",
+        2: "T2DM",
+    }
+
+    # Convert to labels
     eligible_pts_diabetes_type_value_counts = defaultdict(int)
-    for item in eligible_pts_diabetes_type_counts:
-        diabetes_type = item["diabetes_type"]
-        count = item["count"]
-
-        # These are T1/T2DM types
-        if diabetes_type == 1:
-            diabetes_type_str = "T1DM"
-            eligible_pts_diabetes_type_value_counts[diabetes_type_str] += count
-        elif diabetes_type == 2:
-            diabetes_type_str = "T2DM"
-            eligible_pts_diabetes_type_value_counts[diabetes_type_str] += count
-        else:
-            # Count as 'Other rare forms'
-            diabetes_type_str = "Other rare forms"
-            eligible_pts_diabetes_type_value_counts[diabetes_type_str] += count
-
-    # Convert to percentages
-    eligible_pts_diabetes_type_value_counts = convert_value_counts_dict_to_pct(
-        eligible_pts_diabetes_type_value_counts
-    )
+    for key, value in eligible_pts_diabetes_type_value_counts_raw.items():
+        eligible_pts_diabetes_type_value_counts[
+            diabetes_type_label_map.get(key, "Other rare forms")
+        ] += value
 
     return eligible_pts_diabetes_type_value_counts
 
