@@ -1445,9 +1445,10 @@ def test_dietician_no_additional_offered_date_provided_fail_validation():
 
 
 @pytest.mark.django_db
-def test_dietician_additional_offered_date_missing_fail_validation():
+def test_dietician_additional_offered_date_missing_passes_validation():
     """
-    Test that dietician extra appointment offered but date missing should fail
+    Test that dietician extra appointment offered but date missing should pass
+    https://github.com/rcpch/national-paediatric-diabetes-audit/issues/668
     """
 
     patient = PatientFactory()
@@ -1463,9 +1464,9 @@ def test_dietician_additional_offered_date_missing_fail_validation():
 
     # Trigger the cleaners
     assert (
-        form.is_valid() == False
-    ), f"Dietician extra appointment offered but date missing should fail"
-    assert "dietician_additional_appointment_date" in form.errors
+        form.is_valid()
+    ), f"Dietician extra appointment offered but date missing should pass"
+    assert "dietician_additional_appointment_date" not in form.errors
 
 
 @pytest.mark.django_db
