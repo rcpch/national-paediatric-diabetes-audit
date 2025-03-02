@@ -9,11 +9,11 @@ from django.contrib import messages
 from django.shortcuts import render
 
 from project import constants
-from project.npda.general_functions.quarter_for_date import \
-    retrieve_quarter_for_date
+from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
 from project.npda.kpi_class.kpis import CalculateKPIS
-from project.npda.models.paediatric_diabetes_unit import \
-    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass
+from project.npda.models.paediatric_diabetes_unit import (
+    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
+)
 from project.npda.models.patient import Patient
 from project.npda.views.dashboard import helpers as hp
 from project.npda.views.dashboard import template_data
@@ -338,7 +338,9 @@ def dashboard(request):
         "default_table_data": {
             "headers": default_pt_level_table_headers,
             "row_data": default_pt_level_table_data,
-            "ineligible_hover_reason": template_data.TEXT["health_checks"]["ineligible_hover_reason"],
+            "ineligible_hover_reason": template_data.TEXT["health_checks"][
+                "ineligible_hover_reason"
+            ],
         },
         # TODO: this should be an enum but we're currently not doing benchmarking so can update
         # at that point
@@ -399,8 +401,10 @@ def patient_report(request):
         "default_table_data": {
             "headers": default_pt_level_table_headers,
             "row_data": default_pt_level_table_data,
-            "ineligible_hover_reason": template_data.TEXT["health_checks"]["ineligible_hover_reason"],
-        }
+            "ineligible_hover_reason": template_data.TEXT["health_checks"][
+                "ineligible_hover_reason"
+            ],
+        },
     }
 
     return render(request, template_name=template, context=context)
