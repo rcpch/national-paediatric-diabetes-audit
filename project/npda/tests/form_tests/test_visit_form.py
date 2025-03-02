@@ -1455,6 +1455,7 @@ def test_dietician_additional_offered_date_missing_passes_validation():
 
     form = VisitForm(
         data={
+            "visit_date": "2025-01-01",  # Required for validation
             "dietician_additional_appointment_offered": 1,  # Yes
             "dietician_additional_appointment_date": None,
             "carbohydrate_counting_level_three_education_date": "2025-01-01",
