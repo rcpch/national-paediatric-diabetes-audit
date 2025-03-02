@@ -689,7 +689,8 @@ class CalculateKPIS:
         *a valid date of birth
         *a valid PDU number
         * a visit date or admission date within the audit period
-        * Below the age of 25 at the start of the audit period* Diagnosis of Type 1 diabetes
+        * Below the age of 25 at the start of the audit period
+        * Diagnosis of Type 1 diabetes
 
         Excluding
         * Date of diagnosis within the audit period
