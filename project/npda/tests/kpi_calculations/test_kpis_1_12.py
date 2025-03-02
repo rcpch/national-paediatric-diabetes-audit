@@ -272,6 +272,9 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
 
     Essentialy KPI1 but also check
 
+        Inclusions:
+        * Diagnosis of Type 1 diabetes
+
         Excluding
         * Date of diagnosis within the audit period
         * Date of leaving service within the audit period
@@ -310,7 +313,7 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
         death_date=None,
     )
 
-    # Create Patients and Visits that should FAIL KPI3
+    # Create Patients and Visits that should FAIL KPI1
     # Visit date before audit period
     ineligible_patient_visit_date: List[Patient] = PatientFactory(
         postcode="ineligible_patient_visit_date",
