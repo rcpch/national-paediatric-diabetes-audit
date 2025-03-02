@@ -84,7 +84,7 @@ def get_patient_level_report_partial(request):
         template_name="dashboard/pt_level_report_table_container_partial.html",
         context={
             "text": selected_data,
-            "pt_level_menu_tab_selected": pt_level_menu_tab_selected,
+            "selected": pt_level_menu_tab_selected,
             "highlight": highlight,
             "table_data": {
                 "headers": selected_table_headers,
