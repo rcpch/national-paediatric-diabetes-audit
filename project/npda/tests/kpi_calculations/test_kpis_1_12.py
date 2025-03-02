@@ -320,14 +320,8 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
     # Visit date before audit period
     ineligible_patient_visit_date: List[Patient] = PatientFactory(
         postcode="ineligible_patient_visit_date",
-        diabetes_type=DIABETES_TYPES[0][0], # T1DM
-        # other eligibilty criteria met
-        # KPI1 eligible
-        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
-        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
-        # Date of diagnosis within the audit period
-        diagnosis_date=AUDIT_START_DATE - relativedelta(days=2),
-        
+        visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
+         diabetes_type=DIABETES_TYPES[0][0], # T1DM
     )
     # Above age 25 at start of audit period
     ineligible_patient_too_old: List[Patient] = PatientFactory(
@@ -339,12 +333,13 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
     # KPI5 specific ineligible patients
     ineligible_patient_diabetes_type_not_t1dm = PatientFactory(
         postcode="ineligible_patient_diabetes_type_not_t1dm",
+        diabetes_type=DIABETES_TYPES[1][0], # T2DM
+        # Other eligibility criteria met
         # KPI1 eligible
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
         # Date of diagnosis within the audit period
-        diagnosis_date=AUDIT_START_DATE + relativedelta(days=2),
-        diabetes_type=DIABETES_TYPES[1][0], # T2DM
+        diagnosis_date=AUDIT_START_DATE - relativedelta(days=2),
     )
     ineligible_patient_diag_within_audit_period = PatientFactory(
         postcode="ineligible_patient_diag_within_audit_period",
