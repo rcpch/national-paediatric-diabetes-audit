@@ -13,7 +13,6 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.views.generic import ListView
 from django.views.generic.edit import CreateView, DeleteView, UpdateView
-from django.utils import timezone
 
 # RCPCH imports
 from ..forms.visit_form import VisitForm

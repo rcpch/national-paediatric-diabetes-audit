@@ -53,6 +53,8 @@ def visit_falls_within_audit_period_Q_object(
     filter_dict = Q()  # Q object to return
     if prepend_query_path:
         prepend_query_path = f"{prepend_query_path}__"
+    else:
+        prepend_query_path = ""
 
     for visit_date in ALL_VISIT_DATES:
         # loops through all the potential dates in a visit instance and returns a Q object that can be used to filter
