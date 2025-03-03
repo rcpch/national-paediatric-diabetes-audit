@@ -123,9 +123,21 @@ class PatientListView(
 
         a_year_ago = timezone.now() - timezone.timedelta(days=365)
 
+        this_audit_year_visits = visit_falls_within_audit_period_Q_object(
+            audit_start_date=date(
+                year=int(self.request.session.get("selected_audit_year")),
+                month=4,
+                day=1,
+            ),
+            prepend_query_path="visit",
+        )
+
         patient_queryset = patient_queryset.annotate(
             audit_year=F("submissions__audit_year"),
-            visit_error_count=Count(Case(When(visit__is_valid=False, then=1))),
+            visit_error_count=Count(
+                Case(When(this_audit_year_visits & Q(visit__is_valid=False), then=1))
+            ),
+            visits_this_audit_year=Count(this_audit_year_visits),
             incomplete_full_year_of_care=Case(
                 When(diagnosis_date__gt=a_year_ago, then=True), default=False
             ),
