@@ -17,7 +17,11 @@ from django.utils import timezone
 
 # RCPCH imports
 from ..forms.visit_form import VisitForm
-from ..general_functions import get_visit_categories, get_visit_tabs
+from ..general_functions import (
+    get_visit_categories,
+    get_visit_tabs,
+    visit_falls_within_audit_period_Q_object,
+)
 from ..kpi_class.kpis import CalculateKPIS
 from ..models import Patient, Transfer, Visit
 from .mixins import (
@@ -61,13 +65,17 @@ class PatientVisitsListView(
             submission_active=True,
             audit_year=self.request.session.get("selected_audit_year"),
         ).first()
-        visits = Visit.objects.filter(  # filter visits to those within the audit year
-            patient=patient,
-            visit_date__gte=audit_start_date,
-            visit_date__lte=datetime.date(
-                year=audit_start_date.year + 1, month=3, day=31
-            ),
-        ).order_by("is_valid", "id")
+        visits = (
+            Visit.objects.filter(  # filter visits to those within the audit year
+                patient=patient,
+            )
+            .filter(
+                visit_falls_within_audit_period_Q_object(
+                    audit_start_date=audit_start_date, prepend_query_path=None
+                )
+            )
+            .order_by("is_valid", "id")
+        )
         calculated_visits = []
         for visit in visits:
             visit_categories = get_visit_categories(instance=visit, form=None)

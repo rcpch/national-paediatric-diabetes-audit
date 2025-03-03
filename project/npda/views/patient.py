@@ -1,6 +1,7 @@
 # python imports
 import logging
 import json
+from datetime import date
 
 # Django imports
 from django.apps import apps
@@ -29,6 +30,7 @@ from project.npda.general_functions import (
     organisations_adapter,
     fetch_organisation_by_ods_code,
     retrieve_quarter_for_date,
+    visit_falls_within_audit_period_Q_object,
 )
 from project.npda.models import (
     NPDAUser,
@@ -115,14 +117,13 @@ class PatientListView(
             # PDU view
             filtered_patients &= Q(
                 submissions__paediatric_diabetes_unit__pz_code=pz_code,
-                visit__visit_date__gte=timezone.datetime(
-                    year=self.request.session.get("selected_audit_year"), month=4, day=1
+            ) & visit_falls_within_audit_period_Q_object(
+                audit_start_date=date(
+                    year=self.request.session.get("selected_audit_year"),
+                    month=4,
+                    day=1,
                 ),
-                visit__visit_date__lte=timezone.datetime(
-                    year=self.request.session.get("selected_audit_year") + 1,
-                    month=3,
-                    day=31,
-                ),
+                prepend_query_path="visit",
             )
 
         patient_queryset = patient_queryset.filter(filtered_patients)
