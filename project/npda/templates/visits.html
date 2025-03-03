@@ -74,8 +74,12 @@
                   <tr class="bg-rcpch_dark_blue py-5 text-xs text-white text-gray-700 uppercase bg-gray-50">
                     <th colspan="4" class="px-2">
                       <strong>
-                        Total: {{ visits|length }} Visit
-                        {% if visits|length > 1 %}s{% endif %}
+                        Total: {{ visits|length }}
+                        {% if visits|length > 1 %}
+                          Visits
+                        {% else %}
+                          Visit
+                        {% endif %}
                       </strong>
                     </th>
                   </tr>
