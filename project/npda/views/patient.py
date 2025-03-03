@@ -114,7 +114,15 @@ class PatientListView(
         if not self.request.user.viewing_data_nationally():
             # PDU view
             filtered_patients &= Q(
-                submissions__paediatric_diabetes_unit__pz_code=pz_code
+                submissions__paediatric_diabetes_unit__pz_code=pz_code,
+                visit__visit_date__gte=timezone.datetime(
+                    year=self.request.session.get("selected_audit_year"), month=4, day=1
+                ),
+                visit__visit_date__lte=timezone.datetime(
+                    year=self.request.session.get("selected_audit_year") + 1,
+                    month=3,
+                    day=31,
+                ),
             )
 
         patient_queryset = patient_queryset.filter(filtered_patients)

@@ -187,7 +187,7 @@
                   <i class="fa-circle fa-stack-1x fas"></i>
                   <i class="fa-exclamation fa-stack-1x fa-inverse fas"></i>
                 </span>
-                <strong class="text-rcpch_red self-center px-2">Visits ({{ patient.visit_set.all.count }})</strong>
+                <strong class="text-rcpch_red self-center px-2">Visits ({{ patient.visit_error_count }}/{{ patient.visit_set.all.count }})</strong>
               {% else %}
                 <strong class="text-rcpch_pink self-center">Visits ({{ patient.visit_set.all.count }})</strong>
               {% endif %}

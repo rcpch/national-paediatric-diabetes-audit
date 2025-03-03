@@ -13,6 +13,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.views.generic import ListView
 from django.views.generic.edit import CreateView, DeleteView, UpdateView
+from django.utils import timezone
 
 # RCPCH imports
 from ..forms.visit_form import VisitForm
@@ -53,11 +54,20 @@ class PatientVisitsListView(
         patient_id = self.kwargs.get("patient_id")
         context = super(PatientVisitsListView, self).get_context_data(**kwargs)
         patient = Patient.objects.get(pk=patient_id)
+        audit_start_date = datetime.date(
+            year=self.request.session.get("selected_audit_year"), month=4, day=1
+        )
         submission = patient.submissions.filter(
             submission_active=True,
             audit_year=self.request.session.get("selected_audit_year"),
         ).first()
-        visits = Visit.objects.filter(patient=patient).order_by("is_valid", "id")
+        visits = Visit.objects.filter(  # filter visits to those within the audit year
+            patient=patient,
+            visit_date__gte=audit_start_date,
+            visit_date__lte=datetime.date(
+                year=audit_start_date.year + 1, month=3, day=31
+            ),
+        ).order_by("is_valid", "id")
         calculated_visits = []
         for visit in visits:
             visit_categories = get_visit_categories(instance=visit, form=None)
