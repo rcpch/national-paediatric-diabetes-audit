@@ -117,13 +117,6 @@ class PatientListView(
             # PDU view
             filtered_patients &= Q(
                 submissions__paediatric_diabetes_unit__pz_code=pz_code,
-            ) & visit_falls_within_audit_period_Q_object(
-                audit_start_date=date(
-                    year=self.request.session.get("selected_audit_year"),
-                    month=4,
-                    day=1,
-                ),
-                prepend_query_path="visit",
             )
 
         patient_queryset = patient_queryset.filter(filtered_patients)
