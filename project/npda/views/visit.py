@@ -58,7 +58,7 @@ class PatientVisitsListView(
         context = super(PatientVisitsListView, self).get_context_data(**kwargs)
         patient = Patient.objects.get(pk=patient_id)
         audit_start_date = datetime.date(
-            year=self.request.session.get("selected_audit_year"), month=4, day=1
+            year=int(self.request.session.get("selected_audit_year")), month=4, day=1
         )
         submission = patient.submissions.filter(
             submission_active=True,
