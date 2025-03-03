@@ -1,11 +1,12 @@
 import json
 import logging
-from datetime import date
 
 import plotly.graph_objects as go
 import plotly.io as pio
+
 # Django imports
 from django.http import HttpResponseBadRequest
+
 # Django imports
 from django.shortcuts import render
 
@@ -13,86 +14,20 @@ import project.constants.colors as colors
 from project.npda.general_functions.map import (
     generate_dataframe_and_aggregated_distance_data_from_cases,
     generate_distance_from_organisation_scatterplot_figure,
-    get_children_by_pdu_audit_year)
-from project.npda.general_functions.rcpch_nhs_organisations import \
-    fetch_organisation_by_ods_code
-from project.npda.kpi_class.kpis import CalculateKPIS
-from project.npda.models.paediatric_diabetes_unit import \
-    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass
+    get_children_by_pdu_audit_year,
+)
+from project.npda.general_functions.rcpch_nhs_organisations import fetch_organisation_by_ods_code
+from project.npda.models.paediatric_diabetes_unit import (
+    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
+)
 from project.npda.views.dashboard.helpers import (
-    get_list_of_shortened_ticktext_labels, get_pt_level_table_data)
-from project.npda.views.dashboard.template_data import (KPI_CATEGORY_ATTR_MAP,
-                                                        TEXT)
+    get_list_of_shortened_ticktext_labels,
+)
 from project.npda.views.decorators import login_and_otp_required
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_CHART_HTML_HEIGHT = "18rem"
-
-
-@login_and_otp_required()
-def get_patient_level_report_partial(request):
-
-    if not request.htmx:
-        return HttpResponseBadRequest("This view is only accessible via HTMX")
-
-    pt_level_menu_tab_selected = request.GET.get("selected")
-
-    # State vars
-    # Colour the selected menu tab
-    highlight = {f"{key}": key == pt_level_menu_tab_selected for key in TEXT.keys()}
-
-    selected_data: dict = TEXT[pt_level_menu_tab_selected]
-
-    # Gather the selected category's data
-
-    # First need to get the relevant calculations
-    pz_code = request.session.get("pz_code")
-
-    selected_audit_year = int(request.session.get("selected_audit_year"))
-    # TODO: remove min clamp once available audit year from preference filter sorted
-    selected_audit_year = max(selected_audit_year, 2024)
-    calculation_date = date(year=selected_audit_year, month=5, day=1)
-
-    calculate_kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=True)
-
-    # Set relevant patients
-    calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
-
-    # Run the relevant subset of calculations
-    selected_kpis = KPI_CATEGORY_ATTR_MAP[pt_level_menu_tab_selected]
-    kpi_calculations_object = calculate_kpis._calculate_kpis(selected_kpis)
-
-    try:
-        selected_table_headers, selected_table_data = get_pt_level_table_data(
-            category=pt_level_menu_tab_selected,
-            calculate_kpis_object=calculate_kpis,
-            kpi_calculations_object=kpi_calculations_object,
-        )
-    except Exception as e:
-        logger.error(
-            f"Error getting pt_level_table_data for {pt_level_menu_tab_selected=} {e=}",
-            exc_info=True,
-        )
-        # messages.error(request, f"Error getting data!")
-
-        selected_table_headers = []
-        selected_table_data = []
-
-    return render(
-        request,
-        template_name="dashboard/pt_level_report_table_partial.html",
-        context={
-            "text": selected_data,
-            "pt_level_menu_tab_selected": pt_level_menu_tab_selected,
-            "highlight": highlight,
-            "table_data": {
-                "headers": selected_table_headers,
-                "row_data": selected_table_data,
-                "ineligible_hover_reason": selected_data.get("ineligible_hover_reason", {}),
-            },
-        },
-    )
 
 
 @login_and_otp_required()
@@ -249,7 +184,7 @@ def get_waffle_chart_partial(request):
                 orientation="h",
                 # Move legend higher above the plot
                 # IMD plot has subtitle so move up less
-                y=1.15 if is_imd_plot else 1.2,  
+                y=1.15 if is_imd_plot else 1.2,
                 x=0.5,
                 xanchor="center",
                 font=dict(size=10),
