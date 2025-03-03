@@ -70,7 +70,6 @@ def dashboard(request):
     """
     Dashboard view for the KPIs.
     """
-    print(request.session.get("selected_audit_year"))
 
     template = "dashboard.html"
     if request.htmx:
@@ -103,6 +102,9 @@ def dashboard(request):
     )
 
     kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
+
+    print(kpi_calculations_object)
+
     # Extract helpers
     get_attribute_name = calculate_kpis.kpi_name_registry.get_attribute_name
 
