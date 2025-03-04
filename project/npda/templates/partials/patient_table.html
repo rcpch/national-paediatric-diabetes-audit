@@ -181,15 +181,15 @@
           <td class="text-right whitespace-nowrap">
             <a href="{% url 'patient_visits' patient.pk %}"
                class="align-center flex tooltip tooltip-left {% if patient.visit_error_count < 1 %} text-rcpch_pink {% else %} text-rcpch_red {% endif %}"
-               data-tip="{% if patient.visit_error_count > 0 %} {{ patient.visit_error_count }} visit{{ patient.visit_error_count|pluralize }} {{ patient.visit_error_count|pluralize:'has, have' }} errors that need addressing. Items have been saved but will not be included until rectified. {% else %} View patient visits {% endif %}">
+               data-tip="{% if patient.visit_error_count > 0 %} {{ patient.visit_error_count }} visit{{ patient.visit_error_count|pluralize }} {{ patient.visit_error_count|pluralize:'has, have' }} errors that need addressing. Items have been saved but will not be included until rectified. {% else %} View patient visits April {{ request.session.selected_audit_year }} - March {{ request.session.selected_audit_year|add:'1' }} {% endif %}">
               {% if patient.visit_error_count > 0 %}
                 <span class="fa-stack">
                   <i class="fa-circle fa-stack-1x fas"></i>
                   <i class="fa-exclamation fa-stack-1x fa-inverse fas"></i>
                 </span>
-                <strong class="text-rcpch_red self-center px-2">Visits ({{ patient.visit_set.all.count }})</strong>
+                <strong class="text-rcpch_red self-center px-2">Visits ({{ patient.visit_error_count }}/{{ patient.visits_this_audit_year }})</strong>
               {% else %}
-                <strong class="text-rcpch_pink self-center">Visits ({{ patient.visit_set.all.count }})</strong>
+                <strong class="text-rcpch_pink self-center">Visits ({{ patient.visits_this_audit_year }})</strong>
               {% endif %}
               <!-- caret -->
               <svg class="w-8 h-8 self-center"

@@ -70,6 +70,7 @@ def dashboard(request):
     """
     Dashboard view for the KPIs.
     """
+
     template = "dashboard.html"
     if request.htmx:
         template = "dashboard/dashboard_base.html"
@@ -96,9 +97,12 @@ def dashboard(request):
         today = date.today()
         calculation_date = date(selected_audit_year, today.month, today.day)
 
-    calculate_kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=True)
+    calculate_kpis = CalculateKPIS(
+        calculation_date=calculation_date, return_pt_querysets=True
+    )
 
     kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
+
     # Extract helpers
     get_attribute_name = calculate_kpis.kpi_name_registry.get_attribute_name
 
@@ -148,7 +152,9 @@ def dashboard(request):
     )
 
     # HCL Use
-    hcl_use_per_quarter_value_counts_pct = calculate_kpis.get_kpi_24_hcl_use_stratified_by_quarter()
+    hcl_use_per_quarter_value_counts_pct = (
+        calculate_kpis.get_kpi_24_hcl_use_stratified_by_quarter()
+    )
 
     # Care at diagnosis - kpis 41-43
     # Get attr names for KPIs 41, 42, 43
@@ -156,9 +162,15 @@ def dashboard(request):
     kpi_42_attr_name = calculate_kpis.kpi_name_registry.get_attribute_name(42)
     kpi_43_attr_name = calculate_kpis.kpi_name_registry.get_attribute_name(43)
     care_at_diagnosis_value_counts_pct = hp.get_care_at_diagnosis_vcs_pct(
-        kpi_41_values=kpi_calculations_object["calculated_kpi_values"][kpi_41_attr_name],
-        kpi_42_values=kpi_calculations_object["calculated_kpi_values"][kpi_42_attr_name],
-        kpi_43_values=kpi_calculations_object["calculated_kpi_values"][kpi_43_attr_name],
+        kpi_41_values=kpi_calculations_object["calculated_kpi_values"][
+            kpi_41_attr_name
+        ],
+        kpi_42_values=kpi_calculations_object["calculated_kpi_values"][
+            kpi_42_attr_name
+        ],
+        kpi_43_values=kpi_calculations_object["calculated_kpi_values"][
+            kpi_43_attr_name
+        ],
     )
 
     # Health checks
@@ -166,14 +178,19 @@ def dashboard(request):
     kpi_32_2_attr_name = calculate_kpis.kpi_name_registry.get_attribute_name(322)
     kpi_32_3_attr_name = calculate_kpis.kpi_name_registry.get_attribute_name(323)
     hc_completion_rate_value_counts_pct = hp.get_hc_completion_rate_vcs(
-        kpi_32_2_values=kpi_calculations_object["calculated_kpi_values"][kpi_32_2_attr_name],
-        kpi_32_3_values=kpi_calculations_object["calculated_kpi_values"][kpi_32_3_attr_name],
+        kpi_32_2_values=kpi_calculations_object["calculated_kpi_values"][
+            kpi_32_2_attr_name
+        ],
+        kpi_32_3_values=kpi_calculations_object["calculated_kpi_values"][
+            kpi_32_3_attr_name
+        ],
     )
 
     # Additional care processes
     # Get attr names for KPIs 33-40
     additional_care_processes_kpi_attr_names = [
-        calculate_kpis.kpi_name_registry.get_attribute_name(kpi) for kpi in range(33, 41)
+        calculate_kpis.kpi_name_registry.get_attribute_name(kpi)
+        for kpi in range(33, 41)
     ]
     additional_care_processes_value_counts_pct = hp.get_additional_care_processes_value_counts(
         additional_care_processes_kpi_attr_names=additional_care_processes_kpi_attr_names,
@@ -192,7 +209,8 @@ def dashboard(request):
     # Admissions
     # Get attr names for KPIs 46-7
     admissions_kpi_attr_names = [
-        calculate_kpis.kpi_name_registry.get_attribute_name(kpi) for kpi in range(46, 48)
+        calculate_kpis.kpi_name_registry.get_attribute_name(kpi)
+        for kpi in range(46, 48)
     ]
     admissions_value_counts_absolute = hp.get_admissions_value_counts_absolute(
         admissions_kpi_attr_names=admissions_kpi_attr_names,
@@ -222,13 +240,25 @@ def dashboard(request):
     default_pt_level_menu_text = template_data.TEXT["health_checks"]
     default_pt_level_menu_tab_selected = "health_checks"
     highlight = {
-        f"{key}": key == default_pt_level_menu_tab_selected for key in template_data.TEXT.keys()
+        f"{key}": key == default_pt_level_menu_tab_selected
+        for key in template_data.TEXT.keys()
     }
-    default_pt_level_table_headers, default_pt_level_table_data = hp.get_pt_level_table_data(
-        category="health_checks",
-        calculate_kpis_object=calculate_kpis,
-        kpi_calculations_object=kpi_calculations_object,
+    default_pt_level_table_headers, default_pt_level_table_data = (
+        hp.get_pt_level_table_data(
+            category="health_checks",
+            calculate_kpis_object=calculate_kpis,
+            kpi_calculations_object=kpi_calculations_object,
+        )
     )
+
+    ethnicity_parent_color_map = {}
+    ethnicity_child_parent_map = {}
+
+    for parent, entry in constants.ETHNICITY_PARENT_COLOR_MAP.items():
+        ethnicity_parent_color_map[parent] = entry["color"]
+
+        for category in entry["categories"]:
+            ethnicity_child_parent_map[category] = parent
 
     ethnicity_parent_color_map = {}
     ethnicity_child_parent_map = {}
@@ -263,36 +293,40 @@ def dashboard(request):
                 }
             },
             "tx_regimen_value_counts_pct": {
-                "no_eligible_patients": kpi_calculations_object["calculated_kpi_values"][
-                    "kpi_1_total_eligible"
-                ]["total_eligible"]
+                "no_eligible_patients": kpi_calculations_object[
+                    "calculated_kpi_values"
+                ]["kpi_1_total_eligible"]["total_eligible"]
                 == 0,
                 "data": json.dumps(tx_regimen_value_counts_pct),
             },
             "glucose_monitoring_value_counts_pct": {
-                "no_eligible_patients": kpi_calculations_object["calculated_kpi_values"][
-                    "kpi_1_total_eligible"
-                ]["total_eligible"]
+                "no_eligible_patients": kpi_calculations_object[
+                    "calculated_kpi_values"
+                ]["kpi_1_total_eligible"]["total_eligible"]
                 == 0,
                 "data": json.dumps(glucose_monitoring_value_counts_pct),
             },
             "hcl_use_per_quarter_value_counts_pct": {
-                "no_eligible_patients": kpi_calculations_object["calculated_kpi_values"][
-                    "kpi_1_total_eligible"
-                ]["total_eligible"]
+                "no_eligible_patients": kpi_calculations_object[
+                    "calculated_kpi_values"
+                ]["kpi_1_total_eligible"]["total_eligible"]
                 == 0,
                 "data": json.dumps(hcl_use_per_quarter_value_counts_pct),
             },
             "care_at_diagnosis_value_count": {
                 "no_eligible_patients": all(
                     [
-                        care_at_diagnosis_value_counts_pct["coeliac_disease_screening"]["total"]
-                        == 0,
-                        care_at_diagnosis_value_counts_pct["thyroid_disease_screening"]["total"]
-                        == 0,
-                        care_at_diagnosis_value_counts_pct["carbohydrate_counting_education"][
+                        care_at_diagnosis_value_counts_pct["coeliac_disease_screening"][
                             "total"
                         ]
+                        == 0,
+                        care_at_diagnosis_value_counts_pct["thyroid_disease_screening"][
+                            "total"
+                        ]
+                        == 0,
+                        care_at_diagnosis_value_counts_pct[
+                            "carbohydrate_counting_education"
+                        ]["total"]
                         == 0,
                     ]
                 ),
@@ -305,17 +339,17 @@ def dashboard(request):
                 "data": json.dumps(hc_completion_rate_value_counts_pct),
             },
             "hba1c_value_counts": {
-                "no_eligible_patients": kpi_calculations_object["calculated_kpi_values"][
-                    "kpi_1_total_eligible"
-                ]["total_eligible"]
+                "no_eligible_patients": kpi_calculations_object[
+                    "calculated_kpi_values"
+                ]["kpi_1_total_eligible"]["total_eligible"]
                 == 0,
                 # No need to json-ify as data ready to render in template
                 "data": hba1c_value_counts_stratified_by_diabetes_type,
             },
             "admissions_value_counts_absolute": {
-                "no_eligible_patients": kpi_calculations_object["calculated_kpi_values"][
-                    "kpi_1_total_eligible"
-                ]["total_eligible"]
+                "no_eligible_patients": kpi_calculations_object[
+                    "calculated_kpi_values"
+                ]["kpi_1_total_eligible"]["total_eligible"]
                 == 0,
                 "data": admissions_value_counts_absolute,
             },

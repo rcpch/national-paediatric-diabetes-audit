@@ -16,9 +16,10 @@
           hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
           hx-include="[name='audit_year_select_name']">
     {% for audit_year in audit_years %}
-      <option value="{{ audit_year|stringformat:'s' }}"
-              {% if selected_audit_year|stringformat:"s" == audit_year|stringformat:"s" %} selected {% endif %}>
-        {{ audit_year }}
+      <option value="{{ audit_year.year|stringformat:'s' }}"
+              {% if selected_audit_year|stringformat:"s" == audit_year.year|stringformat:"s" %} selected {% endif %}
+              {% if audit_year.disabled == True %}disabled{% endif %}>
+        April {{ audit_year.year }} - March {{ audit_year.year|add:'1' }}
       </option>
     {% endfor %}
   </select>

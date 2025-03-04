@@ -16,7 +16,11 @@ from django.views.generic.edit import CreateView, DeleteView, UpdateView
 
 # RCPCH imports
 from ..forms.visit_form import VisitForm
-from ..general_functions import get_visit_categories, get_visit_tabs
+from ..general_functions import (
+    get_visit_categories,
+    get_visit_tabs,
+    visit_falls_within_audit_period_Q_object,
+)
 from ..kpi_class.kpis import CalculateKPIS
 from ..models import Patient, Transfer, Visit
 from .mixins import (
@@ -53,11 +57,24 @@ class PatientVisitsListView(
         patient_id = self.kwargs.get("patient_id")
         context = super(PatientVisitsListView, self).get_context_data(**kwargs)
         patient = Patient.objects.get(pk=patient_id)
+        audit_start_date = datetime.date(
+            year=int(self.request.session.get("selected_audit_year")), month=4, day=1
+        )
         submission = patient.submissions.filter(
             submission_active=True,
             audit_year=self.request.session.get("selected_audit_year"),
         ).first()
-        visits = Visit.objects.filter(patient=patient).order_by("is_valid", "id")
+        visits = (
+            Visit.objects.filter(  # filter visits to those within the audit year
+                patient=patient,
+            )
+            .filter(
+                visit_falls_within_audit_period_Q_object(
+                    audit_start_date=audit_start_date, prepend_query_path=None
+                )
+            )
+            .order_by("is_valid", "id")
+        )
         calculated_visits = []
         for visit in visits:
             visit_categories = get_visit_categories(instance=visit, form=None)
