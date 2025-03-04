@@ -9,6 +9,7 @@ from datetime import date, timedelta
 
 from project.npda import apps
 from project.npda.models.submission import Submission
+from project.npda.models.visit import Visit
 from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
 from project.npda.tests.factories.paediatrics_diabetes_unit_factory import (
     PaediatricsDiabetesUnitFactory,
@@ -44,7 +45,9 @@ def assert_kpi_result_equal(
     :raises AssertionError: If the fields in the KPIResult objects differ.
     """
     if isinstance(expected, KPIResult) is False:
-        raise TypeError(f"expected must be of type KPIResult (current: {type(expected)}")
+        raise TypeError(
+            f"expected must be of type KPIResult (current: {type(expected)}"
+        )
     if isinstance(actual, KPIResult) is False:
         raise TypeError(f"actual must be of type KPIResult (current: {type(actual)}")
 
@@ -74,7 +77,9 @@ def assert_kpi_result_equal(
     if expected.patient_querysets is not None:
         # If actual.patient_querysets is None, we can't compare the querysets
         if actual.patient_querysets is None:
-            mismatches.append(f"patient_querysets: expected {expected.patient_querysets}, got None")
+            mismatches.append(
+                f"patient_querysets: expected {expected.patient_querysets}, got None"
+            )
         else:
             # For each pt queryset in expected, check if the actual queryset is
             # the same
@@ -103,8 +108,12 @@ def test_ensure_mocked_audit_date_range_is_correct(AUDIT_START_DATE):
     """Ensure that the mocked audit date range is correct."""
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
 
-    assert calc_kpis.audit_start_date == date(2024, 4, 1), f"Mocked audit start date incorrect!"
-    assert calc_kpis.audit_end_date == date(2025, 3, 31), f"Mocked audit end date incorrect!"
+    assert calc_kpis.audit_start_date == date(
+        2024, 4, 1
+    ), f"Mocked audit start date incorrect!"
+    assert calc_kpis.audit_end_date == date(
+        2025, 3, 31
+    ), f"Mocked audit end date incorrect!"
 
 
 @pytest.mark.parametrize(
@@ -220,6 +229,7 @@ def test_calculate_kpis_only_includes_patients_with_an_active_submission(
     # using postcode for debugging purposes
     inactive_submission_pt = PatientFactory(
         postcode="inactive_submission_pt",
+        diabetes_type=1,
     )
     inactive_submission = Submission.objects.create(
         audit_year=AUDIT_START_DATE.year,
@@ -234,6 +244,7 @@ def test_calculate_kpis_only_includes_patients_with_an_active_submission(
     # using postcode for debugging purposes
     active_submission_pt = PatientFactory(
         postcode="active_submission_pt",
+        diabetes_type=1,
     )
     # create active submission
     active_submission = Submission.objects.create(
@@ -253,16 +264,40 @@ def test_calculate_kpis_only_includes_patients_with_an_active_submission(
 
     kpi_calculator.set_patients_for_calculation(pz_codes=[submission_pdu.pz_code])
 
-    kpi_1_patients: QuerySet[Patient] = kpi_calculator._calculate_kpis()["calculated_kpi_values"][
-        kpi_calculator.kpi_name_registry.get_attribute_name(1)
-    ]["patient_querysets"]
+    kpi_1_patients: QuerySet[Patient] = kpi_calculator._calculate_kpis()[
+        "calculated_kpi_values"
+    ][kpi_calculator.kpi_name_registry.get_attribute_name(1)]["patient_querysets"]
 
     # for debugging purposes, print this
+    print("kpi_1_patients", kpi_1_patients)
     # kpi_calculator._calculate_kpis()["calculated_kpi_values"][kpi_calculator.kpi_name_registry.get_attribute_name(1)]["patient_querysets"]['ineligible'].values('postcode')
     # currently finding only 1 patient and setting as ineligible
 
+    print("inactive_submission_pt", inactive_submission_pt)
+    print(
+        "active_submission_pt",
+        active_submission_pt.date_of_birth,
+        active_submission_pt.diabetes_type,
+        active_submission_pt.paediatric_diabetes_units,
+    )
+
+    print(
+        "Submission active",
+        Submission.objects.filter(
+            submission_active=True,
+            paediatric_diabetes_unit=submission_pdu,
+            audit_year=AUDIT_START_DATE.year,
+        ).values(
+            "submission_active", "paediatric_diabetes_unit", "audit_year", "patients"
+        ),
+    )
+
     # Ensure correct pts
-    assert inactive_submission_pt not in kpi_1_patients["eligible"]
-    assert inactive_submission_pt in kpi_1_patients["ineligible"]
+    assert (
+        inactive_submission_pt not in kpi_1_patients["eligible"]
+    )  # inactive submission patients should have been filtered out
+    assert (
+        inactive_submission_pt not in kpi_1_patients["ineligible"]
+    )  # inactive submission patients should have been filtered out
     assert active_submission_pt in kpi_1_patients["eligible"]
     assert active_submission_pt not in kpi_1_patients["ineligible"]
