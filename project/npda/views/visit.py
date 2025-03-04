@@ -104,7 +104,7 @@ class VisitCreateView(
         context["patient"] = patient
         context["title"] = "Add New Visit"
         context["form_method"] = "create"
-        context["button_title"] = "Add New Visit"
+        context["button_title"] = "Add"
         context["visit_tabs"] = get_visit_tabs(form=None)
         return context
 
@@ -153,7 +153,7 @@ class VisitUpdateView(
         context["nhs_number"] = context["form"].patient.nhs_number
         context["visit_id"] = self.kwargs["pk"]
         context["title"] = "Edit Visit Details"
-        context["button_title"] = "Edit Visit Details"
+        context["button_title"] = "Save"
         context["form_method"] = "update"
         context["visit_tabs"] = get_visit_tabs(form=context["form"])
 

@@ -131,7 +131,7 @@ class NPDAUserCreateView(
             self.request.user.is_superuser or self.request.user.is_rcpch_staff
         )
         context["title"] = "Add New NPDA User"
-        context["button_title"] = "Add NPDA User"
+        context["button_title"] = "Add"
         context["form_method"] = "create"
         context["selected_pdu"] = self.request.session.get("pz_code")
         return context
@@ -253,7 +253,7 @@ class NPDAUserUpdateView(
             self.request.user.is_superuser or self.request.user.is_rcpch_staff
         )
         context["title"] = "Edit NPDA User Details"
-        context["button_title"] = "Edit NPDA User Details"
+        context["button_title"] = "Save"
         context["form_method"] = "update"
         context["npda_user"] = NPDAUser.objects.get(pk=self.kwargs["pk"])
         context["organisation_employers"] = (
