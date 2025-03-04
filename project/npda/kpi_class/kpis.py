@@ -9,7 +9,7 @@ from datetime import date, datetime, timedelta
 # Python imports
 from decimal import Decimal
 from pprint import pformat
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from typing import Literal, Optional, Tuple, Union
 
 from dateutil.relativedelta import relativedelta
 
@@ -30,7 +30,6 @@ from django.db.models import (
 )
 
 # NPDA Imports
-from project.constants import diabetes_types
 from project.constants.albuminuria_stage import ALBUMINURIA_STAGES
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.constants.hospital_admission_reasons import (
@@ -49,7 +48,10 @@ from project.constants.types.kpi_types import (
     kpi_registry,
 )
 from project.constants.yes_no_unknown import YES_NO_UNKNOWN
-from project.npda.general_functions import get_audit_period_for_date
+from project.npda.general_functions import (
+    get_audit_period_for_date,
+    visit_falls_within_audit_period_Q_object,
+)
 from project.npda.general_functions.audit_period import get_quarters_for_audit_period
 from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
 from project.npda.models import Patient, Visit
@@ -132,6 +134,9 @@ class CalculateKPIS:
             self.total_patients_count = self.patients.count()
         elif pz_codes:
             self.patients = Patient.objects.filter(
+                visit_falls_within_audit_period_Q_object(
+                    prepend_query_path="visit", audit_start_date=self.audit_start_date
+                ),  # include only patients with visits within the audit period in the active submission
                 patientsubmission__submission__paediatric_diabetes_unit__pz_code__in=pz_codes,
                 patientsubmission__submission__submission_active=True,
                 patientsubmission__submission__submission_date__range=(
@@ -170,6 +175,9 @@ class CalculateKPIS:
             for KPI calculations and aggregations."""
 
         self.patients = Patient.objects.filter(
+            visit_falls_within_audit_period_Q_object(
+                prepend_query_path="visit", audit_start_date=self.audit_start_date
+            ),
             paediatric_diabetes_units__paediatric_diabetes_unit__pz_code__in=pz_codes,
             patientsubmission__submission__submission_active=True,
             patientsubmission__submission__submission_date__range=(
