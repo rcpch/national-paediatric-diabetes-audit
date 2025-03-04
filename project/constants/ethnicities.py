@@ -30,7 +30,7 @@ ETHNICITY_PARENT_COLOR_MAP = {
             "White - British",
             "White - Irish",
             "White - Any other White background",
-        ]
+        ],
     },
     "Mixed": {
         "color": colors.RCPCH_YELLOW,
@@ -39,7 +39,7 @@ ETHNICITY_PARENT_COLOR_MAP = {
             "Mixed - White and Black African",
             "Mixed - White and Asian",
             "Mixed - Any other mixed background",
-        ]
+        ],
     },
     "Asian": {
         "color": colors.RCPCH_PINK,
@@ -48,22 +48,19 @@ ETHNICITY_PARENT_COLOR_MAP = {
             "Asian - Pakistani or British Pakistani",
             "Asian - Bangladeshi or British Bangladeshi",
             "Asian - Any other Asian background",
-            "Chinese"
-        ]
+            "Chinese",
+        ],
     },
     "Black": {
         "color": colors.RCPCH_MID_GREY,
         "categories": [
             "Black - Caribbean",
             "Black - African",
-        ]
+            "Black - Any other Black background",
+        ],
     },
     "Other": {
         "color": colors.RCPCH_DARK_BLUE,
-        "categories": [
-            "Other - Any other ethnic group",
-            "Not Stated",
-            "Not known"
-        ]
+        "categories": ["Other - Any other ethnic group", "Not Stated", "Not known"],
     },
 }
