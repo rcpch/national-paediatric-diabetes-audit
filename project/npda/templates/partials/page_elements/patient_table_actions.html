@@ -34,7 +34,7 @@
             </button>
         </label>
     </label>
-    {% if user.view_preference == 1 %}
+    {% if user.view_preference != 2 %}
         {% if can_complete_questionnaire %}
             <a href="{% url 'patient-add' %}"
                 class="btn btn-info h-auto w-full md:w-auto {% if not can_alter_this_audit_year_submission %} btn-disabled {% endif %}">
