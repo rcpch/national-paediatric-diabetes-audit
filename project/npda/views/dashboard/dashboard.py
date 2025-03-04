@@ -70,7 +70,6 @@ def dashboard(request):
     """
     Dashboard view for the KPIs.
     """
-
     template = "dashboard.html"
     if request.htmx:
         template = "dashboard/dashboard_base.html"
@@ -102,7 +101,6 @@ def dashboard(request):
     )
 
     kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
-
     # Extract helpers
     get_attribute_name = calculate_kpis.kpi_name_registry.get_attribute_name
 
@@ -250,15 +248,6 @@ def dashboard(request):
             kpi_calculations_object=kpi_calculations_object,
         )
     )
-
-    ethnicity_parent_color_map = {}
-    ethnicity_child_parent_map = {}
-
-    for parent, entry in constants.ETHNICITY_PARENT_COLOR_MAP.items():
-        ethnicity_parent_color_map[parent] = entry["color"]
-
-        for category in entry["categories"]:
-            ethnicity_child_parent_map[category] = parent
 
     ethnicity_parent_color_map = {}
     ethnicity_child_parent_map = {}

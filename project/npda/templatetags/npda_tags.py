@@ -330,12 +330,12 @@ def centile_for_field(field, centile_sds):
 
     if centile is not None:
         if centile >= 99.9:
-            centile = "centile: ≥99.6ᵗʰ"
+            centile = "≥99.6ᵗʰ"
         elif centile < 0.4:
-            centile = "centile: ≤0.4ᵗʰ"
-        centile = f"centile {centile}"
+            centile = "≤0.4ᵗʰ"
+        centile = f"Centile {centile}"
     if sds is not None:
-        sds = f"SDS: {sds}"
+        sds = f"SDS {sds}"
     else:
         sds = ""
         centile = ""
