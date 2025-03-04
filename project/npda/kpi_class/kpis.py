@@ -132,7 +132,7 @@ class CalculateKPIS:
             self.total_patients_count = self.patients.count()
         elif pz_codes:
             self.patients = Patient.objects.filter(
-                paediatric_diabetes_units__paediatric_diabetes_unit__pz_code__in=pz_codes,
+                patientsubmission__submission__paediatric_diabetes_unit__pz_code__in=pz_codes,
                 patientsubmission__submission__submission_active=True,
                 patientsubmission__submission__submission_date__range=(
                     self.audit_start_date,
