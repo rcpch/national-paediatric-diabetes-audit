@@ -251,6 +251,24 @@ def dashboard(request):
         )
     )
 
+    ethnicity_parent_color_map = {}
+    ethnicity_child_parent_map = {}
+
+    for parent, entry in constants.ETHNICITY_PARENT_COLOR_MAP.items():
+        ethnicity_parent_color_map[parent] = entry["color"]
+
+        for category in entry["categories"]:
+            ethnicity_child_parent_map[category] = parent
+
+    ethnicity_parent_color_map = {}
+    ethnicity_child_parent_map = {}
+
+    for parent, entry in constants.ETHNICITY_PARENT_COLOR_MAP.items():
+        ethnicity_parent_color_map[parent] = entry["color"]
+
+        for category in entry["categories"]:
+            ethnicity_child_parent_map[category] = parent
+
     context = {
         "pdu_object": pdu,
         # "pdu_lead_organisation": pdu_lead_organisation,
@@ -341,12 +359,8 @@ def dashboard(request):
             "pt_ethnicity_tree_map_data": {
                 "no_eligible_patients": not pt_ethnicity_value_counts,
                 "data": json.dumps(pt_ethnicity_value_counts),
-                "parent_color_map": json.dumps(
-                    constants.ethnicities.ETHNICITY_PARENT_COLOR_MAP
-                ),
-                "child_parent_map": json.dumps(
-                    constants.ethnicities.ETHNICITY_CHILD_PARENT_MAP
-                ),
+                "parent_color_map": json.dumps(ethnicity_parent_color_map),
+                "child_parent_map": json.dumps(ethnicity_child_parent_map),
             },
             "pt_imd_value_counts_pct": {
                 "data": json.dumps(pt_imd_value_counts_pct),
