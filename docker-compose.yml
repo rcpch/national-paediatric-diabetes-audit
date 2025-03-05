@@ -26,6 +26,7 @@ services:
     image: npda-django:built # build image and save for use by other containers
     depends_on:
       - postgis
+      - redis
     volumes:
       - .:/app/
     command: s/start-dev
@@ -39,11 +40,45 @@ services:
     volumes:
       - npda-postgis-data:/var/lib/postgresql/data
     restart: always
+  
+  # Redis backend for Celery task scheduler
+  redis:
+    image: redis:alpine
+    expose:
+      - 6379
+    restart: always
+
+  # Celery worker
+  celeryworker:
+    <<: *global # this will inherit config from x-global-environment
+    image: npda-django:built
+    container_name: npda-celery-worker
+    volumes:
+      - .:/app/
+    command: celery -A project worker -l info
+    restart: always
+
+  # Flower UI for Celery tasks
+  flower:
+    <<: *global # this will inherit config from x-global-environment
+    image: npda-django:built
+    ports:
+      - 5555:5555
+    volumes:
+      - npda-flower-data:/data
+      - .:/app/
+    container_name: npda-flower
+    command: celery -A project flower --persistent=True -url_prefix=/flower
+    restart: always
+    depends_on:
+      - redis
+      - django
 
   mkdocs:
     <<: *django # this will inherit all the settings from the django service
     ports:
       - 8007:8007
+    container_name: npda-mkdocs
     command: >
       sh -c "mkdocs build --config-file documentation/mkdocs.yml &&
         mkdocs serve --config-file documentation/mkdocs.yml"
@@ -52,3 +87,5 @@ services:
 volumes:
   npda-caddy-data:
   npda-postgis-data:
+  npda-flower-data:
+  npda-redis-data:

@@ -36,6 +36,11 @@ nhs-number
 # live application server
 gunicorn>=22.0.0
 
+# Celery (background tasks)
+celery==5.4.0
+flower==2.0.1
+redis==5.2.1
+
 # code linting and formatting
 autopep8==2.0.4
 black>=24.3.0

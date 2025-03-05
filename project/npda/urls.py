@@ -108,6 +108,8 @@ urlpatterns = [
         name="password_reset_confirm",
     ),
     path("csrf_fail/", csrf_fail, name="csrf_fail"),
+    # Debugging
+    path("celery_test_task/", celery_test_task, name="celery_test_task")
 ]
 
 dashboard_urlpatterns = [
