@@ -2454,16 +2454,16 @@ def test_dietician_additional_offered_date_missing_passes_validation(
 
 
 @pytest.mark.django_db
-def test_dietician_additional_offered_none_but_date_offered_fail_validation(
+def test_dietician_additional_offered_no_but_date_offered_fail_validation(
     test_user, single_row_valid_df
 ):
     """
-    Test that dietician additional appointment none but date offered should fail
+    Test that dietician additional appointment answered No but date offered should fail
     """
     single_row_valid_df.loc[
         0,
         "Was the patient offered an additional appointment with a paediatric dietitian?",
-    ] = None
+    ] = 2
     single_row_valid_df.loc[0, "Date of additional appointment with dietitian"] = (
         "01/01/2022"
     )
@@ -2474,7 +2474,7 @@ def test_dietician_additional_offered_none_but_date_offered_fail_validation(
 
     visit = Visit.objects.first()
 
-    assert visit.dietician_additional_appointment_offered is None
+    assert visit.dietician_additional_appointment_offered == 2
     assert visit.dietician_additional_appointment_date == datetime.date(2022, 1, 1)
 
 

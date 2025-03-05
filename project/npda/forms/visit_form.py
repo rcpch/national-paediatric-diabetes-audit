@@ -1018,14 +1018,12 @@ class VisitForm(forms.ModelForm):
         )
 
         if dietician_additional_appointment_date is not None and (
-            dietician_additional_appointment_offered is None
-            or dietician_additional_appointment_offered == 2
-            or dietician_additional_appointment_offered == 3
-        ):  # No or Unknown
+            dietician_additional_appointment_offered == 2
+        ):  # No
             raise ValidationError(
                 {
                     "dietician_additional_appointment_date": [
-                        "'Was the patient offered an additional appointment with a paediatric dietitian?' must be completed if 'Date of additional appointment with dietitian' is filled in"
+                        "Answer to 'Was the patient offered an additional appointment with a paediatric dietitian?' cannot be No if 'Date of additional appointment with dietitian' is filled in"
                     ]
                 }
             )
