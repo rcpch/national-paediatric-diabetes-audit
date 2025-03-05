@@ -68,7 +68,7 @@ services:
       - npda-flower-data:/data
       - .:/app/
     container_name: npda-flower
-    command: celery -A project flower --persistent=True -url_prefix=/flower
+    command: celery -A project flower --persistent=True --db=/data/flower_db
     restart: always
     depends_on:
       - redis
