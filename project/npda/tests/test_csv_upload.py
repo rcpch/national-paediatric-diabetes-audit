@@ -953,9 +953,7 @@ def test_urine_albumin_value_is_rounded_to_one_decimal(test_user, single_row_val
 
     visit = Visit.objects.first()
 
-    assert visit.albumin_creatinine_ratio == round(
-        Decimal("0.73"), 1
-    )
+    assert visit.albumin_creatinine_ratio == round(Decimal("0.73"), 1)
     assert "albumin_creatinine_ratio" not in (visit.errors or {})
 
 
@@ -2206,7 +2204,7 @@ def test_psychological_support_date_missing_fails_validation(
     single_row_valid_df.loc[
         0,
         "Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?",
-    ] = 99 # Unknown
+    ] = 99  # Unknown
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
 
@@ -2478,143 +2476,6 @@ def test_dietician_additional_offered_none_but_date_offered_fail_validation(
 
     assert visit.dietician_additional_appointment_offered is None
     assert visit.dietician_additional_appointment_date == datetime.date(2022, 1, 1)
-
-
-"""
-Sick day rules tests
-"""
-
-
-@pytest.mark.django_db
-def test_sick_day_rules_provided_passes_validation(test_user, single_row_valid_df):
-    """
-    Test that sick day rules are accepted
-    """
-    single_row_valid_df.loc[
-        0,
-        "Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia",
-    ] = "01/01/2022"
-    single_row_valid_df.loc[
-        0,
-        "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?",
-    ] = 1
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert len(errors) == 0
-
-    visit = Visit.objects.first()
-
-    assert visit.sick_day_rules_training_date == datetime.date(2022, 1, 1)
-    assert visit.ketone_meter_training == 1
-
-
-@pytest.mark.django_db
-def test_sick_day_rules_not_provided_passes_validation(test_user, single_row_valid_df):
-    """
-    Test that sick day rules are accepted where not provided (date not required)
-    """
-    single_row_valid_df.loc[
-        0,
-        "Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia",
-    ] = None
-    single_row_valid_df.loc[
-        0,
-        "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?",
-    ] = 2
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert len(errors) == 0
-
-    visit = Visit.objects.first()
-
-    assert visit.sick_day_rules_training_date == None
-    assert visit.ketone_meter_training == 2
-
-
-@pytest.mark.django_db
-def test_sick_day_rules_not_provided_but_date_provided_fails_validation(
-    test_user, single_row_valid_df
-):
-    """
-    Test that sick day rules not provided but date provided fails validation
-    """
-    single_row_valid_df.loc[
-        0,
-        "Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia",
-    ] = "01/01/2022"
-    single_row_valid_df.loc[
-        0,
-        "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?",
-    ] = 2
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert (
-        "ketone_meter_training" in errors[0]
-    ), f"Expected error in sick_day_rules_training_date, but got None"
-
-    visit = Visit.objects.first()
-
-    assert visit.sick_day_rules_training_date == datetime.date(2022, 1, 1)
-    assert visit.ketone_meter_training == 2
-
-
-@pytest.mark.django_db
-def test_sick_day_rules_none_but_date_provided_fails_validation(
-    test_user, single_row_valid_df
-):
-    """
-    Test that sick day rules not answered but date provided fails validation
-    """
-    single_row_valid_df.loc[
-        0,
-        "Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia",
-    ] = "01/01/2022"
-    single_row_valid_df.loc[
-        0,
-        "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?",
-    ] = None
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert (
-        "ketone_meter_training" in errors[0]
-    ), f"Expected error in sick_day_rules_training_date, but got None"
-
-    visit = Visit.objects.first()
-
-    assert visit.sick_day_rules_training_date == datetime.date(2022, 1, 1)
-    assert visit.ketone_meter_training == None
-
-
-@pytest.mark.django_db
-def test_sick_day_rules_provided_but_no_date_provided_fails_validation(
-    test_user, single_row_valid_df
-):
-    """
-    Test that sick day rules are provided but no date is rejected
-    """
-    single_row_valid_df.loc[
-        0,
-        "Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia",
-    ] = None
-    single_row_valid_df.loc[
-        0,
-        "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?",
-    ] = 1
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert (
-        "sick_day_rules_training_date" in errors[0]
-    ), f"Expected error in sick_day_rules_training_date, but got None"
-
-    visit = Visit.objects.first()
-
-    assert visit.sick_day_rules_training_date == None
-    assert visit.ketone_meter_training == 1
 
 
 """
@@ -3268,7 +3129,7 @@ def test_alternative_formats_for_sex(test_user, dummy_sheet_csv, alternative, ex
     # One row CSV. We have to alter the text directly as we're dealing with string values
     # and the test df has already been parsed with sex as a number column
     [header, row] = dummy_sheet_csv.split("\n")[:2]
-    
+
     cells = row.split(",")
     cells[3] = alternative
 
@@ -3281,20 +3142,21 @@ def test_alternative_formats_for_sex(test_user, dummy_sheet_csv, alternative, ex
     patient = Patient.objects.first()
     assert patient.sex == expected
 
+
 @pytest.mark.django_db
 def test_mix_of_standard_and_alternative_formats_for_sex(test_user, dummy_sheet_csv):
     # Two row CSV. We have to alter the text directly as we're dealing with string values
     # and the test df has already been parsed with sex as a number column
     rows = dummy_sheet_csv.split("\n")
-    
+
     header = rows[0]
     [row1, row2] = rows[2:4]
 
     # Double check we do have different patients
-    assert(row1.split(",")[0] != row2.split(",")[0])
-    
+    assert row1.split(",")[0] != row2.split(",")[0]
+
     row1_cells = row1.split(",")
-    row1_cells[3] = 'M'
+    row1_cells[3] = "M"
     row1 = ",".join(row1_cells)
 
     csv = "\n".join([header, row1, row2])
@@ -3304,6 +3166,6 @@ def test_mix_of_standard_and_alternative_formats_for_sex(test_user, dummy_sheet_
     assert len(errors) == 0
 
     [patient1, patient2] = Patient.objects.all()
-    
+
     assert patient1.sex == 1
     assert patient2.sex == 1

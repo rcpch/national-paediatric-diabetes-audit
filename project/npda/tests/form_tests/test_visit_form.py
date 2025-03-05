@@ -92,52 +92,6 @@ def test_height_and_weight_missing_date():
 
 
 @pytest.mark.django_db
-def test_weight_missing_height_and_date_present():
-    patient = PatientFactory()
-
-    form = VisitForm(
-        data={
-            "height": "60",
-            "weight": None,
-            "height_weight_observation_date": "2025-01-01",
-        },
-        initial={"patient": patient},
-    )
-
-    # Not passing all the data so it will have errors, just trigger the cleaners
-    assert form.is_valid() == False, f"Height supplied but weight missing"
-
-    assert "weight" in form.errors
-    assert (
-        "Height, Weight and Observation Date must all be supplied to complete this measure."
-        in form.errors["weight"]
-    )
-
-
-@pytest.mark.django_db
-def test_height_missing_weight_and_date_present():
-    patient = PatientFactory()
-
-    form = VisitForm(
-        data={
-            "height": None,
-            "weight": "50",
-            "height_weight_observation_date": "2025-01-01",
-        },
-        initial={"patient": patient},
-    )
-
-    # Not passing all the data so it will have errors, just trigger the cleaners
-    assert form.is_valid() == False, f"Height supplied but weight missing"
-
-    assert "height" in form.errors
-    assert (
-        "Height, Weight and Observation Date must all be supplied to complete this measure."
-        in form.errors["height"]
-    )
-
-
-@pytest.mark.django_db
 @patch(
     "project.npda.forms.visit_form.validate_visit_sync",
     mock_external_validation_result(

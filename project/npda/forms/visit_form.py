@@ -786,18 +786,6 @@ class VisitForm(forms.ModelForm):
                 [{"weight": weight}],
             )
 
-        if (height is not None and weight is None) or (
-            height is None and weight is not None
-        ):
-            measurement_item = "weight" if height is not None else "height"
-            raise ValidationError(
-                {
-                    measurement_item: [
-                        "Height, Weight and Observation Date must all be supplied to complete this measure."
-                    ]
-                }
-            )
-
         if height_weight_observation_date is not None:
             if height is None and weight is None:
                 raise ValidationError(
