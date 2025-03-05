@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 from django import forms
 from django.core.exceptions import ValidationError
@@ -699,6 +700,13 @@ class VisitForm(forms.ModelForm):
 
     def clean_hospital_admission_date(self):
         data = self.cleaned_data["hospital_admission_date"]
+        diagnosis_date = date(
+            year=self.patient.diagnosis_date.year,
+            month=self.patient.diagnosis_date.month,
+            day=self.patient.diagnosis_date.day,
+        )
+        # diagnosis date can be within 11 days of admission date
+        diagnosis_date = diagnosis_date.replace(day=diagnosis_date.day - 11)
         valid, error = validate_date(
             date_under_examination_field_name="hospital_admission_date",
             date_under_examination_label_name="Start date (Hospital Provider Spell)",
