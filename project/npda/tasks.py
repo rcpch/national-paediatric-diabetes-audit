@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 @shared_task
 def test_task():
     logger.info("Hello from the Celery test task!")
-    # logger.info("These are the PDUs registered in the database:")
+    logger.info("These are the PDUs registered in the database:")
 
-    # for pdu in PaediatricDiabetesUnit.objects.all():
-    #     logger.info(f"\t{pdu.name} [{pdu.pz_code}]")
+    for pdu in PaediatricDiabetesUnit.objects.all():
+        logger.info(f"\t{pdu.lead_organisation_name} [{pdu.pz_code}]")

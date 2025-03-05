@@ -55,7 +55,7 @@ services:
     container_name: npda-celery-worker
     volumes:
       - .:/app/
-    command: s/start-celery
+    command: s/start-celery-dev
     restart: always
 
   # Flower UI for Celery tasks
