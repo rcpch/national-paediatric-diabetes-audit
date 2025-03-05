@@ -446,3 +446,8 @@ class PatientDeleteView(
     model = Patient
     success_message = "Child removed from database"
     success_url = reverse_lazy("patients")
+
+    def post(self, request, *args, **kwargs):
+        if "cancel" in request.POST:
+            return redirect(reverse("patient-update", kwargs={"pk": self.kwargs["pk"]}))
+        return super().post(request, *args, **kwargs)
