@@ -1042,35 +1042,6 @@ class VisitForm(forms.ModelForm):
                 }
             )
 
-        sick_day_rules_training_date = cleaned_data.get("sick_day_rules_training_date")
-        ketone_meter_training = cleaned_data.get("ketone_meter_training")
-
-        if ketone_meter_training is not None:
-            if ketone_meter_training == 1:
-                measure_must_have_date_and_value(
-                    sick_day_rules_training_date,
-                    "sick_day_rules_training_date",
-                    [{"ketone_meter_training": ketone_meter_training}],
-                )
-            else:
-                if sick_day_rules_training_date is not None:
-                    raise ValidationError(
-                        {
-                            "ketone_meter_training": [
-                                "'Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia is only needed if patient is using ketone testing equipment."
-                            ],
-                        },
-                    )
-        else:
-            if sick_day_rules_training_date is not None:
-                raise ValidationError(
-                    {
-                        "ketone_meter_training": [
-                            "'Was the patient using (or trained to use) blood ketone testing equipment at time of visit?' must be completed if Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia has been provided."
-                        ],
-                    }
-                )
-
         hospital_admission_date = cleaned_data.get("hospital_admission_date")
         hospital_discharge_date = cleaned_data.get("hospital_discharge_date")
         hospital_admission_reason = cleaned_data.get("hospital_admission_reason")
