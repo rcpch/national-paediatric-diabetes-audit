@@ -1,0 +1,4 @@
+#!/bin/bash -e
+
+mkdir -p /data
+celery -A project flower --persistent=True --db=/data/flower_db

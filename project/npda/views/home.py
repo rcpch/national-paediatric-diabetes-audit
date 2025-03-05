@@ -28,6 +28,8 @@ from ..general_functions.view_preference import get_or_update_view_preference
 # RCPCH imports
 from .decorators import login_and_otp_required
 
+from project.npda.tasks import test_task
+
 # Logging
 logger = logging.getLogger(__name__)
 
@@ -190,3 +192,10 @@ def audit_year(request):
     )
 
     return response
+
+
+@login_and_otp_required()
+def celery_test_task(request):
+    test_task.delay()
+
+    return HttpResponse(status=204)

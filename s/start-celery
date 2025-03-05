@@ -1,0 +1,3 @@
+#!/bin/bash -e
+
+celery -A project worker -l info
