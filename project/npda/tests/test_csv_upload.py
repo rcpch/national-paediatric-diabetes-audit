@@ -3250,3 +3250,33 @@ def test_visit_date_not_before_diagnosis_date(test_user, single_row_valid_df):
     assert visit.patient.diagnosis_date == datetime.date(
         year=2022, month=1, day=1
     ), f"Diagnosis date should be 1/1/2022, but was {visit.patient.diagnosis_date}"
+
+
+@pytest.mark.parametrize(
+    "alternative,expected",
+    [
+        pytest.param("Unknown", 0),
+        pytest.param("unknown", 0),
+        pytest.param("M", 1),
+        pytest.param("m", 1),
+        pytest.param("F", 2),
+        pytest.param("f", 2),
+    ],
+)
+@pytest.mark.django_db
+def test_alternative_formats_for_sex(test_user, dummy_sheet_csv, alternative, expected):
+    # One row CSV. We have to alter the text directly as we're dealing with string values
+    # and the test df has already been parsed with sex as a number column
+    [header, row] = dummy_sheet_csv.split("\n")[:2]
+    
+    cells = row.split(",")
+    cells[3] = alternative
+
+    csv = f"{header}\n{','.join(cells)}"
+    df = read_csv_from_str(csv).df
+
+    errors = csv_upload_sync(test_user, df)
+    assert len(errors) == 0
+
+    patient = Patient.objects.first()
+    assert patient.sex == expected
