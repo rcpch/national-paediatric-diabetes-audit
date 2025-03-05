@@ -297,7 +297,7 @@ class PatientCreateView(
         pz_code = self.request.session.get("pz_code")
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
         context = super().get_context_data(**kwargs)
-        title = f"Add New Child to {pdu.lead_organisation_name}  ({pz_code})"
+        title = f"Add New Child to {pdu.lead_organisation_name}  ({pdu.pz_code})"
         if (
             pdu.parent_name is not None
         ):  # if the PDU has a parent, include the parent name in the title
@@ -398,17 +398,19 @@ class PatientUpdateView(
 
     def get_context_data(self, **kwargs):
         Transfer = apps.get_model("npda", "Transfer")
-        pz_code = self.request.session.get("pz_code")
+        # pz_code = self.request.session.get("pz_code")
         patient = Patient.objects.get(pk=self.kwargs["pk"])
         transfer = Transfer.objects.get(patient=patient)
         context = super().get_context_data(**kwargs)
         PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-        title = f"Edit Child Details in {pdu.lead_organisation_name}  ({pz_code})"
+        pdu = PaediatricDiabetesUnit.objects.get(
+            pz_code=transfer.paediatric_diabetes_unit.pz_code
+        )
+        title = f"Edit Child Details in {pdu.lead_organisation_name}  ({transfer.paediatric_diabetes_unit.pz_code})"
         if (
             transfer.paediatric_diabetes_unit.parent_name is not None
         ):  # if the PDU has a parent, include the parent name in the title
-            title = f"Add New Child to {transfer.paediatric_diabetes_unit.lead_organisation_name} - {transfer.paediatric_diabetes_unit.parent_name} ({pz_code})"
+            title = f"Add New Child to {transfer.paediatric_diabetes_unit.lead_organisation_name} - {transfer.paediatric_diabetes_unit.parent_name} ({transfer.paediatric_diabetes_unit.pz_code})"
         context["title"] = title
         context["button_title"] = "Save"
         context["form_method"] = "update"
