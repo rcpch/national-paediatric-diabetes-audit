@@ -348,9 +348,15 @@ REDIS_PORT = os.getenv("REDIS_PORT")
 REDIS_DATABASE_NUMBER = os.getenv("REDIS_DATABASE_NUMBER")
 REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD")
 
-if REDIS_PASSWORD:
-    CELERY_BROKER_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOSTNAME}:{REDIS_PORT}/{REDIS_DATABASE_NUMBER}"
-else:
-    CELERY_BROKER_URL = f"redis://{REDIS_HOSTNAME}:{REDIS_PORT}/{REDIS_DATABASE_NUMBER}"
+REDIS_USE_SSL = os.environ.get("REDIS_USE_SSL")
+
+redis_protocol = 'rediss' if REDIS_USE_SSL else 'redis'
+redis_auth = f":{REDIS_PASSWORD}@" if REDIS_PASSWORD else ""
+redis_params = f"?ssl_cert_reqs=required" if REDIS_USE_SSL else ""
+
+CELERY_BROKER_URL = f"{redis_protocol}://{redis_auth}{REDIS_HOSTNAME}:{REDIS_PORT}/{REDIS_DATABASE_NUMBER}{redis_params}"
+
+# Temporary debugging until it works in Azure
+print(f"!! CELERY_BROKER_URL={CELERY_BROKER_URL.replace(REDIS_PASSWORD, "*") if REDIS_PASSWORD else CELERY_BROKER_URL}")
 
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL

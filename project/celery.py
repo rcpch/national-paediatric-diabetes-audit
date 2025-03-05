@@ -18,6 +18,7 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 
 app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
 
+print(f"!! {dir(app)}")
 
 class NPDATask(Task):
     def on_failure(self, exc, task_id, args, kwargs, einfo):
