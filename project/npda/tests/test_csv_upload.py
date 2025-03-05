@@ -1835,7 +1835,7 @@ def test_total_cholesterol_value_below_reference_form_fails_validation(
     """
     Test that total cholesterol value is rejected if impossible
     """
-    single_row_valid_df.loc[0, "Total Cholesterol Level (mmol/l)"] = Decimal("0.1")
+    single_row_valid_df.loc[0, "Total Cholesterol Level (mmol/l)"] = 0.1
     single_row_valid_df.loc[0, "Observation Date: Total Cholesterol Level"] = (
         "01/01/2022"
     )
@@ -3250,3 +3250,60 @@ def test_visit_date_not_before_diagnosis_date(test_user, single_row_valid_df):
     assert visit.patient.diagnosis_date == datetime.date(
         year=2022, month=1, day=1
     ), f"Diagnosis date should be 1/1/2022, but was {visit.patient.diagnosis_date}"
+
+
+@pytest.mark.parametrize(
+    "alternative,expected",
+    [
+        pytest.param("Unknown", 0),
+        pytest.param("unknown", 0),
+        pytest.param("M", 1),
+        pytest.param("m", 1),
+        pytest.param("F", 2),
+        pytest.param("f", 2),
+    ],
+)
+@pytest.mark.django_db
+def test_alternative_formats_for_sex(test_user, dummy_sheet_csv, alternative, expected):
+    # One row CSV. We have to alter the text directly as we're dealing with string values
+    # and the test df has already been parsed with sex as a number column
+    [header, row] = dummy_sheet_csv.split("\n")[:2]
+    
+    cells = row.split(",")
+    cells[3] = alternative
+
+    csv = f"{header}\n{','.join(cells)}"
+    df = read_csv_from_str(csv).df
+
+    errors = csv_upload_sync(test_user, df)
+    assert len(errors) == 0
+
+    patient = Patient.objects.first()
+    assert patient.sex == expected
+
+@pytest.mark.django_db
+def test_mix_of_standard_and_alternative_formats_for_sex(test_user, dummy_sheet_csv):
+    # Two row CSV. We have to alter the text directly as we're dealing with string values
+    # and the test df has already been parsed with sex as a number column
+    rows = dummy_sheet_csv.split("\n")
+    
+    header = rows[0]
+    [row1, row2] = rows[2:4]
+
+    # Double check we do have different patients
+    assert(row1.split(",")[0] != row2.split(",")[0])
+    
+    row1_cells = row1.split(",")
+    row1_cells[3] = 'M'
+    row1 = ",".join(row1_cells)
+
+    csv = "\n".join([header, row1, row2])
+    df = read_csv_from_str(csv).df
+
+    errors = csv_upload_sync(test_user, df)
+    assert len(errors) == 0
+
+    [patient1, patient2] = Patient.objects.all()
+    
+    assert patient1.sex == 1
+    assert patient2.sex == 1

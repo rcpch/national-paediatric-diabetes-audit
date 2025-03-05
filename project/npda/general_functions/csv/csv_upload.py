@@ -30,6 +30,7 @@ from project.npda.forms.patient_form import PatientForm
 from project.npda.forms.visit_form import VisitForm
 from project.npda.forms.external_patient_validators import validate_patient_async
 from project.npda.forms.external_visit_validators import validate_visit_async
+from project.npda.general_functions.csv.csv_clean import csv_clean
 
 
 async def csv_upload(
@@ -211,6 +212,7 @@ async def csv_upload(
     """
     Process the csv file and validate and save the data in the tables, parsing any errors
     """
+    dataframe = csv_clean(dataframe)
 
     # Remember the original row number to help users find where the problem was in the CSV
     dataframe = dataframe.assign(row_index=np.arange(dataframe.shape[0]))
