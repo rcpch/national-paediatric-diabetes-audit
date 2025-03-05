@@ -1835,7 +1835,7 @@ def test_total_cholesterol_value_below_reference_form_fails_validation(
     """
     Test that total cholesterol value is rejected if impossible
     """
-    single_row_valid_df.loc[0, "Total Cholesterol Level (mmol/l)"] = Decimal("0.1")
+    single_row_valid_df.loc[0, "Total Cholesterol Level (mmol/l)"] = 0.1
     single_row_valid_df.loc[0, "Observation Date: Total Cholesterol Level"] = (
         "01/01/2022"
     )
