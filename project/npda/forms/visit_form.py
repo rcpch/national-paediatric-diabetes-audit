@@ -775,13 +775,29 @@ class VisitForm(forms.ModelForm):
             measure_must_have_date_and_value(
                 height_weight_observation_date,
                 "height_weight_observation_date",
-                [{"weight": height}],
+                [{"weight": weight}],
+            )
+
+        if (height is not None and weight is None) or (
+            height is None and weight is not None
+        ):
+            measurement_item = "weight" if height is not None else "height"
+            raise ValidationError(
+                {
+                    measurement_item: [
+                        "Height, Weight and Observation Date must all be supplied to complete this measure."
+                    ]
+                }
             )
 
         if height_weight_observation_date is not None:
             if height is None and weight is None:
                 raise ValidationError(
-                    "Height and Weight cannot both be empty if Observation Date is filled in"
+                    {
+                        "height_weight_observation_date": [
+                            "Height and Weight cannot both be empty if Observation Date is filled in"
+                        ]
+                    }
                 )
 
         # Get centiles for height and weight and bmi if they are present as well as date and sex
@@ -950,10 +966,12 @@ class VisitForm(forms.ModelForm):
             "psychological_additional_support_status"
         )
 
-        has_psychological_data = any([
-            psychological_screening_assessment_date,
-            psychological_additional_support_status
-        ])
+        has_psychological_data = any(
+            [
+                psychological_screening_assessment_date,
+                psychological_additional_support_status,
+            ]
+        )
 
         if has_psychological_data and psychological_additional_support_status != 99:
             measure_must_have_date_and_value(
