@@ -55,7 +55,7 @@ services:
     container_name: npda-celery-worker
     volumes:
       - .:/app/
-    command: celery -A project worker -l info
+    command: s/start-celery
     restart: always
 
   # Flower UI for Celery tasks
@@ -68,7 +68,7 @@ services:
       - npda-flower-data:/data
       - .:/app/
     container_name: npda-flower
-    command: celery -A project flower --persistent=True --db=/data/flower_db
+    command: s/start-flower
     restart: always
     depends_on:
       - redis
