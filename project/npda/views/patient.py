@@ -92,9 +92,19 @@ class PatientListView(
         # apply filters and annotations to the queryset
         pz_code = self.request.session.get("pz_code")
         paediatric_diabetes_unit = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-        paediatric_diabetes_unit_lead_organisation = fetch_organisation_by_ods_code(
-            ods_code=paediatric_diabetes_unit.lead_organisation_ods_code
-        )
+        if paediatric_diabetes_unit.lead_organisation_geocoordinates is None:
+            # we cannot make an API call for each patient  every time we load the page,
+            # so we only do it if the geocoordinates are missing
+            # This should have been done when the PDU was created
+            paediatric_diabetes_unit_lead_organisation = fetch_organisation_by_ods_code(
+                ods_code=paediatric_diabetes_unit.lead_organisation_ods_code
+            )
+            paediatric_diabetes_unit.lead_organisation_geocoordinates = Point(
+                paediatric_diabetes_unit_lead_organisation["longitude"],
+                paediatric_diabetes_unit_lead_organisation["latitude"],
+                srid=4326,
+            )
+            paediatric_diabetes_unit.save()
         filtered_patients = Q(
             submissions__submission_active=True,
             submissions__audit_year=self.request.session.get("selected_audit_year"),
@@ -145,11 +155,7 @@ class PatientListView(
             most_recent_visit_date=Max("visit__visit_date"),
             distance_from_lead_organisation=Distance(
                 "location_wgs84",
-                Point(
-                    paediatric_diabetes_unit_lead_organisation["longitude"],
-                    paediatric_diabetes_unit_lead_organisation["latitude"],
-                    srid=4326,
-                ),
+                paediatric_diabetes_unit.lead_organisation_geocoordinates,
             ),
         )
 

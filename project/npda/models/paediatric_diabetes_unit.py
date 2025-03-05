@@ -20,6 +20,11 @@ class PaediatricDiabetesUnit(models.Model):
         blank=True,
         null=True,
     )
+    lead_organisation_geocoordinates = models.PointField(
+        help_text="Enter the organisation geocoordinates",
+        blank=True,
+        null=True,
+    )
     parent_ods_code = models.CharField(
         max_length=10,
         help_text="Enter the parent ODS code",
