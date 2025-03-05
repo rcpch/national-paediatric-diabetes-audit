@@ -3280,3 +3280,30 @@ def test_alternative_formats_for_sex(test_user, dummy_sheet_csv, alternative, ex
 
     patient = Patient.objects.first()
     assert patient.sex == expected
+
+@pytest.mark.django_db
+def test_mix_of_standard_and_alternative_formats_for_sex(test_user, dummy_sheet_csv):
+    # Two row CSV. We have to alter the text directly as we're dealing with string values
+    # and the test df has already been parsed with sex as a number column
+    rows = dummy_sheet_csv.split("\n")
+    
+    header = rows[0]
+    [row1, row2] = rows[2:4]
+
+    # Double check we do have different patients
+    assert(row1.split(",")[0] != row2.split(",")[0])
+    
+    row1_cells = row1.split(",")
+    row1_cells[3] = 'M'
+    row1 = ",".join(row1_cells)
+
+    csv = "\n".join([header, row1, row2])
+    df = read_csv_from_str(csv).df
+
+    errors = csv_upload_sync(test_user, df)
+    assert len(errors) == 0
+
+    [patient1, patient2] = Patient.objects.all()
+    
+    assert patient1.sex == 1
+    assert patient2.sex == 1
