@@ -1472,16 +1472,16 @@ def test_dietician_additional_offered_date_missing_passes_validation():
 
 
 @pytest.mark.django_db
-def test_dietician_additional_offered_none_but_date_offered_fail_validation():
+def test_dietician_additional_offered_no_but_date_offered_fail_validation():
     """
-    Test that dietician additional appointment none but date offered should fail
+    Test that dietician additional appointment No but date offered should fail
     """
 
     patient = PatientFactory()
 
     form = VisitForm(
         data={
-            "dietician_additional_appointment_offered": None,  # None
+            "dietician_additional_appointment_offered": 2,  # No
             "dietician_additional_appointment_date": "2025-01-01",
             "carbohydrate_counting_level_three_education_date": "2025-01-01",
         },
@@ -1491,7 +1491,7 @@ def test_dietician_additional_offered_none_but_date_offered_fail_validation():
     # Trigger the cleaners
     assert (
         form.is_valid() == False
-    ), f"Dietician additional appointment none but date offered should fail"
+    ), f"Dietician additional appointment No but date offered should fail"
     assert "dietician_additional_appointment_date" in form.errors
 
 

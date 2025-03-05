@@ -1010,6 +1010,24 @@ class VisitForm(forms.ModelForm):
                     }
                 )
 
+        dietician_additional_appointment_offered = cleaned_data.get(
+            "dietician_additional_appointment_offered"
+        )
+        dietician_additional_appointment_date = cleaned_data.get(
+            "dietician_additional_appointment_date"
+        )
+
+        if dietician_additional_appointment_date is not None and (
+            dietician_additional_appointment_offered == 2
+        ):  # No
+            raise ValidationError(
+                {
+                    "dietician_additional_appointment_date": [
+                        "Answer to 'Was the patient offered an additional appointment with a paediatric dietitian?' cannot be No if 'Date of additional appointment with dietitian' is filled in"
+                    ]
+                }
+            )
+
         hospital_admission_date = cleaned_data.get("hospital_admission_date")
         hospital_discharge_date = cleaned_data.get("hospital_discharge_date")
         hospital_admission_reason = cleaned_data.get("hospital_admission_reason")
