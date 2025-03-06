@@ -229,3 +229,16 @@ class VisitDeleteView(
         return reverse(
             "patient_visits", kwargs={"patient_id": self.kwargs["patient_id"]}
         )
+
+    def post(self, request, *args, **kwargs):
+        if "cancel" in request.POST:
+            return redirect(
+                reverse(
+                    "visit-update",
+                    kwargs={
+                        "pk": self.kwargs["pk"],
+                        "patient_id": self.kwargs["patient_id"],
+                    },
+                )
+            )
+        return super().post(request, *args, **kwargs)
