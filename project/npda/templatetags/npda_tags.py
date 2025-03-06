@@ -260,7 +260,6 @@ def nhs_number_vs_urn(pz_code, patient=None):
         # Jersey
         return "Unique Reference Number"
     else:
-        print(patient)
         if patient and patient.nhs_number:
             return f"{patient.nhs_number[:3]} {patient.nhs_number[3:6]} {patient.nhs_number[6:]}"
         return "NHS Number"
