@@ -16,10 +16,12 @@ from django.forms import BaseForm
 from django.forms import BaseForm
 from django.http.response import HttpResponse
 from django.shortcuts import render, redirect, reverse
+from django.template.loader import render_to_string
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
 from django.http import HttpResponse
 from django.urls import reverse_lazy
+from django.utils.html import escape
 
 
 # Third party imports
@@ -64,6 +66,15 @@ class PatientListView(
     model = Patient
     template_name = "patients.html"
     paginate_by = 50
+
+    def split_search_string(self, search_string) -> [str]:
+        """
+        Split string at comma and return as a list
+        """
+        return [
+            nhs_number.standardise_format(term.strip()) or term
+            for term in search_string.split(",")
+        ]
 
     def get_sort_by(self):
         sort_by_param = self.request.GET.get("sort_by")
@@ -115,14 +126,20 @@ class PatientListView(
         # filter by contents of the search bar
         search = self.request.GET.get("search-input")
         if search:
-            search = nhs_number.standardise_format(search) or search
-            filtered_patients &= Q(
-                (
-                    Q(nhs_number__icontains=search)
-                    | Q(unique_reference_number__icontains=search)
+            search_terms = self.split_search_string(search)
+
+            combined_q = Q()  # Initialize an empty Q object
+
+            for item in search_terms:
+                item_q = (
+                    Q(nhs_number__icontains=item)
+                    | Q(unique_reference_number__icontains=item)
+                    | Q(pk__icontains=item)
                 )
-                | Q(pk__icontains=search)
-            )
+                combined_q |= item_q  # Combine with OR
+
+            if combined_q:  # Check if any search terms were provided
+                filtered_patients &= combined_q  # Apply the combined OR query
 
         # filter patients to the view preference of the user
         if not self.request.user.viewing_data_nationally():
@@ -231,6 +248,10 @@ class PatientListView(
         seen_first_valid_incomplete_full_year = False
         seen_first_died = False
 
+        context["search_input_list"] = self.split_search_string(
+            search_string=self.request.GET.get("search-input", "")
+        )
+
         # Add extra fields to the patient that we can't add to the query. This is ok because the queryset will be max the page size.
         for patient in context["page_obj"]:
             # Signpost the latest quarter
@@ -273,9 +294,12 @@ class PatientListView(
         response = super().get(request, *args, **kwargs)
 
         if request.htmx:
-            return render(
-                request, "partials/patient_table.html", context=self.get_context_data()
+            htmx_response = render(
+                request,
+                "partials/patient_table.html",
+                context=self.get_context_data(),
             )
+            return htmx_response
 
         return response
 

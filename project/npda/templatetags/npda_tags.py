@@ -278,6 +278,19 @@ def nhs_number_vs_urn(pz_code, patient=None):
 
 
 @register.simple_tag
+def format_nhs_number(nhs_number):
+    """
+    Formats the NHS number with spaces
+    If the NHS number is less than 10 characters or more, it will return the original value
+    Used in the patient list page to format the NHS number of badges
+    """
+    if nhs_number and len(nhs_number) == 10 and nhs_number.isdigit():
+        return f"{nhs_number[:3]} {nhs_number[3:6]} {nhs_number[6:]}"
+
+    return nhs_number
+
+
+@register.simple_tag
 def jersify_errors_for_unique_patient_identifier(
     pz_code, nhs_number_errors, unique_reference_number_errors
 ):

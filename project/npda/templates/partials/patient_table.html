@@ -2,6 +2,7 @@
 {% load npda_tags %}
 {% url 'patients' as patients_url %}
 {% if page_obj %}
+  {% include 'partials/page_elements/search_input_badges.html' with search_input_list=search_input_list %}
   <div class="w-full overflow-x-scroll">
     <table class="font-montserrat table-md table mt-2 mb-5 text-sm text-left rtl:text-right">
       <thead class="bg-rcpch_dark_blue text-xs text-white uppercase">
@@ -67,7 +68,7 @@
                 <a class="btn flex p-1 h-full tooltip tooltip-right {% if nhs_number_error or gp_error %} text-rcpch_red {% else %} hover:text-rcpch_pink {% endif %}"
                    target="_blank"
                    href="{% url 'patient-update' patient.pk %}"
-                   data-tip="{% if unique_identifier_error or gp_error %} {{ unique_identifier_error }} {{ gp_error }} {% else %} {% if patient.is_in_transfer_in_the_last_year %}Patient in transfer... {% else %}View patient details (opens new tab){% endif %} {% endif %}">
+                   data-tip="{% if unique_identifier_error or gp_error %} {{ unique_identifier_error }} {{ gp_error }} {% else %} {% if patient.is_in_transfer_in_the_last_year %}Patient in transfer... {% else %}View patient (NPDA ID {{ patient.pk }}) details (opens new tab){% endif %} {% endif %}">
                   <span class="fa-stack">
                     {% if unique_identifier_error or gp_error %}
                       <i class="fa-circle fa-stack-1x fas"></i>

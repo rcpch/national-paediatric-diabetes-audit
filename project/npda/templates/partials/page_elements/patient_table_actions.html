@@ -1,15 +1,20 @@
+{% load npda_tags %}
 <div class="flex flex-wrap">
     <label class="form-control flex items-center gap-2 grow">
         <label class="bg-rcpch_strong_blue mx-6 text-white input flex items-center gap-2 w-full h-auto">
-            <div class="hidden lg:block  text-nowrap">
-                <i class="fa-solid fa-hospital-user text-white mr-2"></i>
-                Patient search
-            </div>
+            <span class="tooltip tooltip-bottom text-nowrap"
+                  data-tip="To view multiple patients, separate {% nhs_number_vs_urn pdu.pz_code %}s with a comma">
+                <div class="hidden lg:block  text-nowrap">
+                    <i class="fa-solid fa-hospital-user text-white mr-2"></i>
+                    Patient search
+                    <i class="fa-solid fa-question-circle text-white ml-2"></i>
+                </div>
+            </span>
             <div class="divider divider-horizontal after:bg-rcpch_strong_blue_light_tint1 before:bg-rcpch_strong_blue_light_tint3 hidden lg:flex">
             </div>
             <input type="text"
                    class="text-center placeholder-gray-300 focus:bg-rcpch_strong_blue_light_tint2 hover:bg-rcpch_strong_blue_light_tint2 focus:placeholder-gray-500 p-2 m-2 text-wrap w-full"
-                   placeholder="Enter an NHS number..."
+                   placeholder="Enter a unique NDPA ID or {% nhs_number_vs_urn pdu.pz_code %}. To search for several separate them with a comma..."
                    id="search-input"
                    name="search-input"
                    hx-get="{% url 'patients' %}"
