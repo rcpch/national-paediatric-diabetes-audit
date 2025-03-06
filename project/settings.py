@@ -356,7 +356,4 @@ redis_params = f"?ssl_cert_reqs=required" if REDIS_USE_SSL else ""
 
 CELERY_BROKER_URL = f"{redis_protocol}://{redis_auth}{REDIS_HOSTNAME}:{REDIS_PORT}/{REDIS_DATABASE_NUMBER}{redis_params}"
 
-# Temporary debugging until it works in Azure
-print(f"!! CELERY_BROKER_URL={CELERY_BROKER_URL.replace(REDIS_PASSWORD, "*") if REDIS_PASSWORD else CELERY_BROKER_URL}")
-
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
