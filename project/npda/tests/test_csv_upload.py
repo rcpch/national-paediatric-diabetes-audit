@@ -18,7 +18,7 @@ from django.contrib.gis.geos import Point
 from httpx import HTTPError
 
 from project.npda.general_functions.csv import csv_upload, csv_parse
-from project.constants import ALL_DATES
+from project.constants import ALL_DATES, CSV_HEADING_OBJECTS
 from project.npda.models import NPDAUser, Patient, Visit
 from project.npda.tests.factories.patient_factory import (
     INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
@@ -183,6 +183,12 @@ def modify_raw_csv(csv_str, start=None, end=None, replacements={}):
     writer.writerows(rows)
 
     return output.getvalue()
+
+
+def headings_for_model_field(model_field):
+    for headings in CSV_HEADING_OBJECTS:
+        if headings["model_field"] == model_field:
+            return headings
 
 
 @pytest.mark.django_db
@@ -514,19 +520,6 @@ def test_over_25(test_user, single_row_valid_df):
 
     error_message = patient.errors["date_of_birth"][0]["message"]
     assert error_message == "NPDA patients cannot be 25+ years old. This patient is 25"
-
-
-@pytest.mark.django_db
-def test_invalid_diabetes_type(test_user, single_row_valid_df):
-    single_row_valid_df["Diabetes Type"] = 45
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert "diabetes_type" in errors[0]
-
-    patient = Patient.objects.first()
-
-    assert patient.diabetes_type == 45
-    assert "diabetes_type" in patient.errors
 
 
 @pytest.mark.django_db
@@ -3155,7 +3148,7 @@ def test_visit_date_not_before_diagnosis_date(test_user, single_row_valid_df):
 )
 @pytest.mark.django_db
 def test_alternative_formats_for_sex(test_user, dummy_sheet_csv, alternative, expected):
-    csv = modify_raw_csv(dummy_sheet_csv,
+    one_row_csv = modify_raw_csv(dummy_sheet_csv,
         end=2, # exclusive
         replacements = [
             {
@@ -3166,7 +3159,7 @@ def test_alternative_formats_for_sex(test_user, dummy_sheet_csv, alternative, ex
         ]
     )
 
-    df = read_csv_from_str(csv).df
+    df = read_csv_from_str(one_row_csv).df
 
     errors = csv_upload_sync(test_user, df)
     assert len(errors) == 0
@@ -3177,7 +3170,7 @@ def test_alternative_formats_for_sex(test_user, dummy_sheet_csv, alternative, ex
 
 @pytest.mark.django_db
 def test_mix_of_standard_and_alternative_formats_for_sex(test_user, dummy_sheet_csv):
-    csv = modify_raw_csv(dummy_sheet_csv,
+    two_rows_csv = modify_raw_csv(dummy_sheet_csv,
         start=2, # inclusive
         end=4, # exclusive
         replacements = [
@@ -3189,7 +3182,7 @@ def test_mix_of_standard_and_alternative_formats_for_sex(test_user, dummy_sheet_
         ]
     )
     
-    df = read_csv_from_str(csv).df
+    df = read_csv_from_str(two_rows_csv).df
 
     # Double check we do have different patients
     assert df["NHS Number"].nunique() == 2
@@ -3201,3 +3194,98 @@ def test_mix_of_standard_and_alternative_formats_for_sex(test_user, dummy_sheet_
 
     assert patient1.sex == 1
     assert patient2.sex == 1
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        pytest.param("7", "7"),
+        pytest.param("TOO_LONG", None),
+    ]
+)
+@pytest.mark.django_db
+def test_bad_data_for_ethnic_category(test_user, dummy_sheet_csv, value, expected):
+    one_row_csv = modify_raw_csv(dummy_sheet_csv,
+        end=2, # exclusive
+        replacements = [
+            {
+                "row": 1,
+                "column": "Ethnic Category",
+                "value": value
+            }
+        ]
+    )
+
+    df = read_csv_from_str(one_row_csv).df
+
+    errors = csv_upload_sync(test_user, df)
+    assert len(errors) > 0
+
+    patient = Patient.objects.first()
+
+    assert patient.ethnicity == expected
+    assert "ethnicity" in patient.errors
+
+# TODO MRB:
+#  - integer fields (eg systolic_blood_pressure)
+#  - date fields
+#  - decimal fields
+# TODO MRB: pick an incorrect choice automatically
+
+@pytest.mark.parametrize(
+    "model_field,incorrect_choice",
+    [
+        pytest.param("diabetes_type", 9),
+        pytest.param("reason_leaving_service", 9),
+        pytest.param("hba1c_format", 9),
+        pytest.param("treatment", 11),
+        pytest.param("closed_loop_system", 9),
+        pytest.param("glucose_monitoring", 9),
+        pytest.param("retinal_screening_result", 9),
+        pytest.param("albuminuria_stage", 9),
+        pytest.param("thyroid_treatment_status", 9),
+        pytest.param("gluten_free_diet", 9),
+        pytest.param("psychological_additional_support_status", 9),
+        pytest.param("smoking_status", 9),
+        pytest.param("dietician_additional_appointment_offered", 9),
+        pytest.param("ketone_meter_training", 9),
+        pytest.param("hospital_admission_reason", 9),
+        pytest.param("dka_additional_therapies", 9)
+    ]
+)
+@pytest.mark.django_db
+def test_bad_data_for_positive_small_integer_fields(test_user, dummy_sheet_csv, model_field, incorrect_choice):
+    headings = headings_for_model_field(model_field)
+    
+    column = headings["heading"]
+    model = apps.get_model("npda", headings["model"])
+
+    for [value, expected, assertion_message] in [
+        [incorrect_choice, incorrect_choice, f"Failed to handle {model_field} with incorrect choice {incorrect_choice}"],
+        [-1, None, f"Failed to handle {model_field} with -1 (negative number)"],
+        [9999, None, f"Failed to handle {model_field} with 9999 (value bigger than int8)"],
+        [32768, None, f"Failed to handle {model_field} 32768 (value bigger than Django small integer field)"],
+        ["STRING", None, f"Failed to handle unexpected string for {model_field}"]
+    ]:
+        one_row_csv = modify_raw_csv(dummy_sheet_csv,
+            end=2, # exclusive
+            replacements = [
+                {
+                    "row": 1,
+                    "column": column,
+                    "value": value
+                }
+            ]
+        )
+
+        df = read_csv_from_str(one_row_csv).df
+
+        errors = csv_upload_sync(test_user, df)
+        assert len(errors) > 0, assertion_message
+
+        if model.objects.count() == 0:
+            assert False, assertion_message
+
+        instance = model.objects.first()
+
+        assert getattr(instance, model_field) == expected, assertion_message
+        assert model_field in instance.errors
