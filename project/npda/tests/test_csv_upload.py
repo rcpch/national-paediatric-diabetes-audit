@@ -1,6 +1,8 @@
 import dataclasses
 import datetime
 import tempfile
+import csv
+from io import StringIO
 from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 
@@ -154,6 +156,33 @@ def read_csv_from_str(contents):
         f.seek(0)
 
         return csv_parse(f)
+
+
+def modify_raw_csv(csv_str, start=None, end=None, replacements={}):
+    # Sometimes we have to alter the CSV directly to test values
+    # of the wrong type.
+    reader = csv.reader(StringIO(csv_str))
+    [header, *rows] = [row for row in reader]
+
+    start_ix = 0 if start is None else start - 1
+    end_ix = len(rows) if end is None else end - 1
+
+    rows = rows[start_ix:end_ix]
+    
+    for replacement in replacements:
+        row_ix = replacement["row"] - 1
+        column_ix = header.index(replacement["column"])
+        value = replacement["value"]
+
+        rows[row_ix][column_ix] = value
+    
+    output = StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow(header)
+    writer.writerows(rows)
+
+    return output.getvalue()
 
 
 @pytest.mark.django_db
@@ -3126,14 +3155,17 @@ def test_visit_date_not_before_diagnosis_date(test_user, single_row_valid_df):
 )
 @pytest.mark.django_db
 def test_alternative_formats_for_sex(test_user, dummy_sheet_csv, alternative, expected):
-    # One row CSV. We have to alter the text directly as we're dealing with string values
-    # and the test df has already been parsed with sex as a number column
-    [header, row] = dummy_sheet_csv.split("\n")[:2]
+    csv = modify_raw_csv(dummy_sheet_csv,
+        end=2, # exclusive
+        replacements = [
+            {
+                "row": 1,
+                "column": "Stated gender",
+                "value": alternative
+            }
+        ]
+    )
 
-    cells = row.split(",")
-    cells[3] = alternative
-
-    csv = f"{header}\n{','.join(cells)}"
     df = read_csv_from_str(csv).df
 
     errors = csv_upload_sync(test_user, df)
@@ -3145,22 +3177,22 @@ def test_alternative_formats_for_sex(test_user, dummy_sheet_csv, alternative, ex
 
 @pytest.mark.django_db
 def test_mix_of_standard_and_alternative_formats_for_sex(test_user, dummy_sheet_csv):
-    # Two row CSV. We have to alter the text directly as we're dealing with string values
-    # and the test df has already been parsed with sex as a number column
-    rows = dummy_sheet_csv.split("\n")
-
-    header = rows[0]
-    [row1, row2] = rows[2:4]
+    csv = modify_raw_csv(dummy_sheet_csv,
+        start=2, # inclusive
+        end=4, # exclusive
+        replacements = [
+            {
+                "row": 2,
+                "column": "Stated gender",
+                "value": "M"
+            }
+        ]
+    )
+    
+    df = read_csv_from_str(csv).df
 
     # Double check we do have different patients
-    assert row1.split(",")[0] != row2.split(",")[0]
-
-    row1_cells = row1.split(",")
-    row1_cells[3] = "M"
-    row1 = ",".join(row1_cells)
-
-    csv = "\n".join([header, row1, row2])
-    df = read_csv_from_str(csv).df
+    assert df["NHS Number"].nunique() == 2
 
     errors = csv_upload_sync(test_user, df)
     assert len(errors) == 0

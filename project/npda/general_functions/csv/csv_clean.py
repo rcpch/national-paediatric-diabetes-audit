@@ -24,7 +24,5 @@ def clean_csv_sex(value):
 def csv_clean(df):
     if not is_numeric_dtype(df["Stated gender"]):
         df["Stated gender"] = df["Stated gender"].apply(clean_csv_sex)
-    
-    print(df["Stated gender"].dtype)
 
     return df
