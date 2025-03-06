@@ -84,7 +84,9 @@ class PatientVisitsListView(
         context["submission"] = submission
 
         # If the patient has left the PDU, they may appear in another one but we record that as a separate Patient instance
-        pdu = Transfer.objects.get(patient=patient).paediatric_diabetes_unit
+        paediatric_diabetes_unit = Transfer.objects.get(
+            patient=patient
+        ).paediatric_diabetes_unit
 
         calculate_kpis = CalculateKPIS(
             calculation_date=datetime.date.today(), return_pt_querysets=False
@@ -93,10 +95,11 @@ class PatientVisitsListView(
         # for a single patient's calculation
         kpi_calculations_object = calculate_kpis.calculate_kpis_for_single_patient(
             patient,
-            pdu,
+            paediatric_diabetes_unit,
         )
 
         context["kpi_calculations_object"] = kpi_calculations_object
+        context["paediatric_diabetes_unit"] = paediatric_diabetes_unit
 
         return context
 
@@ -123,6 +126,9 @@ class VisitCreateView(
         context["form_method"] = "create"
         context["button_title"] = "Add"
         context["visit_tabs"] = get_visit_tabs(form=None)
+        Transfer = apps.get_model("npda", "Transfer")
+        transfer = Transfer.objects.get(patient=patient, date_leaving_service=None)
+        context["paediatric_diabetes_unit"] = transfer.paediatric_diabetes_unit
         return context
 
     def get_success_url(self):
@@ -173,6 +179,13 @@ class VisitUpdateView(
         context["button_title"] = "Save"
         context["form_method"] = "update"
         context["visit_tabs"] = get_visit_tabs(form=context["form"])
+        visit = Visit.objects.get(pk=self.kwargs["pk"])
+        Transfer = apps.get_model("npda", "Transfer")
+        transfer = Transfer.objects.get(
+            patient=visit.patient, date_leaving_service=None
+        )
+        context["paediatric_diabetes_unit"] = transfer.paediatric_diabetes_unit
+        context["patient"] = visit.patient
 
         return context
 
@@ -191,7 +204,6 @@ class VisitUpdateView(
         return initial
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
-        print("form_valid is called int he view")
         if "delete" in self.request.POST:
             return redirect(reverse("visit-delete", kwargs={"pk": self.kwargs["pk"]}))
         visit = form.save(commit=True)
