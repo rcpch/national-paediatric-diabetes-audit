@@ -96,6 +96,10 @@ async def csv_upload(
             async_client=async_client,
         )
 
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print(f"!! {form.errors.as_data()["diabetes_type"][0].code}")
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+
         return form
 
     async def validate_visit_using_form(patient_form, row, async_client):
