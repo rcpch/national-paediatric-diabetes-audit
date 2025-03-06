@@ -16,6 +16,18 @@ app = Celery("project")
 
 app.config_from_object("django.conf:settings", namespace="CELERY")
 
+app.conf.update(
+    # Hacks to work around the lack of built in support for Redis cluster.
+    # We don't use a cluster directly but Azure Managed Redis acts like one.
+    # https://github.com/celery/celery/issues/8276#issuecomment-2082176893
+    broker_transport_options={
+        "global_keyprefix": "{queue}:"
+    },
+    result_backend_transport_options={
+        "global_keyprefix": "{rest}:"
+    }
+)
+
 app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
 
 class NPDATask(Task):
