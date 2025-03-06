@@ -72,11 +72,13 @@ class PatientListView(
         sort_by = None
 
         # Check we are sorting by a fixed set of fields rather than the full Django __ notation
+        # Note that sorting by sex or diabetes_type is hard as the key is an integer, not a string
         if sort_by_param in [
             "nhs_number",
             "unique_reference_number",
             "index_of_multiple_deprivation_quintile",
             "distance_from_lead_organisation",
+            "date_of_birth",
         ]:
             sort_by = sort_by_param
 

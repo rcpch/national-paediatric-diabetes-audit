@@ -18,7 +18,10 @@
               {% endif %}
             </span>
           </th>
-          <th scope="col" class="px-2 py-3 text-center">Date of Birth</th>
+          <th scope="col" class="px-2 py-3 text-center">
+            {% include 'partials/page_elements/sort_icon.html' with field="date_of_birth" is_string=False %}
+            Date of Birth
+          </th>
           <th scope="col" class="px-2 py-3 text-center">Sex</th>
           <th scope="col" class="px-2 py-3 text-center">Diabetes Type</th>
           <th scope="col" class="px-2 py-3 text-center">Diagnosis Date</th>
@@ -26,14 +29,14 @@
           <th scope="col" class="px-2 py-3 text-center">
             <span class="tooltip tooltip-bottom"
                   data-tip="The 'Index of Multiple Deprivation' quintile for the patients postcode.">
-              {% include 'partials/page_elements/sort_icon.html' with field="index_of_multiple_deprivation_quintile" %}
+              {% include 'partials/page_elements/sort_icon.html' with field="index_of_multiple_deprivation_quintile" is_string=False %}
               IMD <i class="fa-question-circle fas"></i>
             </span>
           </th>
           <th scope="col" class="px-2 py-3 text-center">
             <span class="tooltip tooltip-bottom"
                   data-tip="The distance 'as the crow flies' from the patients postcode to this PDU.">
-              {% include 'partials/page_elements/sort_icon.html' with field="distance_from_lead_organisation" %}
+              {% include 'partials/page_elements/sort_icon.html' with field="distance_from_lead_organisation" is_string=False %}
               Distance to PDU <i class="fa-question-circle fas"></i>
             </span>
           </th>
