@@ -82,11 +82,7 @@ class PatientVisitsListView(
         context["visits"] = calculated_visits
         context["patient"] = patient
         context["submission"] = submission
-
-        # If the patient has left the PDU, they may appear in another one but we record that as a separate Patient instance
-        paediatric_diabetes_unit = Transfer.objects.get(
-            patient=patient
-        ).paediatric_diabetes_unit
+        paediatric_diabetes_unit = submission.paediatric_diabetes_unit
 
         calculate_kpis = CalculateKPIS(
             calculation_date=datetime.date.today(), return_pt_querysets=False
