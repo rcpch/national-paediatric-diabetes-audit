@@ -3268,10 +3268,10 @@ def test_bad_data_for_positive_small_integer_fields(test_user, dummy_sheet_csv, 
     model = apps.get_model("npda", headings["model"])
 
     for [value, expected, assertion_message] in [
-        # [incorrect_choice, incorrect_choice, f"Failed to handle {model_field} with incorrect choice {incorrect_choice}"],
-        # [-1, None, f"Failed to handle {model_field} with -1 (negative number)"],
-        # [9999, None, f"Failed to handle {model_field} with 9999 (value bigger than int8)"],
-        # [32768, None, f"Failed to handle {model_field} 32768 (value bigger than Django small integer field)"],
+        [incorrect_choice, incorrect_choice, f"Failed to handle {model_field} with incorrect choice {incorrect_choice}"],
+        [-1, None, f"Failed to handle {model_field} with -1 (negative number)"],
+        [9999, None, f"Failed to handle {model_field} with 9999 (value bigger than int8)"],
+        [32768, None, f"Failed to handle {model_field} 32768 (value bigger than Django small integer field)"],
         ["STRING", None, f"Failed to handle unexpected string for {model_field}"]
     ]:
         one_row_csv = modify_raw_csv(dummy_sheet_csv,
@@ -3298,3 +3298,42 @@ def test_bad_data_for_positive_small_integer_fields(test_user, dummy_sheet_csv, 
 
         assert getattr(instance, model_field) == expected, assertion_message
         assert model_field in instance.errors
+
+@pytest.mark.parametrize(
+    "model_field",
+    [
+        pytest.param("systolic_blood_pressure"),
+        pytest.param("diastolic_blood_pressure"),
+    ]
+)
+@pytest.mark.django_db
+def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
+    headings = headings_for_model_field(model_field)
+
+    column = headings["heading"]
+    model = apps.get_model("npda", headings["model"])
+
+    one_row_csv = modify_raw_csv(dummy_sheet_csv,
+        end=2, # exclusive
+        replacements = [
+            {
+                "row": 1,
+                "column": column,
+                "value": "STRING"
+            }
+        ]
+    )
+
+    df = read_csv_from_str(one_row_csv).df
+
+    errors = csv_upload_sync(test_user, df)
+
+    assert len(errors) > 0, assertion_message
+
+    if model.objects.count() == 0:
+        assert False, assertion_message
+
+    instance = model.objects.first()
+
+    assert getattr(instance, model_field) == None
+    assert model_field in instance.errors
