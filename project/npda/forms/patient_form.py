@@ -63,7 +63,6 @@ class PostcodeField(forms.CharField):
 
 
 class PatientForm(forms.ModelForm):
-
     date_leaving_service = forms.DateField(required=False, widget=DateInput())
     reason_leaving_service = forms.ChoiceField(
         required=False, choices=LEAVE_PDU_REASONS
@@ -109,6 +108,8 @@ class PatientForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        self.audit_year = kwargs.pop("audit_year", None)
+        self.paediatric_diabetes_unit = kwargs.pop("paediatric_diabetes_unit", None)
         super().__init__(*args, **kwargs)
         if self.instance.pk:
             try:
@@ -197,6 +198,19 @@ class PatientForm(forms.ModelForm):
                     "Either NHS Number or Unique Reference Number must be provided."
                 ),
             )
+
+        if nhs_number and unique_reference_number:
+            self.add_error(
+                "nhs_number",
+                ValidationError(
+                    "Only one of NHS Number or Unique Reference Number can be provided."
+                ),
+            )
+
+        if nhs_number:
+            self.validate_uniqueness(nhs_number, None)
+        elif unique_reference_number:
+            self.validate_uniqueness(None, unique_reference_number)
 
         reason_leaving_service = cleaned_data.get("reason_leaving_service")
         date_leaving_service = cleaned_data.get("date_leaving_service")
@@ -313,3 +327,39 @@ class PatientForm(forms.ModelForm):
                 patient_transfer.save()
 
         return self.instance
+
+    def validate_uniqueness(self, nhs_number, unique_reference_number):
+        """
+        Validate that the NHS Number or Unique Reference Number is unique within this submission.
+        """
+        if nhs_number:
+            PatientSubmission = apps.get_model("npda", "PatientSubmission")
+            submissions = PatientSubmission.objects.filter(
+                submission__submission_active=True,
+                submission__audit_year=self.audit_year,
+                patient__nhs_number=nhs_number,
+                submission__paediatric_diabetes_unit=self.paediatric_diabetes_unit,
+            )
+            if submissions.count() > 0:
+                self.add_error(
+                    "nhs_number",
+                    ValidationError(
+                        "NHS Number must be unique within this submission."
+                    ),
+                )
+
+        if unique_reference_number:
+            PatientSubmission = apps.get_model("npda", "PatientSubmission")
+            submissions = PatientSubmission.objects.filter(
+                submission__submission_active=True,
+                submission__audit_year=self.audit_year,
+                patient__unique_reference_number=unique_reference_number,
+                submission__paediatric_diabetes_unit=self.paediatric_diabetes_unit,
+            )
+            if submissions.count() > 0:
+                self.add_error(
+                    "unique_reference_number",
+                    ValidationError(
+                        "Unique Reference Number must be unique within this submission."
+                    ),
+                )

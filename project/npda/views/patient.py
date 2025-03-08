@@ -324,6 +324,16 @@ class PatientCreateView(
     success_message = "New child record created successfully"
     success_url = reverse_lazy("patients")
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+        pz_code = self.request.session.get("pz_code")
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+        audit_year = self.request.session.get("selected_audit_year")
+        kwargs["paediatric_diabetes_unit"] = pdu
+        kwargs["audit_year"] = audit_year
+        return kwargs
+
     def get_context_data(self, **kwargs):
         PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
         pz_code = self.request.session.get("pz_code")
