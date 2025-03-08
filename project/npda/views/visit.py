@@ -124,7 +124,7 @@ class VisitCreateView(
         context["patient"] = patient
         context["title"] = "Add New Visit"
         context["form_method"] = "create"
-        context["button_title"] = "Add"
+        context["button_title"] = "Create New Visit"
         context["visit_tabs"] = get_visit_tabs(form=None)
         Transfer = apps.get_model("npda", "Transfer")
         transfer = Transfer.objects.get(patient=patient, date_leaving_service=None)
@@ -175,8 +175,8 @@ class VisitUpdateView(
         context["patient_id"] = self.kwargs["patient_id"]
         context["nhs_number"] = context["form"].patient.nhs_number
         context["visit_id"] = self.kwargs["pk"]
-        context["title"] = "Edit Visit Details"
-        context["button_title"] = "Save"
+        context["title"] = "Edit/Update Visit Details"
+        context["button_title"] = "Save Changes"
         context["form_method"] = "update"
         context["visit_tabs"] = get_visit_tabs(form=context["form"])
         visit = Visit.objects.get(pk=self.kwargs["pk"])
