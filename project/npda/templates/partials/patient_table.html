@@ -68,7 +68,10 @@
                 <a class="btn flex p-1 h-full tooltip tooltip-right {% if nhs_number_error or gp_error %} text-rcpch_red {% else %} hover:text-rcpch_pink {% endif %}"
                    target="_blank"
                    href="{% url 'patient-update' patient.pk %}"
-                   data-tip="{% if unique_identifier_error or gp_error %} {{ unique_identifier_error }} {{ gp_error }} {% else %} {% if patient.is_in_transfer_in_the_last_year %}Patient in transfer... {% else %}View patient (NPDA ID {{ patient.pk }}) details (opens new tab){% endif %} {% endif %}">
+                   data-tip="{% if unique_identifier_error or gp_error %} {{ unique_identifier_error }} {{ gp_error }} {% else %} {% if patient.is_in_transfer_in_the_last_year %}Patient in transfer... {% endif %}View patient (NPDA ID {{ patient.pk }}) details (opens new tab) {% if patient.is_part_of_another_active_submission %} Note {% nhs_number_vs_urn pz_code patient %} is part of another active submission for {{ request.session.selected_audit_year }} in another PDU {% endif %} {% endif %} ">
+                  {% if patient.is_part_of_another_active_submission %}
+                    <i class="fa-solid fa-copy fa"></i>
+                  {% endif %}
                   <span class="fa-stack">
                     {% if unique_identifier_error or gp_error %}
                       <i class="fa-circle fa-stack-1x fas"></i>
@@ -80,7 +83,7 @@
                   <strong class="font-mono text-xs">
                     {% nhs_number_vs_urn pz_code patient %}
                     {% if patient.is_in_transfer_in_the_last_year %}
-                      <i class="fa-solid fa-handshake"></i>
+                      <i class="fa-solid fa-handshake fa-xl"></i>
                     {% endif %}
                   </strong>
                 </span>

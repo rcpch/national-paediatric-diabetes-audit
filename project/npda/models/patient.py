@@ -4,6 +4,7 @@ import logging
 from datetime import timedelta
 
 # django imports
+from django.apps import apps
 from django.contrib.gis.db import models
 from django.contrib.gis.db.models import (
     CharField,
@@ -211,3 +212,25 @@ class Patient(models.Model):
         ).exists():
             return True
         return False
+
+    def is_part_of_another_active_submission(self):
+        """
+        Returns True if the patient is part of more than one active submission
+        """
+        current_audit_year = date.today().year
+        if date.today().month < 4:
+            current_audit_year -= 1
+
+        PatientSubmission = apps.get_model(
+            app_label="npda", model_name="PatientSubmission"
+        )
+
+        return (
+            PatientSubmission.objects.filter(
+                patient__nhs_number=self.nhs_number,
+                patient__unique_reference_number=self.unique_reference_number,
+                submission__audit_year=current_audit_year,
+                submission__submission_active=True,
+            ).count()
+            > 1
+        )
