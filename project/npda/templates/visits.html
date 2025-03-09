@@ -131,7 +131,7 @@
             <a href="{% url 'patients' %}"
                class="bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 mt-40 font-semibold text-white border hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue hover:text-white">Back to Patient List</a>
             <div class="py-20">
-              {% include 'partials/visit_list_tips.html' pz_code=pz_code patient=patient %}
+              {% include 'partials/visit_list_tips.html' with pz_code=pz_code patient=patient %}
             </div>
           </div>
         {% endblock %}

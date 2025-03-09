@@ -1,3 +1,4 @@
+{% load npda_tags %}
 <div role="alert" class="alert mt-4">
   <i class="fa-solid fa-lightbulb text-rcpch_pink fa-3x"></i>
   <span>
@@ -23,7 +24,9 @@
     <li>
       <i class="fa-solid fa-exclamation-circle text-rcpch_red"></i> indicates that there are errors related to that measure. If you hover your mouse over the category, the error will be show as a tooltip.
     </li>
-    <i class="fas fa-smile text-rcpch_pink"></i> This platform is built and maintained by the RCPCH Incubator developer team. If you find any errors or have any suggestions, we are keen to know about them so please report them to the NPDA team at
-    <a href="mailto:{{ npda_email }}" class="text-rcpch_light_blue">{{ npda_email }}</a>
+    <div class="mt-2">
+      <i class="fas fa-smile text-rcpch_pink"></i> This platform is built and maintained by the RCPCH Incubator developer team. If you find any errors or have any suggestions, we are keen to know about them so please report them to the NPDA team at
+      <a href="mailto:{{ npda_email }}" class="text-rcpch_light_blue">{{ npda_email }}</a>
+    </div>
   </span>
 </div>

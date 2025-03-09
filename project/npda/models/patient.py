@@ -225,15 +225,6 @@ class Patient(models.Model):
             app_label="npda", model_name="PatientSubmission"
         )
 
-        print(
-            PatientSubmission.objects.filter(
-                patient__nhs_number=self.nhs_number,
-                patient__unique_reference_number=self.unique_reference_number,
-                submission__audit_year=current_audit_year,
-                submission__submission_active=True,
-            ).all()
-        )
-
         return (
             PatientSubmission.objects.filter(
                 patient__nhs_number=self.nhs_number,

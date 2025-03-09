@@ -266,20 +266,15 @@ def test_rcpch_audit_team_can_see_visits_from_all_pdus(
     gosh_user = NPDAUser.objects.filter(
         organisation_employers__pz_code=GOSH_PZ_CODE
     ).first()
-    print("GOSH user", gosh_user.organisation_employers.all())
 
     ah_user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE
     ).first()
-    print("AH user", ah_user.organisation_employers.all())
 
     rcpch_user = NPDAUser.objects.filter(is_rcpch_audit_team_member=True).first()
 
     gosh_patient = create_submission_with_patient(gosh_user)
     ah_patient = create_submission_with_patient(ah_user)
-
-    print(gosh_patient.paediatric_diabetes_units.all())
-    print(ah_patient.paediatric_diabetes_units.all())
 
     client = login_and_verify_user(client, rcpch_user)
 
