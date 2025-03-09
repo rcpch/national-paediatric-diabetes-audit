@@ -1,9 +1,12 @@
 import pytest
 
+# Django imports
+from django.apps import apps
 from django.urls import reverse
 from django.utils.timezone import make_aware
 from http import HTTPStatus
 
+# RCPCH imports
 from project.constants.user import RCPCH_AUDIT_TEAM
 from project.npda.models import Patient, Submission, NPDAUser
 from project.npda.tests.utils import login_and_verify_user
@@ -23,8 +26,12 @@ def create_submission_with_patient(user):
         submission_by=user,
         paediatric_diabetes_unit=user.organisation_employers.first(),
     )
-
+    Transfer = apps.get_model("npda.Transfer")
     patient = PatientFactory()
+    # Update the transfer to match the user's PDU
+    Transfer.objects.filter(patient=patient).update(
+        paediatric_diabetes_unit=user.organisation_employers.first()
+    )
     submission.patients.add(patient)
 
     return patient
@@ -259,15 +266,20 @@ def test_rcpch_audit_team_can_see_visits_from_all_pdus(
     gosh_user = NPDAUser.objects.filter(
         organisation_employers__pz_code=GOSH_PZ_CODE
     ).first()
+    print("GOSH user", gosh_user.organisation_employers.all())
 
     ah_user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE
     ).first()
+    print("AH user", ah_user.organisation_employers.all())
 
     rcpch_user = NPDAUser.objects.filter(is_rcpch_audit_team_member=True).first()
 
     gosh_patient = create_submission_with_patient(gosh_user)
     ah_patient = create_submission_with_patient(ah_user)
+
+    print(gosh_patient.paediatric_diabetes_units.all())
+    print(ah_patient.paediatric_diabetes_units.all())
 
     client = login_and_verify_user(client, rcpch_user)
 
