@@ -570,6 +570,7 @@ def test_reason_leaving_service_missing(mocked_pdu, mocked_audit_year):
     assert "reason_leaving_service" in form.errors.as_data()
 
 
+@pytest.mark.django_db
 def test_reason_leaving_service_invalid(mocked_pdu, mocked_audit_year):
     form = PatientForm(
         {"reason_leaving_service": 99},
