@@ -225,6 +225,15 @@ class Patient(models.Model):
             app_label="npda", model_name="PatientSubmission"
         )
 
+        print(
+            PatientSubmission.objects.filter(
+                patient__nhs_number=self.nhs_number,
+                patient__unique_reference_number=self.unique_reference_number,
+                submission__audit_year=current_audit_year,
+                submission__submission_active=True,
+            ).all()
+        )
+
         return (
             PatientSubmission.objects.filter(
                 patient__nhs_number=self.nhs_number,
@@ -234,3 +243,29 @@ class Patient(models.Model):
             ).count()
             > 1
         )
+
+    def paediatric_diabetes_units_which_are_part_of_another_active_submission(self):
+        """
+        Returns True if the patient is part of more than one active submission
+        """
+        current_audit_year = date.today().year
+        if date.today().month < 4:
+            current_audit_year -= 1
+
+        PatientSubmission = apps.get_model(
+            app_label="npda", model_name="PatientSubmission"
+        )
+
+        all_submissions = (
+            PatientSubmission.objects.filter(
+                patient__nhs_number=self.nhs_number,
+                patient__unique_reference_number=self.unique_reference_number,
+                submission__audit_year=current_audit_year,
+                submission__submission_active=True,
+            )
+            .exclude(
+                submission__paediatric_diabetes_unit=self.submissions.first().paediatric_diabetes_unit
+            )
+            .all()
+        )
+        return all_submissions

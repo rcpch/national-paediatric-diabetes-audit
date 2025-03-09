@@ -14,14 +14,15 @@ from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.db.models import Count, Case, When, Max, Q, F
 from django.forms import BaseForm
 from django.forms import BaseForm
+from django.http import HttpResponse
 from django.http.response import HttpResponse
+from django.contrib.postgres.aggregates import StringAgg
 from django.shortcuts import render, redirect, reverse
 from django.template.loader import render_to_string
-from django.views.generic.edit import CreateView, UpdateView, DeleteView
-from django.views.generic import ListView
-from django.http import HttpResponse
 from django.urls import reverse_lazy
 from django.utils.html import escape
+from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django.views.generic import ListView
 
 
 # Third party imports
@@ -104,7 +105,9 @@ class PatientListView(
 
         # apply filters and annotations to the queryset
         pz_code = self.request.session.get("pz_code")
-        paediatric_diabetes_unit = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+        paediatric_diabetes_unit = PaediatricDiabetesUnit.objects.filter(
+            pz_code=pz_code
+        ).first()
         if paediatric_diabetes_unit.lead_organisation_geocoordinates is None:
             # we cannot make an API call for each patient  every time we load the page,
             # so we only do it if the geocoordinates are missing

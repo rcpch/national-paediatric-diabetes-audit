@@ -1,0 +1,29 @@
+<div role="alert" class="alert mt-4">
+  <i class="fa-solid fa-lightbulb text-rcpch_pink fa-3x"></i>
+  <span>
+    <strong>Helpful Tips:</strong>
+    <li>
+      This is a list of all the visits for {% nhs_number_vs_urn pz_code patient %} (NPDA ID {{ patient.pk }}).
+    </li>
+    <li>
+      Only those users with the correct permissions can edit or delete visits. If your Paediatric Diabetes Unit has opted to submit the audit by csv upload, you will not be able to edit or delete visits here, but you can still view them.
+    </li>
+    <li>
+      Measures are organised into colour categories:
+      {% for item in visits.0.categories %}
+        <span class="bg-{{ item.colour }} px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white">
+          {{ item.name }}
+        </span>
+      {% endfor %}
+    </li>
+    <li>
+      Those measures that were addressed at each visit appear as a list in the table.
+      You can click on a category to take you straight to that section.
+    </li>
+    <li>
+      <i class="fa-solid fa-exclamation-circle text-rcpch_red"></i> indicates that there are errors related to that measure. If you hover your mouse over the category, the error will be show as a tooltip.
+    </li>
+    <i class="fas fa-smile text-rcpch_pink"></i> This platform is built and maintained by the RCPCH Incubator developer team. If you find any errors or have any suggestions, we are keen to know about them so please report them to the NPDA team at
+    <a href="mailto:{{ npda_email }}" class="text-rcpch_light_blue">{{ npda_email }}</a>
+  </span>
+</div>

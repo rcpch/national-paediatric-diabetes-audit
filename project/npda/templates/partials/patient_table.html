@@ -68,7 +68,7 @@
                 <a class="btn flex p-1 h-full tooltip tooltip-right {% if nhs_number_error or gp_error %} text-rcpch_red {% else %} hover:text-rcpch_pink {% endif %}"
                    target="_blank"
                    href="{% url 'patient-update' patient.pk %}"
-                   data-tip="{% if unique_identifier_error or gp_error %} {{ unique_identifier_error }} {{ gp_error }} {% else %} {% if patient.is_in_transfer_in_the_last_year %}Patient in transfer... {% endif %}View patient (NPDA ID {{ patient.pk }}) details (opens new tab) {% if patient.is_part_of_another_active_submission %} Note {% nhs_number_vs_urn pz_code patient %} is part of another active submission for {{ request.session.selected_audit_year }} in another PDU {% endif %} {% endif %} ">
+                   data-tip="{% if unique_identifier_error or gp_error %} {{ unique_identifier_error }} {{ gp_error }} {% else %} {% if patient.is_in_transfer_in_the_last_year %}Patient in transfer... {% endif %}View patient (NPDA ID {{ patient.pk }}) details (opens new tab) {% if patient.is_part_of_another_active_submission %} Note {% nhs_number_vs_urn pz_code patient %} is part of another active submission for {{ request.session.selected_audit_year }} in {% for submission_unit in patient.paediatric_diabetes_units_which_are_part_of_another_active_submission %} {{ submission_unit.submission.paediatric_diabetes_unit }}, {% endfor %} {% endif %} {% endif %} ">
                   {% if patient.is_part_of_another_active_submission %}
                     <i class="fa-solid fa-copy fa"></i>
                   {% endif %}
@@ -220,6 +220,7 @@
       {% include 'partials/page_elements/patient_table_page_controls.html' %}
     </tfoot>
   </table>
+  {% include 'partials/patient_table_tips.html' with pz_code=pz_code %}
 </div>
 {% else %}
 <div class="hero bg-base-200 min-h-screen">
