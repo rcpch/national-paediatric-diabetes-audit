@@ -1,4 +1,7 @@
 # python imports
+from asgiref.sync import sync_to_async, async_to_sync
+from channels.db import database_sync_to_async
+
 import logging
 from datetime import date
 
@@ -207,10 +210,16 @@ class PatientForm(forms.ModelForm):
                 ),
             )
 
-        if nhs_number:
-            self.validate_uniqueness(nhs_number, None)
-        elif unique_reference_number:
-            self.validate_uniqueness(None, unique_reference_number)
+        # Synchronous invocation for npda platform UI vs async for csv_upload.
+        if nhs_number or unique_reference_number:
+            import asyncio
+
+            if asyncio.iscoroutinefunction(self.validate_uniqueness):
+                self._validate_field_uniqueness_async(
+                    nhs_number, unique_reference_number
+                )
+            else:
+                self.validate_uniqueness(nhs_number, unique_reference_number)
 
         reason_leaving_service = cleaned_data.get("reason_leaving_service")
         date_leaving_service = cleaned_data.get("date_leaving_service")
@@ -328,38 +337,85 @@ class PatientForm(forms.ModelForm):
 
         return self.instance
 
+    async def validate_uniqueness_async(self, nhs_number, unique_reference_number):
+        """
+        Validate that the NHS Number or Unique Reference Number is unique within this submission.
+        Handles both synchronous and asynchronous contexts.
+        """
+        if nhs_number:
+            await self._validate_field_uniqueness_async(
+                nhs_number,
+                "nhs_number",
+                "patient__nhs_number",
+                "NHS Number must be unique within this submission.",
+            )
+
+        if unique_reference_number:
+            await self._validate_field_uniqueness_async(
+                unique_reference_number,
+                "unique_reference_number",
+                "patient__unique_reference_number",
+                "Unique Reference Number must be unique within this submission.",
+            )
+
+    async def _validate_field_uniqueness_async(
+        self, value, field_name, filter_field, error_message
+    ):
+        PatientSubmission = apps.get_model("npda", "PatientSubmission")
+
+        @database_sync_to_async
+        def get_submissions_count(filter_kwargs):
+            return PatientSubmission.objects.filter(**filter_kwargs).count()
+
+        filter_kwargs = {
+            "submission__submission_active": True,
+            "submission__audit_year": self.audit_year,
+            filter_field: value,
+            "submission__paediatric_diabetes_unit": self.paediatric_diabetes_unit,
+        }
+
+        count = await get_submissions_count(filter_kwargs)
+
+        if count > 0:
+            self.add_error(field_name, ValidationError(error_message))
+
     def validate_uniqueness(self, nhs_number, unique_reference_number):
         """
         Validate that the NHS Number or Unique Reference Number is unique within this submission.
+        Handles both synchronous and asynchronous contexts.
         """
         if nhs_number:
-            PatientSubmission = apps.get_model("npda", "PatientSubmission")
-            submissions = PatientSubmission.objects.filter(
-                submission__submission_active=True,
-                submission__audit_year=self.audit_year,
-                patient__nhs_number=nhs_number,
-                submission__paediatric_diabetes_unit=self.paediatric_diabetes_unit,
+            self._validate_field_uniqueness(
+                nhs_number,
+                "nhs_number",
+                "patient__nhs_number",
+                "NHS Number must be unique within this submission.",
             )
-            if submissions.count() > 0:
-                self.add_error(
-                    "nhs_number",
-                    ValidationError(
-                        "NHS Number must be unique within this submission."
-                    ),
-                )
 
         if unique_reference_number:
-            PatientSubmission = apps.get_model("npda", "PatientSubmission")
-            submissions = PatientSubmission.objects.filter(
-                submission__submission_active=True,
-                submission__audit_year=self.audit_year,
-                patient__unique_reference_number=unique_reference_number,
-                submission__paediatric_diabetes_unit=self.paediatric_diabetes_unit,
+            self._validate_field_uniqueness(
+                unique_reference_number,
+                "unique_reference_number",
+                "patient__unique_reference_number",
+                "Unique Reference Number must be unique within this submission.",
             )
-            if submissions.count() > 0:
-                self.add_error(
-                    "unique_reference_number",
-                    ValidationError(
-                        "Unique Reference Number must be unique within this submission."
-                    ),
-                )
+
+    def _validate_field_uniqueness(
+        self, value, field_name, filter_field, error_message
+    ):
+        PatientSubmission = apps.get_model("npda", "PatientSubmission")
+
+        def get_submissions_count(filter_kwargs):
+            return PatientSubmission.objects.filter(**filter_kwargs).count()
+
+        filter_kwargs = {
+            "submission__submission_active": True,
+            "submission__audit_year": self.audit_year,
+            filter_field: value,
+            "submission__paediatric_diabetes_unit": self.paediatric_diabetes_unit,
+        }
+
+        count = get_submissions_count(filter_kwargs)
+
+        if count > 0:
+            self.add_error(field_name, ValidationError(error_message))

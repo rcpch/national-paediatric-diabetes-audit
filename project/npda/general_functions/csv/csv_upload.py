@@ -284,7 +284,7 @@ async def csv_upload(
         patient_form = await validate_patient_using_form(first_row, async_client)
 
         # Pull through cleaned_data so we can use it in the async visit validators
-        patient_form.is_valid()
+        await sync_to_async(patient_form.is_valid)()
 
         record_errors_from_form(errors_to_return, patient_row_index, patient_form)
 
