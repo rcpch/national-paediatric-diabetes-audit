@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 from unittest import skip
 
 # 3rd Party imports
+from django.apps import apps
 from django.core.exceptions import ValidationError
 from dateutil.relativedelta import relativedelta
 
@@ -37,10 +38,12 @@ MOCK_EXTERNAL_VALIDATION_RESULT = PatientExternalValidationResult(
     location_wgs84=LOCATION[0],
 )
 
+ALDER_HEY_PZ_CODE = "PZ074"
+
 
 @pytest.fixture
 def mocked_pdu():
-    return PaediatricsDiabetesUnitFactory(pz_code="PZ999")  # RCPCH
+    return PaediatricsDiabetesUnitFactory(pz_code=ALDER_HEY_PZ_CODE)
 
 
 @pytest.fixture
@@ -611,3 +614,43 @@ def test_successful_patient_transfer(mocked_pdu, mocked_audit_year):
     assert transfer.patient == patient
     assert transfer.date_leaving_service == TODAY
     assert transfer.reason_leaving_service == 1
+
+
+@pytest.mark.django_db
+def test_fail_validation_if_same_patient_twice_in_same_submission(
+    mocked_pdu,
+    mocked_audit_year,
+    seed_groups_fixture,
+    seed_users_fixture,
+):
+    NPDAUser = apps.get_model("npda", "NPDAUser")
+    pdu_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=mocked_pdu.pz_code
+    ).first()
+
+    form = PatientForm(
+        VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu, audit_year=mocked_audit_year
+    )
+    assert len(form.errors.as_data()) == 0
+    patient = form.save()
+
+    print(pdu_user)
+
+    # add the patient to a submission
+    Submission = apps.get_model("npda", "Submission")
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=mocked_pdu,
+        audit_year=mocked_audit_year,
+        submission_active=True,
+        submission_date=TODAY,
+        submission_by=pdu_user,
+    )
+    submission.patients.add(patient)
+
+    # Create a new form with the same patient
+    new_form = PatientForm(
+        VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu, audit_year=mocked_audit_year
+    )
+    new_form.is_valid()
+
+    assert "nhs_number" in new_form.errors.as_data()
