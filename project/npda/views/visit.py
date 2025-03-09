@@ -120,7 +120,7 @@ class VisitCreateView(
         context["patient"] = patient
         context["title"] = "Add New Visit"
         context["form_method"] = "create"
-        context["button_title"] = "Add"
+        context["button_title"] = "Create New Visit"
         context["visit_tabs"] = get_visit_tabs(form=None)
         # Getting the PDU for the patient most of the time will be the same as the selected PDU in session.
         # However, if the user has selected a different PDU in the session but has come here from a national view
@@ -219,8 +219,8 @@ class VisitUpdateView(
         context["patient_id"] = self.kwargs["patient_id"]
         context["nhs_number"] = context["form"].patient.nhs_number
         context["visit_id"] = self.kwargs["pk"]
-        context["title"] = "Edit Visit Details"
-        context["button_title"] = "Save"
+        context["title"] = "Edit/Update Visit Details"
+        context["button_title"] = "Save Changes"
         context["form_method"] = "update"
         context["visit_tabs"] = get_visit_tabs(form=context["form"])
         visit = Visit.objects.get(pk=self.kwargs["pk"])

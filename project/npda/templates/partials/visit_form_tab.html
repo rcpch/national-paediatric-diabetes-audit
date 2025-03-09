@@ -104,6 +104,10 @@
                           <div class="badge bg-rcpch_light_blue text-white badge-lg">{{ sds }}</div>
                         {% endif %}
                       {% endwith %}
+                    {% else %}
+                      {% if field.id_for_label == 'id_bmi' or field.id_for_label == 'id_height' or field.id_for_label == 'id_weight' %}
+                        <span>Centiles/SDS/BMI (calculated on form submission)</span>
+                      {% endif %}
                     {% endif %}
                   {% endif %}
                 {% endif %}
