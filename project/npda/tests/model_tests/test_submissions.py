@@ -22,6 +22,7 @@ import pytest
 # 3rd party imports
 from django.urls import reverse
 from django.utils import timezone
+from django.apps import apps
 
 from project.constants.user import RCPCH_AUDIT_TEAM
 
@@ -95,7 +96,7 @@ def test_npda_user_cannot_submit_same_patient_twice_within_the_same_submission(
     seed_users_fixture,
     client,
 ):
-    """Test NPDAUser cannot submit the same patient twice in the same submission."""
+    """Test NPDAUser cannot submit the same patient twice in the same submission in the same PDU."""
 
     # Get Alder Hey user from fixture
     ah_user = NPDAUser.objects.filter(
@@ -149,3 +150,88 @@ def test_npda_user_cannot_submit_same_patient_twice_within_the_same_submission(
     )
     # This patient should be in the previous year's submission as well as this year's submission
     assert Submission.objects.filter(paediatric_diabetes_unit=pdu).count() == 2
+
+
+@pytest.mark.django_db
+def test_npda_user_can_submit_same_patient_twice_within_the_same_submission_in_different_pdus(
+    seed_groups_fixture,
+    seed_users_fixture,
+    client,
+):
+    """Test NPDAUser cannot submit the same patient twice in the same submission in different PDUs."""
+
+    # Get Alder Hey user from fixture
+    ah_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
+    ).first()
+    gos_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=GOSH_PZ_CODE
+    ).first()
+
+    # Login as Alder Hey user
+    client = login_and_verify_user(client, ah_user)
+
+    # Get Alder Hey PDU
+    alderhey_pdu = PaediatricsDiabetesUnitFactory(pz_code=ALDER_HEY_PZ_CODE)
+    gos_pdu = PaediatricsDiabetesUnitFactory(pz_code=GOSH_PZ_CODE)
+
+    # Create a submission
+    new_alderhey_submission = Submission.objects.create(
+        paediatric_diabetes_unit=alderhey_pdu,
+        audit_year=audit_dates[0].year,
+        submission_date=timezone.now(),
+        submission_by=ah_user,  # user is the user who is logged in. Passed in as a parameter
+        submission_active=True,
+    )
+
+    new_gosh_submission = Submission.objects.create(
+        paediatric_diabetes_unit=gos_pdu,
+        audit_year=audit_dates[0].year,
+        submission_date=timezone.now(),
+        submission_by=gos_user,  # user is not logged in
+        submission_active=True,
+    )
+
+    # Create a patient
+    patient = PatientFactory()
+
+    # Add patient to submission
+    new_alderhey_submission.patients.add(patient)
+
+    # Check patient was not added to submission twice
+    assert new_alderhey_submission.patients.count() == 1
+    assert patient in new_alderhey_submission.patients.all()
+    assert new_alderhey_submission.patients.filter(pk=patient.pk).count() == 1
+    assert (  # There should be only one submission for the patient in this audit year and PDU
+        Submission.objects.filter(
+            audit_year=audit_dates[0].year, paediatric_diabetes_unit=alderhey_pdu
+        ).count()
+        == 1
+    )
+
+    assert new_gosh_submission.patients.count() == 0
+
+    # Try to add the same patient to GOSH submission
+    # asset an error was raised trying this
+    # with pytest.raises(Exception):
+    #     new_gosh_submission.patients.add(patient)
+    new_gosh_submission.patients.add(patient)
+
+    PatientSubmission = apps.get_model(app_label="npda", model_name="PatientSubmission")
+    # Check there are two submissions for the patient in this audit year
+    assert (
+        PatientSubmission.objects.filter(
+            patient=patient, submission__submission_active=True
+        ).count()
+        == 2
+    )
+
+    assert new_gosh_submission.patients.count() == 1
+    assert patient in new_gosh_submission.patients.all()
+    assert new_gosh_submission.patients.filter(pk=patient.pk).count() == 1
+    assert (  # There should be only one submission for the patient in this audit year and PDU
+        Submission.objects.filter(
+            audit_year=audit_dates[0].year, paediatric_diabetes_unit=gos_pdu
+        ).count()
+        == 1
+    )

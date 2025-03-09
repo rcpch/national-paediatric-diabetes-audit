@@ -82,11 +82,7 @@ class PatientVisitsListView(
         context["visits"] = calculated_visits
         context["patient"] = patient
         context["submission"] = submission
-
-        # If the patient has left the PDU, they may appear in another one but we record that as a separate Patient instance
-        paediatric_diabetes_unit = Transfer.objects.get(
-            patient=patient
-        ).paediatric_diabetes_unit
+        paediatric_diabetes_unit = submission.paediatric_diabetes_unit
 
         calculate_kpis = CalculateKPIS(
             calculation_date=datetime.date.today(), return_pt_querysets=False
@@ -126,9 +122,57 @@ class VisitCreateView(
         context["form_method"] = "create"
         context["button_title"] = "Create New Visit"
         context["visit_tabs"] = get_visit_tabs(form=None)
-        Transfer = apps.get_model("npda", "Transfer")
-        transfer = Transfer.objects.get(patient=patient, date_leaving_service=None)
-        context["paediatric_diabetes_unit"] = transfer.paediatric_diabetes_unit
+        # Getting the PDU for the patient most of the time will be the same as the selected PDU in session.
+        # However, if the user has selected a different PDU in the session but has come here from a national view
+        # then we can't use that.
+        if self.request.user.view_preference == 2:
+            # we potentially have a choice here if the patient is in multiple PDUs
+            PatientSubmission = apps.get_model("npda", "PatientSubmission")
+            if (
+                PatientSubmission.objects.filter(
+                    patient=patient,
+                    submission__audit_year=self.request.session.get(
+                        "selected_audit_year"
+                    ),
+                    submission__submission_active=True,
+                ).count()
+                > 1
+            ):
+                # this patient has more than one active submission
+                # if the user has selected a PDU in the session, we can use that
+                if PatientSubmission.objects.filter(
+                    patient=patient,
+                    submission__audit_year=self.request.session.get(
+                        "selected_audit_year"
+                    ),
+                    submission__submission_active=True,
+                    submission__paediatric_diabetes_unit=PaediatricDiabetesUnit.objects.get(
+                        pz_code=self.request.session.get("pz_code")
+                    ),
+                ).exists():
+                    context["paediatric_diabetes_unit"] = (
+                        PaediatricDiabetesUnit.objects.get(
+                            pz_code=self.request.session.get("pz_code")
+                        )
+                    )
+                else:
+                    # if we can't use the PDU in the session, we shall have to use the first one
+                    context["paediatric_diabetes_unit"] = (
+                        PatientSubmission.objects.filter(
+                            patient=patient,
+                            submission__audit_year=self.request.session.get(
+                                "selected_audit_year"
+                            ),
+                            submission__submission_active=True,
+                        )
+                        .first()
+                        .submission.paediatric_diabetes_unit
+                    )
+        else:
+            PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+            context["paediatric_diabetes_unit"] = PaediatricDiabetesUnit.objects.get(
+                pz_code=self.request.session.get("pz_code")
+            )
         return context
 
     def get_success_url(self):
@@ -180,11 +224,7 @@ class VisitUpdateView(
         context["form_method"] = "update"
         context["visit_tabs"] = get_visit_tabs(form=context["form"])
         visit = Visit.objects.get(pk=self.kwargs["pk"])
-        Transfer = apps.get_model("npda", "Transfer")
-        transfer = Transfer.objects.get(
-            patient=visit.patient, date_leaving_service=None
-        )
-        context["paediatric_diabetes_unit"] = transfer.paediatric_diabetes_unit
+
         context["patient"] = visit.patient
 
         return context

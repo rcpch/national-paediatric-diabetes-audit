@@ -1,9 +1,12 @@
 import pytest
 
+# Django imports
+from django.apps import apps
 from django.urls import reverse
 from django.utils.timezone import make_aware
 from http import HTTPStatus
 
+# RCPCH imports
 from project.constants.user import RCPCH_AUDIT_TEAM
 from project.npda.models import Patient, Submission, NPDAUser
 from project.npda.tests.utils import login_and_verify_user
@@ -23,8 +26,12 @@ def create_submission_with_patient(user):
         submission_by=user,
         paediatric_diabetes_unit=user.organisation_employers.first(),
     )
-
+    Transfer = apps.get_model("npda.Transfer")
     patient = PatientFactory()
+    # Update the transfer to match the user's PDU
+    Transfer.objects.filter(patient=patient).update(
+        paediatric_diabetes_unit=user.organisation_employers.first()
+    )
     submission.patients.add(patient)
 
     return patient

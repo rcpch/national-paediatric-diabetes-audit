@@ -68,7 +68,10 @@
                 <a class="btn flex p-1 h-full tooltip tooltip-right {% if nhs_number_error or gp_error %} text-rcpch_red {% else %} hover:text-rcpch_pink {% endif %}"
                    target="_blank"
                    href="{% url 'patient-update' patient.pk %}"
-                   data-tip="{% if unique_identifier_error or gp_error %} {{ unique_identifier_error }} {{ gp_error }} {% else %} {% if patient.is_in_transfer_in_the_last_year %}Patient in transfer... {% else %}View patient (NPDA ID {{ patient.pk }}) details (opens new tab){% endif %} {% endif %}">
+                   data-tip="{% if unique_identifier_error or gp_error %} {{ unique_identifier_error }} {{ gp_error }} {% else %} {% if patient.is_in_transfer_in_the_last_year %}Patient in transfer... {% endif %}View patient (NPDA ID {{ patient.pk }}) details (opens new tab) {% if patient.is_part_of_another_active_submission %} Note {% nhs_number_vs_urn pz_code patient %} is part of another active submission for {{ request.session.selected_audit_year }} in {% for submission_unit in patient.paediatric_diabetes_units_which_are_part_of_another_active_submission %} {{ submission_unit.submission.paediatric_diabetes_unit }}, {% endfor %} {% endif %} {% endif %} ">
+                  {% if patient.is_part_of_another_active_submission %}
+                    <i class="fa-solid fa-copy fa"></i>
+                  {% endif %}
                   <span class="fa-stack">
                     {% if unique_identifier_error or gp_error %}
                       <i class="fa-circle fa-stack-1x fas"></i>
@@ -80,7 +83,7 @@
                   <strong class="font-mono text-xs">
                     {% nhs_number_vs_urn pz_code patient %}
                     {% if patient.is_in_transfer_in_the_last_year %}
-                      <i class="fa-solid fa-handshake"></i>
+                      <i class="fa-solid fa-handshake fa-xl"></i>
                     {% endif %}
                   </strong>
                 </span>
@@ -217,15 +220,41 @@
       {% include 'partials/page_elements/patient_table_page_controls.html' %}
     </tfoot>
   </table>
+  {% include 'partials/patient_table_tips.html' with pz_code=pz_code %}
 </div>
 {% else %}
-<div role="alert" class="alert mt-2">
-  <svg xmlns="http://www.w3.org/2000/svg"
-       class="w-6 h-6 shrink-0 stroke-current"
-       fill="none"
-       viewBox="0 0 24 24">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-  </svg>
-  <span>No patients found.</span>
+<div class="hero bg-base-200 min-h-screen">
+  <div class="hero-content text-center">
+    <div class="max-w-md">
+      <h1 class="text-5xl font-bold font-montserrat text-rcpch_light_blue">
+        {% if can_complete_questionnaire %}
+          Start your {{ selected_audit_year }} submission by adding a patient...
+        {% else %}
+          You have no patients in your submission for {{ selected_audit_year }}...
+        {% endif %}
+      </h1>
+      <i class="fa-solid fa-hand-sparkles text-5xl text-rcpch_light_blue opacity-0 animate-sparkle mt-2"></i>
+      {% if can_alter_this_audit_year_submission %}
+        <div class="py-6">
+          {% if request.session.can_complete_questionnaire %}
+            <a href="{% url 'patient-add' %}"
+               class="btn btn-info h-auto w-full md:w-auto">
+              <i class="fa-solid fa-person-circle-plus"></i>
+              Add patient
+            </a>
+          {% else %}
+            <a href="{% url 'upload_csv' %}"
+               class="btn btn-info h-auto w-full md:w-auto">
+              <i class="fa-solid fa-person-circle-plus"></i>
+              Upload CSV
+            </a>
+          {% endif %}
+        </div>
+        <p class="mt-2 font-montserrat">
+          <i>(You can also find this button in the search bar at the top)</i>
+        </p>
+      {% endif %}
+    </div>
+  </div>
 </div>
 {% endif %}

@@ -14,14 +14,15 @@ from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.db.models import Count, Case, When, Max, Q, F
 from django.forms import BaseForm
 from django.forms import BaseForm
+from django.http import HttpResponse
 from django.http.response import HttpResponse
+from django.contrib.postgres.aggregates import StringAgg
 from django.shortcuts import render, redirect, reverse
 from django.template.loader import render_to_string
-from django.views.generic.edit import CreateView, UpdateView, DeleteView
-from django.views.generic import ListView
-from django.http import HttpResponse
 from django.urls import reverse_lazy
 from django.utils.html import escape
+from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django.views.generic import ListView
 
 
 # Third party imports
@@ -104,7 +105,9 @@ class PatientListView(
 
         # apply filters and annotations to the queryset
         pz_code = self.request.session.get("pz_code")
-        paediatric_diabetes_unit = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+        paediatric_diabetes_unit = PaediatricDiabetesUnit.objects.filter(
+            pz_code=pz_code
+        ).first()
         if paediatric_diabetes_unit.lead_organisation_geocoordinates is None:
             # we cannot make an API call for each patient  every time we load the page,
             # so we only do it if the geocoordinates are missing
@@ -324,6 +327,16 @@ class PatientCreateView(
     success_message = "New child record created successfully"
     success_url = reverse_lazy("patients")
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+        pz_code = self.request.session.get("pz_code")
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+        audit_year = self.request.session.get("selected_audit_year")
+        kwargs["paediatric_diabetes_unit"] = pdu
+        kwargs["audit_year"] = audit_year
+        return kwargs
+
     def get_context_data(self, **kwargs):
         PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
         pz_code = self.request.session.get("pz_code")
@@ -335,7 +348,7 @@ class PatientCreateView(
         ):  # if the PDU has a parent, include the parent name in the title
             title = f"Add New Child to {pdu.lead_organisation_name} - {pdu.parent_name} ({pz_code})"
         context["title"] = title
-        context["button_title"] = "Add"
+        context["button_title"] = "Create New Child Patient Record"
         context["form_method"] = "create"
         return context
 
@@ -444,7 +457,7 @@ class PatientUpdateView(
         ):  # if the PDU has a parent, include the parent name in the title
             title = f"Add New Child to {transfer.paediatric_diabetes_unit.lead_organisation_name} - {transfer.paediatric_diabetes_unit.parent_name} ({transfer.paediatric_diabetes_unit.pz_code})"
         context["title"] = title
-        context["button_title"] = "Save"
+        context["button_title"] = "Save Changes"
         context["form_method"] = "update"
         context["patient_id"] = self.kwargs["pk"]
         return context

@@ -33,6 +33,11 @@
                 </select>
               {% else %}
                 {% if viewable %}
+                  {% if field.field.required or field.id_for_label == 'id_nhs_number' or field.id_for_label == 'id_unique_reference_number' %}
+                    <div class="indicator">
+                      <span class="indicator-item badge badge-lg bg-rcpch_pink text-white ">Required</span>
+                    </div>
+                  {% endif %}
                   <input id="{{ field.id_for_label }}"
                          name="{{ field.html_name }}"
                          class="input rcpch-input-text {% if not can_alter_this_audit_year_submission or not can_use_questionnaire %}opacity-40 pointer-events-none{% endif %}"
@@ -119,5 +124,45 @@
         {% endif %}
       </div>
     </form>
+    <div role="alert" class="alert mt-4">
+      <i class="fa-solid fa-lightbulb text-rcpch_pink fa-3x"></i>
+      <span>
+        <strong>Helpful Tips:</strong>
+        <li>
+          Only those users with the correct permissions can edit or delete patients. If your Paediatric Diabetes Unit has opted to submit the audit by csv upload, you will not be able to edit or delete patients here, but you can still view them.
+        </li>
+        <li>
+          <div class="badge bg-rcpch_pink text-white badge-lg">Required</div>
+          indicates that the field is mandatory. The form will not submit if this field is empty.
+        </li>
+        <li>
+          All entries are optional except
+          <div class="badge bg-rcpch_light_blue text-white badge-lg">
+            {% nhs_number_vs_urn pz_code %}
+          </div>
+          <div class="badge bg-rcpch_light_blue text-white badge-lg">Date of Birth</div>
+          <div class="badge bg-rcpch_light_blue text-white badge-lg">
+            Date of Diagnosis
+          </div>
+          <div class="badge bg-rcpch_light_blue text-white badge-lg">Diabetes Type</div>
+        </li>
+        <li>
+          You don't need to supply the GP practice ODS code. We will look this up for you using the postcode.
+        </li>
+        <li>
+          <i class="fa-solid fa-exclamation-circle text-rcpch_red"></i> indicates that there are errors in the form. The errors should be displayed alongside in red.
+        </li>
+        <li>
+          The form will not submit if any items fail validation. Don't worry if you make a mistake - you can always come back and correct it.
+        </li>
+        <li>
+          If you have any questions, please contact the NPDA team at
+          <a href="mailto:{{ npda_email }}" class="text-rcpch_light_blue">{{ npda_email }}</a>
+        </li>
+        <div class="mt-2">
+          <i class="fas fa-smile text-rcpch_pink"></i> This platform is built and maintained by the RCPCH Incubator developer team. If you find any errors or have any suggestions, we are keen to know about them so please report them to the NPDA team.
+        </div>
+      </span>
+    </div>
   </div>
 {% endblock %}

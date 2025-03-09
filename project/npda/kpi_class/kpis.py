@@ -245,6 +245,12 @@ class CalculateKPIS:
         )
         diagnosed_in_period = patient.diagnosis_date in self.AUDIT_DATE_RANGE
         died_in_period = patient.death_date in self.AUDIT_DATE_RANGE
+        print(
+            "within kpi function: ",
+            patient,
+            pdu,
+            Transfer.objects.filter(patient=patient),
+        )
         transfer_in_period = (
             Transfer.objects.get(
                 patient=patient,

@@ -1,0 +1,49 @@
+{% load npda_tags %}
+<div role="alert" class="alert mt-4">
+  <i class="fa-solid fa-lightbulb text-rcpch_pink fa-3x"></i>
+  <span>
+    <strong>Helpful Tips:</strong>
+    <li>
+      This is a list of all the patients in your Paediatric Diabetes Unit ({{ pz_code }}) <i><strong>in your current submission</strong></i>.
+    </li>
+    <li>
+      You can click on the visits link for each patient to view all of their visits.
+    </li>
+    <li>
+      You can click on a patient's {% nhs_number_vs_urn pz_code %} to view or edit their details (if you have authorization). This will open a new tab in your browser.
+    </li>
+    <li>
+      If the patient is part of another submission in a different Paediatric Diabetes Unit, an additional <i class="fa-solid fa-copy fa"></i> icon will appear beside their NPDA ID. Hover over the icon to see the name of the PDU.
+    </li>
+    <li>
+      The NPDA ID is a unique identifier for each patient in the NPDA and can be found by hovering over the patient's {% nhs_number_vs_urn pz_code %}. If you have any questions about a patient, please contact the NPDA team, quoting the NPDA ID.
+    </li>
+    <li>
+      Patients are divided into those who have Data Quality Issues and those who have not.
+    </li>
+    <li>
+      Patients who have not completed a full year of care are highlighted in yellow and will have a <i class="fa-solid fa-handshake fa-xl"></i> icon beside their {% nhs_number_vs_urn pz_code %}. See the <a href="{% docs_url %}/developer/kpis/patient_characteristics/#calculation_3"
+    class="text-rcpch_light_blue">documentation</a> for more information on definitions.
+    </li>
+    <li>
+      If there are any errors in the patient data, you will see a red exclamation mark next to the measure in the table. Hover over the exclamation mark to see the error.
+    </li>
+    <li>
+      The pink arrow at the end of each row will take you to the patient's visits. The number of visits is shown in brackets. If there are any errors in the visits, the arrow will show in red and the number will reflect the number of visits with errors as a fraction of the total visits.
+    </li>
+    <li>
+      The <span class="badge bg-rcpch_pink text-white badge-lg"><i class="fa-arrow-down-a-z fa-solid mr-2"></i></span> or <span class="badge bg-rcpch_pink text-white badge-lg"><i class="fa-arrow-down-1-9 fa-solid mr-2"></i></span> icon in the table header allow you to sort the table by that column. Click on the icon to sort in ascending or descending order. They will appear grey if the table is not sorted by that column, white if they are.
+    </li>
+    <li>
+      Use the search bar to find a specific patient by name, NHS number, or NPDA ID. The search bar accepts multiple {% nhs_number_vs_urn pz_code %}s or NPDA IDs, separated by commas.
+    </li>
+    <li>
+      Only those users with the correct permissions can edit or delete patients. If your Paediatric Diabetes Unit has opted to submit to the audit by csv upload, you will not be able to edit or delete patients or their visits here, but you can still view them.
+    </li>
+    <li>
+      If you have any questions, please contact the NPDA team at
+      <a href="mailto:{{ npda_email }}" class="text-rcpch_light_blue">{{ site_contact_email }}</a>
+    </li>
+    <i class="fas fa-smile text-rcpch_pink"></i> This platform is built and maintained by the RCPCH Incubator developer team. If you find any errors or have any suggestions, we are keen to know about them so please report them to the NPDA team.
+  </span>
+</div>

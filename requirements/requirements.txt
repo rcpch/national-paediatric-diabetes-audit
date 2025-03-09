@@ -5,6 +5,7 @@ httpx==0.27.2
 
 # third party imports
 ## django and misc
+channels==4.2.0
 dj_database_url==2.1.0
 django
 django-filter==23.5
