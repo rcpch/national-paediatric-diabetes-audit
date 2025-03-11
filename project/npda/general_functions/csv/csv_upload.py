@@ -120,6 +120,15 @@ async def csv_upload(
 
         return form
 
+    def can_save_field(form, target_field_name):
+        for field_name, errors in form.errors.as_data().items():
+            if field_name == target_field_name:
+                for error in errors:
+                    if error.code in ["invalid", "invalid_choice"]:
+                        return False
+
+        return True
+
     def retain_errors_and_invalid_field_data(form):
         # We want to retain fields even if they're invalid so that we can return them to the user
         # Use the field value from cleaned_data, falling back to data if it's not there
@@ -127,8 +136,10 @@ async def csv_upload(
             setattr(form.instance, key, value)
 
         for key, value in form.data.items():
-            if key not in form.cleaned_data:
+            if key not in form.cleaned_data and can_save_field(form, key):
                 setattr(form.instance, key, value)
+            elif not hasattr(form.instance, key):
+                setattr(form.instance, key, None)
 
         form.instance.is_valid = form.is_valid()
         form.instance.errors = (

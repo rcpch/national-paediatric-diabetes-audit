@@ -3337,6 +3337,7 @@ def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
 @pytest.mark.parametrize(
     "model_field",
     [
+        # TODO MRB: no validation currently for fields on Transfer
         pytest.param("date_leaving_service"),
         pytest.param("death_date"),
         pytest.param("visit_date"),
@@ -3356,7 +3357,7 @@ def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
         pytest.param("flu_immunisation_recommended_date"),
         pytest.param("sick_day_rules_training_date"),
         pytest.param("hospital_admission_date"),
-        pytest.param("hospital_discharge_date")           
+        pytest.param("hospital_discharge_date")
     ]
 )
 @pytest.mark.django_db
@@ -3382,7 +3383,7 @@ def test_bad_data_for_date_fields(test_user, dummy_sheet_csv, model_field):
     errors = csv_upload_sync(test_user, df)
 
     assert len(errors) > 0
-    assert model.objects.count() == 0
+    assert model.objects.count() == 1
 
     instance = model.objects.first()
 
@@ -3423,7 +3424,7 @@ def test_bad_data_for_decimal_fields(test_user, dummy_sheet_csv, model_field):
     errors = csv_upload_sync(test_user, df)
 
     assert len(errors) > 0
-    assert model.objects.count() == 0
+    assert model.objects.count() == 1
 
     instance = model.objects.first()
 
