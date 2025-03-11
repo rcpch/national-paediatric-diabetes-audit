@@ -88,7 +88,11 @@ async def csv_upload(
     async def validate_patient_using_form(row, async_client):
         fields = row_to_dict(row, Patient)
 
-        form = PatientForm(fields)
+        form = PatientForm(
+            fields,
+            paediatric_diabetes_unit=pdu,
+            audit_year=audit_year,
+        )
         form.async_validation_results = await validate_patient_async(
             postcode=fields["postcode"],
             gp_practice_ods_code=fields["gp_practice_ods_code"],
@@ -229,7 +233,9 @@ async def csv_upload(
     # dict[number, dict[str, list[str]]]
     errors_to_return = collections.defaultdict(lambda: collections.defaultdict(list))
 
-    async def save_patient_and_transfer(patient_form, transfer_fields, patient_row_index):
+    async def save_patient_and_transfer(
+        patient_form, transfer_fields, patient_row_index
+    ):
         try:
             retain_errors_and_invalid_field_data(patient_form)
 
@@ -242,7 +248,7 @@ async def csv_upload(
                 await Transfer.objects.acreate(**transfer_fields)
 
                 await new_submission.patients.aadd(patient)
-            
+
             return patient
         except Exception as error:
             logger.exception(
@@ -251,12 +257,10 @@ async def csv_upload(
 
             # We don't know what field caused the error so add to __all__
             errors_to_return[patient_row_index]["__all__"].append(str(error))
-    
+
     async def save_visits(patient, visit_forms):
         for visit_form, visit_row_index in visit_forms:
-            record_errors_from_form(
-                errors_to_return, visit_row_index, visit_form
-            )
+            record_errors_from_form(errors_to_return, visit_row_index, visit_form)
 
             try:
                 retain_errors_and_invalid_field_data(visit_form)
@@ -280,7 +284,7 @@ async def csv_upload(
         patient_form = await validate_patient_using_form(first_row, async_client)
 
         # Pull through cleaned_data so we can use it in the async visit validators
-        patient_form.is_valid()
+        await sync_to_async(patient_form.is_valid)()
 
         record_errors_from_form(errors_to_return, patient_row_index, patient_form)
 
@@ -290,16 +294,20 @@ async def csv_upload(
                 patient_form, row, async_client
             )
             visit_forms.append((visit_form, int(row["row_index"])))
-        
+
         nhs_number = patient_form.cleaned_data.get("nhs_number")
-        unique_reference_number = patient_form.cleaned_data.get("unique_reference_number")
+        unique_reference_number = patient_form.cleaned_data.get(
+            "unique_reference_number"
+        )
 
         if nhs_number is None and unique_reference_number is None:
             errors_to_return[patient_row_index]["__all__"].append(
                 "Either NHS Number or Unique Reference Number must be provided."
             )
         else:
-            patient = await save_patient_and_transfer(patient_form, transfer_fields, patient_row_index)
+            patient = await save_patient_and_transfer(
+                patient_form, transfer_fields, patient_row_index
+            )
 
             if patient:
                 await save_visits(patient, visit_forms)
@@ -322,10 +330,11 @@ async def csv_upload(
             throttle_semaphore = asyncio.Semaphore(5)
 
             for _, rows in visits_by_patient:
+
                 async def task(rows):
                     async with throttle_semaphore:
                         await process_rows_for_patient(rows, async_client)
-                
+
                 tg.create_task(task(rows))
 
     # Store the errors to report back to the user in the Data Quality Report

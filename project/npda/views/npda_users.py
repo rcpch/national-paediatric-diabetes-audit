@@ -482,9 +482,9 @@ class RCPCHLoginView(TwoFactorLoginView):
             password_reset_date = user.password_last_set + timezone.timedelta(days=90)
             if user.is_active and (password_reset_date <= timezone.now()):
                 messages.add_message(
-                    request=self.request,
-                    extra_tags=messages.ERROR,
-                    message=f"Your password has expired. Please reset it.",
+                    self.request,
+                    messages.ERROR,
+                    f"Your password has expired. Please reset it.",
                 )
                 return redirect(reverse("password_reset"))
 

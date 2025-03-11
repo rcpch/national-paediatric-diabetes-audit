@@ -82,9 +82,7 @@ class PatientVisitsListView(
         context["visits"] = calculated_visits
         context["patient"] = patient
         context["submission"] = submission
-
-        # If the patient has left the PDU, they may appear in another one but we record that as a separate Patient instance
-        pdu = Transfer.objects.get(patient=patient).paediatric_diabetes_unit
+        paediatric_diabetes_unit = submission.paediatric_diabetes_unit
 
         calculate_kpis = CalculateKPIS(
             calculation_date=datetime.date.today(), return_pt_querysets=False
@@ -93,10 +91,11 @@ class PatientVisitsListView(
         # for a single patient's calculation
         kpi_calculations_object = calculate_kpis.calculate_kpis_for_single_patient(
             patient,
-            pdu,
+            paediatric_diabetes_unit,
         )
 
         context["kpi_calculations_object"] = kpi_calculations_object
+        context["paediatric_diabetes_unit"] = paediatric_diabetes_unit
 
         return context
 
@@ -121,8 +120,59 @@ class VisitCreateView(
         context["patient"] = patient
         context["title"] = "Add New Visit"
         context["form_method"] = "create"
-        context["button_title"] = "Add"
+        context["button_title"] = "Create New Visit"
         context["visit_tabs"] = get_visit_tabs(form=None)
+        # Getting the PDU for the patient most of the time will be the same as the selected PDU in session.
+        # However, if the user has selected a different PDU in the session but has come here from a national view
+        # then we can't use that.
+        if self.request.user.view_preference == 2:
+            # we potentially have a choice here if the patient is in multiple PDUs
+            PatientSubmission = apps.get_model("npda", "PatientSubmission")
+            if (
+                PatientSubmission.objects.filter(
+                    patient=patient,
+                    submission__audit_year=self.request.session.get(
+                        "selected_audit_year"
+                    ),
+                    submission__submission_active=True,
+                ).count()
+                > 1
+            ):
+                # this patient has more than one active submission
+                # if the user has selected a PDU in the session, we can use that
+                if PatientSubmission.objects.filter(
+                    patient=patient,
+                    submission__audit_year=self.request.session.get(
+                        "selected_audit_year"
+                    ),
+                    submission__submission_active=True,
+                    submission__paediatric_diabetes_unit=PaediatricDiabetesUnit.objects.get(
+                        pz_code=self.request.session.get("pz_code")
+                    ),
+                ).exists():
+                    context["paediatric_diabetes_unit"] = (
+                        PaediatricDiabetesUnit.objects.get(
+                            pz_code=self.request.session.get("pz_code")
+                        )
+                    )
+                else:
+                    # if we can't use the PDU in the session, we shall have to use the first one
+                    context["paediatric_diabetes_unit"] = (
+                        PatientSubmission.objects.filter(
+                            patient=patient,
+                            submission__audit_year=self.request.session.get(
+                                "selected_audit_year"
+                            ),
+                            submission__submission_active=True,
+                        )
+                        .first()
+                        .submission.paediatric_diabetes_unit
+                    )
+        else:
+            PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+            context["paediatric_diabetes_unit"] = PaediatricDiabetesUnit.objects.get(
+                pz_code=self.request.session.get("pz_code")
+            )
         return context
 
     def get_success_url(self):
@@ -169,10 +219,13 @@ class VisitUpdateView(
         context["patient_id"] = self.kwargs["patient_id"]
         context["nhs_number"] = context["form"].patient.nhs_number
         context["visit_id"] = self.kwargs["pk"]
-        context["title"] = "Edit Visit Details"
-        context["button_title"] = "Save"
+        context["title"] = "Edit/Update Visit Details"
+        context["button_title"] = "Save Changes"
         context["form_method"] = "update"
         context["visit_tabs"] = get_visit_tabs(form=context["form"])
+        visit = Visit.objects.get(pk=self.kwargs["pk"])
+
+        context["patient"] = visit.patient
 
         return context
 
@@ -191,7 +244,6 @@ class VisitUpdateView(
         return initial
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
-        print("form_valid is called int he view")
         if "delete" in self.request.POST:
             return redirect(reverse("visit-delete", kwargs={"pk": self.kwargs["pk"]}))
         visit = form.save(commit=True)
@@ -229,3 +281,16 @@ class VisitDeleteView(
         return reverse(
             "patient_visits", kwargs={"patient_id": self.kwargs["patient_id"]}
         )
+
+    def post(self, request, *args, **kwargs):
+        if "cancel" in request.POST:
+            return redirect(
+                reverse(
+                    "visit-update",
+                    kwargs={
+                        "pk": self.kwargs["pk"],
+                        "patient_id": self.kwargs["patient_id"],
+                    },
+                )
+            )
+        return super().post(request, *args, **kwargs)

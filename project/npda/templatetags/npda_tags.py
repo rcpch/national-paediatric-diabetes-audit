@@ -1,9 +1,12 @@
-import re
+from datetime import date
 import itertools
 import logging
+import re
 
 from django import template, forms
 from django.conf import settings
+from django.contrib.gis.measure import D
+from django.utils.html import conditional_escape, mark_safe
 
 from ...constants import (
     # VisitCategories,
@@ -11,9 +14,6 @@ from ...constants import (
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
 )
-
-from django.contrib.gis.measure import D
-from datetime import date
 
 
 register = template.Library()
@@ -128,13 +128,11 @@ def error_for_field(errors_by_field, field):
     if errors_by_field is None:
         return ""
 
-    concatenated_fields = ""
-
     errors = errors_by_field[field] if field in errors_by_field else []
 
-    error_messages = [error["message"] for error in errors]
+    error_messages = [conditional_escape(error["message"]) for error in errors]
 
-    return "\n".join(error_messages)
+    return mark_safe("\n".join(error_messages))
 
 
 @register.simple_tag
@@ -211,14 +209,6 @@ def docs_url():
 
 
 @register.filter
-def format_nhs_number(nhs_number):
-    if nhs_number and len(nhs_number) >= 10:
-        return f"{nhs_number[:3]} {nhs_number[3:6]} {nhs_number[6:]}"
-
-    return nhs_number
-
-
-@register.filter
 def get_key_where_true(dictionary: dict) -> str:
     """Get the first key where the value is True.
 
@@ -270,11 +260,25 @@ def nhs_number_vs_urn(pz_code, patient=None):
         # Jersey
         return "Unique Reference Number"
     else:
-        if patient and patient.nhs_number:
-            if len(patient.nhs_number) >= 10:
+        if patient:
+            if patient.nhs_number:
                 return f"{patient.nhs_number[:3]} {patient.nhs_number[3:6]} {patient.nhs_number[6:]}"
-            return patient.nhs_number
+            else:
+                return patient.unique_reference_number
         return "NHS Number"
+
+
+@register.simple_tag
+def format_nhs_number(nhs_number):
+    """
+    Formats the NHS number with spaces
+    If the NHS number is less than 10 characters or more, it will return the original value
+    Used in the patient list page to format the NHS number of badges
+    """
+    if nhs_number and len(nhs_number) == 10 and nhs_number.isdigit():
+        return f"{nhs_number[:3]} {nhs_number[3:6]} {nhs_number[6:]}"
+
+    return nhs_number
 
 
 @register.simple_tag

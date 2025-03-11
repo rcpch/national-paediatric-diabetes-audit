@@ -1,5 +1,5 @@
 from datetime import datetime
-
+from django.conf import settings
 from project.npda.general_functions import get_current_audit_year
 
 
@@ -54,3 +54,7 @@ def can_use_questionnaire(request):
         return {"can_use_questionnaire": True}
 
     return {"can_use_questionnaire": False}
+
+
+def site_contact_email(request):
+    return settings.SITE_CONTACT_EMAIL
