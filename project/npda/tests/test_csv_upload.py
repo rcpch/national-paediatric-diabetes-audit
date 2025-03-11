@@ -3227,7 +3227,6 @@ def test_bad_data_for_ethnic_category(test_user, dummy_sheet_csv, value, expecte
 
 # TODO MRB:
 #  - catastrophic failure fields: date of birth and diabetes diagnosis 
-#  - decimal fields
 #
 # What error codes do we get for these?
 #
@@ -3374,6 +3373,47 @@ def test_bad_data_for_date_fields(test_user, dummy_sheet_csv, model_field):
                 "row": 1,
                 "column": column,
                 "value": "NOT A DATE"
+            }
+        ]
+    )
+
+    df = read_csv_from_str(one_row_csv).df
+
+    errors = csv_upload_sync(test_user, df)
+
+    assert len(errors) > 0
+    assert model.objects.count() == 0
+
+    instance = model.objects.first()
+
+    assert getattr(instance, model_field) == None
+    assert model_field in instance.errors
+
+
+@pytest.mark.parametrize(
+    "model_field",
+    [
+        pytest.param("height"),
+        pytest.param("weight"),
+        pytest.param("hba1c"),
+        pytest.param("albumin_creatinine_ratio"),
+        pytest.param("total_cholesterol")         
+    ]
+)
+@pytest.mark.django_db
+def test_bad_data_for_decimal_fields(test_user, dummy_sheet_csv, model_field):
+    headings = headings_for_model_field(model_field)
+
+    column = headings["heading"]
+    model = apps.get_model("npda", headings["model"])
+
+    one_row_csv = modify_raw_csv(dummy_sheet_csv,
+        end=2, # exclusive
+        replacements = [
+            {
+                "row": 1,
+                "column": column,
+                "value": "STRING"
             }
         ]
     )
