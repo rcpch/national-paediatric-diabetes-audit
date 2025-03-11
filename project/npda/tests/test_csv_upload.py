@@ -3226,8 +3226,7 @@ def test_bad_data_for_ethnic_category(test_user, dummy_sheet_csv, value, expecte
     assert "ethnicity" in patient.errors
 
 # TODO MRB:
-#  - integer fields (eg systolic_blood_pressure)
-#  - date fields
+#  - catastrophic failure fields: date of birth and diabetes diagnosis 
 #  - decimal fields
 #
 # What error codes do we get for these?
@@ -3290,9 +3289,7 @@ def test_bad_data_for_positive_small_integer_fields(test_user, dummy_sheet_csv, 
         errors = csv_upload_sync(test_user, df)
 
         assert len(errors) > 0, assertion_message
-
-        if model.objects.count() == 0:
-            assert False, assertion_message
+        assert model.objects.count() == 0, assertion_message
 
         instance = model.objects.first()
 
@@ -3328,10 +3325,65 @@ def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
 
     errors = csv_upload_sync(test_user, df)
 
-    assert len(errors) > 0, assertion_message
+    assert len(errors) > 0
 
-    if model.objects.count() == 0:
-        assert False, assertion_message
+    assert model.objects.count() == 0
+
+    instance = model.objects.first()
+
+    assert getattr(instance, model_field) == None
+    assert model_field in instance.errors
+
+
+@pytest.mark.parametrize(
+    "model_field",
+    [
+        pytest.param("date_leaving_service"),
+        pytest.param("death_date"),
+        pytest.param("visit_date"),
+        pytest.param("height_weight_observation_date"),
+        pytest.param("hba1c_date"),
+        pytest.param("blood_pressure_observation_date"),
+        pytest.param("foot_examination_observation_date"),
+        pytest.param("retinal_screening_observation_date"),
+        pytest.param("albumin_creatinine_ratio_date"),
+        pytest.param("total_cholesterol_date"),
+        pytest.param("thyroid_function_date"),
+        pytest.param("coeliac_screen_date"),
+        pytest.param("psychological_screening_assessment_date"),
+        pytest.param("smoking_cessation_referral_date"),
+        pytest.param("carbohydrate_counting_level_three_education_date"),
+        pytest.param("dietician_additional_appointment_date"),
+        pytest.param("flu_immunisation_recommended_date"),
+        pytest.param("sick_day_rules_training_date"),
+        pytest.param("hospital_admission_date"),
+        pytest.param("hospital_discharge_date")           
+    ]
+)
+@pytest.mark.django_db
+def test_bad_data_for_date_fields(test_user, dummy_sheet_csv, model_field):
+    headings = headings_for_model_field(model_field)
+
+    column = headings["heading"]
+    model = apps.get_model("npda", headings["model"])
+
+    one_row_csv = modify_raw_csv(dummy_sheet_csv,
+        end=2, # exclusive
+        replacements = [
+            {
+                "row": 1,
+                "column": column,
+                "value": "NOT A DATE"
+            }
+        ]
+    )
+
+    df = read_csv_from_str(one_row_csv).df
+
+    errors = csv_upload_sync(test_user, df)
+
+    assert len(errors) > 0
+    assert model.objects.count() == 0
 
     instance = model.objects.first()
 
