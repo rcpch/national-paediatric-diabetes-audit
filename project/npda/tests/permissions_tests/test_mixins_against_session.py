@@ -276,3 +276,42 @@ class TestQuestionnaireView:
 
         assert response.status_code == 403
         # Cannot check if the visit was not saved as a visit is created in the VisitForm instance
+
+    def test_csv_uploaders_can_view_patient(self):
+        """
+        They can't edit the patient but can view them (the UI displays read only)
+        """
+        assert not self.ah_user.is_rcpch_audit_team_member
+
+        patient = PatientFactory()
+
+        session = self.client.session
+        session["can_complete_questionnaire"] = False
+        session.save()
+
+        url = reverse("patient-update", kwargs={"pk": patient.pk})
+
+        response = self.client.get(url)
+        assert response.status_code == 200
+    
+    def test_csv_uploaders_can_view_visit(self):
+        """
+        They can't edit the visit but can view it (the UI displays read only)
+        """
+        assert not self.ah_user.is_rcpch_audit_team_member
+
+        patient = PatientFactory()
+        visit = VisitFactory(patient=patient)
+
+        session = self.client.session
+        session["can_complete_questionnaire"] = False
+        session.save()
+
+        url = reverse("visit-update", kwargs={
+            "patient_id": patient.pk,
+            "pk": visit.pk
+        })
+
+        response = self.client.get(url)
+        assert response.status_code == 200
+
