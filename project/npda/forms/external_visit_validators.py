@@ -35,7 +35,7 @@ class VisitExternalValidationResult:
 async def _calculate_centiles_z_scores(
     birth_date: date, observation_date: date, sex: int, measurement_method: str, observation_value: Decimal | None, async_client: AsyncClient
 ) -> CentileAndSDS | None:
-    if observation_value is None:
+    if observation_value is None or observation_value <= 0:
         return None
 
     try:
@@ -87,7 +87,22 @@ async def validate_visit_async(
 
     bmi = None
 
-    if height is not None and weight is not None:
+    valid_height = height is not None
+    valid_weight = weight is not None
+
+    if valid_height and height <= 0:
+        logger.warning(
+            "Height is <=0. Cannot calculate centiles and z-scores."
+        )
+        valid_height = False
+    
+    if valid_weight and weight <= 0:
+        logger.warning(
+            "Weight is <=0. Cannot calculate centiles and z-scores."
+        )
+        valid_weight = False
+
+    if valid_height and valid_weight:
         bmi = calculate_bmi(height, weight)
         ret.bmi = bmi
 
