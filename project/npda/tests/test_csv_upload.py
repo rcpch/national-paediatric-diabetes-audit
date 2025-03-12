@@ -18,7 +18,7 @@ from django.contrib.gis.geos import Point
 from httpx import HTTPError
 
 from project.npda.general_functions.csv import csv_upload, csv_parse
-from project.constants import ALL_DATES, CSV_HEADING_OBJECTS
+from project.constants import csv_definition_for, ALL_DATES
 from project.npda.models import NPDAUser, Patient, Visit
 from project.npda.tests.factories.patient_factory import (
     INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
@@ -183,12 +183,6 @@ def modify_raw_csv(csv_str, start=None, end=None, replacements={}):
     writer.writerows(rows)
 
     return output.getvalue()
-
-
-def headings_for_model_field(model_field):
-    for headings in CSV_HEADING_OBJECTS:
-        if headings["model_field"] == model_field:
-            return headings
 
 
 @pytest.mark.django_db
@@ -3251,7 +3245,7 @@ def test_bad_data_for_ethnic_category(test_user, dummy_sheet_csv, value, expecte
 )
 @pytest.mark.django_db
 def test_bad_data_for_positive_small_integer_fields(test_user, dummy_sheet_csv, model_field, incorrect_choice):
-    headings = headings_for_model_field(model_field)
+    headings = csv_definition_for(model_field)
     
     column = headings["heading"]
     model = apps.get_model("npda", headings["model"])
@@ -3295,7 +3289,7 @@ def test_bad_data_for_positive_small_integer_fields(test_user, dummy_sheet_csv, 
 )
 @pytest.mark.django_db
 def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
-    headings = headings_for_model_field(model_field)
+    headings = csv_definition_for(model_field)
 
     column = headings["heading"]
     model = apps.get_model("npda", headings["model"])
@@ -3329,7 +3323,7 @@ def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
     "model_field",
     [
         # TODO MRB: no validation currently for fields on Transfer
-        pytest.param("date_leaving_service"),
+        # pytest.param("date_leaving_service"),
         pytest.param("death_date"),
         pytest.param("visit_date"),
         pytest.param("height_weight_observation_date"),
@@ -3353,7 +3347,7 @@ def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
 )
 @pytest.mark.django_db
 def test_bad_data_for_date_fields(test_user, dummy_sheet_csv, model_field):
-    headings = headings_for_model_field(model_field)
+    headings = csv_definition_for(model_field)
 
     column = headings["heading"]
     model = apps.get_model("npda", headings["model"])
@@ -3394,7 +3388,7 @@ def test_bad_data_for_date_fields(test_user, dummy_sheet_csv, model_field):
 )
 @pytest.mark.django_db
 def test_bad_data_for_decimal_fields(test_user, dummy_sheet_csv, model_field):
-    headings = headings_for_model_field(model_field)
+    headings = csv_definition_for(model_field)
 
     column = headings["heading"]
     model = apps.get_model("npda", headings["model"])

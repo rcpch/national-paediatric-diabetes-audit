@@ -378,3 +378,14 @@ NONNULL_FIELDS = [
     "PDU Number",
     "Visit/Appointment Date",
 ]
+
+def csv_definition_for(model_field_or_column: str):
+    match model_field_or_column:
+        case 'nhs_number' | 'NHS Number':
+            return UNIQUE_IDENTIFIER_ENGLAND
+        case 'unique_reference_number' | 'Unique Reference Number':
+            return UNIQUE_IDENTIFIER_JERSEY
+        case _:
+            for item in CSV_HEADING_OBJECTS:
+                if item["model_field"] == model_field_or_column or item["heading"] == model_field_or_column:
+                    return item

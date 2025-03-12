@@ -23,6 +23,7 @@ from ...constants.csv_headings import (
     CSV_HEADING_OBJECTS,
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
+    csv_definition_for
 )
 
 
@@ -120,19 +121,6 @@ def find_column_index_by_name(column_name: str, ws: Worksheet) -> int | None:
     return column_index
 
 
-def model_field_to_csv_heading(model_field: str) -> str:
-    match model_field:
-        case 'nhs_number':
-            return 'NHS Number'
-        case 'unique_reference_number':
-            return 'Unique Reference Number'
-        case _:
-            return next(
-                (item["heading"] for item in CSV_HEADING_OBJECTS if item["model_field"] == model_field),
-                model_field
-            )
-
-
 def flatten_errors(
     #  {row_number: {field_name: [error_messages]}}
     errors: dict[int, dict[str, list[str]]],
@@ -140,7 +128,7 @@ def flatten_errors(
     identifier_field: str,
     csv_headings: List[Dict[str, str]],
 ) -> pd.DataFrame:
-    identifier_column = model_field_to_csv_heading(identifier_field)
+    identifier_column = csv_definition_for(identifier_field)["heading"]
 
     rows = []
 
@@ -150,13 +138,13 @@ def flatten_errors(
                 # 0 based indexing and the column header. So + 2
                 "Original CSV Row": int(row_ix) + 2,
                 identifier_field: original_data.loc[int(row_ix), identifier_column],
-                "Column": model_field_to_csv_heading(field),
+                "Column": csv_definition_for(field["heading"]),
                 "Errors": "; ".join(errors),
             })
 
     return pd.DataFrame(rows, columns=[
         "Original CSV Row",
-        model_field_to_csv_heading(identifier_field),
+        csv_definition_for(identifier_field)["heading"],
         "Column",
         "Errors"
     ])
