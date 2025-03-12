@@ -285,8 +285,7 @@ class TestQuestionnaireView:
         assert not self.ah_user.is_rcpch_audit_team_member
 
         patient = PatientFactory()
-        # TODO MRB: why is there more than one AH PDU?
-        pdu = PaediatricDiabetesUnit.objects.filter(pz_code=ALDER_HEY_PZ_CODE).first()
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
         
         transfer = Transfer.objects.get(patient=patient)
         transfer.paediatric_diabetes_unit = pdu
@@ -308,8 +307,7 @@ class TestQuestionnaireView:
         assert not self.ah_user.is_rcpch_audit_team_member
 
         patient = PatientFactory()
-        # TODO MRB: why is there more than one AH PDU?
-        pdu = PaediatricDiabetesUnit.objects.filter(pz_code=ALDER_HEY_PZ_CODE).first()
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
         
         transfer = Transfer.objects.get(patient=patient)
         transfer.paediatric_diabetes_unit = pdu
