@@ -1,4 +1,4 @@
-"""Contains the data for the dashboard template."""
+"""Contains the data for the patient_report template."""
 
 TEXT = {
     "health_checks": {

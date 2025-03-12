@@ -9,10 +9,10 @@ from django.http import HttpResponseBadRequest
 from django.shortcuts import render
 
 from project.npda.kpi_class.kpis import CalculateKPIS
-from project.npda.views.dashboard.helpers import (
+from project.npda.views.patient_report.helpers import (
     get_pt_level_table_data,
 )
-from project.npda.views.dashboard.template_data import KPI_CATEGORY_ATTR_MAP, TEXT
+from project.npda.views.patient_report.template_data import KPI_CATEGORY_ATTR_MAP, TEXT
 from project.npda.views.decorators import login_and_otp_required
 
 logger = logging.getLogger(__name__)
