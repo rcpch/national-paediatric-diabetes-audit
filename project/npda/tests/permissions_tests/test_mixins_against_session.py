@@ -259,7 +259,6 @@ class TestQuestionnaireView:
         Test that users who do have questionnaire permission can save a visit through the questionnaire view.
         """
         # Create a patient
-        # TODO MRB: it looks like this is a bug? You can attach a visit if you know the patients pk, regardless of PDU
         patient = PatientFactory()
 
         form = VisitForm(data=COMPLETED_VISIT, initial={"patient": patient})
