@@ -98,6 +98,74 @@ async def test_missing_weight():
         assert(mock.call_count == 1)
 
 
+async def test_zero_height():
+    with patch("project.npda.forms.external_visit_validators.calculate_centiles_z_scores", AsyncMock(return_value=(1,2))) as mock:
+        result = await validate_visit_async(
+            **(VALID_FIELDS | {"height": 0})
+        )
+
+        assert(result.height_result is None)
+
+        assert(result.weight_result.centile == 1)
+        assert(result.weight_result.sds == 2)
+
+        assert(result.bmi is None)
+        assert(result.bmi_result is None)
+
+        assert(mock.call_count == 1)
+
+
+async def test_zero_weight():
+    with patch("project.npda.forms.external_visit_validators.calculate_centiles_z_scores", AsyncMock(return_value=(1,2))) as mock:
+        result = await validate_visit_async(
+            **(VALID_FIELDS | {"weight": 0})
+        )
+
+        assert(result.height_result.centile == 1)
+        assert(result.height_result.sds == 2)
+
+        assert(result.weight_result is None)
+
+        assert(result.bmi is None)
+        assert(result.bmi_result is None)
+
+        assert(mock.call_count == 1)
+
+
+async def test_negative_height():
+    with patch("project.npda.forms.external_visit_validators.calculate_centiles_z_scores", AsyncMock(return_value=(1,2))) as mock:
+        result = await validate_visit_async(
+            **(VALID_FIELDS | {"height": -2})
+        )
+
+        assert(result.height_result is None)
+
+        assert(result.weight_result.centile == 1)
+        assert(result.weight_result.sds == 2)
+
+        assert(result.bmi is None)
+        assert(result.bmi_result is None)
+
+        assert(mock.call_count == 1)
+
+
+async def test_negative_weight():
+    with patch("project.npda.forms.external_visit_validators.calculate_centiles_z_scores", AsyncMock(return_value=(1,2))) as mock:
+        result = await validate_visit_async(
+            **(VALID_FIELDS | {"weight": -2})
+        )
+
+        assert(result.height_result.centile == 1)
+        assert(result.height_result.sds == 2)
+
+        assert(result.weight_result is None)
+
+        assert(result.bmi is None)
+        assert(result.bmi_result is None)
+
+        assert(mock.call_count == 1)
+
+
 async def test_invalid_bmi():
     with patch("project.npda.forms.external_visit_validators.calculate_centiles_z_scores", AsyncMock(return_value=(1,2))):
         with patch("project.npda.forms.external_visit_validators.calculate_bmi", Mock(return_value=None)):
