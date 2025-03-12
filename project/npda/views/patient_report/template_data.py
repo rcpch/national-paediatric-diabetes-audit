@@ -12,9 +12,9 @@ TEXT = {
             "THYROID SCREEN",
             "BLOOD PRESSURE",
             "URINARY ALBUMIN",
-            "EYE SCREEN",
             "FOOT EXAM",
             "TOTAL",
+            "EYE SCREEN",
         ],
         "ineligible_hover_reason": {
             "kpi_25_hba1c": "Does not fulfil criteria for KPI 5",

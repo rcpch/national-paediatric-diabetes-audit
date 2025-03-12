@@ -118,7 +118,17 @@ def get_pt_level_table_data(
                 data[pt.pk]["total"][1] += 1
 
         # Finally add the headers. Need to add nhs_number, is_gte_12yo, and total to the headers
-        headers = ["nhs_number", "is_gte_12yo"] + kpi_attr_names + ["total"]
+
+        headers = (
+            ["nhs_number", "is_gte_12yo"]
+            # Put retinal screening at the end
+            + [
+                kpi_attr_name
+                for kpi_attr_name in kpi_attr_names
+                if kpi_attr_name != "kpi_30_retinal_screening"
+            ]
+            + ["total", "kpi_30_retinal_screening"]
+        )
         return headers, data
 
     elif category == "additional_care_processes":
