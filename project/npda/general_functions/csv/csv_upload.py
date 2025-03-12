@@ -124,7 +124,7 @@ async def csv_upload(
         for field_name, errors in form.errors.as_data().items():
             if field_name == target_field_name:
                 for error in errors:
-                    if error.code in ["invalid"]:
+                    if error.code in ["invalid", "invalid_choice"]:
                         return False
 
         return True
