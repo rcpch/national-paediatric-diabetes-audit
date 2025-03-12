@@ -279,38 +279,43 @@ async def csv_upload(
         first_row = rows.iloc[0]
         patient_row_index = int(first_row["row_index"])
 
-        transfer_fields = validate_transfer(first_row)
+        try:
+            transfer_fields = validate_transfer(first_row)
 
-        patient_form = await validate_patient_using_form(first_row, async_client)
+            patient_form = await validate_patient_using_form(first_row, async_client)
 
-        # Pull through cleaned_data so we can use it in the async visit validators
-        await sync_to_async(patient_form.is_valid)()
+            # Pull through cleaned_data so we can use it in the async visit validators
+            await sync_to_async(patient_form.is_valid)()
 
-        record_errors_from_form(errors_to_return, patient_row_index, patient_form)
+            record_errors_from_form(errors_to_return, patient_row_index, patient_form)
 
-        visit_forms = []
-        for _, row in rows.iterrows():
-            visit_form = await validate_visit_using_form(
-                patient_form, row, async_client
-            )
-            visit_forms.append((visit_form, int(row["row_index"])))
+            visit_forms = []
+            for _, row in rows.iterrows():
+                visit_form = await validate_visit_using_form(
+                    patient_form, row, async_client
+                )
+                visit_forms.append((visit_form, int(row["row_index"])))
 
-        nhs_number = patient_form.cleaned_data.get("nhs_number")
-        unique_reference_number = patient_form.cleaned_data.get(
-            "unique_reference_number"
-        )
-
-        if nhs_number is None and unique_reference_number is None:
-            errors_to_return[patient_row_index]["__all__"].append(
-                "Either NHS Number or Unique Reference Number must be provided."
-            )
-        else:
-            patient = await save_patient_and_transfer(
-                patient_form, transfer_fields, patient_row_index
+            nhs_number = patient_form.cleaned_data.get("nhs_number")
+            unique_reference_number = patient_form.cleaned_data.get(
+                "unique_reference_number"
             )
 
-            if patient:
-                await save_visits(patient, visit_forms)
+            if nhs_number is None and unique_reference_number is None:
+                errors_to_return[patient_row_index]["__all__"].append(
+                    "Either NHS Number or Unique Reference Number must be provided."
+                )
+            else:
+                patient = await save_patient_and_transfer(
+                    patient_form, transfer_fields, patient_row_index
+                )
+
+                if patient:
+                    await save_visits(patient, visit_forms)
+        except Exception as e:
+            # Unexpected!
+            logging.exception(f"Unhandled exception processing {csv_file_name}[{patient_row_index}]") # triggers an admin email
+            errors_to_return[patient_row_index]["__all__"].append(str(e)) # record the row as failed
 
     async with httpx.AsyncClient() as async_client:
         async with asyncio.TaskGroup() as tg:
