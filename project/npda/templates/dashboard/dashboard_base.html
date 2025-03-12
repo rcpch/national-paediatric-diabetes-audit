@@ -1,6 +1,5 @@
 {% url 'dashboard' as hx_get %}
-{% comment %} ADDS KONVA FOR WAFFLE PLOTS JUST WHEN THIS TEMPLATE IS RENDERED {% endcomment %}
-<script src="https://unpkg.com/konva@9/konva.min.js"></script>
+
 <div class="mx-10 p-4 font-montserrat text-rcpch_dark_blue"
      id="dashboard"
      hx-get="{{ hx_get }}"
@@ -15,60 +14,30 @@
   <div class="grid grid-cols-12 gap-4">
     <!-- ROW 1 -->
     <div class="col-span-3">
-      <!-- PDU Details Card -->
-      <div class="card bg-base-100 shadow-xl">
-        <div class="card-body">
-          <h2 class="card-title">PDU Details</h2>
-          <p>Mock data for PDU details...</p>
-        </div>
-      </div>
+      <!-- PDU Card -->
+      {% include 'dashboard/components/cards/pdu_card.html' with pdu_object=pdu_object %}
     </div>
     <div class="col-span-3">
       <!-- Audit Details Card -->
-      <div class="card bg-base-100 shadow-xl">
-        <div class="card-body">
-          <h2 class="card-title">Audit Details</h2>
-          <p>Mock data for audit details...</p>
-        </div>
-      </div>
+      {% include 'dashboard/components/cards/audit_details_card.html' with kpi_calculations_object=kpi_calculations_object current_quarter=current_quarter current_date=current_date days_remaining_until_audit_end_date=days_remaining_until_audit_end_date %}
     </div>
     <div class="col-span-6">
       <!-- Patient Measurements Card -->
-      <div class="card bg-base-100 shadow-xl">
-        <div class="card-body">
-          <h2 class="card-title">Patient Measurements</h2>
-          <p>Mock data for patient measurements...</p>
-        </div>
-      </div>
+      {% include 'dashboard/components/cards/patient_measurements_card.html' with patient_measurements=patient_measurements %}
     </div>
     <!-- ROW 2 -->
     <div class="col-span-6">
       <!-- Patient Characteristics Card -->
-      <div class="card bg-base-100 shadow-xl">
-        <div class="card-body">
-          <h2 class="card-title">Patient Characteristics</h2>
-          <p>Mock data for patient characteristics...</p>
-        </div>
-      </div>
+      {% include 'dashboard/components/cards/patient_characteristics_card.html' %}
     </div>
     <div class="col-span-6">
       <!-- Other Metrics Card -->
-      <div class="card bg-base-100 shadow-xl">
-        <div class="card-body">
-          <h2 class="card-title">Other Metrics</h2>
-          <p>Mock data for other metrics...</p>
-        </div>
-      </div>
+      {% include 'dashboard/components/cards/other_metrics_card.html' %}
     </div>
     <!-- ROW 3 -->
     <div class="col-span-12">
       <!-- Map Card -->
-      <div class="card bg-base-100 shadow-xl">
-        <div class="card-body">
-          <h2 class="card-title">Map</h2>
-          {% include 'dashboard/components/cards/imd_map_card.html' with scatterplot_of_cases_for_selected_organisation=charts.scatterplot_of_cases_for_selected_organisation pdu_lead_organisation=pdu_lead_organisation pdu_object=pdu_object %}
-        </div>
-      </div>
+      {% include 'dashboard/components/cards/imd_map_card.html' with scatterplot_of_cases_for_selected_organisation=charts.scatterplot_of_cases_for_selected_organisation pdu_lead_organisation=pdu_lead_organisation pdu_object=pdu_object %}
     </div>
   </div>
 </div>
