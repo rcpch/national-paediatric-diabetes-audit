@@ -24,8 +24,8 @@ from project.npda.tests.factories.paediatrics_diabetes_unit_factory import (
 from project.constants.user import RCPCH_AUDIT_TEAM
 from project.npda.forms.patient_form import PatientForm
 from project.npda.forms.visit_form import VisitForm
-from project.npda.models import NPDAUser, Visit
-from project.npda.models import Patient
+from project.npda.models import NPDAUser, Visit, Patient, Transfer
+from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 from project.npda.tests.utils import login_and_verify_user
 from project.npda.tests.UserDataClasses import test_user_audit_centre_editor_data
 from project.npda.general_functions import audit_period
@@ -259,6 +259,7 @@ class TestQuestionnaireView:
         Test that users who do have questionnaire permission can save a visit through the questionnaire view.
         """
         # Create a patient
+        # TODO MRB: it looks like this is a bug? You can attach a visit if you know the patients pk, regardless of PDU
         patient = PatientFactory()
 
         form = VisitForm(data=COMPLETED_VISIT, initial={"patient": patient})
@@ -284,6 +285,12 @@ class TestQuestionnaireView:
         assert not self.ah_user.is_rcpch_audit_team_member
 
         patient = PatientFactory()
+        # TODO MRB: why is there more than one AH PDU?
+        pdu = PaediatricDiabetesUnit.objects.filter(pz_code=ALDER_HEY_PZ_CODE).first()
+        
+        transfer = Transfer.objects.get(patient=patient)
+        transfer.paediatric_diabetes_unit = pdu
+        transfer.save()
 
         session = self.client.session
         session["can_complete_questionnaire"] = False
@@ -301,6 +308,13 @@ class TestQuestionnaireView:
         assert not self.ah_user.is_rcpch_audit_team_member
 
         patient = PatientFactory()
+        # TODO MRB: why is there more than one AH PDU?
+        pdu = PaediatricDiabetesUnit.objects.filter(pz_code=ALDER_HEY_PZ_CODE).first()
+        
+        transfer = Transfer.objects.get(patient=patient)
+        transfer.paediatric_diabetes_unit = pdu
+        transfer.save()
+
         visit = VisitFactory(patient=patient)
 
         session = self.client.session
