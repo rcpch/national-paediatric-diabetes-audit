@@ -3028,39 +3028,38 @@ def test_bad_data_for_ethnic_category(test_user, dummy_sheet_csv, value):
     assert "ethnicity" in patient.errors
 
 
-# TODO MRB: pick an incorrect choice automatically
 @pytest.mark.parametrize(
-    "model_field,incorrect_choice",
+    "model_field",
     [
         # TODO MRB: need to handle diabetes type separately as it's mandatory
-        # pytest.param("diabetes_type", 9),
+        # pytest.param("diabetes_type"),
         # TODO MRB: no validation currently for fields on transfer
-        # pytest.param("reason_leaving_service", 9),
-        pytest.param("hba1c_format", 9),
-        pytest.param("treatment", 11),
-        pytest.param("closed_loop_system", 9),
-        pytest.param("glucose_monitoring", 9),
-        pytest.param("retinal_screening_result", 9),
-        pytest.param("albuminuria_stage", 9),
-        pytest.param("thyroid_treatment_status", 9),
-        pytest.param("gluten_free_diet", 9),
-        pytest.param("psychological_additional_support_status", 9),
-        pytest.param("smoking_status", 9),
-        pytest.param("dietician_additional_appointment_offered", 9),
-        pytest.param("ketone_meter_training", 9),
-        pytest.param("hospital_admission_reason", 9),
-        pytest.param("dka_additional_therapies", 9)
+        # pytest.param("reason_leaving_service"),
+        pytest.param("hba1c_format"),
+        pytest.param("treatment"),
+        pytest.param("closed_loop_system"),
+        pytest.param("glucose_monitoring"),
+        pytest.param("retinal_screening_result"),
+        pytest.param("albuminuria_stage"),
+        pytest.param("thyroid_treatment_status"),
+        pytest.param("gluten_free_diet"),
+        pytest.param("psychological_additional_support_status"),
+        pytest.param("smoking_status"),
+        pytest.param("dietician_additional_appointment_offered"),
+        pytest.param("ketone_meter_training"),
+        pytest.param("hospital_admission_reason"),
+        pytest.param("dka_additional_therapies")
     ]
 )
 @pytest.mark.django_db
-def test_bad_data_for_positive_small_integer_fields(test_user, dummy_sheet_csv, model_field, incorrect_choice):
+def test_bad_data_for_positive_small_integer_fields(test_user, dummy_sheet_csv, model_field):
     headings = csv_definition_for(model_field)
     
     column = headings["heading"]
     model = apps.get_model("npda", headings["model"])
 
     for [value, expected, assertion_message] in [
-        [incorrect_choice, None, f"Failed to handle {model_field} with incorrect choice {incorrect_choice}"],
+        [94, None, f"Failed to handle {model_field} with incorrect choice (94)"],
         [-1, None, f"Failed to handle {model_field} with -1 (negative number)"],
         [9999, None, f"Failed to handle {model_field} with 9999 (value bigger than int8)"],
         [32768, None, f"Failed to handle {model_field} 32768 (value bigger than Django small integer field)"],
@@ -3127,7 +3126,7 @@ def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
     assert model_field in instance.errors
 
 
-# TODO MRB: date field issues are currently swallowed in parse_csv (they turn into NaT)
+@pytest.mark.skip(reason="https://github.com/rcpch/national-paediatric-diabetes-audit/issues/488")
 @pytest.mark.parametrize(
     "model_field",
     [
