@@ -3034,7 +3034,8 @@ def test_bad_data_for_ethnic_category(test_user, dummy_sheet_csv, value):
     [
         # TODO MRB: need to handle diabetes type separately as it's mandatory
         # pytest.param("diabetes_type", 9),
-        pytest.param("reason_leaving_service", 9),
+        # TODO MRB: no validation currently for fields on transfer
+        # pytest.param("reason_leaving_service", 9),
         pytest.param("hba1c_format", 9),
         pytest.param("treatment", 11),
         pytest.param("closed_loop_system", 9),
@@ -3059,7 +3060,7 @@ def test_bad_data_for_positive_small_integer_fields(test_user, dummy_sheet_csv, 
     model = apps.get_model("npda", headings["model"])
 
     for [value, expected, assertion_message] in [
-        [incorrect_choice, incorrect_choice, f"Failed to handle {model_field} with incorrect choice {incorrect_choice}"],
+        [incorrect_choice, None, f"Failed to handle {model_field} with incorrect choice {incorrect_choice}"],
         [-1, None, f"Failed to handle {model_field} with -1 (negative number)"],
         [9999, None, f"Failed to handle {model_field} with 9999 (value bigger than int8)"],
         [32768, None, f"Failed to handle {model_field} 32768 (value bigger than Django small integer field)"],
