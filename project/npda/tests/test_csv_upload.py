@@ -3033,8 +3033,7 @@ def test_bad_data_for_ethnic_category(test_user, dummy_sheet_csv, value):
     [
         # TODO MRB: need to handle diabetes type separately as it's mandatory
         # pytest.param("diabetes_type"),
-        # TODO MRB: no validation currently for fields on transfer
-        # pytest.param("reason_leaving_service"),
+        pytest.param("reason_leaving_service"),
         pytest.param("hba1c_format"),
         pytest.param("treatment"),
         pytest.param("closed_loop_system"),
@@ -3086,7 +3085,10 @@ def test_bad_data_for_positive_small_integer_fields(test_user, dummy_sheet_csv, 
         instance = model.objects.first()
 
         assert getattr(instance, model_field) == expected, assertion_message
-        assert model_field in instance.errors
+
+        # No errors field in Transfer
+        if hasattr(instance, "errors"):
+            assert model_field in instance.errors
 
 @pytest.mark.parametrize(
     "model_field",
@@ -3130,8 +3132,7 @@ def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
 @pytest.mark.parametrize(
     "model_field",
     [
-        # TODO MRB: no validation currently for fields on Transfer
-        # pytest.param("date_leaving_service"),
+        pytest.param("date_leaving_service"),
         pytest.param("death_date"),
         pytest.param("visit_date"),
         pytest.param("height_weight_observation_date"),
