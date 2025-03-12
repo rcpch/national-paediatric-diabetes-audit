@@ -3225,22 +3225,13 @@ def test_bad_data_for_ethnic_category(test_user, dummy_sheet_csv, value, expecte
     assert patient.ethnicity == expected
     assert "ethnicity" in patient.errors
 
-# TODO MRB:
-#  - catastrophic failure fields: date of birth and diabetes diagnosis 
-#
-# What error codes do we get for these?
-#
-# TODO MRB: pick an incorrect choice automatically
-#
-# To handle:
-#  invalid_choice
-#  invalid? (check with tests for other fields)
-#  cannot safely cast non-equivalent int64 to int8
 
+# TODO MRB: pick an incorrect choice automatically
 @pytest.mark.parametrize(
     "model_field,incorrect_choice",
     [
-        pytest.param("diabetes_type", 9),
+        # TODO MRB: need to handle diabetes type separately as it's mandatory
+        # pytest.param("diabetes_type", 9),
         pytest.param("reason_leaving_service", 9),
         pytest.param("hba1c_format", 9),
         pytest.param("treatment", 11),
@@ -3288,7 +3279,7 @@ def test_bad_data_for_positive_small_integer_fields(test_user, dummy_sheet_csv, 
         errors = csv_upload_sync(test_user, df)
 
         assert len(errors) > 0, assertion_message
-        assert model.objects.count() == 0, assertion_message
+        assert model.objects.count() == 1, assertion_message
 
         instance = model.objects.first()
 
@@ -3325,8 +3316,7 @@ def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
     errors = csv_upload_sync(test_user, df)
 
     assert len(errors) > 0
-
-    assert model.objects.count() == 0
+    assert model.objects.count() == 1
 
     instance = model.objects.first()
 
@@ -3334,6 +3324,7 @@ def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
     assert model_field in instance.errors
 
 
+# TODO MRB: date field issues are currently swallowed in parse_csv (they turn into NaT)
 @pytest.mark.parametrize(
     "model_field",
     [
