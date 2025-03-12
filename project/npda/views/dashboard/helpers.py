@@ -428,6 +428,8 @@ def get_pt_level_table_data(
     - headers
     - row_data
 
+    NOTE: kpi_30_retinal_screening is not included in the totals
+
     where row_data is a list of dicts with the following example structure (keys are pt.pk):
         {
                 11: {
@@ -477,7 +479,7 @@ def get_pt_level_table_data(
             )
             data[pt.pk]["is_gte_12yo"] = pt_is_gte_12yo
             # total = (passed / total)
-            data[pt.pk]["total"] = [0, 7 if pt_is_gte_12yo else 3]
+            data[pt.pk]["total"] = [0, 6 if pt_is_gte_12yo else 3]
 
         # For each kpi, update the data dict with the pts that have passed and failed
         for kpi_attr_name in kpi_attr_names:
@@ -487,11 +489,28 @@ def get_pt_level_table_data(
             ]
 
             for pt in kpi_pt_querysets["passed"]:
-                data[pt.pk]["total"][0] += 1
+
+                # Mark as completed
                 data[pt.pk][kpi_attr_name] = True
 
+                # Skip retinal screening as it's not included in the totals
+                if kpi_attr_name == "kpi_30_retinal_screening":
+                    continue
+
+                # Increment the passed count otherwise
+                data[pt.pk]["total"][0] += 1
+
             for pt in kpi_pt_querysets["failed"]:
+
+                # Mark as failed
                 data[pt.pk][kpi_attr_name] = False
+
+                # Skip retinal screening as it's not included in the totals
+                if kpi_attr_name == "kpi_30_retinal_screening":
+                    continue
+
+                # Increment the failed count otherwise
+                data[pt.pk]["total"][1] += 1
 
         # Finally add the headers. Need to add nhs_number, is_gte_12yo, and total to the headers
         headers = ["nhs_number", "is_gte_12yo"] + kpi_attr_names + ["total"]
