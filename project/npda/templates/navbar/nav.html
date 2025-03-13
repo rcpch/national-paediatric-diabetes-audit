@@ -1,5 +1,4 @@
 {% load npda_tags %}
-{% comment %} {% if request.user.is_rcpch_audit_team_member or request.user.is_rcpch_staff or request.user.is_superuser %} {% endcomment %}
 {% if active_git_branch != 'live' %}
   <div class="admin-data">
     DEVELOPER INFO - branch: <a href="https://github.com/rcpch/national-paediatric-diabetes-audit/tree/{{active_git_branch}}" target="_blank" class="text-rcpch_red font-bold">{{ active_git_branch }}</a>,
