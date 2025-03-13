@@ -6,7 +6,7 @@ TEXT = {
         "description": "HbA1c, BMI, and thyroid screen must be completed annually for all children and young people with Type 1 diabetes. Urinary albumin, blood pressure, and foot exam are mandatory for young people aged 12 and above. Eye screening is mandatory every 2 years for young people aged 12 and above, unless retinopathy was observed at a previous screen.",
         "headers": [
             "NHS NUMBER",
-            ">= 12YO",
+            # ">= 12YO",
             "HBA1C",
             "BMI",
             "THYROID SCREEN",

@@ -73,7 +73,9 @@
               {% for pt_pk, results in table_data.row_data.items %}
 
                 <tr class="bg-white border-b hover:bg-gray-100">
-                  {% for kpi_attr_name in table_data.headers %}
+                  {% comment %} We exclude is_gte_12yo as though data is used for indicating total, it is not a KPI and
+                  should not be displayed in a column {% endcomment %}
+                  {% for kpi_attr_name in table_data.headers|exclude_item:"is_gte_12yo" %}
                     <td class="px-6 py-4">
                       {% with result=results|get_item:kpi_attr_name %}
                       <p class="">
