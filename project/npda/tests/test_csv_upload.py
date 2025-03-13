@@ -862,6 +862,15 @@ def test_mixed_case_column_headers(test_user, dummy_sheet_csv):
 
 
 @pytest.mark.django_db
+def test_invalid_nhs_number_column_name(test_user, dummy_sheet_csv):
+    csv = dummy_sheet_csv.replace("NHS Number", "NHSNumberXYZWoo")
+    results = read_csv_from_str(csv)
+
+    assert results.missing_columns == ["NHS Number"]
+    assert results.additional_columns == ["NHSNumberXYZWoo"]
+
+
+@pytest.mark.django_db
 def test_first_row_with_extra_cell_at_the_start(test_user, single_row_valid_df):
     csv = single_row_valid_df.to_csv(index=False, date_format="%d/%m/%Y")
 
