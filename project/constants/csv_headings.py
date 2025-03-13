@@ -268,8 +268,6 @@ CSV_HEADING_OBJECTS = (
     },
 )
 
-# HEADINGS_LIST = [item["heading"] for item in CSV_HEADINGS]
-
 ALL_DATES = [
     "Date of Birth",
     "Date of Diabetes Diagnosis",
