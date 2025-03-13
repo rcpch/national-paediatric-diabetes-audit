@@ -40,23 +40,41 @@
         </div>
         <p>{{ text.description }}</p>
       </div>
-      <div class="flex flex-col my-2 gap-2">
-        <p class="font-bold text-rcpch_dark_blue">Key</p>
-        <div class="flex gap-4">
-          <div class="flex gap-2 items-center">
-            <i class="fa-solid fa-circle-check text-success"></i>
-            <p>{{ text.key|get_item:"pass" }}</p>
-          </div>
-          <div class="flex gap-2 items-center">
-            <i class="fa-solid fa-circle-exclamation text-error"></i>
-            <p>{{ text.key|get_item:"fail" }}</p>
-          </div>
-          <div class="flex gap-2 items-center">
-            <i class="fa-solid fa-ban text-muted"></i>
-            <p>{{ text.key|get_item:"ineligible" }}</p>
+
+      <div class="flex justify-between items-center">
+        {% comment %} KEYS {% endcomment %}
+        <div class="flex flex-col my-2 gap-2">
+          <p class="font-bold text-rcpch_dark_blue">Key</p>
+          <div class="flex gap-4">
+            <div class="flex gap-2 items-center">
+              <i class="fa-solid fa-circle-check text-success"></i>
+              <p>{{ text.key|get_item:"pass" }}</p>
+            </div>
+            <div class="flex gap-2 items-center">
+              <i class="fa-solid fa-circle-exclamation text-error"></i>
+              <p>{{ text.key|get_item:"fail" }}</p>
+            </div>
+            <div class="flex gap-2 items-center">
+              <i class="fa-solid fa-ban text-muted"></i>
+              <p>{{ text.key|get_item:"ineligible" }}</p>
+            </div>
           </div>
         </div>
+        {% comment %} TOGGLES {% endcomment %}
+
+        {% comment %} Add toggle for eye checks column {% endcomment %}
+        {% if selected == 'health_checks' %}
+        <div class="flex">
+          <fieldset class="fieldset">
+            <label class="fieldset-label flex flex-col justify-center items-center">
+              <span class="text-xs">Eye checks</span>
+              <input type="checkbox" checked="checked" class="toggle toggle-secondary" />
+            </label>
+          </fieldset>
+        </div>
+        {% endif %}
       </div>
+
     </div>
     <div class="flex overflow-y-auto h-[60vh] w-full"
          id="pt_level_report_table">
@@ -89,7 +107,7 @@
                             </div>
                           {% elif kpi_attr_name == "total" %}
                             <span class="tooltip tooltip-top block underline decoration-dotted" data-tip="{% if results|get_item:"is_gte_12yo" %}Greater than 12 years old{% else %}Less than 12 years old{% endif %}">
-                              {{ result.0 }} / {{ result.1 }} <i class="fa-solid fa-magnifying-glass fa-2xs absolute -top-2 -right-1"></i>
+                              {{ result.0 }} / {{ result.1 }} <i class="fa-solid fa-question fa-2xs absolute -top-2"></i>
                             </span>
 
 
