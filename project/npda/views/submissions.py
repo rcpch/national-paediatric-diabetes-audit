@@ -2,6 +2,7 @@
 import json
 import logging
 import io
+import itertools
 from typing import Any, Iterable
 from datetime import date
 from asgiref.sync import sync_to_async
@@ -227,20 +228,12 @@ async def upload_csv(request):
                 or parsed_csv.additional_columns
                 or parsed_csv.duplicate_columns
             ):
-                message = "Invalid CSV format."
-                if parsed_csv.missing_columns:
-                    message += (
-                        f" Missing columns: [{", ".join(parsed_csv.missing_columns)}]"
-                    )
-                if parsed_csv.additional_columns:
-                    message += f" Unexpected columns: [{", ".join(parsed_csv.additional_columns)}]"
-                if parsed_csv.duplicate_columns:
-                    message += f" Duplicate columns: [{", ".join(parsed_csv.additional_columns)}]"
-                messages.error(
-                    request=request,
-                    message=message,
-                )
-                return render(request, "upload_csv/file_upload.html")
+                return render(request, "upload_csv/file_upload.html", context = {
+                    "csv_and_template_columns": list(itertools.zip_longest(parsed_csv.template_columns, parsed_csv.df.columns)),
+                    "missing_columns": parsed_csv.missing_columns,
+                    "additional_columns": parsed_csv.additional_columns,
+                    "duplicate_columns": parsed_csv.duplicate_columns,
+                })
 
             audit_year = request.session.get("selected_audit_year")
 
