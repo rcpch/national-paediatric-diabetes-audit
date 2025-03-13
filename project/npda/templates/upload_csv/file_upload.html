@@ -1,15 +1,21 @@
 {% extends 'base.html' %}
 {% block content %}
   <div class="w-full flex flex-col justify-center items-center min-h-fit">
-    <div class="container flex flex-col justify-center items-center my-6">
+    <div class="container flex flex-col justify-center items-center my-20">
       <div class="w-6/12 mb-12">
         <div role="alert" class="alert border-t-1 border-blue-400 shadow-lg">
           <i class="fa-2xl fa-file-csv fa-solid"></i>
           <div>
-            <h3 class="font-bold">You must upload using the exact columns from the template.</h3>
+            <h3 class="font-bold">Template - Audit Template (.csv)</h3>
             <div class="text-xs">
-              Templates from older versions of the platform may not be supported. Please check your columns against the template.
+              Our upload facility is built for .csv files with a specific structure.
             </div>
+          </div>
+          <div class="tooltip"
+               data-tip="To avoid unpredictable results, specific columns are expected in all uploaded .csv files. To keep it simple - we recommend populating our template file before uploading it.">
+            <button class="btn btn-sm">
+              Why?<i class="fa-circle-question fa-solid"></i>
+            </button>
           </div>
         </div>
         <a href="{% url 'download_template' 'england_wales' %}"
@@ -18,6 +24,7 @@
       </div>
       <form method="post"
             enctype="multipart/form-data"
+            action="home"
             class="w-6/12 p-8 border-4 border-gray-400 border-dashed"
             _="on dragover or dragenter halt the event then add .bg-rcpch_light_grey on dragleave or drop remove .bg-rcpch_light_grey on drop halt the event then get event.dataTransfer.files then put it into #upload_input.files then call updateFilename(#upload_input)">
         <p class="font-montserrat text-rcpch_dark_blue mb-4 text-xl font-semibold text-center">
@@ -53,41 +60,6 @@
         </div>
       </form>
     </div>
-    {% if missing_columns or additional_columns or duplicate_columns %}
-      <div class="w-6/12 m-6">
-        <div role="alert" class="alert alert-warning">
-          <span class="fa-stack">
-            <i class="fa-circle fa-stack-1x fas"></i>
-            <i class="fa-exclamation fa-stack-1x fa-inverse fas"></i>
-          </span>
-          <span>Warning: Column errors detected!</span>
-        </div>
-        <table class="table">
-          <thead>
-            <td>Template</td>
-            <td>Your CSV file</td>
-          </thead>
-          <tbody>
-            {% for template_column, csv_column in csv_and_template_columns %}
-              <tr>
-                <td>
-                  {{template_column}}
-                </td>
-                {% if template_column in missing_columns or template_column in additional_columns or template_column in duplicate_columns %}
-                  <td class="bg-rcpch_red text-white">
-                    {{ csv_column }}
-                  </td>
-                {% else %}
-                  <td>
-                    {{ csv_column }}
-                  </td>
-                {% endif %}
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    {% endif %}
   </div>
   <script>
   function updateFilename(input) {
