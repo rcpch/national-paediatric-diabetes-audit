@@ -111,7 +111,10 @@ class Patient(models.Model):
         verbose_name="Diabetes Type", choices=DIABETES_TYPES
     )
 
-    diagnosis_date = DateField(verbose_name="Date of Diabetes Diagnosis")
+    diagnosis_date = DateField(
+        verbose_name="Date of Diabetes Diagnosis",
+        null=True
+    )
 
     death_date = models.DateField(
         verbose_name="Date of death",
