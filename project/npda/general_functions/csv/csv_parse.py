@@ -26,7 +26,6 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ParsedCSVFile:
     df: pd.DataFrame
-    template_columns: list[str]
     missing_columns: list[str]
     additional_columns: list[str]
     duplicate_columns: list[str]
@@ -183,7 +182,6 @@ def csv_parse(csv_file, is_jersey=False):
 
     return ParsedCSVFile(
         df,
-        HEADINGS_LIST,
         missing_columns,
         additional_columns,
         duplicate_columns,
