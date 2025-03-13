@@ -86,7 +86,7 @@ def test_generate_csv_upload_to_view(
         )
 
     # Send POST request with CSV file
-    url = reverse("home")
+    url = reverse("upload_csv")
     response = client.post(url, {"csv_upload": csv_file})
 
     # Assert the response to ensure no error
