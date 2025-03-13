@@ -152,6 +152,8 @@ def csv_parse(csv_file, is_jersey=False):
 
     # Rows where the unique identifier is missing will be removed - count the number of rows before and after: placed here to ensure all columns have been processed
     total_row_count = df.shape[0]
+    discrepancy = 0
+
     if is_jersey:
         unique_reference_number_nonnull_row_count = df[
             "Unique Reference Number"
@@ -161,13 +163,14 @@ def csv_parse(csv_file, is_jersey=False):
                 "No Unique Reference Numbers found in the file. Please ensure all rows have a unique identifier and upload the file again."
             )
         discrepancy = total_row_count - unique_reference_number_nonnull_row_count
-    else:
+    elif "NHS Number" in df.columns:
         nhs_number_nonnull_row_count = df["NHS Number"].count()
         if nhs_number_nonnull_row_count == 0:
             raise ValueError(
                 "No NHS Numbers found in the file. Please ensure all rows have a unique identifier and upload the file again."
             )
         discrepancy = total_row_count - nhs_number_nonnull_row_count
+    
     if discrepancy > 0:
         if discrepancy == 1:
             raise ValueError(
