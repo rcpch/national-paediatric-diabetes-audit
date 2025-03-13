@@ -86,9 +86,11 @@
                               </span>
                             </div>
                           {% elif kpi_attr_name == "total" %}
-                            {{ result.0 }} / {{ result.1 }}
+                            <span class="tooltip tooltip-top block underline decoration-dotted" data-tip="{% if results|get_item:"is_gte_12yo" %}Greater than 12 years old{% else %}Less than 12 years old{% endif %}">
+                              {{ result.0 }} / {{ result.1 }} <i class="fa-solid fa-magnifying-glass fa-2xs absolute -top-2 -right-1"></i>
+                            </span>
 
-                    {% comment %} TODO: THIS IS UGLY (possibly the worst i ever written), MAKE PARTIALS PER TABLE TAB {% endcomment %}
+
                           {% comment %} NUMBERS {% endcomment %}
                           {% elif kpi_attr_name == 'kpi_44_mean_hba1c' or kpi_attr_name == 'kpi_45_median_hba1c' or kpi_attr_name == 'kpi_46_number_of_admissions' or kpi_attr_name == 'kpi_47_number_of_dka_admissions' %}
                             {{ result }}
