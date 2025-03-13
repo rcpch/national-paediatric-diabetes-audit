@@ -1,4 +1,12 @@
 {% load npda_tags %}
+{% comment %} {% if request.user.is_rcpch_audit_team_member or request.user.is_rcpch_staff or request.user.is_superuser %} {% endcomment %}
+{% if active_git_branch != 'live' %}
+  <div class="admin-data">
+    DEVELOPER INFO - branch: <a href="https://github.com/rcpch/national-paediatric-diabetes-audit/tree/{{active_git_branch}}" target="_blank" class="text-rcpch_red font-bold">{{ active_git_branch }}</a>,
+    commit: <a href="https://github.com/rcpch/national-paediatric-diabetes-audit/commit/{{latest_git_commit}}" target="_blank" class="text-rcpch_red font-bold">{{ latest_git_commit | truncatechars:7 }}</a>,
+    current user: {{ user.email }}
+  </div>
+{% endif %}
 <div class="navbar bg-base-100 sticky top-0 z-[70] p-0 items-center h-10 shadow">
   {% comment %} NPDA NAV LOGO {% endcomment %}
   <div class="navbar-start">
@@ -6,7 +14,7 @@
       {% comment %} MOBILE HAMBURGER MENU ICON {% endcomment %}
       <div tabindex="0" role="button" class="btn btn-ghost lg:hidden">
         <svg xmlns="http://www.w3.org/2000/svg"
-             class="h-5 w-5"
+             class="h-5 w-5x"
              fill="none"
              viewBox="0 0 24 24"
              stroke="currentColor">
