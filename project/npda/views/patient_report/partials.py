@@ -77,9 +77,6 @@ def get_patient_level_report_partial(request):
             "ineligible_hover_reason": selected_data.get("ineligible_hover_reason", {}),
         },
     }
-    
-    logger.debug(f'{context["text"]=}')
-
 
     return render(
         request,

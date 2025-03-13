@@ -67,8 +67,8 @@
         <div class="flex">
           <fieldset class="fieldset">
             <label class="fieldset-label flex flex-col justify-center items-center">
-              <span class="text-xs">Eye checks</span>
-              <input type="checkbox" checked="checked" class="toggle toggle-secondary" />
+              <span class="text-xs">Show eye screen</span>
+              <input type="checkbox" id="eyeScreenToggle" class="toggle toggle-secondary" checked/>
             </label>
           </fieldset>
         </div>
@@ -82,7 +82,7 @@
         <thead class="uppercase bg-rcpch_dark_blue text-white sticky top-0 z-10">
           <tr>
             {% for header in text.headers %}
-              <th class="px-6 py-4">{{ header }}</th>
+              <th class="px-6 py-4 transition-opacity duration-500 ease-in-out {% if header == "EYE SCREEN" %}eyeScreenColumn{% endif %}">{{ header }}</th>
             {% endfor %}
           </tr>
         </thead>
@@ -94,7 +94,7 @@
                   {% comment %} We exclude is_gte_12yo as though data is used for indicating total, it is not a KPI and
                   should not be displayed in a column {% endcomment %}
                   {% for kpi_attr_name in table_data.headers|exclude_item:"is_gte_12yo" %}
-                    <td class="px-6 py-4">
+                    <td class="px-6 py-4 {% if kpi_attr_name == "kpi_30_retinal_screening" %}eyeScreenColumn{% endif %}">
                       {% with result=results|get_item:kpi_attr_name %}
                       <p class="">
                           {% if kpi_attr_name == "nhs_number" or kpi_attr_name == "unique_reference_number" %}
@@ -173,7 +173,34 @@
       [disabled] * {
         cursor: progress;
       }
-</style>
+    </style>
+
+    {% comment %} JS for eye screen toggle {% endcomment %}
+    {% if selected == 'health_checks' %}
+    <script>
+      (function() {
+        const eyeScreenToggle = document.getElementById('eyeScreenToggle');
+        const eyeScreenColumns = document.querySelectorAll('.eyeScreenColumn');
+
+        eyeScreenToggle.addEventListener('change', () => {
+          eyeScreenColumns.forEach(column => {
+            column.style.display = eyeScreenToggle.checked ? '' : 'none';
+          });
+        });
+
+        // Initial state - show columns by default
+        eyeScreenColumns.forEach(column => {
+          column.style.display = '';
+        });
+
+        // Set toggle to checked to match initial visible state
+        if (eyeScreenToggle) {
+          eyeScreenToggle.checked = true;
+        }
+      })();
+    </script>
+    {% endif %}
+
 </div>
 {% comment %} N PATIENTS BOTTOM CAP {% endcomment %}
 <div class="bg-rcpch_dark_blue py-5 text-white text-center">
@@ -189,3 +216,5 @@ No eligible patients
 </div>
 </div>
 </div>
+
+
