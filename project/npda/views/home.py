@@ -35,105 +35,13 @@ logger = logging.getLogger(__name__)
 
 
 @login_and_otp_required()
-async def home(request):
+def home(request):
     """
     Home page view - contains the upload form.
     Only verified users can access this page.
     """
-    if request.session.get("can_upload_csv") is False:
-        # If the user does not have permission to upload csvs, redirect them to the submissions page
-        return redirect("dashboard")
-
-    if request.method == "POST":
-        form = UploadFileForm(request.POST, request.FILES)
-        user_csv = request.FILES["csv_upload"]
-        user_csv_filename = user_csv.name
-        # We are eventually storing the CSV file as a BinaryField so have to hold it in memory
-        user_csv_bytes = user_csv.read()
-
-        pz_code = request.session.get("pz_code")
-        is_jersey = pz_code == "PZ248"
-        if request.session.get("can_upload_csv") is True:
-            # check to see if the CSV is valid - cannot accept CSVs with no header. All other header errors are non-lethal but are reported back to the user
-            try:
-                parsed_csv = csv_parse(io.BytesIO(user_csv_bytes), is_jersey=is_jersey)
-            except ValueError as e:
-                messages.error(
-                    request=request,
-                    message=f"Invalid CSV format: {e}",
-                )
-                return redirect("home")
-
-            if (
-                parsed_csv.missing_columns
-                or parsed_csv.additional_columns
-                or parsed_csv.duplicate_columns
-            ):
-                message = "Invalid CSV format."
-                if parsed_csv.missing_columns:
-                    message += (
-                        f" Missing columns: [{", ".join(parsed_csv.missing_columns)}]"
-                    )
-                if parsed_csv.additional_columns:
-                    message += f" Unexpected columns: [{", ".join(parsed_csv.additional_columns)}]"
-                if parsed_csv.duplicate_columns:
-                    message += f" Duplicate columns: [{", ".join(parsed_csv.additional_columns)}]"
-                messages.error(
-                    request=request,
-                    message=message,
-                )
-                return redirect("home")
-
-            audit_year = request.session.get("selected_audit_year")
-
-            # CSV is valid, parse any errors and store the data in the tables.
-            errors_by_row_index = await csv_upload(
-                user=request.user,
-                dataframe=parsed_csv.df,
-                csv_file_name=user_csv_filename,
-                csv_file_bytes=user_csv_bytes,
-                pdu_pz_code=pz_code,
-                audit_year=audit_year,
-            )
-            # log user activity
-            VisitActivity = apps.get_model("npda", "VisitActivity")
-            try:
-                await VisitActivity.objects.acreate(
-                    activity=8,
-                    ip_address=request.META.get("REMOTE_ADDR"),
-                    npdauser=request.user,
-                )  # uploaded csv - activity 8
-            except Exception as e:
-                logger.error(f"Failed to log user activity: {e}")
-
-            # update the session fields - this stores that the user has uploaded a csv and disables the ability to use the questionnaire
-            await sync_to_async(refresh_session_filters)(request)
-
-            if errors_by_row_index:
-                messages.error(
-                    request=request,
-                    message=f"CSV has been uploaded, but errors were found in {len(errors_by_row_index.items())} rows. Please check the data quality report for details.",
-                )
-            else:
-                messages.success(
-                    request=request,
-                    message="Submission completed. There were no errors.",
-                )
-            return redirect("patients")
-        else:
-            # If the user does not have permission to upload csvs, redirect them to the dashboard page
-            messages.error(
-                request=request,
-                message=f"You have do not have permission to upload csvs for {pz_code}.",
-            )
-            return redirect("dashboard")
-
-    else:
-        form = UploadFileForm()
-
-    context = {"file_uploaded": False, "form": form}
     template = "home.html"
-    return render(request=request, template_name=template, context=context)
+    return render(request=request, template_name="home.html")
 
 
 def download_template(request, region):
