@@ -21,7 +21,6 @@ from ..general_functions import (
     get_visit_tabs,
     visit_falls_within_audit_period_Q_object,
 )
-from ..kpi_class.kpis import CalculateKPIS
 from ..models import Patient, Transfer, Visit
 from .mixins import (
     CheckCanCompleteQuestionnaireMixin,
@@ -84,17 +83,6 @@ class PatientVisitsListView(
         context["submission"] = submission
         paediatric_diabetes_unit = submission.paediatric_diabetes_unit
 
-        calculate_kpis = CalculateKPIS(
-            calculation_date=datetime.date.today(), return_pt_querysets=False
-        )
-        # Calculate the KPIs for this patient, returning only subset relevant
-        # for a single patient's calculation
-        kpi_calculations_object = calculate_kpis.calculate_kpis_for_single_patient(
-            patient,
-            paediatric_diabetes_unit,
-        )
-
-        context["kpi_calculations_object"] = kpi_calculations_object
         context["paediatric_diabetes_unit"] = paediatric_diabetes_unit
 
         return context

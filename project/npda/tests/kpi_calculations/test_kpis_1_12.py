@@ -53,8 +53,8 @@ def test_kpi_calculation_1(AUDIT_START_DATE):
         return_pt_querysets=True,
     )
     # Need to be mocked as not using public `calculate_kpis_for_*` methods
-    calc_kpis.patients = Patient.objects.all()
-    calc_kpis.total_patients_count = Patient.objects.count()
+    patients = Patient.objects.all()
+    calc_kpis.set_patients_for_calculation(patients=patients)   
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=N_PATIENTS_ELIGIBLE,
