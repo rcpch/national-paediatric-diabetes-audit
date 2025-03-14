@@ -132,17 +132,18 @@ class CalculateKPIS:
             self.total_patients_count = self.patients.count()
         elif pz_codes:
             self.patients = Patient.objects.filter(
-                visit_falls_within_audit_period_Q_object(
-                    prepend_query_path="visit", audit_start_date=self.audit_start_date
-                ),  # include only patients with visits within the audit period in the active submission
-                patientsubmission__submission__paediatric_diabetes_unit__pz_code__in=pz_codes,
-                patientsubmission__submission__submission_active=True,
-                patientsubmission__submission__submission_date__range=(
-                    self.audit_start_date,
-                    self.audit_end_date,
-                ),
+                self._get_patient_filter_query_for_submissions(pz_codes)
             )
             self.total_patients_count = self.patients.count()
+
+    def _get_patient_filter_query_for_submissions(self, pz_codes: list[str]):
+        return Q(
+            visit_falls_within_audit_period_Q_object(
+                prepend_query_path="visit", audit_start_date=self.audit_start_date
+            ),  # include only patients with visits within the audit period in the active submission
+            patientsubmission__submission__paediatric_diabetes_unit__pz_code__in=pz_codes,
+            patientsubmission__submission__submission_active=True,
+        )
 
     def calculate_kpis_for_patients(
         self,
@@ -173,15 +174,7 @@ class CalculateKPIS:
             for KPI calculations and aggregations."""
 
         self.patients = Patient.objects.filter(
-            visit_falls_within_audit_period_Q_object(
-                prepend_query_path="visit", audit_start_date=self.audit_start_date
-            ),
-            paediatric_diabetes_units__paediatric_diabetes_unit__pz_code__in=pz_codes,
-            patientsubmission__submission__submission_active=True,
-            patientsubmission__submission__submission_date__range=(
-                self.audit_start_date,
-                self.audit_end_date,
-            ),
+            self._get_patient_filter_query_for_submissions(pz_codes)
         )
 
         self.total_patients_count = self.patients.count()
