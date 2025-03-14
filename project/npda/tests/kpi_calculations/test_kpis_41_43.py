@@ -1,19 +1,18 @@
 """Tests for the 7 Key Processes KPIs."""
 
 import logging
-from typing import List
 
 import pytest
 from dateutil.relativedelta import relativedelta
 
 from project.constants.diabetes_types import DIABETES_TYPES
-from project.constants.smoking_status import SMOKING_STATUS
 from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
 from project.npda.tests import utils
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.tests.kpi_calculations.test_calculate_kpis import assert_kpi_result_equal
+from project.npda.tests.kpi_calculations.test_calculate_kpis import \
+    assert_kpi_result_equal
 
 # Logging
 logger = logging.getLogger(__name__)

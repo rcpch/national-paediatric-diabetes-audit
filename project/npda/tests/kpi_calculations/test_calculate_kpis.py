@@ -6,26 +6,19 @@ Also contains utils / helper functions for testing the CalculateKPIS class.
 import logging
 from datetime import date, timedelta
 
-
-from project.npda import apps
-from project.npda.models.submission import Submission
-from project.npda.models.visit import Visit
-from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
-from project.npda.tests.factories.paediatrics_diabetes_unit_factory import (
-    PaediatricsDiabetesUnitFactory,
-)
-from django.db.models import QuerySet
-from project.npda.tests.factories.patient_factory import PatientFactory
 import pytest
+from django.db.models import QuerySet
 
 from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult, kpi_registry
 from project.npda.models.patient import Patient
-from project.npda.tests.UserDataClasses import (
-    test_user_audit_centre_coordinator_data,
-    test_user_audit_centre_editor_data,
-    test_user_audit_centre_reader_data,
-    test_user_rcpch_audit_team_data,
-)
+from project.npda.models.submission import Submission
+from project.npda.models.visit import Visit
+from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
+from project.npda.tests.factories.paediatrics_diabetes_unit_factory import \
+    PaediatricsDiabetesUnitFactory
+from project.npda.tests.factories.patient_factory import PatientFactory
+from project.npda.tests.UserDataClasses import \
+    test_user_audit_centre_reader_data
 
 # Logging
 logger = logging.getLogger(__name__)

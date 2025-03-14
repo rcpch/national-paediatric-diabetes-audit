@@ -1,62 +1,37 @@
 """Views for KPIs calculations
 """
 
-from collections import defaultdict
 import logging
+from collections import defaultdict
 from dataclasses import asdict, is_dataclass
 from datetime import date, datetime, timedelta
-
 # Python imports
 from decimal import Decimal
 from pprint import pformat
 from typing import Literal, Optional, Tuple, Union
 
 from dateutil.relativedelta import relativedelta
-
 # Django imports
-from django.apps import apps
-from django.db.models import (
-    Case,
-    Count,
-    Exists,
-    F,
-    IntegerField,
-    OuterRef,
-    Q,
-    QuerySet,
-    Subquery,
-    Sum,
-    When,
-)
+from django.db.models import (Case, Count, Exists, F, IntegerField, OuterRef,
+                              Q, QuerySet, Subquery, Sum, When)
 
 # NPDA Imports
 from project.constants.albuminuria_stage import ALBUMINURIA_STAGES
 from project.constants.diabetes_types import DIABETES_TYPES
-from project.constants.hospital_admission_reasons import (
-    HOSPITAL_ADMISSION_REASONS,
-)
-from project.constants.retinal_screening_results import (
-    RETINAL_SCREENING_RESULTS,
-)
+from project.constants.hospital_admission_reasons import \
+    HOSPITAL_ADMISSION_REASONS
+from project.constants.retinal_screening_results import \
+    RETINAL_SCREENING_RESULTS
 from project.constants.smoking_status import SMOKING_STATUS
-from project.constants.types.kpi_types import (
-    IndividualPtKPICalculationsDict,
-    IndividualPtKPICalculationsObject,
-    IndividualPtKPIResults,
-    KPICalculationsObject,
-    KPIResult,
-    kpi_registry,
-)
+from project.constants.types.kpi_types import (KPICalculationsObject,
+                                               KPIResult, kpi_registry)
 from project.constants.yes_no_unknown import YES_NO_UNKNOWN
-from project.npda.general_functions import (
-    get_audit_period_for_date,
-    visit_falls_within_audit_period_Q_object,
-)
-from project.npda.general_functions.audit_period import get_quarters_for_audit_period
-from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
+from project.npda.general_functions import get_audit_period_for_date
+from project.npda.general_functions.audit_period import \
+    get_quarters_for_audit_period
+from project.npda.general_functions.quarter_for_date import \
+    retrieve_quarter_for_date
 from project.npda.models import Patient, Visit
-from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
-from project.npda.models.transfer import Transfer
 
 # Logging
 logger = logging.getLogger(__name__)

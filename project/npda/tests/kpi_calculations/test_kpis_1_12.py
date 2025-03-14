@@ -1,6 +1,5 @@
 """Tests for the Patient Characteristics KPIS."""
 
-from datetime import date
 from typing import List
 
 import pytest
@@ -8,14 +7,12 @@ from dateutil.relativedelta import relativedelta
 
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
-from project.npda.models import Patient, NPDAUser, PaediatricDiabetesUnit
-from project.npda.models.submission import Submission
+from project.npda.models import Patient
+from project.npda.tests import utils
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.tests.kpi_calculations.test_calculate_kpis import (
-    assert_kpi_result_equal,
-)
-from project.npda.tests import utils
+from project.npda.tests.kpi_calculations.test_calculate_kpis import \
+    assert_kpi_result_equal
 
 
 @pytest.mark.django_db

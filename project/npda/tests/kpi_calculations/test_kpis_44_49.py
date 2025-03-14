@@ -1,8 +1,7 @@
 """Tests for the Outcomes KPIs."""
 
-from decimal import Decimal
 import logging
-from typing import List
+from decimal import Decimal
 
 import pytest
 from dateutil.relativedelta import relativedelta
