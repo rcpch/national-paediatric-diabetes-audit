@@ -142,11 +142,20 @@ def test_kpi_calculation_22(AUDIT_START_DATE):
         visit__treatment=1,
     )
 
+    # Create a submission (BEFORE calculating KPIs)
+    # submission = utils.create_submission(
+    #     AUDIT_START_DATE,
+    #     pz_code=ineligible_patient_visit_date.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
+    # )
+    # submission.patients.add(*Patient.objects.all())
+
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
-    # Need to be mocked as not using public `calculate_kpis_for_*` methods
-    calc_kpis.patients = Patient.objects.all()
-    calc_kpis.total_patients_count = Patient.objects.count()
+    calc_kpis.set_patients_for_calculation(
+        pz_codes=[
+            ineligible_patient_visit_date.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code
+        ]
+    )
 
     EXPECTED_TOTAL_ELIGIBLE = 6
     EXPECTED_TOTAL_INELIGIBLE = 2
@@ -214,11 +223,20 @@ def test_kpi_calculation_23(AUDIT_START_DATE):
         visit__glucose_monitoring=1,
     )
 
+    # Create a submission (BEFORE calculating KPIs)
+    # submission = utils.create_submission(
+    #     AUDIT_START_DATE,
+    #     pz_code=ineligible_patient_visit_date.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
+    # )
+    # submission.patients.add(*Patient.objects.all())
+
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
-    # Need to be mocked as not using public `calculate_kpis_for_*` methods
-    calc_kpis.patients = Patient.objects.all()
-    calc_kpis.total_patients_count = Patient.objects.count()
+    calc_kpis.set_patients_for_calculation(
+        pz_codes=[
+            ineligible_patient_visit_date.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code
+        ]
+    )
 
     EXPECTED_TOTAL_ELIGIBLE = 6
     EXPECTED_TOTAL_INELIGIBLE = 2
