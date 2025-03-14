@@ -78,11 +78,11 @@ def test_kpi_calculations_13_to_20(AUDIT_START_DATE, treatment: int, expected_re
     )
 
     # Create a submission (BEFORE calculating KPIs)
-    # submission = utils.create_submission(
-    #     AUDIT_START_DATE,
-    #     pz_code=ineligible_patient_visit_date.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
-    # )
-    # submission.patients.add(*Patient.objects.all())
+    submission = utils.create_submission(
+        AUDIT_START_DATE,
+        pz_code=ineligible_patient_visit_date.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
+    )
+    submission.patients.add(*Patient.objects.all())
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
