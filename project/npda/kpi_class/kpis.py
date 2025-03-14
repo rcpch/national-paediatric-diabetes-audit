@@ -138,9 +138,9 @@ class CalculateKPIS:
 
     def _get_patient_filter_query_for_submissions(self, pz_codes: list[str]):
         return Q(
-            visit_falls_within_audit_period_Q_object(
-                prepend_query_path="visit", audit_start_date=self.audit_start_date
-            ),  # include only patients with visits within the audit period in the active submission
+            # visit_falls_within_audit_period_Q_object(
+            #     prepend_query_path="visit", audit_start_date=self.audit_start_date
+            # ),  # include only patients with visits within the audit period in the active submission
             patientsubmission__submission__paediatric_diabetes_unit__pz_code__in=pz_codes,
             patientsubmission__submission__submission_active=True,
         )
