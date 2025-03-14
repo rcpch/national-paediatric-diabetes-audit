@@ -55,7 +55,12 @@ def test_kpi_calculation_1(
     )
 
     # Create a submission (BEFORE calculating KPIs)
-    submission = utils.create_submission(AUDIT_START_DATE)
+    submission = utils.create_submission(
+        AUDIT_START_DATE,
+        pz_code=eligible_patients[0]
+        .paediatric_diabetes_units.first()
+        .paediatric_diabetes_unit.pz_code,
+    )
     submission.patients.add(*Patient.objects.all())
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
@@ -64,7 +69,6 @@ def test_kpi_calculation_1(
         return_pt_querysets=True,
     )
     calc_kpis.set_patients_for_calculation(pz_codes=["PZ130"])
-    breakpoint()
 
     EXPECTED_KPIRESULT = KPIResult(
         total_eligible=N_PATIENTS_ELIGIBLE,
