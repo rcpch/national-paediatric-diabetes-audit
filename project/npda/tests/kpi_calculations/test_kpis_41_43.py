@@ -10,10 +10,10 @@ from project.constants.diabetes_types import DIABETES_TYPES
 from project.constants.smoking_status import SMOKING_STATUS
 from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
+from project.npda.tests import utils
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.tests.kpi_calculations.test_calculate_kpis import \
-    assert_kpi_result_equal
+from project.npda.tests.kpi_calculations.test_calculate_kpis import assert_kpi_result_equal
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -53,8 +53,7 @@ def test_kpi_calculation_41(AUDIT_START_DATE, AUDIT_END_DATE):
         # KPI7 eligible
         **eligible_criteria,
         # KPI 41 specific
-        visit__coeliac_screen_date=DIAB_DIAGNOSIS_91D_BEFORE_END
-        - relativedelta(days=90),
+        visit__coeliac_screen_date=DIAB_DIAGNOSIS_91D_BEFORE_END - relativedelta(days=90),
     )
     # only 2nd visit has coeliac screen
     passing_patient_2 = PatientFactory(
@@ -82,17 +81,15 @@ def test_kpi_calculation_41(AUDIT_START_DATE, AUDIT_END_DATE):
     # new T1DM diagnosis lt 90 days audit end but coeliac screen 91 days after
     # overriding diagnosis date so coeliac screen will be within audit end
     eligible_criteria_with_diag_92D_before_end = eligible_criteria.copy()
-    eligible_criteria_with_diag_92D_before_end["diagnosis_date"] = (
-        AUDIT_END_DATE - relativedelta(days=92)
+    eligible_criteria_with_diag_92D_before_end["diagnosis_date"] = AUDIT_END_DATE - relativedelta(
+        days=92
     )
     failing_patient_2_coeliac_91D_after_diag = PatientFactory(
         postcode="failing_patient_2_coeliac_91D_after_diag",
         # KPI7 eligible
         **eligible_criteria_with_diag_92D_before_end,
         # KPI 41 specific
-        visit__coeliac_screen_date=eligible_criteria_with_diag_92D_before_end[
-            "diagnosis_date"
-        ]
+        visit__coeliac_screen_date=eligible_criteria_with_diag_92D_before_end["diagnosis_date"]
         + relativedelta(days=91),
     )
 
@@ -126,13 +123,11 @@ def test_kpi_calculation_41(AUDIT_START_DATE, AUDIT_END_DATE):
     )
 
     # Create a submission (BEFORE calculating KPIs)
-    # submission = utils.create_submission(
-    #     AUDIT_START_DATE,
-    #     pz_code=ineligible_patient_diag_90D_before_end
-    #     .paediatric_diabetes_units.first()
-    #     .paediatric_diabetes_unit.pz_code,
-    # )
-    # submission.patients.add(*Patient.objects.all())
+    submission = utils.create_submission(
+        AUDIT_START_DATE,
+        pz_code=ineligible_patient_diag_90D_before_end.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
+    )
+    submission.patients.add(*Patient.objects.all())
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
@@ -193,8 +188,7 @@ def test_kpi_calculation_42(AUDIT_START_DATE, AUDIT_END_DATE):
         # KPI7 eligible
         **eligible_criteria,
         # KPI 42 specific
-        visit__thyroid_function_date=DIAB_DIAGNOSIS_91D_BEFORE_END
-        - relativedelta(days=90),
+        visit__thyroid_function_date=DIAB_DIAGNOSIS_91D_BEFORE_END - relativedelta(days=90),
     )
     # only 2nd visit has thyroid_function_date
     passing_patient_2 = PatientFactory(
@@ -222,17 +216,15 @@ def test_kpi_calculation_42(AUDIT_START_DATE, AUDIT_END_DATE):
     # new T1DM diagnosis lt 90 days audit end but thyroid_function_date 91 days after
     # overriding diagnosis date so thyroid_function_date will be within audit end
     eligible_criteria_with_diag_92D_before_end = eligible_criteria.copy()
-    eligible_criteria_with_diag_92D_before_end["diagnosis_date"] = (
-        AUDIT_END_DATE - relativedelta(days=92)
+    eligible_criteria_with_diag_92D_before_end["diagnosis_date"] = AUDIT_END_DATE - relativedelta(
+        days=92
     )
     failing_patient_2_thyroid_fn_date_91D_after_diag = PatientFactory(
         postcode="failing_patient_2_thyroid_fn_date_91D_after_diag",
         # KPI7 eligible
         **eligible_criteria_with_diag_92D_before_end,
         # KPI 42 specific
-        visit__thyroid_function_date=eligible_criteria_with_diag_92D_before_end[
-            "diagnosis_date"
-        ]
+        visit__thyroid_function_date=eligible_criteria_with_diag_92D_before_end["diagnosis_date"]
         + relativedelta(days=91),
     )
 
@@ -266,13 +258,11 @@ def test_kpi_calculation_42(AUDIT_START_DATE, AUDIT_END_DATE):
     )
 
     # Create a submission (BEFORE calculating KPIs)
-    # submission = utils.create_submission(
-    #     AUDIT_START_DATE,
-    #     pz_code=ineligible_patient_diag_90D_before_end
-    #     .paediatric_diabetes_units.first()
-    #     .paediatric_diabetes_unit.pz_code,
-    # )
-    # submission.patients.add(*Patient.objects.all())
+    submission = utils.create_submission(
+        AUDIT_START_DATE,
+        pz_code=ineligible_patient_diag_90D_before_end.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
+    )
+    submission.patients.add(*Patient.objects.all())
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
@@ -369,8 +359,8 @@ def test_kpi_calculation_43(AUDIT_START_DATE, AUDIT_END_DATE):
     eligible_criteria_with_diag_15D_before_end = eligible_criteria.copy()
     # overriding diagnosis date so
     # carbohydrate_counting_level_three_education_date will be within audit end
-    eligible_criteria_with_diag_15D_before_end["diagnosis_date"] = (
-        AUDIT_END_DATE - relativedelta(days=15)
+    eligible_criteria_with_diag_15D_before_end["diagnosis_date"] = AUDIT_END_DATE - relativedelta(
+        days=15
     )
     failing_patient_2_carb_count_date_15D_after_diag = PatientFactory(
         postcode="failing_patient_2_carb_count_date_15D_after_diag",
@@ -413,14 +403,12 @@ def test_kpi_calculation_43(AUDIT_START_DATE, AUDIT_END_DATE):
         - relativedelta(days=14),
     )
 
-     # Create a submission (BEFORE calculating KPIs)
-    # submission = utils.create_submission(
-    #     AUDIT_START_DATE,
-    #     pz_code=ineligible_patient_diag_14D_before_end
-    #     .paediatric_diabetes_units.first()
-    #     .paediatric_diabetes_unit.pz_code,
-    # )
-    # submission.patients.add(*Patient.objects.all())
+    # Create a submission (BEFORE calculating KPIs)
+    submission = utils.create_submission(
+        AUDIT_START_DATE,
+        pz_code=ineligible_patient_diag_14D_before_end.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
+    )
+    submission.patients.add(*Patient.objects.all())
 
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
