@@ -5,9 +5,9 @@ from dateutil.relativedelta import relativedelta
 
 from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
+from project.npda.tests import utils
 from project.npda.tests.factories.patient_factory import PatientFactory
-from project.npda.tests.kpi_calculations.test_calculate_kpis import \
-    assert_kpi_result_equal
+from project.npda.tests.kpi_calculations.test_calculate_kpis import assert_kpi_result_equal
 
 
 @pytest.mark.django_db
@@ -103,11 +103,20 @@ def test_kpi_calculation_24(AUDIT_START_DATE):
             visit__treatment=treatment_val,
         )
 
+    # Create a submission (BEFORE calculating KPIs)
+    # submission = utils.create_submission(
+    #     AUDIT_START_DATE,
+    #     pz_code=ineligible_patient_visit_date.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
+    # )
+    # submission.patients.add(*Patient.objects.all())
+
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
-    # Need to be mocked as not using public `calculate_kpis_for_*` methods
-    calc_kpis.patients = Patient.objects.all()
-    calc_kpis.total_patients_count = Patient.objects.count()
+    calc_kpis.set_patients_for_calculation(
+        pz_codes=[
+            ineligible_patient_visit_date.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code
+        ]
+    )
 
     EXPECTED_TOTAL_ELIGIBLE = 8
     EXPECTED_TOTAL_INELIGIBLE = 8
