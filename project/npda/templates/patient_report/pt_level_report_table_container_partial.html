@@ -73,10 +73,14 @@
           </fieldset>
         </div>
         {% endif %}
+        {% comment %} Add toggle for eye checks column {% endcomment %}
       </div>
 
     </div>
-    <div class="flex overflow-y-auto h-[60vh] w-full"
+    {% comment %} Below accounts for all of the above selected tabs which is why
+    it's a bit messy, should extract into own partials for each
+    {% endcomment %}
+    <div class="flex overflow-y-auto max-h-[60vh] w-full"
          id="pt_level_report_table">
       <table class="table-auto w-full text-xs  text-center text-gray-500 mb-5 font-montserrat overflow-x-auto">
         <thead class="uppercase bg-rcpch_dark_blue text-white sticky top-0 z-10">
@@ -141,15 +145,8 @@
                 </tr>
               {% endfor %}
             {% else %}
-              {% for _ in "12345"|make_list %}
-                <tr class="bg-white border-b hover:bg-gray-100">
-                    {% for _ in text.headers %}
-                    <td class="px-6 py-4 text-muted">
-                      -
-                    </td>
-                    {% endfor %}
-                </tr>
-              {% endfor %}
+
+
             {% endif %}
       </tbody>
     </table>
