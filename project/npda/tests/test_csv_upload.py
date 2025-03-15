@@ -846,11 +846,12 @@ def test_case_insensitive_column_headers(test_user, dummy_sheet_csv):
     lines[0] = lines[0].lower()
     csv = "\n".join(lines)
 
-    df = read_csv_from_str(csv).df
+    parsed_csv = read_csv_from_str(csv)
+    assert len(parsed_csv.additional_columns) == 0
 
-    errors = csv_upload_sync(test_user, df)
+    errors = csv_upload_sync(test_user, parsed_csv.df)
 
-    assert len(errors) == 0  #
+    assert len(errors) == 0
 
 
 @pytest.mark.django_db
@@ -859,6 +860,25 @@ def test_mixed_case_column_headers(test_user, dummy_sheet_csv):
     df = read_csv_from_str(csv).df
 
     assert df.columns[0] == "NHS Number"
+
+
+@pytest.mark.django_db
+def test_invalid_nhs_number_column_name(test_user, dummy_sheet_csv):
+    csv = dummy_sheet_csv.replace("NHS Number", "NHSNumberXYZWoo")
+    results = read_csv_from_str(csv)
+
+    assert results.missing_columns == ["NHS Number"]
+    assert results.additional_columns == ["NHSNumberXYZWoo"]
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/741
+@pytest.mark.django_db
+def test_invalid_date_of_birth_column_name_with_mixed_case_column_headers(test_user, dummy_sheet_csv):
+    csv = dummy_sheet_csv.replace("Date of Birth", "DOB").replace("HbA1c result format", "HBA1C Result Format")
+    results = read_csv_from_str(csv)
+
+    assert results.missing_columns == ["Date of Birth"]
+    assert results.additional_columns == ["DOB"]
 
 
 @pytest.mark.django_db

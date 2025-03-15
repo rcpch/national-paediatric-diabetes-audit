@@ -372,3 +372,10 @@ def no_categories_present(categories):
         if category.get("present", False):
             return False
     return True
+
+@register.filter
+def exclude_item(lst, item):
+    """Removes an item from a list"""
+    if isinstance(lst, list):
+        return [i for i in lst if i != item]
+    return lst  # Return as-is if it's not a list
