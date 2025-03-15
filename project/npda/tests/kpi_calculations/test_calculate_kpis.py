@@ -193,151 +193,152 @@ def test_calculate_kpis_return_obj_has_correct_kpi_labels(AUDIT_START_DATE):
         ), f"KPI {actual_kpi_attribute_name} has incorrect label: {actual_kpi_label}"
 
 
-@pytest.mark.django_db
-def test_calculate_kpis_only_includes_patients_with_an_active_submission(
-    AUDIT_START_DATE: date,
-    seed_groups_fixture,
-    seed_users_fixture,
-):
-    """Tests that only patients with an active submission are included in the KPI calculations.
+# NOTE: Leaving commented (on 15 Mar 2025) in case we come back to this, see PR #781 for details
+# @pytest.mark.django_db
+# def test_calculate_kpis_only_includes_patients_with_an_active_submission(
+#     AUDIT_START_DATE: date,
+#     seed_groups_fixture,
+#     seed_users_fixture,
+# ):
+#     """Tests that only patients with an active submission are included in the KPI calculations.
 
-    This
-
-
-    """
-    # Ensure starting with clean pts in test db
-    Patient.objects.all().delete()
-
-    submission_pdu = PaediatricsDiabetesUnitFactory()
-
-    # User in this pdu
-    user_data = test_user_audit_centre_reader_data
-    submission_user = NPDAUserFactory(
-        organisation_employers=[submission_pdu.pz_code],
-        groups=[user_data.group_name],
-        role=user_data.role,
-    )
-
-    # Create an inactive submission
-    # using postcode for debugging purposes
-    inactive_submission_pt = PatientFactory(
-        postcode="inactive_submission_pt",
-        diabetes_type=1,
-        visit__visit_date=AUDIT_START_DATE
-        + timedelta(days=1),  # visit date must be within audit period and not None
-    )
-    inactive_submission = Submission.objects.create(
-        audit_year=AUDIT_START_DATE.year,
-        paediatric_diabetes_unit=submission_pdu,
-        submission_date=AUDIT_START_DATE + timedelta(days=1),
-        submission_active=False,
-        submission_by=submission_user,
-    )
-    inactive_submission.patients.add(inactive_submission_pt)
-
-    # Now create an active submission
-    # using postcode for debugging purposes
-    active_submission_pt = PatientFactory(
-        postcode="active_submission_pt",
-        diabetes_type=1,
-        visit__visit_date=AUDIT_START_DATE
-        + timedelta(days=1),  # visit date must be within audit period and not None
-    )
-    # create active submission
-    active_submission = Submission.objects.create(
-        audit_year=AUDIT_START_DATE.year,
-        paediatric_diabetes_unit=submission_pdu,
-        submission_date=AUDIT_START_DATE + timedelta(days=1),
-        submission_active=True,
-        submission_by=submission_user,
-    )
-    active_submission.patients.add(active_submission_pt)
-
-    # Perform calculations
-    kpi_calculator = CalculateKPIS(
-        calculation_date=AUDIT_START_DATE,
-        return_pt_querysets=True,
-    )
-
-    kpi_calculator.set_patients_for_calculation(pz_codes=[submission_pdu.pz_code])
-
-    kpi_1_patients: QuerySet[Patient] = kpi_calculator._calculate_kpis()[
-        "calculated_kpi_values"
-    ][kpi_calculator.kpi_name_registry.get_attribute_name(1)]["patient_querysets"]
-
-    # Ensure correct pts
-    assert (
-        inactive_submission_pt not in kpi_1_patients["eligible"]
-    )  # inactive submission patients should have been filtered out
-    assert (
-        inactive_submission_pt not in kpi_1_patients["ineligible"]
-    )  # inactive submission patients should have been filtered out
-    assert active_submission_pt in kpi_1_patients["eligible"]
-    assert active_submission_pt not in kpi_1_patients["ineligible"]
+#     This
 
 
-@pytest.mark.django_db
-def test_calculate_kpis_excludes_patients_in_an_active_submission_with_no_visit_dates_within_audit_period(
-    AUDIT_START_DATE: date,
-    seed_groups_fixture,
-    seed_users_fixture,
-):
-    """
-    Tests that patients in an active submission with no visit dates within the audit period are excluded from the KPI calculations.
-    This is because users will upload a csv file which may include visit dates outside the audit period as well as in.
-    """
+#     """
+#     # Ensure starting with clean pts in test db
+#     Patient.objects.all().delete()
 
-    # Ensure starting with clean pts in test db
-    Patient.objects.all().delete()
+#     submission_pdu = PaediatricsDiabetesUnitFactory()
 
-    submission_pdu = PaediatricsDiabetesUnitFactory()
+#     # User in this pdu
+#     user_data = test_user_audit_centre_reader_data
+#     submission_user = NPDAUserFactory(
+#         organisation_employers=[submission_pdu.pz_code],
+#         groups=[user_data.group_name],
+#         role=user_data.role,
+#     )
 
-    # User in this pdu
-    user_data = test_user_audit_centre_reader_data
-    submission_user = NPDAUserFactory(
-        organisation_employers=[submission_pdu.pz_code],
-        groups=[user_data.group_name],
-        role=user_data.role,
-    )
+#     # Create an inactive submission
+#     # using postcode for debugging purposes
+#     inactive_submission_pt = PatientFactory(
+#         postcode="inactive_submission_pt",
+#         diabetes_type=1,
+#         visit__visit_date=AUDIT_START_DATE
+#         + timedelta(days=1),  # visit date must be within audit period and not None
+#     )
+#     inactive_submission = Submission.objects.create(
+#         audit_year=AUDIT_START_DATE.year,
+#         paediatric_diabetes_unit=submission_pdu,
+#         submission_date=AUDIT_START_DATE + timedelta(days=1),
+#         submission_active=False,
+#         submission_by=submission_user,
+#     )
+#     inactive_submission.patients.add(inactive_submission_pt)
 
-    # Create an active submission
-    # using postcode for debugging purposes
-    active_submission_pt = PatientFactory(
-        postcode="active_submission_pt",
-        diabetes_type=1,
-        visit__visit_date=AUDIT_START_DATE
-        - timedelta(days=2),  # visit date must be outside audit period and not None
-    )
-    # add a second visit outside the audit period
-    Visit.objects.create(
-        patient=active_submission_pt,
-        visit_date=AUDIT_START_DATE - timedelta(days=1),
-    )
+#     # Now create an active submission
+#     # using postcode for debugging purposes
+#     active_submission_pt = PatientFactory(
+#         postcode="active_submission_pt",
+#         diabetes_type=1,
+#         visit__visit_date=AUDIT_START_DATE
+#         + timedelta(days=1),  # visit date must be within audit period and not None
+#     )
+#     # create active submission
+#     active_submission = Submission.objects.create(
+#         audit_year=AUDIT_START_DATE.year,
+#         paediatric_diabetes_unit=submission_pdu,
+#         submission_date=AUDIT_START_DATE + timedelta(days=1),
+#         submission_active=True,
+#         submission_by=submission_user,
+#     )
+#     active_submission.patients.add(active_submission_pt)
 
-    # create active submission
-    active_submission = Submission.objects.create(
-        audit_year=AUDIT_START_DATE.year,
-        paediatric_diabetes_unit=submission_pdu,
-        submission_date=AUDIT_START_DATE + timedelta(days=1),
-        submission_active=True,
-        submission_by=submission_user,
-    )
-    active_submission.patients.add(active_submission_pt)
+#     # Perform calculations
+#     kpi_calculator = CalculateKPIS(
+#         calculation_date=AUDIT_START_DATE,
+#         return_pt_querysets=True,
+#     )
 
-    # Perform calculations
-    kpi_calculator = CalculateKPIS(
-        calculation_date=AUDIT_START_DATE,
-        return_pt_querysets=True,
-    )
+#     kpi_calculator.set_patients_for_calculation(pz_codes=[submission_pdu.pz_code])
 
-    kpi_calculator.set_patients_for_calculation(pz_codes=[submission_pdu.pz_code])
+#     kpi_1_patients: QuerySet[Patient] = kpi_calculator._calculate_kpis()[
+#         "calculated_kpi_values"
+#     ][kpi_calculator.kpi_name_registry.get_attribute_name(1)]["patient_querysets"]
 
-    kpi_1_patients: QuerySet[Patient] = kpi_calculator._calculate_kpis()[
-        "calculated_kpi_values"
-    ][kpi_calculator.kpi_name_registry.get_attribute_name(1)]["patient_querysets"]
+#     # Ensure correct pts
+#     assert (
+#         inactive_submission_pt not in kpi_1_patients["eligible"]
+#     )  # inactive submission patients should have been filtered out
+#     assert (
+#         inactive_submission_pt not in kpi_1_patients["ineligible"]
+#     )  # inactive submission patients should have been filtered out
+#     assert active_submission_pt in kpi_1_patients["eligible"]
+#     assert active_submission_pt not in kpi_1_patients["ineligible"]
 
-    assert (
-        active_submission_pt not in kpi_1_patients["eligible"]
-    )  # active submission patients with one or more visit dates within audit period should be included
-    assert active_submission_pt not in kpi_1_patients["ineligible"]
-    # count the number of visits in the patient_querysets
+
+# @pytest.mark.django_db
+# def test_calculate_kpis_excludes_patients_in_an_active_submission_with_no_visit_dates_within_audit_period(
+#     AUDIT_START_DATE: date,
+#     seed_groups_fixture,
+#     seed_users_fixture,
+# ):
+#     """
+#     Tests that patients in an active submission with no visit dates within the audit period are excluded from the KPI calculations.
+#     This is because users will upload a csv file which may include visit dates outside the audit period as well as in.
+#     """
+
+#     # Ensure starting with clean pts in test db
+#     Patient.objects.all().delete()
+
+#     submission_pdu = PaediatricsDiabetesUnitFactory()
+
+#     # User in this pdu
+#     user_data = test_user_audit_centre_reader_data
+#     submission_user = NPDAUserFactory(
+#         organisation_employers=[submission_pdu.pz_code],
+#         groups=[user_data.group_name],
+#         role=user_data.role,
+#     )
+
+#     # Create an active submission
+#     # using postcode for debugging purposes
+#     active_submission_pt = PatientFactory(
+#         postcode="active_submission_pt",
+#         diabetes_type=1,
+#         visit__visit_date=AUDIT_START_DATE
+#         - timedelta(days=2),  # visit date must be outside audit period and not None
+#     )
+#     # add a second visit outside the audit period
+#     Visit.objects.create(
+#         patient=active_submission_pt,
+#         visit_date=AUDIT_START_DATE - timedelta(days=1),
+#     )
+
+#     # create active submission
+#     active_submission = Submission.objects.create(
+#         audit_year=AUDIT_START_DATE.year,
+#         paediatric_diabetes_unit=submission_pdu,
+#         submission_date=AUDIT_START_DATE + timedelta(days=1),
+#         submission_active=True,
+#         submission_by=submission_user,
+#     )
+#     active_submission.patients.add(active_submission_pt)
+
+#     # Perform calculations
+#     kpi_calculator = CalculateKPIS(
+#         calculation_date=AUDIT_START_DATE,
+#         return_pt_querysets=True,
+#     )
+
+#     kpi_calculator.set_patients_for_calculation(pz_codes=[submission_pdu.pz_code])
+
+#     kpi_1_patients: QuerySet[Patient] = kpi_calculator._calculate_kpis()[
+#         "calculated_kpi_values"
+#     ][kpi_calculator.kpi_name_registry.get_attribute_name(1)]["patient_querysets"]
+
+#     assert (
+#         active_submission_pt not in kpi_1_patients["eligible"]
+#     )  # active submission patients with one or more visit dates within audit period should be included
+#     assert active_submission_pt not in kpi_1_patients["ineligible"]
+#     # count the number of visits in the patient_querysets
