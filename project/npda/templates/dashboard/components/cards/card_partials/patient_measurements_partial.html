@@ -46,4 +46,27 @@
       </tbody>
     </table>
   </div>
+  {% comment %} stats {% endcomment %}
+  <a href="{% url 'patients' %}"
+     class="tooltip"
+     data-tip="Click here to view all patients and review any data quality issues">
+    <div class="flex flex-row justify-between text-center justify-center">
+      <div class="stats shadow">
+        <div class="stat place-items-center">
+          <div class="stat-figure text-primary"></div>
+          <div class="stat-title">Data Quality</div>
+          <div class="stat-value {% if submission_visit_error_count > 0 %}text-rcpch_pink{% else %}text-rcpch_light_blue{% endif %}">
+            {{ submission_visit_error_count }}
+          </div>
+          <div class="stat-desc">
+            visits have data errors
+            {% if submission_visit_error_count > 0 %}
+              affecting <strong>{{ affected_patients }}</strong> patients
+            {% endif %}
+          </div>
+          <div class="stat-desc">Last upload: {{ submission_date }}</div>
+        </div>
+      </div>
+    </div>
+  </a>
 </div>

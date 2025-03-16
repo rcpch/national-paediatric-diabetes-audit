@@ -4,6 +4,7 @@ from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.views.dashboard import helpers as hp
 from project.npda.views.patient_report.template_data import KPI_CATEGORY_ATTR_MAP, TEXT
 from project.npda.views.decorators import login_and_otp_required
+from project.npda.models import Visit, Submission
 
 
 @login_and_otp_required()
@@ -23,14 +24,22 @@ def patient_measurements(request):
         calculation_date=calculation_date, return_pt_querysets=True
     )
 
-    kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
+    calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
     # Extract helpers
-    get_attribute_name = calculate_kpis.kpi_name_registry.get_attribute_name
+    # get_attribute_name = calculate_kpis.kpi_name_registry.get_attribute_name
     hba1c_value_counts_stratified_by_diabetes_type = (
         hp.get_hba1c_value_counts_stratified_by_diabetes_type(
             calculate_kpis_instance=calculate_kpis
         )
     )
+
+    current_submission = Submission.objects.get(
+        audit_year=selected_audit_year,
+        paediatric_diabetes_unit__pz_code=pz_code,
+        submission_active=True,
+    )
+    visits = Visit.objects.filter(patient__in=current_submission.patients.all())
+    submission_visits_with_errors = visits.filter(errors__isnull=False)
 
     template = (
         "dashboard/components/cards/card_partials/patient_measurements_partial.html"
@@ -43,5 +52,8 @@ def patient_measurements(request):
             "selected_audit_year": selected_audit_year,
             "pz_code": pz_code,
             "hba1c_value_counts_stratified_by_diabetes_type": hba1c_value_counts_stratified_by_diabetes_type,
+            "submission_visit_error_count": submission_visits_with_errors.count(),
+            "submission_date": current_submission.submission_date,
+            "affected_patients": current_submission.patients.count(),
         },
     )
