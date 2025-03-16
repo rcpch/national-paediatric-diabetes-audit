@@ -1,23 +1,25 @@
 <div>
-  <h1>Patient Measurements</h1>
-  {% comment %} create a table with two columns (t1 dm, t2dm) and two rows (mean and medium) {% endcomment %}
   <div class="table-responsive">
     <table class="table table-bordered table-striped table-hover">
       <thead>
         <tr>
           <th></th>
+          <th>All</th>
           <th>Type 1</th>
           <th>Type 2</th>
+          <th>Other</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td>Mean</td>
+          <td></td>
           <td>{{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.mean }}</td>
           <td>{{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.median }}</td>
         </tr>
         <tr>
           <td>Median</td>
+          <td></td>
           <td>{{ hba1c_value_counts_stratified_by_diabetes_type.t2dm.mean }}</td>
           <td>{{ hba1c_value_counts_stratified_by_diabetes_type.t2dm.median }}</td>
         </tr>
