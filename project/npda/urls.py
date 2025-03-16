@@ -18,6 +18,7 @@ from .views.dashboard import dashboard, partials
 from .views.patient_report import partials as patient_report_partials
 from .views.patient_report.patient_measurements import patient_measurements
 from .views.patient_report import patient_report
+from .views.patient_report.patient_characteristics import patient_characteristics
 
 urlpatterns = [
     path("", view=home, name="home"),
@@ -176,6 +177,11 @@ patient_report_urlpatterns = [
         "get_patient_level_report_partial",
         view=patient_report_partials.get_patient_level_report_partial,
         name="get_patient_level_report_partial",
+    ),
+    path(
+        "patient_characteristics",
+        view=patient_characteristics,
+        name="patient_characteristics",
     ),
 ]
 
