@@ -2,11 +2,12 @@
 from datetime import date
 
 # Django imports
-from django.db.models import F, Case, When, Value, CharField, Count, Q
+from django.db.models import Q
 from django.shortcuts import render
 
 # Third party imports
 from dateutil.relativedelta import relativedelta
+import plotly.graph_objects as go
 
 # Project imports
 from project.npda.general_functions.audit_period import audit_period_for_audit_year
@@ -137,6 +138,14 @@ def patient_characteristics(request):
         "not_specified": 0,
     }
 
+    imd_counts = {
+        "1 (most deprived)": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5 (least deprived)": 0,
+    }
+
     for patient in all_patients_in_this_submission_by_age:
         patient["age"] = relativedelta(comparison_date, patient["date_of_birth"]).years
 
@@ -145,6 +154,7 @@ def patient_characteristics(request):
             if patient["diabetes_type"] == dmtype["key"]:
                 dmtype["enabled"] = True
 
+        # Count the number of patients in each age band
         if 0 <= patient["age"] < 2:
             age_band_counts["birth_two"] += 1
         elif 2 <= patient["age"] < 5:
@@ -158,11 +168,13 @@ def patient_characteristics(request):
         elif 19 <= patient["age"] < 25:
             age_band_counts["nineteen_twenty_five"] += 1
 
+        # count the number of <12 and >12
         if patient["age"] < 12:
             age_band_counts["under_twelve"] += 1
         elif patient["age"] >= 12:
             age_band_counts["over_twelve"] += 1
 
+        # Count the patients by sex
         if patient["sex"] == 1:
             sex_counts["male"] += 1
         elif patient["sex"] == 2:
@@ -172,11 +184,72 @@ def patient_characteristics(request):
         elif patient["sex"] == 9:
             sex_counts["not_specified"] += 1
 
+        # Count the patients by IMD
+        if patient["index_of_multiple_deprivation_quintile"] == 1:
+            imd_counts["1 (most deprived)"] += 1
+        elif patient["index_of_multiple_deprivation_quintile"] == 2:
+            imd_counts["2"] += 1
+        elif patient["index_of_multiple_deprivation_quintile"] == 3:
+            imd_counts["3"] += 1
+        elif patient["index_of_multiple_deprivation_quintile"] == 4:
+            imd_counts["4"] += 1
+        elif patient["index_of_multiple_deprivation_quintile"] == 5:
+            imd_counts["5 (least deprived)"] += 1
+
+    # Create the IMD pie chart
+    imd_piechart = create_imd_piechart(imd_counts)
+
     context = {
         "number_of_patients": number_of_patients,
         "patients_by_age": age_band_counts,
         "patients_by_sex": sex_counts,
+        "patients_by_imd": imd_counts,
         "diabetes_types": diabetes_types,
+        "imd_piechart": imd_piechart.to_html(full_html=False),
     }
 
     return render(request, template, context)
+
+
+def create_imd_piechart(imd_counts):
+    """
+    Generates a Plotly pie chart from IMD counts.
+
+    Args:
+        imd_counts (dict): A dictionary where keys are IMD levels (1-5) and values are counts.
+
+    Returns:
+        plotly.graph_objects.Figure: A Plotly pie chart figure.
+    """
+
+    colors = [
+        "#E00087",  # IMD 1
+        "#D3D3D3",  # Light Gray (IMD 2)
+        "#A9A9A9",  # Dark Gray (IMD 3)
+        "#808080",  # Gray (IMD 4)
+        "#11A7F2",  # IMD 5
+    ]
+
+    labels = list(imd_counts.keys())
+    values = list(imd_counts.values())
+
+    fig = go.Figure(
+        data=[
+            go.Pie(
+                labels=labels,
+                values=values,
+                marker_colors=colors,
+                texttemplate="%{label}: %{value}",  # Add labels to the slices
+                textposition="inside",
+                showlegend=True,
+                hole=0.4,  # Donut chart
+            )
+        ]
+    )
+
+    fig.update_layout(
+        title="Index of Multiple Deprivation (IMD) Distribution",
+        margin=dict(l=20, r=20, t=50, b=20),  # minimal margins
+    )
+
+    return fig
