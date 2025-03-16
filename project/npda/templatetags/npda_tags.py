@@ -373,9 +373,20 @@ def no_categories_present(categories):
             return False
     return True
 
+
 @register.filter
 def exclude_item(lst, item):
     """Removes an item from a list"""
     if isinstance(lst, list):
         return [i for i in lst if i != item]
     return lst  # Return as-is if it's not a list
+
+
+@register.filter
+def hba1c_units(value, is_ifcc=True):
+    if value is None:
+        return "-"
+    if is_ifcc:
+        return f"{value} mmol/mol"
+    else:
+        return f"({value} %)"

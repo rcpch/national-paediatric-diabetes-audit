@@ -1,3 +1,4 @@
+{% load npda_tags %}
 <div>
   <div class="table-responsive">
     <table class="table table-bordered table-striped table-hover">
@@ -15,26 +16,26 @@
           <td>Mean</td>
           <td></td>
           <td>
-            {{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.mean__mmol_mol }} ({{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.mean__percent }})
+            {{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.mean__mmol_mol|hba1c_units:True }} {{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.mean__percent|hba1c_units:False }}
           </td>
           <td>
-            {{ hba1c_value_counts_stratified_by_diabetes_type.t2dm.mean__mmol_mol }} ({{ hba1c_value_counts_stratified_by_diabetes_type.t2dm.mean__percent }})
+            {{ hba1c_value_counts_stratified_by_diabetes_type.t2dm.mean__mmol_mol|hba1c_units:True }} {{ hba1c_value_counts_stratified_by_diabetes_type.t2dm.mean__percent|hba1c_units:False }}
           </td>
           <td>
-            {{ hba1c_value_counts_stratified_by_diabetes_type.other.mean__mmol_mol }} ({{ hba1c_value_counts_stratified_by_diabetes_type.other.mean__percent }})
+            {{ hba1c_value_counts_stratified_by_diabetes_type.other.mean__mmol_mol|hba1c_units:True }} {{ hba1c_value_counts_stratified_by_diabetes_type.other.mean__percent|hba1c_units:False }}
           </td>
         </tr>
         <tr>
           <td>Median</td>
           <td></td>
           <td>
-            {{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.median__mmol_mol }} ({{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.median__percent }})
+            {{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.median__mmol_mol|hba1c_units:True }} {{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.median__percent|hba1c_units:False }}
           </td>
           <td>
-            {{ hba1c_value_counts_stratified_by_diabetes_type.t2dm.median__mmol_mol }} ({{ hba1c_value_counts_stratified_by_diabetes_type.t2dm.median__percent }})
+            {{ hba1c_value_counts_stratified_by_diabetes_type.t2dm.median__mmol_mol|hba1c_units:True }} {{ hba1c_value_counts_stratified_by_diabetes_type.t2dm.median__percent|hba1c_units:False }}
           </td>
           <td>
-            {{ hba1c_value_counts_stratified_by_diabetes_type.other.median__mmol_mol }} ({{ hba1c_value_counts_stratified_by_diabetes_type.other.median__percent }})
+            {{ hba1c_value_counts_stratified_by_diabetes_type.other.median__mmol_mol|hba1c_units:True }} {{ hba1c_value_counts_stratified_by_diabetes_type.other.median__percent|hba1c_units:False }}
           </td>
         </tr>
       </tbody>
