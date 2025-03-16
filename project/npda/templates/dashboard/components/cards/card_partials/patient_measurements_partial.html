@@ -14,17 +14,30 @@
         <tr>
           <td>Mean</td>
           <td></td>
-          <td>{{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.mean }}</td>
-          <td>{{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.median }}</td>
+          <td>
+            {{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.mean__mmol_mol }} ({{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.mean__percent }})
+          </td>
+          <td>
+            {{ hba1c_value_counts_stratified_by_diabetes_type.t2dm.mean__mmol_mol }} ({{ hba1c_value_counts_stratified_by_diabetes_type.t2dm.mean__percent }})
+          </td>
+          <td>
+            {{ hba1c_value_counts_stratified_by_diabetes_type.other.mean__mmol_mol }} ({{ hba1c_value_counts_stratified_by_diabetes_type.other.mean__percent }})
+          </td>
         </tr>
         <tr>
           <td>Median</td>
           <td></td>
-          <td>{{ hba1c_value_counts_stratified_by_diabetes_type.t2dm.mean }}</td>
-          <td>{{ hba1c_value_counts_stratified_by_diabetes_type.t2dm.median }}</td>
+          <td>
+            {{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.median__mmol_mol }} ({{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.median__percent }})
+          </td>
+          <td>
+            {{ hba1c_value_counts_stratified_by_diabetes_type.t2dm.median__mmol_mol }} ({{ hba1c_value_counts_stratified_by_diabetes_type.t2dm.median__percent }})
+          </td>
+          <td>
+            {{ hba1c_value_counts_stratified_by_diabetes_type.other.median__mmol_mol }} ({{ hba1c_value_counts_stratified_by_diabetes_type.other.median__percent }})
+          </td>
         </tr>
       </tbody>
     </table>
   </div>
-  {{ hba1c_value_counts_stratified_by_diabetes_type }}
 </div>
