@@ -25,6 +25,7 @@ from django.db.models import (
     Subquery,
     Sum,
     When,
+    DecimalField,
 )
 
 # NPDA Imports
@@ -43,7 +44,7 @@ from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 from project.npda.general_functions import get_audit_period_for_date
 from project.npda.general_functions.audit_period import get_quarters_for_audit_period
 from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
-from project.npda.models import Patient, Visit
+from project.npda.models import Patient, Visit, Round
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -3209,13 +3210,32 @@ class CalculateKPIS:
         """
 
         # Calculate median HBa1c for each patient
-        visit_value_cols = ["patient__pk", "hba1c", "patient__nhs_number"]
+        visit_value_cols = ["patient__pk", "hba1c_mmol_mol", "patient__nhs_number"]
         # Retrieve all visits with valid HbA1c values
-        valid_visits = Visit.objects.filter(
-            visit_date__range=self.AUDIT_DATE_RANGE,
-            hba1c_date__gt=F("patient__diagnosis_date") + timedelta(days=90),
-            patient__in=eligible_patients,
-        ).values(*visit_value_cols)
+        valid_visits = (
+            Visit.objects.filter(
+                visit_date__range=self.AUDIT_DATE_RANGE,
+                hba1c_date__gt=F("patient__diagnosis_date") + timedelta(days=90),
+                patient__in=eligible_patients,
+            )
+            .annotate(  # convert HbA1c to mmol/mol if necessary
+                hba1c_mmol_mol=Case(
+                    When(
+                        hba1c_format=HBA1C_FORMATS[0][0],
+                        then=F("hba1c"),
+                    ),
+                    When(
+                        hba1c_format=HBA1C_FORMATS[1][0],
+                        then=F("hba1c") - Round(Decimal("2.152") / Decimal("0.09148")),
+                    ),
+                    default=F("hba1c"),
+                    output_field=DecimalField(
+                        max_digits=5, decimal_places=2, null=True
+                    ),
+                )
+            )
+            .values(*visit_value_cols)
+        )
 
         # Group HbA1c values by patient ID into a list so can use
         # calculate_median method
@@ -3226,7 +3246,7 @@ class CalculateKPIS:
         )
         for visit in valid_visits:
             hba1c_values_by_patient[visit["patient__pk"]]["hb1ac_values"].append(
-                visit["hba1c"]
+                visit["hba1c_mmol_mol"]
             )
             hba1c_values_by_patient[visit["patient__pk"]]["nhs_number"] = visit[
                 "patient__nhs_number"
@@ -3269,7 +3289,7 @@ class CalculateKPIS:
         # Retrieve all visits with valid HbA1c values
         valid_visits = self._get_valid_visits_for_kpi_44_and_45(
             eligible_patients=eligible_patients,
-        ).values("patient__pk", "hba1c")
+        ).values("patient__pk", "hba1c_mmol_mol")
 
         # Group HbA1c values by patient ID into a list so can use
         # calculate_median method
@@ -3277,7 +3297,9 @@ class CalculateKPIS:
         # aggregation gets complicated
         hba1c_values_by_patient = defaultdict(list)
         for visit in valid_visits:
-            hba1c_values_by_patient[visit["patient__pk"]].append(visit["hba1c"])
+            hba1c_values_by_patient[visit["patient__pk"]].append(
+                visit["hba1c_mmol_mol"]
+            )
 
         # For each patient, calculate the median of their HbA1c values
         hba1c_values_by_patient = self.get_median_hba1c_values_by_patient(
@@ -3316,13 +3338,26 @@ class CalculateKPIS:
         Enable query re-use as dashboard requires stratification by diabetes type
         but these calculations do not
 
-        Note this filters out visits with HbA1c where there are errors
+        Note this filters out visits where hba1c_mmol_mol is None
         """
 
         return Visit.objects.filter(
             visit_date__range=self.AUDIT_DATE_RANGE,
             hba1c_date__gt=F("patient__diagnosis_date") + timedelta(days=90),
             patient__in=eligible_patients,
+        ).annotate(
+            hba1c_mmol_mol=Case(
+                When(
+                    hba1c_format=HBA1C_FORMATS[0][0],
+                    then=F("hba1c"),
+                ),
+                When(
+                    hba1c_format=HBA1C_FORMATS[1][0],
+                    then=F("hba1c") - Round(Decimal("2.152") / Decimal("0.09148")),
+                ),
+                default=F("hba1c"),
+                output_field=DecimalField(max_digits=5, decimal_places=2, null=True),
+            )
         )
 
     def calculate_kpi_hba1c_vals_stratified_by_diabetes_type(self):
@@ -3356,7 +3391,7 @@ class CalculateKPIS:
             # Retrieve all visits with valid HbA1c values
             valid_visits = self._get_valid_visits_for_kpi_44_and_45(
                 eligible_patients=eligible_pts,
-            ).values("patient__pk", "hba1c")
+            ).values("patient__pk", "hba1c_mmol_mol")
 
             hba1c_vals[key]["mean"] = round(
                 self._calculate_mean_hba1cs(valid_visits), 1
@@ -3377,7 +3412,9 @@ class CalculateKPIS:
         # aggregation gets complicated
         hba1c_values_by_patient = defaultdict(list)
         for visit in valid_visits:
-            hba1c_values_by_patient[visit["patient__pk"]].append(visit["hba1c"])
+            hba1c_values_by_patient[visit["patient__pk"]].append(
+                visit["hba1c_mmol_mol"]
+            )
 
         # For each patient, calculate the median of their HbA1c values
         median_hba1cs = []
@@ -3398,7 +3435,9 @@ class CalculateKPIS:
         # aggregation gets complicated
         hba1c_values_by_patient = defaultdict(list)
         for visit in valid_visits:
-            hba1c_values_by_patient[visit["patient__pk"]].append(visit["hba1c"])
+            hba1c_values_by_patient[visit["patient__pk"]].append(
+                visit["hba1c_mmol_mol"]
+            )
 
         # For each patient, calculate the median of their HbA1c values
         median_hba1cs = []

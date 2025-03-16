@@ -644,7 +644,7 @@ class Visit(models.Model, HelpTextMixin):
     def __str__(self) -> str:
         return f"Patient visit for {self.patient} on {self.visit_date}"
 
-    def hba1c_mmol_mol(self):
+    def _hba1c_mmol_mol(self):
         """
         Return HbA1c in mmol/mol
 

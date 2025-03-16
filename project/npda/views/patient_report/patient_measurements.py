@@ -1,0 +1,47 @@
+from datetime import date
+from django.shortcuts import render
+from project.npda.kpi_class.kpis import CalculateKPIS
+from project.npda.views.dashboard import helpers as hp
+from project.npda.views.patient_report.template_data import KPI_CATEGORY_ATTR_MAP, TEXT
+from project.npda.views.decorators import login_and_otp_required
+
+
+@login_and_otp_required()
+def patient_measurements(request):
+
+    # First need to get the relevant calculations
+    pz_code = request.session.get("pz_code")
+
+    selected_audit_year = int(request.session.get("selected_audit_year"))
+    if selected_audit_year <= 2024:
+        # The day after the audit year end date
+        calculation_date = date(selected_audit_year, 4, 1)
+    else:
+        today = date.today()
+        calculation_date = date(selected_audit_year, today.month, today.day)
+    calculate_kpis = CalculateKPIS(
+        calculation_date=calculation_date, return_pt_querysets=True
+    )
+
+    kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
+    # Extract helpers
+    get_attribute_name = calculate_kpis.kpi_name_registry.get_attribute_name
+    hba1c_value_counts_stratified_by_diabetes_type = (
+        hp.get_hba1c_value_counts_stratified_by_diabetes_type(
+            calculate_kpis_instance=calculate_kpis
+        )
+    )
+
+    template = (
+        "dashboard/components/cards/card_partials/patient_measurements_partial.html"
+    )
+
+    return render(
+        request,
+        template_name=template,
+        context={
+            "selected_audit_year": selected_audit_year,
+            "pz_code": pz_code,
+            "hba1c_value_counts_stratified_by_diabetes_type": hba1c_value_counts_stratified_by_diabetes_type,
+        },
+    )

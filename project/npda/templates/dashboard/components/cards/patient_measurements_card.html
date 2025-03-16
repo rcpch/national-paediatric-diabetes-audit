@@ -3,7 +3,23 @@
   Patient Measurements
 {% endblock card_title %}
 {% block card_body %}
-  <div class="flex flex-col justify-center items-center">
-    <p>Mock data for patient measurements...</p>
-  </div>
+  {% if hba1c_value_counts_stratified_by_diabetes_type.no_eligible_patients %}
+    <div class="alert alert-info">
+      <i class="fa-solid fa-person-circle-exclamation"></i> No eligible patients.
+    </div>
+  {% else %}
+    <div hx-get="{% url 'patient_measurements' %}"
+         hx-trigger="load"
+         hx-swap="innerHTML"
+         hx-target="#patient_measurements"
+         hx-indicator="#loading-spinner-patient-measurements"
+         _="on htmx:afterRequest remove #loading-spinner-patient-measurements">
+    </div>
+    <div id="patient_measurements">
+      {% include 'dashboard/components/cards/card_partials/patient_measurements_partial.html' with hba1c_value_counts_stratified_by_diabetes_type=hba1c_value_counts_stratified_by_diabetes_type %}
+    </div>
+    <div id="loading-spinner-patient-measurements"
+         class="loading loading-spinner text-rcpch_dark_blue flex flex-grow-1 justify-center items-center h-full w-1/5 mx-auto bg-center">
+    </div>
+  {% endif %}
 {% endblock %}
