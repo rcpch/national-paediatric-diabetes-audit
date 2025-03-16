@@ -5,7 +5,7 @@
       <thead>
         <tr>
           <th></th>
-          <th>All</th>
+          <th class="text-rcpch_pink">All</th>
           <th>Type 1</th>
           <th>Type 2</th>
           <th>Other</th>
@@ -14,7 +14,10 @@
       <tbody>
         <tr>
           <td>Mean</td>
-          <td></td>
+          <td class="text-rcpch_pink font-bold">
+            {{ hba1c_value_counts_stratified_by_diabetes_type.all.mean__mmol_mol|hba1c_units:True }}
+            {{ hba1c_value_counts_stratified_by_diabetes_type.all.mean__percent|hba1c_units:False }}
+          </td>
           <td>
             {{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.mean__mmol_mol|hba1c_units:True }} {{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.mean__percent|hba1c_units:False }}
           </td>
@@ -27,7 +30,9 @@
         </tr>
         <tr>
           <td>Median</td>
-          <td></td>
+          <td class="text-rcpch_pink font-bold">
+            {{ hba1c_value_counts_stratified_by_diabetes_type.all.median__mmol_mol|hba1c_units:True }} {{ hba1c_value_counts_stratified_by_diabetes_type.all.median__percent|hba1c_units:False }}
+          </td>
           <td>
             {{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.median__mmol_mol|hba1c_units:True }} {{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.median__percent|hba1c_units:False }}
           </td>
