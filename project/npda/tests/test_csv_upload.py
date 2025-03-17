@@ -928,6 +928,21 @@ def test_invalid_date_of_birth_column_name_with_mixed_case_column_headers(
     assert results.additional_columns == ["DOB"]
 
 
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/741
+@pytest.mark.django_db
+def test_old_template_headers(test_user, dummy_sheet_csv_old_headers):
+    csv = dummy_sheet_csv_old_headers
+    results = read_csv_from_str(csv)
+
+    assert results.missing_columns == []
+    assert results.additional_columns == []
+
+    csv_upload_sync(test_user, results.df)
+
+    assert(Patient.objects.count() > 0)
+    assert(Visit.objects.count() > 0)
+
+
 @pytest.mark.django_db
 def test_first_row_with_extra_cell_at_the_start(test_user, single_row_valid_df):
     csv = single_row_valid_df.to_csv(index=False, date_format="%d/%m/%Y")
