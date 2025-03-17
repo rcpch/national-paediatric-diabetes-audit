@@ -22,7 +22,8 @@ from project.npda.tests.factories import (NPDAUserFactory,
                                           seed_groups_per_function_fixture,
                                           seed_users_per_function_fixture,
                                           dummy_sheets_folder,
-                                          dummy_sheet_csv)
+                                          dummy_sheet_csv,
+                                          dummy_sheet_csv_old_headers)
 
 logger = logging.getLogger(__name__)
 # register factories to be used across test directory

@@ -3,6 +3,7 @@ UNIQUE_IDENTIFIER_ENGLAND = (
         "heading": "NHS Number",
         "model_field": "nhs_number",
         "model": "Patient",
+        "alternative_headings": ["NHSNumber"]
     },
 )
 

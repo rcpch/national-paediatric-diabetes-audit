@@ -47,11 +47,11 @@ def csv_parse(csv_file, is_jersey=False):
 
     # Define the column names to be used in the csv file: the unique identifier in Jersy is different from the one in England
     if is_jersey:
-        HEADINGS_LIST = UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
+        HEADINGS_OBJECTS = UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
     else:
-        HEADINGS_LIST = UNIQUE_IDENTIFIER_ENGLAND + CSV_HEADING_OBJECTS
+        HEADINGS_OBJECTS = UNIQUE_IDENTIFIER_ENGLAND + CSV_HEADING_OBJECTS
 
-    HEADINGS_LIST = [item["heading"] for item in HEADINGS_LIST]
+    HEADINGS_LIST = [item["heading"] for item in HEADINGS_OBJECTS]
 
     # Convert the predefined column names to lowercase
     lowercase_headings_list = [heading.lower() for heading in HEADINGS_LIST]
@@ -74,14 +74,16 @@ def csv_parse(csv_file, is_jersey=False):
     # The template published on the RCPCH website has trailing spaces on 'Observation Date: Thyroid Function '
     df.columns = df.columns.str.strip()
 
-    if df.columns[0].lower() not in lowercase_headings_list:
-        # No header in the source - pass them from our definitions
-        logger.warning(
-            f"CSV file uploaded without column names, using predefined column names"
-        )
+    # Replace headings which were different from in the old NPDA template with the new
+    for column in df.columns:
+        lowercase_col = column.lower()
 
-        # Have to reset back otherwise we get an empty dataframe
-        csv_file.seek(0)
+        for heading in HEADINGS_OBJECTS:
+            if "alternative_headings" in heading:
+                lowercase_alternative_headings = [h.lower() for h in heading["alternative_headings"]]
+
+                if lowercase_col in lowercase_alternative_headings:
+                    df = df.rename(columns={column: heading["heading"]})
 
     # Pandas has strange behaviour for the first line in a CSV - additional cells become row labels
     # https://github.com/pandas-dev/pandas/issues/47490
