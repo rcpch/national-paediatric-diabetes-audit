@@ -6,26 +6,19 @@ Also contains utils / helper functions for testing the CalculateKPIS class.
 import logging
 from datetime import date, timedelta
 
+import pytest
+from django.db.models import QuerySet
 
-from project.npda import apps
+from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult, kpi_registry
+from project.npda.models.patient import Patient
 from project.npda.models.submission import Submission
 from project.npda.models.visit import Visit
 from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
 from project.npda.tests.factories.paediatrics_diabetes_unit_factory import (
     PaediatricsDiabetesUnitFactory,
 )
-from django.db.models import QuerySet
 from project.npda.tests.factories.patient_factory import PatientFactory
-import pytest
-
-from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult, kpi_registry
-from project.npda.models.patient import Patient
-from project.npda.tests.UserDataClasses import (
-    test_user_audit_centre_coordinator_data,
-    test_user_audit_centre_editor_data,
-    test_user_audit_centre_reader_data,
-    test_user_rcpch_audit_team_data,
-)
+from project.npda.tests.UserDataClasses import test_user_audit_centre_reader_data
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -45,9 +38,7 @@ def assert_kpi_result_equal(
     :raises AssertionError: If the fields in the KPIResult objects differ.
     """
     if isinstance(expected, KPIResult) is False:
-        raise TypeError(
-            f"expected must be of type KPIResult (current: {type(expected)}"
-        )
+        raise TypeError(f"expected must be of type KPIResult (current: {type(expected)}")
     if isinstance(actual, KPIResult) is False:
         raise TypeError(f"actual must be of type KPIResult (current: {type(actual)}")
 
@@ -77,9 +68,7 @@ def assert_kpi_result_equal(
     if expected.patient_querysets is not None:
         # If actual.patient_querysets is None, we can't compare the querysets
         if actual.patient_querysets is None:
-            mismatches.append(
-                f"patient_querysets: expected {expected.patient_querysets}, got None"
-            )
+            mismatches.append(f"patient_querysets: expected {expected.patient_querysets}, got None")
         else:
             # For each pt queryset in expected, check if the actual queryset is
             # the same
@@ -108,12 +97,8 @@ def test_ensure_mocked_audit_date_range_is_correct(AUDIT_START_DATE):
     """Ensure that the mocked audit date range is correct."""
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
 
-    assert calc_kpis.audit_start_date == date(
-        2024, 4, 1
-    ), f"Mocked audit start date incorrect!"
-    assert calc_kpis.audit_end_date == date(
-        2025, 3, 31
-    ), f"Mocked audit end date incorrect!"
+    assert calc_kpis.audit_start_date == date(2024, 4, 1), f"Mocked audit start date incorrect!"
+    assert calc_kpis.audit_end_date == date(2025, 3, 31), f"Mocked audit end date incorrect!"
 
 
 @pytest.mark.parametrize(
@@ -206,12 +191,7 @@ def test_calculate_kpis_only_includes_patients_with_an_active_submission(
     seed_groups_fixture,
     seed_users_fixture,
 ):
-    """Tests that only patients with an active submission are included in the KPI calculations.
-
-    This
-
-
-    """
+    """Tests that only patients with an active submission are included in the KPI calculations."""
     # Ensure starting with clean pts in test db
     Patient.objects.all().delete()
 
@@ -268,9 +248,9 @@ def test_calculate_kpis_only_includes_patients_with_an_active_submission(
 
     kpi_calculator.set_patients_for_calculation(pz_codes=[submission_pdu.pz_code])
 
-    kpi_1_patients: QuerySet[Patient] = kpi_calculator._calculate_kpis()[
-        "calculated_kpi_values"
-    ][kpi_calculator.kpi_name_registry.get_attribute_name(1)]["patient_querysets"]
+    kpi_1_patients: QuerySet[Patient] = kpi_calculator._calculate_kpis()["calculated_kpi_values"][
+        kpi_calculator.kpi_name_registry.get_attribute_name(1)
+    ]["patient_querysets"]
 
     # Ensure correct pts
     assert (
@@ -283,68 +263,69 @@ def test_calculate_kpis_only_includes_patients_with_an_active_submission(
     assert active_submission_pt not in kpi_1_patients["ineligible"]
 
 
-@pytest.mark.django_db
-def test_calculate_kpis_excludes_patients_in_an_active_submission_with_no_visit_dates_within_audit_period(
-    AUDIT_START_DATE: date,
-    seed_groups_fixture,
-    seed_users_fixture,
-):
-    """
-    Tests that patients in an active submission with no visit dates within the audit period are excluded from the KPI calculations.
-    This is because users will upload a csv file which may include visit dates outside the audit period as well as in.
-    """
+# NOTE: Leaving commented (on 15 Mar 2025) in case we come back to this, see PR #781 for details
+# @pytest.mark.django_db
+# def test_calculate_kpis_excludes_patients_in_an_active_submission_with_no_visit_dates_within_audit_period(
+#     AUDIT_START_DATE: date,
+#     seed_groups_fixture,
+#     seed_users_fixture,
+# ):
+#     """
+#     Tests that patients in an active submission with no visit dates within the audit period are excluded from the KPI calculations.
+#     This is because users will upload a csv file which may include visit dates outside the audit period as well as in.
+#     """
 
-    # Ensure starting with clean pts in test db
-    Patient.objects.all().delete()
+#     # Ensure starting with clean pts in test db
+#     Patient.objects.all().delete()
 
-    submission_pdu = PaediatricsDiabetesUnitFactory()
+#     submission_pdu = PaediatricsDiabetesUnitFactory()
 
-    # User in this pdu
-    user_data = test_user_audit_centre_reader_data
-    submission_user = NPDAUserFactory(
-        organisation_employers=[submission_pdu.pz_code],
-        groups=[user_data.group_name],
-        role=user_data.role,
-    )
+#     # User in this pdu
+#     user_data = test_user_audit_centre_reader_data
+#     submission_user = NPDAUserFactory(
+#         organisation_employers=[submission_pdu.pz_code],
+#         groups=[user_data.group_name],
+#         role=user_data.role,
+#     )
 
-    # Create an active submission
-    # using postcode for debugging purposes
-    active_submission_pt = PatientFactory(
-        postcode="active_submission_pt",
-        diabetes_type=1,
-        visit__visit_date=AUDIT_START_DATE
-        - timedelta(days=2),  # visit date must be outside audit period and not None
-    )
-    # add a second visit outside the audit period
-    Visit.objects.create(
-        patient=active_submission_pt,
-        visit_date=AUDIT_START_DATE - timedelta(days=1),
-    )
+#     # Create an active submission
+#     # using postcode for debugging purposes
+#     active_submission_pt = PatientFactory(
+#         postcode="active_submission_pt",
+#         diabetes_type=1,
+#         visit__visit_date=AUDIT_START_DATE
+#         - timedelta(days=2),  # visit date must be outside audit period and not None
+#     )
+#     # add a second visit outside the audit period
+#     Visit.objects.create(
+#         patient=active_submission_pt,
+#         visit_date=AUDIT_START_DATE - timedelta(days=1),
+#     )
 
-    # create active submission
-    active_submission = Submission.objects.create(
-        audit_year=AUDIT_START_DATE.year,
-        paediatric_diabetes_unit=submission_pdu,
-        submission_date=AUDIT_START_DATE + timedelta(days=1),
-        submission_active=True,
-        submission_by=submission_user,
-    )
-    active_submission.patients.add(active_submission_pt)
+#     # create active submission
+#     active_submission = Submission.objects.create(
+#         audit_year=AUDIT_START_DATE.year,
+#         paediatric_diabetes_unit=submission_pdu,
+#         submission_date=AUDIT_START_DATE + timedelta(days=1),
+#         submission_active=True,
+#         submission_by=submission_user,
+#     )
+#     active_submission.patients.add(active_submission_pt)
 
-    # Perform calculations
-    kpi_calculator = CalculateKPIS(
-        calculation_date=AUDIT_START_DATE,
-        return_pt_querysets=True,
-    )
+#     # Perform calculations
+#     kpi_calculator = CalculateKPIS(
+#         calculation_date=AUDIT_START_DATE,
+#         return_pt_querysets=True,
+#     )
 
-    kpi_calculator.set_patients_for_calculation(pz_codes=[submission_pdu.pz_code])
+#     kpi_calculator.set_patients_for_calculation(pz_codes=[submission_pdu.pz_code])
 
-    kpi_1_patients: QuerySet[Patient] = kpi_calculator._calculate_kpis()[
-        "calculated_kpi_values"
-    ][kpi_calculator.kpi_name_registry.get_attribute_name(1)]["patient_querysets"]
+#     kpi_1_patients: QuerySet[Patient] = kpi_calculator._calculate_kpis()[
+#         "calculated_kpi_values"
+#     ][kpi_calculator.kpi_name_registry.get_attribute_name(1)]["patient_querysets"]
 
-    assert (
-        active_submission_pt not in kpi_1_patients["eligible"]
-    )  # active submission patients with one or more visit dates within audit period should be included
-    assert active_submission_pt not in kpi_1_patients["ineligible"]
-    # count the number of visits in the patient_querysets
+#     assert (
+#         active_submission_pt not in kpi_1_patients["eligible"]
+#     )  # active submission patients with one or more visit dates within audit period should be included
+#     assert active_submission_pt not in kpi_1_patients["ineligible"]
+#     # count the number of visits in the patient_querysets
