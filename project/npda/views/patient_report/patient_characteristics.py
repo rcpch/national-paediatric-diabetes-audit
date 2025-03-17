@@ -18,7 +18,6 @@ from project.constants.colors import (
     RCPCH_PINK,
     RCPCH_MID_GREY,
     RCPCH_DARK_BLUE,
-    RCPCH_LIGHT_GREY,
 )
 
 
@@ -256,7 +255,8 @@ def patient_characteristics(request):
         "number_of_patients": number_of_patients,
         "patients_by_age": age_band_counts,
         "patients_by_sex": sex_counts,
-        "patients_by_imd": imd_counts,
+        "imd_has_data": not counts_are_zero(imd_counts),
+        "ethnicity_has_data": not counts_are_zero(ethnicity_counts),
         "diabetes_types": diabetes_types,
         "imd_piechart": imd_piechart.to_html(full_html=False),
         "ethnicity_piechart": ethnicity_piechart.to_html(full_html=False),
@@ -306,3 +306,7 @@ def create_piechart(dict_counts, colors, title):
     )
 
     return fig
+
+
+def counts_are_zero(counts):
+    return all(count == 0 for count in counts.values())

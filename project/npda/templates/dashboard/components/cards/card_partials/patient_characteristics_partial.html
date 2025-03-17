@@ -117,35 +117,39 @@
   {% comment %}  {% endcomment %}
 </div>
 {% comment %}  {% endcomment %}
-<div class="row mt-5">
-  <form class="filter">
-    <input class="btn"
-           type="radio"
-           name="ethnicity_deprivation"
-           value="ethnicity"
-           aria-label="Ethnicity"
-           _="on click toggle .hidden on #deprivation-piechart then toggle .hidden on #ethnicity-piechart" />
-    <input class="btn"
-           checked
-           type="radio"
-           name="ethnicity_deprivation"
-           value="deprivation"
-           aria-label="Deprivation"
-           _="on click toggle .hidden on #ethnicity-piechart then toggle .hidden on #deprivation-piechart" />
-  </form>
-  {% comment %}  {% endcomment %}
-</div>
-<div class="grid grid-cols-2 gap-4">
+<div class="grid grid-cols-2 gap-4 mt-5">
   <div class="col-span-1" id='piecharts'>
-    <div class="w-full h-25" id="deprivation-piechart">
-      {{ imd_piechart|safe }}
-    </div>
-    <div class="w-full h-25 hidden" id="ethnicity-piechart">
-      {{ ethnicity_piechart|safe }}
+    <form class="filter">
+      <input class="btn"
+             {% if ethnicity_has_datef is False or imd_has_data is False %} disabled {% endif %}
+             type="radio"
+             name="ethnicity_deprivation"
+             value="ethnicity"
+             aria-label="Ethnicity"
+             _="on click toggle .hidden on #deprivation-piechart then toggle .hidden on #ethnicity-piechart" />
+      <input class="btn"
+             {% if ethnicity_has_datef is False or imd_has_data is False %} disabled {% endif %}
+             checked
+             type="radio"
+             name="ethnicity_deprivation"
+             value="deprivation"
+             aria-label="Deprivation"
+             _="on click toggle .hidden on #ethnicity-piechart then toggle .hidden on #deprivation-piechart" />
+    </form>
+    {% if ethnicity_has_date or imd_has_data %}
+      <div class="w-full h-25" id="deprivation-piechart">
+        {{ imd_piechart|safe }}
+      </div>
+      <div class="w-full h-25 hidden" id="ethnicity-piechart">
+        {{ ethnicity_piechart|safe }}
+      </div>
+    {% else %}
+      <div class="alert alert-info mt-5">
+        <i class="fa-solid fa-person-circle-exclamation"></i> No eligible patients.
+      </div>
+    {% endif %}
+    {% comment %} ethnicity / deprivation toggle and chart {% endcomment %}
+    <div class="col-span-1 px-5 mt-5">
+      <h1>hello</h1>
     </div>
   </div>
-  {% comment %} ethnicity / deprivation toggle and chart {% endcomment %}
-  <div class="col-span-1 px-5 mt-5">
-    <h1>hello</h1>
-  </div>
-</div>
