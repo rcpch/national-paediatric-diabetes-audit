@@ -217,23 +217,13 @@ def test_multiple_patients(
     assert second_patient.diagnosis_date == df["Date of Diabetes Diagnosis"][2].date()
 
 
-@pytest.mark.parametrize(
-    "column,model_field",
-    [
-        pytest.param("Date of Birth", "date_of_birth"),
-        pytest.param("Diabetes Type", "diabetes_type"),
-        pytest.param("Date of Diabetes Diagnosis", "diagnosis_date"),
-    ],
-)
 @pytest.mark.django_db(transaction=True)
-def test_missing_mandatory_field(
+def test_missing_date_of_birth(
     seed_groups_per_function_fixture,
     seed_users_per_function_fixture,
     single_row_valid_df,
-    column,
-    model_field,
 ):
-    # As these tests need full transaction support we can't use our session fixtures
+    # As this test needs full transaction support we can't use our session fixtures
     test_user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE
     ).first()
@@ -241,7 +231,7 @@ def test_missing_mandatory_field(
     # Delete all patients to ensure we're starting from a clean slate
     Patient.objects.all().delete()
 
-    single_row_valid_df.loc[0, column] = None
+    single_row_valid_df.loc[0, "Date of Birth"] = None
 
     assert (
         Patient.objects.count() == 0
@@ -249,7 +239,7 @@ def test_missing_mandatory_field(
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
 
-    assert model_field in errors[0]
+    assert "date_of_birth" in errors[0]
 
     # Catastrophic - we can't save this patient at all
     assert Patient.objects.count() == 0
@@ -310,6 +300,34 @@ def test_missing_unique_reference_number(
 
     # We shouldn't save this patient (invariant enforced in Patient.save not in the database)
     assert Patient.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_missing_date_of_diagnosis(test_user, single_row_valid_df):
+    single_row_valid_df.loc[0, "Date of Diabetes Diagnosis"] = None
+
+    errors = csv_upload_sync(test_user, single_row_valid_df)
+
+    assert "diagnosis_date" in errors[0]
+
+    assert Patient.objects.count() == 1
+
+    patient = Patient.objects.first()
+    assert patient.diagnosis_date is None
+
+
+@pytest.mark.django_db
+def test_missing_diabetes_type(test_user, single_row_valid_df):
+    single_row_valid_df.loc[0, "Diabetes Type"] = None
+
+    errors = csv_upload_sync(test_user, single_row_valid_df)
+
+    assert "diabetes_type" in errors[0]
+
+    assert Patient.objects.count() == 1
+
+    patient = Patient.objects.first()
+    assert patient.diagnosis_date is None
 
 
 @pytest.mark.django_db
