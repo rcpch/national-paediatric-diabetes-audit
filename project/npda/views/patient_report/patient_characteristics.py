@@ -12,6 +12,14 @@ import plotly.graph_objects as go
 # Project imports
 from project.npda.general_functions.audit_period import audit_period_for_audit_year
 from project.npda.models import Submission
+from project.constants.colors import (
+    RCPCH_LIGHT_BLUE,
+    RCPCH_YELLOW,
+    RCPCH_PINK,
+    RCPCH_MID_GREY,
+    RCPCH_DARK_BLUE,
+    RCPCH_LIGHT_GREY,
+)
 
 
 def patient_characteristics(request):
@@ -115,6 +123,7 @@ def patient_characteristics(request):
         "pk",
         "sex",
         "date_of_birth",
+        "ethnicity",
         "index_of_multiple_deprivation_quintile",
         "diabetes_type",
     )
@@ -145,6 +154,33 @@ def patient_characteristics(request):
         "4": 0,
         "5 (least deprived)": 0,
     }
+
+    ethnicity_counts = {
+        "White": 0,
+        "Mixed": 0,
+        "Asian": 0,
+        "Black": 0,
+        "Other/Not Stated/Unknown": 0,
+    }
+
+    imd_colors = [
+        "#E00087",  # IMD 1
+        "#D3D3D3",  # Light Gray (IMD 2)
+        "#A9A9A9",  # Dark Gray (IMD 3)
+        "#808080",  # Gray (IMD 4)
+        "#11A7F2",  # IMD 5
+    ]
+
+    ethnicity_colors = [
+        RCPCH_LIGHT_BLUE,  # White
+        RCPCH_YELLOW,  # Mixed
+        RCPCH_PINK,  # Asian
+        RCPCH_MID_GREY,  # Black
+        RCPCH_DARK_BLUE,  # Other
+    ]
+
+    imd_title = "<b>Index of Multiple Deprivation (IMD) Distribution</b>"
+    ethnicity_title = "<b>Ethnicity Distribution</b>"
 
     for patient in all_patients_in_this_submission_by_age:
         patient["age"] = relativedelta(comparison_date, patient["date_of_birth"]).years
@@ -196,8 +232,25 @@ def patient_characteristics(request):
         elif patient["index_of_multiple_deprivation_quintile"] == 5:
             imd_counts["5 (least deprived)"] += 1
 
+        # Ethnicity
+        if patient["ethnicity"] in ["A", "B", "C"]:
+            ethnicity_counts["White"] += 1
+        if patient["ethnicity"] in ["D", "E", "F", "G"]:
+            ethnicity_counts["Mixed"] += 1
+        if patient["ethnicity"] in ["H", "J", "K", "L", "R"]:
+            ethnicity_counts["Asian"] += 1
+        if patient["ethnicity"] in ["M", "N", "P"]:
+            ethnicity_counts["Black"] += 1
+        if patient["ethnicity"] in ["S", "Z", "99"]:
+            ethnicity_counts["Other/Not Stated/Unknown"] += 1
+
     # Create the IMD pie chart
-    imd_piechart = create_imd_piechart(imd_counts)
+    imd_piechart = create_piechart(imd_counts, imd_colors, imd_title)
+
+    # Create the Ethnicity pie chart
+    ethnicity_piechart = create_piechart(
+        ethnicity_counts, ethnicity_colors, ethnicity_title
+    )
 
     context = {
         "number_of_patients": number_of_patients,
@@ -206,12 +259,13 @@ def patient_characteristics(request):
         "patients_by_imd": imd_counts,
         "diabetes_types": diabetes_types,
         "imd_piechart": imd_piechart.to_html(full_html=False),
+        "ethnicity_piechart": ethnicity_piechart.to_html(full_html=False),
     }
 
     return render(request, template, context)
 
 
-def create_imd_piechart(imd_counts):
+def create_piechart(dict_counts, colors, title):
     """
     Generates a Plotly pie chart from IMD counts.
 
@@ -222,16 +276,8 @@ def create_imd_piechart(imd_counts):
         plotly.graph_objects.Figure: A Plotly pie chart figure.
     """
 
-    colors = [
-        "#E00087",  # IMD 1
-        "#D3D3D3",  # Light Gray (IMD 2)
-        "#A9A9A9",  # Dark Gray (IMD 3)
-        "#808080",  # Gray (IMD 4)
-        "#11A7F2",  # IMD 5
-    ]
-
-    labels = list(imd_counts.keys())
-    values = list(imd_counts.values())
+    labels = list(dict_counts.keys())
+    values = list(dict_counts.values())
 
     fig = go.Figure(
         data=[
@@ -249,7 +295,7 @@ def create_imd_piechart(imd_counts):
 
     fig.update_layout(
         title={
-            "text": "<b>Index of Multiple Deprivation (IMD) Distribution</b>",
+            "text": title,
             "font": {
                 "size": 14,
                 "color": "#0D0D58",  # RCPCH dark blue

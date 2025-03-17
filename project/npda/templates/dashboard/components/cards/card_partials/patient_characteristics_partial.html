@@ -82,7 +82,8 @@
 </div>
 {% comment %} Sex states {% endcomment %}
 <div class="text-rcpch_dark_blue font-bold px-5 mt-5">Sexes</div>
-<div class="flex flex-wrap">
+<div class="flex flex-col">
+  {% comment %}  {% endcomment %}
   <div class="stats shadow flex flex-row">
     <div class="stat place-items-center">
       <div class="stat-title">Boys</div>
@@ -113,12 +114,38 @@
       </div>
     </div>
   </div>
+  {% comment %}  {% endcomment %}
+</div>
+{% comment %}  {% endcomment %}
+<div class="row mt-5">
+  <form class="filter">
+    <input class="btn"
+           type="radio"
+           name="ethnicity_deprivation"
+           value="ethnicity"
+           aria-label="Ethnicity"
+           _="on click toggle .hidden on #deprivation-piechart then toggle .hidden on #ethnicity-piechart" />
+    <input class="btn"
+           checked
+           type="radio"
+           name="ethnicity_deprivation"
+           value="deprivation"
+           aria-label="Deprivation"
+           _="on click toggle .hidden on #ethnicity-piechart then toggle .hidden on #deprivation-piechart" />
+  </form>
+  {% comment %}  {% endcomment %}
 </div>
 <div class="grid grid-cols-2 gap-4">
-  <div class="col-span-1">
-    <p>Some content in the first column.</p>
+  <div class="col-span-1" id='piecharts'>
+    <div class="w-full h-25" id="deprivation-piechart">
+      {{ imd_piechart|safe }}
+    </div>
+    <div class="w-full h-25 hidden" id="ethnicity-piechart">
+      {{ ethnicity_piechart|safe }}
+    </div>
   </div>
-  <div class="col-span-1 px-5">
-    <div class="w-full h-25">{{ imd_piechart|safe }}</div>
+  {% comment %} ethnicity / deprivation toggle and chart {% endcomment %}
+  <div class="col-span-1 px-5 mt-5">
+    <h1>hello</h1>
   </div>
 </div>

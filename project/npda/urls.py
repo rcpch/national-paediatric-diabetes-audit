@@ -18,7 +18,9 @@ from .views.dashboard import dashboard, partials
 from .views.patient_report import partials as patient_report_partials
 from .views.patient_report.patient_measurements import patient_measurements
 from .views.patient_report import patient_report
-from .views.patient_report.patient_characteristics import patient_characteristics
+from .views.patient_report.patient_characteristics import (
+    patient_characteristics,
+)
 
 urlpatterns = [
     path("", view=home, name="home"),
