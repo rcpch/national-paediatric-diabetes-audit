@@ -51,8 +51,12 @@
         <td>{{ patients_by_age.twelve_sixteen }}</td>
         <td>{{ patients_by_age.sixteen_nineteen }}</td>
         <td>{{ patients_by_age.nineteen_twenty_five }}</td>
-        <td class="text-rcpch_pink font-bold">{{ patients_by_age.under_twelve }}</td>
-        <td class="text-rcpch_pink font-bold">{{ patients_by_age.over_twelve }}</td>
+        <td class="text-rcpch_pink_light_tint2 font-bold">
+          {{ patients_by_age.under_twelve }}
+        </td>
+        <td class="text-rcpch_pink_light_tint2 font-bold">
+          {{ patients_by_age.over_twelve }}
+        </td>
         <td class="text-rcpch_pink font-bold">{{ number_of_patients }}</td>
       </tr>
       <tr>
@@ -65,10 +69,10 @@
         <td>
           {{ patients_by_age.nineteen_twenty_five|percentage:number_of_patients }}
         </td>
-        <td class="text-rcpch_pink font-bold">
+        <td class="text-rcpch_pink_light_tint2 font-bold">
           {{ patients_by_age.under_twelve|percentage:number_of_patients }}
         </td>
-        <td class="text-rcpch_pink font-bold">
+        <td class="text-rcpch_pink_light_tint2 font-bold">
           {{ patients_by_age.over_twelve|percentage:number_of_patients }}
         </td>
         <td></td>

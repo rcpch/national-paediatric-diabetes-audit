@@ -248,7 +248,14 @@ def create_imd_piechart(imd_counts):
     )
 
     fig.update_layout(
-        title="Index of Multiple Deprivation (IMD) Distribution",
+        title={
+            "text": "<b>Index of Multiple Deprivation (IMD) Distribution</b>",
+            "font": {
+                "size": 14,
+                "color": "#0D0D58",  # RCPCH dark blue
+                "family": "Montserrat",
+            },
+        },
         margin=dict(l=20, r=20, t=50, b=20),  # minimal margins
     )
 
