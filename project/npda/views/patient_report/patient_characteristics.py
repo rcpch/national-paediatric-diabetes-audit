@@ -209,7 +209,7 @@ def patient_characteristics(request):
         elif 12 <= patient["age"] < 16:
             age_band_counts["twelve_sixteen"] += 1
         elif 16 <= patient["age"] < 19:
-            age_band_counts["1sixteen_nineteen"] += 1
+            age_band_counts["sixteen_nineteen"] += 1
         elif 19 <= patient["age"] < 25:
             age_band_counts["nineteen_twenty_five"] += 1
 
