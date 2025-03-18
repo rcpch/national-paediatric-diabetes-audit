@@ -27,7 +27,6 @@ from project.npda.tests.factories import (
     seed_users_per_function_fixture,
     dummy_sheets_folder,
     dummy_sheet_csv,
-    dummy_sheet_csv_old_headers
 )
 
 logger = logging.getLogger(__name__)
