@@ -3167,12 +3167,16 @@ class CalculateKPIS:
         )
 
         # Extract just the median values
-        median_hba1cs = [
-            values["median"] for values in hba1c_values_by_patient.values()
+        median_hba1cs_mmol_mol = [
+            values["median_mmol"] for values in hba1c_values_by_patient.values()
+        ]
+        median_hba1cs_percent = [
+            values["median_percent"] for values in hba1c_values_by_patient.values()
         ]
 
         # Finally calculate the mean of the medians
-        mean_of_median_hba1cs = self.calculate_mean(median_hba1cs)
+        mean_of_median_hba1cs_mmol_mol = self.calculate_mean(median_hba1cs_mmol_mol)
+        mean_of_median_hba1cs_percent = self.calculate_mean(median_hba1cs_percent)
 
         # Also set pt querysets to be returned if required
         patient_querysets = self._get_pt_querysets_object(
@@ -3184,7 +3188,7 @@ class CalculateKPIS:
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
             # Use passed for storing the value
-            total_passed=mean_of_median_hba1cs,
+            total_passed=mean_of_median_hba1cs_mmol_mol,
             # Failed is not used
             total_failed=-1,
             patient_querysets=patient_querysets,
@@ -3200,11 +3204,11 @@ class CalculateKPIS:
 
             {
                 3757: {
-                'hb1ac_values': [Decimal('47.00'), Decimal('46.00'), Decimal('45.00')],
                 'nhs_number': '4722553467'
+                "hba1c_mmol_mol": [Decimal('49.00'), Decimal('48.00'), Decimal('47.00')],
+                "hba1c_percent": [Decimal('6.7'), Decimal('8.5'), Decimal('8.2')],
                 },
                 3758: {
-                'hb1ac_values': [Decimal('49.00'), Decimal('48.00'), Decimal('47.00')],
                 'nhs_number': '4279935300'},
                 }
         """
@@ -3263,23 +3267,32 @@ class CalculateKPIS:
         # We're doing this in Python instead of Django ORM because median
         # aggregation gets complicated
         hba1c_values_by_patient = defaultdict(
-            lambda: {"hb1ac_values": [], "nhs_number": ""}
+            lambda: {
+                "hb1ac_values_mmol_mol": [],
+                "hb1ac_values_percent": [],
+                "nhs_number": "",
+                "median_mmol": None,
+                "median_percent": None,
+            }
         )
         for visit in valid_visits:
-            hba1c_values_by_patient[visit["patient__pk"]]["hb1ac_values"].append(
-                visit["hba1c_mmol_mol"]
-            )
-            hba1c_values_by_patient[visit["patient__pk"]]["hb1ac_values"].append(
-                visit["hba1c_percent"]
-            )
+            hba1c_values_by_patient[visit["patient__pk"]][
+                "hb1ac_values_mmol_mol"
+            ].append(visit["hba1c_mmol_mol"])
+            hba1c_values_by_patient[visit["patient__pk"]][
+                "hb1ac_values_percent"
+            ].append(visit["hba1c_percent"])
             hba1c_values_by_patient[visit["patient__pk"]]["nhs_number"] = visit[
                 "patient__nhs_number"
             ]
 
         # Now calculate the median for each patient
         for patient_id, values in hba1c_values_by_patient.items():
-            hba1c_values_by_patient[patient_id]["median"] = self.calculate_median(
-                values["hb1ac_values"]
+            hba1c_values_by_patient[patient_id]["median_mmol_mol"] = (
+                self.calculate_median(values["hb1ac_values_mmol_mol"])
+            )
+            hba1c_values_by_patient[patient_id]["median_percent"] = (
+                self.calculate_median(values["hb1ac_values_percent"])
             )
 
         return dict(hba1c_values_by_patient)
@@ -3332,12 +3345,16 @@ class CalculateKPIS:
         )
 
         # Extract just the median values
-        median_hba1cs = [
-            values["median"] for values in hba1c_values_by_patient.values()
+        median_hba1cs_mmol_mol = [
+            values["median_mmol_mol"] for values in hba1c_values_by_patient.values()
+        ]
+        median_hba1cs_percent = [
+            values["median_percent"] for values in hba1c_values_by_patient.values()
         ]
 
         # Finally calculate the median of the medians
-        median_of_median_hba1cs = self.calculate_median(median_hba1cs)
+        median_of_median_hba1cs_mmol_mol = self.calculate_median(median_hba1cs_mmol_mol)
+        median_of_median_hba1cs_percent = self.calculate_median(median_hba1cs_percent)
 
         # Also set pt querysets to be returned if required
         patient_querysets = self._get_pt_querysets_object(
@@ -3348,11 +3365,12 @@ class CalculateKPIS:
         return KPIResult(
             total_eligible=total_eligible,
             total_ineligible=total_ineligible,
-            # Use passed for storing the value
-            total_passed=median_of_median_hba1cs,
+            total_passed=-1,
             # Failed is not used
             total_failed=-1,
             patient_querysets=patient_querysets,
+            median_hba1c_mmol_mol=median_of_median_hba1cs_mmol_mol,
+            median_hba1c_percentage=median_of_median_hba1cs_percent,
         )
 
     def _get_valid_visits_for_kpi_44_and_45(
