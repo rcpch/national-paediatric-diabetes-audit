@@ -118,7 +118,7 @@
 </div>
 {% comment %}  {% endcomment %}
 <div class="text-rcpch_dark_blue font-bold text-sm mt-5">
-  Patient Characteristics for All Patients
+  All Patient Characteristics
 </div>
 <div class="grid grid-cols-2 gap-4 mt-5">
   <div class="col-span-1" id='piecharts'>
@@ -182,4 +182,8 @@
       {{ diabetes_type_box_plot|safe }}
     </div>
   </div>
+</div>
+{% comment %}  {% endcomment %}
+<div class="col-span-2 text-sm">
+  <i class="fa-solid fa-circle-question text-rcpch_pink"></i> These charts are based on all children in this submission {{ audit_year.0 }} to {{ audit_year.1 }}, excluding those with missing HbA1c data or those within 3 months of diagnosis.
 </div>

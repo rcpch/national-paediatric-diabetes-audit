@@ -283,6 +283,7 @@ def patient_characteristics(request):
     )
 
     context = {
+        "audit_year": (audit_start, audit_end),
         "number_of_patients": number_of_patients,
         "patients_by_age": age_band_counts,
         "patients_by_sex": sex_counts,
