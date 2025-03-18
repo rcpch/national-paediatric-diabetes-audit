@@ -163,6 +163,11 @@ dashboard_urlpatterns = [
         name="get_pump_partial",
     ),
     path(
+        "get_cgm_partial",
+        view=partials.get_cgm_partial,
+        name="get_cgm_partial",
+    ),
+    path(
         "temp_set_eligible_kpi_7",
         view=dashboard.temp_set_eligible_kpi_7,
         name="temp_set_eligible_kpi_7",
