@@ -288,6 +288,7 @@ def patient_characteristics(request):
         4: "4",
         5: "5 (least deprived)",
     }
+
     df["patient__sex"] = df["patient__sex"].map(sex_mapping)
     df["patient__diabetes_type"] = df["patient__diabetes_type"].map(
         diabetes_type_mapping

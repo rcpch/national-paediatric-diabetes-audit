@@ -117,7 +117,7 @@
   {% comment %}  {% endcomment %}
 </div>
 {% comment %}  {% endcomment %}
-<div class="text-rcpch_dark_blue font-bold px-5">
+<div class="text-rcpch_dark_blue font-bold text-sm mt-5">
   Patient Characteristics for All Patients
 </div>
 <div class="grid grid-cols-2 gap-4 mt-5">
@@ -160,26 +160,26 @@
              name="boxplot"
              value="sex"
              aria-label="Sex"
-             _="on click toggle .hidden on #sex-boxplot then toggle .hidden on #imd-boxplot then toggle .hidden on #diabetes-type-boxplot" />
+             _="on click remove .hidden from #sex-boxplot add .hidden to #imd-boxplot add .hidden to #diabetes-type-boxplot" />
       <input class="btn"
              {% if ethnicity_has_data is False or imd_has_data is False %} disabled {% endif %}
              type="radio"
              name="boxplot"
              value="imd"
              aria-label="Deprivation"
-             _="on click toggle .hidden on #sex-boxplot then toggle .hidden on #imd-boxplot then toggle .hidden on #diabetes-type-boxplot" />
+             _="on click add .hidden to #sex-boxplot remove .hidden from #imd-boxplot add .hidden to #diabetes-type-boxplot" />
       <input class="btn"
              {% if ethnicity_has_data is False or imd_has_data is False %} disabled {% endif %}
              type="radio"
              name="boxplot"
              value="diabetes_type"
              aria-label="Diabetes Types"
-             _="on click toggle .hidden on #sex-boxplot then toggle .hidden on #imd-boxplot then toggle .hidden on #diabetes-type-boxplot" />
+             _="on click add .hidden to #sex-boxplot add .hidden to #imd-boxplot remove .hidden from #diabetes-type-boxplot" />
     </form>
     <div class="w-auto h-25" id="sex-boxplot">{{ sex_box_plot|safe }}</div>
     <div class="w-auto h-25 hidden" id="imd-boxplot">{{ imd_box_plot|safe }}</div>
     <div class="w-auto h-25 hidden" id="diabetes-type-boxplot">
-      {{ diabetes_type_boxplot|safe }}
+      {{ diabetes_type_box_plot|safe }}
     </div>
   </div>
 </div>
