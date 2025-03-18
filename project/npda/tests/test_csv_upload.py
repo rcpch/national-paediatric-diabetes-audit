@@ -568,6 +568,33 @@ def test_invalid_sex(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+def test_not_specified_sex(test_user, single_row_valid_df):
+    single_row_valid_df["Stated gender"] = 3
+
+    errors = csv_upload_sync(test_user, single_row_valid_df)
+    assert "sex" in errors[0]
+
+    patient = Patient.objects.first()
+
+    assert patient.sex == 3
+    assert len(patient.errors) == 0
+
+
+@pytest.mark.django_db
+def test_unknown_sex(test_user, single_row_valid_df):
+    single_row_valid_df["Stated gender"] = 99
+
+    errors = csv_upload_sync(test_user, single_row_valid_df)
+    assert "sex" in errors[0]
+
+    patient = Patient.objects.first()
+
+    assert patient.sex == 99
+    assert len(patient.errors) == 0
+
+
+
+@pytest.mark.django_db
 def test_missing_gp_ods_code(test_user, single_row_valid_df):
     single_row_valid_df["GP Practice Code"] = None
 
