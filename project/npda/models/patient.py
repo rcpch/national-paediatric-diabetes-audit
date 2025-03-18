@@ -107,11 +107,12 @@ class Patient(models.Model):
         null=True,
     )
 
+    # Mandatory for the questionnaire but we still want to save data if missing in a CSV upload
     diabetes_type = PositiveSmallIntegerField(
-        verbose_name="Diabetes Type", choices=DIABETES_TYPES
+        verbose_name="Diabetes Type", choices=DIABETES_TYPES, null=True
     )
 
-    diagnosis_date = DateField(verbose_name="Date of Diabetes Diagnosis")
+    diagnosis_date = DateField(verbose_name="Date of Diabetes Diagnosis", null=True)
 
     death_date = models.DateField(
         verbose_name="Date of death",

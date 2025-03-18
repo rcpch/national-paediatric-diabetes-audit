@@ -1,7 +1,6 @@
 {
   "recommendations": [
     // Recommended extensions...
-    "streetsidesoftware.code-spell-checker", // Source code spell checker
     "ms-python.black-formatter", // Python formatter
     "batisteo.vscode-django", // Django support
     "junstyle.vscode-django-support", // Django Template Support Intellisense

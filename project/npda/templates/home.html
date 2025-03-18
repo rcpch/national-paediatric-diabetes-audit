@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load npda_tags %}
 {% block content %}
   <section class="bg-rcpch_dark_blue font-montserrat h-100">
     <div class="hero h-[80vh] bg-rcpch_dark_blue font-montserrat "
@@ -16,7 +17,7 @@
           <p class="mb-5 text-center">
             We are now accepting data for the 2024-25 audit year. Download the current dataset, templates for submitting data via CSV and questionnaire and our user guide.
           </p>
-          <a href="http://0.0.0.0:8007/" class="btn w-full">Read User Guide</a>
+          <a href="{% docs_url %}" class="btn w-full">Read User Guide</a>
         </div>
         <img src="{% static 'rcpch-logo.jpg' %}"
              class="rounded-lg shadow-2xl order-3  max-w-[50%]" />

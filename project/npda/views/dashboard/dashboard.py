@@ -16,7 +16,6 @@ from project.npda.models.paediatric_diabetes_unit import (
 )
 from project.npda.models.patient import Patient
 from project.npda.views.dashboard import helpers as hp
-from project.npda.views.dashboard import template_data
 from project.npda.views.decorators import login_and_otp_required
 
 # LOGGING
@@ -234,21 +233,6 @@ def dashboard(request):
     ).days
     current_quarter = retrieve_quarter_for_date(current_date)
 
-    # Gather defaults for htmx partials pt level table
-    default_pt_level_menu_text = template_data.TEXT["health_checks"]
-    default_pt_level_menu_tab_selected = "health_checks"
-    highlight = {
-        f"{key}": key == default_pt_level_menu_tab_selected
-        for key in template_data.TEXT.keys()
-    }
-    default_pt_level_table_headers, default_pt_level_table_data = (
-        hp.get_pt_level_table_data(
-            category="health_checks",
-            calculate_kpis_object=calculate_kpis,
-            kpi_calculations_object=kpi_calculations_object,
-        )
-    )
-
     ethnicity_parent_color_map = {}
     ethnicity_child_parent_map = {}
 
@@ -360,17 +344,6 @@ def dashboard(request):
                     selected_audit_year=selected_audit_year,
                 )
             ),
-        },
-        # Defaults for htmx partials
-        "default_pt_level_menu_text": default_pt_level_menu_text,
-        "default_pt_level_menu_tab_selected": default_pt_level_menu_tab_selected,
-        "default_highlight": highlight,
-        "default_table_data": {
-            "headers": default_pt_level_table_headers,
-            "row_data": default_pt_level_table_data,
-            "ineligible_hover_reason": template_data.TEXT["health_checks"][
-                "ineligible_hover_reason"
-            ],
         },
         # TODO: this should be an enum but we're currently not doing benchmarking so can update
         # at that point
