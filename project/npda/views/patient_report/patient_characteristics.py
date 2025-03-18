@@ -25,6 +25,7 @@ from project.constants.colors import (
     RCPCH_MID_GREY,
     RCPCH_LIGHT_GREY,
     RCPCH_DARK_BLUE,
+    RCPCH_LIGHTEST_GREY,
 )
 from project.constants import HBA1C_FORMATS
 from project.npda.models import Visit
@@ -126,6 +127,7 @@ def patient_characteristics(request):
             )  # Filter by diabetes type
 
     # Get the number of patients of ages 0-2, 2-5, 5-12, 12-16, 16-19, 19-25
+    # Filter these patients by the diabetes type selected or All
     all_patients_in_this_submission_by_age = all_patients_in_this_submission.filter(
         filter
     ).values(
@@ -253,6 +255,8 @@ def patient_characteristics(request):
         if patient["ethnicity"] in ["S", "Z", "99"]:
             ethnicity_counts["Other/Not Stated/Unknown"] += 1
 
+    # create the charts
+
     # Create the IMD pie chart
     imd_piechart = create_piechart(imd_counts, imd_colors, imd_title)
 
@@ -264,32 +268,22 @@ def patient_characteristics(request):
     visits = return_eligible_visits(all_patients_in_this_submission, audit_year)
     # Create a Pandas DataFrame
     df = pd.DataFrame(visits)
-    # Convert Decimal to float for plotting
-    df["hba1c_mmol_mol"] = df["hba1c_mmol_mol"].astype(float)
 
-    # Map sex codes to labels for better visualization
-    sex_mapping = {1: "Male", 2: "Female", 0: "Not Known", 9: "Not Specified"}
-    df["patient__sex"] = df["patient__sex"].map(sex_mapping)
-    line_colors = {
-        "Male": RCPCH_LIGHT_BLUE,
-        "Female": RCPCH_PINK,
-        "Not Known": RCPCH_YELLOW,
-        "Not Specified": RCPCH_MID_GREY,
-    }
-    fill_colors = {
-        "Male": RCPCH_LIGHT_BLUE_TINT1,
-        "Female": RCPCH_PINK_LIGHT_TINT1,
-        "Not Known": RCPCH_YELLOW_LIGHT_TINT1,
-        "Not Specified": RCPCH_LIGHT_GREY,
-    }
-    sex_hba1c_mmol_mol_violin_title = "<b>Distribution of HbA1c (mmol/mol) by Sex</b>"
-
-    # Create the violin plot
-    sex_hba1c_mmol_mol_violin = create_violin(
-        df, line_colors, fill_colors, sex_hba1c_mmol_mol_violin_title
+    # Create the box plot for sex
+    sex_hba1c_mmol_mol_box_plot = create_box_plot(df, "sex")
+    # Create the box plot for IMD
+    imd_hba1c_mmol_mol_box_plot = create_box_plot(
+        df,
+        "index_of_multiple_deprivation_quintile",
+    )
+    # Create the box plot for diabetes types
+    diabetes_type_hba1c_mmol_mol_box_plot = create_box_plot(
+        df,
+        "diabetes_type",
     )
 
     context = {
+        "audit_year": (audit_start, audit_end),
         "number_of_patients": number_of_patients,
         "patients_by_age": age_band_counts,
         "patients_by_sex": sex_counts,
@@ -298,7 +292,11 @@ def patient_characteristics(request):
         "diabetes_types": diabetes_types,
         "imd_piechart": imd_piechart.to_html(full_html=False),
         "ethnicity_piechart": ethnicity_piechart.to_html(full_html=False),
-        "violin_plot": sex_hba1c_mmol_mol_violin.to_html(full_html=False),
+        "sex_box_plot": sex_hba1c_mmol_mol_box_plot.to_html(full_html=False),
+        "imd_box_plot": imd_hba1c_mmol_mol_box_plot.to_html(full_html=False),
+        "diabetes_type_box_plot": diabetes_type_hba1c_mmol_mol_box_plot.to_html(
+            full_html=False
+        ),
     }
 
     return render(request, template, context)
@@ -359,6 +357,8 @@ def return_eligible_visits(patients, audit_year):
         "hba1c_percent",
         "patient__nhs_number",
         "patient__sex",
+        "patient__diabetes_type",
+        "patient__index_of_multiple_deprivation_quintile",
     ]
 
     audit_start, audit_end = audit_period_for_audit_year(audit_year)
@@ -401,32 +401,34 @@ def return_eligible_visits(patients, audit_year):
     )
 
 
-def create_violin(df, line_colors, fill_colors, title):
-    # Create the violin plot using Plotly Graph Objects
+def _build_box_plot(df, field, line_colors, fill_colors, title, xaxis_title):
+    """
+    # Create the violin plot using Plotly Graph Objects"
+    """
     fig = go.Figure()
 
-    for sex in df["patient__sex"].unique():
-        subset = df[df["patient__sex"] == sex]
+    for item in df[f"patient__{field}"].unique():
+        subset = df[df[f"patient__{field}"] == item]
         # Add box plot
         fig.add_trace(
             go.Box(
                 y=subset["hba1c_mmol_mol"],
-                name=sex,
-                marker_color=line_colors[sex],
-                fillcolor=fill_colors[sex],
+                name=item,
+                marker_color=line_colors[item],
+                fillcolor=fill_colors[item],
             )
         )
 
         # Add scatter plot on top
         fig.add_trace(
             go.Scatter(
-                x=[sex] * len(subset),  # Position scatter points over the box
+                x=[item] * len(subset),  # Position scatter points over the box
                 y=subset["hba1c_mmol_mol"],
                 mode="markers",
                 marker=dict(
                     color="black", size=5, opacity=0.6
                 ),  # Color of scatter points
-                name=sex,
+                name=item,
                 showlegend=False,  # Don't duplicate legend entries
             )
         )
@@ -434,7 +436,7 @@ def create_violin(df, line_colors, fill_colors, title):
     fig.update_layout(
         title=title,
         yaxis_title="HbA1c (mmol/mol)",
-        xaxis_title="Sex",
+        xaxis_title=xaxis_title,
     )
 
     fig.update_layout(
@@ -450,3 +452,84 @@ def create_violin(df, line_colors, fill_colors, title):
     )
 
     return fig
+
+
+def create_box_plot(df, field):
+    """
+    # Create the parameters for the box plot
+    """
+    mapping_object = {}
+    if field == "sex":
+        mapping_object = {1: "Male", 2: "Female", 0: "Not Known", 9: "Not Specified"}
+        line_colors = {
+            "Male": RCPCH_LIGHT_BLUE,
+            "Female": RCPCH_PINK,
+            "Not Known": RCPCH_YELLOW,
+            "Not Specified": RCPCH_MID_GREY,
+        }
+        fill_colors = {
+            "Male": RCPCH_LIGHT_BLUE_TINT1,
+            "Female": RCPCH_PINK_LIGHT_TINT1,
+            "Not Known": RCPCH_YELLOW_LIGHT_TINT1,
+            "Not Specified": RCPCH_LIGHT_GREY,
+        }
+        title = "<b>Distribution of HbA1c (mmol/mol) by Sex</b>"
+        xaxis_title = "Sex"
+    elif field == "index_of_multiple_deprivation_quintile":
+        mapping_object = {
+            1: "1 (most deprived)",
+            2: "2",
+            3: "3",
+            4: "4",
+            5: "5 (least deprived)",
+        }
+        line_colors = {
+            "1 (most deprived)": "#E00087",  # IMD 1
+            "2": "#D3D3D3",  # Light Gray (IMD 2)
+            "3": "#A9A9A9",  # Dark Gray (IMD 3)
+            "4": "#808080",  # Gray (IMD 4)
+            "5 (least deprived)": "#11A7F2",  # IMD 5
+        }
+        fill_colors = {
+            "1 (most deprived)": RCPCH_PINK_LIGHT_TINT1,  # IMD 1
+            "2": RCPCH_LIGHTEST_GREY,  # Light Gray (IMD 2)
+            "3": RCPCH_LIGHT_GREY,  # Dark Gray (IMD 3)
+            "4": RCPCH_MID_GREY,  # Gray (IMD 4)
+            "5 (least deprived)": RCPCH_LIGHT_BLUE_TINT1,  # IMD 5
+        }
+        title = "<b>Distribution of HbA1c (mmol/mol) by IMD</b>"
+        xaxis_title = "Index of Multiple Deprivation (IMD)"
+    elif field == "diabetes_type":
+        mapping_object = {
+            1: "Type 1",
+            2: "Type 2",
+            3: "CFRD",
+            4: "MODY",
+            5: "Other",
+            99: "Unknown",
+        }
+        xaxis_title = "Diabetes Types"
+        line_colors = {
+            "Type 1": RCPCH_LIGHT_BLUE,
+            "Type 2": RCPCH_PINK,
+            "CFRD": RCPCH_YELLOW,
+            "MODY": RCPCH_MID_GREY,
+            "Other": RCPCH_DARK_BLUE,
+            "Unknown": RCPCH_LIGHTEST_GREY,
+        }
+        fill_colors = {
+            "Type 1": RCPCH_LIGHT_BLUE_TINT1,
+            "Type 2": RCPCH_PINK_LIGHT_TINT1,
+            "CFRD": RCPCH_YELLOW_LIGHT_TINT1,
+            "MODY": RCPCH_LIGHT_GREY,
+            "Other": RCPCH_DARK_BLUE,
+            "Unknown": RCPCH_LIGHTEST_GREY,
+        }
+        title = "<b>Distribution of HbA1c (mmol/mol) by Diabetes Type</b>"
+
+    df[f"patient__{field}"] = df[f"patient__{field}"].map(mapping_object)
+    # Convert Decimal to float for plotting
+    df["hba1c_mmol_mol"] = df["hba1c_mmol_mol"].astype(float)
+
+    boxplot = _build_box_plot(df, field, line_colors, fill_colors, title, xaxis_title)
+    return boxplot
