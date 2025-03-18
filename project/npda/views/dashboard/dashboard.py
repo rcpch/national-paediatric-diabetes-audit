@@ -98,8 +98,6 @@ def dashboard(request):
     calculate_kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=True)
 
     kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
-    # Extract helpers
-    get_attribute_name = calculate_kpis.kpi_name_registry.get_attribute_name
 
     # From this, gather specific chart data required
 
