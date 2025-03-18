@@ -1655,6 +1655,30 @@ def test_inpatient_admission_stabilisation_admission_date_less_than_eleven_days_
 
 
 @pytest.mark.django_db
+def test_inpatient_admission_stabilisation_when_diagnosis_date_missing():
+    """
+    Test that inpatient admission for stabilisation passes if admission date is within 11 days of diagnosis date
+    """
+    patient = PatientFactory()
+    patient.diagnosis_date = None
+
+    form = VisitForm(
+        data={
+            "visit_date": "2025-01-01",  # Required for validation
+            "hospital_admission_date": "2025-01-01",
+            "hospital_discharge_date": "2025-01-08",
+            "hospital_admission_reason": 1,  # patient stabilisation
+            # dka_additional_therapies
+            # hospital_admission_other
+        },
+        initial={"patient": patient},
+    )
+
+    # Trigger the cleaners
+    assert form.is_valid()
+
+
+@pytest.mark.django_db
 def test_inpatient_admission_stabilisation_discharge_date_after_date_of_death_fails_validation():
     """
     Test that inpatient admission for stabilisation is rejected if discharge date before admission date
