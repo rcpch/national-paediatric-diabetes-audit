@@ -143,6 +143,11 @@ dashboard_urlpatterns = [
         name="get_new_admissions_partial",
     ),
     path(
+        "get_transitioned_to_adult_service_partial",
+        view=partials.get_transitioned_to_adult_service_partial,
+        name="get_transitioned_to_adult_service_partial",
+    ),
+    path(
         "temp_set_eligible_kpi_7",
         view=dashboard.temp_set_eligible_kpi_7,
         name="temp_set_eligible_kpi_7",

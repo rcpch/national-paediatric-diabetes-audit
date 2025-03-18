@@ -33,6 +33,7 @@ from project.constants.albuminuria_stage import ALBUMINURIA_STAGES
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.constants.hba1c_format import HBA1C_FORMATS
 from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
+from project.constants.leave_pdu_reasons import LEAVE_PDU_REASONS
 from project.constants.retinal_screening_results import RETINAL_SCREENING_RESULTS
 from project.constants.smoking_status import SMOKING_STATUS
 from project.constants.types.kpi_types import (
@@ -888,6 +889,37 @@ class CalculateKPIS:
             total_failed=total_failed,
             patient_querysets=patient_querysets,
         )
+    
+    def get_number_of_transitioned_to_adult_service_this_month(self) -> int:
+        """
+        Returns the number of patients who have been transitioned to the adult service this month
+
+        KPI 9 + transitioned to adult service + this month
+        """
+        base_eligible_patients, _ = (
+            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+        )
+
+        today = date.today()
+        current_month_start = date(today.year, today.month, 1)
+        current_month_end = date(today.year, today.month + 1, 1)
+
+        eligible_patients = base_eligible_patients.filter(
+            Q(paediatric_diabetes_units__date_leaving_service__range=(current_month_start, current_month_end)),
+            Q(paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[0][0])
+        )
+
+        return eligible_patients.count()
+
+    def _get_kpi_9_eligible_pts_base_query_set(self) -> QuerySet[Patient]:
+        """
+        Returns a base query set for KPI 9 for re use
+        """
+        if not hasattr(self, "kpi_9_eligible_pts_base_query_set"):
+            self.kpi_9_eligible_pts_base_query_set = self.patients.filter(
+                Q(paediatric_diabetes_units__date_leaving_service__range=(self.AUDIT_DATE_RANGE))
+            )
+        return self.kpi_9_eligible_pts_base_query_set
 
     def calculate_kpi_10_total_coeliacs(self) -> KPIResult:
         """
