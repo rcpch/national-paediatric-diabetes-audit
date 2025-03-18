@@ -234,7 +234,7 @@ def get_new_diagnoses_partial(request):
 
     n_diagnoses_this_month = calculate_kpis.get_new_diagnoses_this_month()
 
-    context = {"number": n_diagnoses_this_month}
+    context = {"number": n_diagnoses_this_month, "units": "(N / month)"}
 
     return render(
         request, "dashboard/components/cards/card_partials/secondary_card_partial.html", context
@@ -276,11 +276,12 @@ def get_new_admissions_partial(request):
 
     n_admissions_this_month = calculate_kpis.get_number_of_admissions_this_month()
 
-    context = {"number": n_admissions_this_month}
+    context = {"number": n_admissions_this_month, "units": "(N / month)"}
 
     return render(
         request, "dashboard/components/cards/card_partials/secondary_card_partial.html", context
     )
+
 
 @login_and_otp_required()
 def get_transitioned_to_adult_service_partial(request):
@@ -313,15 +314,18 @@ def get_transitioned_to_adult_service_partial(request):
 
     calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
 
-    n_transitioned_to_adult_service = calculate_kpis.get_number_of_transitioned_to_adult_service_this_month()
+    n_transitioned_to_adult_service = (
+        calculate_kpis.get_number_of_transitioned_to_adult_service_this_month()
+    )
 
-    context = {"number": n_transitioned_to_adult_service}
+    context = {"number": n_transitioned_to_adult_service, "units": "(N / month)"}
 
     return render(
         request,
         "dashboard/components/cards/card_partials/secondary_card_partial.html",
         context,
     )
+
 
 @login_and_otp_required()
 def get_moved_out_of_area_partial(request):
@@ -340,14 +344,14 @@ def get_moved_out_of_area_partial(request):
             message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
         )
         return render(request, "dashboard.html")
-    
+
     selected_audit_year = int(request.session.get("selected_audit_year"))
 
     if selected_audit_year <= 2024:
         # The day after the audit year end date
         calculation_date = date(selected_audit_year, 4, 1)
     else:
-        today = date.today()    
+        today = date.today()
         calculation_date = date(selected_audit_year, today.month, today.day)
 
     calculate_kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=True)
@@ -356,7 +360,57 @@ def get_moved_out_of_area_partial(request):
 
     n_moved_out_of_area = calculate_kpis.get_number_of_moved_out_of_area_this_month()
 
-    context = {"number": n_moved_out_of_area}
+    context = {"number": n_moved_out_of_area, "units": "(N / month)"}
+
+    return render(
+        request,
+        "dashboard/components/cards/card_partials/secondary_card_partial.html",
+        context,
+    )
+
+
+@login_and_otp_required()
+def get_n_on_hcl_partial(request):
+    """HTMX view that returns the number of patients who are on HCL"""
+
+    pz_code = request.session.get("pz_code")
+
+    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
+        "npda", "PaediatricDiabetesUnit"
+    )
+    try:
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+    except PaediatricDiabetesUnit.DoesNotExist:
+        messages.error(
+            request=request,
+            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
+        )
+        return render(request, "dashboard.html")
+
+    selected_audit_year = int(request.session.get("selected_audit_year"))
+
+    if selected_audit_year <= 2024:
+        # The day after the audit year end date
+        calculation_date = date(selected_audit_year, 4, 1)
+    else:
+        today = date.today()
+        calculation_date = date(selected_audit_year, today.month, today.day)
+
+    calculate_kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=True)
+
+    calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+
+    hcl_use_kpi_result = calculate_kpis.calculate_kpi_24_hybrid_closed_loop_system()
+
+    n_hcl_use = hcl_use_kpi_result.total_passed
+    pct_hcl_use = round(
+        hcl_use_kpi_result.total_passed / hcl_use_kpi_result.total_eligible * 100, 1
+    )
+
+    context = {
+        "number": n_hcl_use,
+        "units": f"({pct_hcl_use}%)",
+    }
 
     return render(
         request,
