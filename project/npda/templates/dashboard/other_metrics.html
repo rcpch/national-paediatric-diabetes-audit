@@ -1,7 +1,7 @@
 <!-- Metrics Dashboard -->
-<div class="space-y-6">
+<div class="grid grid-cols-1 gap-4">
     <!-- Top Row Metrics -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <!-- New diagnoses -->
         {%include "dashboard/components/bases/base_secondary_card.html" with title="New diagnoses" value="25" subtitle="(N / month)"%}
 
@@ -16,15 +16,22 @@
     </div>
 
     <!-- Main Content Area -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 xl:grid-cols-4 gap-4">
         <!-- Graph Section -->
         <div class="card bg-base-100 shadow-xl flex flex-col md:col-span-3">
             <div class="card-body">
                 <h2 class="card-title text-sm text-center font-bold">Closed Loop</h2>
                 <div class="">
-                    <div class="flex items-center justify-center text-gray-500">
-                        [Graph Placeholder]
-                    </div>
+                  {% if charts.hcl_use_per_quarter_value_counts_pct.no_eligible_patients %}
+                  <div class="alert alert-info">
+                    <i class="fa-solid fa-person-circle-exclamation"></i> No eligible patients.
+                  </div>
+                {% else %}
+                  <div
+                  hx-get="{% url 'get_hcl_scatter_plot' %}"
+                  hx-vals='{ "data" : {{ charts.hcl_use_per_quarter_value_counts_pct.data }} }'
+                  hx-trigger="load" hx-swap="innerHTML"></div>
+                {% endif %}
                 </div>
             </div>
         </div>
@@ -32,13 +39,13 @@
         <!-- Right Side Metrics -->
         <div class="flex flex-col gap-4">
             <!-- Closed Loop -->
-            {%include "dashboard/components/bases/base_secondary_card.html" with title="Closed Loop" value="25" subtitle="(50%)" %}
+            {% include "dashboard/components/bases/base_secondary_card.html" with title="Closed Loop" value="25" subtitle="(50%)" %}
 
             <!-- Pump -->
-            {%include "dashboard/components/bases/base_secondary_card.html" with title="Pump" value="25" subtitle="(50%)" %}
+            {% include "dashboard/components/bases/base_secondary_card.html" with title="Pump" value="25" subtitle="(50%)" %}
 
             <!-- CGM -->
-            {%include "dashboard/components/bases/base_secondary_card.html" with title="CGM" value="25" subtitle="(50%)" %}
+            {% include "dashboard/components/bases/base_secondary_card.html" with title="CGM" value="25" subtitle="(50%)" %}
         </div>
     </div>
 </div>
