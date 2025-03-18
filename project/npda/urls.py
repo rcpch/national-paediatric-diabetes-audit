@@ -123,39 +123,14 @@ dashboard_urlpatterns = [
         name="dashboard",
     ),
     path(
-        "get_waffle_chart_partial",
-        view=partials.get_waffle_chart_partial,
-        name="get_waffle_chart_partial",
-    ),
-    path(
-        "get_map_chart_partial",
-        view=partials.get_map_chart_partial,
-        name="get_map_chart_partial",
-    ),
-    path(
-        "get_progress_bar_chart_partial",
-        view=partials.get_progress_bar_chart_partial,
-        name="get_progress_bar_chart_partial",
-    ),
-    path(
-        "get_simple_bar_chart_pcts_partial",
-        view=partials.get_simple_bar_chart_pcts_partial,
-        name="get_simple_bar_chart_pcts_partial",
-    ),
-    path(
-        "get_simple_bar_chart_absolutes_partial",
-        view=partials.get_simple_bar_chart_absolutes_partial,
-        name="get_simple_bar_chart_absolutes_partial",
-    ),
-    path(
         "get_hcl_scatter_plot",
         view=partials.get_hcl_scatter_plot,
         name="get_hcl_scatter_plot",
     ),
     path(
-        "get_treemap_chart_partial",
-        view=partials.get_treemap_chart_partial,
-        name="get_treemap_chart_partial",
+        "get_map_chart_partial",
+        view=partials.get_map_chart_partial,
+        name="get_map_chart_partial",
     ),
     path(
         "temp_set_eligible_kpi_7",
