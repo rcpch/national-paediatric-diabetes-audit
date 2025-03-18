@@ -407,14 +407,27 @@ def create_violin(df, line_colors, fill_colors, title):
 
     for sex in df["patient__sex"].unique():
         subset = df[df["patient__sex"] == sex]
+        # Add box plot
         fig.add_trace(
-            go.Violin(
+            go.Box(
                 y=subset["hba1c_mmol_mol"],
                 name=sex,
-                box_visible=True,
-                meanline_visible=True,
-                line_color=line_colors[sex],
+                marker_color=line_colors[sex],
                 fillcolor=fill_colors[sex],
+            )
+        )
+
+        # Add scatter plot on top
+        fig.add_trace(
+            go.Scatter(
+                x=[sex] * len(subset),  # Position scatter points over the box
+                y=subset["hba1c_mmol_mol"],
+                mode="markers",
+                marker=dict(
+                    color="black", size=5, opacity=0.6
+                ),  # Color of scatter points
+                name=sex,
+                showlegend=False,  # Don't duplicate legend entries
             )
         )
 
