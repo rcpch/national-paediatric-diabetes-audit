@@ -1,6 +1,8 @@
 import dataclasses
 import datetime
 import tempfile
+import csv
+from io import StringIO
 from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 
@@ -16,7 +18,7 @@ from django.contrib.gis.geos import Point
 from httpx import HTTPError
 
 from project.npda.general_functions.csv import csv_upload, csv_parse
-from project.constants import ALL_DATES
+from project.constants import csv_definition_for, ALL_DATES
 from project.npda.models import NPDAUser, Patient, Visit
 from project.npda.tests.factories.patient_factory import (
     INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
@@ -154,6 +156,33 @@ def read_csv_from_str(contents):
         f.seek(0)
 
         return csv_parse(f)
+
+
+def modify_raw_csv(csv_str, start=None, end=None, replacements={}):
+    # Sometimes we have to alter the CSV directly to test values
+    # of the wrong type.
+    reader = csv.reader(StringIO(csv_str))
+    [header, *rows] = [row for row in reader]
+
+    start_ix = 0 if start is None else start - 1
+    end_ix = len(rows) if end is None else end - 1
+
+    rows = rows[start_ix:end_ix]
+    
+    for replacement in replacements:
+        row_ix = replacement["row"] - 1
+        column_ix = header.index(replacement["column"])
+        value = replacement["value"]
+
+        rows[row_ix][column_ix] = value
+    
+    output = StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow(header)
+    writer.writerows(rows)
+
+    return output.getvalue()
 
 
 @pytest.mark.django_db
@@ -331,24 +360,6 @@ def test_missing_diabetes_type(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_error_in_single_visit(test_user, single_row_valid_df):
-    single_row_valid_df.loc[0, "Diabetes Treatment at time of Hba1c measurement"] = 45
-    single_row_valid_df.loc[
-        0,
-        "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
-    ] = 3
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "treatment" in errors[0]
-
-    visit = Visit.objects.first()
-
-    assert visit.treatment == 45
-    assert "treatment" in visit.errors
-
-
-@pytest.mark.django_db
 def test_error_in_multiple_visits(test_user, one_patient_two_visits):
     df = one_patient_two_visits
     df.loc[0, "Diabetes Treatment at time of Hba1c measurement"] = 45
@@ -369,9 +380,7 @@ def test_error_in_multiple_visits(test_user, one_patient_two_visits):
 
     [first_visit, second_visit] = Visit.objects.all().order_by("visit_date")
 
-    print(second_visit.patient.nhs_number)
-
-    assert first_visit.treatment == 45
+    assert first_visit.treatment is None
     assert "treatment" in first_visit.errors
 
     assert (
@@ -410,7 +419,7 @@ def test_multiple_patients_where_one_has_visit_errors_and_the_other_does_not(
 
     [visit_for_second_patient] = Visit.objects.filter(patient=patient_two)
 
-    assert first_visit_for_first_patient.treatment == 45
+    assert first_visit_for_first_patient.treatment is None
     assert "treatment" in first_visit_for_first_patient.errors
 
     assert (
@@ -455,10 +464,10 @@ def test_multiple_patients_with_visit_errors(
     visit_for_first_patient = Visit.objects.filter(patient=patient_one).first()
     visit_for_second_patient = Visit.objects.filter(patient=patient_two).first()
 
-    assert visit_for_first_patient.treatment == 45
+    assert visit_for_first_patient.treatment == None
     assert "treatment" in visit_for_first_patient.errors
 
-    assert visit_for_second_patient.treatment == 45
+    assert visit_for_second_patient.treatment == None
     assert "treatment" in visit_for_second_patient.errors
 
 
@@ -503,19 +512,6 @@ def test_over_25(test_user, single_row_valid_df):
 
     error_message = patient.errors["date_of_birth"][0]["message"]
     assert error_message == "NPDA patients cannot be 25+ years old. This patient is 25"
-
-
-@pytest.mark.django_db
-def test_invalid_diabetes_type(test_user, single_row_valid_df):
-    single_row_valid_df["Diabetes Type"] = 45
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert "diabetes_type" in errors[0]
-
-    patient = Patient.objects.first()
-
-    assert patient.diabetes_type == 45
-    assert "diabetes_type" in patient.errors
 
 
 @pytest.mark.django_db
@@ -567,21 +563,8 @@ def test_invalid_sex(test_user, single_row_valid_df):
 
     patient = Patient.objects.first()
 
-    assert patient.sex == 45
+    assert patient.sex == None
     assert "sex" in patient.errors
-
-
-@pytest.mark.django_db
-def test_invalid_ethnicity(test_user, single_row_valid_df):
-    single_row_valid_df["Ethnic Category"] = "45"
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert "ethnicity" in errors[0]
-
-    patient = Patient.objects.first()
-
-    assert patient.ethnicity == "45"
-    assert "ethnicity" in patient.errors
 
 
 @pytest.mark.django_db
@@ -1084,17 +1067,6 @@ def test_bad_date_format_on_optional_column(one_patient_two_visits):
 
 
 @pytest.mark.django_db
-def test_upload_csv_with_bool_values_instead_of_int(test_user, single_row_valid_df):
-    single_row_valid_df["Has the patient been recommended a Gluten-free diet?"] = True
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-    assert "gluten_free_diet" in errors[0]
-
-    visit = Visit.objects.first()
-    assert visit.gluten_free_diet == 1
-
-
-@pytest.mark.django_db
 def test_height_is_rounded_to_one_decimal(test_user, single_row_valid_df):
     single_row_valid_df["Patient Height (cm)"] = 123.456
     single_row_valid_df["Patient Weight (kg)"] = 7.89
@@ -1558,29 +1530,6 @@ def test_decs_value_form_passes_validation(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_decs_value_unrecognized_form_fails_validation(test_user, single_row_valid_df):
-    """
-    Test that an impossible DECS value is invalid
-    """
-    single_row_valid_df.loc[0, "Retinal Screening date"] = "01/01/2022"
-    single_row_valid_df.loc[0, "Retinal Screening Result"] = 94  # Impossible value
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert (
-        "retinal_screening_result" in errors[0]
-    ), f"Retinal screening result should fail validation, but passed."
-
-    visit = Visit.objects.first()
-    assert visit.retinal_screening_observation_date == datetime.date(
-        2022, 1, 1
-    ), f"Saved Retinal screening date should be 1/1/2022, but was {visit.retinal_screening_observation_date}"
-    assert (
-        visit.retinal_screening_result == 94
-    ), f"Saved Retinal screening result should be 94 (impossible value), but was {visit.retinal_screening_result}"
-
-
-@pytest.mark.django_db
 def test_decs_value_none_form_fails_validation(test_user, single_row_valid_df):
     """
     Test that a missing DECS value is invalid
@@ -1652,36 +1601,6 @@ def test_urine_albumin_value_form_passes_validation(test_user, single_row_valid_
     assert (
         visit.albuminuria_stage == 1
     ), f"Saved urine albumin stage should be 1 (Normal), but was {visit.albuminuria_stage}"
-    assert visit.albumin_creatinine_ratio_date == datetime.date(
-        2022, 1, 1
-    ), f"Saved urine albumin observation date should be 1/1/2022, but was {visit.albumin_creatinine_ratio_date}"
-
-
-@pytest.mark.django_db
-def test_urine_albumin_impossible_value_form_fails_validation(
-    test_user, single_row_valid_df
-):
-    """
-    Test that urine albumin stage is rejected if impossible
-    """
-    single_row_valid_df.loc[0, "Urinary Albumin Level (ACR)"] = 30
-    single_row_valid_df.loc[0, "Albuminuria Stage"] = 94  # Impossible value
-    single_row_valid_df.loc[0, "Observation Date: Urinary Albumin Level"] = "01/01/2022"
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert (
-        "albuminuria_stage" in errors[0]
-    ), f"Urine albumin stage should fail validation as impossible, but passed."
-
-    visit = Visit.objects.first()
-
-    assert (
-        visit.albumin_creatinine_ratio == 30
-    ), f"Saved urine albumin should be 30, but was {visit.albumin_creatinine_ratio}"
-    assert (
-        visit.albuminuria_stage == 94
-    ), f"Saved urine albumin stage should be 94 (Impossible), but was {visit.albuminuria_stage}"
     assert visit.albumin_creatinine_ratio_date == datetime.date(
         2022, 1, 1
     ), f"Saved urine albumin observation date should be 1/1/2022, but was {visit.albumin_creatinine_ratio_date}"
@@ -2003,29 +1922,6 @@ def test_thyroid_treatment_passes_validation(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_thyroid_treatment_impossible_value_fails_validation(
-    test_user, single_row_valid_df
-):
-    """
-    Test that an impossible thyroid treatment value is rejected
-    """
-    single_row_valid_df.loc[
-        0,
-        "At time of, or following measurement of thyroid function, was the patient prescribed any thyroid treatment?",
-    ] = 94  # Impossible value
-    single_row_valid_df.loc[0, "Observation Date: Thyroid Function"] = "01/01/2022"
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "thyroid_treatment_status" in errors[0]
-
-    visit = Visit.objects.first()
-
-    assert visit.thyroid_treatment_status == 94
-    assert visit.thyroid_function_date == datetime.date(2022, 1, 1)
-
-
-@pytest.mark.django_db
 def test_thyroid_treatment_missing_fails_validation(test_user, single_row_valid_df):
     """
     Test that a missing thyroid treatment value is rejected
@@ -2096,30 +1992,6 @@ def test_coeliac_screening_passes_validation(test_user, single_row_valid_df):
     assert visit.gluten_free_diet == 1
 
 
-@pytest.mark.django_db
-def test_coeliac_screening_impossible_value_fails_validation(
-    test_user, single_row_valid_df
-):
-    """
-    Test that an impossible coeliac screening value is rejected
-    """
-    single_row_valid_df.loc[0, "Observation Date: Coeliac Disease Screening"] = (
-        "01/01/2022"
-    )
-    single_row_valid_df.loc[
-        0, "Has the patient been recommended a Gluten-free diet?"
-    ] = 94  # Impossible value
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "gluten_free_diet" in errors[0]
-
-    visit = Visit.objects.first()
-
-    assert visit.coeliac_screen_date == datetime.date(2022, 1, 1)
-    assert visit.gluten_free_diet == 94
-
-
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/628
 @pytest.mark.django_db
 def test_coeliac_screening_missing_fails_validation(test_user, single_row_valid_df):
@@ -2186,31 +2058,6 @@ def test_psychological_support_passes_validation(test_user, single_row_valid_df)
 
     assert visit.psychological_screening_assessment_date == datetime.date(2022, 1, 1)
     assert visit.psychological_additional_support_status == 1
-
-
-@pytest.mark.django_db
-def test_psychological_support_impossible_value_fails_validation(
-    test_user, single_row_valid_df
-):
-    """
-    Test that an impossible psychological support value is rejected
-    """
-    single_row_valid_df.loc[
-        0, "Observation Date - Psychological Screening Assessment"
-    ] = "01/01/2022"
-    single_row_valid_df.loc[
-        0,
-        "Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?",
-    ] = 94  # Impossible value
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "psychological_additional_support_status" in errors[0]
-
-    visit = Visit.objects.first()
-
-    assert visit.psychological_screening_assessment_date == datetime.date(2022, 1, 1)
-    assert visit.psychological_additional_support_status == 94
 
 
 @pytest.mark.django_db
@@ -2329,29 +2176,6 @@ def test_smoking_status_non_smoker_passes_validation(test_user, single_row_valid
 
     assert visit.smoking_cessation_referral_date is None
     assert visit.smoking_status == 1
-
-
-@pytest.mark.django_db
-def test_smoking_status_impossible_value_fails_validation(
-    test_user, single_row_valid_df
-):
-    """
-    Test that an impossible smoking status value is rejected
-    """
-    single_row_valid_df.loc[
-        0,
-        "Date of offer of referral to smoking cessation service (if patient is a current smoker)",
-    ] = "01/01/2022"
-    single_row_valid_df.loc[0, "Does the patient smoke?"] = 94  # Impossible value
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert "smoking_status" in errors[0]
-
-    visit = Visit.objects.first()
-
-    assert visit.smoking_cessation_referral_date == datetime.date(2022, 1, 1)
-    assert visit.smoking_status == 94
 
 
 @pytest.mark.django_db
@@ -3194,15 +3018,18 @@ def test_visit_date_not_before_diagnosis_date(test_user, single_row_valid_df):
 )
 @pytest.mark.django_db
 def test_alternative_formats_for_sex(test_user, dummy_sheet_csv, alternative, expected):
-    # One row CSV. We have to alter the text directly as we're dealing with string values
-    # and the test df has already been parsed with sex as a number column
-    [header, row] = dummy_sheet_csv.split("\n")[:2]
+    one_row_csv = modify_raw_csv(dummy_sheet_csv,
+        end=2, # exclusive
+        replacements = [
+            {
+                "row": 1,
+                "column": "Stated gender",
+                "value": alternative
+            }
+        ]
+    )
 
-    cells = row.split(",")
-    cells[3] = alternative
-
-    csv = f"{header}\n{','.join(cells)}"
-    df = read_csv_from_str(csv).df
+    df = read_csv_from_str(one_row_csv).df
 
     errors = csv_upload_sync(test_user, df)
     assert len(errors) == 0
@@ -3213,22 +3040,22 @@ def test_alternative_formats_for_sex(test_user, dummy_sheet_csv, alternative, ex
 
 @pytest.mark.django_db
 def test_mix_of_standard_and_alternative_formats_for_sex(test_user, dummy_sheet_csv):
-    # Two row CSV. We have to alter the text directly as we're dealing with string values
-    # and the test df has already been parsed with sex as a number column
-    rows = dummy_sheet_csv.split("\n")
-
-    header = rows[0]
-    [row1, row2] = rows[2:4]
+    two_rows_csv = modify_raw_csv(dummy_sheet_csv,
+        start=2, # inclusive
+        end=4, # exclusive
+        replacements = [
+            {
+                "row": 2,
+                "column": "Stated gender",
+                "value": "M"
+            }
+        ]
+    )
+    
+    df = read_csv_from_str(two_rows_csv).df
 
     # Double check we do have different patients
-    assert row1.split(",")[0] != row2.split(",")[0]
-
-    row1_cells = row1.split(",")
-    row1_cells[3] = "M"
-    row1 = ",".join(row1_cells)
-
-    csv = "\n".join([header, row1, row2])
-    df = read_csv_from_str(csv).df
+    assert df["NHS Number"].nunique() == 2
 
     errors = csv_upload_sync(test_user, df)
     assert len(errors) == 0
@@ -3237,3 +3064,229 @@ def test_mix_of_standard_and_alternative_formats_for_sex(test_user, dummy_sheet_
 
     assert patient1.sex == 1
     assert patient2.sex == 1
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        pytest.param("7"),
+        pytest.param("TOO_LONG"),
+    ]
+)
+@pytest.mark.django_db
+def test_bad_data_for_ethnic_category(test_user, dummy_sheet_csv, value):
+    one_row_csv = modify_raw_csv(dummy_sheet_csv,
+        end=2, # exclusive
+        replacements = [
+            {
+                "row": 1,
+                "column": "Ethnic Category",
+                "value": value
+            }
+        ]
+    )
+
+    df = read_csv_from_str(one_row_csv).df
+
+    errors = csv_upload_sync(test_user, df)
+    assert len(errors) > 0
+
+    patient = Patient.objects.first()
+
+    assert patient.ethnicity == None
+    assert "ethnicity" in patient.errors
+
+
+@pytest.mark.parametrize(
+    "model_field",
+    [
+        pytest.param("reason_leaving_service"),
+        pytest.param("hba1c_format"),
+        pytest.param("treatment"),
+        pytest.param("closed_loop_system"),
+        pytest.param("glucose_monitoring"),
+        pytest.param("retinal_screening_result"),
+        pytest.param("albuminuria_stage"),
+        pytest.param("thyroid_treatment_status"),
+        pytest.param("gluten_free_diet"),
+        pytest.param("psychological_additional_support_status"),
+        pytest.param("smoking_status"),
+        pytest.param("dietician_additional_appointment_offered"),
+        pytest.param("ketone_meter_training"),
+        pytest.param("hospital_admission_reason"),
+        pytest.param("dka_additional_therapies")
+    ]
+)
+@pytest.mark.django_db
+def test_bad_data_for_positive_small_integer_fields(test_user, dummy_sheet_csv, model_field):
+    headings = csv_definition_for(model_field)
+    
+    column = headings["heading"]
+    model = apps.get_model("npda", headings["model"])
+
+    for [value, expected, assertion_message] in [
+        [94, None, f"Failed to handle {model_field} with incorrect choice (94)"],
+        [-1, None, f"Failed to handle {model_field} with -1 (negative number)"],
+        [9999, None, f"Failed to handle {model_field} with 9999 (value bigger than int8)"],
+        [32768, None, f"Failed to handle {model_field} 32768 (value bigger than Django small integer field)"],
+        ["STRING", None, f"Failed to handle unexpected string for {model_field}"]
+    ]:
+        one_row_csv = modify_raw_csv(dummy_sheet_csv,
+            end=2, # exclusive
+            replacements = [
+                {
+                    "row": 1,
+                    "column": column,
+                    "value": value
+                }
+            ]
+        )
+
+        df = read_csv_from_str(one_row_csv).df
+
+        errors = csv_upload_sync(test_user, df)
+
+        assert len(errors) > 0, assertion_message
+        assert model.objects.count() == 1, assertion_message
+
+        instance = model.objects.first()
+
+        assert getattr(instance, model_field) == expected, assertion_message
+
+        # No errors field in Transfer
+        if hasattr(instance, "errors"):
+            assert model_field in instance.errors
+
+@pytest.mark.parametrize(
+    "model_field",
+    [
+        pytest.param("systolic_blood_pressure"),
+        pytest.param("diastolic_blood_pressure"),
+    ]
+)
+@pytest.mark.django_db
+def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
+    headings = csv_definition_for(model_field)
+
+    column = headings["heading"]
+    model = apps.get_model("npda", headings["model"])
+
+    one_row_csv = modify_raw_csv(dummy_sheet_csv,
+        end=2, # exclusive
+        replacements = [
+            {
+                "row": 1,
+                "column": column,
+                "value": "STRING"
+            }
+        ]
+    )
+
+    df = read_csv_from_str(one_row_csv).df
+
+    errors = csv_upload_sync(test_user, df)
+
+    assert len(errors) > 0
+    assert model.objects.count() == 1
+
+    instance = model.objects.first()
+
+    assert getattr(instance, model_field) == None
+    assert model_field in instance.errors
+
+
+@pytest.mark.skip(reason="https://github.com/rcpch/national-paediatric-diabetes-audit/issues/488")
+@pytest.mark.parametrize(
+    "model_field",
+    [
+        pytest.param("date_leaving_service"),
+        pytest.param("death_date"),
+        pytest.param("visit_date"),
+        pytest.param("height_weight_observation_date"),
+        pytest.param("hba1c_date"),
+        pytest.param("blood_pressure_observation_date"),
+        pytest.param("foot_examination_observation_date"),
+        pytest.param("retinal_screening_observation_date"),
+        pytest.param("albumin_creatinine_ratio_date"),
+        pytest.param("total_cholesterol_date"),
+        pytest.param("thyroid_function_date"),
+        pytest.param("coeliac_screen_date"),
+        pytest.param("psychological_screening_assessment_date"),
+        pytest.param("smoking_cessation_referral_date"),
+        pytest.param("carbohydrate_counting_level_three_education_date"),
+        pytest.param("dietician_additional_appointment_date"),
+        pytest.param("flu_immunisation_recommended_date"),
+        pytest.param("sick_day_rules_training_date"),
+        pytest.param("hospital_admission_date"),
+        pytest.param("hospital_discharge_date")
+    ]
+)
+@pytest.mark.django_db
+def test_bad_data_for_date_fields(test_user, dummy_sheet_csv, model_field):
+    headings = csv_definition_for(model_field)
+
+    column = headings["heading"]
+    model = apps.get_model("npda", headings["model"])
+
+    one_row_csv = modify_raw_csv(dummy_sheet_csv,
+        end=2, # exclusive
+        replacements = [
+            {
+                "row": 1,
+                "column": column,
+                "value": "NOT A DATE"
+            }
+        ]
+    )
+
+    df = read_csv_from_str(one_row_csv).df
+
+    errors = csv_upload_sync(test_user, df)
+
+    assert len(errors) > 0
+    assert model.objects.count() == 1
+
+    instance = model.objects.first()
+
+    assert getattr(instance, model_field) == None
+    assert model_field in instance.errors
+
+
+@pytest.mark.parametrize(
+    "model_field",
+    [
+        pytest.param("height"),
+        pytest.param("weight"),
+        pytest.param("hba1c"),
+        pytest.param("albumin_creatinine_ratio"),
+        pytest.param("total_cholesterol")         
+    ]
+)
+@pytest.mark.django_db
+def test_bad_data_for_decimal_fields(test_user, dummy_sheet_csv, model_field):
+    headings = csv_definition_for(model_field)
+
+    column = headings["heading"]
+    model = apps.get_model("npda", headings["model"])
+
+    one_row_csv = modify_raw_csv(dummy_sheet_csv,
+        end=2, # exclusive
+        replacements = [
+            {
+                "row": 1,
+                "column": column,
+                "value": "STRING"
+            }
+        ]
+    )
+
+    df = read_csv_from_str(one_row_csv).df
+
+    errors = csv_upload_sync(test_user, df)
+
+    assert len(errors) > 0
+    assert model.objects.count() == 1
+
+    instance = model.objects.first()
+
+    assert getattr(instance, model_field) == None
+    assert model_field in instance.errors

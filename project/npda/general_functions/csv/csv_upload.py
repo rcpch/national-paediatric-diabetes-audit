@@ -21,6 +21,7 @@ from project.constants import (
     CSV_HEADING_OBJECTS,
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
+    LEAVE_PDU_REASONS,
 )
 
 # Logging setup
@@ -82,11 +83,9 @@ async def csv_upload(
 
         return ret
 
-    def validate_transfer(row):
-        return row_to_dict(row, Transfer) | {"paediatric_diabetes_unit": pdu}
-
     async def validate_patient_using_form(row, async_client):
-        fields = row_to_dict(row, Patient)
+        # Date and reason leaving service are validated by the patient form but saved in Transfer 
+        fields = row_to_dict(row, Patient) | row_to_dict(row, Transfer)
 
         form = PatientForm(
             fields,
@@ -120,20 +119,41 @@ async def csv_upload(
 
         return form
 
-    def retain_errors_and_invalid_field_data(form):
-        # We want to retain fields even if they're invalid so that we can return them to the user
+    def can_save_field(form, target_field_name):
+        for field_name, errors in form.errors.as_data().items():
+            if field_name == target_field_name:
+                for error in errors:
+                    if error.code in ["invalid", "invalid_choice"]:
+                        return False
+
+        return True
+
+    def save_errors_and_retain_valid_fields(form):
+        # We want to retain fields so that we can show them in the user interface
         # Use the field value from cleaned_data, falling back to data if it's not there
+        # We can't retain invalid fields however as they might fail database validation
         for key, value in form.cleaned_data.items():
             setattr(form.instance, key, value)
 
         for key, value in form.data.items():
-            if key not in form.cleaned_data:
+            if key not in form.cleaned_data and can_save_field(form, key):
                 setattr(form.instance, key, value)
+            elif not hasattr(form.instance, key):
+                setattr(form.instance, key, None)
 
         form.instance.is_valid = form.is_valid()
         form.instance.errors = (
             None if form.is_valid() else form.errors.get_json_data(escape_html=True)
         )
+    
+    def get_valid_transfer_fields(row, patient_form):
+        transfer_fields = row_to_dict(row, Transfer) | {"paediatric_diabetes_unit": pdu}
+
+        for field in transfer_fields:
+            if not can_save_field(patient_form, field):
+                transfer_fields[field] = None
+
+        return transfer_fields
 
     def record_errors_from_form(errors_to_return, row_index, form):
         for field, errors in form.errors.as_data().items():
@@ -237,7 +257,7 @@ async def csv_upload(
         patient_form, transfer_fields, patient_row_index
     ):
         try:
-            retain_errors_and_invalid_field_data(patient_form)
+            save_errors_and_retain_valid_fields(patient_form)
 
             patient = await sync_to_async(lambda: patient_form.save())()
 
@@ -263,7 +283,7 @@ async def csv_upload(
             record_errors_from_form(errors_to_return, visit_row_index, visit_form)
 
             try:
-                retain_errors_and_invalid_field_data(visit_form)
+                save_errors_and_retain_valid_fields(visit_form)
                 visit_form.instance.patient = patient
 
                 await sync_to_async(lambda: visit_form.save())()
@@ -280,8 +300,6 @@ async def csv_upload(
         patient_row_index = int(first_row["row_index"])
 
         try:
-            transfer_fields = validate_transfer(first_row)
-
             patient_form = await validate_patient_using_form(first_row, async_client)
 
             # Pull through cleaned_data so we can use it in the async visit validators
@@ -306,6 +324,8 @@ async def csv_upload(
                     "Either NHS Number or Unique Reference Number must be provided."
                 )
             else:
+                transfer_fields = get_valid_transfer_fields(first_row, patient_form)
+
                 patient = await save_patient_and_transfer(
                     patient_form, transfer_fields, patient_row_index
                 )
