@@ -1,0 +1,22 @@
+<div class="card bg-base-100 shadow-xl  flex flex-col">
+  <div class="card-body p-4 justify-between">
+      <div class="flex">
+        <h2 class="card-title text-xs {% if center_title %}text-center{% endif %} text-stone-600">
+            {% if title_with_badge %}
+            <div class="flex justify-between items-center w-full">
+                <span>{{ title }}</span>
+                {{ badge|safe }}
+            </div>
+            {% else %}
+            {{ title }}
+            {% endif %}
+        </h2>
+      </div>
+
+          <div class="flex items-center justify-between mt-2">
+              <span class="text-xl font-bold text-rcpch_dark_blue">{{ value }}</span>
+              <span class="text-xs text-rcpch_pink">{{ subtitle }}</span>
+          </div>
+
+  </div>
+</div>
