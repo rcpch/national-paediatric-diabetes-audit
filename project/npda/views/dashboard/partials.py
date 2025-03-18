@@ -6,8 +6,10 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from django.apps import apps
 from django.contrib import messages
+
 # Django imports
 from django.http import HttpResponseBadRequest
+
 # Django imports
 from django.shortcuts import render
 
@@ -15,12 +17,15 @@ import project.constants.colors as colors
 from project.npda.general_functions.map import (
     generate_dataframe_and_aggregated_distance_data_from_cases,
     generate_distance_from_organisation_scatterplot_figure,
-    get_children_by_pdu_audit_year)
-from project.npda.general_functions.rcpch_nhs_organisations import \
-    fetch_organisation_by_ods_code
+    get_children_by_pdu_audit_year,
+)
+from project.npda.general_functions.rcpch_nhs_organisations import (
+    fetch_organisation_by_ods_code,
+)
 from project.npda.kpi_class.kpis import CalculateKPIS
-from project.npda.models.paediatric_diabetes_unit import \
-    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass
+from project.npda.models.paediatric_diabetes_unit import (
+    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
+)
 from project.npda.views.decorators import login_and_otp_required
 
 logger = logging.getLogger(__name__)
@@ -39,7 +44,9 @@ def get_map_chart_partial(request):
     selected_audit_year = request.session.get("selected_audit_year")
 
     try:
-        paediatric_diabetes_unit = PaediatricDiabetesUnitClass.objects.get(pz_code=pz_code)
+        paediatric_diabetes_unit = PaediatricDiabetesUnitClass.objects.get(
+            pz_code=pz_code
+        )
 
         # get lead organisation for the selected PDU
         pdu_lead_organisation = fetch_organisation_by_ods_code(
@@ -182,7 +189,9 @@ def get_hcl_scatter_plot(request):
         )
 
         return render(
-            request, "dashboard/hcl_scatter_plot_partial.html", {"chart_html": chart_html}
+            request,
+            "dashboard/hcl_scatter_plot_partial.html",
+            {"chart_html": chart_html},
         )
     except Exception as e:
         logger.error("Error generating hcl scatter plot", exc_info=True)
@@ -222,7 +231,9 @@ def get_new_diagnoses_partial(request):
         today = date.today()
         calculation_date = date(selected_audit_year, today.month, today.day)
 
-    calculate_kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=True)
+    calculate_kpis = CalculateKPIS(
+        calculation_date=calculation_date, return_pt_querysets=True
+    )
 
     calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
 
@@ -231,7 +242,9 @@ def get_new_diagnoses_partial(request):
     context = {"number": n_diagnoses_this_month, "units": "(N / month)"}
 
     return render(
-        request, "dashboard/components/cards/card_partials/secondary_card_partial.html", context
+        request,
+        "dashboard/components/cards/card_partials/secondary_card_partial.html",
+        context,
     )
 
 
@@ -264,7 +277,9 @@ def get_new_admissions_partial(request):
         today = date.today()
         calculation_date = date(selected_audit_year, today.month, today.day)
 
-    calculate_kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=True)
+    calculate_kpis = CalculateKPIS(
+        calculation_date=calculation_date, return_pt_querysets=True
+    )
 
     calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
 
@@ -273,7 +288,9 @@ def get_new_admissions_partial(request):
     context = {"number": n_admissions_this_month, "units": "(N / month)"}
 
     return render(
-        request, "dashboard/components/cards/card_partials/secondary_card_partial.html", context
+        request,
+        "dashboard/components/cards/card_partials/secondary_card_partial.html",
+        context,
     )
 
 
@@ -304,7 +321,9 @@ def get_transitioned_to_adult_service_partial(request):
         today = date.today()
         calculation_date = date(selected_audit_year, today.month, today.day)
 
-    calculate_kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=True)
+    calculate_kpis = CalculateKPIS(
+        calculation_date=calculation_date, return_pt_querysets=True
+    )
 
     calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
 
@@ -348,7 +367,9 @@ def get_moved_out_of_area_partial(request):
         today = date.today()
         calculation_date = date(selected_audit_year, today.month, today.day)
 
-    calculate_kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=True)
+    calculate_kpis = CalculateKPIS(
+        calculation_date=calculation_date, return_pt_querysets=True
+    )
 
     calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
 
@@ -390,15 +411,23 @@ def get_n_on_hcl_partial(request):
         today = date.today()
         calculation_date = date(selected_audit_year, today.month, today.day)
 
-    calculate_kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=True)
+    calculate_kpis = CalculateKPIS(
+        calculation_date=calculation_date, return_pt_querysets=True
+    )
 
     calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
 
     hcl_use_kpi_result = calculate_kpis.calculate_kpi_24_hybrid_closed_loop_system()
 
     n_hcl_use = hcl_use_kpi_result.total_passed
-    pct_hcl_use = round(
-        hcl_use_kpi_result.total_passed / hcl_use_kpi_result.total_eligible * 100, 1
+
+    pct_hcl_use = (
+        round(
+            hcl_use_kpi_result.total_passed / hcl_use_kpi_result.total_eligible * 100, 1
+        )
+        if hcl_use_kpi_result.total_eligible is not None
+        and hcl_use_kpi_result.total_eligible > 0
+        else 0
     )
 
     context = {
@@ -440,14 +469,20 @@ def get_pump_partial(request):
         today = date.today()
         calculation_date = date(selected_audit_year, today.month, today.day)
 
-    calculate_kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=True)
+    calculate_kpis = CalculateKPIS(
+        calculation_date=calculation_date, return_pt_querysets=True
+    )
 
     calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
 
     pump_kpi_result = calculate_kpis.calculate_kpi_15_insulin_pump()
 
     n_pump = pump_kpi_result.total_passed
-    pct_pump = round(pump_kpi_result.total_passed / pump_kpi_result.total_eligible * 100, 1)
+    pct_pump = (
+        round(pump_kpi_result.total_passed / pump_kpi_result.total_eligible * 100, 1)
+        if pump_kpi_result.total_eligible > 0
+        else 0
+    )
 
     context = {
         "number": n_pump,
@@ -488,14 +523,20 @@ def get_cgm_partial(request):
         today = date.today()
         calculation_date = date(selected_audit_year, today.month, today.day)
 
-    calculate_kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=True)
+    calculate_kpis = CalculateKPIS(
+        calculation_date=calculation_date, return_pt_querysets=True
+    )
 
     calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
 
     cgm_kpi_result = calculate_kpis.calculate_kpi_22_real_time_cgm_with_alarms()
 
     n_cgm = cgm_kpi_result.total_passed
-    pct_cgm = round(cgm_kpi_result.total_passed / cgm_kpi_result.total_eligible * 100, 1)
+    pct_cgm = (
+        round(cgm_kpi_result.total_passed / cgm_kpi_result.total_eligible * 100, 1)
+        if cgm_kpi_result.total_eligible > 0
+        else 0
+    )
 
     context = {
         "number": n_cgm,

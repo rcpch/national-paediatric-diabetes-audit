@@ -8,15 +8,14 @@
       <i class="fa-solid fa-person-circle-exclamation"></i> No eligible patients.
     </div>
   {% else %}
-    <div hx-get="{% url 'patient_characteristics' %}"
+    <div hx-get="{% url 'patient_ages' %}"
          hx-trigger="load"
          hx-swap="innerHTML"
-         hx-target="#patient_characteristics"
-         hx-indicator="#loading-spinner-patient-measurements"
-         _="on htmx:afterRequest remove #loading-spinner-patient-characteristics">
-    </div>
-    <div id="patient_characteristics"></div>
-    <div id="loading-spinner-patient-characteristics"
+         hx-target="#patient_ages"
+         hx-indicator="#loading-spinner-patient-ages"
+         _="on htmx:afterRequest remove #loading-spinner-patient-ages"></div>
+    <div id="patient_ages"></div>
+    <div id="loading-spinner-patient-ages"
          class="loading loading-spinner text-rcpch_dark_blue flex flex-grow-1 justify-center items-center h-full w-1/5 mx-auto bg-center">
     </div>
   {% endif %}

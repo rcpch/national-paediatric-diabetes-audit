@@ -29,11 +29,12 @@ from project.constants.colors import (
 )
 from project.constants import HBA1C_FORMATS
 from project.npda.models import Visit
-from project.npda.kpi_class.kpis import CalculateKPIS
 
 
-def patient_characteristics(request):
-
+def patient_ages(request):
+    """
+    This function is used to generate the patient ages table
+    """
     diabetes_types = [
         {
             "key": 0,
@@ -93,9 +94,7 @@ def patient_characteristics(request):
                     request.POST["diabetes_type"]
                 )
 
-    template = (
-        "dashboard/components/cards/card_partials/patient_characteristics_partial.html"
-    )
+    template = "dashboard/components/cards/card_partials/patient_ages_partial.html"
 
     audit_year = request.session.get("selected_audit_year", None)
 
@@ -151,48 +150,6 @@ def patient_characteristics(request):
         "over_twelve": 0,
     }
 
-    sex_counts = {
-        "male": 0,
-        "female": 0,
-        "not_known": 0,
-        "not_specified": 0,
-    }
-
-    imd_counts = {
-        "1 (most deprived)": 0,
-        "2": 0,
-        "3": 0,
-        "4": 0,
-        "5 (least deprived)": 0,
-    }
-
-    ethnicity_counts = {
-        "White": 0,
-        "Mixed": 0,
-        "Asian": 0,
-        "Black": 0,
-        "Other/Not Stated/Unknown": 0,
-    }
-
-    imd_colors = [
-        "#E00087",  # IMD 1
-        "#D3D3D3",  # Light Gray (IMD 2)
-        "#A9A9A9",  # Dark Gray (IMD 3)
-        "#808080",  # Gray (IMD 4)
-        "#11A7F2",  # IMD 5
-    ]
-
-    ethnicity_colors = [
-        RCPCH_LIGHT_BLUE,  # White
-        RCPCH_YELLOW,  # Mixed
-        RCPCH_PINK,  # Asian
-        RCPCH_MID_GREY,  # Black
-        RCPCH_DARK_BLUE,  # Other
-    ]
-
-    imd_title = "<b>Index of Multiple Deprivation (IMD) Distribution</b>"
-    ethnicity_title = "<b>Ethnicity Distribution</b>"
-
     for patient in all_patients_in_this_submission_by_age:
         patient["age"] = relativedelta(comparison_date, patient["date_of_birth"]).years
 
@@ -221,6 +178,65 @@ def patient_characteristics(request):
         elif patient["age"] >= 12:
             age_band_counts["over_twelve"] += 1
 
+    # create the charts
+
+    context = {
+        "audit_year": (audit_start, audit_end),
+        "number_of_patients": number_of_patients,
+        "patients_by_age": age_band_counts,
+        "diabetes_types": diabetes_types,
+    }
+
+    return render(request, template, context)
+
+
+def all_patient_charts(request):
+    """
+    This function is used to generate all the patient characteristics charts
+    """
+    audit_year = request.session.get("selected_audit_year", None)
+
+    audit_start, audit_end = audit_period_for_audit_year(audit_year)
+    all_patients_in_this_submission = (
+        Submission.objects.filter(
+            audit_year__range=(audit_start.year, audit_end.year),
+            submission_active=True,
+            paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
+        )
+        .get()
+        .patients.all()
+    )
+
+    sex_counts = {
+        "male": 0,
+        "female": 0,
+        "not_known": 0,
+        "not_specified": 0,
+    }
+
+    imd_counts = {
+        "1 (most deprived)": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5 (least deprived)": 0,
+    }
+
+    ethnicity_counts = {
+        "White": 0,
+        "Mixed": 0,
+        "Asian": 0,
+        "Black": 0,
+        "Other/Not Stated/Unknown": 0,
+    }
+
+    for patient in all_patients_in_this_submission.values(
+        "pk",
+        "sex",
+        "ethnicity",
+        "index_of_multiple_deprivation_quintile",
+        "diabetes_type",
+    ):
         # Count the patients by sex
         if patient["sex"] == 1:
             sex_counts["male"] += 1
@@ -255,54 +271,101 @@ def patient_characteristics(request):
         if patient["ethnicity"] in ["S", "Z", "99"]:
             ethnicity_counts["Other/Not Stated/Unknown"] += 1
 
-    # create the charts
-
     # Create the IMD pie chart
-    imd_piechart = create_piechart(imd_counts, imd_colors, imd_title)
+    imd_piechart = create_piechart(imd_counts, "index_of_multiple_deprivation_quintile")
 
     # Create the Ethnicity pie chart
-    ethnicity_piechart = create_piechart(
-        ethnicity_counts, ethnicity_colors, ethnicity_title
-    )
+    ethnicity_piechart = create_piechart(ethnicity_counts, "ethnicity")
 
     visits = return_eligible_visits(all_patients_in_this_submission, audit_year)
     # Create a Pandas DataFrame
     df = pd.DataFrame(visits)
 
     # Create the box plot for sex
-    sex_hba1c_mmol_mol_box_plot = create_box_plot(df, "sex")
+    sex_hba1c_mmol_mol_box_plot = create_box_plot(df, "sex") if not df.empty else None
     # Create the box plot for IMD
-    imd_hba1c_mmol_mol_box_plot = create_box_plot(
-        df,
-        "index_of_multiple_deprivation_quintile",
+    imd_hba1c_mmol_mol_box_plot = (
+        create_box_plot(
+            df,
+            "index_of_multiple_deprivation_quintile",
+        )
+        if not df.empty
+        else None
     )
     # Create the box plot for diabetes types
-    diabetes_type_hba1c_mmol_mol_box_plot = create_box_plot(
-        df,
-        "diabetes_type",
+    diabetes_type_hba1c_mmol_mol_box_plot = (
+        create_box_plot(
+            df,
+            "diabetes_type",
+        )
+        if not df.empty
+        else None
+    )
+
+    template = (
+        "dashboard/components/cards/card_partials/all_patient_charts_partial.html"
     )
 
     context = {
-        "audit_year": (audit_start, audit_end),
-        "number_of_patients": number_of_patients,
-        "patients_by_age": age_band_counts,
         "patients_by_sex": sex_counts,
         "imd_has_data": not counts_are_zero(imd_counts),
         "ethnicity_has_data": not counts_are_zero(ethnicity_counts),
-        "diabetes_types": diabetes_types,
-        "imd_piechart": imd_piechart.to_html(full_html=False),
-        "ethnicity_piechart": ethnicity_piechart.to_html(full_html=False),
-        "sex_box_plot": sex_hba1c_mmol_mol_box_plot.to_html(full_html=False),
-        "imd_box_plot": imd_hba1c_mmol_mol_box_plot.to_html(full_html=False),
-        "diabetes_type_box_plot": diabetes_type_hba1c_mmol_mol_box_plot.to_html(
-            full_html=False
+        "imd_piechart": imd_piechart.to_html(full_html=False) if imd_piechart else None,
+        "ethnicity_piechart": (
+            ethnicity_piechart.to_html(full_html=False) if imd_piechart else None
+        ),
+        "sex_box_plot": (
+            sex_hba1c_mmol_mol_box_plot.to_html(full_html=False)
+            if sex_hba1c_mmol_mol_box_plot
+            else None
+        ),
+        "imd_box_plot": (
+            imd_hba1c_mmol_mol_box_plot.to_html(full_html=False)
+            if imd_hba1c_mmol_mol_box_plot
+            else None
+        ),
+        "diabetes_type_box_plot": (
+            diabetes_type_hba1c_mmol_mol_box_plot.to_html(full_html=False)
+            if diabetes_type_hba1c_mmol_mol_box_plot
+            else None
         ),
     }
 
     return render(request, template, context)
 
 
-def create_piechart(dict_counts, colors, title):
+"""
+# Helper functions for the two views
+"""
+
+
+def _build_pie_chart(field):
+    """
+    # Build the pie chart for the patient characteristics
+    """
+    if field == "index_of_multiple_deprivation_quintile":
+        colors = [
+            "#E00087",  # IMD 1
+            "#D3D3D3",  # Light Gray (IMD 2)
+            "#A9A9A9",  # Dark Gray (IMD 3)
+            "#808080",  # Gray (IMD 4)
+            "#11A7F2",  # IMD 5
+        ]
+        title = "<b>Index of Multiple Deprivation (IMD) Distribution</b>"
+    elif field == "ethnicity":
+        colors = [
+            RCPCH_LIGHT_BLUE,  # White
+            RCPCH_YELLOW,  # Mixed
+            RCPCH_PINK,  # Asian
+            RCPCH_MID_GREY,  # Black
+            RCPCH_DARK_BLUE,  # Other
+        ]
+        title = "<b>Ethnicity Distribution</b>"
+
+    return colors, title
+
+
+def create_piechart(dict_counts, field):
     """
     Generates a Plotly pie chart from IMD counts.
 
@@ -312,6 +375,8 @@ def create_piechart(dict_counts, colors, title):
     Returns:
         plotly.graph_objects.Figure: A Plotly pie chart figure.
     """
+
+    colors, title = _build_pie_chart(field)
 
     labels = list(dict_counts.keys())
     values = list(dict_counts.values())
@@ -351,7 +416,7 @@ def counts_are_zero(counts):
 
 def return_eligible_visits(patients, audit_year):
 
-    visit_value_cols = [
+    visit_value_cols = {
         "patient__pk",
         "hba1c_mmol_mol",
         "hba1c_percent",
@@ -359,7 +424,7 @@ def return_eligible_visits(patients, audit_year):
         "patient__sex",
         "patient__diabetes_type",
         "patient__index_of_multiple_deprivation_quintile",
-    ]
+    }
 
     audit_start, audit_end = audit_period_for_audit_year(audit_year)
     return (

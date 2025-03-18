@@ -19,7 +19,8 @@ from .views.patient_report import partials as patient_report_partials
 from .views.patient_report.patient_measurements import patient_measurements
 from .views.patient_report import patient_report
 from .views.patient_report.patient_characteristics import (
-    patient_characteristics,
+    patient_ages,
+    all_patient_charts,
 )
 
 urlpatterns = [
@@ -191,9 +192,14 @@ patient_report_urlpatterns = [
         name="get_patient_level_report_partial",
     ),
     path(
-        "patient_characteristics",
-        view=patient_characteristics,
-        name="patient_characteristics",
+        "patient_ages",
+        view=patient_ages,
+        name="patient_ages",
+    ),
+    path(
+        "all_patient_charts",
+        view=all_patient_charts,
+        name="all_patient_charts",
     ),
 ]
 
