@@ -1,12 +1,13 @@
 {% load npda_tags %}
 {% if user.is_authenticated %}
-  {% comment %} DASHBOARD {% endcomment %}
   <li class="">
-    {% include "navbar/components/nav_link.html" with url_name="dashboard" nav_text="Dashboard" %}
+    {% include "navbar/components/nav_link.html" with url_name="dashboard" nav_text="Unit Report" %}
   </li>
-  {% comment %} SUBMISSIONS {% endcomment %}
   <li class="">
-    {% include "navbar/components/nav_link.html" with url_name="patients" nav_text="Submissions" %}
+    {% include "navbar/components/nav_link.html" with url_name="patient_report" nav_text="Patient Report" %}
+  </li>
+  <li class="">
+    {% include "navbar/components/nav_link.html" with url_name="patients" nav_text="Patient Data" %}
   </li>
 {% endif %}
 <li>

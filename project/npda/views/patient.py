@@ -1,6 +1,7 @@
 # python imports
 import logging
 import json
+from datetime import date
 
 # Django imports
 from django.apps import apps
@@ -13,12 +14,15 @@ from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.db.models import Count, Case, When, Max, Q, F
 from django.forms import BaseForm
 from django.forms import BaseForm
+from django.http import HttpResponse
 from django.http.response import HttpResponse
+from django.contrib.postgres.aggregates import StringAgg
 from django.shortcuts import render, redirect, reverse
+from django.template.loader import render_to_string
+from django.urls import reverse_lazy
+from django.utils.html import escape
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
-from django.http import HttpResponse
-from django.urls import reverse_lazy
 
 
 # Third party imports
@@ -29,6 +33,7 @@ from project.npda.general_functions import (
     organisations_adapter,
     fetch_organisation_by_ods_code,
     retrieve_quarter_for_date,
+    visit_falls_within_audit_period_Q_object,
 )
 from project.npda.models import (
     NPDAUser,
@@ -63,6 +68,15 @@ class PatientListView(
     template_name = "patients.html"
     paginate_by = 50
 
+    def split_search_string(self, search_string) -> [str]:
+        """
+        Split string at comma and return as a list
+        """
+        return [
+            nhs_number.standardise_format(term.strip()) or term
+            for term in search_string.split(",")
+        ]
+
     def get_sort_by(self):
         sort_by_param = self.request.GET.get("sort_by")
         sort_param = self.request.GET.get("sort")
@@ -70,11 +84,13 @@ class PatientListView(
         sort_by = None
 
         # Check we are sorting by a fixed set of fields rather than the full Django __ notation
+        # Note that sorting by sex or diabetes_type is hard as the key is an integer, not a string
         if sort_by_param in [
             "nhs_number",
             "unique_reference_number",
             "index_of_multiple_deprivation_quintile",
             "distance_from_lead_organisation",
+            "date_of_birth",
         ]:
             sort_by = sort_by_param
 
@@ -89,10 +105,22 @@ class PatientListView(
 
         # apply filters and annotations to the queryset
         pz_code = self.request.session.get("pz_code")
-        paediatric_diabetes_unit = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-        paediatric_diabetes_unit_lead_organisation = fetch_organisation_by_ods_code(
-            ods_code=paediatric_diabetes_unit.lead_organisation_ods_code
-        )
+        paediatric_diabetes_unit = PaediatricDiabetesUnit.objects.filter(
+            pz_code=pz_code
+        ).first()
+        if paediatric_diabetes_unit.lead_organisation_geocoordinates is None:
+            # we cannot make an API call for each patient  every time we load the page,
+            # so we only do it if the geocoordinates are missing
+            # This should have been done when the PDU was created
+            paediatric_diabetes_unit_lead_organisation = fetch_organisation_by_ods_code(
+                ods_code=paediatric_diabetes_unit.lead_organisation_ods_code
+            )
+            paediatric_diabetes_unit.lead_organisation_geocoordinates = Point(
+                paediatric_diabetes_unit_lead_organisation["longitude"],
+                paediatric_diabetes_unit_lead_organisation["latitude"],
+                srid=4326,
+            )
+            paediatric_diabetes_unit.save()
         filtered_patients = Q(
             submissions__submission_active=True,
             submissions__audit_year=self.request.session.get("selected_audit_year"),
@@ -101,39 +129,55 @@ class PatientListView(
         # filter by contents of the search bar
         search = self.request.GET.get("search-input")
         if search:
-            search = nhs_number.standardise_format(search) or search
-            filtered_patients &= Q(
-                (
-                    Q(nhs_number__icontains=search)
-                    | Q(unique_reference_number__icontains=search)
+            search_terms = self.split_search_string(search)
+
+            combined_q = Q()  # Initialize an empty Q object
+
+            for item in search_terms:
+                item_q = (
+                    Q(nhs_number__icontains=item)
+                    | Q(unique_reference_number__icontains=item)
+                    | Q(pk__icontains=item)
                 )
-                | Q(pk__icontains=search)
-            )
+                combined_q |= item_q  # Combine with OR
+
+            if combined_q:  # Check if any search terms were provided
+                filtered_patients &= combined_q  # Apply the combined OR query
 
         # filter patients to the view preference of the user
         if not self.request.user.viewing_data_nationally():
             # PDU view
             filtered_patients &= Q(
-                submissions__paediatric_diabetes_unit__pz_code=pz_code
+                submissions__paediatric_diabetes_unit__pz_code=pz_code,
             )
 
         patient_queryset = patient_queryset.filter(filtered_patients)
 
         a_year_ago = timezone.now() - timezone.timedelta(days=365)
 
+        this_audit_year_visits = visit_falls_within_audit_period_Q_object(
+            audit_start_date=date(
+                year=int(self.request.session.get("selected_audit_year")),
+                month=4,
+                day=1,
+            ),
+            prepend_query_path="visit",
+        )
+
         patient_queryset = patient_queryset.annotate(
             audit_year=F("submissions__audit_year"),
-            visit_error_count=Count(Case(When(visit__is_valid=False, then=1))),
-            incomplete_full_year_of_care=Case(When(diagnosis_date__gt=a_year_ago, then=True), default=False),
+            visit_error_count=Count(
+                Case(When(this_audit_year_visits & Q(visit__is_valid=False), then=1))
+            ),
+            visits_this_audit_year=Count(this_audit_year_visits),
+            incomplete_full_year_of_care=Case(
+                When(diagnosis_date__gt=a_year_ago, then=True), default=False
+            ),
             last_upload_date=Max("submissions__submission_date"),
             most_recent_visit_date=Max("visit__visit_date"),
             distance_from_lead_organisation=Distance(
                 "location_wgs84",
-                Point(
-                    paediatric_diabetes_unit_lead_organisation["longitude"],
-                    paediatric_diabetes_unit_lead_organisation["latitude"],
-                    srid=4326,
-                ),
+                paediatric_diabetes_unit.lead_organisation_geocoordinates,
             ),
         )
 
@@ -143,9 +187,9 @@ class PatientListView(
             patient_queryset = patient_queryset.order_by(sort_by)
         else:
             patient_queryset = patient_queryset.order_by(
-                "is_valid", # Patient model has errors
-                "-visit_error_count", # Any Visits associated to the patient have errors
-                "incomplete_full_year_of_care"
+                "is_valid",  # Patient model has errors
+                "-visit_error_count",  # Any Visits associated to the patient have errors
+                "incomplete_full_year_of_care",
             )
 
         return patient_queryset
@@ -154,7 +198,9 @@ class PatientListView(
         context = super().get_context_data(**kwargs)
 
         pz_code = self.request.session.get("pz_code")
-        selected_audit_year = self.request.session.get("selected_audit_year")
+        selected_audit_year = self.request.session.get(
+            "selected_audit_year"
+        )  # this is the year that that audit period starts in
 
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code) if pz_code else None
         context["pdu"] = pdu
@@ -205,6 +251,10 @@ class PatientListView(
         seen_first_valid_incomplete_full_year = False
         seen_first_died = False
 
+        context["search_input_list"] = self.split_search_string(
+            search_string=self.request.GET.get("search-input", "")
+        )
+
         # Add extra fields to the patient that we can't add to the query. This is ok because the queryset will be max the page size.
         for patient in context["page_obj"]:
             # Signpost the latest quarter
@@ -212,7 +262,7 @@ class PatientListView(
                 patient.latest_quarter = retrieve_quarter_for_date(
                     patient.most_recent_visit_date
                 )
-        
+
         seen_first_error = False
         seen_first_valid = False
         seen_first_valid_incomplete_full_year = False
@@ -228,7 +278,10 @@ class PatientListView(
                         patient.is_first_error = True
                         seen_first_error = True
                 else:
-                    if not seen_first_valid_incomplete_full_year and patient.incomplete_full_year_of_care:
+                    if (
+                        not seen_first_valid_incomplete_full_year
+                        and patient.incomplete_full_year_of_care
+                    ):
                         patient.is_first_valid_incomplete_full_year = True
 
                         seen_first_valid_incomplete_full_year = True
@@ -244,9 +297,12 @@ class PatientListView(
         response = super().get(request, *args, **kwargs)
 
         if request.htmx:
-            return render(
-                request, "partials/patient_table.html", context=self.get_context_data()
+            htmx_response = render(
+                request,
+                "partials/patient_table.html",
+                context=self.get_context_data(),
             )
+            return htmx_response
 
         return response
 
@@ -271,18 +327,28 @@ class PatientCreateView(
     success_message = "New child record created successfully"
     success_url = reverse_lazy("patients")
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+        pz_code = self.request.session.get("pz_code")
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+        audit_year = self.request.session.get("selected_audit_year")
+        kwargs["paediatric_diabetes_unit"] = pdu
+        kwargs["audit_year"] = audit_year
+        return kwargs
+
     def get_context_data(self, **kwargs):
         PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
         pz_code = self.request.session.get("pz_code")
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
         context = super().get_context_data(**kwargs)
-        title = f"Add New Child to {pdu.lead_organisation_name}  ({pz_code})"
+        title = f"Add New Child to {pdu.lead_organisation_name}  ({pdu.pz_code})"
         if (
             pdu.parent_name is not None
         ):  # if the PDU has a parent, include the parent name in the title
             title = f"Add New Child to {pdu.lead_organisation_name} - {pdu.parent_name} ({pz_code})"
         context["title"] = title
-        context["button_title"] = "Add New Child"
+        context["button_title"] = "Create New Child Patient Record"
         context["form_method"] = "create"
         return context
 
@@ -377,19 +443,21 @@ class PatientUpdateView(
 
     def get_context_data(self, **kwargs):
         Transfer = apps.get_model("npda", "Transfer")
-        pz_code = self.request.session.get("pz_code")
+        # pz_code = self.request.session.get("pz_code")
         patient = Patient.objects.get(pk=self.kwargs["pk"])
         transfer = Transfer.objects.get(patient=patient)
         context = super().get_context_data(**kwargs)
         PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-        title = f"Edit Child Details in {pdu.lead_organisation_name}  ({pz_code})"
+        pdu = PaediatricDiabetesUnit.objects.get(
+            pz_code=transfer.paediatric_diabetes_unit.pz_code
+        )
+        title = f"Edit Child Details in {pdu.lead_organisation_name}  ({transfer.paediatric_diabetes_unit.pz_code})"
         if (
             transfer.paediatric_diabetes_unit.parent_name is not None
         ):  # if the PDU has a parent, include the parent name in the title
-            title = f"Add New Child to {transfer.paediatric_diabetes_unit.lead_organisation_name} - {transfer.paediatric_diabetes_unit.parent_name} ({pz_code})"
+            title = f"Add New Child to {transfer.paediatric_diabetes_unit.lead_organisation_name} - {transfer.paediatric_diabetes_unit.parent_name} ({transfer.paediatric_diabetes_unit.pz_code})"
         context["title"] = title
-        context["button_title"] = "Edit Child Details"
+        context["button_title"] = "Save Changes"
         context["form_method"] = "update"
         context["patient_id"] = self.kwargs["pk"]
         return context
@@ -423,3 +491,8 @@ class PatientDeleteView(
     model = Patient
     success_message = "Child removed from database"
     success_url = reverse_lazy("patients")
+
+    def post(self, request, *args, **kwargs):
+        if "cancel" in request.POST:
+            return redirect(reverse("patient-update", kwargs={"pk": self.kwargs["pk"]}))
+        return super().post(request, *args, **kwargs)

@@ -202,19 +202,23 @@ class CheckCurrentAuditYearMixin(AccessMixin):
 
 class CheckCanCompleteQuestionnaireMixin(AccessMixin):
     """
-    A mixin that checks whether the user has the permission to complete the questionnaire
+    A mixin that checks whether the user can complete the questionnaire:
+      - The submission is not a CSV upload (can_complete_questionnaire = True)
+      - The submission is not a CSV upload
+        - and the operation is a GET (the UI has code to display read only)
+        - or you are a superuser or audit team member
     """
 
     def dispatch(self, request, *args, **kwargs):
         # Check if the user has the permission to complete the questionnaire
         if not request.session.get("can_complete_questionnaire"):
-            logger.warning(
-                f"User {request.user} tried to complete the questionnaire without the permission to do so."
-            )
-            if request.user.is_superuser or request.user.is_rcpch_audit_team_member:
+            if request.method == "GET" or request.user.is_superuser or request.user.is_rcpch_audit_team_member:
                 # Allow superusers and RCPCH audit team members to complete the questionnaire
                 return super().dispatch(request, *args, **kwargs)
 
+            logger.warning(
+                f"User {request.user} tried to complete the questionnaire without the permission to do so."
+            )
             raise PermissionDenied()
 
         return super().dispatch(request, *args, **kwargs)

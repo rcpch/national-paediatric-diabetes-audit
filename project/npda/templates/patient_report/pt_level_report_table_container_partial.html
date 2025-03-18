@@ -2,11 +2,11 @@
 <div id="pt_level_report">
   <div class="flex flex-col gap-4">
     <div class="flex gap-4 flex-wrap">
-      {% include 'dashboard/pt_level_menu_tab_button.html' with selected=highlight.health_checks key='health_checks' button_text='Health Checks' %}
-      {% include 'dashboard/pt_level_menu_tab_button.html' with selected=highlight.additional_care_processes key='additional_care_processes' button_text='Additional Care Processes' %}
-      {% include 'dashboard/pt_level_menu_tab_button.html' with selected=highlight.care_at_diagnosis key='care_at_diagnosis' button_text='Care at Diagnosis' %}
-      {% include 'dashboard/pt_level_menu_tab_button.html' with selected=highlight.outcomes key='outcomes' button_text='Outcomes' %}
-      {% include 'dashboard/pt_level_menu_tab_button.html' with selected=highlight.treatment key='treatment' button_text='Treatment' %}
+      {% include 'patient_report/pt_level_menu_tab_button.html' with selected=highlight.health_checks key='health_checks' button_text='Health Checks' %}
+      {% include 'patient_report/pt_level_menu_tab_button.html' with selected=highlight.additional_care_processes key='additional_care_processes' button_text='Additional Care Processes' %}
+      {% include 'patient_report/pt_level_menu_tab_button.html' with selected=highlight.care_at_diagnosis key='care_at_diagnosis' button_text='Care at Diagnosis' %}
+      {% include 'patient_report/pt_level_menu_tab_button.html' with selected=highlight.outcomes key='outcomes' button_text='Outcomes' %}
+      {% include 'patient_report/pt_level_menu_tab_button.html' with selected=highlight.treatment key='treatment' button_text='Treatment' %}
     </div>
     <div class="bg-white border border-gray-300 rounded-lg shadow text-rcpch_dark_blue h-full p-2">
       <!-- CURRENT SELECTION DESCRIPTION -->
@@ -40,31 +40,53 @@
         </div>
         <p>{{ text.description }}</p>
       </div>
-      <div class="flex flex-col my-2 gap-2">
-        <p class="font-bold text-rcpch_dark_blue">Key</p>
-        <div class="flex gap-4">
-          <div class="flex gap-2 items-center">
-            <i class="fa-solid fa-circle-check text-success"></i>
-            <p>Pass</p>
-          </div>
-          <div class="flex gap-2 items-center">
-            <i class="fa-solid fa-circle-exclamation text-error"></i>
-            <p>Fail</p>
-          </div>
-          <div class="flex gap-2 items-center">
-            <i class="fa-solid fa-ban text-muted"></i>
-            <p>Ineligible</p>
+
+      <div class="flex justify-between items-center">
+        {% comment %} KEYS {% endcomment %}
+        <div class="flex flex-col my-2 gap-2">
+          <p class="font-bold text-rcpch_dark_blue">Key</p>
+          <div class="flex gap-4">
+            <div class="flex gap-2 items-center">
+              <i class="fa-solid fa-circle-check text-success"></i>
+              <p>{{ text.key|get_item:"pass" }}</p>
+            </div>
+            <div class="flex gap-2 items-center">
+              <i class="fa-solid fa-circle-exclamation text-error"></i>
+              <p>{{ text.key|get_item:"fail" }}</p>
+            </div>
+            <div class="flex gap-2 items-center">
+              <i class="fa-solid fa-ban text-muted"></i>
+              <p>{{ text.key|get_item:"ineligible" }}</p>
+            </div>
           </div>
         </div>
+        {% comment %} TOGGLES {% endcomment %}
+
+        {% comment %} Add toggle for eye checks column {% endcomment %}
+        {% if selected == 'health_checks' %}
+        <div class="flex">
+          <fieldset class="fieldset">
+            <label class="fieldset-label flex flex-col justify-center items-center">
+              <span class="text-xs">Show eye screen</span>
+              <input type="checkbox" id="eyeScreenToggle" class="toggle toggle-secondary" checked/>
+            </label>
+          </fieldset>
+        </div>
+        {% endif %}
+        {% comment %} Add toggle for eye checks column {% endcomment %}
       </div>
+
     </div>
-    <div class="flex overflow-y-auto h-[60vh] w-full"
+    {% comment %} Below accounts for all of the above selected tabs which is why
+    it's a bit messy, should extract into own partials for each
+    {% endcomment %}
+    <div class="flex overflow-y-auto max-h-[60vh] w-full"
          id="pt_level_report_table">
       <table class="table-auto w-full text-xs  text-center text-gray-500 mb-5 font-montserrat overflow-x-auto">
         <thead class="uppercase bg-rcpch_dark_blue text-white sticky top-0 z-10">
           <tr>
             {% for header in text.headers %}
-              <th class="px-6 py-4">{{ header }}</th>
+              <th class="px-6 py-4 transition-opacity duration-500 ease-in-out {% if header == "EYE SCREEN" %}eyeScreenColumn{% endif %}">{{ header }}</th>
             {% endfor %}
           </tr>
         </thead>
@@ -73,10 +95,12 @@
               {% for pt_pk, results in table_data.row_data.items %}
 
                 <tr class="bg-white border-b hover:bg-gray-100">
-                  {% for kpi_attr_name in table_data.headers %}
-                    <td class="px-6 py-4">
+                  {% comment %} We exclude is_gte_12yo as though data is used for indicating total, it is not a KPI and
+                  should not be displayed in a column {% endcomment %}
+                  {% for kpi_attr_name in table_data.headers|exclude_item:"is_gte_12yo" %}
+                    <td class="px-6 py-4 {% if kpi_attr_name == "kpi_30_retinal_screening" %}eyeScreenColumn{% endif %}">
                       {% with result=results|get_item:kpi_attr_name %}
-                      <p class="{{ kpi_attr_name }}">
+                      <p class="">
                           {% if kpi_attr_name == "nhs_number" or kpi_attr_name == "unique_reference_number" %}
                               <span class="tooltip tooltip-right block" data-tip="View patient's visits">
                                 <a href="{% url 'patient_visits' pt_pk %}" class="block w-full h-full">
@@ -86,9 +110,11 @@
                               </span>
                             </div>
                           {% elif kpi_attr_name == "total" %}
-                            {{ result.0 }} / {{ result.1 }}
+                            <span class="tooltip tooltip-top block underline decoration-dotted" data-tip="{% if results|get_item:"is_gte_12yo" %}Greater than 12 years old{% else %}Less than 12 years old{% endif %}">
+                              {{ result.0 }} / {{ result.1 }} <i class="fa-solid fa-question fa-2xs absolute -top-2"></i>
+                            </span>
 
-                    {% comment %} TODO: THIS IS UGLY (possibly the worst i ever written), MAKE PARTIALS PER TABLE TAB {% endcomment %}
+
                           {% comment %} NUMBERS {% endcomment %}
                           {% elif kpi_attr_name == 'kpi_44_mean_hba1c' or kpi_attr_name == 'kpi_45_median_hba1c' or kpi_attr_name == 'kpi_46_number_of_admissions' or kpi_attr_name == 'kpi_47_number_of_dka_admissions' %}
                             {{ result }}
@@ -107,6 +133,7 @@
                             <i class="fa-solid fa-circle-exclamation text-error"></i>
                           {% else %}
                           {% comment %} INELIGIBLE {% endcomment %}
+
                             <span class="tooltip tooltip-top block" data-tip="{{ table_data.ineligible_hover_reason|get_item:kpi_attr_name|default:"Ineligible" }}">
                               <i class="fa-solid fa-ban text-muted"></i>
                             </span>
@@ -118,15 +145,8 @@
                 </tr>
               {% endfor %}
             {% else %}
-              {% for _ in "12345"|make_list %}
-                <tr class="bg-white border-b hover:bg-gray-100">
-                    {% for _ in text.headers %}
-                    <td class="px-6 py-4 text-muted">
-                      -
-                    </td>
-                    {% endfor %}
-                </tr>
-              {% endfor %}
+
+
             {% endif %}
       </tbody>
     </table>
@@ -150,7 +170,34 @@
       [disabled] * {
         cursor: progress;
       }
-</style>
+    </style>
+
+    {% comment %} JS for eye screen toggle {% endcomment %}
+    {% if selected == 'health_checks' %}
+    <script>
+      (function() {
+        const eyeScreenToggle = document.getElementById('eyeScreenToggle');
+        const eyeScreenColumns = document.querySelectorAll('.eyeScreenColumn');
+
+        eyeScreenToggle.addEventListener('change', () => {
+          eyeScreenColumns.forEach(column => {
+            column.style.display = eyeScreenToggle.checked ? '' : 'none';
+          });
+        });
+
+        // Initial state - show columns by default
+        eyeScreenColumns.forEach(column => {
+          column.style.display = '';
+        });
+
+        // Set toggle to checked to match initial visible state
+        if (eyeScreenToggle) {
+          eyeScreenToggle.checked = true;
+        }
+      })();
+    </script>
+    {% endif %}
+
 </div>
 {% comment %} N PATIENTS BOTTOM CAP {% endcomment %}
 <div class="bg-rcpch_dark_blue py-5 text-white text-center">
@@ -166,3 +213,5 @@ No eligible patients
 </div>
 </div>
 </div>
+
+

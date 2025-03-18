@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from django import forms
 from django.core.exceptions import ValidationError
@@ -699,12 +700,24 @@ class VisitForm(forms.ModelForm):
 
     def clean_hospital_admission_date(self):
         data = self.cleaned_data["hospital_admission_date"]
+
+        if not self.patient.diagnosis_date:
+            diagnosis_date = None
+        else:
+            diagnosis_date = date(
+                year=self.patient.diagnosis_date.year,
+                month=self.patient.diagnosis_date.month,
+                day=self.patient.diagnosis_date.day,
+            )
+            # diagnosis date can be within 11 days of admission date
+            diagnosis_date = diagnosis_date - timedelta(days=11)
+
         valid, error = validate_date(
             date_under_examination_field_name="hospital_admission_date",
             date_under_examination_label_name="Start date (Hospital Provider Spell)",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=self.patient.diagnosis_date,
+            date_of_diagnosis=diagnosis_date,
             date_of_death=self.patient.death_date,
         )
         if valid == False:
@@ -775,13 +788,17 @@ class VisitForm(forms.ModelForm):
             measure_must_have_date_and_value(
                 height_weight_observation_date,
                 "height_weight_observation_date",
-                [{"weight": height}],
+                [{"weight": weight}],
             )
 
         if height_weight_observation_date is not None:
             if height is None and weight is None:
                 raise ValidationError(
-                    "Height and Weight cannot both be empty if Observation Date is filled in"
+                    {
+                        "height_weight_observation_date": [
+                            "Height and Weight cannot both be empty if Observation Date is filled in"
+                        ]
+                    }
                 )
 
         # Get centiles for height and weight and bmi if they are present as well as date and sex
@@ -950,10 +967,12 @@ class VisitForm(forms.ModelForm):
             "psychological_additional_support_status"
         )
 
-        has_psychological_data = any([
-            psychological_screening_assessment_date,
-            psychological_additional_support_status
-        ])
+        has_psychological_data = any(
+            [
+                psychological_screening_assessment_date,
+                psychological_additional_support_status,
+            ]
+        )
 
         if has_psychological_data and psychological_additional_support_status != 99:
             measure_must_have_date_and_value(
@@ -1002,59 +1021,17 @@ class VisitForm(forms.ModelForm):
         dietician_additional_appointment_date = cleaned_data.get(
             "dietician_additional_appointment_date"
         )
-        if dietician_additional_appointment_offered is not None:
-            if dietician_additional_appointment_offered == 1:
-                measure_must_have_date_and_value(
-                    dietician_additional_appointment_date,
-                    "dietician_additional_appointment_date",
-                    [
-                        {
-                            "dietician_additional_appointment_offered": dietician_additional_appointment_offered
-                        }
-                    ],
-                )
 
         if dietician_additional_appointment_date is not None and (
-            dietician_additional_appointment_offered is None
-            or dietician_additional_appointment_offered == 2
-            or dietician_additional_appointment_offered == 3
-        ):  # No or Unknown
+            dietician_additional_appointment_offered == 2
+        ):  # No
             raise ValidationError(
                 {
                     "dietician_additional_appointment_date": [
-                        "'Was the patient offered an additional appointment with a paediatric dietitian?' must be completed if 'Date of additional appointment with dietitian' is filled in"
+                        "Answer to 'Was the patient offered an additional appointment with a paediatric dietitian?' cannot be No if 'Date of additional appointment with dietitian' is filled in"
                     ]
                 }
             )
-
-        sick_day_rules_training_date = cleaned_data.get("sick_day_rules_training_date")
-        ketone_meter_training = cleaned_data.get("ketone_meter_training")
-
-        if ketone_meter_training is not None:
-            if ketone_meter_training == 1:
-                measure_must_have_date_and_value(
-                    sick_day_rules_training_date,
-                    "sick_day_rules_training_date",
-                    [{"ketone_meter_training": ketone_meter_training}],
-                )
-            else:
-                if sick_day_rules_training_date is not None:
-                    raise ValidationError(
-                        {
-                            "ketone_meter_training": [
-                                "'Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia is only needed if patient is using ketone testing equipment."
-                            ],
-                        },
-                    )
-        else:
-            if sick_day_rules_training_date is not None:
-                raise ValidationError(
-                    {
-                        "ketone_meter_training": [
-                            "'Was the patient using (or trained to use) blood ketone testing equipment at time of visit?' must be completed if Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia has been provided."
-                        ],
-                    }
-                )
 
         hospital_admission_date = cleaned_data.get("hospital_admission_date")
         hospital_discharge_date = cleaned_data.get("hospital_discharge_date")

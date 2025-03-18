@@ -58,15 +58,26 @@ def create_session_object(user):
         )
     )
 
-    audit_year = get_current_audit_year()
+    audit_year = (
+        get_current_audit_year()
+    )  # this is the year that that audit period starts in
     submission_actions = get_submission_actions(pz_code, audit_year)
+
+    supported_audit_years = [
+        (
+            {"year": year, "disabled": False}
+            if year <= get_current_audit_year()
+            else {"year": year, "disabled": True}
+        )
+        for year in SUPPORTED_AUDIT_YEARS
+    ]
 
     session = {
         "pz_code": pz_code,
         "lead_organisation": primary_organisation.paediatric_diabetes_unit.lead_organisation_name,
         "pdu_choices": list(pdu_choices),
         "selected_audit_year": audit_year,
-        "audit_years": SUPPORTED_AUDIT_YEARS,
+        "audit_years": supported_audit_years,
     } | submission_actions
 
     return session
@@ -83,10 +94,17 @@ def refresh_session_filters(request, pz_code=None, audit_year=None):
 
     pz_code = pz_code or request.session.get("pz_code")
 
-    audit_years = SUPPORTED_AUDIT_YEARS
+    supported_audit_years = [
+        (
+            {"year": year, "disabled": False}
+            if year <= get_current_audit_year()
+            else {"year": year, "disabled": True}
+        )
+        for year in SUPPORTED_AUDIT_YEARS
+    ]
     audit_year = audit_year or request.session.get("selected_audit_year")
 
-    session["audit_years"] = audit_years
+    session["audit_years"] = supported_audit_years
     session["selected_audit_year"] = audit_year
 
     if pz_code:

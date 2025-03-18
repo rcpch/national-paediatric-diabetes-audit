@@ -1,4 +1,5 @@
 # python imports
+from datetime import date
 import logging
 
 # django imports
@@ -8,6 +9,7 @@ from django.contrib.gis.db import models
 from .help_text_mixin import HelpTextMixin
 from .categorised_formfield_mixin import *
 from ...constants import (
+    ALL_VISIT_DATES,
     ALBUMINURIA_STAGES,
     CLOSED_LOOP_TYPES,
     DKA_ADDITIONAL_THERAPIES,
@@ -40,7 +42,7 @@ class Visit(models.Model, HelpTextMixin):
     height = CategorisedDecimalField(
         verbose_name="Patient Height (cm)",
         help_text={
-            "label": "At least one height/weight measurement should be recorded during the audit year. BMI will be calculated centrally.",
+            "label": "At least one height/weight measurement should be recorded during the audit year. BMI will be calculated centrally. Note: BMI health check is only completed if both height and weight is measured at the same visit.",
             "reference": "NG18: 1.2.45 At each clinic visit for children and young people with type 1 diabetes measure height and weight and plot on an appropriate growth chart. Check for normal growth and/or significant changes in weight because these may reflect changes in blood glucose control. [2004, amended 2015], NG18: 1.3.20 At each clinic visit for children and young people with type 2 diabetes: • measure height and weight and plot on an appropriate growth chart • calculate BMI. Check for normal growth and/or significant changes in weight because these may reflect changes in blood glucose control. [2004, amended 2015]",
         },
         max_digits=4,
@@ -82,7 +84,7 @@ class Visit(models.Model, HelpTextMixin):
     weight = CategorisedDecimalField(
         verbose_name="Patient Weight (kg)",
         help_text={
-            "label": "Patient Weight (kg)",
+            "label": "Patient Weight (kg). Note: BMI health check is only completed if both height and weight is measured at the same visit",
             "reference": "NG18: 1.2.45 At each clinic visit for children and young people with type 1 diabetes measure height and weight and plot on an appropriate growth chart. Check for normal growth and/or significant changes in weight because these may reflect changes in blood glucose control. [2004, amended 2015], NG18: 1.3.20 At each clinic visit for children and young people with type 2 diabetes: • measure height and weight and plot on an appropriate growth chart • calculate BMI. Check for normal growth and/or significant changes in weight because these may reflect changes in blood glucose control. [2004, amended 2015]",
         },
         max_digits=4,
@@ -124,7 +126,7 @@ class Visit(models.Model, HelpTextMixin):
     bmi = CategorisedDecimalField(
         verbose_name="Body Mass Index",
         help_text={
-            "label": "This is a calculated field. BMI value for the patient.",
+            "label": "This is a calculated field. BMI value for the patient. BMI health check is only completed if both height and weight is measured at the same visit",
             "reference": "The BMI is calculated using the height and weight of the patient. This is used to calculate the body mass index sds and centile of the patient.",
         },
         max_digits=3,

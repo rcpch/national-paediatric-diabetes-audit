@@ -1098,6 +1098,7 @@ def test_thyroid_function_date_none_form_passes_validation_if_treatment_not_pres
     assert "thyroid_treatment_status" not in form.errors
     assert "thyroid_function_date" not in form.errors
 
+
 """
 Coeliac tests
 """
@@ -1445,15 +1446,17 @@ def test_dietician_no_additional_offered_date_provided_fail_validation():
 
 
 @pytest.mark.django_db
-def test_dietician_additional_offered_date_missing_fail_validation():
+def test_dietician_additional_offered_date_missing_passes_validation():
     """
-    Test that dietician extra appointment offered but date missing should fail
+    Test that dietician extra appointment offered but date missing should pass
+    https://github.com/rcpch/national-paediatric-diabetes-audit/issues/668
     """
 
     patient = PatientFactory()
 
     form = VisitForm(
         data={
+            "visit_date": "2025-01-01",  # Required for validation
             "dietician_additional_appointment_offered": 1,  # Yes
             "dietician_additional_appointment_date": None,
             "carbohydrate_counting_level_three_education_date": "2025-01-01",
@@ -1463,22 +1466,22 @@ def test_dietician_additional_offered_date_missing_fail_validation():
 
     # Trigger the cleaners
     assert (
-        form.is_valid() == False
-    ), f"Dietician extra appointment offered but date missing should fail"
-    assert "dietician_additional_appointment_date" in form.errors
+        form.is_valid()
+    ), f"Dietician extra appointment offered but date missing should pass"
+    assert "dietician_additional_appointment_date" not in form.errors
 
 
 @pytest.mark.django_db
-def test_dietician_additional_offered_none_but_date_offered_fail_validation():
+def test_dietician_additional_offered_no_but_date_offered_fail_validation():
     """
-    Test that dietician additional appointment none but date offered should fail
+    Test that dietician additional appointment No but date offered should fail
     """
 
     patient = PatientFactory()
 
     form = VisitForm(
         data={
-            "dietician_additional_appointment_offered": None,  # None
+            "dietician_additional_appointment_offered": 2,  # No
             "dietician_additional_appointment_date": "2025-01-01",
             "carbohydrate_counting_level_three_education_date": "2025-01-01",
         },
@@ -1488,121 +1491,8 @@ def test_dietician_additional_offered_none_but_date_offered_fail_validation():
     # Trigger the cleaners
     assert (
         form.is_valid() == False
-    ), f"Dietician additional appointment none but date offered should fail"
+    ), f"Dietician additional appointment No but date offered should fail"
     assert "dietician_additional_appointment_date" in form.errors
-
-
-"""
-Test sick day rules
-"""
-
-
-@pytest.mark.django_db
-def test_sick_day_rules_provided_passes_validation():
-    """
-    Test that sick day rules are accepted
-    """
-    patient = PatientFactory()
-
-    form = VisitForm(
-        data={
-            "visit_date": "2025-01-01",  # Required for validation
-            "ketone_meter_training": 1,  # Yes
-            "sick_day_rules_training_date": "2025-01-01",
-        },
-        initial={"patient": patient},
-    )
-
-    # Trigger the cleaners
-    assert form.is_valid(), f"Form should be valid but got {form.errors}"
-    assert "ketone_meter_training" not in form.errors
-    assert "sick_day_rules_training_date" not in form.errors
-
-
-@pytest.mark.django_db
-def test_sick_day_rules_not_provided_passes_validation():
-    """
-    Test that sick day rules are accepted where not provided (date not required)
-    """
-    patient = PatientFactory()
-
-    form = VisitForm(
-        data={
-            "visit_date": "2025-01-01",  # Required for validation
-            "ketone_meter_training": 2,  # No
-            "sick_day_rules_training_date": None,
-        },
-        initial={"patient": patient},
-    )
-
-    # Trigger the cleaners
-    assert form.is_valid(), f"Form should be valid but got {form.errors}"
-    assert "ketone_meter_training" not in form.errors
-    assert "sick_day_rules_training_date" not in form.errors
-
-
-@pytest.mark.django_db
-def test_sick_day_rules_not_provided_but_date_provided_fails_validation():
-    """
-    Test that sick day rules not provided but date provided fails validation
-    """
-    patient = PatientFactory()
-
-    form = VisitForm(
-        data={
-            "ketone_meter_training": 2,  # No
-            "sick_day_rules_training_date": "2025-01-01",
-        },
-        initial={"patient": patient},
-    )
-
-    # Trigger the cleaners
-    assert (
-        form.is_valid() == False
-    ), f"Sick day rules not provided but date provided should fail"
-    assert "ketone_meter_training" in form.errors
-
-
-@pytest.mark.django_db
-def test_sick_day_rules_none_but_date_provided_fails_validation():
-    """
-    Test that sick day rules not answered but date provided fails validation
-    """
-    patient = PatientFactory()
-
-    form = VisitForm(
-        data={
-            "ketone_meter_training": None,  # None
-            "sick_day_rules_training_date": "2025-01-01",
-        },
-        initial={"patient": patient},
-    )
-
-    # Trigger the cleaners
-    assert (
-        form.is_valid() == False
-    ), f"Sick day rules not answered but date provided should fail"
-    assert "ketone_meter_training" in form.errors
-
-
-@pytest.mark.django_db
-def test_sick_day_rules_provided_but_no_date_provided_fails_validation():
-    """
-    Test that sick day rules are provided but no date is rejected
-    """
-    patient = PatientFactory()
-
-    form = VisitForm(
-        data={
-            "ketone_meter_training": 1,  # Yes
-            "sick_day_rules_training_date": None,
-        },
-        initial={"patient": patient},
-    )
-
-    # Trigger the cleaners
-    assert form.is_valid() == False, f"Sick day rules provided but no date should fail"
-    assert "sick_day_rules_training_date" in form.errors
 
 
 """
@@ -1709,7 +1599,81 @@ def test_inpatient_admission_stabilisation_discharge_date_before_diagnosis_date_
     assert (
         form.is_valid() == False
     ), f"Inpatient admission for stabilisation admission date before discharge date should fail"
+    assert "hospital_discharge_date" in form.errors
+
+
+@pytest.mark.django_db
+def test_inpatient_admission_stabilisation_admission_date_more_than_eleven_days_before_diagnosis_date_fails_validation():
+    """
+    Test that inpatient admission for stabilisation is rejected if diagnosis date is more than 11 days before admission date
+    """
+    patient = PatientFactory()
+    patient.diagnosis_date = datetime.date(2025, 1, 15)
+
+    form = VisitForm(
+        data={
+            "hospital_admission_date": "2025-01-01",
+            "hospital_discharge_date": "2025-01-016",
+            "hospital_admission_reason": 1,  # patient stabilisation
+            # dka_additional_therapies
+            # hospital_admission_other
+        },
+        initial={"patient": patient},
+    )
+
+    # Trigger the cleaners
+    assert (
+        form.is_valid() == False
+    ), f"Inpatient admission for stabilisation admission date more than 11 days before diagnosis date should fail"
     assert "hospital_admission_date" in form.errors
+
+
+@pytest.mark.django_db
+def test_inpatient_admission_stabilisation_admission_date_less_than_eleven_days_before_diagnosis_date_passes_validation():
+    """
+    Test that inpatient admission for stabilisation passes if admission date is within 11 days of diagnosis date
+    """
+    patient = PatientFactory()
+    patient.diagnosis_date = datetime.date(2025, 1, 15)
+
+    form = VisitForm(
+        data={
+            "visit_date": "2025-02-01",  # Required for validation
+            "hospital_admission_date": "2025-01-10",
+            "hospital_discharge_date": "2025-01-16",
+            "hospital_admission_reason": 1,  # patient stabilisation
+            # dka_additional_therapies
+            # hospital_admission_other
+        },
+        initial={"patient": patient},
+    )
+
+    # Trigger the cleaners
+    assert form.is_valid()
+
+
+@pytest.mark.django_db
+def test_inpatient_admission_stabilisation_when_diagnosis_date_missing():
+    """
+    Test that inpatient admission for stabilisation passes if admission date is within 11 days of diagnosis date
+    """
+    patient = PatientFactory()
+    patient.diagnosis_date = None
+
+    form = VisitForm(
+        data={
+            "visit_date": "2025-02-01",  # Required for validation
+            "hospital_admission_date": "2025-01-01",
+            "hospital_discharge_date": "2025-01-08",
+            "hospital_admission_reason": 1,  # patient stabilisation
+            # dka_additional_therapies
+            # hospital_admission_other
+        },
+        initial={"patient": patient},
+    )
+
+    # Trigger the cleaners
+    assert form.is_valid()
 
 
 @pytest.mark.django_db

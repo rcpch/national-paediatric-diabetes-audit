@@ -27,16 +27,14 @@ docker tag npda-django:built ${azure_tag}
 docker push ${azure_tag}
 
 # Deploy to Azure Container Apps
-az containerapp revision copy \
+s/deploy-revision.py \
     --name ${AZURE_STAGING_APP_NAME} \
     --resource-group ${AZURE_RESOURCE_GROUP} \
-    --image ${azure_tag} \
-    --query 'properties.provisioningState'
+    --git-hash ${GITHUB_SHA}
 
-az containerapp revision copy \
+s/deploy-revision.py \
     --name ${AZURE_LIVE_APP_NAME} \
     --resource-group ${AZURE_RESOURCE_GROUP} \
-    --image ${azure_tag} \
-    --query 'properties.provisioningState'
+    --git-hash ${GITHUB_SHA}
 
 # Deploy to the docs is handled in the GitHub workflow itself

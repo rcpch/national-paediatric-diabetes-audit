@@ -15,6 +15,8 @@ from project.npda.views.dashboard.dashboard import temp_set_eligible_kpi_7
 
 from .views import *
 from .views.dashboard import dashboard, partials
+from .views.patient_report import partials as patient_report_partials
+from .views.patient_report import patient_report
 
 urlpatterns = [
     path("", view=home, name="home"),
@@ -106,6 +108,8 @@ urlpatterns = [
         name="password_reset_confirm",
     ),
     path("csrf_fail/", csrf_fail, name="csrf_fail"),
+    # Debugging
+    path("celery_test_task/", celery_test_task, name="celery_test_task"),
 ]
 
 dashboard_urlpatterns = [
@@ -113,11 +117,6 @@ dashboard_urlpatterns = [
         "dashboard",
         view=dashboard.dashboard,
         name="dashboard",
-    ),
-    path(
-        "get_patient_level_report_partial",
-        view=partials.get_patient_level_report_partial,
-        name="get_patient_level_report_partial",
     ),
     path(
         "get_waffle_chart_partial",
@@ -141,7 +140,7 @@ dashboard_urlpatterns = [
     ),
     path(
         "get_simple_bar_chart_absolutes_partial",
-        view=get_simple_bar_chart_absolutes_partial,
+        view=partials.get_simple_bar_chart_absolutes_partial,
         name="get_simple_bar_chart_absolutes_partial",
     ),
     path(
@@ -161,5 +160,19 @@ dashboard_urlpatterns = [
     ),
 ]
 
+patient_report_urlpatterns = [
+    path(
+        "patient_report",
+        view=patient_report.patient_report,
+        name="patient_report",
+    ),
+    path(
+        "get_patient_level_report_partial",
+        view=patient_report_partials.get_patient_level_report_partial,
+        name="get_patient_level_report_partial",
+    ),
+]
+
 # Collate all URL patterns
 urlpatterns += dashboard_urlpatterns
+urlpatterns += patient_report_urlpatterns

@@ -71,7 +71,11 @@ def log_user_login_failed(sender, request, user=None, **kwargs):
 
 @receiver(user_logged_out)
 def log_user_logout(sender, request, user, **kwargs):
-    logger.info(f"{user} ({user.email}) logged out from {get_client_ip(request)}.")
+    # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/679
+    # Sometimes this fires without an email on the user.
+    email_to_log = f"({user.email})" if user.email else ""
+    logger.info(f"{user} {email_to_log} logged out from {get_client_ip(request)}.")
+
     VisitActivity.objects.create(
         activity=3, ip_address=get_client_ip(request), npdauser=user
     )

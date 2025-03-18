@@ -1,9 +1,12 @@
-import re
+from datetime import date
 import itertools
 import logging
+import re
 
 from django import template, forms
 from django.conf import settings
+from django.contrib.gis.measure import D
+from django.utils.html import conditional_escape, mark_safe
 
 from ...constants import (
     # VisitCategories,
@@ -12,12 +15,10 @@ from ...constants import (
     UNIQUE_IDENTIFIER_JERSEY,
 )
 
-from django.contrib.gis.measure import D
-from datetime import date
 
 register = template.Library()
 
-# logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @register.filter
@@ -127,13 +128,11 @@ def error_for_field(errors_by_field, field):
     if errors_by_field is None:
         return ""
 
-    concatenated_fields = ""
-
     errors = errors_by_field[field] if field in errors_by_field else []
 
-    error_messages = [error["message"] for error in errors]
+    error_messages = [conditional_escape(error["message"]) for error in errors]
 
-    return "\n".join(error_messages)
+    return mark_safe("\n".join(error_messages))
 
 
 @register.simple_tag
@@ -210,14 +209,6 @@ def docs_url():
 
 
 @register.filter
-def format_nhs_number(nhs_number):
-    if nhs_number and len(nhs_number) >= 10:
-        return f"{nhs_number[:3]} {nhs_number[3:6]} {nhs_number[6:]}"
-
-    return nhs_number
-
-
-@register.filter
 def get_key_where_true(dictionary: dict) -> str:
     """Get the first key where the value is True.
 
@@ -269,11 +260,25 @@ def nhs_number_vs_urn(pz_code, patient=None):
         # Jersey
         return "Unique Reference Number"
     else:
-        if patient and patient.nhs_number:
-            if len(patient.nhs_number) >= 10:
+        if patient:
+            if patient.nhs_number:
                 return f"{patient.nhs_number[:3]} {patient.nhs_number[3:6]} {patient.nhs_number[6:]}"
-            return patient.nhs_number
+            else:
+                return patient.unique_reference_number
         return "NHS Number"
+
+
+@register.simple_tag
+def format_nhs_number(nhs_number):
+    """
+    Formats the NHS number with spaces
+    If the NHS number is less than 10 characters or more, it will return the original value
+    Used in the patient list page to format the NHS number of badges
+    """
+    if nhs_number and len(nhs_number) == 10 and nhs_number.isdigit():
+        return f"{nhs_number[:3]} {nhs_number[3:6]} {nhs_number[6:]}"
+
+    return nhs_number
 
 
 @register.simple_tag
@@ -329,12 +334,12 @@ def centile_for_field(field, centile_sds):
 
     if centile is not None:
         if centile >= 99.9:
-            centile = "centile: ≥99.6ᵗʰ"
+            centile = "≥99.6ᵗʰ"
         elif centile < 0.4:
-            centile = "centile: ≤0.4ᵗʰ"
-        centile = f"centile {centile}"
+            centile = "≤0.4ᵗʰ"
+        centile = f"Centile {centile}"
     if sds is not None:
-        sds = f"SDS: {sds}"
+        sds = f"SDS {sds}"
     else:
         sds = ""
         centile = ""
@@ -367,3 +372,10 @@ def no_categories_present(categories):
         if category.get("present", False):
             return False
     return True
+
+@register.filter
+def exclude_item(lst, item):
+    """Removes an item from a list"""
+    if isinstance(lst, list):
+        return [i for i in lst if i != item]
+    return lst  # Return as-is if it's not a list

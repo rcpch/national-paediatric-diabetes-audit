@@ -35,10 +35,7 @@ class VisitExternalValidationResult:
 async def _calculate_centiles_z_scores(
     birth_date: date, observation_date: date, sex: int, measurement_method: str, observation_value: Decimal | None, async_client: AsyncClient
 ) -> CentileAndSDS | None:
-    if observation_value is None:
-        logger.warning(
-            f"Cannot calculate centiles and z-scores for {measurement_method} as it is missing"
-        )
+    if observation_value is None or observation_value <= 0:
         return None
 
     try:
@@ -72,7 +69,10 @@ async def validate_visit_async(
         return ret
 
     if not observation_date:
-        logger.warning("Observation date is not specified. Cannot calculate centiles and z-scores.")
+        # We expect visits without height and weight, but those that have them and not an obs date are unexpected
+        if height is not None or weight is not None:
+            logger.warning("Observation date is not specified. Cannot calculate centiles and z-scores.")
+        
         return ret
 
     if sex == 1:
@@ -87,13 +87,24 @@ async def validate_visit_async(
 
     bmi = None
 
-    if height is not None and weight is not None:
+    valid_height = height is not None
+    valid_weight = weight is not None
+
+    if valid_height and height <= 0:
+        logger.warning(
+            "Height is <=0. Cannot calculate centiles and z-scores."
+        )
+        valid_height = False
+    
+    if valid_weight and weight <= 0:
+        logger.warning(
+            "Weight is <=0. Cannot calculate centiles and z-scores."
+        )
+        valid_weight = False
+
+    if valid_height and valid_weight:
         bmi = calculate_bmi(height, weight)
         ret.bmi = bmi
-    else:
-        logger.warning(
-            "Missing height or weight. Cannot calculate BMI centiles and z-scores."
-        )
 
     validate_height_task = _calculate_centiles_z_scores(birth_date, observation_date, sex, "height", height, async_client)
     validate_weight_task = _calculate_centiles_z_scores(birth_date, observation_date, sex, "weight", weight, async_client)

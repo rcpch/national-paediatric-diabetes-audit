@@ -1,0 +1,13 @@
+{% load npda_tags %}
+<div class="flex flex-wrap gap-2 mt-2 bg-rcpch_">
+  {% if search_input_list.0 != '' %}
+    <div class="text-md font-montserrat text-rcpch_dark_grey">
+      List of search terms:
+    </div>
+    {% for item in search_input_list %}
+      <div class="badge bg-rcpch_pink text-white badge-lg">
+        {% format_nhs_number item %}
+      </div>
+    {% endfor %}
+  {% endif %}
+</div>

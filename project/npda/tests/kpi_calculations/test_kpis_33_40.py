@@ -9,6 +9,7 @@ from project.constants.diabetes_types import DIABETES_TYPES
 from project.constants.smoking_status import SMOKING_STATUS
 from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
+from project.npda.tests import utils
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
 from project.npda.tests.kpi_calculations.test_calculate_kpis import \
@@ -19,7 +20,7 @@ from project.npda.tests.kpi_calculations.test_calculate_kpis import \
 def test_kpi_calculation_33(AUDIT_START_DATE):
     """Tests that KPI33 is calculated correctly.
 
-    Calculates KPI 32: HbA1c 4+ (%)
+    Calculates KPI 33: HbA1c 4+ (%)
 
     Numerator: Number of eligible patients with at least four entries for HbA1c value (item 17) with an observation date (item 19) within the audit period
 
@@ -42,6 +43,8 @@ def test_kpi_calculation_33(AUDIT_START_DATE):
         "transfer__date_leaving_service": None,
         # Date of death NOT within the audit period"
         "death_date": None,
+        # T1DM
+        "diabetes_type": DIABETES_TYPES[0][0],
     }
 
     # Passing patients
@@ -150,11 +153,20 @@ def test_kpi_calculation_33(AUDIT_START_DATE):
         death_date=AUDIT_START_DATE + relativedelta(days=2),
     )
 
+    # Create a submission (BEFORE calculating KPIs)
+    submission = utils.create_submission(
+        AUDIT_START_DATE,
+        pz_code=ineligible_patient_death_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
+    )
+    submission.patients.add(*Patient.objects.all())
+
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
-    # Need to be mocked as not using public `calculate_kpis_for_*` methods
-    calc_kpis.patients = Patient.objects.all()
-    calc_kpis.total_patients_count = Patient.objects.count()
+    calc_kpis.set_patients_for_calculation(
+        pz_codes=[
+            ineligible_patient_death_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code
+        ]
+    )
 
     EXPECTED_TOTAL_ELIGIBLE = 5
     EXPECTED_TOTAL_INELIGIBLE = 5
@@ -199,6 +211,8 @@ def test_kpi_calculation_34(AUDIT_START_DATE):
         "transfer__date_leaving_service": None,
         # Date of death NOT within the audit period"
         "death_date": None,
+        # T1DM
+        "diabetes_type": DIABETES_TYPES[0][0],
     }
 
     # Passing patients
@@ -207,8 +221,7 @@ def test_kpi_calculation_34(AUDIT_START_DATE):
         # KPI5 eligible
         **eligible_criteria,
         # KPI 34 specific
-        visit__psychological_screening_assessment_date=AUDIT_START_DATE
-        + relativedelta(days=2),
+        visit__psychological_screening_assessment_date=AUDIT_START_DATE + relativedelta(days=2),
     )
     # second visit has a valid psychological screening date
     passing_patient_2 = PatientFactory(
@@ -222,8 +235,7 @@ def test_kpi_calculation_34(AUDIT_START_DATE):
     VisitFactory(
         patient=passing_patient_2,
         visit_date=AUDIT_START_DATE + relativedelta(days=5),
-        psychological_screening_assessment_date=AUDIT_START_DATE
-        + relativedelta(days=5),
+        psychological_screening_assessment_date=AUDIT_START_DATE + relativedelta(days=5),
     )
 
     # Failing patients
@@ -233,8 +245,7 @@ def test_kpi_calculation_34(AUDIT_START_DATE):
         # KPI5 eligible
         **eligible_criteria,
         # KPI 34 specific
-        visit__psychological_screening_assessment_date=AUDIT_START_DATE
-        - relativedelta(days=2),
+        visit__psychological_screening_assessment_date=AUDIT_START_DATE - relativedelta(days=2),
     )
     # No psychological screening
     failing_patient_2 = PatientFactory(
@@ -284,11 +295,20 @@ def test_kpi_calculation_34(AUDIT_START_DATE):
         death_date=AUDIT_START_DATE + relativedelta(days=2),
     )
 
+    # Create a submission (BEFORE calculating KPIs)
+    submission = utils.create_submission(
+        AUDIT_START_DATE,
+        pz_code=ineligible_patient_death_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
+    )
+    submission.patients.add(*Patient.objects.all())
+
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
-    # Need to be mocked as not using public `calculate_kpis_for_*` methods
-    calc_kpis.patients = Patient.objects.all()
-    calc_kpis.total_patients_count = Patient.objects.count()
+    calc_kpis.set_patients_for_calculation(
+        pz_codes=[
+            ineligible_patient_death_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code
+        ]
+    )
 
     EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 5
@@ -328,8 +348,7 @@ def test_kpi_calculation_35(AUDIT_START_DATE):
         # Diagnosis of Type 1 diabetes
         "diabetes_type": DIABETES_TYPES[0][0],
         # KPI 6 specific = an observation within the audit period
-        "visit__height_weight_observation_date": AUDIT_START_DATE
-        + relativedelta(days=2),
+        "visit__height_weight_observation_date": AUDIT_START_DATE + relativedelta(days=2),
         # Also has same exclusions as KPI 5
         # Date of diagnosis NOT within the audit period
         "diagnosis_date": AUDIT_START_DATE - relativedelta(days=2),
@@ -413,11 +432,20 @@ def test_kpi_calculation_35(AUDIT_START_DATE):
         death_date=AUDIT_START_DATE + relativedelta(days=2),
     )
 
+    # Create a submission (BEFORE calculating KPIs)
+    submission = utils.create_submission(
+        AUDIT_START_DATE,
+        pz_code=ineligible_patient_death_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
+    )
+    submission.patients.add(*Patient.objects.all())
+
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
-    # Need to be mocked as not using public `calculate_kpis_for_*` methods
-    calc_kpis.patients = Patient.objects.all()
-    calc_kpis.total_patients_count = Patient.objects.count()
+    calc_kpis.set_patients_for_calculation(
+        pz_codes=[
+            ineligible_patient_death_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code
+        ]
+    )
 
     EXPECTED_TOTAL_ELIGIBLE = 4
     EXPECTED_TOTAL_INELIGIBLE = 3
@@ -457,8 +485,7 @@ def test_kpi_calculation_36(AUDIT_START_DATE):
         # Diagnosis of Type 1 diabetes
         "diabetes_type": DIABETES_TYPES[0][0],
         # KPI 6 specific = an observation within the audit period
-        "visit__height_weight_observation_date": AUDIT_START_DATE
-        + relativedelta(days=2),
+        "visit__height_weight_observation_date": AUDIT_START_DATE + relativedelta(days=2),
         "visit__visit_date": AUDIT_START_DATE + relativedelta(days=5),
         # Also has same exclusions as KPI 5
         # Date of diagnosis NOT within the audit period
@@ -529,11 +556,20 @@ def test_kpi_calculation_36(AUDIT_START_DATE):
         death_date=AUDIT_START_DATE + relativedelta(days=2),
     )
 
+    # Create a submission (BEFORE calculating KPIs)
+    submission = utils.create_submission(
+        AUDIT_START_DATE,
+        pz_code=ineligible_patient_death_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
+    )
+    submission.patients.add(*Patient.objects.all())
+
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
-    # Need to be mocked as not using public `calculate_kpis_for_*` methods
-    calc_kpis.patients = Patient.objects.all()
-    calc_kpis.total_patients_count = Patient.objects.count()
+    calc_kpis.set_patients_for_calculation(
+        pz_codes=[
+            ineligible_patient_death_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code
+        ]
+    )
 
     EXPECTED_TOTAL_ELIGIBLE = 3
     EXPECTED_TOTAL_INELIGIBLE = 3
@@ -578,6 +614,8 @@ def test_kpi_calculation_37(AUDIT_START_DATE):
         "transfer__date_leaving_service": None,
         # Date of death NOT within the audit period"
         "death_date": None,
+        # T1DM
+        "diabetes_type": DIABETES_TYPES[0][0],
     }
 
     # Passing patients
@@ -652,11 +690,20 @@ def test_kpi_calculation_37(AUDIT_START_DATE):
         death_date=AUDIT_START_DATE + relativedelta(days=2),
     )
 
+    # Create a submission (BEFORE calculating KPIs)
+    submission = utils.create_submission(
+        AUDIT_START_DATE,
+        pz_code=ineligible_patient_death_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
+    )
+    submission.patients.add(*Patient.objects.all())
+
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
-    # Need to be mocked as not using public `calculate_kpis_for_*` methods
-    calc_kpis.patients = Patient.objects.all()
-    calc_kpis.total_patients_count = Patient.objects.count()
+    calc_kpis.set_patients_for_calculation(
+        pz_codes=[
+            ineligible_patient_death_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code
+        ]
+    )
 
     EXPECTED_TOTAL_ELIGIBLE = 3
     EXPECTED_TOTAL_INELIGIBLE = 5
@@ -701,6 +748,8 @@ def test_kpi_calculation_38(AUDIT_START_DATE):
         "transfer__date_leaving_service": None,
         # Date of death NOT within the audit period"
         "death_date": None,
+        # T1DM
+        "diabetes_type": DIABETES_TYPES[0][0],
     }
 
     # Passing patients
@@ -709,8 +758,7 @@ def test_kpi_calculation_38(AUDIT_START_DATE):
         # KPI5 eligible
         **eligible_criteria,
         # KPI 38 specific
-        visit__dietician_additional_appointment_date=AUDIT_START_DATE
-        + relativedelta(days=30),
+        visit__dietician_additional_appointment_date=AUDIT_START_DATE + relativedelta(days=30),
     )
     # only second visit has a valid additional dietician appt
     passing_patient_2 = PatientFactory(
@@ -776,11 +824,20 @@ def test_kpi_calculation_38(AUDIT_START_DATE):
         death_date=AUDIT_START_DATE + relativedelta(days=2),
     )
 
+    # Create a submission (BEFORE calculating KPIs)
+    submission = utils.create_submission(
+        AUDIT_START_DATE,
+        pz_code=ineligible_patient_death_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
+    )
+    submission.patients.add(*Patient.objects.all())
+
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
-    # Need to be mocked as not using public `calculate_kpis_for_*` methods
-    calc_kpis.patients = Patient.objects.all()
-    calc_kpis.total_patients_count = Patient.objects.count()
+    calc_kpis.set_patients_for_calculation(
+        pz_codes=[
+            ineligible_patient_death_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code
+        ]
+    )
 
     EXPECTED_TOTAL_ELIGIBLE = 3
     EXPECTED_TOTAL_INELIGIBLE = 5
@@ -825,6 +882,8 @@ def test_kpi_calculation_39(AUDIT_START_DATE):
         "transfer__date_leaving_service": None,
         # Date of death NOT within the audit period"
         "death_date": None,
+        # T1DM
+        "diabetes_type": DIABETES_TYPES[0][0],
     }
 
     # Passing patients
@@ -833,8 +892,7 @@ def test_kpi_calculation_39(AUDIT_START_DATE):
         # KPI5 eligible
         **eligible_criteria,
         # KPI 39 specific
-        visit__flu_immunisation_recommended_date=AUDIT_START_DATE
-        + relativedelta(days=30),
+        visit__flu_immunisation_recommended_date=AUDIT_START_DATE + relativedelta(days=30),
     )
     # only second visit has a valid influenza immunisation recommended
     passing_patient_2 = PatientFactory(
@@ -900,11 +958,20 @@ def test_kpi_calculation_39(AUDIT_START_DATE):
         death_date=AUDIT_START_DATE + relativedelta(days=2),
     )
 
+    # Create a submission (BEFORE calculating KPIs)
+    submission = utils.create_submission(
+        AUDIT_START_DATE,
+        pz_code=ineligible_patient_death_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
+    )
+    submission.patients.add(*Patient.objects.all())
+
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
-    # Need to be mocked as not using public `calculate_kpis_for_*` methods
-    calc_kpis.patients = Patient.objects.all()
-    calc_kpis.total_patients_count = Patient.objects.count()
+    calc_kpis.set_patients_for_calculation(
+        pz_codes=[
+            ineligible_patient_death_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code
+        ]
+    )
 
     EXPECTED_TOTAL_ELIGIBLE = 3
     EXPECTED_TOTAL_INELIGIBLE = 5
@@ -986,11 +1053,20 @@ def test_kpi_calculation_40(AUDIT_START_DATE):
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
     )
 
+    # Create a submission (BEFORE calculating KPIs)
+    submission = utils.create_submission(
+        AUDIT_START_DATE,
+        pz_code=ineligible_patients_too_old.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
+    )
+    submission.patients.add(*Patient.objects.all())
+
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
-    # Need to be mocked as not using public `calculate_kpis_for_*` methods
-    calc_kpis.patients = Patient.objects.all()
-    calc_kpis.total_patients_count = Patient.objects.count()
+    calc_kpis.set_patients_for_calculation(
+        pz_codes=[
+            ineligible_patients_too_old.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code
+        ]
+    )
 
     EXPECTED_TOTAL_ELIGIBLE = 3
     EXPECTED_TOTAL_INELIGIBLE = 2

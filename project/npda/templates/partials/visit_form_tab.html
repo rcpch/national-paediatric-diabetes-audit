@@ -37,28 +37,31 @@
           {% with category.errors|get_item:field.name as errors %}
             <div class="flex flex-row flex-wrap my-2 mx-2">
               <div class="flex items-center justify-start w-full md:w-1/3">
-                <label for="{{ field.id_for_label }}"
-                       class="block {% if errors %} text-rcpch_red {% else %} text-gray-700 {% endif %} font-bold mb-1 md:mb-0 pr-4">
-                  <small>
-                    {% if errors %}
-                      <span class="fa-stack text-rcpch_red">
-                        <i class="fa-circle fa-stack-1x fas"></i>
-                        <i class="fa-exclamation fa-stack-1x fa-inverse fas"></i>
-                      </span>
-                    {% endif %}
-                    {{ field.label }}
-                    {% if field.help_text.label %}
-                      <div class="tooltip" data-tip="{{ field.help_text.label }}">
-                        <i class="fa-solid fa-circle-question text-rcpch_pink"></i>
-                      </div>
-                    {% endif %}
-                    {% if field.help_text.reference %}
-                      <div class="tooltip" data-tip="{{ field.help_text.reference }}">
-                        <i class="fa fa-book text-rcpch_pink"></i>
-                      </div>
-                    {% endif %}
-                  </small>
-                </label>
+                {% if field.id_for_label != 'id_bmi' or field.id_for_label == 'id_bmi' and field.value is not None %}
+                  <!-- Hide BMI label if no value -->
+                  <label for="{{ field.id_for_label }}"
+                         class="block {% if errors %} text-rcpch_red {% else %} text-gray-700 {% endif %} font-bold mb-1 md:mb-0 pr-4">
+                    <small>
+                      {% if errors %}
+                        <span class="fa-stack text-rcpch_red">
+                          <i class="fa-circle fa-stack-1x fas"></i>
+                          <i class="fa-exclamation fa-stack-1x fa-inverse fas"></i>
+                        </span>
+                      {% endif %}
+                      {{ field.label }}
+                      {% if field.help_text.label %}
+                        <div class="tooltip" data-tip="{{ field.help_text.label }}">
+                          <i class="fa-solid fa-circle-question text-rcpch_pink"></i>
+                        </div>
+                      {% endif %}
+                      {% if field.help_text.reference %}
+                        <div class="tooltip" data-tip="{{ field.help_text.reference }}">
+                          <i class="fa fa-book text-rcpch_pink"></i>
+                        </div>
+                      {% endif %}
+                    </small>
+                  </label>
+                {% endif %}
               </div>
               <div class="flex justify-end w-full md:w-2/3 flex-wrap">
                 {% if field.field.widget|is_select %}
@@ -87,20 +90,26 @@
                     </button>
                   </div>
                 {% else %}
-                  <input type="text" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text rounded-none {% if not can_alter_this_audit_year_submission or not can_use_questionnaire or form.patient.is_in_transfer_in_the_last_year or field.id_for_label == 'id_bmi' %}opacity-40 pointer-events-none{% endif %}" {% if field.field.required %}placeholder="Required"{% endif %} {% if field.value %} value={{ field.value }} {% elif field.value == 0 %} value="0.0" {% endif %}>
-                  {% if field.value is not None %}
-                    {% with field|centile_for_field:'centile' as centile %}
-                      {% if centile %}
-                        <div class="badge bg-rcpch_light_blue text-white badge-lg">{{ centile }}</div>
+                  {% if field.id_for_label != 'id_bmi' or field.id_for_label == 'id_bmi' and field.value is not None %}
+                    <!-- Hide BMI label if no value -->
+                    <input type="text" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text rounded-none {% if not can_alter_this_audit_year_submission or not can_use_questionnaire or form.patient.is_in_transfer_in_the_last_year or field.id_for_label == 'id_bmi' %}opacity-40 pointer-events-none{% endif %}" {% if field.field.required %}placeholder="Required"{% endif %} {% if field.value %} value={{ field.value }} {% elif field.value == 0 %} value="0.0" {% endif %}>
+                    {% if field.value is not None %}
+                      {% with field|centile_for_field:'centile' as centile %}
+                        {% if centile %}
+                          <div class="badge bg-rcpch_light_blue text-white badge-lg">{{ centile }}</div>
+                        {% endif %}
+                      {% endwith %}
+                      {% with field|centile_for_field:'sds' as sds %}
+                        {% if sds %}
+                          <div class="badge bg-rcpch_light_blue text-white badge-lg">{{ sds }}</div>
+                        {% endif %}
+                      {% endwith %}
+                    {% else %}
+                      {% if field.id_for_label == 'id_bmi' or field.id_for_label == 'id_height' or field.id_for_label == 'id_weight' %}
+                        <span>Centiles/SDS/BMI (calculated on form submission)</span>
                       {% endif %}
-                    {% endwith %}
-                    {% with field|centile_for_field:'sds' as sds %}
-                      {% if sds %}
-                        <div class="badge bg-rcpch_light_blue text-white badge-lg">{{ sds }}</div>
-                      {% endif %}
-                    {% endwith %}
+                    {% endif %}
                   {% endif %}
-                  {% if field.id_for_label == "id_weight" %}{{ field.bmi }}{% endif %}
                 {% endif %}
                 {% for error in field.errors %}
                   <p>

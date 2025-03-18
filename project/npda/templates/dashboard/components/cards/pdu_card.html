@@ -1,20 +1,38 @@
 {% extends 'dashboard/components/bases/base_card.html' %}
+{% load static %}
 {% block card_title %}
-{{ pdu_object.pz_code }}
+  {{ pdu_object.pz_code }}
 {% endblock card_title %}
 {% block card_body %}
-
-<!-- PZ Name -->
-<p class="flex justify-center tooltip text-center mt-2 text-lg" data-tip="Lead Organisation Name">{{ pdu_object.lead_organisation_name }}</p>
-
-<!-- Divider with Text "Trust" -->
-{% include 'dashboard/hr_with_text.html' with hr_rule_text="Trust" %}
-
-<!-- Trust Details -->
-<div class="flex flex-col space-evenly text-center ">
-  <p class="flex justify-center tooltip mt-2 text-lg" data-tip="Trust Name">{{ pdu_object.parent_name }}</p>
-  <p class="flex justify-center tooltip mt-2 text-lg" data-tip="Paediatric Diabetes Network">{{ pdu_object.paediatric_diabetes_network_name }} ({{ pdu_object.paediatric_diabetes_network_code }})</p>
-</div>
-
-
+  <!-- PZ Name -->
+  <p class="flex justify-center tooltip text-center mt-2 text-lg"
+     data-tip="Lead Organisation Name">
+    {{ pdu_object.lead_organisation_name }}
+  </p>
+  <!-- Divider with Text "Trust" -->
+  {% if pdu_object.paediatric_diabetes_network_name == 'Wales' %}
+    {% include 'dashboard/hr_with_text.html' with hr_rule_text="Local  Health Board" %}
+  {% elif pdu_object.pz_code != "PZ999" %}
+    {% include 'dashboard/hr_with_text.html' with hr_rule_text="Trust" %}
+  {% endif %}
+  <!-- Trust or LHB Details -->
+  {% if pdu_object.pz_code != "PZ999" %}
+    <div class="flex flex-col space-evenly text-center ">
+      <p class="flex justify-center tooltip mt-2 text-lg"
+         data-tip="{% if pdu_object.paediatric_diabetes_network_name == "Wales" %}Local Health Board{% else %}Trust Name{% endif %}">
+        {{ pdu_object.parent_name }}
+      </p>
+      <p class="flex justify-center tooltip mt-2 text-lg"
+         data-tip="Paediatric Diabetes Network">
+        {{ pdu_object.paediatric_diabetes_network_name }} ({{ pdu_object.paediatric_diabetes_network_code }})
+      </p>
+    </div>
+  {% else %}
+    <div class="flex flex-row justify-center mt-5">
+      <img src="{% static 'images/coat-of-arms.jpg' %}"
+           alt="Coat of Arms"
+           height="25%"
+           width="25%">
+    </div>
+  {% endif %}
 {% endblock %}

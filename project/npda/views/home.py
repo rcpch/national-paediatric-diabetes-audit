@@ -28,6 +28,8 @@ from ..general_functions.view_preference import get_or_update_view_preference
 # RCPCH imports
 from .decorators import login_and_otp_required
 
+from project.npda.tasks import test_task
+
 # Logging
 logger = logging.getLogger(__name__)
 
@@ -159,7 +161,7 @@ def view_preference(request):
         request.user, view_preference_selection
     )
     selected_pz_code = request.POST.get("pz_code_select_name", None)
-    
+
     # includes a validation step
     refresh_session_filters(request, pz_code=selected_pz_code)
 
@@ -174,7 +176,7 @@ def audit_year(request):
     """
     if request.method == "POST":
         audit_year = request.POST.get("audit_year_select_name", None)
-        
+
         refresh_session_filters(request, audit_year=audit_year)
 
         # Reload the page to apply the new view preference
@@ -188,3 +190,12 @@ def audit_year(request):
     response = render(
         request, template_name="partials/audit_year_select.html", context=context
     )
+
+    return response
+
+
+@login_and_otp_required()
+def celery_test_task(request):
+    test_task.delay()
+
+    return HttpResponse(status=204)

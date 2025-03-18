@@ -7,7 +7,7 @@
        hx-target="#patient_table">
     <div class="flex flex-col justify-center px-1 mt-5">
       {% if submission %}
-        {% include 'partials/page_elements/patient_table_actions.html' %}
+        {% include 'partials/page_elements/patient_table_actions.html' with pdu=pdu %}
         <div id="patient_table">{% include 'partials/patient_table.html' %}</div>
       {% else %}
         <div class="flex w-full justify-center mt-5 mb-5">

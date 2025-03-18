@@ -6,7 +6,14 @@
     <div class="overflow-x-auto">
       <div class="min-w-full inline-block px-10 py-2">
         <div class="w-full overflow-x-auto relative">
-          <strong>All {{ submission.audit_year }} Audit Visits for {% nhs_number_vs_urn pz_code %} {% nhs_number_vs_urn pz_code patient %} (NPDA ID-{{ patient.pk }})</strong>
+          {% if patient.is_in_transfer_in_the_last_year %}
+            <div class="badge bg-rcpch_pink text-white badge-lg">
+              This patient has been transferred in the last year
+            </div>
+          {% endif %}
+          <div>
+            <strong>All {{ paediatric_diabetes_unit.lead_organisation_name }} ({{ paediatric_diabetes_unit.pz_code }}) Visits (April {{ submission.audit_year }} - March {{ request.session.selected_audit_year|add:'1' }}) for {% nhs_number_vs_urn pz_code %} {% nhs_number_vs_urn pz_code patient %} (NPDA ID-{{ patient.pk }})</strong>
+          </div>
           {% if visits %}
             <table class="font-montserrat table-md w-full table mb-5 text-sm text-left text-gray-400 text-gray-500 rtl:text-right">
               <thead class="bg-rcpch_dark_blue text-xs text-white text-gray-700 uppercase bg-gray-50">
@@ -30,8 +37,10 @@
                           {% if item.present %}
                             <span class="bg-{{ item.colour }} px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white">
                               <small>
-                                <div class="tooltip tooltip-top visible text-center text-white hover:text-white"
-                                     {% if item.errors %} data-tip='{{ item.errors.values|flatten|join:", " }}' {% endif %}>
+                                <div class="tooltip tooltip-bottom visible text-center text-white hover:text-white"
+                                     {% if item.errors %} data-tip='{% for error in item.errors.values|flatten %}{{ error|safe }}{% endfor %}
+                                     '
+                                     {% endif %}>
                                   {% if item.errors %}
                                     <span class="fa-stack text-rcpch_red">
                                       <i class="fa-circle fa-stack-1x fas"></i>
@@ -74,16 +83,41 @@
                   <tr class="bg-rcpch_dark_blue py-5 text-xs text-white text-gray-700 uppercase bg-gray-50">
                     <th colspan="4" class="px-2">
                       <strong>
-                        Total: {{ visits|length }} Visit
-                        {% if visits|length > 1 %}s{% endif %}
+                        Total: {{ visits|length }}
+                        {% if visits|length > 1 %}
+                          Visits
+                        {% else %}
+                          Visit
+                        {% endif %}
                       </strong>
                     </th>
                   </tr>
                 </tfoot>
               </table>
             {% else %}
-              <div class="py-2">
-                <h5>This child has had no visits yet!</h5>
+              <div class="hero bg-base-200 min-h-screen">
+                <div class="hero-content text-center">
+                  <div class="max-w-md">
+                    <h1 class="text-5xl font-bold font-montserrat text-rcpch_light_blue">
+                      {% nhs_number_vs_urn pz_code patient %} (NPDA ID {{ patient.pk }}) has no visits yet...
+                    </h1>
+                    <i class="fa-solid fa-hand-sparkles text-5xl text-rcpch_light_blue opacity-0 animate-sparkle mt-2"></i>
+                    {% if can_alter_this_audit_year_submission %}
+                      <div class="py-6">
+                        {% if request.session.can_complete_questionnaire %}
+                          <a href="{% url 'visit-create' patient_id=patient.pk %}"
+                             class="btn btn-info h-auto w-full md:w-auto">
+                            <i class="fa-solid fa-person-circle-plus"></i>
+                            Add visit
+                          </a>
+                        {% endif %}
+                      </div>
+                      <p class="mt-2 font-montserrat">
+                        <i>(You can also find this button below)</i>
+                      </p>
+                    {% endif %}
+                  </div>
+                </div>
               </div>
             {% endif %}
             {% if perms.npda.add_visit %}
@@ -97,23 +131,7 @@
             <a href="{% url 'patients' %}"
                class="bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 mt-40 font-semibold text-white border hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue hover:text-white">Back to Patient List</a>
             <div class="py-20">
-              <div class="bg-rcpch_light_blue border-rcpch_light_blue_tint3 relative px-4 py-3 text-white border"
-                   role="alert">
-                <strong class="font-bold">Guidance:</strong>
-                <span class="block sm:inline">A list of all visits for Patient NPDA-ID {{ patient.pk }}. Categories which have been addressed at each visit are listed.</span>
-                <span class="absolute top-0 right-0 bottom-0 px-4 py-3">
-                  <svg class="w-6 h-6 text-red-500 fill-current"
-                       role="button"
-                       xmlns="http://www.w3.org/2000/svg"
-                       viewBox="0 0 20 20">
-                    <title>Close</title>
-                    <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z" />
-                  </svg>
-                </span>
-              </div>
+              {% include 'partials/visit_list_tips.html' with pz_code=pz_code patient=patient %}
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-  {% endblock %}
+        {% endblock %}

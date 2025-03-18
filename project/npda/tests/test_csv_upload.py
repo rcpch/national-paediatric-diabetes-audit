@@ -217,23 +217,13 @@ def test_multiple_patients(
     assert second_patient.diagnosis_date == df["Date of Diabetes Diagnosis"][2].date()
 
 
-@pytest.mark.parametrize(
-    "column,model_field",
-    [
-        pytest.param("Date of Birth", "date_of_birth"),
-        pytest.param("Diabetes Type", "diabetes_type"),
-        pytest.param("Date of Diabetes Diagnosis", "diagnosis_date"),
-    ],
-)
 @pytest.mark.django_db(transaction=True)
-def test_missing_mandatory_field(
+def test_missing_date_of_birth(
     seed_groups_per_function_fixture,
     seed_users_per_function_fixture,
     single_row_valid_df,
-    column,
-    model_field,
 ):
-    # As these tests need full transaction support we can't use our session fixtures
+    # As this test needs full transaction support we can't use our session fixtures
     test_user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE
     ).first()
@@ -241,7 +231,7 @@ def test_missing_mandatory_field(
     # Delete all patients to ensure we're starting from a clean slate
     Patient.objects.all().delete()
 
-    single_row_valid_df.loc[0, column] = None
+    single_row_valid_df.loc[0, "Date of Birth"] = None
 
     assert (
         Patient.objects.count() == 0
@@ -249,7 +239,7 @@ def test_missing_mandatory_field(
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
 
-    assert model_field in errors[0]
+    assert "date_of_birth" in errors[0]
 
     # Catastrophic - we can't save this patient at all
     assert Patient.objects.count() == 0
@@ -310,6 +300,34 @@ def test_missing_unique_reference_number(
 
     # We shouldn't save this patient (invariant enforced in Patient.save not in the database)
     assert Patient.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_missing_date_of_diagnosis(test_user, single_row_valid_df):
+    single_row_valid_df.loc[0, "Date of Diabetes Diagnosis"] = None
+
+    errors = csv_upload_sync(test_user, single_row_valid_df)
+
+    assert "diagnosis_date" in errors[0]
+
+    assert Patient.objects.count() == 1
+
+    patient = Patient.objects.first()
+    assert patient.diagnosis_date is None
+
+
+@pytest.mark.django_db
+def test_missing_diabetes_type(test_user, single_row_valid_df):
+    single_row_valid_df.loc[0, "Diabetes Type"] = None
+
+    errors = csv_upload_sync(test_user, single_row_valid_df)
+
+    assert "diabetes_type" in errors[0]
+
+    assert Patient.objects.count() == 1
+
+    patient = Patient.objects.first()
+    assert patient.diabetes_type is None
 
 
 @pytest.mark.django_db
@@ -846,11 +864,12 @@ def test_case_insensitive_column_headers(test_user, dummy_sheet_csv):
     lines[0] = lines[0].lower()
     csv = "\n".join(lines)
 
-    df = read_csv_from_str(csv).df
+    parsed_csv = read_csv_from_str(csv)
+    assert len(parsed_csv.additional_columns) == 0
 
-    errors = csv_upload_sync(test_user, df)
+    errors = csv_upload_sync(test_user, parsed_csv.df)
 
-    assert len(errors) == 0  #
+    assert len(errors) == 0
 
 
 @pytest.mark.django_db
@@ -859,6 +878,40 @@ def test_mixed_case_column_headers(test_user, dummy_sheet_csv):
     df = read_csv_from_str(csv).df
 
     assert df.columns[0] == "NHS Number"
+
+
+@pytest.mark.django_db
+def test_invalid_nhs_number_column_name(test_user, dummy_sheet_csv):
+    csv = dummy_sheet_csv.replace("NHS Number", "NHSNumberXYZWoo")
+    results = read_csv_from_str(csv)
+
+    assert results.missing_columns == ["NHS Number"]
+    assert results.additional_columns == ["NHSNumberXYZWoo"]
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/741
+@pytest.mark.django_db
+def test_invalid_date_of_birth_column_name_with_mixed_case_column_headers(test_user, dummy_sheet_csv):
+    csv = dummy_sheet_csv.replace("Date of Birth", "DOB").replace("HbA1c result format", "HBA1C Result Format")
+    results = read_csv_from_str(csv)
+
+    assert results.missing_columns == []
+    assert results.additional_columns == []
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/741
+@pytest.mark.django_db
+def test_old_template_headers(test_user, dummy_sheet_csv_old_headers):
+    csv = dummy_sheet_csv_old_headers
+    results = read_csv_from_str(csv)
+
+    assert results.missing_columns == []
+    assert results.additional_columns == []
+
+    csv_upload_sync(test_user, results.df)
+
+    assert(Patient.objects.count() > 0)
+    assert(Visit.objects.count() > 0)
 
 
 @pytest.mark.django_db
@@ -953,25 +1006,15 @@ def test_urine_albumin_value_is_rounded_to_one_decimal(test_user, single_row_val
 
     visit = Visit.objects.first()
 
-    assert visit.albumin_creatinine_ratio == round(
-        Decimal("0.73"), 1
-    )
+    assert visit.albumin_creatinine_ratio == round(Decimal("0.73"), 1)
     assert "albumin_creatinine_ratio" not in (visit.errors or {})
 
 
-@pytest.mark.parametrize(
-    "column",
-    [
-        pytest.param("Date of Birth"),
-        pytest.param("Date of Diabetes Diagnosis"),
-    ],
-)
 @pytest.mark.django_db(transaction=True)
-def test_bad_date_format_on_mandatory_column(
+def test_bad_date_format_on_date_of_birth(
     seed_groups_per_function_fixture,
     seed_users_per_function_fixture,
     one_patient_two_visits,
-    column,
 ):
     # As these tests need full transaction support we can't use our session fixtures
     test_user = NPDAUser.objects.filter(
@@ -982,6 +1025,7 @@ def test_bad_date_format_on_mandatory_column(
     Patient.objects.all().delete()
 
     df = one_patient_two_visits
+    column = "Date of Birth"
 
     df[column] = df[column].astype(str)
     df[column] = "beep"
@@ -1000,6 +1044,28 @@ def test_bad_date_format_on_mandatory_column(
     assert (
         Patient.objects.count() == 0
     ), "There should be no patients in the database after the test"
+
+
+@pytest.mark.skip("Can't distinguish between a bad date format or a missing date until https://github.com/rcpch/national-paediatric-diabetes-audit/pull/752")
+@pytest.mark.django_db
+def test_bad_date_format_on_date_of_diagnosis(test_user, single_row_valid_df):
+    df = single_row_valid_df
+
+    column = "Date of Level 3 carbohydrate counting education received"
+
+    df[column] = df[column].astype(str)
+    df[column] = "beep"
+
+    csv = df.to_csv(index=False, date_format="%d/%m/%Y")
+
+    df = read_csv_from_str(csv).df
+    errors = csv_upload_sync(test_user, df)
+
+    assert len(errors) == 1
+    assert "date_of_diagnosis" in errors[0]
+
+    assert(Patient.objects.count() == 1)
+    assert(Patient.objects.first().diagnosis_date is None)
 
 
 @pytest.mark.django_db
@@ -1835,7 +1901,7 @@ def test_total_cholesterol_value_below_reference_form_fails_validation(
     """
     Test that total cholesterol value is rejected if impossible
     """
-    single_row_valid_df.loc[0, "Total Cholesterol Level (mmol/l)"] = Decimal("0.1")
+    single_row_valid_df.loc[0, "Total Cholesterol Level (mmol/l)"] = 0.1
     single_row_valid_df.loc[0, "Observation Date: Total Cholesterol Level"] = (
         "01/01/2022"
     )
@@ -2206,7 +2272,7 @@ def test_psychological_support_date_missing_fails_validation(
     single_row_valid_df.loc[
         0,
         "Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?",
-    ] = 99 # Unknown
+    ] = 99  # Unknown
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
 
@@ -2432,11 +2498,12 @@ def test_dietician_no_additional_offered_date_provided_fail_validation(
 
 
 @pytest.mark.django_db
-def test_dietician_additional_offered_date_missing_fail_validation(
+def test_dietician_additional_offered_date_missing_passes_validation(
     test_user, single_row_valid_df
 ):
     """
-    Test that dietician extra appointment offered but date missing should fail
+    Test that dietician extra appointment offered but date missing should pass
+    https://github.com/rcpch/national-paediatric-diabetes-audit/issues/668
     """
     single_row_valid_df.loc[
         0,
@@ -2446,7 +2513,7 @@ def test_dietician_additional_offered_date_missing_fail_validation(
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
 
-    assert "dietician_additional_appointment_date" in errors[0]
+    assert "dietician_additional_appointment_date" not in errors[0]
 
     visit = Visit.objects.first()
 
@@ -2455,16 +2522,16 @@ def test_dietician_additional_offered_date_missing_fail_validation(
 
 
 @pytest.mark.django_db
-def test_dietician_additional_offered_none_but_date_offered_fail_validation(
+def test_dietician_additional_offered_no_but_date_offered_fail_validation(
     test_user, single_row_valid_df
 ):
     """
-    Test that dietician additional appointment none but date offered should fail
+    Test that dietician additional appointment answered No but date offered should fail
     """
     single_row_valid_df.loc[
         0,
         "Was the patient offered an additional appointment with a paediatric dietitian?",
-    ] = None
+    ] = 2
     single_row_valid_df.loc[0, "Date of additional appointment with dietitian"] = (
         "01/01/2022"
     )
@@ -2475,145 +2542,8 @@ def test_dietician_additional_offered_none_but_date_offered_fail_validation(
 
     visit = Visit.objects.first()
 
-    assert visit.dietician_additional_appointment_offered is None
+    assert visit.dietician_additional_appointment_offered == 2
     assert visit.dietician_additional_appointment_date == datetime.date(2022, 1, 1)
-
-
-"""
-Sick day rules tests
-"""
-
-
-@pytest.mark.django_db
-def test_sick_day_rules_provided_passes_validation(test_user, single_row_valid_df):
-    """
-    Test that sick day rules are accepted
-    """
-    single_row_valid_df.loc[
-        0,
-        "Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia",
-    ] = "01/01/2022"
-    single_row_valid_df.loc[
-        0,
-        "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?",
-    ] = 1
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert len(errors) == 0
-
-    visit = Visit.objects.first()
-
-    assert visit.sick_day_rules_training_date == datetime.date(2022, 1, 1)
-    assert visit.ketone_meter_training == 1
-
-
-@pytest.mark.django_db
-def test_sick_day_rules_not_provided_passes_validation(test_user, single_row_valid_df):
-    """
-    Test that sick day rules are accepted where not provided (date not required)
-    """
-    single_row_valid_df.loc[
-        0,
-        "Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia",
-    ] = None
-    single_row_valid_df.loc[
-        0,
-        "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?",
-    ] = 2
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert len(errors) == 0
-
-    visit = Visit.objects.first()
-
-    assert visit.sick_day_rules_training_date == None
-    assert visit.ketone_meter_training == 2
-
-
-@pytest.mark.django_db
-def test_sick_day_rules_not_provided_but_date_provided_fails_validation(
-    test_user, single_row_valid_df
-):
-    """
-    Test that sick day rules not provided but date provided fails validation
-    """
-    single_row_valid_df.loc[
-        0,
-        "Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia",
-    ] = "01/01/2022"
-    single_row_valid_df.loc[
-        0,
-        "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?",
-    ] = 2
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert (
-        "ketone_meter_training" in errors[0]
-    ), f"Expected error in sick_day_rules_training_date, but got None"
-
-    visit = Visit.objects.first()
-
-    assert visit.sick_day_rules_training_date == datetime.date(2022, 1, 1)
-    assert visit.ketone_meter_training == 2
-
-
-@pytest.mark.django_db
-def test_sick_day_rules_none_but_date_provided_fails_validation(
-    test_user, single_row_valid_df
-):
-    """
-    Test that sick day rules not answered but date provided fails validation
-    """
-    single_row_valid_df.loc[
-        0,
-        "Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia",
-    ] = "01/01/2022"
-    single_row_valid_df.loc[
-        0,
-        "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?",
-    ] = None
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert (
-        "ketone_meter_training" in errors[0]
-    ), f"Expected error in sick_day_rules_training_date, but got None"
-
-    visit = Visit.objects.first()
-
-    assert visit.sick_day_rules_training_date == datetime.date(2022, 1, 1)
-    assert visit.ketone_meter_training == None
-
-
-@pytest.mark.django_db
-def test_sick_day_rules_provided_but_no_date_provided_fails_validation(
-    test_user, single_row_valid_df
-):
-    """
-    Test that sick day rules are provided but no date is rejected
-    """
-    single_row_valid_df.loc[
-        0,
-        "Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia",
-    ] = None
-    single_row_valid_df.loc[
-        0,
-        "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?",
-    ] = 1
-
-    errors = csv_upload_sync(test_user, single_row_valid_df)
-
-    assert (
-        "sick_day_rules_training_date" in errors[0]
-    ), f"Expected error in sick_day_rules_training_date, but got None"
-
-    visit = Visit.objects.first()
-
-    assert visit.sick_day_rules_training_date == None
-    assert visit.ketone_meter_training == 1
 
 
 """
@@ -3249,3 +3179,61 @@ def test_visit_date_not_before_diagnosis_date(test_user, single_row_valid_df):
     assert visit.patient.diagnosis_date == datetime.date(
         year=2022, month=1, day=1
     ), f"Diagnosis date should be 1/1/2022, but was {visit.patient.diagnosis_date}"
+
+
+@pytest.mark.parametrize(
+    "alternative,expected",
+    [
+        pytest.param("Unknown", 0),
+        pytest.param("unknown", 0),
+        pytest.param("M", 1),
+        pytest.param("m", 1),
+        pytest.param("F", 2),
+        pytest.param("f", 2),
+    ],
+)
+@pytest.mark.django_db
+def test_alternative_formats_for_sex(test_user, dummy_sheet_csv, alternative, expected):
+    # One row CSV. We have to alter the text directly as we're dealing with string values
+    # and the test df has already been parsed with sex as a number column
+    [header, row] = dummy_sheet_csv.split("\n")[:2]
+
+    cells = row.split(",")
+    cells[3] = alternative
+
+    csv = f"{header}\n{','.join(cells)}"
+    df = read_csv_from_str(csv).df
+
+    errors = csv_upload_sync(test_user, df)
+    assert len(errors) == 0
+
+    patient = Patient.objects.first()
+    assert patient.sex == expected
+
+
+@pytest.mark.django_db
+def test_mix_of_standard_and_alternative_formats_for_sex(test_user, dummy_sheet_csv):
+    # Two row CSV. We have to alter the text directly as we're dealing with string values
+    # and the test df has already been parsed with sex as a number column
+    rows = dummy_sheet_csv.split("\n")
+
+    header = rows[0]
+    [row1, row2] = rows[2:4]
+
+    # Double check we do have different patients
+    assert row1.split(",")[0] != row2.split(",")[0]
+
+    row1_cells = row1.split(",")
+    row1_cells[3] = "M"
+    row1 = ",".join(row1_cells)
+
+    csv = "\n".join([header, row1, row2])
+    df = read_csv_from_str(csv).df
+
+    errors = csv_upload_sync(test_user, df)
+    assert len(errors) == 0
+
+    [patient1, patient2] = Patient.objects.all()
+
+    assert patient1.sex == 1
+    assert patient2.sex == 1

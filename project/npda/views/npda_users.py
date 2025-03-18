@@ -131,7 +131,7 @@ class NPDAUserCreateView(
             self.request.user.is_superuser or self.request.user.is_rcpch_staff
         )
         context["title"] = "Add New NPDA User"
-        context["button_title"] = "Add NPDA User"
+        context["button_title"] = "Add"
         context["form_method"] = "create"
         context["selected_pdu"] = self.request.session.get("pz_code")
         return context
@@ -253,7 +253,7 @@ class NPDAUserUpdateView(
             self.request.user.is_superuser or self.request.user.is_rcpch_staff
         )
         context["title"] = "Edit NPDA User Details"
-        context["button_title"] = "Edit NPDA User Details"
+        context["button_title"] = "Save"
         context["form_method"] = "update"
         context["npda_user"] = NPDAUser.objects.get(pk=self.kwargs["pk"])
         context["organisation_employers"] = (
@@ -482,9 +482,9 @@ class RCPCHLoginView(TwoFactorLoginView):
             password_reset_date = user.password_last_set + timezone.timedelta(days=90)
             if user.is_active and (password_reset_date <= timezone.now()):
                 messages.add_message(
-                    request=self.request,
-                    extra_tags=messages.ERROR,
-                    message=f"Your password has expired. Please reset it.",
+                    self.request,
+                    messages.ERROR,
+                    f"Your password has expired. Please reset it.",
                 )
                 return redirect(reverse("password_reset"))
 

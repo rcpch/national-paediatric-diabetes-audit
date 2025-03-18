@@ -1,4 +1,4 @@
-"""Contains the data for the dashboard template."""
+"""Contains the data for the patient_report template."""
 
 TEXT = {
     "health_checks": {
@@ -6,15 +6,15 @@ TEXT = {
         "description": "HbA1c, BMI, and thyroid screen must be completed annually for all children and young people with Type 1 diabetes. Urinary albumin, blood pressure, and foot exam are mandatory for young people aged 12 and above. Eye screening is mandatory every 2 years for young people aged 12 and above, unless retinopathy was observed at a previous screen.",
         "headers": [
             "NHS NUMBER",
-            ">= 12YO",
+            # ">= 12YO",
             "HBA1C",
             "BMI",
             "THYROID SCREEN",
             "BLOOD PRESSURE",
             "URINARY ALBUMIN",
-            "EYE SCREEN",
             "FOOT EXAM",
             "TOTAL",
+            "EYE SCREEN",
         ],
         "ineligible_hover_reason": {
             "kpi_25_hba1c": "Does not fulfil criteria for KPI 5",
@@ -25,9 +25,14 @@ TEXT = {
             "kpi_30_retinal_screening": "Does not fulfil criteria for KPI 6",
             "kpi_31_foot_examination": "Does not fulfil criteria for KPI 6",
         },
+        "key": {
+            "pass": "Complete",
+            "fail": "Incomplete",
+            "ineligible": "Not required"
+        }
     },
     "additional_care_processes": {
-        "title": "Additional Care Proccesses",
+        "title": "Additional Care Processes",
         "description": "These additional care processes are recommended by NICE for children and young people with Type 1 diabetes of all ages (and ineligible otherwise), with the exception of smoking status and referral to smoking cessation services, which apply to young people aged 12 and above.",
         "headers": [
             "NHS NUMBER",
@@ -50,6 +55,11 @@ TEXT = {
             "kpi_39_influenza_immunisation_recommended": "Does not fulfil criteria for KPI 5",
             "kpi_40_sick_day_rules_advice": "Does not fulfil criteria for KPI 1",
         },
+        "key": {
+            "pass": "Complete",
+            "fail": "Incomplete",
+            "ineligible": "Not required"
+        }
     },
     "care_at_diagnosis": {
         "title": "Care at Diagnosis",
@@ -65,6 +75,11 @@ TEXT = {
             "kpi_42_thyroid_disease_screening": "Does not fulfil criteria for KPI 7, diagnosed at least 90 days before the end of the audit period",
             "kpi_43_carbohydrate_counting_education": "Does not fulfil criteria for KPI 7, diagnosed at least 90 days before the end of the audit period",
         },
+        "key": {
+            "pass": "Complete",
+            "fail": "Incomplete",
+            "ineligible": "Not required"
+        }
     },
     "outcomes": {
         "title": "Outcomes",
@@ -79,6 +94,11 @@ TEXT = {
             "Albuminuria present",
         ],
         "ineligible_hover_reason": {},
+        "key": {
+            "pass": "Complete",
+            "fail": "Incomplete",
+            "ineligible": "Not required"
+        }
     },
     "treatment": {
         "title": "Treatment",
@@ -93,6 +113,11 @@ TEXT = {
             "cgm": "Does not fulfil criteria for KPI 1",
             "tx_regimen": "Does not fulfil criteria for any of KPIs 13-20",
         },
+        "key": {
+            "pass": "Complete",
+            "fail": "Incomplete",
+            "ineligible": "Not required"
+        }
     },
 }
 # TODO: might be nicer to move into above dict

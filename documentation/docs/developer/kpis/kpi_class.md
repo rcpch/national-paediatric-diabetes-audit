@@ -4,7 +4,7 @@
 The entrypoint for everything relevant to KPIs _should_ be the `CalculateKPIS`
 class. Missing functionality should be added to this class.
 
-This class is responsible for calculating all KPIs for a given subset of of patients, set through its `self.patients` attribute. There are various methods used to calculate KPIs for different abstractions (e.g. `calculate_kpis_for_single_patient` vs `calculate_kpis_for_pdus`), but each method is a wrapper that works to set the `self.patients` attribute, and then they all call the `_calculate_kpis` method.
+This class is responsible for calculating all KPIs for a given subset of of patients, set through its `self.patients` attribute. There are various methods used to calculate KPIs for different abstractions, but each method is a wrapper that works to set the `self.patients` attribute, and then they all call the `_calculate_kpis` method.
 
 ### Initialisation
 
@@ -38,8 +38,6 @@ We can then use one of the `calculate_kpis_for_` methods to calculate KPIs:
     - Calculate KPIs for given patients.
 2) `calculate_kpis_for_pdus` (list[str])
     - Calculate KPIs for given PZ codes.
-3) `calculate_kpis_for_single_patient` (Patient)
-    - Calculate KPIs for a single patient. Runs all calculations (required as KPIs 1-12 are used as denominators for subsequent KPIs) but returns a subset relevant to a single patient.
 
 All `calculate_` methods return a `KPICalculationsObject`. This is used to represent the results of  calculations across the specified audit period. It contains information about the audit dates, the total number of patients involved, and the calculated KPI results. It looks like:
 
@@ -111,7 +109,7 @@ class PatientVisitsListView(
     def get_context_data(self, **kwargs):
         patient_id = self.kwargs.get("patient_id")
         context = super(PatientVisitsListView, self).get_context_data(**kwargs)
-        patient = Patient.objects.get(pk=patient_id)
+        patients = Patient.objects.filter(pk=patient_id)
 
         ...
 
@@ -121,7 +119,7 @@ class PatientVisitsListView(
 
         # Calculate the KPIs for this patient, returning only subset relevant
         # for a single patient's calculation
-        kpi_calculations_object = calculate_kpis.calculate_kpis_for_single_patient(patient)
+        kpi_calculations_object = calculate_kpis.calculate_kpis_for_patients(patients)
 
         context["kpi_results"] = kpi_calculations_object
 
@@ -150,31 +148,3 @@ class KPINames:
 
 - `get_rendered_label(self, number: int) -> str` which returns the rendered label name for the given KPI number
 
-### Example usage
-
-```python
-@pytest.mark.django_db
-def test_ensure_calculate_kpis_for_patient_returns_correct_kpi_subset(AUDIT_START_DATE):
-    """Tests that the `calculate_kpis_for_single_patient()` method
-    returns the correct subset of KPIs for a single patient.
-    """
-    kpi_calculator = CalculateKPIS(calculation_date=AUDIT_START_DATE)
-
-    kpi_calc_obj = kpi_calculator.calculate_kpis_for_single_patient(
-        PatientFactory(),
-    )
-
-    kpi_results_obj = kpi_calc_obj["calculated_kpi_values"].keys()
-
-    # Check that the KPIs are a subset of the full KPI list
-    EXPECTED_KPIS_SUBSET = list(range(13, 32)) + [321, 322, 323] + (list(range(33, 50)))
-    EXPECTED_KPI_KEYS = [
-        kpi_calculator.kpi_name_registry.get_attribute_name(i)
-        for i in EXPECTED_KPIS_SUBSET
-    ]
-
-    for expected_kpi_key in EXPECTED_KPI_KEYS:
-        assert (
-            expected_kpi_key in kpi_results_obj
-        ), f"Expected KPI {expected_kpi_key} in single patient subset, but not present in results"
-```

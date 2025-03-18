@@ -1,60 +1,37 @@
 """Views for KPIs calculations
 """
 
-from collections import defaultdict
 import logging
+from collections import defaultdict
 from dataclasses import asdict, is_dataclass
 from datetime import date, datetime, timedelta
-
 # Python imports
 from decimal import Decimal
 from pprint import pformat
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from typing import Literal, Optional, Tuple, Union
 
 from dateutil.relativedelta import relativedelta
-
 # Django imports
-from django.apps import apps
-from django.db.models import (
-    Case,
-    Count,
-    Exists,
-    F,
-    IntegerField,
-    OuterRef,
-    Q,
-    QuerySet,
-    Subquery,
-    Sum,
-    When,
-)
+from django.db.models import (Case, Count, Exists, F, IntegerField, OuterRef,
+                              Q, QuerySet, Subquery, Sum, When)
 
 # NPDA Imports
-from project.constants import diabetes_types
 from project.constants.albuminuria_stage import ALBUMINURIA_STAGES
 from project.constants.diabetes_types import DIABETES_TYPES
-from project.constants.hospital_admission_reasons import (
-    HOSPITAL_ADMISSION_REASONS,
-)
-from project.constants.retinal_screening_results import (
-    RETINAL_SCREENING_RESULTS,
-)
+from project.constants.hospital_admission_reasons import \
+    HOSPITAL_ADMISSION_REASONS
+from project.constants.retinal_screening_results import \
+    RETINAL_SCREENING_RESULTS
 from project.constants.smoking_status import SMOKING_STATUS
-from project.constants.types.kpi_types import (
-    IndividualPtKPICalculationsDict,
-    IndividualPtKPICalculationsObject,
-    IndividualPtKPIResults,
-    KPICalculationsObject,
-    KPIResult,
-    kpi_registry,
-)
+from project.constants.types.kpi_types import (KPICalculationsObject,
+                                               KPIResult, kpi_registry)
 from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 from project.npda.general_functions import get_audit_period_for_date
-from project.npda.general_functions.audit_period import get_quarters_for_audit_period
-from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
+from project.npda.general_functions.audit_period import \
+    get_quarters_for_audit_period
+from project.npda.general_functions.quarter_for_date import \
+    retrieve_quarter_for_date
 from project.npda.models import Patient, Visit
-from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
-from project.npda.models.transfer import Transfer
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -83,8 +60,6 @@ class CalculateKPIS:
                 - Calculate KPIs for given patients.
             2) calculate_kpis_for_pdus (list[str])
                 - Calculate KPIs for given PZ codes.
-            3) calculate_kpis_for_single_patient (Patient)
-                - Calculate KPIs for a single patient.
 
             Each calculation method works to set the `self.patients` and
             `self.total_patients_count` attributes used throughout all
@@ -132,9 +107,18 @@ class CalculateKPIS:
             self.total_patients_count = self.patients.count()
         elif pz_codes:
             self.patients = Patient.objects.filter(
-                paediatric_diabetes_units__paediatric_diabetes_unit__pz_code__in=pz_codes
+                self._get_patient_filter_query_for_submissions(pz_codes)
             )
             self.total_patients_count = self.patients.count()
+
+    def _get_patient_filter_query_for_submissions(self, pz_codes: list[str]):
+        return Q(
+            # visit_falls_within_audit_period_Q_object(
+            #     prepend_query_path="visit", audit_start_date=self.audit_start_date
+            # ),  # include only patients with visits within the audit period in the active submission
+            patientsubmission__submission__paediatric_diabetes_unit__pz_code__in=pz_codes,
+            patientsubmission__submission__submission_active=True,
+        )
 
     def calculate_kpis_for_patients(
         self,
@@ -165,152 +149,13 @@ class CalculateKPIS:
             for KPI calculations and aggregations."""
 
         self.patients = Patient.objects.filter(
-            paediatric_diabetes_units__paediatric_diabetes_unit__pz_code__in=pz_codes
+            self._get_patient_filter_query_for_submissions(pz_codes)
         )
+
         self.total_patients_count = self.patients.count()
 
         return self._calculate_kpis()
 
-    def calculate_kpis_for_single_patient(
-        self,
-        patient: Patient,
-        pdu: PaediatricDiabetesUnit,
-    ) -> IndividualPtKPICalculationsDict:
-        """Calculate relevant KPIs subset for a single patient.
-
-        Params:
-            * patient (Patient) - Single patient for KPI calculations and aggregations.
-            * pdu (PaediatricDiabetesUnit) - PDU for the patient. Used to filter transfer
-
-        Returns:
-            * dict - looks like IndividualPtKPICalculationsObject
-
-            Example:
-            {
-                "calculation_datetime": datetime.datetime(
-                    2024, 11, 15, 9, 49, 32, 684190
-                ),
-                "audit_start_date": datetime.date(2024, 4, 1),
-                "audit_end_date": datetime.date(2025, 3, 31),
-                "gte_12yo": False,
-                "diagnosed_in_period": False,
-                "died_in_period": False,
-                "transfer_in_period": False,
-                "kpi_results": {
-                    "kpi_25_hba1c": False,
-                    "kpi_26_bmi": False,
-                    "kpi_27_thyroid_screen": False,
-                    "kpi_28_blood_pressure": None,
-                    "kpi_29_urinary_albumin": None,
-                    "kpi_30_retinal_screening": None,
-                    "kpi_31_foot_examination": None,
-                },
-                "total_passed": 0,
-                "expected_total": 3,
-            }
-        """
-
-        if type(patient) != Patient:
-            raise ValueError(f"patient must be a Patient instance, got {type(patient)}")
-        if type(pdu) != PaediatricDiabetesUnit:
-            raise ValueError(
-                f"pdu must be a PaediatricDiabetesUnit instance, got {type(pdu)}"
-            )
-
-        # Get values that are simple look ups
-        calculation_datetime = datetime.now()
-        audit_start_date = self.audit_start_date
-        audit_end_date = self.audit_end_date
-        gte_12yo = patient.date_of_birth <= calculation_datetime.date() - relativedelta(
-            years=12
-        )
-        diagnosed_in_period = patient.diagnosis_date in self.AUDIT_DATE_RANGE
-        died_in_period = patient.death_date in self.AUDIT_DATE_RANGE
-        transfer_in_period = (
-            Transfer.objects.get(
-                patient=patient,
-                paediatric_diabetes_unit=pdu,
-            ).date_leaving_service
-            is not None
-        )
-
-        # Now get IndividualPtKPIResults
-
-        # Set the base Visit attributes
-        base_visits: QuerySet[Visit] = patient.visit_set.filter(
-            visit_date__range=(self.AUDIT_DATE_RANGE)
-        )
-        passed_kpi_25_hba1c = base_visits.filter(
-            Q(hba1c__isnull=False),
-            Q(hba1c_date__range=(self.AUDIT_DATE_RANGE)),
-        ).exists()
-        passed_kpi_26_bmi = base_visits.filter(
-            Q(height__isnull=False),
-            Q(weight__isnull=False),
-            # Within audit period
-            Q(height_weight_observation_date__range=(self.AUDIT_DATE_RANGE)),
-        ).exists()
-        passed_kpi_27_thyroid_screen = base_visits.filter(
-            # Within audit period
-            Q(thyroid_function_date__range=(self.AUDIT_DATE_RANGE)),
-        ).exists()
-
-        # Only for pts >= 12yo
-        passed_kpi_28_blood_pressure = None
-        passed_kpi_29_urinary_albumin = None
-        passed_kpi_30_retinal_screening = None
-        passed_kpi_31_foot_examination = None
-        if gte_12yo:
-            passed_kpi_28_blood_pressure = base_visits.filter(
-                # Within audit period
-                Q(systolic_blood_pressure__isnull=False),
-                Q(blood_pressure_observation_date__range=(self.AUDIT_DATE_RANGE)),
-            ).exists()
-            passed_kpi_29_urinary_albumin = base_visits.filter(
-                Q(albumin_creatinine_ratio__isnull=False),
-                # Within audit period
-                Q(albumin_creatinine_ratio_date__range=(self.AUDIT_DATE_RANGE)),
-            ).exists()
-            passed_kpi_30_retinal_screening = base_visits.filter(
-                Q(
-                    retinal_screening_result__in=[
-                        RETINAL_SCREENING_RESULTS[0][0],
-                        RETINAL_SCREENING_RESULTS[1][0],
-                    ]
-                ),
-                # Within audit period
-                Q(retinal_screening_observation_date__range=(self.AUDIT_DATE_RANGE)),
-            ).exists()
-            passed_kpi_31_foot_examination = base_visits.filter(
-                # Within audit period
-                Q(foot_examination_observation_date__range=(self.AUDIT_DATE_RANGE)),
-            ).exists()
-
-        # Initiliase the calculations IndividualPtKPICalculationsObject
-        pt_kpi_results = IndividualPtKPIResults(
-            kpi_25_hba1c=passed_kpi_25_hba1c,
-            kpi_26_bmi=passed_kpi_26_bmi,
-            kpi_27_thyroid_screen=passed_kpi_27_thyroid_screen,
-            kpi_28_blood_pressure=passed_kpi_28_blood_pressure,
-            kpi_29_urinary_albumin=passed_kpi_29_urinary_albumin,
-            kpi_30_retinal_screening=passed_kpi_30_retinal_screening,
-            kpi_31_foot_examination=passed_kpi_31_foot_examination,
-        )
-
-        # Initialise the calculations IndividualPtKPICalculationsObject
-        # At the end we convert to dict for serialization
-        return_obj = IndividualPtKPICalculationsObject(
-            calculation_datetime=calculation_datetime,
-            audit_start_date=audit_start_date,
-            audit_end_date=audit_end_date,
-            gte_12yo=gte_12yo,
-            diagnosed_in_period=diagnosed_in_period,
-            died_in_period=died_in_period,
-            transfer_in_period=transfer_in_period,
-            kpi_results=pt_kpi_results,
-        )
-
-        return asdict(return_obj)
 
     def _calculate_kpis(
         self,
@@ -689,7 +534,8 @@ class CalculateKPIS:
         *a valid date of birth
         *a valid PDU number
         * a visit date or admission date within the audit period
-        * Below the age of 25 at the start of the audit period* Diagnosis of Type 1 diabetes
+        * Below the age of 25 at the start of the audit period
+        * Diagnosis of Type 1 diabetes
 
         Excluding
         * Date of diagnosis within the audit period
@@ -705,7 +551,10 @@ class CalculateKPIS:
             self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
         )
 
-        eligible_patients = total_kpi_1_eligible_pts_base_query_set.exclude(
+        eligible_patients = total_kpi_1_eligible_pts_base_query_set.filter(
+            # T1DM
+            diabetes_type=DIABETES_TYPES[0][0],
+        ).exclude(
             # EXCLUDE Date of diagnosis within the audit period
             Q(diagnosis_date__range=(self.AUDIT_DATE_RANGE))
             # EXCLUDE Date of leaving service within the audit period
@@ -1877,15 +1726,18 @@ class CalculateKPIS:
         )
 
         # Get quarter dates
-        quarter_dates = get_quarters_for_audit_period(
-            audit_start_date=self.audit_start_date,
-            audit_end_date=self.audit_end_date,
-        )
+        quarter_end_dates = [
+            quarter[1]
+            for quarter in get_quarters_for_audit_period(
+                audit_start_date=self.audit_start_date,
+                audit_end_date=self.audit_end_date,
+            )
+        ]
         # Only up to current quarter
         current_quarter = retrieve_quarter_for_date(date.today())
-        quarter_dates = quarter_dates[:current_quarter]
+        quarter_end_dates = quarter_end_dates[:current_quarter]
         result = {}
-        for q, (q_start_date, q_end_date) in enumerate(quarter_dates, start=1):
+        for q, q_end_date in enumerate(quarter_end_dates, start=1):
             # Eligible kpi24 patients are those who are either on an insulin pump or insulin pump
             # therapy
             eligible_kpi_24_latest_visit_subquery = (
@@ -1896,7 +1748,7 @@ class CalculateKPIS:
                     # or 6 = Insulin pump therapy plus other blood glucose lowering medication
                     Q(treatment__in=[3, 6]),
                     # Additionally, the visit must be within the quarter
-                    Q(visit_date__range=(q_start_date, q_end_date)),
+                    Q(visit_date__range=(self.audit_start_date, q_end_date)),
                 )
                 .order_by("-visit_date")
                 .values("pk")[:1]
