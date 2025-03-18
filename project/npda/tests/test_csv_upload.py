@@ -568,6 +568,32 @@ def test_invalid_sex(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+def test_not_specified_sex(test_user, single_row_valid_df):
+    single_row_valid_df["Stated gender"] = 3
+
+    errors = csv_upload_sync(test_user, single_row_valid_df)
+    assert "sex" not in errors[0]
+
+    patient = Patient.objects.first()
+
+    assert patient.sex == 3
+    assert patient.errors is None
+
+
+@pytest.mark.django_db
+def test_unknown_sex(test_user, single_row_valid_df):
+    single_row_valid_df["Stated gender"] = 99
+
+    errors = csv_upload_sync(test_user, single_row_valid_df)
+    assert "sex" not in errors[0]
+
+    patient = Patient.objects.first()
+
+    assert patient.sex == 99
+    assert patient.errors is None
+
+
+@pytest.mark.django_db
 def test_missing_gp_ods_code(test_user, single_row_valid_df):
     single_row_valid_df["GP Practice Code"] = None
 
@@ -3008,8 +3034,8 @@ def test_visit_date_not_before_diagnosis_date(test_user, single_row_valid_df):
 @pytest.mark.parametrize(
     "alternative,expected",
     [
-        pytest.param("Unknown", 0),
-        pytest.param("unknown", 0),
+        pytest.param("Unknown", 99),
+        pytest.param("unknown", 99),
         pytest.param("M", 1),
         pytest.param("m", 1),
         pytest.param("F", 2),
