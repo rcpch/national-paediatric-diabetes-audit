@@ -138,13 +138,13 @@ def flatten_errors(
                 # 0 based indexing and the column header. So + 2
                 "Original CSV Row": int(row_ix) + 2,
                 identifier_field: original_data.loc[int(row_ix), identifier_column],
-                "Column": csv_definition_for(field["heading"]),
+                "Column": csv_definition_for(field)["heading"],
                 "Errors": "; ".join(errors),
             })
 
     return pd.DataFrame(rows, columns=[
         "Original CSV Row",
-        csv_definition_for(identifier_field)["heading"],
+        identifier_column,
         "Column",
         "Errors"
     ])
