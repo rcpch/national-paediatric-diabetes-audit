@@ -435,9 +435,11 @@ class CalculateKPIS:
         today = date.today()
         current_month_start = date(today.year, today.month, 1)
         current_month_end = date(today.year, today.month + 1, 1)
-        return self.total_kpi_2_eligible_pts_base_query_set.filter(
+        new_diagnoses_this_month = self.total_kpi_2_eligible_pts_base_query_set.filter(
             Q(diagnosis_date__range=(current_month_start, current_month_end))
         ).count()
+
+        return new_diagnoses_this_month
 
     def calculate_kpi_3_total_t1dm(self) -> KPIResult:
         """
