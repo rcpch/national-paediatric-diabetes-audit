@@ -911,6 +911,27 @@ class CalculateKPIS:
 
         return eligible_patients.count()
 
+    def get_number_of_moved_out_of_area_this_month(self) -> int:
+        """
+        Returns the number of patients who have been moved out of area this month
+
+        KPI 9 + moved out of area + this month
+        """
+        base_eligible_patients, _ = (
+            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+        )
+
+        today = date.today()
+        current_month_start = date(today.year, today.month, 1)
+        current_month_end = date(today.year, today.month + 1, 1)
+
+        eligible_patients = base_eligible_patients.filter(
+            Q(paediatric_diabetes_units__date_leaving_service__range=(current_month_start, current_month_end)),
+            Q(paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[1][0])
+        )
+
+        return eligible_patients.count()
+
     def _get_kpi_9_eligible_pts_base_query_set(self) -> QuerySet[Patient]:
         """
         Returns a base query set for KPI 9 for re use

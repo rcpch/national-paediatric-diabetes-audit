@@ -234,10 +234,10 @@ def get_new_diagnoses_partial(request):
 
     n_diagnoses_this_month = calculate_kpis.get_new_diagnoses_this_month()
 
-    context = {"n_diagnoses_this_month": n_diagnoses_this_month}
+    context = {"number": n_diagnoses_this_month}
 
     return render(
-        request, "dashboard/components/cards/card_partials/new_diagnoses_partial.html", context
+        request, "dashboard/components/cards/card_partials/secondary_card_partial.html", context
     )
 
 
@@ -276,13 +276,13 @@ def get_new_admissions_partial(request):
 
     n_admissions_this_month = calculate_kpis.get_number_of_admissions_this_month()
 
-    context = {"n_admissions_this_month": n_admissions_this_month}
+    context = {"number": n_admissions_this_month}
 
     return render(
-        request, "dashboard/components/cards/card_partials/new_admissions_partial.html", context
+        request, "dashboard/components/cards/card_partials/secondary_card_partial.html", context
     )
 
-
+@login_and_otp_required()
 def get_transitioned_to_adult_service_partial(request):
     """HTMX view that returns the number of patients who have been transitioned to the adult service"""
 
@@ -315,10 +315,51 @@ def get_transitioned_to_adult_service_partial(request):
 
     n_transitioned_to_adult_service = calculate_kpis.get_number_of_transitioned_to_adult_service_this_month()
 
-    context = {"n_transitioned_to_adult_service": n_transitioned_to_adult_service}
+    context = {"number": n_transitioned_to_adult_service}
 
     return render(
         request,
-        "dashboard/components/cards/card_partials/transitioned_to_adult_service_partial.html",
+        "dashboard/components/cards/card_partials/secondary_card_partial.html",
+        context,
+    )
+
+@login_and_otp_required()
+def get_moved_out_of_area_partial(request):
+    """HTMX view that returns the number of patients who have been moved out of area"""
+
+    pz_code = request.session.get("pz_code")
+
+    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
+        "npda", "PaediatricDiabetesUnit"
+    )
+    try:
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+    except PaediatricDiabetesUnit.DoesNotExist:
+        messages.error(
+            request=request,
+            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
+        )
+        return render(request, "dashboard.html")
+    
+    selected_audit_year = int(request.session.get("selected_audit_year"))
+
+    if selected_audit_year <= 2024:
+        # The day after the audit year end date
+        calculation_date = date(selected_audit_year, 4, 1)
+    else:
+        today = date.today()    
+        calculation_date = date(selected_audit_year, today.month, today.day)
+
+    calculate_kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=True)
+
+    calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+
+    n_moved_out_of_area = calculate_kpis.get_number_of_moved_out_of_area_this_month()
+
+    context = {"number": n_moved_out_of_area}
+
+    return render(
+        request,
+        "dashboard/components/cards/card_partials/secondary_card_partial.html",
         context,
     )

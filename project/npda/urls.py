@@ -148,6 +148,11 @@ dashboard_urlpatterns = [
         name="get_transitioned_to_adult_service_partial",
     ),
     path(
+        "get_moved_out_of_area_partial",
+        view=partials.get_moved_out_of_area_partial,
+        name="get_moved_out_of_area_partial",
+    ),
+    path(
         "temp_set_eligible_kpi_7",
         view=dashboard.temp_set_eligible_kpi_7,
         name="temp_set_eligible_kpi_7",
