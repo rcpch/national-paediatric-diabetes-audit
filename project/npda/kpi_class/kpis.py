@@ -3513,6 +3513,7 @@ class CalculateKPIS:
 
         # Filter patients who have at least one valid Visit
         total_passed_query_set = eligible_pts_annotated.filter(has_valid_visit=True)
+        self.kpi_46_total_admissions_queryset = total_passed_query_set
 
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
@@ -3530,6 +3531,38 @@ class CalculateKPIS:
             total_failed=total_failed,
             patient_querysets=patient_querysets,
         )
+
+    def get_number_of_admissions_this_month(self) -> int:
+        """Returns the number of admissions for the current month
+
+        KPI 46 but for the current month
+        """
+
+        if not hasattr(self, "kpi_46_total_admissions_queryset"):
+            self.calculate_kpi_46_number_of_admissions()
+
+        today = date.today()
+        current_month_start = date(today.year, today.month, 1)
+        current_month_end = date(today.year, today.month + 1, 1)
+
+        # Find patients with at least one valid admission
+        # Get the visits that match the valid admission criteria
+        valid_visit_subquery = Visit.objects.filter(
+            # admission start date OR discharge date within this month
+            Q(
+                Q(hospital_admission_date__range=(current_month_start, current_month_end))
+                | Q(hospital_discharge_date__range=(current_month_start, current_month_end))
+            ),
+        )
+
+        # Annotate eligible patients with a boolean indicating the existence
+        # of a valid Visit. NOTE: doing this because Count has weird behavior
+        # if the first Visit has no valid value even if second does
+        eligible_pts_annotated = self.kpi_46_total_admissions_queryset.annotate(
+            has_valid_visit=Exists(valid_visit_subquery)
+        )
+
+        return eligible_pts_annotated.filter(has_valid_visit=True).count()
 
     def get_number_of_admissions_for_patient(self, pt_pk: int) -> int:
         """Required for pt level report as `calculate_kpi_46_number_of_admissions` calculates an aggregate but need pt-level.
