@@ -128,9 +128,10 @@ async def csv_upload(
 
         return True
 
-    def retain_errors_and_invalid_field_data(form):
-        # We want to retain fields even if they're invalid so that we can return them to the user
+    def save_errors_and_retain_valid_fields(form):
+        # We want to retain fields so that we can show them in the user interface
         # Use the field value from cleaned_data, falling back to data if it's not there
+        # We can't retain invalid fields however as they might fail database validation
         for key, value in form.cleaned_data.items():
             setattr(form.instance, key, value)
 
@@ -144,6 +145,15 @@ async def csv_upload(
         form.instance.errors = (
             None if form.is_valid() else form.errors.get_json_data(escape_html=True)
         )
+    
+    def get_valid_transfer_fields(row, patient_form):
+        transfer_fields = row_to_dict(row, Transfer) | {"paediatric_diabetes_unit": pdu}
+
+        for field in transfer_fields:
+            if not can_save_field(patient_form, field):
+                transfer_fields[field] = None
+
+        return transfer_fields
 
     def record_errors_from_form(errors_to_return, row_index, form):
         for field, errors in form.errors.as_data().items():
@@ -247,7 +257,7 @@ async def csv_upload(
         patient_form, transfer_fields, patient_row_index
     ):
         try:
-            retain_errors_and_invalid_field_data(patient_form)
+            save_errors_and_retain_valid_fields(patient_form)
 
             patient = await sync_to_async(lambda: patient_form.save())()
 
@@ -273,7 +283,7 @@ async def csv_upload(
             record_errors_from_form(errors_to_return, visit_row_index, visit_form)
 
             try:
-                retain_errors_and_invalid_field_data(visit_form)
+                save_errors_and_retain_valid_fields(visit_form)
                 visit_form.instance.patient = patient
 
                 await sync_to_async(lambda: visit_form.save())()
@@ -314,7 +324,7 @@ async def csv_upload(
                     "Either NHS Number or Unique Reference Number must be provided."
                 )
             else:
-                transfer_fields = row_to_dict(row, Transfer) | {"paediatric_diabetes_unit": pdu}
+                transfer_fields = get_valid_transfer_fields(first_row, patient_form)
 
                 patient = await save_patient_and_transfer(
                     patient_form, transfer_fields, patient_row_index
