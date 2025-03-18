@@ -313,7 +313,7 @@ def get_transitioned_to_adult_service_partial(request):
 
     calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
 
-    n_transitioned_to_adult_service = calculate_kpis.get_number_of_transitioned_to_adult_service()
+    n_transitioned_to_adult_service = calculate_kpis.get_number_of_transitioned_to_adult_service_this_month()
 
     context = {"n_transitioned_to_adult_service": n_transitioned_to_adult_service}
 
