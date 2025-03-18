@@ -701,12 +701,23 @@ class VisitForm(forms.ModelForm):
     def clean_hospital_admission_date(self):
         data = self.cleaned_data["hospital_admission_date"]
 
+        if not self.patient.diagnosis_date:
+            diagnosis_date = None
+        else:
+            diagnosis_date = date(
+                year=self.patient.diagnosis_date.year,
+                month=self.patient.diagnosis_date.month,
+                day=self.patient.diagnosis_date.day,
+            )
+            # diagnosis date can be within 11 days of admission date
+            diagnosis_date = diagnosis_date - timedelta(days=11)
+
         valid, error = validate_date(
             date_under_examination_field_name="hospital_admission_date",
             date_under_examination_label_name="Start date (Hospital Provider Spell)",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=self.patient.diagnosis_date,
+            date_of_diagnosis=diagnosis_date,
             date_of_death=self.patient.death_date,
         )
         if valid == False:
