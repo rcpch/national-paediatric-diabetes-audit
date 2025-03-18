@@ -1,12 +1,15 @@
 # Python imports
-from datetime import date
+from datetime import date, timedelta
+from decimal import Decimal
 
 # Django imports
-from django.db.models import Q
+from django.db.models import Q, F, Case, When, DecimalField
+from django.db.models.functions import Round
 from django.shortcuts import render
 
 # Third party imports
 from dateutil.relativedelta import relativedelta
+import pandas as pd
 import plotly.graph_objects as go
 
 # Project imports
@@ -14,11 +17,18 @@ from project.npda.general_functions.audit_period import audit_period_for_audit_y
 from project.npda.models import Submission
 from project.constants.colors import (
     RCPCH_LIGHT_BLUE,
+    RCPCH_LIGHT_BLUE_TINT1,
     RCPCH_YELLOW,
+    RCPCH_YELLOW_LIGHT_TINT1,
     RCPCH_PINK,
+    RCPCH_PINK_LIGHT_TINT1,
     RCPCH_MID_GREY,
+    RCPCH_LIGHT_GREY,
     RCPCH_DARK_BLUE,
 )
+from project.constants import HBA1C_FORMATS
+from project.npda.models import Visit
+from project.npda.kpi_class.kpis import CalculateKPIS
 
 
 def patient_characteristics(request):
@@ -251,6 +261,34 @@ def patient_characteristics(request):
         ethnicity_counts, ethnicity_colors, ethnicity_title
     )
 
+    visits = return_eligible_visits(all_patients_in_this_submission, audit_year)
+    # Create a Pandas DataFrame
+    df = pd.DataFrame(visits)
+    # Convert Decimal to float for plotting
+    df["hba1c_mmol_mol"] = df["hba1c_mmol_mol"].astype(float)
+
+    # Map sex codes to labels for better visualization
+    sex_mapping = {1: "Male", 2: "Female", 0: "Not Known", 9: "Not Specified"}
+    df["patient__sex"] = df["patient__sex"].map(sex_mapping)
+    line_colors = {
+        "Male": RCPCH_LIGHT_BLUE,
+        "Female": RCPCH_PINK,
+        "Not Known": RCPCH_YELLOW,
+        "Not Specified": RCPCH_MID_GREY,
+    }
+    fill_colors = {
+        "Male": RCPCH_LIGHT_BLUE_TINT1,
+        "Female": RCPCH_PINK_LIGHT_TINT1,
+        "Not Known": RCPCH_YELLOW_LIGHT_TINT1,
+        "Not Specified": RCPCH_LIGHT_GREY,
+    }
+    sex_hba1c_mmol_mol_violin_title = "<b>Distribution of HbA1c (mmol/mol) by Sex</b>"
+
+    # Create the violin plot
+    sex_hba1c_mmol_mol_violin = create_violin(
+        df, line_colors, fill_colors, sex_hba1c_mmol_mol_violin_title
+    )
+
     context = {
         "number_of_patients": number_of_patients,
         "patients_by_age": age_band_counts,
@@ -260,6 +298,7 @@ def patient_characteristics(request):
         "diabetes_types": diabetes_types,
         "imd_piechart": imd_piechart.to_html(full_html=False),
         "ethnicity_piechart": ethnicity_piechart.to_html(full_html=False),
+        "violin_plot": sex_hba1c_mmol_mol_violin.to_html(full_html=False),
     }
 
     return render(request, template, context)
@@ -310,3 +349,91 @@ def create_piechart(dict_counts, colors, title):
 
 def counts_are_zero(counts):
     return all(count == 0 for count in counts.values())
+
+
+def return_eligible_visits(patients, audit_year):
+
+    visit_value_cols = [
+        "patient__pk",
+        "hba1c_mmol_mol",
+        "hba1c_percent",
+        "patient__nhs_number",
+        "patient__sex",
+    ]
+
+    audit_start, audit_end = audit_period_for_audit_year(audit_year)
+    return (
+        Visit.objects.filter(
+            visit_date__range=(audit_start, audit_end),
+            hba1c_date__gt=F("patient__diagnosis_date") + timedelta(days=90),
+            patient__in=patients,
+            hba1c__isnull=False,
+        )
+        .annotate(
+            hba1c_mmol_mol=Case(
+                When(
+                    hba1c_format=HBA1C_FORMATS[0][0],
+                    then=F("hba1c"),
+                ),
+                When(
+                    hba1c_format=HBA1C_FORMATS[1][0],
+                    then=F("hba1c")
+                    - Round(
+                        Decimal("2.152") / Decimal("0.09148")
+                    ),  # HbA1c (mmol/mol) = (HbA1c (%) - 2.152) / 0.09148
+                ),
+                default=F("hba1c"),
+                output_field=DecimalField(max_digits=5, decimal_places=2, null=True),
+            ),
+            hba1c_percent=Case(
+                When(
+                    hba1c_format=HBA1C_FORMATS[1][0],
+                    then=F("hba1c"),
+                ),
+                When(
+                    hba1c_format=HBA1C_FORMATS[0][0],
+                    then=F("hba1c") * Decimal("0.09148")
+                    + Round(Decimal("2.152")),  # 0.09148 * HbA1c (mmol/mol)) + 2.152
+                ),
+            ),
+        )
+        .values(*visit_value_cols)
+    )
+
+
+def create_violin(df, line_colors, fill_colors, title):
+    # Create the violin plot using Plotly Graph Objects
+    fig = go.Figure()
+
+    for sex in df["patient__sex"].unique():
+        subset = df[df["patient__sex"] == sex]
+        fig.add_trace(
+            go.Violin(
+                y=subset["hba1c_mmol_mol"],
+                name=sex,
+                box_visible=True,
+                meanline_visible=True,
+                line_color=line_colors[sex],
+                fillcolor=fill_colors[sex],
+            )
+        )
+
+    fig.update_layout(
+        title=title,
+        yaxis_title="HbA1c (mmol/mol)",
+        xaxis_title="Sex",
+    )
+
+    fig.update_layout(
+        title={
+            "text": title,
+            "font": {
+                "size": 14,
+                "color": "#0D0D58",  # RCPCH dark blue
+                "family": "Montserrat",
+            },
+        },
+        margin=dict(l=20, r=20, t=50, b=20),  # minimal margins
+    )
+
+    return fig
