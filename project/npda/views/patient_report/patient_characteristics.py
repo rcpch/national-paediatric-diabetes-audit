@@ -268,105 +268,18 @@ def patient_characteristics(request):
     visits = return_eligible_visits(all_patients_in_this_submission, audit_year)
     # Create a Pandas DataFrame
     df = pd.DataFrame(visits)
-    # Convert Decimal to float for plotting
-    df["hba1c_mmol_mol"] = df["hba1c_mmol_mol"].astype(float)
 
-    # Map sex codes to labels for better visualization
-    sex_mapping = {1: "Male", 2: "Female", 0: "Not Known", 9: "Not Specified"}
-    diabetes_type_mapping = {
-        1: "Type 1",
-        2: "Type 2",
-        3: "CFRD",
-        4: "MODY",
-        5: "Other",
-        99: "Unknown",
-    }
-    imd_mapping = {
-        1: "1 (most deprived)",
-        2: "2",
-        3: "3",
-        4: "4",
-        5: "5 (least deprived)",
-    }
-
-    df["patient__sex"] = df["patient__sex"].map(sex_mapping)
-    df["patient__diabetes_type"] = df["patient__diabetes_type"].map(
-        diabetes_type_mapping
-    )  # only if All is selected
-    df["patient__index_of_multiple_deprivation_quintile"] = df[
-        "patient__index_of_multiple_deprivation_quintile"
-    ].map(imd_mapping)
-    line_colors = {
-        "Male": RCPCH_LIGHT_BLUE,
-        "Female": RCPCH_PINK,
-        "Not Known": RCPCH_YELLOW,
-        "Not Specified": RCPCH_MID_GREY,
-    }
-    fill_colors = {
-        "Male": RCPCH_LIGHT_BLUE_TINT1,
-        "Female": RCPCH_PINK_LIGHT_TINT1,
-        "Not Known": RCPCH_YELLOW_LIGHT_TINT1,
-        "Not Specified": RCPCH_LIGHT_GREY,
-    }
-    sex_hba1c_mmol_mol_box_title = "<b>Distribution of HbA1c (mmol/mol) by Sex</b>"
-    xaxis_title = "Sex"
-
-    # Create the box plot
-    sex_hba1c_mmol_mol_box_plot = create_box_plot(
-        df, "sex", line_colors, fill_colors, sex_hba1c_mmol_mol_box_title, xaxis_title
-    )
-
-    line_colors = {
-        "1 (most deprived)": "#E00087",  # IMD 1
-        "2": "#D3D3D3",  # Light Gray (IMD 2)
-        "3": "#A9A9A9",  # Dark Gray (IMD 3)
-        "4": "#808080",  # Gray (IMD 4)
-        "5 (least deprived)": "#11A7F2",  # IMD 5
-    }
-    fill_colors = {
-        "1 (most deprived)": RCPCH_PINK_LIGHT_TINT1,  # IMD 1
-        "2": RCPCH_LIGHTEST_GREY,  # Light Gray (IMD 2)
-        "3": RCPCH_LIGHT_GREY,  # Dark Gray (IMD 3)
-        "4": RCPCH_MID_GREY,  # Gray (IMD 4)
-        "5 (least deprived)": RCPCH_LIGHT_BLUE_TINT1,  # IMD 5
-    }
-    title = "<b>Distribution of HbA1c (mmol/mol) by IMD</b>"
+    # Create the box plot for sex
+    sex_hba1c_mmol_mol_box_plot = create_box_plot(df, "sex")
+    # Create the box plot for IMD
     imd_hba1c_mmol_mol_box_plot = create_box_plot(
         df,
         "index_of_multiple_deprivation_quintile",
-        line_colors,
-        fill_colors,
-        title,
-        xaxis_title="Index of Multiple Deprivation (IMD)",
     )
-
     # Create the box plot for diabetes types
-    xaxis_title = "Diabetes Types"
-    line_colors = {
-        "Type 1": RCPCH_LIGHT_BLUE,
-        "Type 2": RCPCH_PINK,
-        "CFRD": RCPCH_YELLOW,
-        "MODY": RCPCH_MID_GREY,
-        "Other": RCPCH_DARK_BLUE,
-        "Unknown": RCPCH_LIGHTEST_GREY,
-    }
-    fill_colors = {
-        "Type 1": RCPCH_LIGHT_BLUE_TINT1,
-        "Type 2": RCPCH_PINK_LIGHT_TINT1,
-        "CFRD": RCPCH_YELLOW_LIGHT_TINT1,
-        "MODY": RCPCH_LIGHT_GREY,
-        "Other": RCPCH_DARK_BLUE,
-        "Unknown": RCPCH_LIGHTEST_GREY,
-    }
-    title = "<b>Distribution of HbA1c (mmol/mol) by Diabetes Type</b>"
-
     diabetes_type_hba1c_mmol_mol_box_plot = create_box_plot(
         df,
         "diabetes_type",
-        line_colors,
-        fill_colors,
-        title,
-        xaxis_title="Diabetes Types",
     )
 
     context = {
@@ -487,7 +400,7 @@ def return_eligible_visits(patients, audit_year):
     )
 
 
-def create_box_plot(df, field, line_colors, fill_colors, title, xaxis_title):
+def _build_box_plot(df, field, line_colors, fill_colors, title, xaxis_title):
     """
     # Create the violin plot using Plotly Graph Objects"
     """
@@ -538,3 +451,84 @@ def create_box_plot(df, field, line_colors, fill_colors, title, xaxis_title):
     )
 
     return fig
+
+
+def create_box_plot(df, field):
+    """
+    # Create the parameters for the box plot
+    """
+    mapping_object = {}
+    if field == "sex":
+        mapping_object = {1: "Male", 2: "Female", 0: "Not Known", 9: "Not Specified"}
+        line_colors = {
+            "Male": RCPCH_LIGHT_BLUE,
+            "Female": RCPCH_PINK,
+            "Not Known": RCPCH_YELLOW,
+            "Not Specified": RCPCH_MID_GREY,
+        }
+        fill_colors = {
+            "Male": RCPCH_LIGHT_BLUE_TINT1,
+            "Female": RCPCH_PINK_LIGHT_TINT1,
+            "Not Known": RCPCH_YELLOW_LIGHT_TINT1,
+            "Not Specified": RCPCH_LIGHT_GREY,
+        }
+        title = "<b>Distribution of HbA1c (mmol/mol) by Sex</b>"
+        xaxis_title = "Sex"
+    elif field == "index_of_multiple_deprivation_quintile":
+        mapping_object = {
+            1: "1 (most deprived)",
+            2: "2",
+            3: "3",
+            4: "4",
+            5: "5 (least deprived)",
+        }
+        line_colors = {
+            "1 (most deprived)": "#E00087",  # IMD 1
+            "2": "#D3D3D3",  # Light Gray (IMD 2)
+            "3": "#A9A9A9",  # Dark Gray (IMD 3)
+            "4": "#808080",  # Gray (IMD 4)
+            "5 (least deprived)": "#11A7F2",  # IMD 5
+        }
+        fill_colors = {
+            "1 (most deprived)": RCPCH_PINK_LIGHT_TINT1,  # IMD 1
+            "2": RCPCH_LIGHTEST_GREY,  # Light Gray (IMD 2)
+            "3": RCPCH_LIGHT_GREY,  # Dark Gray (IMD 3)
+            "4": RCPCH_MID_GREY,  # Gray (IMD 4)
+            "5 (least deprived)": RCPCH_LIGHT_BLUE_TINT1,  # IMD 5
+        }
+        title = "<b>Distribution of HbA1c (mmol/mol) by IMD</b>"
+        xaxis_title = "Index of Multiple Deprivation (IMD)"
+    elif field == "diabetes_type":
+        mapping_object = {
+            1: "Type 1",
+            2: "Type 2",
+            3: "CFRD",
+            4: "MODY",
+            5: "Other",
+            99: "Unknown",
+        }
+        xaxis_title = "Diabetes Types"
+        line_colors = {
+            "Type 1": RCPCH_LIGHT_BLUE,
+            "Type 2": RCPCH_PINK,
+            "CFRD": RCPCH_YELLOW,
+            "MODY": RCPCH_MID_GREY,
+            "Other": RCPCH_DARK_BLUE,
+            "Unknown": RCPCH_LIGHTEST_GREY,
+        }
+        fill_colors = {
+            "Type 1": RCPCH_LIGHT_BLUE_TINT1,
+            "Type 2": RCPCH_PINK_LIGHT_TINT1,
+            "CFRD": RCPCH_YELLOW_LIGHT_TINT1,
+            "MODY": RCPCH_LIGHT_GREY,
+            "Other": RCPCH_DARK_BLUE,
+            "Unknown": RCPCH_LIGHTEST_GREY,
+        }
+        title = "<b>Distribution of HbA1c (mmol/mol) by Diabetes Type</b>"
+
+    df[f"patient__{field}"] = df[f"patient__{field}"].map(mapping_object)
+    # Convert Decimal to float for plotting
+    df["hba1c_mmol_mol"] = df["hba1c_mmol_mol"].astype(float)
+
+    boxplot = _build_box_plot(df, field, line_colors, fill_colors, title, xaxis_title)
+    return boxplot
