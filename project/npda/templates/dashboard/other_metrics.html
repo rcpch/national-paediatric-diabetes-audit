@@ -3,16 +3,16 @@
     <!-- Top Row Metrics -->
     <div class="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <!-- New diagnoses -->
-        {%include "dashboard/components/bases/base_secondary_card.html" with title="New diagnoses" value="25" subtitle="(N / month)"%}
+        {% include "dashboard/components/cards/new_diagnoses_card.html" %}
 
         <!-- Admissions -->
-        {%include "dashboard/components/bases/base_secondary_card.html" with title="Admissions" value="25" subtitle="(N / month)"%}
+        {% comment %} {%include "dashboard/components/bases/base_secondary_card.html" with title="Admissions" value="25" subtitle="(N / month)"%} {% endcomment %}
 
         <!-- Transitioned to Adult Service -->
-        {%include "dashboard/components/bases/base_secondary_card.html" with title="Transitioned to Adult Diabetes Service" value="25" subtitle="(N / month)"%}
+        {% comment %} {%include "dashboard/components/bases/base_secondary_card.html" with title="Transitioned to Adult Diabetes Service" value="25" subtitle="(N / month)"%} {% endcomment %}
 
         <!-- Moved out of area -->
-        {%include "dashboard/components/bases/base_secondary_card.html" with title="Moved out of area" value="25" subtitle="(N / month)"%}
+        {% comment %} {%include "dashboard/components/bases/base_secondary_card.html" with title="Moved out of area" value="25" subtitle="(N / month)"%} {% endcomment %}
     </div>
 
     <!-- Main Content Area -->
@@ -39,13 +39,13 @@
         <!-- Right Side Metrics -->
         <div class="flex flex-col gap-4">
             <!-- Closed Loop -->
-            {% include "dashboard/components/bases/base_secondary_card.html" with title="Closed Loop" value="25" subtitle="(50%)" %}
+            {% comment %} {% include "dashboard/components/bases/base_secondary_card.html" with title="Closed Loop" value="25" subtitle="(50%)" %} {% endcomment %}
 
             <!-- Pump -->
-            {% include "dashboard/components/bases/base_secondary_card.html" with title="Pump" value="25" subtitle="(50%)" %}
+            {% comment %} {% include "dashboard/components/bases/base_secondary_card.html" with title="Pump" value="25" subtitle="(50%)" %} {% endcomment %}
 
             <!-- CGM -->
-            {% include "dashboard/components/bases/base_secondary_card.html" with title="CGM" value="25" subtitle="(50%)" %}
+            {% comment %} {% include "dashboard/components/bases/base_secondary_card.html" with title="CGM" value="25" subtitle="(50%)" %} {% endcomment %}
         </div>
     </div>
 </div>

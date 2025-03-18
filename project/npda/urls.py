@@ -133,6 +133,11 @@ dashboard_urlpatterns = [
         name="get_map_chart_partial",
     ),
     path(
+        "get_new_diagnoses_partial",
+        view=partials.get_new_diagnoses_partial,
+        name="get_new_diagnoses_partial",
+    ),
+    path(
         "temp_set_eligible_kpi_7",
         view=dashboard.temp_set_eligible_kpi_7,
         name="temp_set_eligible_kpi_7",

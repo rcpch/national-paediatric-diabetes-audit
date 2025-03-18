@@ -1,8 +1,11 @@
+from datetime import date
 import json
 import logging
 
+from django.apps import apps
 import plotly.graph_objects as go
 import plotly.io as pio
+from django.contrib import messages
 
 # Django imports
 from django.http import HttpResponseBadRequest
@@ -17,6 +20,7 @@ from project.npda.general_functions.map import (
     get_children_by_pdu_audit_year,
 )
 from project.npda.general_functions.rcpch_nhs_organisations import fetch_organisation_by_ods_code
+from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.models.paediatric_diabetes_unit import (
     PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
 )
@@ -193,3 +197,45 @@ def get_hcl_scatter_plot(request):
             "dashboard/hcl_scatter_plot_partial.html",
             {"error": "Something went wrong!"},
         )
+
+
+@login_and_otp_required()
+def get_new_diagnoses_partial(request):
+    """HTMX view that returns the number of new diagnoses for the current month"""
+
+    # Get new diagnoses this month
+
+    pz_code = request.session.get("pz_code")
+
+    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
+        "npda", "PaediatricDiabetesUnit"
+    )
+    try:
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+    except PaediatricDiabetesUnit.DoesNotExist:
+        messages.error(
+            request=request,
+            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
+        )
+        return render(request, "dashboard.html")
+
+    selected_audit_year = int(request.session.get("selected_audit_year"))
+
+    if selected_audit_year <= 2024:
+        # The day after the audit year end date
+        calculation_date = date(selected_audit_year, 4, 1)
+    else:
+        today = date.today()
+        calculation_date = date(selected_audit_year, today.month, today.day)
+
+    calculate_kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=True)
+
+    calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+
+    n_diagnoses_this_month = calculate_kpis.get_new_diagnoses_this_month()
+
+    context = {"n_diagnoses_this_month": n_diagnoses_this_month}
+
+    return render(
+        request, "dashboard/components/cards/card_partials/new_diagnoses_partial.html", context
+    )
