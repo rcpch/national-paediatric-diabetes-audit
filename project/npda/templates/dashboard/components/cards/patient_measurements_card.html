@@ -1,6 +1,7 @@
 {% extends 'dashboard/components/bases/base_card.html' %}
 {% block card_title %}
   Patient Measurements
+  {% include 'common/docs_icon_link_button.html' with rel_url="developer/kpis/outcomes/#44-mean-hba1c" fa_icon_class="fa-solid fa-eye" %}
 {% endblock card_title %}
 {% block card_body %}
   {% if hba1c_value_counts_stratified_by_diabetes_type.no_eligible_patients %}

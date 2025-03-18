@@ -239,5 +239,5 @@ def test_visit_hba1c_mmol_mol_conversion(hba1c, hba1c_format, expected_hba1c_mmo
     visit = Visit.objects.create(patient=patient, **eligible_visit_criteria)
 
     assert (
-        visit.hba1c_mmol_mol() == expected_hba1c_mmol_mol
+        visit._hba1c_mmol_mol() == expected_hba1c_mmol_mol
     ), "HbA1c conversion from mmol/mol to % failed"
