@@ -11,31 +11,31 @@
     </p>
     <p class="text-center">This data has not been validated by the NPDA team.</p>
   </div>
-  <div class="grid grid-cols-12 gap-4">
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
     <!-- ROW 1 -->
-    <div class="col-span-3">
+    <div class="col-span-12 xl:col-span-3">
       <!-- PDU Card -->
       {% include 'dashboard/components/cards/pdu_card.html' with pdu_object=pdu_object %}
     </div>
-    <div class="col-span-3">
+    <div class="col-span-12 xl:col-span-3">
       <!-- Audit Details Card -->
       {% include 'dashboard/components/cards/audit_details_card.html' with kpi_calculations_object=kpi_calculations_object current_quarter=current_quarter current_date=current_date days_remaining_until_audit_end_date=days_remaining_until_audit_end_date %}
     </div>
-    <div class="col-span-6">
+    <div class="col-span-12 xl:col-span-6">
       <!-- Patient Measurements Card -->
       {% include 'dashboard/components/cards/patient_measurements_card.html' with patient_measurements=patient_measurements %}
     </div>
     <!-- ROW 2 -->
-    <div class="col-span-6">
+    <div class="col-span-12 xl:col-span-6">
       <!-- Patient Characteristics Card -->
       {% include 'dashboard/components/cards/patient_characteristics_card.html' %}
     </div>
-    <div class="col-span-6">
+    <div class="col-span-12 xl:col-span-6">
       <!-- Other Metrics Card -->
       {% include 'dashboard/other_metrics.html' %}
     </div>
     <!-- ROW 3 -->
-    <div class="col-span-12">
+    <div class="col-span-12 xl:col-span-12">
       <!-- Map Card -->
       {% include 'dashboard/components/cards/imd_map_card.html' with scatterplot_of_cases_for_selected_organisation=charts.scatterplot_of_cases_for_selected_organisation pdu_lead_organisation=pdu_lead_organisation pdu_object=pdu_object %}
     </div>
