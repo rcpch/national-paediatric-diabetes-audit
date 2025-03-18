@@ -83,33 +83,9 @@ async def csv_upload(
 
         return ret
 
-    def handle_transfer_fields(errors_to_return, patient_row_index, row):
-        transfer_fields = row_to_dict(row, Transfer) | {"paediatric_diabetes_unit": pdu}
-
-        reason_leaving_service = transfer_fields.get("reason_leaving_service")
-        reason_leaving_service_valid = False
-
-        # TODO MRB: should we have a TransferForm? How is it done in the patient form?
-        if reason_leaving_service:
-            for (reason, _) in LEAVE_PDU_REASONS:
-                if reason == reason_leaving_service:
-                    reason_leaving_service_valid = True
-                    break
-        else:
-            reason_leaving_service_valid = True
-        
-        if not reason_leaving_service_valid:
-            # Simulate the behaviour of the forms where we null out invalid fields
-            # even though we know it would be fine to save any number here
-            transfer_fields["reason_leaving_service"] = None
-            errors_to_return[patient_row_index]["reason_leaving_service"].append(
-                "Invalid reason for leaving service"
-            )
-
-        return transfer_fields
-
     async def validate_patient_using_form(row, async_client):
-        fields = row_to_dict(row, Patient)
+        # Date and reason leaving service are validated by the patient form but saved in Transfer 
+        fields = row_to_dict(row, Patient) | row_to_dict(row, Transfer)
 
         form = PatientForm(
             fields,
@@ -314,8 +290,6 @@ async def csv_upload(
         patient_row_index = int(first_row["row_index"])
 
         try:
-            transfer_fields = handle_transfer_fields(errors_to_return, patient_row_index, first_row)
-
             patient_form = await validate_patient_using_form(first_row, async_client)
 
             # Pull through cleaned_data so we can use it in the async visit validators
@@ -340,6 +314,8 @@ async def csv_upload(
                     "Either NHS Number or Unique Reference Number must be provided."
                 )
             else:
+                transfer_fields = row_to_dict(row, Transfer) | {"paediatric_diabetes_unit": pdu}
+
                 patient = await save_patient_and_transfer(
                     patient_form, transfer_fields, patient_row_index
                 )
