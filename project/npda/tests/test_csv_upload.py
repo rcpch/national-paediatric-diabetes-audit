@@ -3099,8 +3099,6 @@ def test_bad_data_for_ethnic_category(test_user, dummy_sheet_csv, value):
 @pytest.mark.parametrize(
     "model_field",
     [
-        # TODO MRB: need to handle diabetes type separately as it's mandatory
-        # pytest.param("diabetes_type"),
         pytest.param("reason_leaving_service"),
         pytest.param("hba1c_format"),
         pytest.param("treatment"),
