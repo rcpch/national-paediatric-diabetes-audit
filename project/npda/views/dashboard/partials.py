@@ -715,7 +715,7 @@ def get_hcl_scatter_plot(request):
         # Layout adjustments
         fig.update_layout(
             xaxis=dict(title="Quarter", range=[-0.5, len(quarters) - 0.5]),
-            yaxis=dict(title="% CYP with HCL Use", range=[0, 110]),
+            yaxis=dict(title="% CYP", range=[0, 110]),
             showlegend=False,
             template="simple_white",  # Clean grid style
             margin=dict(l=0, r=0, t=0, b=0),
@@ -727,7 +727,7 @@ def get_hcl_scatter_plot(request):
             config={
                 "displayModeBar": False,
             },
-            default_height="100%",
+            default_height="12rem",
         )
 
         return render(
