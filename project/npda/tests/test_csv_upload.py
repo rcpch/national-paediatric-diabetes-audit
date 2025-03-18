@@ -327,7 +327,7 @@ def test_missing_diabetes_type(test_user, single_row_valid_df):
     assert Patient.objects.count() == 1
 
     patient = Patient.objects.first()
-    assert patient.diagnosis_date is None
+    assert patient.diabetes_type is None
 
 
 @pytest.mark.django_db
@@ -1010,19 +1010,11 @@ def test_urine_albumin_value_is_rounded_to_one_decimal(test_user, single_row_val
     assert "albumin_creatinine_ratio" not in (visit.errors or {})
 
 
-@pytest.mark.parametrize(
-    "column",
-    [
-        pytest.param("Date of Birth"),
-        pytest.param("Date of Diabetes Diagnosis"),
-    ],
-)
 @pytest.mark.django_db(transaction=True)
-def test_bad_date_format_on_mandatory_column(
+def test_bad_date_format_on_date_of_birth(
     seed_groups_per_function_fixture,
     seed_users_per_function_fixture,
     one_patient_two_visits,
-    column,
 ):
     # As these tests need full transaction support we can't use our session fixtures
     test_user = NPDAUser.objects.filter(
@@ -1033,6 +1025,7 @@ def test_bad_date_format_on_mandatory_column(
     Patient.objects.all().delete()
 
     df = one_patient_two_visits
+    column = "Date of Birth"
 
     df[column] = df[column].astype(str)
     df[column] = "beep"
@@ -1051,6 +1044,27 @@ def test_bad_date_format_on_mandatory_column(
     assert (
         Patient.objects.count() == 0
     ), "There should be no patients in the database after the test"
+
+
+@pytest.mark.django_db
+def test_bad_date_format_on_date_of_diagnosis(test_user, single_row_valid_df):
+    df = single_row_valid_df
+
+    column = "Date of Level 3 carbohydrate counting education received"
+
+    df[column] = df[column].astype(str)
+    df[column] = "beep"
+
+    csv = df.to_csv(index=False, date_format="%d/%m/%Y")
+
+    df = read_csv_from_str(csv).df
+    errors = csv_upload_sync(test_user, df)
+
+    assert len(errors) == 1
+    assert "date_of_diagnosis" in errors[0]
+
+    assert(Patient.objects.count() == 1)
+    assert(Patient.objects.first().diagnosis_date is None)
 
 
 @pytest.mark.django_db
