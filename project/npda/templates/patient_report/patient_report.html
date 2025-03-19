@@ -11,7 +11,71 @@
     <p class="text-center">This data has not been validated by the NPDA team.</p>
   </div>
   <!-- SELECT TABS & TABLE -->
-  {% include 'patient_report/pt_level_report_table_container_partial.html' with text=text selected=selected highlight=highlight table_data=table_data %}
+  <div class="flex gap-4 flex-wrap">
+    {% include 'patient_report/pt_level_menu_tab_button.html' with selected=selected key='health_checks' button_text='Health Checks' %}
+    {% include 'patient_report/pt_level_menu_tab_button.html' with selected=selected key='additional_care_processes' button_text='Additional Care Processes' %}
+    {% include 'patient_report/pt_level_menu_tab_button.html' with selected=selected key='care_at_diagnosis' button_text='Care at Diagnosis' %}
+    {% include 'patient_report/pt_level_menu_tab_button.html' with selected=selected key='outcomes' button_text='Outcomes' %}
+    {% include 'patient_report/pt_level_menu_tab_button.html' with selected=selected key='treatment' button_text='Treatment' %}
+  </div>
+  <div class="bg-white border border-gray-300 rounded-lg shadow text-rcpch_dark_blue h-full p-2">
+    <!-- CURRENT SELECTION DESCRIPTION -->
+    <div class="flex flex-col">
+      <div class="flex items-center">
+        <p class="font-bold text-rcpch_dark_blue">Description</p>
+        {% comment %} LINK TO KPI DEFINITIONS {% endcomment %}
+
+          {% if selected == 'health_checks' %}
+            {% with kpi_docs_url="7_key_processes" %}
+              {% include 'common/docs_icon_link_button.html' with rel_url="developer/kpis/"|add:kpi_docs_url fa_icon_class="fa-solid fa-eye" %}
+            {% endwith %}
+          {% elif selected == 'additional_care_processes' %}
+            {% with kpi_docs_url="additional_processes" %}
+              {% include 'common/docs_icon_link_button.html' with rel_url="developer/kpis/"|add:kpi_docs_url fa_icon_class="fa-solid fa-eye" %}
+            {% endwith %}
+          {% elif selected == 'care_at_diagnosis' %}
+            {% with kpi_docs_url="care_at_diagnosis" %}
+              {% include 'common/docs_icon_link_button.html' with rel_url="developer/kpis/"|add:kpi_docs_url fa_icon_class="fa-solid fa-eye" %}
+            {% endwith %}
+          {% elif selected == 'outcomes' %}
+            {% with kpi_docs_url="outcomes" %}
+              {% include 'common/docs_icon_link_button.html' with rel_url="developer/kpis/"|add:kpi_docs_url fa_icon_class="fa-solid fa-eye" %}
+            {% endwith %}
+          {% elif selected == 'treatment' %}
+            {% with kpi_docs_url="treatment_regimen" %}
+              {% include 'common/docs_icon_link_button.html' with rel_url="developer/kpis/"|add:kpi_docs_url fa_icon_class="fa-solid fa-eye" %}
+            {% endwith %}
+          {% endif %}
+      </div>
+      <p>{{ text.description }}</p>
+    </div>
+
+    <div class="flex justify-between items-center">
+      {% comment %} KEYS {% endcomment %}
+      <div class="flex flex-col my-2 gap-2">
+        <p class="font-bold text-rcpch_dark_blue">Key</p>
+        <div class="flex gap-4">
+          <div class="flex gap-2 items-center">
+            <i class="fa-solid fa-circle-check text-success"></i>
+            <p>{{ text.key|get_item:"pass" }}</p>
+          </div>
+          <div class="flex gap-2 items-center">
+            <i class="fa-solid fa-circle-exclamation text-error"></i>
+            <p>{{ text.key|get_item:"fail" }}</p>
+          </div>
+          <div class="flex gap-2 items-center">
+            <i class="fa-solid fa-ban text-muted"></i>
+            <p>{{ text.key|get_item:"ineligible" }}</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div id="pt_level_report_table">
+    </div>
+
+  </div>
 </div>
 
 {% endblock content %}

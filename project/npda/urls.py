@@ -167,9 +167,9 @@ patient_report_urlpatterns = [
         name="patient_report",
     ),
     path(
-        "get_patient_level_report_partial",
-        view=patient_report_partials.get_patient_level_report_partial,
-        name="get_patient_level_report_partial",
+        "get_pt_level_report_table",
+        view=patient_report_partials.get_pt_level_report_table,
+        name="get_pt_level_report_table",
     ),
 ]
 

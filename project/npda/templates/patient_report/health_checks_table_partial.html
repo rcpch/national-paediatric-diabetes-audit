@@ -23,20 +23,9 @@
                           <i class="fa-solid fa-arrow-up-right-from-square text-rcpch_strong_blue"></i>
                           </a>
                         </span>
-                      </div>
                     {% elif kpi_attr_name == "total" %}
                       {{ result.0 }} / {{ result.1 }}
 
-
-                    {% comment %} NUMBERS {% endcomment %}
-                    {% elif kpi_attr_name == 'kpi_44_mean_hba1c' or kpi_attr_name == 'kpi_45_median_hba1c' or kpi_attr_name == 'kpi_46_number_of_admissions' or kpi_attr_name == 'kpi_47_number_of_dka_admissions' %}
-                      {{ result }}
-
-                    {% comment %} TREATMENT TAB {% endcomment %}
-                    {% elif kpi_attr_name == 'cgm' and result is not None %}
-                      {{ result }}
-                    {% elif kpi_attr_name == 'tx_regimen' and result is not None %}
-                      {{ result }}
 
                     {% elif result is True %}
                       {% comment %} PASS {% endcomment %}

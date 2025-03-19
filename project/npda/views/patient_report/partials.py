@@ -83,3 +83,12 @@ def get_patient_level_report_partial(request):
         template_name="patient_report/pt_level_report_table_container_partial.html",
         context=context,
     )
+
+def get_pt_level_report_table(request):
+
+    if not request.htmx:
+        return HttpResponseBadRequest("This view is only accessible via HTMX")
+    
+    logger.info("get_pt_level_report_table")
+
+    return render(request, template_name="patient_report/health_checks_table_partial.html")
