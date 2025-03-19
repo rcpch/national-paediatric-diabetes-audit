@@ -3371,8 +3371,8 @@ class CalculateKPIS:
             median_hba1c_percent = (0.09148 * median_hba1c_mmol_mol) + 2.152
 
             hba1c_vals[key] = {
-                "mean_mmol_mol": round(mean_hba1c_mmol_mol, 1),
-                "median_mmol_mol": round(median_hba1c_mmol_mol, 1),
+                "mean_mmol_mol": int(mean_hba1c_mmol_mol),
+                "median_mmol_mol": int(median_hba1c_mmol_mol),
                 "mean_percent": round(mean_hba1c_percent, 1),
                 "median_percent": round(median_hba1c_percent, 1),
             }
