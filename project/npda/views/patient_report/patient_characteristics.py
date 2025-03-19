@@ -353,6 +353,8 @@ def _build_pie_chart(field):
             "#11A7F2",  # IMD 5
         ]
         title = "<b>Index of Multiple Deprivation (IMD) Distribution</b>"
+        legend_order = ["1 (most deprived)", "2", "3", "4", "5 (least deprived)"]
+        legend_title = "IMD Quintiles"
     elif field == "ethnicity":
         colors = [
             RCPCH_LIGHT_BLUE,  # White
@@ -362,8 +364,10 @@ def _build_pie_chart(field):
             RCPCH_DARK_BLUE,  # Other
         ]
         title = "<b>Ethnicity Distribution</b>"
+        legend_order = ["White", "Mixed", "Asian", "Black", "Other/Not Stated/Unknown"]
+        legend_title = "Ethnicity"
 
-    return colors, title
+    return colors, title, legend_order, legend_title
 
 
 def create_piechart(dict_counts, field):
@@ -377,10 +381,20 @@ def create_piechart(dict_counts, field):
         plotly.graph_objects.Figure: A Plotly pie chart figure.
     """
 
-    colors, title = _build_pie_chart(field)
+    colors, title, legend_order, legend_title = _build_pie_chart(field)
 
     labels = list(dict_counts.keys())
     values = list(dict_counts.values())
+
+    # Sort the labels and values in the order of the legend
+    ordered_labels = []
+    ordered_values = []
+    for cat in legend_order:
+        if cat in labels:
+            ordered_labels.append(cat)
+            ordered_values.append(dict_counts[cat])
+    labels = ordered_labels
+    values = ordered_values
 
     fig = go.Figure(
         data=[
@@ -388,10 +402,11 @@ def create_piechart(dict_counts, field):
                 labels=labels,
                 values=values,
                 marker_colors=colors,
-                texttemplate="%{label}: %{value}",  # Add labels to the slices
                 textposition="inside",
                 showlegend=True,
                 hole=0.4,  # Donut chart
+                hovertemplate="IMD quintile: %{label}<br>Number of children: %{value}<br>Percentage: %{percent}<extra></extra>",
+                sort=False,
             )
         ]
     )
