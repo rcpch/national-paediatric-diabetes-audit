@@ -3,7 +3,6 @@ from datetime import date
 from asgiref.sync import sync_to_async
 import logging
 import asyncio
-import collections
 import json
 
 # django imports
@@ -35,7 +34,7 @@ from project.npda.general_functions.csv.csv_clean import csv_clean
 
 
 async def csv_upload(
-    user, dataframe, csv_file_name, csv_file_bytes, pdu_pz_code, audit_year
+    user, dataframe, errors_to_return, csv_file_name, csv_file_bytes, pdu_pz_code, audit_year
 ):
     """
     Processes standardised NPDA csv file and persists results in NPDA tables
@@ -155,7 +154,7 @@ async def csv_upload(
 
         return transfer_fields
 
-    def record_errors_from_form(errors_to_return, row_index, form):
+    def record_errors_from_form(row_index, form):
         for field, errors in form.errors.as_data().items():
             for error in errors:
                 errors_to_return[row_index][field].extend(error.messages)
@@ -249,10 +248,6 @@ async def csv_upload(
     else:
         visits_by_patient = dataframe.groupby("NHS Number", sort=False, dropna=False)
 
-    # Gather all error messages indexed by row number and the field that caused them (__all__ if we don't know which one)
-    # dict[number, dict[str, list[str]]]
-    errors_to_return = collections.defaultdict(lambda: collections.defaultdict(list))
-
     async def save_patient_and_transfer(
         patient_form, transfer_fields, patient_row_index
     ):
@@ -280,7 +275,7 @@ async def csv_upload(
 
     async def save_visits(patient, visit_forms):
         for visit_form, visit_row_index in visit_forms:
-            record_errors_from_form(errors_to_return, visit_row_index, visit_form)
+            record_errors_from_form(visit_row_index, visit_form)
 
             try:
                 save_errors_and_retain_valid_fields(visit_form)
@@ -305,7 +300,7 @@ async def csv_upload(
             # Pull through cleaned_data so we can use it in the async visit validators
             await sync_to_async(patient_form.is_valid)()
 
-            record_errors_from_form(errors_to_return, patient_row_index, patient_form)
+            record_errors_from_form(patient_row_index, patient_form)
 
             visit_forms = []
             for _, row in rows.iterrows():

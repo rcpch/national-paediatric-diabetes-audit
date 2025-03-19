@@ -2,6 +2,7 @@ import dataclasses
 import datetime
 import tempfile
 import csv
+import collections
 from io import StringIO
 from decimal import Decimal
 from unittest.mock import AsyncMock, patch
@@ -143,6 +144,7 @@ async def csv_upload_sync(user, dataframe, pdu_pz_code=ALDER_HEY_PZ_CODE):
     return await csv_upload(
         user,
         dataframe,
+        errors_to_return=collections.defaultdict(lambda: collections.defaultdict(list)),
         csv_file_name=None,
         csv_file_bytes=None,
         pdu_pz_code=pdu_pz_code,
@@ -1066,12 +1068,17 @@ def test_bad_date_format_on_date_of_diagnosis(test_user, single_row_valid_df):
 
     csv = df.to_csv(index=False, date_format="%d/%m/%Y")
 
-    df = read_csv_from_str(csv).df
-    errors = csv_upload_sync(test_user, df)
+    # Slightly janky - date format errors are returned separately from parse_csv
+    # as they are swallowed up into NaT and we cannot later distinguish between
+    # that an the cell being empty in the CSV upload. To avoid rewriting all the usage
+    # of csv_upload_sync across all tests we assert in two stages here
+    errors = read_csv_from_str(csv).errors_to_return
 
     assert len(errors) == 1
     assert "diagnosis_date" in errors[0]
     assert errors[0]["diagnosis_date"][0] == "Date format is incorrect (expected DD/MM/YYYY)"
+
+    csv_upload_sync(test_user, df)
 
     assert(Patient.objects.count() == 1)
     assert(Patient.objects.first().diagnosis_date is None)
@@ -3263,11 +3270,19 @@ def test_bad_data_for_date_fields(test_user, dummy_sheet_csv, model_field):
         ]
     )
 
-    df = read_csv_from_str(one_row_csv).df
+    results = read_csv_from_str(one_row_csv)
 
-    errors = csv_upload_sync(test_user, df)
+    # Slightly janky - date format errors are returned separately from parse_csv
+    # as they are swallowed up into NaT and we cannot later distinguish between
+    # that an the cell being empty in the CSV upload. To avoid rewriting all the usage
+    # of csv_upload_sync across all tests we assert in two stages here
+    errors = results.errors_to_return
 
     assert len(errors) > 0
+    assert model_field in errors[0]
+
+    csv_upload_sync(test_user, results.df)
+
     assert model.objects.count() == 1
 
     instance = model.objects.first()

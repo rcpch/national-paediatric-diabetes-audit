@@ -90,6 +90,7 @@ async def home(request):
             errors_by_row_index = await csv_upload(
                 user=request.user,
                 dataframe=parsed_csv.df,
+                errors_to_return=parsed_csv.errors_to_return,
                 csv_file_name=user_csv_filename,
                 csv_file_bytes=user_csv_bytes,
                 pdu_pz_code=pz_code,

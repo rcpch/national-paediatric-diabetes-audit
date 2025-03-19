@@ -35,7 +35,7 @@ class ParsedCSVFile:
     # csv_upload also has one of these and they are merged before saving
     # NB: the nested dict is keyed by model field name, not CSV heading
     # dict[number, dict[str, list[str]]]
-    errors_to_return: dict[int, dict[list[str]]]
+    errors_to_return: collections.defaultdict[int, collections.defaultdict[str, list[str]]]
 
 
 def csv_parse(csv_file, is_jersey=False):
@@ -139,8 +139,6 @@ def csv_parse(csv_file, is_jersey=False):
                     errors_to_return[row_index][column].append("Date format is incorrect (expected DD/MM/YYYY)")
             
             df[column] = column_after
-    
-    print(f"!! {errors_to_return}")
 
     # Apply the dtype to non-date columns
     for column, dtype in CSV_DATA_TYPES_MINUS_DATES.items():
