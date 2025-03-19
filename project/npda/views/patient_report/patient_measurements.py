@@ -20,17 +20,13 @@ def patient_measurements(request):
     else:
         today = date.today()
         calculation_date = date(selected_audit_year, today.month, today.day)
-    calculate_kpis = CalculateKPIS(
-        calculation_date=calculation_date, return_pt_querysets=True
-    )
+    calculate_kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=True)
 
     calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
     # Extract helpers
-    # get_attribute_name = calculate_kpis.kpi_name_registry.get_attribute_name
+    # {'all': {'mean__mmol_mol': 58.1, 'mean__percent': 7.3, 'median__mmol_mol': 54.0, 'median__percent': 6.9}, 't1dm': {'mean__mmol_mol': 58.5, 'mean__percent': 7.4, 'median__mmol_mol': 54.0, 'median__percent': 6.9}, 't2dm': {'mean__mmol_mol': 58.8, 'mean__percent': 7.4, 'median__mmol_mol': 55.0, 'median__percent': 7.0}, 'other': {'mean__mmol_mol': 57.8, 'mean__percent': 7.3, 'median__mmol_mol': 53.5, 'median__percent': 6.9}}
     hba1c_value_counts_stratified_by_diabetes_type = (
-        hp.get_hba1c_value_counts_stratified_by_diabetes_type(
-            calculate_kpis_instance=calculate_kpis
-        )
+        calculate_kpis.calculate_kpi_hba1c_vals_stratified_by_diabetes_type()
     )
 
     current_submission = Submission.objects.get(
@@ -41,9 +37,7 @@ def patient_measurements(request):
     visits = Visit.objects.filter(patient__in=current_submission.patients.all())
     submission_visits_with_errors = visits.filter(errors__isnull=False)
 
-    template = (
-        "dashboard/components/cards/card_partials/patient_measurements_partial.html"
-    )
+    template = "dashboard/components/cards/card_partials/patient_measurements_partial.html"
 
     return render(
         request,

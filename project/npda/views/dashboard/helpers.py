@@ -9,18 +9,6 @@ from project.npda.kpi_class.kpis import CalculateKPIS
 logger = logging.getLogger(__name__)
 
 
-def get_hba1c_value_counts_stratified_by_diabetes_type(
-    calculate_kpis_instance: CalculateKPIS,
-) -> dict:
-    """Gets the data for plotting on the chart.
-
-    The KPI class does not stratify by diabetes type so we need to do this here."""
-
-    # Get the query sets (the hba1c value)
-    hba1c_vals = calculate_kpis_instance.calculate_kpi_hba1c_vals_stratified_by_diabetes_type()
-
-    return hba1c_vals
-
 
 def convert_value_counts_dict_to_pct(value_counts_dict: dict):
     """
