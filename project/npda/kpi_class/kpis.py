@@ -3192,12 +3192,7 @@ class CalculateKPIS:
         """
 
         # Calculate median HBa1c for each patient
-        visit_value_cols = [
-            "patient__pk",
-            "hba1c_mmol_mol",
-            "hba1c_percent",
-            "patient__nhs_number",
-        ]
+        visit_value_cols = ["patient__pk", "hba1c_mmol_mol", "patient__nhs_number"]
         # Retrieve all visits with valid HbA1c values
         valid_visits = (
             Visit.objects.filter(
@@ -3205,7 +3200,7 @@ class CalculateKPIS:
                 hba1c_date__gt=F("patient__diagnosis_date") + timedelta(days=90),
                 patient__in=eligible_patients,
             )
-            .annotate(
+            .annotate(  # convert HbA1c to mmol/mol if necessary
                 hba1c_mmol_mol=Case(
                     When(
                         hba1c_format=HBA1C_FORMATS[0][0],
@@ -3213,25 +3208,13 @@ class CalculateKPIS:
                     ),
                     When(
                         hba1c_format=HBA1C_FORMATS[1][0],
-                        then=F("hba1c")
-                        - Round(
-                            Decimal("2.152") / Decimal("0.09148")
-                        ),  # HbA1c (mmol/mol) = (HbA1c (%) - 2.152) / 0.09148
+                        then=F("hba1c") - Round(Decimal("2.152") / Decimal("0.09148")),
                     ),
                     default=F("hba1c"),
-                    output_field=DecimalField(max_digits=5, decimal_places=2, null=True),
-                ),
-                hba1c_percent=Case(
-                    When(
-                        hba1c_format=HBA1C_FORMATS[1][0],
-                        then=F("hba1c"),
+                    output_field=DecimalField(
+                        max_digits=5, decimal_places=2, null=True
                     ),
-                    When(
-                        hba1c_format=HBA1C_FORMATS[0][0],
-                        then=F("hba1c") * Decimal("0.09148")
-                        + Round(Decimal("2.152")),  # 0.09148 * HbA1c (mmol/mol)) + 2.152
-                    ),
-                ),
+                )
             )
             .values(*visit_value_cols)
         )
@@ -3246,9 +3229,6 @@ class CalculateKPIS:
         for visit in valid_visits:
             hba1c_values_by_patient[visit["patient__pk"]]["hb1ac_values"].append(
                 visit["hba1c_mmol_mol"]
-            )
-            hba1c_values_by_patient[visit["patient__pk"]]["hb1ac_values"].append(
-                visit["hba1c_percent"]
             )
             hba1c_values_by_patient[visit["patient__pk"]]["nhs_number"] = visit[
                 "patient__nhs_number"
@@ -3291,7 +3271,7 @@ class CalculateKPIS:
         # Retrieve all visits with valid HbA1c values
         valid_visits = self._get_valid_visits_for_kpi_44_and_45(
             eligible_patients=eligible_patients,
-        ).values("patient__pk", "hba1c_mmol_mol", "hba1c_percent")
+        ).values("patient__pk", "hba1c_mmol_mol")
 
         # Group HbA1c values by patient ID into a list so can use
         # calculate_median method
@@ -3299,8 +3279,9 @@ class CalculateKPIS:
         # aggregation gets complicated
         hba1c_values_by_patient = defaultdict(list)
         for visit in valid_visits:
-            hba1c_values_by_patient[visit["patient__pk"]].append(visit["hba1c_mmol_mol"])
-            hba1c_values_by_patient[visit["patient__pk"]].append(visit["hba1c_percent"])
+            hba1c_values_by_patient[visit["patient__pk"]].append(
+                visit["hba1c_mmol_mol"]
+            )
 
         # For each patient, calculate the median of their HbA1c values
         hba1c_values_by_patient = self.get_median_hba1c_values_by_patient(eligible_patients)
@@ -3344,7 +3325,6 @@ class CalculateKPIS:
             visit_date__range=self.AUDIT_DATE_RANGE,
             hba1c_date__gt=F("patient__diagnosis_date") + timedelta(days=90),
             patient__in=eligible_patients,
-            hba1c__isnull=False,
         ).annotate(
             hba1c_mmol_mol=Case(
                 When(
@@ -3353,25 +3333,11 @@ class CalculateKPIS:
                 ),
                 When(
                     hba1c_format=HBA1C_FORMATS[1][0],
-                    then=F("hba1c")
-                    - Round(
-                        Decimal("2.152") / Decimal("0.09148")
-                    ),  # HbA1c (mmol/mol) = (HbA1c (%) - 2.152) / 0.09148
+                    then=F("hba1c") - Round(Decimal("2.152") / Decimal("0.09148")),
                 ),
                 default=F("hba1c"),
                 output_field=DecimalField(max_digits=5, decimal_places=2, null=True),
-            ),
-            hba1c_percent=Case(
-                When(
-                    hba1c_format=HBA1C_FORMATS[1][0],
-                    then=F("hba1c"),
-                ),
-                When(
-                    hba1c_format=HBA1C_FORMATS[0][0],
-                    then=F("hba1c") * Decimal("0.09148")
-                    + Round(Decimal("2.152")),  # 0.09148 * HbA1c (mmol/mol)) + 2.152
-                ),
-            ),
+            )
         )
 
     def calculate_kpi_hba1c_vals_stratified_by_diabetes_type(self):
@@ -3389,52 +3355,25 @@ class CalculateKPIS:
         eligible_patients_t1dm = eligible_patients.filter(diabetes_type=DIABETES_TYPES[0][0])
         eligible_patients_t2dm = eligible_patients.filter(diabetes_type=DIABETES_TYPES[1][0])
 
-        eligible_patients_other = eligible_patients.exclude(
-            diabetes_type__in=[DIABETES_TYPES[0][0], DIABETES_TYPES[1][0]]
-        )
-
         hba1c_vals = {
             "t1dm": {},
             "t2dm": {},
-            "other": {},
         }
         for key, eligible_pts in zip(
-            ("t1dm", "t2dm", "other"),
-            (eligible_patients_t1dm, eligible_patients_t2dm, eligible_patients_other),
+            ("t1dm", "t2dm"),
+            (eligible_patients_t1dm, eligible_patients_t2dm),
         ):
 
             # Retrieve all visits with valid HbA1c values
             valid_visits = self._get_valid_visits_for_kpi_44_and_45(
                 eligible_patients=eligible_pts,
-            ).values("patient__pk", "hba1c_mmol_mol", "hba1c_percent")
-            valid_visits_mmol_mol = valid_visits.values("patient__pk", "hba1c_mmol_mol")
-            valid_visits_percent = valid_visits.values("patient__pk", "hba1c_percent")
+            ).values("patient__pk", "hba1c_mmol_mol")
 
-            hba1c_vals[key]["mean__mmol_mol"] = (
-                round(self._calculate_mean_hba1cs(valid_visits_mmol_mol, is_ifcc=True), 1)
-                if len(valid_visits_mmol_mol) > 0
-                else None
+            hba1c_vals[key]["mean"] = round(
+                self._calculate_mean_hba1cs(valid_visits), 1
             )
-            hba1c_vals[key]["mean__percent"] = (
-                round(self._calculate_mean_hba1cs(valid_visits_percent, is_ifcc=False), 1)
-                if len(valid_visits_percent) > 0
-                else None
-            )
-            hba1c_vals[key]["median__mmol_mol"] = (
-                round(
-                    self._calculate_median_hba1cs(valid_visits_mmol_mol, is_ifcc=True),
-                    1,
-                )
-                if len(valid_visits_mmol_mol) > 0
-                else None
-            )
-            hba1c_vals[key]["median__percent"] = (
-                round(
-                    self._calculate_median_hba1cs(valid_visits_percent, is_ifcc=False),
-                    1,
-                )
-                if len(valid_visits_percent) > 0
-                else None
+            hba1c_vals[key]["median"] = round(
+                self._calculate_median_hba1cs(valid_visits), 1
             )
 
         return hba1c_vals
@@ -3442,19 +3381,16 @@ class CalculateKPIS:
     def _calculate_mean_hba1cs(
         self,
         valid_visits: QuerySet[Visit],
-        is_ifcc: bool = True,
     ):
         # Group HbA1c values by patient ID into a list so can use
         # calculate_median method
         # We're doing this in Python instead of Django ORM because median
         # aggregation gets complicated
-
         hba1c_values_by_patient = defaultdict(list)
         for visit in valid_visits:
-            if is_ifcc:
-                hba1c_values_by_patient[visit["patient__pk"]].append(visit["hba1c_mmol_mol"])
-            else:
-                hba1c_values_by_patient[visit["patient__pk"]].append(visit["hba1c_percent"])
+            hba1c_values_by_patient[visit["patient__pk"]].append(
+                visit["hba1c_mmol_mol"]
+            )
 
         # For each patient, calculate the median of their HbA1c values
         median_hba1cs = []
@@ -3463,29 +3399,21 @@ class CalculateKPIS:
 
         # Finally calculate the mean of the medians
         mean_of_median_hba1cs = self.calculate_mean(median_hba1cs)
-
-        if mean_of_median_hba1cs == -1:
-            return None
         return mean_of_median_hba1cs
 
     def _calculate_median_hba1cs(
         self,
         valid_visits: QuerySet[Visit],
-        is_ifcc: bool = True,
     ):
         # Group HbA1c values by patient ID into a list so can use
         # calculate_median method
         # We're doing this in Python instead of Django ORM because median
         # aggregation gets complicated
-        # we are calulating median for each patient
-        # we are doing this for IFCC and DCCT (mmol/mol and %)
-
         hba1c_values_by_patient = defaultdict(list)
         for visit in valid_visits:
-            if is_ifcc:
-                hba1c_values_by_patient[visit["patient__pk"]].append(visit["hba1c_mmol_mol"])
-            else:
-                hba1c_values_by_patient[visit["patient__pk"]].append(visit["hba1c_percent"])
+            hba1c_values_by_patient[visit["patient__pk"]].append(
+                visit["hba1c_mmol_mol"]
+            )
 
         # For each patient, calculate the median of their HbA1c values
         median_hba1cs = []
@@ -3494,9 +3422,6 @@ class CalculateKPIS:
 
         # Finally calculate the median of the medians
         median_of_median_hba1cs = self.calculate_median(median_hba1cs)
-
-        if median_of_median_hba1cs == -1:
-            return None
         return median_of_median_hba1cs
 
     def calculate_kpi_46_number_of_admissions(
