@@ -18,6 +18,7 @@ from project.constants import (
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
     CSV_HEADING_OBJECTS,
+    csv_definition_for
 )
 
 # Logging setup
@@ -136,7 +137,8 @@ def csv_parse(csv_file, is_jersey=False):
 
             for (row_index, (value_before, value_after)) in enumerate(zip(column_before, column_after)):
                 if not pd.isna(value_before) and pd.isna(value_after):
-                    errors_to_return[row_index][column].append("Date format is incorrect (expected DD/MM/YYYY)")
+                    model_field = csv_definition_for(column)["model_field"]
+                    errors_to_return[row_index][model_field].append("Date format is incorrect (expected DD/MM/YYYY)")
             
             df[column] = column_after
 
