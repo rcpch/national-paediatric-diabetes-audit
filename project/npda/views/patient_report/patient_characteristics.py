@@ -329,6 +329,7 @@ def all_patient_charts(request):
             if diabetes_type_hba1c_mmol_mol_box_plot
             else None
         ),
+        "audit_year": (audit_start, audit_end),
     }
 
     return render(request, template, context)
@@ -352,6 +353,8 @@ def _build_pie_chart(field):
             "#11A7F2",  # IMD 5
         ]
         title = "<b>Index of Multiple Deprivation (IMD) Distribution</b>"
+        legend_order = ["1 (most deprived)", "2", "3", "4", "5 (least deprived)"]
+        legend_title = "IMD Quintiles"
     elif field == "ethnicity":
         colors = [
             RCPCH_LIGHT_BLUE,  # White
@@ -361,8 +364,10 @@ def _build_pie_chart(field):
             RCPCH_DARK_BLUE,  # Other
         ]
         title = "<b>Ethnicity Distribution</b>"
+        legend_order = ["White", "Mixed", "Asian", "Black", "Other/Not Stated/Unknown"]
+        legend_title = "Ethnicity"
 
-    return colors, title
+    return colors, title, legend_order, legend_title
 
 
 def create_piechart(dict_counts, field):
@@ -376,10 +381,20 @@ def create_piechart(dict_counts, field):
         plotly.graph_objects.Figure: A Plotly pie chart figure.
     """
 
-    colors, title = _build_pie_chart(field)
+    colors, title, legend_order, legend_title = _build_pie_chart(field)
 
     labels = list(dict_counts.keys())
     values = list(dict_counts.values())
+
+    # Sort the labels and values in the order of the legend
+    ordered_labels = []
+    ordered_values = []
+    for cat in legend_order:
+        if cat in labels:
+            ordered_labels.append(cat)
+            ordered_values.append(dict_counts[cat])
+    labels = ordered_labels
+    values = ordered_values
 
     fig = go.Figure(
         data=[
@@ -387,10 +402,11 @@ def create_piechart(dict_counts, field):
                 labels=labels,
                 values=values,
                 marker_colors=colors,
-                texttemplate="%{label}: %{value}",  # Add labels to the slices
                 textposition="inside",
                 showlegend=True,
                 hole=0.4,  # Donut chart
+                hovertemplate="IMD quintile: %{label}<br>Number of children: %{value}<br>Percentage: %{percent}<extra></extra>",
+                sort=False,
             )
         ]
     )
@@ -405,6 +421,8 @@ def create_piechart(dict_counts, field):
             },
         },
         margin=dict(l=20, r=20, t=50, b=20),  # minimal margins
+        height=500,
+        width=600,
     )
 
     return fig
@@ -472,6 +490,9 @@ def _build_box_plot(df, field, line_colors, fill_colors, title, xaxis_title):
     """
     fig = go.Figure()
 
+    # round the percentage to 1 decimal place
+    df["hba1c_percent"] = df["hba1c_percent"].apply(lambda x: round(x, 1))
+
     for item in df[f"patient__{field}"].unique():
         subset = df[df[f"patient__{field}"] == item]
         # Add box plot
@@ -484,6 +505,8 @@ def _build_box_plot(df, field, line_colors, fill_colors, title, xaxis_title):
             )
         )
 
+        custom_data = subset.to_dict("records")
+
         # Add scatter plot on top
         fig.add_trace(
             go.Scatter(
@@ -491,10 +514,12 @@ def _build_box_plot(df, field, line_colors, fill_colors, title, xaxis_title):
                 y=subset["hba1c_mmol_mol"],
                 mode="markers",
                 marker=dict(
-                    color="black", size=5, opacity=0.6
+                    color="black", size=3, opacity=0.6
                 ),  # Color of scatter points
-                name=item,
+                name=f"{item} mmol/mol",
                 showlegend=False,  # Don't duplicate legend entries
+                customdata=custom_data,
+                hovertemplate="HbA1c: %{y}<extra></extra> mmol/mol (%{customdata.hba1c_percent} %) for patient %{customdata.patient__pk} (NHS: %{customdata.patient__nhs_number})",
             )
         )
 
