@@ -23,8 +23,33 @@ def patient_measurements(request):
     calculate_kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=True)
 
     calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
-    # Extract helpers
-    # {'all': {'mean__mmol_mol': 58.1, 'mean__percent': 7.3, 'median__mmol_mol': 54.0, 'median__percent': 6.9}, 't1dm': {'mean__mmol_mol': 58.5, 'mean__percent': 7.4, 'median__mmol_mol': 54.0, 'median__percent': 6.9}, 't2dm': {'mean__mmol_mol': 58.8, 'mean__percent': 7.4, 'median__mmol_mol': 55.0, 'median__percent': 7.0}, 'other': {'mean__mmol_mol': 57.8, 'mean__percent': 7.3, 'median__mmol_mol': 53.5, 'median__percent': 6.9}}
+
+    # {
+    #     "all": {
+    #         "mean_mmol_mol": 58.1,
+    #         "mean_percent": 7.3,
+    #         "median_mmol_mol": 54.0,
+    #         "median_percent": 6.9,
+    #     },
+    #     "t1dm": {
+    #         "mean_mmol_mol": 58.5,
+    #         "mean_percent": 7.4,
+    #         "median_mmol_mol": 54.0,
+    #         "median_percent": 6.9,
+    #     },
+    #     "t2dm": {
+    #         "mean_mmol_mol": 58.8,
+    #         "mean_percent": 7.4,
+    #         "median_mmol_mol": 55.0,
+    #         "median_percent": 7.0,
+    #     },
+    #     "other": {
+    #         "mean_mmol_mol": 57.8,
+    #         "mean_percent": 7.3,
+    #         "median_mmol_mol": 53.5,
+    #         "median_percent": 6.9,
+    #     },
+    # }
     hba1c_value_counts_stratified_by_diabetes_type = (
         calculate_kpis.calculate_kpi_hba1c_vals_stratified_by_diabetes_type()
     )
