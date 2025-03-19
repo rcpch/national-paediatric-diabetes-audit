@@ -143,7 +143,7 @@ async def csv_upload(
 
         form.instance.is_valid = form.is_valid()
         form.instance.errors = (
-            None if form.is_valid() else form.errors.get_json_data(escape_html=True)
+            None if form.is_valid() else form.errors.get_json_data()
         )
     
     def get_valid_transfer_fields(row, patient_form):
