@@ -147,6 +147,13 @@ def patient_ages(request):
         "over_twelve": 0,
     }
 
+    sex_counts = {
+        "male": 0,
+        "female": 0,
+        "not_known": 0,
+        "not_specified": 0,
+    }
+
     for patient in all_patients_in_this_submission_by_age:
         patient["age"] = relativedelta(comparison_date, patient["date_of_birth"]).years
 
@@ -175,6 +182,16 @@ def patient_ages(request):
         elif patient["age"] >= 12:
             age_band_counts["over_twelve"] += 1
 
+        # Count the patients by sex
+        if patient["sex"] == 1:
+            sex_counts["male"] += 1
+        elif patient["sex"] == 2:
+            sex_counts["female"] += 1
+        elif patient["sex"] == 0:
+            sex_counts["not_known"] += 1
+        elif patient["sex"] == 9:
+            sex_counts["not_specified"] += 1
+
     # create the charts
 
     context = {
@@ -182,6 +199,7 @@ def patient_ages(request):
         "number_of_patients": all_patients_in_this_submission_by_age.count(),
         "patients_by_age": age_band_counts,
         "diabetes_types": diabetes_types,
+        "patients_by_sex": sex_counts,
     }
 
     return render(request, template, context)
@@ -203,13 +221,6 @@ def all_patient_charts(request):
         .get()
         .patients.all()
     )
-
-    sex_counts = {
-        "male": 0,
-        "female": 0,
-        "not_known": 0,
-        "not_specified": 0,
-    }
 
     imd_counts = {
         "1 (most deprived)": 0,
@@ -234,15 +245,6 @@ def all_patient_charts(request):
         "index_of_multiple_deprivation_quintile",
         "diabetes_type",
     ):
-        # Count the patients by sex
-        if patient["sex"] == 1:
-            sex_counts["male"] += 1
-        elif patient["sex"] == 2:
-            sex_counts["female"] += 1
-        elif patient["sex"] == 0:
-            sex_counts["not_known"] += 1
-        elif patient["sex"] == 9:
-            sex_counts["not_specified"] += 1
 
         # Count the patients by IMD
         if patient["index_of_multiple_deprivation_quintile"] == 1:
@@ -304,7 +306,6 @@ def all_patient_charts(request):
     )
 
     context = {
-        "patients_by_sex": sex_counts,
         "imd_has_data": not counts_are_zero(imd_counts),
         "ethnicity_has_data": not counts_are_zero(ethnicity_counts),
         "imd_piechart": imd_piechart.to_html(full_html=False) if imd_piechart else None,
