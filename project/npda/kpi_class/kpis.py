@@ -3394,19 +3394,13 @@ class CalculateKPIS:
         )
 
         hba1c_vals = {
-            "all": {},
             "t1dm": {},
             "t2dm": {},
             "other": {},
         }
         for key, eligible_pts in zip(
-            ("all", "t1dm", "t2dm", "other"),
-            (
-                eligible_patients,
-                eligible_patients_t1dm,
-                eligible_patients_t2dm,
-                eligible_patients_other,
-            ),
+            ("t1dm", "t2dm", "other"),
+            (eligible_patients_t1dm, eligible_patients_t2dm, eligible_patients_other),
         ):
 
             # Retrieve all visits with valid HbA1c values
