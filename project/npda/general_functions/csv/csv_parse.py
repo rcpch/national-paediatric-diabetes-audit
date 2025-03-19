@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 import logging
 import re
+import collections
 
 # Django imports
 from django.core.exceptions import ValidationError
@@ -30,6 +31,11 @@ class ParsedCSVFile:
     additional_columns: list[str]
     duplicate_columns: list[str]
     parse_type_error_columns: list[str]
+    # Gather all error messages indexed by row number and the field that caused them
+    # csv_upload also has one of these and they are merged before saving
+    # NB: the nested dict is keyed by model field name, not CSV heading
+    # dict[number, dict[str, list[str]]]
+    errors_to_return: dict[int, dict[list[str]]]
 
 
 def csv_parse(csv_file, is_jersey=False):
@@ -44,6 +50,8 @@ def csv_parse(csv_file, is_jersey=False):
     # If it does not, we will use the predefined column names
     # If it does, we will use the column names in the csv file
     # The exception is if the first row of the csv file does not match any of the predefined column names, in which case we will reject the csv
+
+    errors_to_return = collections.defaultdict(lambda: collections.defaultdict(list))
 
     # Define the column names to be used in the csv file: the unique identifier in Jersy is different from the one in England
     if is_jersey:
@@ -122,8 +130,17 @@ def csv_parse(csv_file, is_jersey=False):
 
     for column in ALL_DATES:
         if column in df.columns:
+            column_before = df[column].copy()
             # Support DD/MM/YYYY and DD/MM/YY
-            df[column] = pd.to_datetime(df[column], format="mixed", dayfirst=True, errors="coerce")
+            column_after = pd.to_datetime(df[column], format="mixed", dayfirst=True, errors="coerce")
+
+            for (row_index, (value_before, value_after)) in enumerate(zip(column_before, column_after)):
+                if not pd.isna(value_before) and pd.isna(value_after):
+                    errors_to_return[row_index][column].append("Date format is incorrect (expected DD/MM/YYYY)")
+            
+            df[column] = column_after
+    
+    print(f"!! {errors_to_return}")
 
     # Apply the dtype to non-date columns
     for column, dtype in CSV_DATA_TYPES_MINUS_DATES.items():
@@ -188,4 +205,5 @@ def csv_parse(csv_file, is_jersey=False):
         additional_columns,
         duplicate_columns,
         parse_type_error_columns,
+        errors_to_return
     )
