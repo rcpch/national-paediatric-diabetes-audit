@@ -329,6 +329,7 @@ def all_patient_charts(request):
             if diabetes_type_hba1c_mmol_mol_box_plot
             else None
         ),
+        "audit_year": (audit_start, audit_end),
     }
 
     return render(request, template, context)
@@ -405,6 +406,8 @@ def create_piechart(dict_counts, field):
             },
         },
         margin=dict(l=20, r=20, t=50, b=20),  # minimal margins
+        height=500,
+        width=600,
     )
 
     return fig
@@ -472,6 +475,9 @@ def _build_box_plot(df, field, line_colors, fill_colors, title, xaxis_title):
     """
     fig = go.Figure()
 
+    # round the percentage to 1 decimal place
+    df["hba1c_percent"] = df["hba1c_percent"].apply(lambda x: round(x, 1))
+
     for item in df[f"patient__{field}"].unique():
         subset = df[df[f"patient__{field}"] == item]
         # Add box plot
@@ -484,6 +490,8 @@ def _build_box_plot(df, field, line_colors, fill_colors, title, xaxis_title):
             )
         )
 
+        custom_data = subset.to_dict("records")
+
         # Add scatter plot on top
         fig.add_trace(
             go.Scatter(
@@ -491,10 +499,12 @@ def _build_box_plot(df, field, line_colors, fill_colors, title, xaxis_title):
                 y=subset["hba1c_mmol_mol"],
                 mode="markers",
                 marker=dict(
-                    color="black", size=5, opacity=0.6
+                    color="black", size=3, opacity=0.6
                 ),  # Color of scatter points
-                name=item,
+                name=f"{item} mmol/mol",
                 showlegend=False,  # Don't duplicate legend entries
+                customdata=custom_data,
+                hovertemplate="HbA1c: %{y}<extra></extra> mmol/mol (%{customdata.hba1c_percent} %) for patient %{customdata.patient__pk} (NHS: %{customdata.patient__nhs_number})",
             )
         )
 
