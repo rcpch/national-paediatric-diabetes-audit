@@ -4,6 +4,7 @@ from asgiref.sync import sync_to_async
 import logging
 import asyncio
 import json
+import collections
 
 # django imports
 from django.apps import apps
@@ -127,7 +128,7 @@ async def csv_upload(
 
         return True
 
-    def save_errors_and_retain_valid_fields(form):
+    def save_errors_and_retain_valid_fields(row_index, form):
         # We want to retain fields so that we can show them in the user interface
         # Use the field value from cleaned_data, falling back to data if it's not there
         # We can't retain invalid fields however as they might fail database validation
@@ -141,9 +142,28 @@ async def csv_upload(
                 setattr(form.instance, key, None)
 
         form.instance.is_valid = form.is_valid()
-        form.instance.errors = (
-            None if form.is_valid() else form.errors.get_json_data(escape_html=True)
-        )
+
+        model_errors = collections.defaultdict(list)
+
+        # From csv_parse. Strings rather than ValidationErrors.
+        for field, errors in errors_to_return[row_index].items():
+            for errors in errors:
+                model_errors[field].append({ "code": "", "message": error})
+        
+        # From forms. ValidationErrors.
+        for field, errors in form.errors.get_json_data(escape_html=True).items():
+            model_errors[field] += errors
+            
+            # Confusingly the JSON in each instance retains the ValidationError code
+            # but we just store the messages for the error json on Submission
+            # TODO MRB: Rationalise in https://github.com/rcpch/national-paediatric-diabetes-audit/issues/332
+            for error in errors:
+                errors_to_return[row_index][field].append(error["message"])
+
+        if model_errors:
+            form.instance.errors = model_errors
+        else:
+            form.instance.errors = None
     
     def get_valid_transfer_fields(row, patient_form):
         transfer_fields = row_to_dict(row, Transfer) | {"paediatric_diabetes_unit": pdu}
@@ -153,11 +173,6 @@ async def csv_upload(
                 transfer_fields[field] = None
 
         return transfer_fields
-
-    def record_errors_from_form(row_index, form):
-        for field, errors in form.errors.as_data().items():
-            for error in errors:
-                errors_to_return[row_index][field].extend(error.messages)
 
     """"
     Create the submission and save the csv file
@@ -252,7 +267,7 @@ async def csv_upload(
         patient_form, transfer_fields, patient_row_index
     ):
         try:
-            save_errors_and_retain_valid_fields(patient_form)
+            save_errors_and_retain_valid_fields(patient_row_index, patient_form)
 
             patient = await sync_to_async(lambda: patient_form.save())()
 
@@ -275,10 +290,8 @@ async def csv_upload(
 
     async def save_visits(patient, visit_forms):
         for visit_form, visit_row_index in visit_forms:
-            record_errors_from_form(visit_row_index, visit_form)
-
             try:
-                save_errors_and_retain_valid_fields(visit_form)
+                save_errors_and_retain_valid_fields(visit_row_index, visit_form)
                 visit_form.instance.patient = patient
 
                 await sync_to_async(lambda: visit_form.save())()
@@ -300,13 +313,15 @@ async def csv_upload(
             # Pull through cleaned_data so we can use it in the async visit validators
             await sync_to_async(patient_form.is_valid)()
 
-            record_errors_from_form(patient_row_index, patient_form)
-
             visit_forms = []
             for _, row in rows.iterrows():
                 visit_form = await validate_visit_using_form(
                     patient_form, row, async_client
                 )
+                
+                # Pull through cleaned_data so we can use it in the async visit validators
+                await sync_to_async(visit_form.is_valid)()
+
                 visit_forms.append((visit_form, int(row["row_index"])))
 
             nhs_number = patient_form.cleaned_data.get("nhs_number")

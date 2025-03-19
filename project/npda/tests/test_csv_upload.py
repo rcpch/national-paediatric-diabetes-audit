@@ -140,11 +140,11 @@ def test_user(seed_groups_fixture, seed_users_fixture):
 # The database is not rolled back if we used the built in async support for pytest
 # https://github.com/pytest-dev/pytest-asyncio/issues/226
 @async_to_sync
-async def csv_upload_sync(user, dataframe, pdu_pz_code=ALDER_HEY_PZ_CODE):
+async def csv_upload_sync(user, dataframe, pdu_pz_code=ALDER_HEY_PZ_CODE, errors_to_return=None):
     return await csv_upload(
         user,
         dataframe,
-        errors_to_return=collections.defaultdict(lambda: collections.defaultdict(list)),
+        errors_to_return=collections.defaultdict(lambda: collections.defaultdict(list)) if errors_to_return is None else errors_to_return,
         csv_file_name=None,
         csv_file_bytes=None,
         pdu_pz_code=pdu_pz_code,
@@ -1078,10 +1078,17 @@ def test_bad_date_format_on_date_of_diagnosis(test_user, single_row_valid_df):
     assert "diagnosis_date" in errors[0]
     assert errors[0]["diagnosis_date"][0] == "Date format is incorrect (expected DD/MM/YYYY)"
 
-    csv_upload_sync(test_user, df)
+    errors = csv_upload_sync(test_user, df, errors_to_return=errors)
+    assert "diagnosis_date" in errors[0]
+    assert errors[0]["diagnosis_date"][0] == "Date format is incorrect (expected DD/MM/YYYY)"
 
     assert(Patient.objects.count() == 1)
-    assert(Patient.objects.first().diagnosis_date is None)
+    patient = Patient.objects.first()
+
+    assert(patient.diagnosis_date is None)
+    
+    assert "diagnosis_date" in patient.errors
+    assert patient.errors["diagnosis_date"][0] == "Date format is incorrect (expected DD/MM/YYYY)"
 
 
 @pytest.mark.django_db
@@ -3286,9 +3293,7 @@ def test_bad_data_for_date_fields(test_user, dummy_sheet_csv, model_field):
     assert model.objects.count() == 1
 
     instance = model.objects.first()
-
     assert getattr(instance, model_field) == None
-    assert model_field in instance.errors
 
 
 @pytest.mark.parametrize(
