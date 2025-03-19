@@ -629,7 +629,9 @@ class Visit(models.Model, HelpTextMixin):
         verbose_name="Record is valid", blank=True, null=True, default=False
     )
 
-    errors = models.JSONField(verbose_name="Validation errors", blank=True, null=True, default=None)
+    errors = models.JSONField(
+        verbose_name="Validation errors", blank=True, null=True, default=None
+    )
 
     # relationships
 
@@ -663,5 +665,11 @@ class Visit(models.Model, HelpTextMixin):
             if self.hba1c_format == HBA1C_FORMATS[0][0]:  # mmol/mol
                 return self.hba1c
             elif self.hba1c_format == HBA1C_FORMATS[1][0]:
-                return round((self.hba1c - Decimal(2.152)) / Decimal(0.09148))
+                # Convert self.hba1c to Decimal before performing the calculation
+                hba1c_decimal = Decimal(str(self.hba1c))
+                result = (hba1c_decimal - Decimal("2.152")) / Decimal("0.09148")
+                return int(
+                    result.quantize(Decimal("1"), rounding="ROUND_HALF_UP")
+                )  # or ROUND_HALF_EVEN, etc.
+
         return None
