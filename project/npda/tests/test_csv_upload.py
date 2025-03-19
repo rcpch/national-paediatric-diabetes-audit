@@ -1055,7 +1055,6 @@ def test_bad_date_format_on_date_of_birth(
     ), "There should be no patients in the database after the test"
 
 
-@pytest.mark.skip("Can't distinguish between a bad date format or a missing date until https://github.com/rcpch/national-paediatric-diabetes-audit/pull/752")
 @pytest.mark.django_db
 def test_bad_date_format_on_date_of_diagnosis(test_user, single_row_valid_df):
     df = single_row_valid_df
@@ -3220,7 +3219,6 @@ def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
     assert model_field in instance.errors
 
 
-@pytest.mark.skip(reason="https://github.com/rcpch/national-paediatric-diabetes-audit/issues/488")
 @pytest.mark.parametrize(
     "model_field",
     [
