@@ -1,7 +1,7 @@
 # python imports
 from datetime import date
-from decimal import Decimal
 import logging
+from decimal import Decimal
 
 # django imports
 from django.contrib.gis.db import models
