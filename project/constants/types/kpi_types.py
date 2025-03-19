@@ -43,8 +43,6 @@ class KPIResult:
     total_failed: Union[int | None]  # E.g. KPIs 1-12 would be None as counts
     kpi_label: str = "KPI Name not found"
     patient_querysets: Union[Dict[str, QuerySet[Patient]], None] = None
-    median_hba1c_mmol_mol: Union[float | None] = None
-    median_hba1c_percentage: Union[float | None] = None
 
 
 @dataclass
@@ -63,8 +61,10 @@ class IndividualPtKPIResults:
     kpi_30_retinal_screening: Optional[bool]
     kpi_31_foot_examination: Optional[bool]
 
-    def get_total_passed(self) -> int:
-        return sum(value for value in asdict(self).values() if value is not None)
+    def get_total_passed(self)->int:
+        return sum(
+            value for value in asdict(self).values() if value is not None
+        )
 
 
 @dataclass
@@ -102,7 +102,6 @@ class KPICalculationsObject:
         KPIResult,
     ]
 
-
 # TypedDict using dataclass as base
 class IndividualPtKPIResultsDict(TypedDict):
     kpi_25_hba1c: bool
@@ -113,7 +112,6 @@ class IndividualPtKPIResultsDict(TypedDict):
     kpi_30_retinal_screening: bool
     kpi_31_foot_examination: bool
 
-
 class IndividualPtKPICalculationsDict(TypedDict):
     calculation_datetime: str  # Use ISO 8601 format for datetime
     audit_start_date: str
@@ -123,7 +121,6 @@ class IndividualPtKPICalculationsDict(TypedDict):
     died_in_period: int
     transfer_in_period: int
     kpi_results: IndividualPtKPIResultsDict
-
 
 """
 Hard coding these for simplicty and readability
