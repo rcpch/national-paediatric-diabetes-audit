@@ -26,65 +26,66 @@
 </form>
 {% comment %}  {% endcomment %}
 <div class="text-rcpch_dark_blue font-bold px-5 mt-5">Ages</div>
-<div class="table-responsive">
-  <table class="table table-bordered table-striped table-hover">
-    <thead>
-      <tr>
-        <th></th>
-        <th>0-2 y</th>
-        <th>2-5 y</th>
-        <th>5-12 y</th>
-        <th>12-16 y</th>
-        <th>16-19 y</th>
-        <th>19-25 y</th>
-        <th class="text-rcpch_pink">Over 12y</th>
-        <th class="text-rcpch_pink">Under 12y</th>
-        <th class="text-rcpch_pink">Total</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td></td>
-        <td>{{ patients_by_age.birth_two }}</td>
-        <td>{{ patients_by_age.two_five }}</td>
-        <td>{{ patients_by_age.five_twelve }}</td>
-        <td>{{ patients_by_age.twelve_sixteen }}</td>
-        <td>{{ patients_by_age.sixteen_nineteen }}</td>
-        <td>{{ patients_by_age.nineteen_twenty_five }}</td>
-        <td class="text-rcpch_pink_light_tint2 font-bold">
-          {{ patients_by_age.under_twelve }}
-        </td>
-        <td class="text-rcpch_pink_light_tint2 font-bold">
-          {{ patients_by_age.over_twelve }}
-        </td>
-        <td class="text-rcpch_pink font-bold">{{ number_of_patients }}</td>
-      </tr>
-      <tr>
-        <td></td>
-        <td>{{ patients_by_age.birth_two|percentage:number_of_patients }}</td>
-        <td>{{ patients_by_age.two_five|percentage:number_of_patients }}</td>
-        <td>{{ patients_by_age.five_twelve|percentage:number_of_patients }}</td>
-        <td>{{ patients_by_age.twelve_sixteen|percentage:number_of_patients }}</td>
-        <td>{{ patients_by_age.sixteen_nineteen|percentage:number_of_patients }}</td>
-        <td>
-          {{ patients_by_age.nineteen_twenty_five|percentage:number_of_patients }}
-        </td>
-        <td class="text-rcpch_pink_light_tint2 font-bold">
-          {{ patients_by_age.under_twelve|percentage:number_of_patients }}
-        </td>
-        <td class="text-rcpch_pink_light_tint2 font-bold">
-          {{ patients_by_age.over_twelve|percentage:number_of_patients }}
-        </td>
-        <td></td>
-      </tr>
-    </tbody>
-  </table>
+<div class="overflow-x-auto w-full">
+  <div class="table-responsive">
+    <table class="table table-bordered table-striped table-hover min-w-full">
+      <thead>
+        <tr>
+          <th></th>
+          <th>0-2 y</th>
+          <th>2-5 y</th>
+          <th>5-12 y</th>
+          <th>12-16 y</th>
+          <th>16-19 y</th>
+          <th>19-25 y</th>
+          <th class="text-rcpch_pink">Over 12y</th>
+          <th class="text-rcpch_pink">Under 12y</th>
+          <th class="text-rcpch_pink">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td></td>
+          <td>{{ patients_by_age.birth_two }}</td>
+          <td>{{ patients_by_age.two_five }}</td>
+          <td>{{ patients_by_age.five_twelve }}</td>
+          <td>{{ patients_by_age.twelve_sixteen }}</td>
+          <td>{{ patients_by_age.sixteen_nineteen }}</td>
+          <td>{{ patients_by_age.nineteen_twenty_five }}</td>
+          <td class="text-rcpch_pink_light_tint2 font-bold">
+            {{ patients_by_age.under_twelve }}
+          </td>
+          <td class="text-rcpch_pink_light_tint2 font-bold">
+            {{ patients_by_age.over_twelve }}
+          </td>
+          <td class="text-rcpch_pink font-bold">{{ number_of_patients }}</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>{{ patients_by_age.birth_two|percentage:number_of_patients }}</td>
+          <td>{{ patients_by_age.two_five|percentage:number_of_patients }}</td>
+          <td>{{ patients_by_age.five_twelve|percentage:number_of_patients }}</td>
+          <td>{{ patients_by_age.twelve_sixteen|percentage:number_of_patients }}</td>
+          <td>{{ patients_by_age.sixteen_nineteen|percentage:number_of_patients }}</td>
+          <td>
+            {{ patients_by_age.nineteen_twenty_five|percentage:number_of_patients }}
+          </td>
+          <td class="text-rcpch_pink_light_tint2 font-bold">
+            {{ patients_by_age.under_twelve|percentage:number_of_patients }}
+          </td>
+          <td class="text-rcpch_pink_light_tint2 font-bold">
+            {{ patients_by_age.over_twelve|percentage:number_of_patients }}
+          </td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </div>
 {% comment %} Sex states {% endcomment %}
 <div class="text-rcpch_dark_blue font-bold px-5 mt-5">Sexes</div>
-<div class="flex flex-col">
-  {% comment %}  {% endcomment %}
-  <div class="stats shadow flex flex-row">
+<div class="overflow-x-auto w-full">
+  <div class="stats shadow w-full overflow-x-auto">
     <div class="stat place-items-center">
       <div class="stat-title">Boys</div>
       <div class="stat-value">{{ patients_by_sex.male }}</div>
@@ -114,6 +115,5 @@
       </div>
     </div>
   </div>
-  {% comment %}  {% endcomment %}
 </div>
 {% comment %}  {% endcomment %}
