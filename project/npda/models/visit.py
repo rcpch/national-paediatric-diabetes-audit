@@ -643,3 +643,26 @@ class Visit(models.Model, HelpTextMixin):
 
     def __str__(self) -> str:
         return f"Patient visit for {self.patient} on {self.visit_date}"
+
+    def _hba1c_mmol_mol(self):
+        """
+        Return HbA1c in mmol/mol
+
+        If has been supplied in %, convert to mmol/mol using the formula
+        HbA1c (%) = (0.09148 * HbA1c (mmol/mol)) + 2.152
+        HbA1c (mmol/mol) = (HbA1c (%) - 2.152) / 0.09148
+        """
+
+        if (
+            self.hba1c_format is not None
+            and self.hba1c is not None
+            and (
+                (self.hba1c > 2 and self.hba1c_format == HBA1C_FORMATS[1][0])
+                or (self.hba1c >= 9 and self.hba1c_format == HBA1C_FORMATS[0][0])
+            )
+        ):
+            if self.hba1c_format == HBA1C_FORMATS[0][0]:  # mmol/mol
+                return self.hba1c
+            elif self.hba1c_format == HBA1C_FORMATS[1][0]:
+                return round((self.hba1c - 2.152) / 0.09148)
+        return None

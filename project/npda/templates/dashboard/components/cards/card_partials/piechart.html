@@ -1,0 +1,5 @@
+{% if selected_chart = 'imd_piechart' %}
+  <div class="w-full h-25">{{ imd_piechart|safe }}</div>
+{% elif selected_chart == 'ethnicity_piechart' %}
+  <div class="w-full h-25">{{ ethnicity_piechart|safe }}</div>
+{% endif %}

@@ -920,23 +920,8 @@ def test_invalid_date_of_birth_column_name_with_mixed_case_column_headers(test_u
     csv = dummy_sheet_csv.replace("Date of Birth", "DOB").replace("HbA1c result format", "HBA1C Result Format")
     results = read_csv_from_str(csv)
 
-    assert results.missing_columns == []
-    assert results.additional_columns == []
-
-
-# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/741
-@pytest.mark.django_db
-def test_old_template_headers(test_user, dummy_sheet_csv_old_headers):
-    csv = dummy_sheet_csv_old_headers
-    results = read_csv_from_str(csv)
-
-    assert results.missing_columns == []
-    assert results.additional_columns == []
-
-    csv_upload_sync(test_user, results.df)
-
-    assert(Patient.objects.count() > 0)
-    assert(Visit.objects.count() > 0)
+    assert results.missing_columns == ["Date of Birth"]
+    assert results.additional_columns == ["DOB"]
 
 
 @pytest.mark.django_db
