@@ -539,7 +539,14 @@ def test_diagnosis_date_before_date_of_birth(test_user, single_row_valid_df):
     single_row_valid_df["Date of Diabetes Diagnosis"] = pd.to_datetime(diagnosis_date)
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
+    
     assert "diagnosis_date" in errors[0]
+    error_message = errors[0]["diagnosis_date"][0]
+
+    assert (
+        error_message
+        == "'Date of Diabetes Diagnosis' cannot be before 'Date of Birth'"
+    )
 
     patient = Patient.objects.first()
 
@@ -547,10 +554,9 @@ def test_diagnosis_date_before_date_of_birth(test_user, single_row_valid_df):
     assert "diagnosis_date" in patient.errors
 
     error_message = patient.errors["diagnosis_date"][0]["message"]
-    # TODO MRB: why does this have entity encoding issues? (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/333)
     assert (
         error_message
-        == "&#x27;Date of Diabetes Diagnosis&#x27; cannot be before &#x27;Date of Birth&#x27;"
+        == "'Date of Diabetes Diagnosis' cannot be before 'Date of Birth'"
     )
 
 
@@ -600,15 +606,20 @@ def test_missing_gp_ods_code(test_user, single_row_valid_df):
     errors = csv_upload_sync(test_user, single_row_valid_df)
     assert "gp_practice_ods_code" in errors[0]
 
+    error_message = errors[0]["gp_practice_ods_code"][0]
+    assert (
+        error_message
+        == "'GP Practice ODS code' and 'GP Practice postcode' cannot both be empty"
+    )
+
     patient = Patient.objects.first()
 
     assert "gp_practice_ods_code" in patient.errors
 
     error_message = patient.errors["gp_practice_ods_code"][0]["message"]
-    # TODO MRB: why does this have entity encoding issues? (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/333)
     assert (
         error_message
-        == "&#x27;GP Practice ODS code&#x27; and &#x27;GP Practice postcode&#x27; cannot both be empty"
+        == "'GP Practice ODS code' and 'GP Practice postcode' cannot both be empty"
     )
 
 
@@ -640,16 +651,21 @@ def test_death_date_before_date_of_birth(test_user, single_row_valid_df):
     errors = csv_upload_sync(test_user, single_row_valid_df)
     assert "death_date" in errors[0]
 
+    error_message = errors[0]["death_date"][0]
+    assert (
+        error_message
+        == "'Death Date' cannot be before 'Date of Birth'"
+    )
+
     patient = Patient.objects.first()
 
     assert patient.death_date == death_date
     assert "death_date" in patient.errors
 
     error_message = patient.errors["death_date"][0]["message"]
-    # TODO MRB: why does this have entity encoding issues? (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/333)
     assert (
         error_message
-        == "&#x27;Death Date&#x27; cannot be before &#x27;Date of Birth&#x27;"
+        == "'Death Date' cannot be before 'Date of Birth'"
     )
 
 
