@@ -1,49 +1,43 @@
-"""Views for KPIs calculations"""
+"""Views for KPIs calculations
+"""
 
 import logging
 from collections import defaultdict
 from dataclasses import asdict, is_dataclass
 from datetime import date, datetime, timedelta
-
 # Python imports
 from decimal import Decimal
 from pprint import pformat
 from typing import Literal, Optional, Tuple, Union
 
 from dateutil.relativedelta import relativedelta
-
 # Django imports
-from django.db.models import (
-    Case,
-    Count,
-    Exists,
-    F,
-    IntegerField,
-    OuterRef,
-    Q,
-    QuerySet,
-    Subquery,
-    Sum,
-    When,
-)
+from django.db.models import (Case, Count, Exists, F, IntegerField, OuterRef,
+                              Q, QuerySet, Subquery, Sum, When)
 
 # NPDA Imports
 from project.constants.albuminuria_stage import ALBUMINURIA_STAGES
 from project.constants.diabetes_types import DIABETES_TYPES
+<<<<<<< HEAD
 from project.constants.hba1c_format import HBA1C_FORMATS
 from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
 from project.constants.leave_pdu_reasons import LEAVE_PDU_REASONS
 from project.constants.retinal_screening_results import RETINAL_SCREENING_RESULTS
+=======
+from project.constants.hospital_admission_reasons import \
+    HOSPITAL_ADMISSION_REASONS
+from project.constants.retinal_screening_results import \
+    RETINAL_SCREENING_RESULTS
+>>>>>>> parent of a2237af1 (add hba1c_mmol_mol class function to Visit model)
 from project.constants.smoking_status import SMOKING_STATUS
-from project.constants.types.kpi_types import (
-    KPICalculationsObject,
-    KPIResult,
-    kpi_registry,
-)
+from project.constants.types.kpi_types import (KPICalculationsObject,
+                                               KPIResult, kpi_registry)
 from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 from project.npda.general_functions import get_audit_period_for_date
-from project.npda.general_functions.audit_period import get_quarters_for_audit_period
-from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
+from project.npda.general_functions.audit_period import \
+    get_quarters_for_audit_period
+from project.npda.general_functions.quarter_for_date import \
+    retrieve_quarter_for_date
 from project.npda.models import Patient, Visit
 
 # Logging
@@ -164,6 +158,7 @@ class CalculateKPIS:
         self.total_patients_count = self.patients.count()
 
         return self._calculate_kpis()
+
 
     def _calculate_kpis(
         self,
@@ -3292,13 +3287,8 @@ class CalculateKPIS:
         self,
         eligible_patients: QuerySet[Patient],
     ) -> QuerySet[Visit]:
-        """
-        Enable query re-use as dashboard requires stratification by diabetes type
-        but these calculations do not
-
-        Note this filters out visits with HbA1c where there are errors
-        """
-
+        """Enable query re-use as dashboard requires stratification by diabetes type
+        but these calculations do not"""
         return Visit.objects.filter(
             visit_date__range=self.AUDIT_DATE_RANGE,
             hba1c_date__gt=F("patient__diagnosis_date") + timedelta(days=90),
