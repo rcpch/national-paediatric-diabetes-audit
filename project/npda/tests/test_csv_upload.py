@@ -1059,7 +1059,7 @@ def test_bad_date_format_on_date_of_birth(
 def test_bad_date_format_on_date_of_diagnosis(test_user, single_row_valid_df):
     df = single_row_valid_df
 
-    column = "Date of Level 3 carbohydrate counting education received"
+    column = "Date of Diabetes Diagnosis"
 
     df[column] = df[column].astype(str)
     df[column] = "beep"
@@ -1070,7 +1070,8 @@ def test_bad_date_format_on_date_of_diagnosis(test_user, single_row_valid_df):
     errors = csv_upload_sync(test_user, df)
 
     assert len(errors) == 1
-    assert "date_of_diagnosis" in errors[0]
+    assert "diagnosis_date" in errors[0]
+    assert errors[0]["diagnosis_date"][0] == "Date format is incorrect (expected DD/MM/YYYY)"
 
     assert(Patient.objects.count() == 1)
     assert(Patient.objects.first().diagnosis_date is None)
