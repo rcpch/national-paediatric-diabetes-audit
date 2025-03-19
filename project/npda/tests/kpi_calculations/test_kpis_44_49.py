@@ -7,23 +7,21 @@ import pytest
 from dateutil.relativedelta import relativedelta
 
 from project.constants.albuminuria_stage import ALBUMINURIA_STAGES
-from project.constants.hospital_admission_reasons import \
-    HOSPITAL_ADMISSION_REASONS
+from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
 from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
 from project.npda.tests import utils
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.tests.kpi_calculations.test_calculate_kpis import \
-    assert_kpi_result_equal
+from project.npda.tests.kpi_calculations.test_calculate_kpis import assert_kpi_result_equal
 
 # Logging
 logger = logging.getLogger(__name__)
 
 
 @pytest.mark.django_db
-def test_kpi_calculation_44(AUDIT_START_DATE):
+def test_kpi_calculation_44(seed_groups_fixture, seed_users_fixture, AUDIT_START_DATE):
     """Tests that KPI44 is calculated correctly.
 
     SINGLE NUMBER: Mean of HbA1c measurements (item 17) within the audit
@@ -48,7 +46,7 @@ def test_kpi_calculation_44(AUDIT_START_DATE):
     pt_1_hba1cs = [Decimal(n) for n in [45, 46, 47]]
     # Diagnosis date is 89 days before AUDIT_START_DATE so valid hba1c dates are
     # all from AUDIT_START_DATE+1day onwards
-    pt_1_hba1c_date_1 = AUDIT_START_DATE+relativedelta(days=2)
+    pt_1_hba1c_date_1 = AUDIT_START_DATE + relativedelta(days=2)
     passing_pt_1_median_46 = PatientFactory(
         # KPI1 eligible
         **eligible_criteria,
@@ -77,7 +75,7 @@ def test_kpi_calculation_44(AUDIT_START_DATE):
     )
 
     pt_2_hba1cs = [Decimal(n) for n in [47, 48, 49]]
-    pt_2_hba1c_date_1 = AUDIT_START_DATE+relativedelta(days=2)
+    pt_2_hba1c_date_1 = AUDIT_START_DATE + relativedelta(days=2)
     passing_pt_2_median_48 = PatientFactory(
         # KPI1 eligible
         **eligible_criteria,
@@ -132,9 +130,7 @@ def test_kpi_calculation_44(AUDIT_START_DATE):
     # Create a submission (BEFORE calculating KPIs)
     submission = utils.create_submission(
         AUDIT_START_DATE,
-        pz_code=ineligible_patient_too_old
-        .paediatric_diabetes_units.first()
-        .paediatric_diabetes_unit.pz_code,
+        pz_code=ineligible_patient_too_old.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
     )
     submission.patients.add(*Patient.objects.all())
 
@@ -196,7 +192,7 @@ def test_kpi_calculation_45(AUDIT_START_DATE):
     pt_1_hba1cs = [Decimal(n) for n in [45, 46, 47]]
     # Diagnosis date is 89 days before AUDIT_START_DATE so valid hba1c dates are
     # all from AUDIT_START_DATE+1day onwards
-    pt_1_hba1c_date_1 = AUDIT_START_DATE+relativedelta(days=2)
+    pt_1_hba1c_date_1 = AUDIT_START_DATE + relativedelta(days=2)
     passing_pt_1_median_46 = PatientFactory(
         # KPI1 eligible
         **eligible_criteria,
@@ -225,7 +221,7 @@ def test_kpi_calculation_45(AUDIT_START_DATE):
     )
 
     pt_2_hba1cs = [Decimal(n) for n in [47, 48, 49]]
-    pt_2_hba1c_date_1 = AUDIT_START_DATE+relativedelta(days=2)
+    pt_2_hba1c_date_1 = AUDIT_START_DATE + relativedelta(days=2)
     passing_pt_2_median_48 = PatientFactory(
         # KPI1 eligible
         **eligible_criteria,
@@ -277,12 +273,10 @@ def test_kpi_calculation_45(AUDIT_START_DATE):
         visit__treatment=1,
     )
 
-   # Create a submission (BEFORE calculating KPIs)
+    # Create a submission (BEFORE calculating KPIs)
     submission = utils.create_submission(
         AUDIT_START_DATE,
-        pz_code=ineligible_patient_too_old
-        .paediatric_diabetes_units.first()
-        .paediatric_diabetes_unit.pz_code,
+        pz_code=ineligible_patient_too_old.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
     )
     submission.patients.add(*Patient.objects.all())
 
@@ -390,9 +384,7 @@ def test_kpi_calculation_46(AUDIT_START_DATE):
     # Create a submission (BEFORE calculating KPIs)
     submission = utils.create_submission(
         AUDIT_START_DATE,
-        pz_code=ineligible_patient_too_old
-        .paediatric_diabetes_units.first()
-        .paediatric_diabetes_unit.pz_code,
+        pz_code=ineligible_patient_too_old.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
     )
     submission.patients.add(*Patient.objects.all())
 
@@ -497,9 +489,7 @@ def test_kpi_calculation_47(AUDIT_START_DATE):
     # Create a submission (BEFORE calculating KPIs)
     submission = utils.create_submission(
         AUDIT_START_DATE,
-        pz_code=ineligible_patient_too_old
-        .paediatric_diabetes_units.first()
-        .paediatric_diabetes_unit.pz_code,
+        pz_code=ineligible_patient_too_old.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
     )
     submission.patients.add(*Patient.objects.all())
 
@@ -609,9 +599,7 @@ def test_kpi_calculation_48(AUDIT_START_DATE):
     # Create a submission (BEFORE calculating KPIs)
     submission = utils.create_submission(
         AUDIT_START_DATE,
-        pz_code=ineligible_patient_too_old
-        .paediatric_diabetes_units.first()
-        .paediatric_diabetes_unit.pz_code,
+        pz_code=ineligible_patient_too_old.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
     )
     submission.patients.add(*Patient.objects.all())
 
@@ -721,9 +709,7 @@ def test_kpi_calculation_49(AUDIT_START_DATE):
     # Create a submission (BEFORE calculating KPIs)
     submission = utils.create_submission(
         AUDIT_START_DATE,
-        pz_code=ineligible_patient_too_old
-        .paediatric_diabetes_units.first()
-        .paediatric_diabetes_unit.pz_code,
+        pz_code=ineligible_patient_too_old.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
     )
     submission.patients.add(*Patient.objects.all())
 

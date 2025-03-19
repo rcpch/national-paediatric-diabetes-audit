@@ -18,17 +18,10 @@ from django.db.models import (Case, Count, Exists, F, IntegerField, OuterRef,
 # NPDA Imports
 from project.constants.albuminuria_stage import ALBUMINURIA_STAGES
 from project.constants.diabetes_types import DIABETES_TYPES
-<<<<<<< HEAD
 from project.constants.hba1c_format import HBA1C_FORMATS
 from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
 from project.constants.leave_pdu_reasons import LEAVE_PDU_REASONS
 from project.constants.retinal_screening_results import RETINAL_SCREENING_RESULTS
-=======
-from project.constants.hospital_admission_reasons import \
-    HOSPITAL_ADMISSION_REASONS
-from project.constants.retinal_screening_results import \
-    RETINAL_SCREENING_RESULTS
->>>>>>> parent of a2237af1 (add hba1c_mmol_mol class function to Visit model)
 from project.constants.smoking_status import SMOKING_STATUS
 from project.constants.types.kpi_types import (KPICalculationsObject,
                                                KPIResult, kpi_registry)
