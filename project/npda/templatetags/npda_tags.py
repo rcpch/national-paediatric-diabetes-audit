@@ -405,7 +405,7 @@ def percentage(value: str, total: str):
         or value == "0"
     ):
         return "-"
-    return f"{round(int(value)) /int(total)*100}%"
+    return f"{round(int(value) / int(total) * 100)}%"
 
 
 @register.filter
