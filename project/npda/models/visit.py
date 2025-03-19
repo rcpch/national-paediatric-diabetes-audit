@@ -1,6 +1,7 @@
 # python imports
 from datetime import date
 import logging
+from decimal import Decimal
 
 # django imports
 from django.contrib.gis.db import models
@@ -664,5 +665,11 @@ class Visit(models.Model, HelpTextMixin):
             if self.hba1c_format == HBA1C_FORMATS[0][0]:  # mmol/mol
                 return self.hba1c
             elif self.hba1c_format == HBA1C_FORMATS[1][0]:
-                return round((self.hba1c - 2.152) / 0.09148)
+                # Convert self.hba1c to Decimal before performing the calculation
+                hba1c_decimal = Decimal(str(self.hba1c))
+                result = (hba1c_decimal - Decimal("2.152")) / Decimal("0.09148")
+                return int(
+                    result.quantize(Decimal("1"), rounding="ROUND_HALF_UP")
+                )  # or ROUND_HALF_EVEN, etc.
+
         return None

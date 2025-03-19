@@ -3298,6 +3298,7 @@ class CalculateKPIS:
             visit_date__range=self.AUDIT_DATE_RANGE,
             hba1c_date__gt=F("patient__diagnosis_date") + timedelta(days=90),
             patient__in=eligible_patients,
+            hba1c__isnull=False,
         )
 
     def calculate_kpi_hba1c_vals_stratified_by_diabetes_type(self):
@@ -3347,7 +3348,7 @@ class CalculateKPIS:
                         ),
                         When(
                             hba1c_format=HBA1C_FORMATS[1][0],
-                            then=F("hba1c") - Round(Decimal("2.152") / Decimal("0.09148")),
+                            then=(F("hba1c") - Round(Decimal("2.152"))) / Decimal("0.09148"),
                         ),
                         default=F("hba1c"),
                         output_field=DecimalField(
@@ -3365,13 +3366,13 @@ class CalculateKPIS:
                 valid_visits, key="hba1c_mmol_mol"
             )
 
-            # Convert to percent
-            mean_hba1c_percent = mean_hba1c_mmol_mol / 10.929
-            median_hba1c_percent = median_hba1c_mmol_mol / 10.929
+            # Convert to percent (noting we're using floats not Decimal now)
+            mean_hba1c_percent = (0.09148 * mean_hba1c_mmol_mol) + 2.152
+            median_hba1c_percent = (0.09148 * median_hba1c_mmol_mol) + 2.152
 
             hba1c_vals[key] = {
-                "mean_mmol_mol": round(mean_hba1c_mmol_mol, 1),
-                "median_mmol_mol": round(median_hba1c_mmol_mol, 1),
+                "mean_mmol_mol": int(mean_hba1c_mmol_mol),
+                "median_mmol_mol": int(median_hba1c_mmol_mol),
                 "mean_percent": round(mean_hba1c_percent, 1),
                 "median_percent": round(median_hba1c_percent, 1),
             }

@@ -109,9 +109,6 @@ def patient_ages(request):
         .patients.all()
     )
 
-    # Get the number of patients in the submission
-    number_of_patients = all_patients_in_this_submission.count()
-
     # This function might get called on historical cohorts, so we need to check if today's date is within the audit period
     if audit_start <= date.today() <= audit_end:
         comparison_date = date.today()
@@ -182,7 +179,7 @@ def patient_ages(request):
 
     context = {
         "audit_year": (audit_start, audit_end),
-        "number_of_patients": number_of_patients,
+        "number_of_patients": all_patients_in_this_submission_by_age.count(),
         "patients_by_age": age_band_counts,
         "diabetes_types": diabetes_types,
     }
