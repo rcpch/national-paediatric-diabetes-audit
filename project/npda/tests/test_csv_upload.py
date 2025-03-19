@@ -1088,7 +1088,7 @@ def test_bad_date_format_on_date_of_diagnosis(test_user, single_row_valid_df):
     assert(patient.diagnosis_date is None)
     
     assert "diagnosis_date" in patient.errors
-    assert patient.errors["diagnosis_date"][0] == "Date format is incorrect (expected DD/MM/YYYY)"
+    assert patient.errors["diagnosis_date"][0]["message"] == "Date format is incorrect (expected DD/MM/YYYY)"
 
 
 @pytest.mark.django_db
@@ -3288,7 +3288,7 @@ def test_bad_data_for_date_fields(test_user, dummy_sheet_csv, model_field):
     assert len(errors) > 0
     assert model_field in errors[0]
 
-    csv_upload_sync(test_user, results.df)
+    csv_upload_sync(test_user, results.df, errors_to_return=errors)
 
     assert model.objects.count() == 1
 

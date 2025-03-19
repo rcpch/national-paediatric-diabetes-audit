@@ -146,10 +146,11 @@ async def csv_upload(
         model_errors = collections.defaultdict(list)
 
         # From csv_parse. Strings rather than ValidationErrors.
-        for field, errors in errors_to_return[row_index].items():
-            for errors in errors:
-                model_errors[field].append({ "code": "", "message": error})
-        
+        if row_index in errors_to_return:
+            for field, errors in errors_to_return[row_index].items():
+                for error in errors:
+                    model_errors[field].append({ "code": "", "message": error})
+
         # From forms. ValidationErrors.
         for field, errors in form.errors.get_json_data(escape_html=True).items():
             model_errors[field] += errors
@@ -319,8 +320,8 @@ async def csv_upload(
                     patient_form, row, async_client
                 )
                 
-                # Pull through cleaned_data so we can use it in the async visit validators
-                await sync_to_async(visit_form.is_valid)()
+                # Pull through cleaned_data
+                visit_form.is_valid()
 
                 visit_forms.append((visit_form, int(row["row_index"])))
 
