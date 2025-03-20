@@ -1,6 +1,7 @@
 # Python imports
 from os import path
 import csv
+import logging
 
 # Django import
 from django.apps import apps
@@ -14,18 +15,20 @@ PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
 OrganisationEmployer = apps.get_model("npda", "OrganisationEmployer")
 NPDAUser = apps.get_model("npda", "NPDAUser")
 
+logger = logging.getLogger(__name__)
+
 
 class Command(BaseCommand):
     help = "Import users into NPDA from a CSV file."
 
     """
     ROLES = (
-    (AUDIT_CENTRE_COORDINATOR, "Coordinator"), # 1
-    (AUDIT_CENTRE_EDITOR, "Editor"), # 2
-    (AUDIT_CENTRE_READER, "Reader"), # 3
-    (RCPCH_AUDIT_TEAM, "RCPCH Audit Team"), # 4
-    (RCPCH_AUDIT_PATIENT_FAMILY, "RCPCH Audit Children and Family"), # 7
-)
+        (AUDIT_CENTRE_COORDINATOR, "Coordinator"), # 1
+        (AUDIT_CENTRE_EDITOR, "Editor"), # 2
+        (AUDIT_CENTRE_READER, "Reader"), # 3
+        (RCPCH_AUDIT_TEAM, "RCPCH Audit Team"), # 4
+        (RCPCH_AUDIT_PATIENT_FAMILY, "RCPCH Audit Children and Family"), # 7
+    )
 """
 
     def add_arguments(self, parser):
@@ -39,6 +42,7 @@ class Command(BaseCommand):
 
         with open(file_path, "r") as file:
             reader = csv.DictReader(file)
+            index = 0
             for row in reader:
                 first_name = row["first_name"]
                 surname = row["surname"]
@@ -94,3 +98,9 @@ class Command(BaseCommand):
                     npda_user=user,
                     is_primary_employer=True,
                 )
+                index += 1
+
+                logger.info(
+                    f"User {email} successfully created as {group.name} in {pdu}."
+                )
+        logger.info(f"🔥 {index} users successfully created.")
