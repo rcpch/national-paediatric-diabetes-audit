@@ -111,6 +111,137 @@ If a patient has not visited your clinic during the audit year, has no results w
 - Please include still include these patients as this enables us to calculate how many patients have left your service.
 - Record their date of transition/leaving the service and use this as your ‘Visit Date’.
 
+## Submitting your CSV
+
+Please note that the screenshots within this document include fictional patient data for illustrative purposes only.
+
+Once you have selected your data entry method for the audit year, you will be directed to a new screen with two options. ***Option 1*** allows you to download the standardised CSV template required for uploading data to the data capture system. This template includes all the necessary columns needed for a successful data submission.
+
+***Option 2*** allows you to select a CSV file from your device and submit data. Please ensure that your data has been thoroughly checked and finalised before submission. If the file does not match the correct format or template, it will be rejected
+
+![image](https://github.com/user-attachments/assets/c097e8d0-c40b-4636-873e-f2fb0099835f)
+
+If the CSV file is in the correct format and successfully uploads you will be directed to a new webpage displaying all submitted patient records.
+
+Any patient records identified issues will be highlighted with a red exclamation mark. By hovering over the exclamation mark, a pop-up box will appear, detailing the specific issue with that patient’s submission. Users should review these flagged entries and make any necessary corrections before finalising their data. It should be noted that the data has successfully submitted at this point, however, there may be issues that impact the quality of the submission. 
+
+![image](https://github.com/user-attachments/assets/7edf9f90-7864-4cfd-8437-cc74531152df)
+
+You can view all errors in your data file by downloading the data quality report.
+
+### Data Quality Report
+
+![image](https://github.com/user-attachments/assets/538585c5-92ee-4316-a68e-a2771fa6d4b4)
+
+After uploading your data via CSV, you can download a ***Data Quality Report*** to validate and check your data. This can be done by selecting the Download Data Quality Report option in the top right corner of the webpage (see screenshot below).
+
+Once downloaded, open the report in Excel. The report will have three tabs: your original submission, your submission with errors annotated, and a list of errors. 
+
+Any cells containing errors or invalid data will be highlighted with a small comment explaining the issue (e.g., ***invalid date format***). To correct these errors, you must update your original CSV file and re-upload the corrected version to the data capture system.
+
+## Upload data via Patient Questionnaire
+
+### Add a New Patient
+
+Navigate to the ***Patient Data*** view and select ***Add Patient***.
+
+![image](https://github.com/user-attachments/assets/3076bb4f-f1fe-400a-be1f-553f230498b8)
+
+This form will ask you to complete all the necessary information to add a new patient to your NPDA submission.
+
+![image](https://github.com/user-attachments/assets/69ba99b2-d27f-482c-abeb-8d6ae6478782)
+
+After successfully entering a patient onto the NPDA data capture system, you will be directed to a new screen displaying a list of all patients you have entered.
+
+![image](https://github.com/user-attachments/assets/3c936499-ecde-436f-a635-c5d6e22ad9da)
+
+### Edit Patient Details
+
+To edit patient details in the future, click on their NHS number in the Patient list. You can also record whether they have left the service in this form.
+
+### Create Visits
+
+From this list, you can add visits for each patient. On the right-hand side of each patient entry, there is a clickable link labelled "***Visits***". Clicking this will take you to a new screen where you will see the option "***Create New Visit***". Selecting this option will open a new web form for you to complete. 
+
+After you’ve clicked on the Create New Visit button, you will be then greeted with the New Visit webform.
+
+![image](https://github.com/user-attachments/assets/be6c8239-1646-4cfb-8b2d-88172cdf44c3)
+
+From here you will see the Visit/Appointment date at the top of the page. A valid date will need to be entered to create a fully visit. After this you can see 3 tabs below the visit date, these are: Routine Measurements, Annual Review and Inpatient Entry. 
+
+![image](https://github.com/user-attachments/assets/8e49fd85-6961-479c-b3e5-de43abbf332e)
+
+The Routine Measurements tab is broken down by the following sections:
+- Measurements
+- HbA1c
+- Treatment
+- CGM
+- Blood Pressure (BP)
+
+The next tab, Annual Review, contains the following metrics:
+- Foot Care
+- DECS (Retinal Screening)
+- ACR (Urinary Albumin)
+- Cholesterol
+- Thyroid
+- Coeliac
+- Psychology
+- Smoking
+- Dietician
+- Sick Day Rules
+- Immunisation (flu)
+
+The final tab, Inpatient Entry, contains the following metric
+- Hospital Admission
+
+After you have entered all the relevant information click the ‘Save’ button at the bottom of the page.
+
+![image](https://github.com/user-attachments/assets/8d6481cc-f9e1-4686-8d28-bdc208221863)
+
+## Page 7 - Unit Report/Patient Report
+
+At the top of the main page, once you have logged in, you will see two tabs: ‘***Unit Report***’ and ‘***Patient Report***’. Clicking on these will provide access to different levels of reporting.
+
+### Unit Report
+
+![image](https://github.com/user-attachments/assets/1ec54dc7-ea40-47ac-bbba-4ef7891d63f1)
+
+The Unit Report tab provides an overview of the patient data you have entered, including:
+- Quarterly submission deadlines,
+- The number of Trusts within your unit's network,
+- Total number of eligible patients,
+- Patient characteristics,
+- Treatment regimen,
+- HbA1c,
+- Glucose monitoring,
+- and other key metrics relevant to your unit. 
+
+If you work at multiple PDUs, you can select your PDU by clicking ‘Filters’ at the top right of the window. 
+
+![image](https://github.com/user-attachments/assets/199fadaf-c6de-4bf5-83c2-7645edf6b1e8)
+
+Please note that the graphs within this tab display unvalidated and uncleaned data, meaning figures may differ from those published in the Quarterly Reporting Dashboard and the NPDA annual reporting.
+The unit report is intended to give you a quick view of your unit’s data
+
+### Patient Report
+
+![image](https://github.com/user-attachments/assets/b06cf147-cc5a-41e1-beaf-2cfa00e8fea5)
+
+Clicking on the Patient Report tab will display a list of patients identified by their NHS number, along with five separate tabs at the top of the report: 
+- Health Checks,
+- Additional Care Processes,
+- Care at Diagnosis,
+- Outcomes,
+- and Treatment. 
+
+Each tab presents key data related to patient care and monitoring. The report is structured to visually indicate whether a required check has been completed. If a patient has undergone a check, a green tick will appear in the corresponding column. If a check is incomplete, a yellow exclamation mark will be displayed, highlighting that the required data is missing. 
+
+This layout provides a clear and efficient way to track patient care processes and identify areas requiring further attention.
+
+
+
+
+
 
 
 
