@@ -20,7 +20,9 @@ def patient_measurements(request):
     else:
         today = date.today()
         calculation_date = date(selected_audit_year, today.month, today.day)
-    calculate_kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=True)
+    calculate_kpis = CalculateKPIS(
+        calculation_date=calculation_date, return_pt_querysets=True
+    )
 
     calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
 
@@ -54,15 +56,28 @@ def patient_measurements(request):
         calculate_kpis.calculate_kpi_hba1c_vals_stratified_by_diabetes_type()
     )
 
-    current_submission = Submission.objects.get(
+    if Submission.objects.filter(
         audit_year=selected_audit_year,
         paediatric_diabetes_unit__pz_code=pz_code,
         submission_active=True,
-    )
-    visits = Visit.objects.filter(patient__in=current_submission.patients.all())
-    submission_visits_with_errors = visits.filter(errors__isnull=False)
+    ).exists():
+        current_submission = Submission.objects.get(
+            audit_year=selected_audit_year,
+            paediatric_diabetes_unit__pz_code=pz_code,
+            submission_active=True,
+        )
+        visits = Visit.objects.filter(patient__in=current_submission.patients.all())
+        submission_visits_with_errors = visits.filter(errors__isnull=False).count()
+        submission_date = current_submission.submission_date
+        affected_patients = current_submission.patients.count()
+    else:
+        submission_visits_with_errors = 0
+        submission_date = None
+        affected_patients = 0
 
-    template = "dashboard/components/cards/card_partials/patient_measurements_partial.html"
+    template = (
+        "dashboard/components/cards/card_partials/patient_measurements_partial.html"
+    )
 
     return render(
         request,
@@ -71,8 +86,8 @@ def patient_measurements(request):
             "selected_audit_year": selected_audit_year,
             "pz_code": pz_code,
             "hba1c_value_counts_stratified_by_diabetes_type": hba1c_value_counts_stratified_by_diabetes_type,
-            "submission_visit_error_count": submission_visits_with_errors.count(),
-            "submission_date": current_submission.submission_date,
-            "affected_patients": current_submission.patients.count(),
+            "submission_visit_error_count": submission_visits_with_errors,
+            "submission_date": submission_date,
+            "affected_patients": affected_patients,
         },
     )

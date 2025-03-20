@@ -29,8 +29,10 @@ from project.constants.colors import (
 )
 from project.constants import HBA1C_FORMATS
 from project.npda.models import Visit
+from project.npda.views.decorators import login_and_otp_required
 
 
+@login_and_otp_required()
 def patient_ages(request):
     """
     This function is used to generate the patient ages table
@@ -98,43 +100,6 @@ def patient_ages(request):
 
     audit_year = request.session.get("selected_audit_year", None)
 
-    audit_start, audit_end = audit_period_for_audit_year(audit_year)
-    all_patients_in_this_submission = (
-        Submission.objects.filter(
-            audit_year__range=(audit_start.year, audit_end.year),
-            submission_active=True,
-            paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
-        )
-        .get()
-        .patients.all()
-    )
-
-    # This function might get called on historical cohorts, so we need to check if today's date is within the audit period
-    if audit_start <= date.today() <= audit_end:
-        comparison_date = date.today()
-    else:
-        comparison_date = audit_end
-
-    filter = Q()
-    if request.POST.get("diabetes_type"):
-        if request.POST.get("diabetes_type") != "0":
-            filter &= Q(
-                diabetes_type=int(request.POST.get("diabetes_type"))
-            )  # Filter by diabetes type
-
-    # Get the number of patients of ages 0-2, 2-5, 5-12, 12-16, 16-19, 19-25
-    # Filter these patients by the diabetes type selected or All
-    all_patients_in_this_submission_by_age = all_patients_in_this_submission.filter(
-        filter
-    ).values(
-        "pk",
-        "sex",
-        "date_of_birth",
-        "ethnicity",
-        "index_of_multiple_deprivation_quintile",
-        "diabetes_type",
-    )
-
     # Get the number of patients of ages 0-2, 2-5, 5-12, 12-16, 16-19, 19-25
     age_band_counts = {
         "birth_two": 0,
@@ -154,49 +119,96 @@ def patient_ages(request):
         "not_specified": 0,
     }
 
-    for patient in all_patients_in_this_submission_by_age:
-        patient["age"] = relativedelta(comparison_date, patient["date_of_birth"]).years
+    audit_start, audit_end = audit_period_for_audit_year(audit_year)
 
-        # Enable the diabetes types that exist  in the filter
-        for dmtype in diabetes_types:
-            if patient["diabetes_type"] == dmtype["key"]:
-                dmtype["enabled"] = True
+    number_of_patients = 0
 
-        # Count the number of patients in each age band
-        if 0 <= patient["age"] < 2:
-            age_band_counts["birth_two"] += 1
-        elif 2 <= patient["age"] < 5:
-            age_band_counts["two_five"] += 1
-        elif 5 <= patient["age"] < 12:
-            age_band_counts["five_twelve"] += 1
-        elif 12 <= patient["age"] < 16:
-            age_band_counts["twelve_sixteen"] += 1
-        elif 16 <= patient["age"] < 19:
-            age_band_counts["sixteen_nineteen"] += 1
-        elif 19 <= patient["age"] < 25:
-            age_band_counts["nineteen_twenty_five"] += 1
+    if Submission.objects.filter(
+        audit_year__range=(audit_start.year, audit_end.year),
+        submission_active=True,
+        paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
+    ).exists():
+        all_patients_in_this_submission = (
+            Submission.objects.filter(
+                audit_year__range=(audit_start.year, audit_end.year),
+                submission_active=True,
+                paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
+            )
+            .get()
+            .patients.all()
+        )
 
-        # count the number of <12 and >12
-        if patient["age"] < 12:
-            age_band_counts["under_twelve"] += 1
-        elif patient["age"] >= 12:
-            age_band_counts["over_twelve"] += 1
+        # This function might get called on historical cohorts, so we need to check if today's date is within the audit period
+        if audit_start <= date.today() <= audit_end:
+            comparison_date = date.today()
+        else:
+            comparison_date = audit_end
 
-        # Count the patients by sex
-        if patient["sex"] == 1:
-            sex_counts["male"] += 1
-        elif patient["sex"] == 2:
-            sex_counts["female"] += 1
-        elif patient["sex"] == 0:
-            sex_counts["not_known"] += 1
-        elif patient["sex"] == 9:
-            sex_counts["not_specified"] += 1
+        filter = Q()
+        if request.POST.get("diabetes_type"):
+            if request.POST.get("diabetes_type") != "0":
+                filter &= Q(
+                    diabetes_type=int(request.POST.get("diabetes_type"))
+                )  # Filter by diabetes type
 
-    # create the charts
+        # Get the number of patients of ages 0-2, 2-5, 5-12, 12-16, 16-19, 19-25
+        # Filter these patients by the diabetes type selected or All
+        all_patients_in_this_submission_by_age = all_patients_in_this_submission.filter(
+            filter
+        ).values(
+            "pk",
+            "sex",
+            "date_of_birth",
+            "ethnicity",
+            "index_of_multiple_deprivation_quintile",
+            "diabetes_type",
+        )
+
+        number_of_patients = all_patients_in_this_submission_by_age.count()
+
+        for patient in all_patients_in_this_submission_by_age:
+            patient["age"] = relativedelta(
+                comparison_date, patient["date_of_birth"]
+            ).years
+
+            # Enable the diabetes types that exist  in the filter
+            for dmtype in diabetes_types:
+                if patient["diabetes_type"] == dmtype["key"]:
+                    dmtype["enabled"] = True
+
+            # Count the number of patients in each age band
+            if 0 <= patient["age"] < 2:
+                age_band_counts["birth_two"] += 1
+            elif 2 <= patient["age"] < 5:
+                age_band_counts["two_five"] += 1
+            elif 5 <= patient["age"] < 12:
+                age_band_counts["five_twelve"] += 1
+            elif 12 <= patient["age"] < 16:
+                age_band_counts["twelve_sixteen"] += 1
+            elif 16 <= patient["age"] < 19:
+                age_band_counts["sixteen_nineteen"] += 1
+            elif 19 <= patient["age"] < 25:
+                age_band_counts["nineteen_twenty_five"] += 1
+
+            # count the number of <12 and >12
+            if patient["age"] < 12:
+                age_band_counts["under_twelve"] += 1
+            elif patient["age"] >= 12:
+                age_band_counts["over_twelve"] += 1
+
+            # Count the patients by sex
+            if patient["sex"] == 1:
+                sex_counts["male"] += 1
+            elif patient["sex"] == 2:
+                sex_counts["female"] += 1
+            elif patient["sex"] == 0:
+                sex_counts["not_known"] += 1
+            elif patient["sex"] == 9:
+                sex_counts["not_specified"] += 1
 
     context = {
         "audit_year": (audit_start, audit_end),
-        "number_of_patients": all_patients_in_this_submission_by_age.count(),
+        "number_of_patients": number_of_patients,
         "patients_by_age": age_band_counts,
         "diabetes_types": diabetes_types,
         "patients_by_sex": sex_counts,
@@ -205,6 +217,7 @@ def patient_ages(request):
     return render(request, template, context)
 
 
+@login_and_otp_required()
 def all_patient_charts(request):
     """
     This function is used to generate all the patient characteristics charts
@@ -212,15 +225,6 @@ def all_patient_charts(request):
     audit_year = request.session.get("selected_audit_year", None)
 
     audit_start, audit_end = audit_period_for_audit_year(audit_year)
-    all_patients_in_this_submission = (
-        Submission.objects.filter(
-            audit_year__range=(audit_start.year, audit_end.year),
-            submission_active=True,
-            paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
-        )
-        .get()
-        .patients.all()
-    )
 
     imd_counts = {
         "1 (most deprived)": 0,
@@ -238,37 +242,54 @@ def all_patient_charts(request):
         "Other/Not Stated/Unknown": 0,
     }
 
-    for patient in all_patients_in_this_submission.values(
-        "pk",
-        "sex",
-        "ethnicity",
-        "index_of_multiple_deprivation_quintile",
-        "diabetes_type",
-    ):
+    if Submission.objects.filter(
+        audit_year__range=(audit_start.year, audit_end.year),
+        submission_active=True,
+        paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
+    ).exists():
+        all_patients_in_this_submission = (
+            Submission.objects.filter(
+                audit_year__range=(audit_start.year, audit_end.year),
+                submission_active=True,
+                paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
+            )
+            .get()
+            .patients.all()
+        )
 
-        # Count the patients by IMD
-        if patient["index_of_multiple_deprivation_quintile"] == 1:
-            imd_counts["1 (most deprived)"] += 1
-        elif patient["index_of_multiple_deprivation_quintile"] == 2:
-            imd_counts["2"] += 1
-        elif patient["index_of_multiple_deprivation_quintile"] == 3:
-            imd_counts["3"] += 1
-        elif patient["index_of_multiple_deprivation_quintile"] == 4:
-            imd_counts["4"] += 1
-        elif patient["index_of_multiple_deprivation_quintile"] == 5:
-            imd_counts["5 (least deprived)"] += 1
+        for patient in all_patients_in_this_submission.values(
+            "pk",
+            "sex",
+            "ethnicity",
+            "index_of_multiple_deprivation_quintile",
+            "diabetes_type",
+        ):
 
-        # Ethnicity
-        if patient["ethnicity"] in ["A", "B", "C"]:
-            ethnicity_counts["White"] += 1
-        if patient["ethnicity"] in ["D", "E", "F", "G"]:
-            ethnicity_counts["Mixed"] += 1
-        if patient["ethnicity"] in ["H", "J", "K", "L", "R"]:
-            ethnicity_counts["Asian"] += 1
-        if patient["ethnicity"] in ["M", "N", "P"]:
-            ethnicity_counts["Black"] += 1
-        if patient["ethnicity"] in ["S", "Z", "99"]:
-            ethnicity_counts["Other/Not Stated/Unknown"] += 1
+            # Count the patients by IMD
+            if patient["index_of_multiple_deprivation_quintile"] == 1:
+                imd_counts["1 (most deprived)"] += 1
+            elif patient["index_of_multiple_deprivation_quintile"] == 2:
+                imd_counts["2"] += 1
+            elif patient["index_of_multiple_deprivation_quintile"] == 3:
+                imd_counts["3"] += 1
+            elif patient["index_of_multiple_deprivation_quintile"] == 4:
+                imd_counts["4"] += 1
+            elif patient["index_of_multiple_deprivation_quintile"] == 5:
+                imd_counts["5 (least deprived)"] += 1
+
+            # Ethnicity
+            if patient["ethnicity"] in ["A", "B", "C"]:
+                ethnicity_counts["White"] += 1
+            if patient["ethnicity"] in ["D", "E", "F", "G"]:
+                ethnicity_counts["Mixed"] += 1
+            if patient["ethnicity"] in ["H", "J", "K", "L", "R"]:
+                ethnicity_counts["Asian"] += 1
+            if patient["ethnicity"] in ["M", "N", "P"]:
+                ethnicity_counts["Black"] += 1
+            if patient["ethnicity"] in ["S", "Z", "99"]:
+                ethnicity_counts["Other/Not Stated/Unknown"] += 1
+    else:
+        all_patients_in_this_submission = None
 
     # Create the IMD pie chart
     imd_piechart = create_piechart(imd_counts, "index_of_multiple_deprivation_quintile")
@@ -276,8 +297,11 @@ def all_patient_charts(request):
     # Create the Ethnicity pie chart
     ethnicity_piechart = create_piechart(ethnicity_counts, "ethnicity")
 
-    visits = return_eligible_visits(all_patients_in_this_submission, audit_year)
-    # Create a Pandas DataFrame
+    if all_patients_in_this_submission is None:
+        visits = None
+    else:
+        visits = return_eligible_visits(all_patients_in_this_submission, audit_year)
+        # Create a Pandas DataFrame
     df = pd.DataFrame(visits)
 
     # Create the box plot for sex
