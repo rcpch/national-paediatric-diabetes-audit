@@ -29,8 +29,10 @@ from project.constants.colors import (
 )
 from project.constants import HBA1C_FORMATS
 from project.npda.models import Visit
+from project.npda.views.decorators import login_and_otp_required
 
 
+@login_and_otp_required()
 def patient_ages(request):
     """
     This function is used to generate the patient ages table
