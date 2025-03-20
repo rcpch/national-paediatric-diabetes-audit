@@ -384,7 +384,7 @@ def exclude_item(lst, item):
 
 @register.filter
 def hba1c_units(value, is_ifcc=True):
-    if value is None:
+    if value is None or value == "" or value == "0" or value == 0 or value < 0:
         return "-"
     if is_ifcc:
         return f"{value} mmol/mol"
