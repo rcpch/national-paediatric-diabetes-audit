@@ -270,7 +270,15 @@ async def csv_upload(
         try:
             save_errors_and_retain_valid_fields(patient_row_index, patient_form)
 
-            patient = await sync_to_async(lambda: patient_form.save())()
+            nhs_number = patient_form.cleaned_data.get("nhs_number")
+            unique_reference_number = patient_form.cleaned_data.get(
+                "unique_reference_number"
+            )
+
+            patient = None
+
+            if nhs_number or unique_reference_number:
+                patient = await sync_to_async(lambda: patient_form.save())()
 
             if patient:
                 # add the patient to a new Transfer instance
@@ -325,24 +333,14 @@ async def csv_upload(
 
                 visit_forms.append((visit_form, int(row["row_index"])))
 
-            nhs_number = patient_form.cleaned_data.get("nhs_number")
-            unique_reference_number = patient_form.cleaned_data.get(
-                "unique_reference_number"
+            transfer_fields = get_valid_transfer_fields(first_row, patient_form)
+
+            patient = await save_patient_and_transfer(
+                patient_form, transfer_fields, patient_row_index
             )
 
-            if nhs_number is None and unique_reference_number is None:
-                errors_to_return[patient_row_index]["__all__"].append(
-                    "Either NHS Number or Unique Reference Number must be provided."
-                )
-            else:
-                transfer_fields = get_valid_transfer_fields(first_row, patient_form)
-
-                patient = await save_patient_and_transfer(
-                    patient_form, transfer_fields, patient_row_index
-                )
-
-                if patient:
-                    await save_visits(patient, visit_forms)
+            if patient:
+                await save_visits(patient, visit_forms)
         except Exception as e:
             # Unexpected!
             logging.exception(
