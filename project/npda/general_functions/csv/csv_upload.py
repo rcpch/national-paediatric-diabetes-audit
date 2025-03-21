@@ -152,7 +152,7 @@ async def csv_upload(
                     model_errors[field].append({ "code": "", "message": error})
 
         # From forms. ValidationErrors.
-        for field, errors in form.errors.get_json_data(escape_html=True).items():
+        for field, errors in form.errors.get_json_data().items():
             model_errors[field] += errors
             
             # Confusingly the JSON in each instance retains the ValidationError code
@@ -345,8 +345,12 @@ async def csv_upload(
                     await save_visits(patient, visit_forms)
         except Exception as e:
             # Unexpected!
-            logging.exception(f"Unhandled exception processing {csv_file_name}[{patient_row_index}]") # triggers an admin email
-            errors_to_return[patient_row_index]["__all__"].append(str(e)) # record the row as failed
+            logging.exception(
+                f"Unhandled exception processing {csv_file_name}[{patient_row_index}]"
+            )  # triggers an admin email
+            errors_to_return[patient_row_index]["__all__"].append(
+                str(e)
+            )  # record the row as failed
 
     async with httpx.AsyncClient() as async_client:
         async with asyncio.TaskGroup() as tg:

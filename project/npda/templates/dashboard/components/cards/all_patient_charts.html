@@ -1,0 +1,17 @@
+{% extends 'dashboard/components/bases/base_landscape_card.html' %}
+{% block card_title %}
+  All Patients
+{% endblock card_title %}
+{% block card_body %}
+  <div hx-get="{% url 'all_patient_charts' %}"
+       hx-trigger="load"
+       hx-swap="innerHTML"
+       hx-target="#all_patient_charts"
+       hx-indicator="#loading-spinner-all-patient-charts"
+       _="on htmx:afterRequest remove #loading-spinner-all-patient-charts">
+  </div>
+  <div id="all_patient_charts"></div>
+  <div id="loading-spinner-all-patient-charts"
+       class="loading loading-spinner text-rcpch_dark_blue flex flex-grow-1 justify-center items-center h-full w-1/5 mx-auto bg-center">
+  </div>
+{% endblock %}
