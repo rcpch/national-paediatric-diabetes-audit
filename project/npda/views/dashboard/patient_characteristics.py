@@ -307,16 +307,14 @@ def all_patient_charts(request):
     # Create the box plot for sex
     sex_hba1c_mmol_mol_box_plot = create_box_plot(df, "sex") if not df.empty else None
     # Create the box plot for IMD
+    imd_hba1c_mmol_mol_box_plot = None
+    if not df.empty:
     # We may not have IMD for all patients (invalid postcodes, ZZ99 etc)
-    df_all_with_imd = df.dropna(subset=["patient__index_of_multiple_deprivation_quintile"])
-    imd_hba1c_mmol_mol_box_plot = (
-        create_box_plot(
+        df_all_with_imd = df.dropna(subset=["patient__index_of_multiple_deprivation_quintile"])
+        imd_hba1c_mmol_mol_box_plot = create_box_plot(
             df_all_with_imd,
             "index_of_multiple_deprivation_quintile",
         )
-        if not df.empty
-        else None
-    )
     # Create the box plot for diabetes types
     diabetes_type_hba1c_mmol_mol_box_plot = (
         create_box_plot(
