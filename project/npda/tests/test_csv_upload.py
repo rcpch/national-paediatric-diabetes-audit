@@ -2,6 +2,7 @@ import dataclasses
 import datetime
 import tempfile
 import csv
+import collections
 from io import StringIO
 from decimal import Decimal
 from unittest.mock import AsyncMock, patch
@@ -139,10 +140,11 @@ def test_user(seed_groups_fixture, seed_users_fixture):
 # The database is not rolled back if we used the built in async support for pytest
 # https://github.com/pytest-dev/pytest-asyncio/issues/226
 @async_to_sync
-async def csv_upload_sync(user, dataframe, pdu_pz_code=ALDER_HEY_PZ_CODE):
+async def csv_upload_sync(user, dataframe, pdu_pz_code=ALDER_HEY_PZ_CODE, errors_to_return=None):
     return await csv_upload(
         user,
         dataframe,
+        errors_to_return=collections.defaultdict(lambda: collections.defaultdict(list)) if errors_to_return is None else errors_to_return,
         csv_file_name=None,
         csv_file_bytes=None,
         pdu_pz_code=pdu_pz_code,
@@ -1056,26 +1058,38 @@ def test_bad_date_format_on_date_of_birth(
     ), "There should be no patients in the database after the test"
 
 
-@pytest.mark.skip("Can't distinguish between a bad date format or a missing date until https://github.com/rcpch/national-paediatric-diabetes-audit/pull/752")
 @pytest.mark.django_db
 def test_bad_date_format_on_date_of_diagnosis(test_user, single_row_valid_df):
     df = single_row_valid_df
 
-    column = "Date of Level 3 carbohydrate counting education received"
+    column = "Date of Diabetes Diagnosis"
 
     df[column] = df[column].astype(str)
     df[column] = "beep"
 
     csv = df.to_csv(index=False, date_format="%d/%m/%Y")
 
-    df = read_csv_from_str(csv).df
-    errors = csv_upload_sync(test_user, df)
+    # Slightly janky - date format errors are returned separately from parse_csv
+    # as they are swallowed up into NaT and we cannot later distinguish between
+    # that an the cell being empty in the CSV upload. To avoid rewriting all the usage
+    # of csv_upload_sync across all tests we assert in two stages here
+    errors = read_csv_from_str(csv).errors_to_return
 
     assert len(errors) == 1
-    assert "date_of_diagnosis" in errors[0]
+    assert "diagnosis_date" in errors[0]
+    assert errors[0]["diagnosis_date"][0] == "Date format is incorrect (expected DD/MM/YYYY)"
+
+    errors = csv_upload_sync(test_user, df, errors_to_return=errors)
+    assert "diagnosis_date" in errors[0]
+    assert errors[0]["diagnosis_date"][0] == "Date format is incorrect (expected DD/MM/YYYY)"
 
     assert(Patient.objects.count() == 1)
-    assert(Patient.objects.first().diagnosis_date is None)
+    patient = Patient.objects.first()
+
+    assert(patient.diagnosis_date is None)
+    
+    assert "diagnosis_date" in patient.errors
+    assert patient.errors["diagnosis_date"][0]["message"] == "Date format is incorrect (expected DD/MM/YYYY)"
 
 
 @pytest.mark.django_db
@@ -3221,7 +3235,6 @@ def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
     assert model_field in instance.errors
 
 
-@pytest.mark.skip(reason="https://github.com/rcpch/national-paediatric-diabetes-audit/issues/488")
 @pytest.mark.parametrize(
     "model_field",
     [
@@ -3265,17 +3278,23 @@ def test_bad_data_for_date_fields(test_user, dummy_sheet_csv, model_field):
         ]
     )
 
-    df = read_csv_from_str(one_row_csv).df
+    results = read_csv_from_str(one_row_csv)
 
-    errors = csv_upload_sync(test_user, df)
+    # Slightly janky - date format errors are returned separately from parse_csv
+    # as they are swallowed up into NaT and we cannot later distinguish between
+    # that an the cell being empty in the CSV upload. To avoid rewriting all the usage
+    # of csv_upload_sync across all tests we assert in two stages here
+    errors = results.errors_to_return
 
     assert len(errors) > 0
+    assert model_field in errors[0]
+
+    csv_upload_sync(test_user, results.df, errors_to_return=errors)
+
     assert model.objects.count() == 1
 
     instance = model.objects.first()
-
     assert getattr(instance, model_field) == None
-    assert model_field in instance.errors
 
 
 @pytest.mark.parametrize(
