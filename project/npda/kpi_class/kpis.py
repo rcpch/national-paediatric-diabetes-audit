@@ -1310,7 +1310,8 @@ class CalculateKPIS:
         # Define the subquery to find the latest visit
         latest_visit_subquery = (
             Visit.objects.filter(
-                patient=OuterRef("pk"),
+                patient=OuterRef("pk"), 
+                treatment__isnull=False
             )
             .order_by("-visit_date")
             .values("pk")[:1]

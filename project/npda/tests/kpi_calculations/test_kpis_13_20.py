@@ -8,6 +8,7 @@ from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
 from project.npda.tests import utils
 from project.npda.tests.factories.patient_factory import PatientFactory
+from project.npda.tests.factories.visit_factory import VisitFactory
 from project.npda.tests.kpi_calculations.test_calculate_kpis import \
     assert_kpi_result_equal
 
@@ -102,3 +103,41 @@ def test_kpi_calculations_13_to_20(AUDIT_START_DATE, treatment: int, expected_re
         expected=expected_result,
         actual=kpi_calc_method(),
     )
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/797
+@pytest.mark.django_db
+def test_kpi_15_correct_if_last_visit_does_not_contain_treatment(AUDIT_START_DATE):
+    first_visit_date = AUDIT_START_DATE + relativedelta(days=2)
+
+    patient1 = PatientFactory(
+        visit__visit_date=first_visit_date,
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        visit__treatment=3
+    )
+
+    patient2 = PatientFactory(
+        visit__visit_date=first_visit_date,
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 8),
+        visit__treatment=3
+    )
+
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    calc_kpis.set_patients_for_calculation(Patient.objects.filter(pk__in=[patient1.pk, patient2.pk]))
+
+    result = calc_kpis.calculate_kpi_15_insulin_pump()
+    assert result.total_passed == 2
+
+    # Add a more recent visit that doesn't record the treatment
+    second_visit_date = first_visit_date + relativedelta(months=3)
+
+    VisitFactory(
+        patient=patient1,
+        visit_date=second_visit_date,
+        height=160.0,
+        weight=50.0,
+        height_weight_observation_date=second_visit_date,
+    )
+
+    result = calc_kpis.calculate_kpi_15_insulin_pump()
+    assert result.total_passed == 2
