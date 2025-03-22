@@ -58,5 +58,6 @@ def can_use_questionnaire(request):
 
 def context_from_settings(request):
     return {
-        "site_contact_email": settings.SITE_CONTACT_EMAIL
+        "site_contact_email": settings.SITE_CONTACT_EMAIL,
+        "instance_label": settings.INSTANCE_LABEL
     }

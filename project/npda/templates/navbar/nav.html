@@ -36,6 +36,11 @@
           <br>
           Diabetes Audit
         </p>
+        {% if instance_label %}
+          <p class="badge badge-lg badge-warning">
+            {{instance_label}}
+          </p>
+        {% endif %}
       </span>
       {% comment %} MOBILE {% endcomment %}
       <span class="lg:hidden">
