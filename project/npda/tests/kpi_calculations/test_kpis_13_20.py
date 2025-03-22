@@ -141,3 +141,19 @@ def test_kpi_15_correct_if_last_visit_does_not_contain_treatment(AUDIT_START_DAT
 
     result = calc_kpis.calculate_kpi_15_insulin_pump()
     assert result.total_passed == 2
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/800
+@pytest.mark.django_db
+def test_kpi_15_correct_if_treatment_is_pump_plus_medication(AUDIT_START_DATE):
+    patient = PatientFactory(
+        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        visit__treatment=6
+    )
+
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    calc_kpis.set_patients_for_calculation(Patient.objects.filter(pk__in=[patient.pk]))
+
+    result = calc_kpis.calculate_kpi_15_insulin_pump()
+    assert result.total_passed == 1
