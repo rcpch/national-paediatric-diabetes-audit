@@ -517,7 +517,9 @@ def return_eligible_visits(patients, audit_year):
     )
 
 
-def _build_box_plot(df, field, line_colors, fill_colors, title, xaxis_title):
+def _build_box_plot(
+    df, field, line_colors, fill_colors, title, xaxis_title, category_order=None
+):
     """
     # Create the violin plot using Plotly Graph Objects"
     """
@@ -526,7 +528,16 @@ def _build_box_plot(df, field, line_colors, fill_colors, title, xaxis_title):
     # round the percentage to 1 decimal place
     df["hba1c_percent"] = df["hba1c_percent"].apply(lambda x: round(x, 1))
 
-    for item in df[f"patient__{field}"].unique():
+    # If no category order specified, use the unique values in the data
+    if category_order is None:
+        category_order = sorted(df[f"patient__{field}"].unique())
+
+    # Filter the category order to only include categories that actually exist in the data
+    category_order = [
+        cat for cat in category_order if cat in df[f"patient__{field}"].unique()
+    ]
+
+    for item in category_order:
         subset = df[df[f"patient__{field}"] == item]
         # Add box plot
         fig.add_trace(
@@ -598,6 +609,7 @@ def create_box_plot(df, field):
         }
         title = "<b>Distribution of HbA1c (mmol/mol) by Sex</b>"
         xaxis_title = "Sex"
+        category_order = ["Male", "Female", "Not Known", "Not Specified"]
     elif field == "index_of_multiple_deprivation_quintile":
         mapping_object = {
             1: "1 (most deprived)",
@@ -622,6 +634,7 @@ def create_box_plot(df, field):
         }
         title = "<b>Distribution of HbA1c (mmol/mol) by IMD</b>"
         xaxis_title = "Index of Multiple Deprivation (IMD)"
+        category_order = ["1 (most deprived)", "2", "3", "4", "5 (least deprived)"]
     elif field == "diabetes_type":
         mapping_object = {
             1: "Type 1",
@@ -649,10 +662,19 @@ def create_box_plot(df, field):
             "Unknown": RCPCH_LIGHTEST_GREY,
         }
         title = "<b>Distribution of HbA1c (mmol/mol) by Diabetes Type</b>"
+        category_order = ["Type 1", "Type 2", "CFRD", "MODY", "Other", "Unknown"]
 
     df[f"patient__{field}"] = df[f"patient__{field}"].map(mapping_object)
     # Convert Decimal to float for plotting
     df["hba1c_mmol_mol"] = df["hba1c_mmol_mol"].astype(float)
 
-    boxplot = _build_box_plot(df, field, line_colors, fill_colors, title, xaxis_title)
+    boxplot = _build_box_plot(
+        df,
+        field,
+        line_colors,
+        fill_colors,
+        title,
+        xaxis_title,
+        category_order=category_order,
+    )
     return boxplot
