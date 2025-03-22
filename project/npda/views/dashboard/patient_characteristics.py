@@ -48,42 +48,42 @@ def patient_ages(request):
         {
             "key": 1,
             "value": "Type 1",
-            "enabled": False,
+            "enabled": True,
             "tooltip": "Type 1 Diabetes",
             "selected": False,
         },
         {
             "key": 2,
             "value": "Type 2",
-            "enabled": False,
+            "enabled": True,
             "tooltip": "Type 2 Diabetes",
             "selected": False,
         },
         {
             "key": 3,
             "value": "CFRD",
-            "enabled": False,
+            "enabled": True,
             "tooltip": "Cystic Fibrosis Related Diabetes",
             "selected": False,
         },
         {
             "key": 4,
             "value": "MODY",
-            "enabled": False,
+            "enabled": True,
             "tooltip": "MODY (monogenic forms of diabetes)",
             "selected": False,
         },
         {
             "key": 5,
             "value": "Other",
-            "enabled": False,
+            "enabled": True,
             "tooltip": "Other specified Diabetes Mellitus",
             "selected": False,
         },
         {
             "key": 9,
             "value": "Unknown",
-            "enabled": False,
+            "enabled": True,
             "tooltip": "Unknown/unspecified",
             "selected": False,
         },
@@ -151,6 +151,20 @@ def patient_ages(request):
                     diabetes_type=int(request.POST.get("diabetes_type"))
                 )  # Filter by diabetes type
 
+        # Disable the diabetes types that do not exist  in the queryset prior to filtering
+        all_patients_in_this_submission.values(
+            "diabetes_type",
+        )
+        for dmtype in diabetes_types:
+            if dmtype["key"] != "All" and dmtype[
+                "key"
+            ] not in all_patients_in_this_submission.values_list(
+                "diabetes_type", flat=True
+            ):
+                dmtype["enabled"] = False
+            else:
+                dmtype["enabled"] = True
+
         # Get the number of patients of ages 0-2, 2-5, 5-12, 12-16, 16-19, 19-25
         # Filter these patients by the diabetes type selected or All
         all_patients_in_this_submission_by_age = all_patients_in_this_submission.filter(
@@ -170,11 +184,6 @@ def patient_ages(request):
             patient["age"] = relativedelta(
                 comparison_date, patient["date_of_birth"]
             ).years
-
-            # Enable the diabetes types that exist  in the filter
-            for dmtype in diabetes_types:
-                if patient["diabetes_type"] == dmtype["key"]:
-                    dmtype["enabled"] = True
 
             # Count the number of patients in each age band
             if 0 <= patient["age"] < 2:
@@ -309,8 +318,10 @@ def all_patient_charts(request):
     # Create the box plot for IMD
     imd_hba1c_mmol_mol_box_plot = None
     if not df.empty:
-    # We may not have IMD for all patients (invalid postcodes, ZZ99 etc)
-        df_all_with_imd = df.dropna(subset=["patient__index_of_multiple_deprivation_quintile"])
+        # We may not have IMD for all patients (invalid postcodes, ZZ99 etc)
+        df_all_with_imd = df.dropna(
+            subset=["patient__index_of_multiple_deprivation_quintile"]
+        )
         imd_hba1c_mmol_mol_box_plot = create_box_plot(
             df_all_with_imd,
             "index_of_multiple_deprivation_quintile",
