@@ -89,12 +89,6 @@ def join_with_comma(value):
         return ", ".join(map(str, value))
     return value
 
-
-@register.simple_tag
-def site_contact_email():
-    return settings.SITE_CONTACT_EMAIL
-
-
 @register.filter
 def is_select(widget):
     return isinstance(widget, (forms.Select, forms.SelectMultiple))

@@ -56,5 +56,7 @@ def can_use_questionnaire(request):
     return {"can_use_questionnaire": False}
 
 
-def site_contact_email(request):
-    return settings.SITE_CONTACT_EMAIL
+def context_from_settings(request):
+    return {
+        "site_contact_email": settings.SITE_CONTACT_EMAIL
+    }
