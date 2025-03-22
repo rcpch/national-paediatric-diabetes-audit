@@ -74,6 +74,8 @@
                         </li>
                         <!-- Pop up which shows data protection guidance for report -->
                         {% include 'partials/page_elements/quality_report_popup.html' %}
+                        <!-- Pop up which shows data protection guidance for original data download -->
+                        {% include 'partials/page_elements/original_data_popup.html' %}
                         <li>
                             <div tabindex="0" role="button" class="btn btn-info text-white dropdown dropdown-bottom dropdown-end">
                                 <i class="fa-solid fa-chevron-down"></i>
@@ -88,8 +90,6 @@
                                             Download original file
                                         </a>
                                     </li>
-                                    <!-- Pop up which shows data protection guidance for original data download -->
-                                    {% include 'partials/page_elements/original_data_popup.html' %}
                                     <li>
                                         <a href="{% url 'submissions' %}">
                                             <i class="fa-solid fa-timeline"></i>
