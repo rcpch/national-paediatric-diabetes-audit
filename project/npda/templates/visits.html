@@ -120,16 +120,38 @@
                 </div>
               </div>
             {% endif %}
-            {% if perms.npda.add_visit %}
-              {% if can_alter_this_audit_year_submission %}
-                <a href="{% url 'visit-create' patient_id=patient.pk %}"
-                   class="bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 mt-40 font-semibold text-white border hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue hover:text-white">Create New Visit</a>
-              {% else %}
-                <span class="bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 mt-40 font-semibold text-white border opacity-40 pointer-events-none hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue hover:text-white">Create New Visit</span>
+            <div>
+              {% if perms.npda.add_visit %}
+                  {% if is_audit_year_open %}
+                    <a href="{% url 'visit-create' patient_id=patient.pk %}"
+                      class="bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 mt-40 font-semibold text-white border hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue hover:text-white">
+                      Create New Visit
+                    </a>
+                  {% else %}
+                    <span class="bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 mt-40 font-semibold text-white border opacity-40 pointer-events-none hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue hover:text-white">
+                      Create New Visit
+                    </span>
+                    {% if can_override_audit_year_open %}
+                      <details class="dropdown">
+                        <summary class="btn bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 font-semibold text-white">
+                          <i class="fa-solid fa-chevron-down"></i>
+                        </summary>
+                        <ul tabindex="0"
+                            class="dropdown-content menu bg-base-100 text-black font-normal rounded-box z-[1] w-52 p-2 shadow">
+                          <li>
+                              <a href="{% url 'visit-create' patient_id=patient.pk %}" class="text-rcpch_red">
+                                  <i class="fa-solid fa-person-circle-plus"></i>
+                                  Add visit manually (Audit Team only)
+                              </a>
+                          </li>
+                        </ul>
+                      </details>
+                    {% endif %}
+                  {% endif %}
               {% endif %}
-            {% endif %}
-            <a href="{% url 'patients' %}"
-               class="bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 mt-40 font-semibold text-white border hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue hover:text-white">Back to Patient List</a>
+              <a href="{% url 'patients' %}"
+                class="bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 mt-40 ml-3 font-semibold text-white border hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue hover:text-white">Back to Patient List</a>
+            </div>
             <div class="py-20">
               {% include 'partials/visit_list_tips.html' with pz_code=pz_code patient=patient %}
             </div>

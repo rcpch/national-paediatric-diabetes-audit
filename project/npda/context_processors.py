@@ -24,8 +24,8 @@ def can_do_ui_actions(request):
     can_override_audit_year_open = request.user.is_superuser or getattr(request.user, "is_rcpch_audit_team_member", False)
 
     return {
-        "is_audit_year_open": False,
-        "can_override_audit_year_open": can_override_audit_year_open,
+        "is_audit_year_open": session_is_audit_year_open,
+        "can_override_audit_year_open": can_override_audit_year_open
         "can_alter_this_audit_year_submission": session_is_audit_year_open or can_override_audit_year_open,
         "can_use_questionnaire": session_can_use_questionnaire or can_override_audit_year_open,
     }
