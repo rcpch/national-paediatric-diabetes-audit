@@ -10,6 +10,7 @@ from .models import (
     VisitActivity,
     Submission,
     PaediatricDiabetesUnit,
+    Banner
 )
 from django.contrib.sessions.models import Session
 
@@ -57,6 +58,11 @@ class VisitActivityAdmin(admin.ModelAdmin):
 
 @admin.register(Submission)
 class SubmissionAdmin(admin.ModelAdmin):
+    search_fields = ["pk"]
+
+
+@admin.register(Banner)
+class BannerAdmin(admin.ModelAdmin):
     search_fields = ["pk"]
 
 

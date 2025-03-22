@@ -35,6 +35,14 @@
     {% block nav %}
       {% include 'navbar/nav.html' %}
     {% endblock %}
+    {% if banner %}
+      <div role="alert" class="alert alert-info">
+        <i class="fa-solid fa-info"></i>
+        <div>
+          {{ banner.html|safe }}
+        </div>
+      </div>
+    {% endif %}
     {% block content %}{% endblock %}
     {% include 'footer.html' %}
     {% block toasts %}

@@ -174,6 +174,7 @@ TEMPLATES = [
                 "project.npda.context_processors.session_data",
                 "project.npda.context_processors.can_alter_this_audit_year_submission",
                 "project.npda.context_processors.can_use_questionnaire",
+                "project.npda.context_processors.banner",
                 # Autologout
                 "django_auto_logout.context_processors.auto_logout_client",
             ],
