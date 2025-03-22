@@ -1756,12 +1756,9 @@ class CalculateKPIS:
 
         # Eligible kpi24 patients are those who are either on an insulin pump or insulin pump therapy
         eligible_kpi_24_latest_visit_subquery = (
-            Visit.objects.filter(patient=OuterRef("pk"))
-            .filter(
-                # Either:
-                # 3 = insulin pump
-                # or 6 = Insulin pump therapy plus other blood glucose lowering medication
-                Q(treatment__in=[3, 6])
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                treatment__isnull=False
             )
             .order_by("-visit_date")
             .values("pk")[:1]
@@ -1770,7 +1767,8 @@ class CalculateKPIS:
             Q(
                 id__in=Subquery(
                     Patient.objects.filter(
-                        visit__in=eligible_kpi_24_latest_visit_subquery
+                        visit__in=eligible_kpi_24_latest_visit_subquery,
+                        visit__treatment__in=[3, 6]
                     ).values("id")
                 )
             )
