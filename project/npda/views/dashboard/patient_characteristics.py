@@ -156,7 +156,7 @@ def patient_ages(request):
             "diabetes_type",
         )
         for dmtype in diabetes_types:
-            if dmtype["key"] != "All" and dmtype[
+            if dmtype["key"] != 0 and dmtype[
                 "key"
             ] not in all_patients_in_this_submission.values_list(
                 "diabetes_type", flat=True
