@@ -455,7 +455,8 @@ def get_n_on_hcl_partial(request):
     )
 
     context = {
-        "number": n_hcl_use,
+        "numerator": hcl_use_kpi_result.total_passed,
+        "denominator": hcl_use_kpi_result.total_eligible,
         "units": f"({pct_hcl_use}%)",
     }
 
@@ -501,7 +502,6 @@ def get_pump_partial(request):
 
     pump_kpi_result = calculate_kpis.calculate_kpi_15_insulin_pump()
 
-    n_pump = pump_kpi_result.total_passed
     pct_pump = (
         round(pump_kpi_result.total_passed / pump_kpi_result.total_eligible * 100, 1)
         if pump_kpi_result.total_eligible > 0
@@ -509,7 +509,8 @@ def get_pump_partial(request):
     )
 
     context = {
-        "number": n_pump,
+        "numerator": pump_kpi_result.total_passed,
+        "denominator": pump_kpi_result.total_eligible,
         "units": f"({pct_pump}%)",
     }
 
@@ -555,7 +556,6 @@ def get_cgm_partial(request):
 
     cgm_kpi_result = calculate_kpis.calculate_kpi_22_real_time_cgm_with_alarms()
 
-    n_cgm = cgm_kpi_result.total_passed
     pct_cgm = (
         round(cgm_kpi_result.total_passed / cgm_kpi_result.total_eligible * 100, 1)
         if cgm_kpi_result.total_eligible > 0
@@ -563,7 +563,8 @@ def get_cgm_partial(request):
     )
 
     context = {
-        "number": n_cgm,
+        "numerator": cgm_kpi_result.total_passed,
+        "denominator": cgm_kpi_result.total_eligible,
         "units": f"({pct_cgm}%)",
     }
 

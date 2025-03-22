@@ -1311,7 +1311,7 @@ class CalculateKPIS:
         Calculates KPI 15: Insulin pump (including those using a pump as part of a hybrid closed loop)
 
         Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment
-        regimen (item 20) is 3 = Insulin pump
+        regimen (item 20) is 3 = Insulin pump or 6 = Insulin pump therapy plus other blood glucose lowering medication
 
         Denominator: Total number of eligible patients (measure 1)
         """
@@ -1326,17 +1326,19 @@ class CalculateKPIS:
         # Define the subquery to find the latest visit
         latest_visit_subquery = (
             Visit.objects.filter(
-                patient=OuterRef("pk"),
+                patient=OuterRef("pk"), 
+                treatment__isnull=False
             )
             .order_by("-visit_date")
             .values("pk")[:1]
         )
-        # Filter the Patient queryset based on the subquery if treatment_regimen = 3
+        # Filter the Patient queryset based on the subquery and treatments
         passed_patients = eligible_patients.filter(
             Q(
                 id__in=Subquery(
                     Patient.objects.filter(
-                        visit__in=latest_visit_subquery, visit__treatment=3
+                        visit__in=latest_visit_subquery,
+                        visit__treatment__in=[3, 6]
                     ).values("id")
                 )
             )
@@ -1770,12 +1772,9 @@ class CalculateKPIS:
 
         # Eligible kpi24 patients are those who are either on an insulin pump or insulin pump therapy
         eligible_kpi_24_latest_visit_subquery = (
-            Visit.objects.filter(patient=OuterRef("pk"))
-            .filter(
-                # Either:
-                # 3 = insulin pump
-                # or 6 = Insulin pump therapy plus other blood glucose lowering medication
-                Q(treatment__in=[3, 6])
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                treatment__isnull=False
             )
             .order_by("-visit_date")
             .values("pk")[:1]
@@ -1784,7 +1783,8 @@ class CalculateKPIS:
             Q(
                 id__in=Subquery(
                     Patient.objects.filter(
-                        visit__in=eligible_kpi_24_latest_visit_subquery
+                        visit__in=eligible_kpi_24_latest_visit_subquery,
+                        visit__treatment__in=[3, 6]
                     ).values("id")
                 )
             )
