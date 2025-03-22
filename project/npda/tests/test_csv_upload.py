@@ -2284,6 +2284,27 @@ def test_smoking_status_date_missing_fails_validation(test_user, single_row_vali
     assert visit.smoking_cessation_referral_date is None
 
 
+@pytest.mark.django_db
+def test_smoking_status_smoker_does_not_require_cessation_referral_date(test_user, single_row_valid_df):
+    """
+    Test that smoking status is accepted
+    """
+    single_row_valid_df.loc[
+        0,
+        "Date of offer of referral to smoking cessation service (if patient is a current smoker)",
+    ] = None
+    single_row_valid_df.loc[0, "Does the patient smoke?"] = 2  # Current smoker
+
+    errors = csv_upload_sync(test_user, single_row_valid_df)
+
+    assert len(errors) == 0
+
+    visit = Visit.objects.first()
+
+    assert visit.smoking_cessation_referral_date is None
+    assert visit.smoking_status == 2
+
+
 """
 Dietitian referral tests
 """

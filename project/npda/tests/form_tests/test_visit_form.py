@@ -1372,6 +1372,24 @@ def test_smoking_status_date_when_non_smoker_form_fails_validation():
     assert "smoking_cessation_referral_date" in form.errors
 
 
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/791
+@pytest.mark.django_db
+def test_smoking_status_smoker_does_not_require_cessation_referral_date():
+    patient = PatientFactory()
+
+    form = VisitForm(
+        data={
+            "visit_date": "2025-01-01",  # Required for validation
+            "smoking_status": 2,  # current smoker
+        },
+        initial={"patient": patient},
+    )
+    # Trigger the cleaners
+    assert form.is_valid(), f"Form should be valid but got {form.errors}"
+    assert "smoking_status" not in form.errors
+    assert "smoking_cessation_referral_date" not in form.errors
+
+
 """
 Dietician tests
 """
