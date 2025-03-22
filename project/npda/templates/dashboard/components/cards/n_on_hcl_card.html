@@ -1,0 +1,23 @@
+{% extends "dashboard/components/bases/base_secondary_card.html" %}
+
+{% block card_title %}
+    Closed Loop
+    {% include 'common/docs_icon_link_button.html' with rel_url="developer/kpis/hybrid_closed_loop_system" fa_icon_class="fa-solid fa-eye" %}
+{% endblock %}
+
+{% block card_content %}
+
+<div
+hx-get="{% url 'get_n_on_hcl_partial' %}"
+hx-trigger="load" hx-swap="innerHTML"
+_="on htmx:afterSwap remove #loading-spinner-n-on-hcl-card"></div>
+
+
+
+
+<div id="loading-spinner-n-on-hcl-card"
+class="loading loading-spinner text-rcpch_dark_blue flex flex-grow-1 justify-center items-center h-full w-1/5 mx-auto bg-center">
+</div>
+
+
+{% endblock %}

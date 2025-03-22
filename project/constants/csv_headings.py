@@ -268,8 +268,6 @@ CSV_HEADING_OBJECTS = (
     },
 )
 
-# HEADINGS_LIST = [item["heading"] for item in CSV_HEADINGS]
-
 ALL_DATES = [
     "Date of Birth",
     "Date of Diabetes Diagnosis",
@@ -342,33 +340,33 @@ ENGLAND_CSV_DATA_TYPES = {
 
 CSV_DATA_TYPES_MINUS_DATES = {
     "Postcode of usual address": "string",
-    "Stated gender": "Int8",
+    "Stated gender": "Int64",
     "Ethnic Category": "string",  # choices are all capital letters
-    "Diabetes Type": "Int8",
-    "Reason for leaving service": "Int8",
+    "Diabetes Type": "Int64",
+    "Reason for leaving service": "Int64",
     "GP Practice Code": "string",
     "PDU Number": "string",
     "Patient Height (cm)": "float64",
     "Patient Weight (kg)": "float64",
     "Hba1c Value": "float64",
-    "HbA1c result format": "Int8",
-    "Diabetes Treatment at time of Hba1c measurement": "Int8",
-    "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?": "Int8",
-    "At the time of HbA1c measurement, in addition to standard blood glucose monitoring (SBGM), was the patient using any other method of glucose monitoring?": "Int8",
-    "Systolic Blood Pressure": "Int16",
-    "Diastolic Blood pressure": "Int16",
-    "Retinal Screening Result": "Int8",
+    "HbA1c result format": "Int64",
+    "Diabetes Treatment at time of Hba1c measurement": "Int64",
+    "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?": "Int64",
+    "At the time of HbA1c measurement, in addition to standard blood glucose monitoring (SBGM), was the patient using any other method of glucose monitoring?": "Int64",
+    "Systolic Blood Pressure": "Int64",
+    "Diastolic Blood pressure": "Int64",
+    "Retinal Screening Result": "Int64",
     "Urinary Albumin Level (ACR)": "float64",
-    "Albuminuria Stage": "Int8",
+    "Albuminuria Stage": "Int64",
     "Total Cholesterol Level (mmol/l)": "float64",
-    "At time of, or following measurement of thyroid function, was the patient prescribed any thyroid treatment?": "Int8",
-    "Has the patient been recommended a Gluten-free diet?": "Int8",
-    "Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?": "Int8",
-    "Does the patient smoke?": "Int8",
-    "Was the patient offered an additional appointment with a paediatric dietitian?": "Int8",
-    "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?": "Int8",
-    "Reason for admission": "Int8",
-    "Only complete if DKA selected in previous question: During this DKA admission did the patient receive any of the following therapies?": "Int8",
+    "At time of, or following measurement of thyroid function, was the patient prescribed any thyroid treatment?": "Int64",
+    "Has the patient been recommended a Gluten-free diet?": "Int64",
+    "Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?": "Int64",
+    "Does the patient smoke?": "Int64",
+    "Was the patient offered an additional appointment with a paediatric dietitian?": "Int64",
+    "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?": "Int64",
+    "Reason for admission": "Int64",
+    "Only complete if DKA selected in previous question: During this DKA admission did the patient receive any of the following therapies?": "Int64",
     "Only complete if OTHER selected: Reason for admission (free text)": "string",
 }
 
@@ -378,3 +376,14 @@ NONNULL_FIELDS = [
     "PDU Number",
     "Visit/Appointment Date",
 ]
+
+def csv_definition_for(model_field_or_column: str):
+    match model_field_or_column:
+        case 'nhs_number' | 'NHS Number':
+            return UNIQUE_IDENTIFIER_ENGLAND[0]
+        case 'unique_reference_number' | 'Unique Reference Number':
+            return UNIQUE_IDENTIFIER_JERSEY[0]
+        case _:
+            for item in CSV_HEADING_OBJECTS:
+                if item["model_field"] == model_field_or_column or item["heading"] == model_field_or_column:
+                    return item

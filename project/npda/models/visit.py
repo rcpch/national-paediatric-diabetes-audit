@@ -1,6 +1,7 @@
 # python imports
 from datetime import date
 import logging
+from decimal import Decimal
 
 # django imports
 from django.contrib.gis.db import models
@@ -643,3 +644,32 @@ class Visit(models.Model, HelpTextMixin):
 
     def __str__(self) -> str:
         return f"Patient visit for {self.patient} on {self.visit_date}"
+
+    def _hba1c_mmol_mol(self):
+        """
+        Return HbA1c in mmol/mol
+
+        If has been supplied in %, convert to mmol/mol using the formula
+        HbA1c (%) = (0.09148 * HbA1c (mmol/mol)) + 2.152
+        HbA1c (mmol/mol) = (HbA1c (%) - 2.152) / 0.09148
+        """
+
+        if (
+            self.hba1c_format is not None
+            and self.hba1c is not None
+            and (
+                (self.hba1c > 2 and self.hba1c_format == HBA1C_FORMATS[1][0])
+                or (self.hba1c >= 9 and self.hba1c_format == HBA1C_FORMATS[0][0])
+            )
+        ):
+            if self.hba1c_format == HBA1C_FORMATS[0][0]:  # mmol/mol
+                return self.hba1c
+            elif self.hba1c_format == HBA1C_FORMATS[1][0]:
+                # Convert self.hba1c to Decimal before performing the calculation
+                hba1c_decimal = Decimal(str(self.hba1c))
+                result = (hba1c_decimal - Decimal("2.152")) / Decimal("0.09148")
+                return int(
+                    result.quantize(Decimal("1"), rounding="ROUND_HALF_UP")
+                )  # or ROUND_HALF_EVEN, etc.
+
+        return None

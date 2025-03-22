@@ -372,3 +372,44 @@ def no_categories_present(categories):
         if category.get("present", False):
             return False
     return True
+
+
+@register.filter
+def exclude_item(lst, item):
+    """Removes an item from a list"""
+    if isinstance(lst, list):
+        return [i for i in lst if i != item]
+    return lst  # Return as-is if it's not a list
+
+
+@register.filter
+def hba1c_units(value, is_ifcc=True):
+    if value is None or value == "" or value == "0" or value == 0 or value < 0:
+        return "-"
+    if is_ifcc:
+        return f"{value} mmol/mol"
+    else:
+        return f"({value} %)"
+
+
+@register.filter
+def percentage(value: str, total: str):
+    if (
+        value is None
+        or total is None
+        or value == ""
+        or total == ""
+        or total == 0
+        or value == 0
+        or total == "0"
+        or value == "0"
+    ):
+        return "-"
+    return f"{round(int(value) / int(total) * 100)}%"
+
+
+@register.filter
+def none_to_dash(value):
+    if value is None or value == "" or value == "0" or value == 0:
+        return "-"
+    return value

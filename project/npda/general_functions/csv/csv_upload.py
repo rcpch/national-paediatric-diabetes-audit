@@ -3,8 +3,8 @@ from datetime import date
 from asgiref.sync import sync_to_async
 import logging
 import asyncio
-import collections
 import json
+import collections
 
 # django imports
 from django.apps import apps
@@ -21,6 +21,7 @@ from project.constants import (
     CSV_HEADING_OBJECTS,
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
+    LEAVE_PDU_REASONS,
 )
 
 # Logging setup
@@ -34,7 +35,7 @@ from project.npda.general_functions.csv.csv_clean import csv_clean
 
 
 async def csv_upload(
-    user, dataframe, csv_file_name, csv_file_bytes, pdu_pz_code, audit_year
+    user, dataframe, errors_to_return, csv_file_name, csv_file_bytes, pdu_pz_code, audit_year
 ):
     """
     Processes standardised NPDA csv file and persists results in NPDA tables
@@ -82,11 +83,9 @@ async def csv_upload(
 
         return ret
 
-    def validate_transfer(row):
-        return row_to_dict(row, Transfer) | {"paediatric_diabetes_unit": pdu}
-
     async def validate_patient_using_form(row, async_client):
-        fields = row_to_dict(row, Patient)
+        # Date and reason leaving service are validated by the patient form but saved in Transfer 
+        fields = row_to_dict(row, Patient) | row_to_dict(row, Transfer)
 
         form = PatientForm(
             fields,
@@ -120,25 +119,61 @@ async def csv_upload(
 
         return form
 
-    def retain_errors_and_invalid_field_data(form):
-        # We want to retain fields even if they're invalid so that we can return them to the user
+    def can_save_field(form, target_field_name):
+        for field_name, errors in form.errors.as_data().items():
+            if field_name == target_field_name:
+                for error in errors:
+                    if error.code in ["invalid", "invalid_choice"]:
+                        return False
+
+        return True
+
+    def save_errors_and_retain_valid_fields(row_index, form):
+        # We want to retain fields so that we can show them in the user interface
         # Use the field value from cleaned_data, falling back to data if it's not there
+        # We can't retain invalid fields however as they might fail database validation
         for key, value in form.cleaned_data.items():
             setattr(form.instance, key, value)
 
         for key, value in form.data.items():
-            if key not in form.cleaned_data:
+            if key not in form.cleaned_data and can_save_field(form, key):
                 setattr(form.instance, key, value)
+            elif not hasattr(form.instance, key):
+                setattr(form.instance, key, None)
 
         form.instance.is_valid = form.is_valid()
-        form.instance.errors = (
-            None if form.is_valid() else form.errors.get_json_data(escape_html=True)
-        )
 
-    def record_errors_from_form(errors_to_return, row_index, form):
-        for field, errors in form.errors.as_data().items():
+        model_errors = collections.defaultdict(list)
+
+        # From csv_parse. Strings rather than ValidationErrors.
+        if row_index in errors_to_return:
+            for field, errors in errors_to_return[row_index].items():
+                for error in errors:
+                    model_errors[field].append({ "code": "", "message": error})
+
+        # From forms. ValidationErrors.
+        for field, errors in form.errors.get_json_data().items():
+            model_errors[field] += errors
+            
+            # Confusingly the JSON in each instance retains the ValidationError code
+            # but we just store the messages for the error json on Submission
+            # TODO MRB: Rationalise in https://github.com/rcpch/national-paediatric-diabetes-audit/issues/332
             for error in errors:
-                errors_to_return[row_index][field].extend(error.messages)
+                errors_to_return[row_index][field].append(error["message"])
+
+        if model_errors:
+            form.instance.errors = model_errors
+        else:
+            form.instance.errors = None
+    
+    def get_valid_transfer_fields(row, patient_form):
+        transfer_fields = row_to_dict(row, Transfer) | {"paediatric_diabetes_unit": pdu}
+
+        for field in transfer_fields:
+            if not can_save_field(patient_form, field):
+                transfer_fields[field] = None
+
+        return transfer_fields
 
     """"
     Create the submission and save the csv file
@@ -229,17 +264,21 @@ async def csv_upload(
     else:
         visits_by_patient = dataframe.groupby("NHS Number", sort=False, dropna=False)
 
-    # Gather all error messages indexed by row number and the field that caused them (__all__ if we don't know which one)
-    # dict[number, dict[str, list[str]]]
-    errors_to_return = collections.defaultdict(lambda: collections.defaultdict(list))
-
     async def save_patient_and_transfer(
         patient_form, transfer_fields, patient_row_index
     ):
         try:
-            retain_errors_and_invalid_field_data(patient_form)
+            save_errors_and_retain_valid_fields(patient_row_index, patient_form)
 
-            patient = await sync_to_async(lambda: patient_form.save())()
+            nhs_number = patient_form.cleaned_data.get("nhs_number")
+            unique_reference_number = patient_form.cleaned_data.get(
+                "unique_reference_number"
+            )
+
+            patient = None
+
+            if nhs_number or unique_reference_number:
+                patient = await sync_to_async(lambda: patient_form.save())()
 
             if patient:
                 # add the patient to a new Transfer instance
@@ -260,10 +299,8 @@ async def csv_upload(
 
     async def save_visits(patient, visit_forms):
         for visit_form, visit_row_index in visit_forms:
-            record_errors_from_form(errors_to_return, visit_row_index, visit_form)
-
             try:
-                retain_errors_and_invalid_field_data(visit_form)
+                save_errors_and_retain_valid_fields(visit_row_index, visit_form)
                 visit_form.instance.patient = patient
 
                 await sync_to_async(lambda: visit_form.save())()
@@ -280,42 +317,38 @@ async def csv_upload(
         patient_row_index = int(first_row["row_index"])
 
         try:
-            transfer_fields = validate_transfer(first_row)
-
             patient_form = await validate_patient_using_form(first_row, async_client)
 
             # Pull through cleaned_data so we can use it in the async visit validators
             await sync_to_async(patient_form.is_valid)()
-
-            record_errors_from_form(errors_to_return, patient_row_index, patient_form)
 
             visit_forms = []
             for _, row in rows.iterrows():
                 visit_form = await validate_visit_using_form(
                     patient_form, row, async_client
                 )
+                
+                # Pull through cleaned_data
+                visit_form.is_valid()
+
                 visit_forms.append((visit_form, int(row["row_index"])))
 
-            nhs_number = patient_form.cleaned_data.get("nhs_number")
-            unique_reference_number = patient_form.cleaned_data.get(
-                "unique_reference_number"
+            transfer_fields = get_valid_transfer_fields(first_row, patient_form)
+
+            patient = await save_patient_and_transfer(
+                patient_form, transfer_fields, patient_row_index
             )
 
-            if nhs_number is None and unique_reference_number is None:
-                errors_to_return[patient_row_index]["__all__"].append(
-                    "Either NHS Number or Unique Reference Number must be provided."
-                )
-            else:
-                patient = await save_patient_and_transfer(
-                    patient_form, transfer_fields, patient_row_index
-                )
-
-                if patient:
-                    await save_visits(patient, visit_forms)
+            if patient:
+                await save_visits(patient, visit_forms)
         except Exception as e:
             # Unexpected!
-            logging.exception(f"Unhandled exception processing {csv_file_name}[{patient_row_index}]") # triggers an admin email
-            errors_to_return[patient_row_index]["__all__"].append(str(e)) # record the row as failed
+            logging.exception(
+                f"Unhandled exception processing {csv_file_name}[{patient_row_index}]"
+            )  # triggers an admin email
+            errors_to_return[patient_row_index]["__all__"].append(
+                str(e)
+            )  # record the row as failed
 
     async with httpx.AsyncClient() as async_client:
         async with asyncio.TaskGroup() as tg:

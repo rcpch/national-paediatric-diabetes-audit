@@ -6,10 +6,10 @@ from dateutil.relativedelta import relativedelta
 from project.constants.diabetes_treatment import TREATMENT_TYPES
 from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
+from project.npda.tests import utils
 from project.npda.tests.factories.patient_factory import PatientFactory
-from project.npda.tests.kpi_calculations.test_calculate_kpis import (
-    assert_kpi_result_equal,
-)
+from project.npda.tests.kpi_calculations.test_calculate_kpis import \
+    assert_kpi_result_equal
 
 # Set up test params for kpis 13-20, as they all have the same denominator
 # and the only thing being changed is value for visit__treatment
@@ -27,9 +27,7 @@ for treatment_type in TREATMENT_TYPES[:-1]:
 
 @pytest.mark.parametrize(("treatment", "expected_result"), TX_TYPE_PARAMS)
 @pytest.mark.django_db
-def test_kpi_calculations_13_to_20(
-    AUDIT_START_DATE, treatment: int, expected_result: KPIResult
-):
+def test_kpi_calculations_13_to_20(AUDIT_START_DATE, treatment: int, expected_result: KPIResult):
     """Tests that KPIS13-20 are calculated correctly.
 
     Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is `treatment` (int 1-9)
@@ -78,11 +76,20 @@ def test_kpi_calculations_13_to_20(
         visit__treatment=1,
     )
 
+    # Create a submission (BEFORE calculating KPIs)
+    submission = utils.create_submission(
+        AUDIT_START_DATE,
+        pz_code=ineligible_patient_visit_date.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
+    )
+    submission.patients.add(*Patient.objects.all())
+
     # The default pz_code is "PZ130" for PaediatricsDiabetesUnitFactory
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
-    # Need to be mocked as not using public `calculate_kpis_for_*` methods
-    calc_kpis.patients = Patient.objects.all()
-    calc_kpis.total_patients_count = Patient.objects.count()
+    calc_kpis.set_patients_for_calculation(
+        pz_codes=[
+            ineligible_patient_visit_date.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code
+        ]
+    )
 
     # Dynamically get the kpi calc method based on treatment type
     #   `treatment` is an int between 1-8

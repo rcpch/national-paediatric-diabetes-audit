@@ -1,9 +1,11 @@
-<div class="bg-white border border-gray-300 rounded-lg shadow text-rcpch_dark_blue h-full flex flex-col">
-  <h2 class="text-lg text-center font-bold p-2">
-    {% block card_title %}{% endblock card_title %}
-  </h2>
-  {% block subtitle %}{% endblock %}
-  <div class="p-3 h-full">
-    {% block card_body %}{% endblock %}
+<div class="card bg-base-100 shadow-xl h-full flex flex-col">
+  <div class="card-body">
+    <h2 class="card-title text-sm text-center font-bold">
+      {% block card_title %}{% endblock card_title %}
+    </h2>
+    {% block subtitle %}{% endblock %}
+    <div class="h-full">
+      {% block card_body %}{% endblock %}
+    </div>
   </div>
 </div>

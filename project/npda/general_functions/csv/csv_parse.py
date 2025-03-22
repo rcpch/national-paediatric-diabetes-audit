@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 import logging
 import re
+import collections
 
 # Django imports
 from django.core.exceptions import ValidationError
@@ -17,6 +18,7 @@ from project.constants import (
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
     CSV_HEADING_OBJECTS,
+    csv_definition_for
 )
 
 # Logging setup
@@ -30,6 +32,11 @@ class ParsedCSVFile:
     additional_columns: list[str]
     duplicate_columns: list[str]
     parse_type_error_columns: list[str]
+    # Gather all error messages indexed by row number and the field that caused them
+    # csv_upload also has one of these and they are merged before saving
+    # NB: the nested dict is keyed by model field name, not CSV heading
+    # dict[number, dict[str, list[str]]]
+    errors_to_return: collections.defaultdict[int, collections.defaultdict[str, list[str]]]
 
 
 def csv_parse(csv_file, is_jersey=False):
@@ -44,6 +51,8 @@ def csv_parse(csv_file, is_jersey=False):
     # If it does not, we will use the predefined column names
     # If it does, we will use the column names in the csv file
     # The exception is if the first row of the csv file does not match any of the predefined column names, in which case we will reject the csv
+
+    errors_to_return = collections.defaultdict(lambda: collections.defaultdict(list))
 
     # Define the column names to be used in the csv file: the unique identifier in Jersy is different from the one in England
     if is_jersey:
@@ -120,8 +129,16 @@ def csv_parse(csv_file, is_jersey=False):
 
     for column in ALL_DATES:
         if column in df.columns:
+            column_before = df[column].copy()
             # Support DD/MM/YYYY and DD/MM/YY
-            df[column] = pd.to_datetime(df[column], format="mixed", dayfirst=True, errors="coerce")
+            column_after = pd.to_datetime(df[column], format="mixed", dayfirst=True, errors="coerce")
+
+            for (row_index, (value_before, value_after)) in enumerate(zip(column_before, column_after)):
+                if not pd.isna(value_before) and pd.isna(value_after):
+                    model_field = csv_definition_for(column)["model_field"]
+                    errors_to_return[row_index][model_field].append("Date format is incorrect (expected DD/MM/YYYY)")
+            
+            df[column] = column_after
 
     # Apply the dtype to non-date columns
     for column, dtype in CSV_DATA_TYPES_MINUS_DATES.items():
@@ -152,6 +169,8 @@ def csv_parse(csv_file, is_jersey=False):
 
     # Rows where the unique identifier is missing will be removed - count the number of rows before and after: placed here to ensure all columns have been processed
     total_row_count = df.shape[0]
+    discrepancy = 0
+
     if is_jersey:
         unique_reference_number_nonnull_row_count = df[
             "Unique Reference Number"
@@ -161,13 +180,14 @@ def csv_parse(csv_file, is_jersey=False):
                 "No Unique Reference Numbers found in the file. Please ensure all rows have a unique identifier and upload the file again."
             )
         discrepancy = total_row_count - unique_reference_number_nonnull_row_count
-    else:
+    elif "NHS Number" in df.columns:
         nhs_number_nonnull_row_count = df["NHS Number"].count()
         if nhs_number_nonnull_row_count == 0:
             raise ValueError(
                 "No NHS Numbers found in the file. Please ensure all rows have a unique identifier and upload the file again."
             )
         discrepancy = total_row_count - nhs_number_nonnull_row_count
+    
     if discrepancy > 0:
         if discrepancy == 1:
             raise ValueError(
@@ -183,4 +203,5 @@ def csv_parse(csv_file, is_jersey=False):
         additional_columns,
         duplicate_columns,
         parse_type_error_columns,
+        errors_to_return
     )
