@@ -2,10 +2,20 @@
   <div class="modal-box">
       <h3 class="text-lg font-bold">Good Data Protection Practice</h3>
       <p class="py-4">
-          This download contains your entire original data file. It contains personal information and must be stored securely and deleted after use.
+        This download contains your entire original data file. It contains personal information and must be stored securely and deleted after use.
       </p>
       <div class="modal-action">
-          <button class="btn" onclick="original_data_modal.close()" type="button">Accept and close</button>
+        <form method="post" action="{% url 'submissions' %}">
+          {% csrf_token %}
+          <input type="hidden" name="audit_id" value="{{ submission.pk }}">
+          <button class="btn"
+            name="submit-data"
+            value="download-data"
+            type="submit"
+            onclick="original_data_modal.close()">
+              Download
+          </button>
+        </form>
       </div>
   </div>
 </dialog>

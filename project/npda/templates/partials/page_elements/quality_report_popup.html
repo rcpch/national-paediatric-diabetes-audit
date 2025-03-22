@@ -1,11 +1,21 @@
 <dialog id="quality_report_modal" class="modal text-black">
   <div class="modal-box">
-      <h3 class="text-lg font-bold">Good Data Protection Practice</h3>
+      <h3 class="text-lg font-bold">Download Data Quality Report</h3>
       <p class="py-4">
-            The data quality report contains your original data annotated with errors using our validation rules. It contains personal information and must be stored securely and deleted after use.
+        The data quality report contains your original data annotated with errors using our validation rules. It contains personal information and must be stored securely and deleted after use.
       </p>
       <div class="modal-action">
-          <button class="btn" onclick="quality_report_modal.close()" type="button">Accept and close</button>
+        <form method="post" action="{% url 'submissions' %}">
+          {% csrf_token %}
+          <input type="hidden" name="audit_id" value="{{ submission.pk }}">
+          <button class="btn"
+            name="submit-data"
+            value="download-report"
+            type="submit"
+            onclick="quality_report_modal.close()">
+              Download
+          </button>
+        </form>
       </div>
   </div>
 </dialog>
