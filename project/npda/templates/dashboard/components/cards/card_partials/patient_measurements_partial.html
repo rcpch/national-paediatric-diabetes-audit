@@ -1,0 +1,72 @@
+{% load npda_tags %}
+<div>
+  <div class="table-responsive">
+    <table class="table table-bordered table-striped table-hover">
+      <thead>
+        <tr>
+          <th></th>
+          <th class="text-rcpch_pink">All</th>
+          <th>Type 1</th>
+          <th>Type 2</th>
+          <th>Other</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Mean</td>
+          <td class="text-rcpch_pink font-bold">
+            {{ hba1c_value_counts_stratified_by_diabetes_type.all.mean_mmol_mol|hba1c_units:True }}
+            {{ hba1c_value_counts_stratified_by_diabetes_type.all.mean_percent|hba1c_units:False }}
+          </td>
+          <td>
+            {{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.mean_mmol_mol|hba1c_units:True }} {{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.mean_percent|hba1c_units:False }}
+          </td>
+          <td>
+            {{ hba1c_value_counts_stratified_by_diabetes_type.t2dm.mean_mmol_mol|hba1c_units:True }} {{ hba1c_value_counts_stratified_by_diabetes_type.t2dm.mean_percent|hba1c_units:False }}
+          </td>
+          <td>
+            {{ hba1c_value_counts_stratified_by_diabetes_type.other.mean_mmol_mol|hba1c_units:True }} {{ hba1c_value_counts_stratified_by_diabetes_type.other.mean_percent|hba1c_units:False }}
+          </td>
+        </tr>
+        <tr>
+          <td>Median</td>
+          <td class="text-rcpch_pink font-bold">
+            {{ hba1c_value_counts_stratified_by_diabetes_type.all.median_mmol_mol|hba1c_units:True }} {{ hba1c_value_counts_stratified_by_diabetes_type.all.median_percent|hba1c_units:False }}
+          </td>
+          <td>
+            {{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.median_mmol_mol|hba1c_units:True }} {{ hba1c_value_counts_stratified_by_diabetes_type.t1dm.median_percent|hba1c_units:False }}
+          </td>
+          <td>
+            {{ hba1c_value_counts_stratified_by_diabetes_type.t2dm.median_mmol_mol|hba1c_units:True }} {{ hba1c_value_counts_stratified_by_diabetes_type.t2dm.median_percent|hba1c_units:False }}
+          </td>
+          <td>
+            {{ hba1c_value_counts_stratified_by_diabetes_type.other.median_mmol_mol|hba1c_units:True }} {{ hba1c_value_counts_stratified_by_diabetes_type.other.median_percent|hba1c_units:False }}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  {% comment %} stats {% endcomment %}
+  <a href="{% url 'patients' %}"
+     class="tooltip"
+     data-tip="Click here to view all patients and review any data quality issues">
+    <div class="flex flex-row justify-between text-center justify-center">
+      <div class="stats shadow">
+        <div class="stat place-items-center">
+          <div class="stat-figure text-primary"></div>
+          <div class="stat-title">Data Quality</div>
+          <div class="stat-value {% if submission_visit_error_count > 0 %}text-rcpch_pink{% else %}text-rcpch_light_blue{% endif %}">
+            {{ submission_visit_error_count }}
+          </div>
+          <div class="stat-desc">
+            visits have data errors
+            {% if submission_visit_error_count > 0 %}
+              affecting <strong>{{ affected_patients }}</strong> patients
+            {% endif %}
+          </div>
+          <div class="stat-desc">Last upload: {{ submission_date }}</div>
+        </div>
+      </div>
+    </div>
+  </a>
+</div>

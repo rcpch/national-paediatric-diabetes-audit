@@ -1,56 +1,25 @@
 {% extends 'dashboard/components/bases/base_card.html' %}
-
-
 {% block card_title %}
-  Patient Characteristics
-{% endblock card_title%}
+  Patient Ages by Diabetes Type
+{% endblock card_title %}
 {% block card_body %}
-
-{% if charts.pt_characteristics_value_counts.data.care.kpi_4_total_t1dm_gte_12yo.total == 0 %}
-  <div class="alert alert-info">
-    <i class="fa-solid fa-person-circle-exclamation"></i> No eligible patients.
-  </div>
-{% else %}
-<div class="p-2 h-full flex flex-col justify-between">
-    {% comment %} CARE {% endcomment %}
-    <div class="flex flex-col mb-1">
-      <div class="flex items-center">
-        <h4 class='font-bold'>Care</h4>
-        {% include 'common/docs_icon_link_button.html' with rel_url="developer/kpis/patient_characteristics/#4-number-of-patients-aged-12-with-type-1-diabetes" fa_icon_class="fa-solid fa-eye" %}
-      </div>
-
-      {% include 'dashboard/pt_characteristics_figures_and_title.html' with values=charts.pt_characteristics_value_counts.data.care key='care' %}
-
+  {% if hba1c_value_counts_stratified_by_diabetes_type.no_eligible_patients %}
+    <div class="alert alert-info">
+      <i class="fa-solid fa-person-circle-exclamation"></i> No eligible patients.
     </div>
-
-    {% comment %} TRANSITIONED {% endcomment %}
-    <div class="flex flex-col mb-1">
-      <div class="flex items-center">
-        <h4 class='font-bold'>Transitioned</h4>
-        {% include 'common/docs_icon_link_button.html' with rel_url="developer/kpis/patient_characteristics/#9-number-of-patients-who-transitionedleft-service-within-audit-period" fa_icon_class="fa-solid fa-eye" %}
+  {% else %}
+    <div class="overflow-x-auto w-full">
+      <div hx-get="{% url 'patient_ages' %}"
+           hx-trigger="load"
+           hx-swap="innerHTML"
+           hx-target="#patient_ages"
+           hx-indicator="#loading-spinner-patient-ages"
+           _="on htmx:afterRequest remove #loading-spinner-patient-ages">
       </div>
-
-      {% include 'dashboard/pt_characteristics_figures_and_title.html' with values=charts.pt_characteristics_value_counts.data.died_or_transitioned key='died_or_transitioned' %}
-
-    </div>
-
-    {% comment %} COMORBIDITY / TESTING {% endcomment %}
-    <div class="flex flex-col mb-1">
-      <div class="flex items-center">
-        <h4 class='font-bold'>Comorbidity & Testing</h4>
-        {% include 'common/docs_icon_link_button.html' with rel_url="developer/kpis/patient_characteristics/#10-number-of-patients-with-coeliac-disease" fa_icon_class="fa-solid fa-eye" %}
+      <div id="patient_ages" class="w-full"></div>
+      <div id="loading-spinner-patient-ages"
+           class="loading loading-spinner text-rcpch_dark_blue flex flex-grow-1 justify-center items-center h-full w-1/5 mx-auto bg-center">
       </div>
-
-      {% include 'dashboard/pt_characteristics_figures_and_title.html' with values=charts.pt_characteristics_value_counts.data.comorbidity_and_testing key='comorbidity_and_testing' %}
-
     </div>
-  </div>
-{% endif %}
-
+  {% endif %}
 {% endblock %}
-
-
-
-
-
-

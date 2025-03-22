@@ -13,8 +13,11 @@ def clean_csv_sex(value):
         case "f" | "2":
             return 2
         
-        case "not specified" | "9":
-            return 9
+        case "not specified" | "3":
+            return 3
+        
+        case "unknown" | "99":
+            return 99
         
         case _:
             # Return Not Known. The patient won't save in the database without a numeric value.
@@ -24,5 +27,7 @@ def clean_csv_sex(value):
 def csv_clean(df):
     if not is_numeric_dtype(df["Stated gender"]):
         df["Stated gender"] = df["Stated gender"].apply(clean_csv_sex)
+    
+    print(df["Stated gender"].dtype)
 
     return df

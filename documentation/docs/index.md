@@ -2,8 +2,6 @@
 title: Introduction
 author: Dr Simon Chapman
 ---
-!!! info "Guidance for Clinicians"
-    Go to the Clinician Guide above for guidance on entering patient data.
 
 ## National Paediatric Diabetes Audit
 
@@ -37,3 +35,16 @@ The audit is counselled by a Project Board and Methodology & Dataset Working Gro
 * Develop user-friendly tools to interrogate the dataset
 * Support centres wishing to develop local action plans to improve diabetes care
 * Maximise the use and availability of data for research
+
+# User Groups  
+    
+There are three different levels of user types within the NPDA portal, each with varying levels of access and permissions. These user types determine what aspects of the dashboard they can view or amend, ensuring that the right individuals have appropriate control over the data.  
+
+## Coordinator  
+Coordinators have the highest level of access within units, and this role should be assigned to clinical leads. Coordinators can upload, add, and remove data, as well as view site-level information. Additionally, they have the ability to add new users to the NPDA data capture system for their unit.  
+
+## Editor  
+Users with **Editor** status will have the ability to create and upload data to the platform. However, they will not be able to delete any data or access higher-level unit information. Editors will not be able to add new users to the platform.  
+
+## Reader  
+Users with **Reader** status will have restricted access, allowing them to view patient information such as NHS number and visit date, as well as unit-level data. However, they will not be able to amend any data, upload information, or add new users to the platform. 

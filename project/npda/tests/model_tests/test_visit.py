@@ -176,7 +176,7 @@ Suggested tests for the Visit model:
 - A visit can be created if a valid hospital_admission_discharge_date is supplied and is different to the visit date.
 - A visit can be created if a valid dka_additional_therapies is supplied (correct key) and a value of 2 ('DKA') for hospital_admission_reason has been supplied.
 - A visit cannot be created if an invalid dka_additional_therapies is supplied (incorrect key) and a value of 2 ('DKA') for hospital_admission_reason has been supplied.
-- A visit cannot be created if a valid dka_additional_therapies is supplied (correct key) and a value of 2 ('DKA') for hospital_admission_reason has not been supplied if an error is NOT stored in the errors field. 
+- A visit cannot be created if a valid dka_additional_therapies is supplied (correct key) and a value of 2 ('DKA') for hospital_admission_reason has not been supplied if an error is NOT stored in the errors field.
 - A visit can be created if a a valid dka_additional_therapies is supplied (correct key) and a value of 2 ('DKA') for hospital_admission_reason has not been supplied if an error is stored in the errors field.
 - A visit can be created if a valid hospital_admission_other is supplied and a value of 6 ('Other causes') for hospital_admission_reason has been supplied.
 - A visit cannot be created if a valid hospital_admission_other is supplied and a value of 6 ('Other causes') for hospital_admission_reason has not been supplied if an error is NOT stored in the errors field.
@@ -186,3 +186,58 @@ Suggested tests for the Visit model:
 - A visit can be created if a patient has multiple visits.
 - A visit cannot be created if it is associated with more than one patient.
 """
+
+import datetime
+import pytest
+from dateutil.relativedelta import relativedelta
+from django.apps import apps
+from django.utils import timezone
+from project.npda.models import Patient, Visit
+from project.constants import DIABETES_TYPES, HBA1C_FORMATS
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "hba1c, hba1c_format, expected_hba1c_mmol_mol",
+    [
+        (50, HBA1C_FORMATS[0][0], 50),  # mmol/mol
+        (6.5, HBA1C_FORMATS[1][0], 48),  # %
+        (None, HBA1C_FORMATS[0][0], None),  # mmol/mol
+        (None, HBA1C_FORMATS[1][0], None),  # %
+        (0, HBA1C_FORMATS[0][0], None),  # invalid mmol/mol
+        (0, HBA1C_FORMATS[1][0], None),  # invalid %
+        (8, HBA1C_FORMATS[0][0], None),  # invalid mmol/mol
+        (1, HBA1C_FORMATS[1][0], None),  # invalid %
+        (42, HBA1C_FORMATS[0][0], 42),  # mmol/mol
+        (5.5, HBA1C_FORMATS[1][0], 37),  # %
+        (75, HBA1C_FORMATS[0][0], 75),  # mmol/mol
+        (8.9, HBA1C_FORMATS[1][0], 74),  # %
+        (100, HBA1C_FORMATS[0][0], 100),  # mmol/mol
+        (10.1, HBA1C_FORMATS[1][0], 87),  # %
+    ],
+)
+def test_visit_hba1c_mmol_mol_conversion(hba1c, hba1c_format, expected_hba1c_mmol_mol):
+    """
+    Test that the HbA1c conversion from mmol/mol to % is correct.
+    """
+    Patient.objects.all().delete()
+    eligible_criteria = {
+        "date_of_birth": timezone.now() - relativedelta(years=5),
+        "diabetes_type": DIABETES_TYPES[0][0],  # Type 1
+        # KPI 41 specific
+        "diagnosis_date": timezone.now() - relativedelta(years=1),
+    }
+
+    eligible_visit_criteria = {
+        "visit_date": timezone.now(),
+        "hba1c": hba1c,
+        "hba1c_format": hba1c_format,  # mmol/mol
+        "hba1c_date": timezone.now() - relativedelta(months=1),
+    }
+
+    patient = Patient.objects.create(**eligible_criteria)
+    visit = Visit.objects.create(patient=patient, **eligible_visit_criteria)
+
+    assert (
+        visit._hba1c_mmol_mol() == expected_hba1c_mmol_mol
+    ), "HbA1c conversion from mmol/mol to % failed"
