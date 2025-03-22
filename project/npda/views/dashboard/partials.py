@@ -26,6 +26,7 @@ from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.models.paediatric_diabetes_unit import (
     PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
 )
+from project.npda.models.submission import Submission
 from project.npda.views.decorators import login_and_otp_required
 
 logger = logging.getLogger(__name__)
@@ -224,7 +225,20 @@ def get_new_diagnoses_partial(request):
 
     selected_audit_year = int(request.session.get("selected_audit_year"))
 
-    if selected_audit_year <= 2024:
+    if Submission.objects.filter(
+        paediatric_diabetes_unit=pdu,
+        audit_year=selected_audit_year,
+        submission_active=True,
+    ).exists():
+        submission = Submission.objects.get(
+            paediatric_diabetes_unit=pdu,
+            audit_year=selected_audit_year,
+            submission_active=True,
+        )
+    else:
+        submission = None
+
+    if selected_audit_year <= date.today().year:
         # The day after the audit year end date
         calculation_date = date(selected_audit_year, 4, 1)
     else:
@@ -237,9 +251,19 @@ def get_new_diagnoses_partial(request):
 
     calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
 
-    n_diagnoses_this_month = calculate_kpis.get_new_diagnoses_this_month()
+    # n_diagnoses_this_month = calculate_kpis.get_new_diagnoses_this_month()
+    if submission:
+        n_diagnoses_this_submission = calculate_kpis.get_new_diagnoses_this_submission(
+            submission=submission
+        )
+    else:
+        n_diagnoses_this_submission = 0
 
-    context = {"number": n_diagnoses_this_month, "units": "(N / month)"}
+    context = {
+        "number": n_diagnoses_this_submission,
+        "units": "(patients)",
+        "description": "New diagnoses this submission",
+    }
 
     return render(
         request,

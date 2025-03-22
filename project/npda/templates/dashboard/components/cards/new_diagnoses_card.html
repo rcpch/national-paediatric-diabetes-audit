@@ -1,23 +1,16 @@
 {% extends "dashboard/components/bases/base_secondary_card.html" %}
-
 {% block card_title %}
     New diagnoses
     {% include 'common/docs_icon_link_button.html' with rel_url="developer/kpis/patient_characteristics/#2-total-number-of-new-diagnoses-within-the-audit-period" fa_icon_class="fa-solid fa-eye" %}
+    <a href="{% url 'patients' %}" class="text-rcpch_pink"><i class="fa-solid fa-chart-line"></i></a>
 {% endblock %}
-
 {% block card_content %}
-
-<div
-hx-get="{% url 'get_new_diagnoses_partial' %}"
-hx-trigger="load" hx-swap="innerHTML"
-_="on htmx:afterSwap remove #loading-spinner-new-diagnoses-card"></div>
-
-
-
-
-<div id="loading-spinner-new-diagnoses-card"
-class="loading loading-spinner text-rcpch_dark_blue flex flex-grow-1 justify-center items-center h-full w-1/5 mx-auto bg-center">
-</div>
-
-
+    <div hx-get="{% url 'get_new_diagnoses_partial' %}"
+         hx-trigger="load"
+         hx-swap="innerHTML"
+         _="on htmx:afterSwap remove #loading-spinner-new-diagnoses-card">
+    </div>
+    <div id="loading-spinner-new-diagnoses-card"
+         class="loading loading-spinner text-rcpch_dark_blue flex flex-grow-1 justify-center items-center h-full w-1/5 mx-auto bg-center">
+    </div>
 {% endblock %}

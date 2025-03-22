@@ -449,6 +449,22 @@ class CalculateKPIS:
 
         return new_diagnoses_this_month
 
+    def get_new_diagnoses_this_submission(self, submission) -> int:
+        """Returns the number of new diagnoses for the current month"""
+        if not hasattr(self, "kpi_2_total_eligible"):
+            self.calculate_kpi_2_total_new_diagnoses()
+
+        # KPI 2 is the total number of new diagnoses within the audit period
+        # so we need to filter for the current month
+        audit_dates = get_audit_period_for_date(submission.submission_date.date())
+        submission_start = audit_dates[0]
+        submission_end = audit_dates[1]
+        new_diagnoses_this_month = self.total_kpi_2_eligible_pts_base_query_set.filter(
+            Q(diagnosis_date__range=(submission_start, submission_end))
+        ).count()
+
+        return new_diagnoses_this_month
+
     def calculate_kpi_3_total_t1dm(self) -> KPIResult:
         """
         Calculates KPI 3: Total number of eligible patients with Type 1 diabetes
