@@ -48,60 +48,58 @@
                 Add patient
             </a>
         {% else %}
-            <form method="post" action="{% url 'submissions' %}">
-                {% csrf_token %}
-                <input type="hidden" name="audit_id" value="{{ submission.pk }}">
-                <div class="dropdown pl-1 pr-1">
-                    <ul class="menu menu-horizontal">
-                        <li>
-                            <a href="{% url 'upload_csv' %}" class="btn btn-info text-white">
-                                <i class="fa-solid fa-upload"></i>
-                                Upload CSV
-                            </a>
-                        </li>
-                        <li>
-                            <button class="btn {% if submission_error_count > 0 %} btn-warning {% else %} btn-success {% endif %} text-white"
-                                    name="submit-data"
-                                    value="download-report"
-                                    type="submit">
-                                <i class="fa-solid fa-file-excel"></i>
-                                Data Quality Report
-                                {% if submission_error_count > 0 %}
-                                    <span class="badge badge-error">{{ submission_error_count }}</span>
-                                {% endif %}
-                            </a>
-                        </li>
-                        <li>
-                            <div tabindex="0" role="button" class="btn btn-info text-white">
-                                <i class="fa-solid fa-chevron-down"></i>
-                            </div>
-                        </li>
-                    </ul>
-                    <ul tabindex="0"
-                        class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
-                        <li>
-                            <button name="submit-data" value="download-data" type="submit">
-                                <i class="fa-solid fa-download"></i>
-                                Download original file
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{% url 'submissions' %}">
-                                <i class="fa-solid fa-timeline"></i>
-                                View upload history
-                            </a>
-                        </li>
-                        {% if user.is_superuser or request.user.is_rcpch_audit_team_member %}
+            <div class="pl-1 pr-1">
+                <ul class="menu menu-horizontal">
+                    <li>
+                        <a href="{% url 'upload_csv' %}" class="btn btn-info text-white">
+                            <i class="fa-solid fa-upload"></i>
+                            Upload CSV
+                        </a>
+                    </li>
+                    <li>
+                        <button class="btn {% if submission_error_count > 0 %} btn-warning {% else %} btn-success {% endif %} text-white"
+                                type="button"
+                                onclick="quality_report_modal.showModal()">
+                            <i class="fa-solid fa-file-excel"></i>
+                            Data Quality Report
+                            {% if submission_error_count > 0 %}
+                                <span class="badge badge-error">{{ submission_error_count }}</span>
+                            {% endif %}
+                        </button>
+                    </li>
+                    <!-- Pop up which shows data protection guidance for report -->
+                    {% include 'partials/page_elements/quality_report_popup.html' %}
+                    <!-- Pop up which shows data protection guidance for original data download -->
+                    {% include 'partials/page_elements/original_data_popup.html' %}
+                    <li tabindex="0" role="button" class="btn btn-info text-white dropdown dropdown-bottom dropdown-end w-12 p-0 flex">
+                        <i class="fa-solid fa-chevron-down"></i>
+                        <ul tabindex="0"
+                            class="dropdown-content menu bg-base-100 text-black font-normal rounded-box z-[1] w-52 p-2 shadow">
                             <li>
-                                <a href="{% url 'patient-add' %}" class="text-rcpch_red">
-                                    <i class="fa-solid fa-person-circle-plus"></i>
-                                    Add patient manually (Audit Team only)
+                                <button type="button"
+                                    onclick="original_data_modal.showModal()">
+                                    <i class="fa-solid fa-download"></i>
+                                    Download original file
                                 </a>
                             </li>
-                        {% endif %}
-                    </ul>
-                </div>
-            </form>
+                            <li>
+                                <a href="{% url 'submissions' %}">
+                                    <i class="fa-solid fa-timeline"></i>
+                                    View upload history
+                                </a>
+                            </li>
+                            {% if user.is_superuser or request.user.is_rcpch_audit_team_member %}
+                                <li>
+                                    <a href="{% url 'patient-add' %}" class="text-rcpch_red">
+                                        <i class="fa-solid fa-person-circle-plus"></i>
+                                        Add patient manually (Audit Team only)
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </li>
+                </ul>
+            </div>
         {% endif %}
     {% endif %}
 </div>
