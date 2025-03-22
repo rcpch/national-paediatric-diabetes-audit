@@ -521,56 +521,90 @@ def _build_box_plot(
     df, field, line_colors, fill_colors, title, xaxis_title, category_order=None
 ):
     """
-    # Create the violin plot using Plotly Graph Objects"
+    Create the box plot using Plotly Graph Objects
+    Shows all categories in category_order, even if they have no data
     """
     fig = go.Figure()
 
-    # round the percentage to 1 decimal place
-    df["hba1c_percent"] = df["hba1c_percent"].apply(lambda x: round(x, 1))
-
-    # If no category order specified, use the unique values in the data
-    if category_order is None:
-        category_order = sorted(df[f"patient__{field}"].unique())
-
-    # Filter the category order to only include categories that actually exist in the data
-    category_order = [
-        cat for cat in category_order if cat in df[f"patient__{field}"].unique()
-    ]
-
-    for item in category_order:
-        subset = df[df[f"patient__{field}"] == item]
-        # Add box plot
-        fig.add_trace(
-            go.Box(
-                y=subset["hba1c_mmol_mol"],
-                name=item,
-                marker_color=line_colors[item],
-                fillcolor=fill_colors[item],
+    # If DataFrame is empty or None, still create the plot with empty boxes
+    if df is None or df.empty:
+        for item in category_order:
+            fig.add_trace(
+                go.Box(
+                    y=[None],  # Empty data
+                    name=item,
+                    marker_color="rgba(200, 200, 200, 0.5)",  # Light grey
+                    fillcolor="rgba(220, 220, 220, 0.5)",  # Lighter grey
+                    line=dict(width=1, color="rgba(200, 200, 200, 0.5)"),
+                    boxpoints=False,  # Don't show outlier points
+                    hoverinfo="name",
+                    hovertemplate=f"{item}: No data available<extra></extra>",
+                )
             )
+    else:
+        # Round the percentage to 1 decimal place
+        df["hba1c_percent"] = df["hba1c_percent"].apply(
+            lambda x: round(x, 1) if pd.notnull(x) else x
         )
 
-        custom_data = subset.to_dict("records")
-
-        # Add scatter plot on top
-        fig.add_trace(
-            go.Scatter(
-                x=[item] * len(subset),  # Position scatter points over the box
-                y=subset["hba1c_mmol_mol"],
-                mode="markers",
-                marker=dict(
-                    color="black", size=3, opacity=0.6
-                ),  # Color of scatter points
-                name=f"{item} mmol/mol",
-                showlegend=False,  # Don't duplicate legend entries
-                customdata=custom_data,
-                hovertemplate="HbA1c: %{y}<extra></extra> mmol/mol (%{customdata.hba1c_percent} %) for patient %{customdata.patient__pk} (NHS: %{customdata.patient__nhs_number})",
+        # For each category in the specified order, add a trace
+        for item in category_order:
+            # Find rows where patient field equals the current category
+            subset = (
+                df[df[f"patient__{field}"] == item] if not df.empty else pd.DataFrame()
             )
-        )
 
+            if len(subset) > 0:
+                # Category has data - add normal box plot
+                fig.add_trace(
+                    go.Box(
+                        y=subset["hba1c_mmol_mol"],
+                        name=item,
+                        marker_color=line_colors[item],
+                        fillcolor=fill_colors[item],
+                    )
+                )
+
+                custom_data = subset.to_dict("records")
+
+                # Add scatter plot on top for individual points
+                fig.add_trace(
+                    go.Scatter(
+                        x=[item] * len(subset),  # Position scatter points over the box
+                        y=subset["hba1c_mmol_mol"],
+                        mode="markers",
+                        marker=dict(color="black", size=3, opacity=0.6),
+                        name=f"{item} mmol/mol",
+                        showlegend=False,  # Don't duplicate legend entries
+                        customdata=custom_data,
+                        hovertemplate="HbA1c: %{y}<extra></extra> mmol/mol (%{customdata.hba1c_percent} %) for patient %{customdata.patient__pk} (NHS: %{customdata.patient__nhs_number})",
+                    )
+                )
+            else:
+                # Category has no data - add "empty" box plot
+                fig.add_trace(
+                    go.Box(
+                        y=[None],  # Empty data
+                        name=item,
+                        marker_color="rgba(200, 200, 200, 0.5)",  # Light grey
+                        fillcolor="rgba(220, 220, 220, 0.5)",  # Lighter grey
+                        line=dict(width=1, color="rgba(200, 200, 200, 0.5)"),
+                        boxpoints=False,  # Don't show outlier points
+                        hoverinfo="name",
+                        hovertemplate=f"{item}: No data available<extra></extra>",
+                    )
+                )
+
+    # Set layout with explicit category ordering
     fig.update_layout(
         title=title,
         yaxis_title="HbA1c (mmol/mol)",
         xaxis_title=xaxis_title,
+        xaxis=dict(
+            categoryorder="array",
+            categoryarray=category_order,
+        ),
+        legend=dict(traceorder="normal"),
     )
 
     fig.update_layout(
@@ -664,9 +698,40 @@ def create_box_plot(df, field):
         title = "<b>Distribution of HbA1c (mmol/mol) by Diabetes Type</b>"
         category_order = ["Type 1", "Type 2", "CFRD", "MODY", "Other", "Unknown"]
 
-    df[f"patient__{field}"] = df[f"patient__{field}"].map(mapping_object)
-    # Convert Decimal to float for plotting
-    df["hba1c_mmol_mol"] = df["hba1c_mmol_mol"].astype(float)
+    # Map values using the mapping object
+    if not df.empty:
+        df = df.copy()
+        # For IMD, we need special handling to ensure all categories exist
+        if field == "index_of_multiple_deprivation_quintile":
+            # Create a DataFrame with a single row for each IMD category
+            dummy_rows = []
+            for key, value in mapping_object.items():
+                if key is not None:  # Skip None for now
+                    dummy_rows.append(
+                        {
+                            f"patient__{field}": value,
+                            "hba1c_mmol_mol": float(
+                                "nan"
+                            ),  # Use NaN for missing values
+                            "hba1c_percent": float("nan"),
+                        }
+                    )
+
+            # Create dummy DataFrame with all categories
+            dummy_df = pd.DataFrame(dummy_rows)
+
+            # Map the actual data
+            df[f"patient__{field}"] = df[f"patient__{field}"].map(mapping_object)
+
+            # Combine with actual data (only used to ensure all categories present)
+            combined_df = pd.concat([df, dummy_df], ignore_index=True)
+            df = combined_df
+        else:
+            df[f"patient__{field}"] = df[f"patient__{field}"].map(mapping_object)
+
+        # Convert Decimal to float for plotting
+        df["hba1c_mmol_mol"] = df["hba1c_mmol_mol"].astype(float)
+        df["hba1c_percent"] = df["hba1c_percent"].astype(float)
 
     boxplot = _build_box_plot(
         df,
