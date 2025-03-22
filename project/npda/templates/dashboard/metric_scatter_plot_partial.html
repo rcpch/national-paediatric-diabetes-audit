@@ -1,0 +1,10 @@
+<h2 class="card-title text-sm text-center font-bold mb-5">
+  {{ cumulative_graph_title }}
+</h2>
+{% if error %}
+  <div class="alert alert-danger">
+    <i class="fa-solid fa-person-circle-exclamation"></i> {{ error }}
+  </div>
+{% elif chart_html %}
+  {{ chart_html|safe }}
+{% endif %}

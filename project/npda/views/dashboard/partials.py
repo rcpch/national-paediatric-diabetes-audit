@@ -107,7 +107,7 @@ def get_map_chart_partial(request):
 
 
 @login_and_otp_required()
-def get_hcl_scatter_plot(request):
+def get_metric_scatter_plot(request):
     """HTMX view that accepts a GET request with an object of waffle labels and percentages,
     returning a waffle chart rendered.
 
@@ -191,14 +191,17 @@ def get_hcl_scatter_plot(request):
 
         return render(
             request,
-            "dashboard/hcl_scatter_plot_partial.html",
-            {"chart_html": chart_html},
+            "dashboard/metric_scatter_plot_partial.html",
+            {
+                "chart_html": chart_html,
+                "cumulative_graph_title": "Hybrid Closed Loop",
+            },
         )
     except Exception as e:
         logger.error("Error generating hcl scatter plot", exc_info=True)
         return render(
             request,
-            "dashboard/hcl_scatter_plot_partial.html",
+            "dashboard/metric_scatter_plot_partial.html",
             {"error": "Something went wrong!"},
         )
 
@@ -458,6 +461,7 @@ def get_n_on_hcl_partial(request):
         "numerator": hcl_use_kpi_result.total_passed,
         "denominator": hcl_use_kpi_result.total_eligible,
         "units": f"({pct_hcl_use}%)",
+        "cumulative_graph_title": "Hybrid Closed Loop",
     }
 
     return render(
