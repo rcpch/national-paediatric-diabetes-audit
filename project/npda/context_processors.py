@@ -17,43 +17,17 @@ def session_data(request):
     }
 
 
-def can_alter_this_audit_year_submission(request):
-    """
-    This context processor is used to determine if the user can alter the submission for the current audit year.
-    If the user is an admin, they can always alter the submission.
-    If the user is not an admin, they can only alter the submission if the audit year is the current year.
-    """
-    if hasattr(request.user, "is_rcpch_audit_team_member"):
-        if request.user.is_rcpch_audit_team_member:
-            return {"can_alter_this_audit_year_submission": True}
+def can_do_ui_actions(request):
+    session_is_audit_year_open = request.session.get("selected_audit_year") == get_current_audit_year()
+    session_can_use_questionnaire = request.session.get("can_complete_questionnaire", True)
 
-    if (
-        request.session.get("selected_audit_year") == get_current_audit_year()
-        or request.user.is_superuser
-    ):
-        return {
-            "can_alter_this_audit_year_submission": True,
-        }
-    else:
-        return {"can_alter_this_audit_year_submission": False}
+    is_admin = request.user.is_superuser or request.user.is_rcpch_audit_team_member
 
-
-def can_use_questionnaire(request):
-    """
-    This context processor is used to determine if the user can use the questionnaire.
-    If the user is an admin, they can always use the questionnaire.
-    If the user is not an admin, they can only use the questionnaire if they have not uploaded a csv.
-    """
-    if hasattr(request.user, "is_rcpch_audit_team_member"):
-        if request.user.is_rcpch_audit_team_member:
-            return {"can_use_questionnaire": True}
-
-    if request.user.is_superuser or request.session.get(
-        "can_complete_questionnaire", True
-    ):
-        return {"can_use_questionnaire": True}
-
-    return {"can_use_questionnaire": False}
+    return {
+        "is_audit_year_open": session_is_audit_year_open,
+        "can_alter_this_audit_year_submission": session_is_audit_year_open or is_admin,
+        "can_use_questionnaire": session_can_use_questionnaire or is_admin,
+    }
 
 
 def context_from_settings(request):
