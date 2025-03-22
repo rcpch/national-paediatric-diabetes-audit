@@ -98,6 +98,7 @@ if DEBUG is True:
             except ValueError:
                 logger.error(f"Invalid DEBUGPY_PORT value: {DEBUGPY_PORT}. Must be an integer.")
 
+INSTANCE_LABEL = os.getenv("INSTANCE_LABEL")
 
 # GENERAL CAPTCHA SETTINGS
 CAPTCHA_IMAGE_SIZE = (200, 50)
@@ -174,6 +175,7 @@ TEMPLATES = [
                 "project.npda.context_processors.session_data",
                 "project.npda.context_processors.can_alter_this_audit_year_submission",
                 "project.npda.context_processors.can_use_questionnaire",
+                "project.npda.context_processors.context_from_settings",
                 # Autologout
                 "django_auto_logout.context_processors.auto_logout_client",
             ],

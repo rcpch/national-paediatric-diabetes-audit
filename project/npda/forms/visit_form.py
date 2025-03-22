@@ -990,21 +990,14 @@ class VisitForm(forms.ModelForm):
         )
         smoking_status = cleaned_data.get("smoking_status")
         if smoking_status:
-            if smoking_status == 2:  # Current  smoking status: must supply a date
-                measure_must_have_date_and_value(
-                    smoking_cessation_referral_date,
-                    "smoking_cessation_referral_date",
-                    [{"smoking_status": smoking_status}],
+            if smoking_status != 2 and smoking_cessation_referral_date is not None:
+                raise ValidationError(
+                    {
+                        "smoking_cessation_referral_date": [
+                            "Smoking Cessation Referral Date must be left empty if patient is not a current smoker or status is unknown."
+                        ]
+                    }
                 )
-            else:
-                if smoking_cessation_referral_date is not None:
-                    raise ValidationError(
-                        {
-                            "smoking_cessation_referral_date": [
-                                "Smoking Cessation Referral Date must be left empty if patient is not a current smoker or status is unknown."
-                            ]
-                        }
-                    )
         else:
             if smoking_cessation_referral_date is not None:
                 raise ValidationError(

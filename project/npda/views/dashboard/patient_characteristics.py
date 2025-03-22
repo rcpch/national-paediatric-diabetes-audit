@@ -322,6 +322,10 @@ def all_patient_charts(request):
         df_all_with_imd = df.dropna(
             subset=["patient__index_of_multiple_deprivation_quintile"]
         )
+        # We may not have IMD for all patients (invalid postcodes, ZZ99 etc)
+        df_all_with_imd = df.dropna(
+            subset=["patient__index_of_multiple_deprivation_quintile"]
+        )
         imd_hba1c_mmol_mol_box_plot = create_box_plot(
             df_all_with_imd,
             "index_of_multiple_deprivation_quintile",
@@ -507,7 +511,7 @@ def return_eligible_visits(patients, audit_year):
                 When(
                     hba1c_format=HBA1C_FORMATS[0][0],
                     then=Round(
-                        F("hba1c") * Decimal("0.09148") + Decimal("2.152")
+                        F("hba1c") * Decimal("0.09148") + Decimal("2.152"), 1
                     ),  # 0.09148 * HbA1c (mmol/mol)) + 2.152
                 ),
             ),
