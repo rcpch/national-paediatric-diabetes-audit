@@ -21,12 +21,13 @@ def can_do_ui_actions(request):
     session_is_audit_year_open = request.session.get("selected_audit_year") == get_current_audit_year()
     session_can_use_questionnaire = request.session.get("can_complete_questionnaire", True)
 
-    is_admin = request.user.is_superuser or request.user.is_rcpch_audit_team_member
+    can_override_audit_year_open = request.user.is_superuser or getattr(request.user, "is_rcpch_audit_team_member", False)
 
     return {
-        "is_audit_year_open": session_is_audit_year_open,
-        "can_alter_this_audit_year_submission": session_is_audit_year_open or is_admin,
-        "can_use_questionnaire": session_can_use_questionnaire or is_admin,
+        "is_audit_year_open": False,
+        "can_override_audit_year_open": can_override_audit_year_open,
+        "can_alter_this_audit_year_submission": session_is_audit_year_open or can_override_audit_year_open,
+        "can_use_questionnaire": session_can_use_questionnaire or can_override_audit_year_open,
     }
 
 
