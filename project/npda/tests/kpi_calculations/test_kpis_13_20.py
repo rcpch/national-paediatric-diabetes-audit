@@ -8,8 +8,9 @@ from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
 from project.npda.tests import utils
 from project.npda.tests.factories.patient_factory import PatientFactory
-from project.npda.tests.kpi_calculations.test_calculate_kpis import \
-    assert_kpi_result_equal
+from project.npda.tests.kpi_calculations.test_calculate_kpis import (
+    assert_kpi_result_equal,
+)
 
 # Set up test params for kpis 13-20, as they all have the same denominator
 # and the only thing being changed is value for visit__treatment
@@ -27,7 +28,9 @@ for treatment_type in TREATMENT_TYPES[:-1]:
 
 @pytest.mark.parametrize(("treatment", "expected_result"), TX_TYPE_PARAMS)
 @pytest.mark.django_db
-def test_kpi_calculations_13_to_20(AUDIT_START_DATE, treatment: int, expected_result: KPIResult):
+def test_kpi_calculations_13_to_20(
+    AUDIT_START_DATE, treatment: int, expected_result: KPIResult
+):
     """Tests that KPIS13-20 are calculated correctly.
 
     Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is `treatment` (int 1-9)

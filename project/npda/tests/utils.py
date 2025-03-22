@@ -4,6 +4,7 @@ from django_otp import DEVICE_ID_SESSION_KEY
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.test.client import RequestFactory
 from two_factor.utils import default_device
+from django.contrib.auth.models import Group
 
 from project.constants.user import VIEW_PREFERENCES
 from project.npda.models import NPDAUser, PaediatricDiabetesUnit, Submission
@@ -12,6 +13,7 @@ from project.npda.tests.constants_for_tests import ALDER_HEY_PZ_CODE
 from dateutil.relativedelta import relativedelta
 
 from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
+from project.npda.general_functions import group_for_role, group_for_group
 
 # NPDA Imports
 
@@ -45,20 +47,21 @@ def create_submission(
 
     We use the provided pz_code to seed auser and use them to create a submission.
     """
-
+    group = group_for_role(role_key=test_user_audit_centre_reader_data.role_str)
+    print(f"{group} cock and balls  group")
     npda_user = NPDAUserFactory(
-            first_name="test",
-            role=test_user_audit_centre_reader_data.role,
-            # Assign flags based on user role
-            is_active=test_user_audit_centre_reader_data.is_active,
-            is_staff=test_user_audit_centre_reader_data.is_staff,
-            is_rcpch_audit_team_member=test_user_audit_centre_reader_data.is_rcpch_audit_team_member,
-            is_rcpch_staff=test_user_audit_centre_reader_data.is_rcpch_staff,
-            groups=[test_user_audit_centre_reader_data.group_name],
-            view_preference=(VIEW_PREFERENCES[0][0]),
-            # Assign to PDU via organisation employer by passing in list of pz_codes
-            organisation_employers=[pz_code],
-        )
+        first_name="test",
+        role=test_user_audit_centre_reader_data.role,
+        # Assign flags based on user role
+        is_active=test_user_audit_centre_reader_data.is_active,
+        is_staff=test_user_audit_centre_reader_data.is_staff,
+        is_rcpch_audit_team_member=test_user_audit_centre_reader_data.is_rcpch_audit_team_member,
+        is_rcpch_staff=test_user_audit_centre_reader_data.is_rcpch_staff,
+        groups=[group],
+        view_preference=(VIEW_PREFERENCES[0][0]),
+        # Assign to PDU via organisation employer by passing in list of pz_codes
+        organisation_employers=[pz_code],
+    )
     pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
 
     return Submission.objects.create(

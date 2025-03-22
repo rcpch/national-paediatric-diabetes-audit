@@ -1295,7 +1295,7 @@ class CalculateKPIS:
         Calculates KPI 15: Insulin pump (including those using a pump as part of a hybrid closed loop)
 
         Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment
-        regimen (item 20) is 3 = Insulin pump
+        regimen (item 20) is 3 = Insulin pump or 6=Insulin pump plus other blood glucose lowering medication
 
         Denominator: Total number of eligible patients (measure 1)
         """
@@ -1320,7 +1320,8 @@ class CalculateKPIS:
             Q(
                 id__in=Subquery(
                     Patient.objects.filter(
-                        visit__in=latest_visit_subquery, visit__treatment=3
+                        Q(visit__treatment=3) | Q(visit__treatment=6),
+                        visit__in=latest_visit_subquery,
                     ).values("id")
                 )
             )
