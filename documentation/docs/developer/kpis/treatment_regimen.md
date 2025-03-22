@@ -28,7 +28,7 @@
 
 ### Calculation
 
-**Numerator**: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is 3 = Insulin pump
+**Numerator**: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is 3 = Insulin pump Insulin pump or 6 = Insulin pump therapy plus other blood glucose lowering medication
 
 **Denominator**: Total number of eligible patients (measure 1)
 
