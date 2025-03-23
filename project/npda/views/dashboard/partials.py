@@ -139,6 +139,10 @@ def get_metric_scatter_plot(request):
         quarters = [f"Q{q}" for q in data]
         percentages = [data[q]["pct"] for q in data]
         passed = [data[q]["total_passed"] for q in data]
+        cumulative_sum = 0
+        incremental_passed = [
+            (cumulative_sum := cumulative_sum + data[q]["total_passed"]) for q in data
+        ]
         eligible = [data[q]["total_eligible"] for q in data]
         all_colors = [colors.RCPCH_LIGHT_BLUE for _ in data]
         # highlight the last quarter
@@ -147,6 +151,22 @@ def get_metric_scatter_plot(request):
         # Create scatter plot
         fig = go.Figure()
 
+        # cumulative totals
+        fig.add_trace(
+            go.Scatter(
+                x=quarters,
+                y=incremental_passed,
+                marker=dict(
+                    color=colors.RCPCH_LIGHT_GREY,  # Change to desired color
+                    line=dict(color=colors.RCPCH_LIGHT_GREY, width=1),  # Add border
+                    symbol="square",
+                    size=12,
+                ),
+                hovertemplate="<b>Running Total: <i>%{y}</i> children in %{x}</b><extra></extra>",
+                name="Cumulative Total",
+            ),
+        )
+        # totals by quarter
         fig.add_trace(
             go.Scatter(
                 x=quarters,
@@ -158,7 +178,7 @@ def get_metric_scatter_plot(request):
                     symbol="square",
                 ),
                 line=dict(color=colors.RCPCH_LIGHT_BLUE),
-                hovertemplate="<b>Number of children in %{x}</b>:<i>%{y}</i><extra></extra>",
+                hovertemplate="Quarter total: <b><i>%{y}</i> children in %{x}</b><extra></extra>",
             ),
         )
 
@@ -175,7 +195,7 @@ def get_metric_scatter_plot(request):
         fig.add_annotation(
             x=quarters[-1],
             y=passed[-1],
-            text=f"{passed[-1]} children",
+            text=f"{passed[-1]} children in {quarters[-1]}",
             showarrow=False,
             font=dict(color=colors.RCPCH_PINK, size=12),
             yshift=yshift,

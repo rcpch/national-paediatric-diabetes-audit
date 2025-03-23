@@ -29,10 +29,10 @@
                  hx-swap="innerHTML"
                  hx-target="#scatter-plot"
                  hx-indicator="#loading-spinner-all-patient-charts"
-                 _="on htmx:afterRequest remove #loading-spinner-selected-metric-charts">
+                 _="on htmx:afterRequest remove #loading-spinner-selected-metric-charts then remove .hidden from #scatter-plot-select">
             </div>
             <div id="scatter-plot"></div>
-            <form class="filter mt-5">
+            <form class="filter mt-5 hidden" id="scatter-plot-select">
               {% for scatter_plot_select in scatter_plot_select_list %}
                 <input class="btn"
                        type="radio"
