@@ -2,21 +2,20 @@ from datetime import datetime, timedelta
 import logging
 
 from django.apps import apps
-from django.forms import BaseModelForm
-from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
-from django.utils import timezone
-from django.shortcuts import redirect, render
-from django.views.generic.edit import CreateView, UpdateView, DeleteView
-from django.views.generic import ListView
-from django.contrib.auth.views import PasswordResetView
-from django.urls import reverse, reverse_lazy
-from django.contrib.messages.views import SuccessMessageMixin
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.contrib.auth.views import PasswordResetView
+from django.contrib.messages.views import SuccessMessageMixin
+from django.db.models import Count, Case, When, BooleanField
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
+from django.shortcuts import redirect, render
+from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.utils.html import strip_tags
-from django.conf import settings
-from django.core.exceptions import PermissionDenied
+from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django.views.generic import ListView
 
 # third party imports
 from two_factor.views import LoginView as TwoFactorLoginView
@@ -34,7 +33,7 @@ from ..general_functions import (
     send_email_to_recipients,
     group_for_role,
     organisations_adapter,
-    refresh_session_filters
+    refresh_session_filters,
 )
 from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
 from .mixins import LoginAndOTPRequiredMixin
@@ -58,13 +57,20 @@ class NPDAUserListView(
     def get_queryset(self):
         # scope the queryset to filter only those users in organisations in the same PDU. This is to prevent users from seeing all users in the system
         pz_code = self.request.session.get("pz_code")
+        flag_field = Count("organisation_employers")
 
         if self.request.user.viewing_data_nationally():
-            return NPDAUser.objects.all().order_by("surname")
-        
-        return NPDAUser.objects.filter(
-            organisation_employers__pz_code=pz_code
-        ).order_by("surname")
+            return (
+                NPDAUser.objects.all()
+                .annotate(number_of_pdu_memberships=flag_field)
+                .order_by("surname")
+            )
+
+        return (
+            NPDAUser.objects.all()
+            .annotate(number_of_pdu_memberships=flag_field)
+            .order_by("surname")
+        )
 
     def get_context_data(self, **kwargs):
         context = super(NPDAUserListView, self).get_context_data(**kwargs)
@@ -143,7 +149,7 @@ class NPDAUserCreateView(
         new_user.set_unusable_password()
         new_user.is_active = True
         new_user.email_confirmed = False
-        new_user.view_preference = 1 # PDU level view preference
+        new_user.view_preference = 1  # PDU level view preference
         new_user.save()
 
         # add the user to the appropriate organisation

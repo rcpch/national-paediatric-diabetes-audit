@@ -415,3 +415,17 @@ def screen_ineligible(value):
     if value is None or value == "" or value == "0" or value == 0:
         return 0
     return value
+
+
+@register.filter
+def employer_match(user_to_match, user):
+    """
+    Checks if the user_to_match has an employer in common with the user (the logged in user)
+    RCPCH staff and audit team members can view all users
+    """
+    if user.is_superuser or user.is_rcpch_staff or user.is_rcpch_audit_team_member:
+        return True
+    for employer in user_to_match.organisation_employers.all():
+        if employer in user.organisation_employers.all():
+            return True
+    return False
