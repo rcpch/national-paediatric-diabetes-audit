@@ -454,3 +454,13 @@ def exclude_admin_user_field(field, user):
     ]:
         return False
     return True
+
+
+@register.filter
+def include_admin_users(user):
+    """
+    Returns true if the user is an RCPCH staff member or superuser
+    """
+    if user.is_superuser or user.is_rcpch_staff or user.is_rcpch_audit_team_member:
+        return True
+    return False

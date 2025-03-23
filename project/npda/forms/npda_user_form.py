@@ -97,8 +97,6 @@ class NPDAUserForm(forms.ModelForm):
         self.fields["add_employer"].choices = employer_choices
         self.employer_choices = employer_choices
 
-        # remove child or family from role choices
-
         # only if the form is bound - this user is being updated
         if self.instance.pk is not None:
             # this is a bit of a hack but necessary due to htmx.
