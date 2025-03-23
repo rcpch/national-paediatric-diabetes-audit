@@ -101,6 +101,11 @@ def is_dateinput(widget):
 
 
 @register.filter
+def is_textarea(widget):
+    return isinstance(widget, (forms.Textarea))
+
+
+@register.filter
 def is_textinput(widget):
     return isinstance(widget, (forms.CharField, forms.TextInput, forms.EmailField))
 
