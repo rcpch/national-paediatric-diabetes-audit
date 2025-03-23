@@ -118,6 +118,12 @@ def get_metric_scatter_plot(request):
         if not request.htmx:
             return HttpResponseBadRequest("This view is only accessible via HTMX")
 
+        if request.method == "POST":
+            selected_chart = request.POST["scatter_plot_select"]
+            if selected_chart == "new_diagnoses":
+                kpis = CalculateKPIS()
+                data = kpis.get_new_diagnoses_this_submission()
+
         if not (request_data := request.GET.get("data", None)):
             return HttpResponseBadRequest("No data provided")
 
@@ -194,11 +200,10 @@ def get_metric_scatter_plot(request):
             "dashboard/metric_scatter_plot_partial.html",
             {
                 "chart_html": chart_html,
-                "cumulative_graph_title": "Hybrid Closed Loop",
             },
         )
     except Exception as e:
-        logger.error("Error generating hcl scatter plot", exc_info=True)
+        logger.error("Error generating metric scatter plot", exc_info=True)
         return render(
             request,
             "dashboard/metric_scatter_plot_partial.html",
@@ -208,10 +213,9 @@ def get_metric_scatter_plot(request):
 
 @login_and_otp_required()
 def get_new_diagnoses_partial(request):
-    """HTMX view that returns the number of new diagnoses for the current month"""
+    """HTMX view that returns the number of new diagnoses for the current submission"""
 
-    # Get new diagnoses this month
-
+    # Get new diagnoses this submission
     pz_code = request.session.get("pz_code")
 
     PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
@@ -577,3 +581,18 @@ def get_cgm_partial(request):
         "dashboard/components/cards/card_partials/secondary_card_partial.html",
         context,
     )
+
+
+def get_selected_chart_data(selected_chart: str):
+    """Return the data for the selected chart"""
+
+    if selected_chart == "new_diagnoses":
+        
+    elif selected_chart == "new_admissions":
+        
+    elif selected_chart == "transitioned_to_adult_service":
+        
+    elif selected_chart == "all_pump":
+        
+    else:
+        

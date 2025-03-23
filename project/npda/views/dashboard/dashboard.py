@@ -9,11 +9,11 @@ from django.contrib import messages
 from django.shortcuts import render
 
 from project import constants
-from project.npda.general_functions.quarter_for_date import \
-    retrieve_quarter_for_date
+from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
 from project.npda.kpi_class.kpis import CalculateKPIS
-from project.npda.models.paediatric_diabetes_unit import \
-    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass
+from project.npda.models.paediatric_diabetes_unit import (
+    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
+)
 from project.npda.models.patient import Patient
 from project.npda.views.decorators import login_and_otp_required
 
@@ -63,6 +63,39 @@ def temp_set_eligible_kpi_7(request):
 # 🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
 
 
+def _scatter_plot_select_list(button_name_selected: str):
+    """
+    Keeps track of which filter buttons are selected in the scatter plot
+    """
+    scatter_buttons = [
+        {
+            "name": "new_diagnoses",
+            "selected": button_name_selected == "new_diagnoses",
+            "enabled": True,
+            "title": "New diagnoses",
+        },
+        {
+            "name": "new_admissions",
+            "selected": button_name_selected == "new_admissions",
+            "enabled": True,
+            "title": "New Admissions",
+        },
+        {
+            "name": "transitioned_to_adult_service",
+            "selected": button_name_selected == "transitioned_to_adult_service",
+            "enabled": True,
+            "title": "Transitioned to Adult Services",
+        },
+        {
+            "name": "all_pump",
+            "selected": button_name_selected == "all_pump",
+            "enabled": True,
+            "title": "All Pumps",
+        },
+    ]
+    return scatter_buttons
+
+
 @login_and_otp_required()
 def dashboard(request):
     """
@@ -94,14 +127,18 @@ def dashboard(request):
         today = date.today()
         calculation_date = date(selected_audit_year, today.month, today.day)
 
-    calculate_kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=True)
+    calculate_kpis = CalculateKPIS(
+        calculation_date=calculation_date, return_pt_querysets=True
+    )
 
     kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
 
     # From this, gather specific chart data required
 
     # HCL Use
-    hcl_use_per_quarter_value_counts_pct = calculate_kpis.get_kpi_24_hcl_use_stratified_by_quarter()
+    hcl_use_per_quarter_value_counts_pct = (
+        calculate_kpis.get_kpi_24_hcl_use_stratified_by_quarter()
+    )
 
     # Gather other context vars
     current_date = date.today()
@@ -111,6 +148,7 @@ def dashboard(request):
     current_quarter = retrieve_quarter_for_date(current_date)
 
     context = {
+        "scatter_plot_select_list": _scatter_plot_select_list("new_diagnoses"),
         "pdu_object": pdu,
         # "pdu_lead_organisation": pdu_lead_organisation,
         "kpi_calculations_object": kpi_calculations_object,
@@ -119,9 +157,9 @@ def dashboard(request):
         "days_remaining_until_audit_end_date": days_remaining_until_audit_end_date,
         "charts": {
             "hcl_use_per_quarter_value_counts_pct": {
-                "no_eligible_patients": kpi_calculations_object["calculated_kpi_values"][
-                    "kpi_1_total_eligible"
-                ]["total_eligible"]
+                "no_eligible_patients": kpi_calculations_object[
+                    "calculated_kpi_values"
+                ]["kpi_1_total_eligible"]["total_eligible"]
                 == 0,
                 "data": json.dumps(hcl_use_per_quarter_value_counts_pct),
             },
