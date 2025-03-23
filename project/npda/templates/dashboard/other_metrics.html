@@ -24,26 +24,36 @@
             </div>
           {% else %}
             <div hx-get="{% url 'get_metric_scatter_plot' %}"
-                 hx-vals='{ "data" : {{ charts.hcl_use_per_quarter_value_counts_pct.data }} }'
+                 hx-vals='{ "data" : {{ charts.new_diagnoses_per_quarter_value_counts_pct.data }} }'
                  hx-trigger="load"
-                 hx-swap="innerHTML"></div>
+                 hx-swap="innerHTML"
+                 hx-target="#scatter-plot"
+                 hx-indicator="#loading-spinner-all-patient-charts"
+                 _="on htmx:afterRequest remove #loading-spinner-selected-metric-charts">
+            </div>
+            <div id="scatter-plot"></div>
+            <form class="filter mt-5">
+              {% for scatter_plot_select in scatter_plot_select_list %}
+                <input class="btn"
+                       type="radio"
+                       name="scatter_plot_select"
+                       hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                       hx-post="{% url 'get_metric_scatter_plot' %}"
+                       hx-swap="innerHTML"
+                       hx-target="#scatter-plot"
+                       hx-trigger="click"
+                       type="radio"
+                       aria-label="{{ scatter_plot_select.title }}"
+                       value="{{ scatter_plot_select.name }}"
+                       {% if scatter_plot_select.selected %}checked{% endif %}
+                       _="on htmx:afterRequest remove #loading-spinner-selected-metric-charts" />
+              {% endfor %}
+            </form>
           {% endif %}
+          <div id="loading-spinner-selected-metric-charts"
+               class="loading loading-spinner text-rcpch_dark_blue flex flex-grow-1 justify-center items-center h-full w-1/5 mx-auto bg-center">
+          </div>
         </div>
-        <form class="filter">
-          {% for scatter_plot_select in scatter_plot_select_list %}
-            <input class="btn"
-                   type="radio"
-                   name="scatter_plot_select"
-                   hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                   hx-post="{% url 'get_metric_scatter_plot' %}"
-                   hx-swap="innerHTML"
-                   hx-trigger="click"
-                   type="radio"
-                   aria-label="{{ scatter_plot_select.title }}"
-                   value="{{ scatter_plot_select.name }}"
-                   {% if scatter_plot_select.selected %}checked{% endif %} />
-          {% endfor %}
-        </form>
       </div>
     </div>
     <!-- Right Side Metrics -->

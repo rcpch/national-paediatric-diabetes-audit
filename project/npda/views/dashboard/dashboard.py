@@ -63,39 +63,6 @@ def temp_set_eligible_kpi_7(request):
 # 🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
 
 
-def _scatter_plot_select_list(button_name_selected: str):
-    """
-    Keeps track of which filter buttons are selected in the scatter plot
-    """
-    scatter_buttons = [
-        {
-            "name": "new_diagnoses",
-            "selected": button_name_selected == "new_diagnoses",
-            "enabled": True,
-            "title": "New diagnoses",
-        },
-        {
-            "name": "new_admissions",
-            "selected": button_name_selected == "new_admissions",
-            "enabled": True,
-            "title": "New Admissions",
-        },
-        {
-            "name": "transitioned_to_adult_service",
-            "selected": button_name_selected == "transitioned_to_adult_service",
-            "enabled": True,
-            "title": "Transitioned to Adult Services",
-        },
-        {
-            "name": "all_pump",
-            "selected": button_name_selected == "all_pump",
-            "enabled": True,
-            "title": "All Pumps",
-        },
-    ]
-    return scatter_buttons
-
-
 @login_and_otp_required()
 def dashboard(request):
     """
@@ -135,9 +102,9 @@ def dashboard(request):
 
     # From this, gather specific chart data required
 
-    # HCL Use
-    hcl_use_per_quarter_value_counts_pct = (
-        calculate_kpis.get_kpi_24_hcl_use_stratified_by_quarter()
+    # new diagnoses
+    new_diagnosis_per_quarter_value_counts_pct = (
+        calculate_kpis.calculate_kpi_2_total_new_diagnoses_stratified_by_quarter()
     )
 
     # Gather other context vars
@@ -156,12 +123,12 @@ def dashboard(request):
         "current_quarter": current_quarter,
         "days_remaining_until_audit_end_date": days_remaining_until_audit_end_date,
         "charts": {
-            "hcl_use_per_quarter_value_counts_pct": {
+            "new_diagnoses_per_quarter_value_counts_pct": {
                 "no_eligible_patients": kpi_calculations_object[
                     "calculated_kpi_values"
                 ]["kpi_1_total_eligible"]["total_eligible"]
                 == 0,
-                "data": json.dumps(hcl_use_per_quarter_value_counts_pct),
+                "data": json.dumps(new_diagnosis_per_quarter_value_counts_pct),
             },
             "map": json.dumps(
                 dict(
@@ -176,3 +143,30 @@ def dashboard(request):
     }
 
     return render(request, template_name=template, context=context)
+
+
+def _scatter_plot_select_list(button_name_selected: str):
+    """
+    Keeps track of which filter buttons are selected in the scatter plot
+    """
+    scatter_buttons = [
+        {
+            "name": "new_diagnoses",
+            "selected": button_name_selected == "new_diagnoses",
+            "enabled": True,
+            "title": "New diagnoses",
+        },
+        {
+            "name": "new_admissions",
+            "selected": button_name_selected == "new_admissions",
+            "enabled": True,
+            "title": "New Admissions",
+        },
+        {
+            "name": "transitioned_to_adult_service",
+            "selected": button_name_selected == "transitioned_to_adult_service",
+            "enabled": True,
+            "title": "Transitioned to Adults",
+        },
+    ]
+    return scatter_buttons

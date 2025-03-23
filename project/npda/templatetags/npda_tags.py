@@ -89,6 +89,7 @@ def join_with_comma(value):
         return ", ".join(map(str, value))
     return value
 
+
 @register.filter
 def is_select(widget):
     return isinstance(widget, (forms.Select, forms.SelectMultiple))
@@ -406,4 +407,11 @@ def percentage(value: str, total: str):
 def none_to_dash(value):
     if value is None or value == "" or value == "0" or value == 0:
         return "-"
+    return value
+
+
+@register.filter
+def screen_ineligible(value):
+    if value is None or value == "" or value == "0" or value == 0:
+        return 0
     return value

@@ -2,7 +2,8 @@
 {% block card_title %}
     New diagnoses
     {% include 'common/docs_icon_link_button.html' with rel_url="developer/kpis/patient_characteristics/#2-total-number-of-new-diagnoses-within-the-audit-period" fa_icon_class="fa-solid fa-eye" %}
-    <a href="{% url 'patients' %}" class="text-rcpch_pink"><i class="fa-solid fa-chart-line"></i></a>
+    <span class="text-rcpch_pink tooltip"
+          data-tip="Numbers of patients newly diagnosed with any type of diabetes this audit year"><i class="fa-solid fa-chart-line"></i></span>
 {% endblock %}
 {% block card_content %}
     <div hx-get="{% url 'get_new_diagnoses_partial' %}"
