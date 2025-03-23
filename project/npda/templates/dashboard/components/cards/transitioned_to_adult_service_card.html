@@ -1,23 +1,17 @@
 {% extends "dashboard/components/bases/base_secondary_card.html" %}
-
 {% block card_title %}
-    Transitioned to adult service
+    Transitioned to Adult Services
     {% include 'common/docs_icon_link_button.html' with rel_url="developer/kpis/patient_characteristics/#calculation_7" fa_icon_class="fa-solid fa-eye" %}
+    <span class="text-rcpch_pink tooltip"
+          data-tip="Total number of patients with any type of diabetes transitioned to adult services this audit year"><i class="fa-solid fa-chart-line"></i></span>
 {% endblock %}
-
 {% block card_content %}
-
-<div
-hx-get="{% url 'get_transitioned_to_adult_service_partial' %}"
-hx-trigger="load" hx-swap="innerHTML"
-_="on htmx:afterSwap remove #loading-spinner-transitioned-to-adult-service-card"></div>
-
-
-
-
-<div id="loading-spinner-transitioned-to-adult-service-card"
-class="loading loading-spinner text-rcpch_dark_blue flex flex-grow-1 justify-center items-center h-full w-1/5 mx-auto bg-center">
-</div>
-
-
+    <div hx-get="{% url 'get_transitioned_to_adult_service_partial' %}"
+         hx-trigger="load"
+         hx-swap="innerHTML"
+         _="on htmx:afterSwap remove #loading-spinner-transitioned-to-adult-service-card">
+    </div>
+    <div id="loading-spinner-transitioned-to-adult-service-card"
+         class="loading loading-spinner text-rcpch_dark_blue flex flex-grow-1 justify-center items-center h-full w-1/5 mx-auto bg-center">
+    </div>
 {% endblock %}

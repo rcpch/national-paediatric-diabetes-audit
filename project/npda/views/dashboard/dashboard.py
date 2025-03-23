@@ -160,7 +160,7 @@ def _scatter_plot_select_list(button_name_selected: str):
             "name": "new_admissions",
             "selected": button_name_selected == "new_admissions",
             "enabled": True,
-            "title": "New Admissions",
+            "title": "Hospital Admissions",
         },
         {
             "name": "transitioned_to_adult_service",

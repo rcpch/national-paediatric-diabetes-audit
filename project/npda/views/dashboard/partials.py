@@ -224,26 +224,7 @@ def get_new_diagnoses_partial(request):
     # Get new diagnoses this submission
     pz_code = request.session.get("pz_code")
 
-    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
-        "npda", "PaediatricDiabetesUnit"
-    )
-    try:
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-    except PaediatricDiabetesUnit.DoesNotExist:
-        messages.error(
-            request=request,
-            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
-        )
-        return render(request, "dashboard.html")
-
-    selected_audit_year = int(request.session.get("selected_audit_year"))
-
-    if selected_audit_year <= date.today().year:
-        # The day after the audit year end date
-        calculation_date = date(selected_audit_year, 4, 1)
-    else:
-        today = date.today()
-        calculation_date = date(selected_audit_year, today.month, today.day)
+    submission, calculation_date = submission_and_calculation_date(request)
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=False
@@ -255,7 +236,7 @@ def get_new_diagnoses_partial(request):
 
     context = {
         "number": n_diagnoses_this_year.total_eligible,
-        "units": "(patients)",
+        "units": "patients",
         "description": "New diagnoses this audit year",
     }
 
@@ -274,36 +255,19 @@ def get_new_admissions_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
-        "npda", "PaediatricDiabetesUnit"
-    )
-    try:
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-    except PaediatricDiabetesUnit.DoesNotExist:
-        messages.error(
-            request=request,
-            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
-        )
-        return render(request, "dashboard.html")
-
-    selected_audit_year = int(request.session.get("selected_audit_year"))
-
-    if selected_audit_year <= 2024:
-        # The day after the audit year end date
-        calculation_date = date(selected_audit_year, 4, 1)
-    else:
-        today = date.today()
-        calculation_date = date(selected_audit_year, today.month, today.day)
+    submission, calculation_date = submission_and_calculation_date(request)
 
     calculate_kpis = CalculateKPIS(
-        calculation_date=calculation_date, return_pt_querysets=True
+        calculation_date=calculation_date, return_pt_querysets=False
     )
 
     calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
 
-    n_admissions_this_month = calculate_kpis.get_number_of_admissions_this_month()
+    n_admissions_this_month = (
+        calculate_kpis.calculate_kpi_46_number_of_admissions().total_passed
+    )
 
-    context = {"number": n_admissions_this_month, "units": "(N / month)"}
+    context = {"number": n_admissions_this_month, "units": "children"}
 
     return render(
         request,
@@ -318,26 +282,7 @@ def get_transitioned_to_adult_service_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
-        "npda", "PaediatricDiabetesUnit"
-    )
-    try:
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-    except PaediatricDiabetesUnit.DoesNotExist:
-        messages.error(
-            request=request,
-            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
-        )
-        return render(request, "dashboard.html")
-
-    selected_audit_year = int(request.session.get("selected_audit_year"))
-
-    if selected_audit_year <= 2024:
-        # The day after the audit year end date
-        calculation_date = date(selected_audit_year, 4, 1)
-    else:
-        today = date.today()
-        calculation_date = date(selected_audit_year, today.month, today.day)
+    submission, calculation_date = submission_and_calculation_date(request)
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -351,7 +296,8 @@ def get_transitioned_to_adult_service_partial(request):
 
     context = {
         "number": n_transitioned_to_adult_service,
-        "units": "children this audit year",
+        "units": "children",
+        "description": "Number of children transitioned to adult services this audit year",
     }
 
     return render(
@@ -367,26 +313,7 @@ def get_moved_out_of_area_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
-        "npda", "PaediatricDiabetesUnit"
-    )
-    try:
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-    except PaediatricDiabetesUnit.DoesNotExist:
-        messages.error(
-            request=request,
-            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
-        )
-        return render(request, "dashboard.html")
-
-    selected_audit_year = int(request.session.get("selected_audit_year"))
-
-    if selected_audit_year <= 2024:
-        # The day after the audit year end date
-        calculation_date = date(selected_audit_year, 4, 1)
-    else:
-        today = date.today()
-        calculation_date = date(selected_audit_year, today.month, today.day)
+    submission, calculation_date = submission_and_calculation_date(request)
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -411,26 +338,7 @@ def get_n_on_hcl_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
-        "npda", "PaediatricDiabetesUnit"
-    )
-    try:
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-    except PaediatricDiabetesUnit.DoesNotExist:
-        messages.error(
-            request=request,
-            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
-        )
-        return render(request, "dashboard.html")
-
-    selected_audit_year = int(request.session.get("selected_audit_year"))
-
-    if selected_audit_year <= 2024:
-        # The day after the audit year end date
-        calculation_date = date(selected_audit_year, 4, 1)
-    else:
-        today = date.today()
-        calculation_date = date(selected_audit_year, today.month, today.day)
+    submission, calculation_date = submission_and_calculation_date(request)
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -439,8 +347,6 @@ def get_n_on_hcl_partial(request):
     calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
 
     hcl_use_kpi_result = calculate_kpis.calculate_kpi_24_hybrid_closed_loop_system()
-
-    n_hcl_use = hcl_use_kpi_result.total_passed
 
     pct_hcl_use = (
         round(
@@ -471,26 +377,7 @@ def get_pump_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
-        "npda", "PaediatricDiabetesUnit"
-    )
-    try:
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-    except PaediatricDiabetesUnit.DoesNotExist:
-        messages.error(
-            request=request,
-            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
-        )
-        return render(request, "dashboard.html")
-
-    selected_audit_year = int(request.session.get("selected_audit_year"))
-
-    if selected_audit_year <= 2024:
-        # The day after the audit year end date
-        calculation_date = date(selected_audit_year, 4, 1)
-    else:
-        today = date.today()
-        calculation_date = date(selected_audit_year, today.month, today.day)
+    submission, calculation_date = submission_and_calculation_date(request)
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -525,26 +412,7 @@ def get_cgm_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
-        "npda", "PaediatricDiabetesUnit"
-    )
-    try:
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-    except PaediatricDiabetesUnit.DoesNotExist:
-        messages.error(
-            request=request,
-            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
-        )
-        return render(request, "dashboard.html")
-
-    selected_audit_year = int(request.session.get("selected_audit_year"))
-
-    if selected_audit_year <= 2024:
-        # The day after the audit year end date
-        calculation_date = date(selected_audit_year, 4, 1)
-    else:
-        today = date.today()
-        calculation_date = date(selected_audit_year, today.month, today.day)
+    submission, calculation_date = submission_and_calculation_date(request)
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True

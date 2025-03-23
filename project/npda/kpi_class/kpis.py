@@ -3724,7 +3724,7 @@ class CalculateKPIS:
 
         # Also set pt querysets to be returned if required
         patient_querysets = self._get_pt_querysets_object(
-            eligible=eligible_patients,
+            eligible=eligible_pts_annotated,
             passed=total_passed_query_set,
         )
 
