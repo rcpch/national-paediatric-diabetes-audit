@@ -1070,7 +1070,7 @@ class VisitForm(forms.ModelForm):
                     if hospital_admission_other is not None:
                         raise ValidationError(
                             {
-                                "hospital_admission_other": [
+                                "hospital_admission_reason": [
                                     "Hospital Admission Reason must be 'Other' if 'Other' has been completed."
                                 ]
                             }
