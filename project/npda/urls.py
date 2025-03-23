@@ -124,9 +124,9 @@ dashboard_urlpatterns = [
         name="dashboard",
     ),
     path(
-        "get_hcl_scatter_plot",
-        view=partials.get_hcl_scatter_plot,
-        name="get_hcl_scatter_plot",
+        "get_metric_scatter_plot",
+        view=partials.get_metric_scatter_plot,
+        name="get_metric_scatter_plot",
     ),
     path(
         "get_map_chart_partial",

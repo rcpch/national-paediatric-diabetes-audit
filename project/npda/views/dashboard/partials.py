@@ -26,6 +26,7 @@ from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.models.paediatric_diabetes_unit import (
     PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
 )
+from project.npda.models.submission import Submission
 from project.npda.views.decorators import login_and_otp_required
 
 logger = logging.getLogger(__name__)
@@ -106,7 +107,7 @@ def get_map_chart_partial(request):
 
 
 @login_and_otp_required()
-def get_hcl_scatter_plot(request):
+def get_metric_scatter_plot(request):
     """HTMX view that accepts a GET request with an object of waffle labels and percentages,
     returning a waffle chart rendered.
 
@@ -117,16 +118,31 @@ def get_hcl_scatter_plot(request):
         if not request.htmx:
             return HttpResponseBadRequest("This view is only accessible via HTMX")
 
-        if not (request_data := request.GET.get("data", None)):
-            return HttpResponseBadRequest("No data provided")
+        if request.method == "POST":
+            selected_chart = request.POST["scatter_plot_select"]
+            submission, calculation_date = submission_and_calculation_date(request)
+            data, title, tooltip_text = get_selected_chart_data(
+                selected_chart, calculation_date, request.session.get("pz_code")
+            )
 
-        # Fetch data from query parameters
-        data = json.loads(request_data)
+        if request.method == "GET":
+            if not (request_data := request.GET.get("data", None)):
+                return HttpResponseBadRequest("No data provided")
+
+            # Fetch data from query parameters
+            # if data is None:
+            data = json.loads(request_data)
+            title = "All new diabetes diagnoses by quarter"
+            tooltip_text = "Numbers of patients newly diagnosed with any type of diabetes each quarter. These numbers are not cumulative and reflect only new diagnoses in that quarter."
 
         # Extracting data
         quarters = [f"Q{q}" for q in data]
         percentages = [data[q]["pct"] for q in data]
         passed = [data[q]["total_passed"] for q in data]
+        cumulative_sum = 0
+        incremental_passed = [
+            (cumulative_sum := cumulative_sum + data[q]["total_passed"]) for q in data
+        ]
         eligible = [data[q]["total_eligible"] for q in data]
         all_colors = [colors.RCPCH_LIGHT_BLUE for _ in data]
         # highlight the last quarter
@@ -135,10 +151,26 @@ def get_hcl_scatter_plot(request):
         # Create scatter plot
         fig = go.Figure()
 
+        # cumulative totals
         fig.add_trace(
             go.Scatter(
                 x=quarters,
-                y=percentages,
+                y=incremental_passed,
+                marker=dict(
+                    color=colors.RCPCH_LIGHT_GREY,  # Change to desired color
+                    line=dict(color=colors.RCPCH_LIGHT_GREY, width=1),  # Add border
+                    symbol="square",
+                    size=12,
+                ),
+                hovertemplate="<b>Running Total: <i>%{y}</i> children in %{x}</b><extra></extra>",
+                name="Cumulative Total",
+            ),
+        )
+        # totals by quarter
+        fig.add_trace(
+            go.Scatter(
+                x=quarters,
+                y=passed,
                 mode="lines+markers",
                 marker=dict(
                     size=12,
@@ -146,25 +178,24 @@ def get_hcl_scatter_plot(request):
                     symbol="square",
                 ),
                 line=dict(color=colors.RCPCH_LIGHT_BLUE),
-                hovertemplate="<b>%{x}</b>:Eligible passed: %{customdata[0]} / %{customdata[1]} (%{y:.1f}%)<extra></extra>",
-                customdata=list(zip(passed, eligible)),
-            )
+                hovertemplate="Quarter total: <b><i>%{y}</i> children in %{x}</b><extra></extra>",
+            ),
         )
 
         # Add annotation for last quarter
-        last_pct = percentages[-1]
+        last_passed = passed[-1]
         # Offset below point if penultimate point higher than final point
         Y_SHIFT = 20
-        if len(percentages) > 1 and percentages[-2] >= last_pct:
+        if len(passed) > 1 and passed[-2] >= last_passed:
             # If the final point is < 10, don't offset below as goes off the chart
-            yshift = -Y_SHIFT if last_pct > (Y_SHIFT) else Y_SHIFT
+            yshift = -Y_SHIFT if last_passed > (Y_SHIFT) else Y_SHIFT
         else:
             # Don't need to account for going off the chart at top as added space
             yshift = Y_SHIFT
         fig.add_annotation(
             x=quarters[-1],
-            y=percentages[-1],
-            text=f"{percentages[-1]}%",
+            y=passed[-1],
+            text=f"{passed[-1]} children in {quarters[-1]}",
             showarrow=False,
             font=dict(color=colors.RCPCH_PINK, size=12),
             yshift=yshift,
@@ -173,7 +204,7 @@ def get_hcl_scatter_plot(request):
         # Layout adjustments
         fig.update_layout(
             xaxis=dict(title="Quarter", range=[-0.5, len(quarters) - 0.5]),
-            yaxis=dict(title="% CYP", range=[0, 110]),
+            yaxis=dict(title="Number of children"),
             showlegend=False,
             template="simple_white",  # Clean grid style
             margin=dict(l=0, r=0, t=0, b=0),
@@ -190,56 +221,44 @@ def get_hcl_scatter_plot(request):
 
         return render(
             request,
-            "dashboard/hcl_scatter_plot_partial.html",
-            {"chart_html": chart_html},
+            "dashboard/metric_scatter_plot_partial.html",
+            {
+                "chart_html": chart_html,
+                "chart_title": title,
+                "tooltip_text": tooltip_text,
+            },
         )
     except Exception as e:
-        logger.error("Error generating hcl scatter plot", exc_info=True)
+        logger.error("Error generating metric scatter plot", exc_info=True)
         return render(
             request,
-            "dashboard/hcl_scatter_plot_partial.html",
+            "dashboard/metric_scatter_plot_partial.html",
             {"error": "Something went wrong!"},
         )
 
 
 @login_and_otp_required()
 def get_new_diagnoses_partial(request):
-    """HTMX view that returns the number of new diagnoses for the current month"""
+    """HTMX view that returns the number of new diagnoses for the current submission"""
 
-    # Get new diagnoses this month
-
+    # Get new diagnoses this submission
     pz_code = request.session.get("pz_code")
 
-    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
-        "npda", "PaediatricDiabetesUnit"
-    )
-    try:
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-    except PaediatricDiabetesUnit.DoesNotExist:
-        messages.error(
-            request=request,
-            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
-        )
-        return render(request, "dashboard.html")
-
-    selected_audit_year = int(request.session.get("selected_audit_year"))
-
-    if selected_audit_year <= 2024:
-        # The day after the audit year end date
-        calculation_date = date(selected_audit_year, 4, 1)
-    else:
-        today = date.today()
-        calculation_date = date(selected_audit_year, today.month, today.day)
+    submission, calculation_date = submission_and_calculation_date(request)
 
     calculate_kpis = CalculateKPIS(
-        calculation_date=calculation_date, return_pt_querysets=True
+        calculation_date=calculation_date, return_pt_querysets=False
     )
 
     calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
 
-    n_diagnoses_this_month = calculate_kpis.get_new_diagnoses_this_month()
+    n_diagnoses_this_year = calculate_kpis.calculate_kpi_2_total_new_diagnoses()
 
-    context = {"number": n_diagnoses_this_month, "units": "(N / month)"}
+    context = {
+        "number": n_diagnoses_this_year.total_eligible,
+        "units": "patients",
+        "description": "New diagnoses this audit year",
+    }
 
     return render(
         request,
@@ -256,36 +275,19 @@ def get_new_admissions_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
-        "npda", "PaediatricDiabetesUnit"
-    )
-    try:
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-    except PaediatricDiabetesUnit.DoesNotExist:
-        messages.error(
-            request=request,
-            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
-        )
-        return render(request, "dashboard.html")
-
-    selected_audit_year = int(request.session.get("selected_audit_year"))
-
-    if selected_audit_year <= 2024:
-        # The day after the audit year end date
-        calculation_date = date(selected_audit_year, 4, 1)
-    else:
-        today = date.today()
-        calculation_date = date(selected_audit_year, today.month, today.day)
+    submission, calculation_date = submission_and_calculation_date(request)
 
     calculate_kpis = CalculateKPIS(
-        calculation_date=calculation_date, return_pt_querysets=True
+        calculation_date=calculation_date, return_pt_querysets=False
     )
 
     calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
 
-    n_admissions_this_month = calculate_kpis.get_number_of_admissions_this_month()
+    n_admissions_this_month = (
+        calculate_kpis.calculate_kpi_46_number_of_admissions().total_passed
+    )
 
-    context = {"number": n_admissions_this_month, "units": "(N / month)"}
+    context = {"number": n_admissions_this_month, "units": "children"}
 
     return render(
         request,
@@ -300,26 +302,7 @@ def get_transitioned_to_adult_service_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
-        "npda", "PaediatricDiabetesUnit"
-    )
-    try:
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-    except PaediatricDiabetesUnit.DoesNotExist:
-        messages.error(
-            request=request,
-            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
-        )
-        return render(request, "dashboard.html")
-
-    selected_audit_year = int(request.session.get("selected_audit_year"))
-
-    if selected_audit_year <= 2024:
-        # The day after the audit year end date
-        calculation_date = date(selected_audit_year, 4, 1)
-    else:
-        today = date.today()
-        calculation_date = date(selected_audit_year, today.month, today.day)
+    submission, calculation_date = submission_and_calculation_date(request)
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -328,10 +311,14 @@ def get_transitioned_to_adult_service_partial(request):
     calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
 
     n_transitioned_to_adult_service = (
-        calculate_kpis.get_number_of_transitioned_to_adult_service_this_month()
+        calculate_kpis.calculate_kpi_9_total_service_transitions().total_passed  # this will return None if there are no eligible patients
     )
 
-    context = {"number": n_transitioned_to_adult_service, "units": "(N / month)"}
+    context = {
+        "number": n_transitioned_to_adult_service,
+        "units": "children",
+        "description": "Number of children transitioned to adult services this audit year",
+    }
 
     return render(
         request,
@@ -346,26 +333,7 @@ def get_moved_out_of_area_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
-        "npda", "PaediatricDiabetesUnit"
-    )
-    try:
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-    except PaediatricDiabetesUnit.DoesNotExist:
-        messages.error(
-            request=request,
-            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
-        )
-        return render(request, "dashboard.html")
-
-    selected_audit_year = int(request.session.get("selected_audit_year"))
-
-    if selected_audit_year <= 2024:
-        # The day after the audit year end date
-        calculation_date = date(selected_audit_year, 4, 1)
-    else:
-        today = date.today()
-        calculation_date = date(selected_audit_year, today.month, today.day)
+    submission, calculation_date = submission_and_calculation_date(request)
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -373,9 +341,11 @@ def get_moved_out_of_area_partial(request):
 
     calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
 
-    n_moved_out_of_area = calculate_kpis.get_number_of_moved_out_of_area_this_month()
+    n_moved_out_of_area = (
+        calculate_kpis.get_number_of_moved_out_of_area_this_audit_year()
+    )
 
-    context = {"number": n_moved_out_of_area, "units": "(N / month)"}
+    context = {"number": n_moved_out_of_area, "units": "children"}
 
     return render(
         request,
@@ -390,26 +360,7 @@ def get_n_on_hcl_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
-        "npda", "PaediatricDiabetesUnit"
-    )
-    try:
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-    except PaediatricDiabetesUnit.DoesNotExist:
-        messages.error(
-            request=request,
-            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
-        )
-        return render(request, "dashboard.html")
-
-    selected_audit_year = int(request.session.get("selected_audit_year"))
-
-    if selected_audit_year <= 2024:
-        # The day after the audit year end date
-        calculation_date = date(selected_audit_year, 4, 1)
-    else:
-        today = date.today()
-        calculation_date = date(selected_audit_year, today.month, today.day)
+    submission, calculation_date = submission_and_calculation_date(request)
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -418,8 +369,6 @@ def get_n_on_hcl_partial(request):
     calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
 
     hcl_use_kpi_result = calculate_kpis.calculate_kpi_24_hybrid_closed_loop_system()
-
-    n_hcl_use = hcl_use_kpi_result.total_passed
 
     pct_hcl_use = (
         round(
@@ -434,6 +383,7 @@ def get_n_on_hcl_partial(request):
         "numerator": hcl_use_kpi_result.total_passed,
         "denominator": hcl_use_kpi_result.total_eligible,
         "units": f"({pct_hcl_use}%)",
+        "cumulative_graph_title": "Hybrid Closed Loop",
     }
 
     return render(
@@ -449,26 +399,7 @@ def get_pump_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
-        "npda", "PaediatricDiabetesUnit"
-    )
-    try:
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-    except PaediatricDiabetesUnit.DoesNotExist:
-        messages.error(
-            request=request,
-            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
-        )
-        return render(request, "dashboard.html")
-
-    selected_audit_year = int(request.session.get("selected_audit_year"))
-
-    if selected_audit_year <= 2024:
-        # The day after the audit year end date
-        calculation_date = date(selected_audit_year, 4, 1)
-    else:
-        today = date.today()
-        calculation_date = date(selected_audit_year, today.month, today.day)
+    submission, calculation_date = submission_and_calculation_date(request)
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -503,26 +434,7 @@ def get_cgm_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
-        "npda", "PaediatricDiabetesUnit"
-    )
-    try:
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-    except PaediatricDiabetesUnit.DoesNotExist:
-        messages.error(
-            request=request,
-            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
-        )
-        return render(request, "dashboard.html")
-
-    selected_audit_year = int(request.session.get("selected_audit_year"))
-
-    if selected_audit_year <= 2024:
-        # The day after the audit year end date
-        calculation_date = date(selected_audit_year, 4, 1)
-    else:
-        today = date.today()
-        calculation_date = date(selected_audit_year, today.month, today.day)
+    submission, calculation_date = submission_and_calculation_date(request)
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -549,3 +461,70 @@ def get_cgm_partial(request):
         "dashboard/components/cards/card_partials/secondary_card_partial.html",
         context,
     )
+
+
+def get_selected_chart_data(selected_chart: str, calculation_date: date, pz_code: str):
+    """Return the data for the selected chart"""
+
+    kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=False)
+    kpis.set_patients_for_calculation(pz_codes=[pz_code])
+
+    if selected_chart == "new_diagnoses":
+        return (
+            kpis.calculate_kpi_2_total_new_diagnoses_stratified_by_quarter(),
+            "All new diabetes diagnoses by quarter",
+            "Numbers of patients newly diagnosed with any type of diabetes each quarter. These numbers are not cumulative and reflect only new diagnoses in that quarter.",
+        )
+    elif selected_chart == "new_admissions":
+        return (
+            kpis.calculate_kpi_46_number_of_admissions_stratified_by_quarter(),
+            "All new diabetes admissions by quarter",
+            "Numbers of patients with diabetes admitted to hospital for any reason by quarter. These numbers are not cumulative and reflect only children inpatient in that quarter.",
+        )
+    elif selected_chart == "transitioned_to_adult_service":
+        return (
+            kpis.calculate_kpi_9_total_service_transitions_stratified_by_quarter(),
+            "All children transitioned to adult service by quarter",
+            "Numbers of patients with diabetes transitioned to adult services by quarter. These numbers are not cumulative and reflect only patients who have a date of transition to adult services in that quarter.",
+        )
+
+
+def submission_and_calculation_date(request):
+    # Get new diagnoses this submission
+    pz_code = request.session.get("pz_code")
+
+    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
+        "npda", "PaediatricDiabetesUnit"
+    )
+    try:
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+    except PaediatricDiabetesUnit.DoesNotExist:
+        messages.error(
+            request=request,
+            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
+        )
+        return render(request, "dashboard.html")
+
+    selected_audit_year = int(request.session.get("selected_audit_year"))
+
+    if Submission.objects.filter(
+        paediatric_diabetes_unit=pdu,
+        audit_year=selected_audit_year,
+        submission_active=True,
+    ).exists():
+        submission = Submission.objects.get(
+            paediatric_diabetes_unit=pdu,
+            audit_year=selected_audit_year,
+            submission_active=True,
+        )
+    else:
+        submission = None
+
+    if selected_audit_year <= date.today().year:
+        # The day after the audit year end date
+        calculation_date = date(selected_audit_year, 4, 1)
+    else:
+        today = date.today()
+        calculation_date = date(selected_audit_year, today.month, today.day)
+
+    return submission, calculation_date

@@ -24,6 +24,7 @@ def retrieve_quarter_for_date(date_instance: date) -> int:
     audit_start_date = date(date_instance.year, 4, 1)
     if date_instance < audit_start_date:
         # The patient was audited in the previous year
+        audit_start_date = date(date_instance.year - 1, 4, 1)
         quarter_2 = date(date_instance.year - 1, 7, 1)
         quarter_3 = date(date_instance.year - 1, 10, 1)
         quarter_4 = date(date_instance.year, 1, 1)
