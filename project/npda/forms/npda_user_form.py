@@ -90,9 +90,14 @@ class NPDAUserForm(forms.ModelForm):
         self.fields["surname"].required = True
         self.fields["email"].required = True
         self.fields["role"].required = True
+        self.fields["role"].choices = [
+            choice for choice in self.fields["role"].choices if choice[0] != 7
+        ]  # remove Child and Family option from role choices
         self.fields["add_employer"].required = False
         self.fields["add_employer"].choices = employer_choices
         self.employer_choices = employer_choices
+
+        # remove child or family from role choices
 
         # only if the form is bound - this user is being updated
         if self.instance.pk is not None:
