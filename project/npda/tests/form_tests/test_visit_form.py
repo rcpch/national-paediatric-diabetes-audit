@@ -1770,7 +1770,7 @@ def test_inpatient_admission_stabilisation_hospital_admission_other_provided_fai
         form.is_valid() == False
     ), f"Inpatient admission for stabilisation with hospital admission other should fail"
     assert (
-        "hospital_admission_other" in form.errors
+        "hospital_admission_reason" in form.errors
     ), "Hospital admission other should be in errors as hospital admission for stabilisation"
 
 
@@ -1850,7 +1850,7 @@ def test_inpatient_admission_dka_additional_therapies_hospital_admission_also_pr
         form.is_valid() == False
     ), f"Inpatient admission for DKA with additional therapies and hospital_admission_other should fail"
     assert (
-        "hospital_admission_other" in form.errors
+        "hospital_admission_reason" in form.errors
     ), "hospital_admission_other should be in errors as hospital admission for DKA"
 
 
