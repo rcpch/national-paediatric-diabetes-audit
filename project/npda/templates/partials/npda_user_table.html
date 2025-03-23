@@ -19,10 +19,14 @@
         <tr class="text-rcpch_light_blue bg-white border-b border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white">
           <td class="text-left">
             <div class="tooltip tooltip-right" data-tip="NPDA User Unique ID">
-              <a href="{% url 'npdauser-update' npda_user.pk %}"
-                 class="text-rcpch_pink px-2 hover:text-rcpch_dark_blue">
+              {% if perms.npda.change_npdauser %}
+                <a href="{% url 'npdauser-update' npda_user.pk %}"
+                   class="text-rcpch_pink px-2 hover:text-rcpch_dark_blue">
+                  <strong>{{ npda_user.pk }}</strong>
+                </a>
+              {% else %}
                 <strong>{{ npda_user.pk }}</strong>
-              </a>
+              {% endif %}
             </div>
           </td>
           <td class="text-left">{{ npda_user.get_full_name }}</td>
@@ -156,7 +160,8 @@
           </td>
           <td class="px-6 text-left">{{ npda_user.get_role_display }}</td>
           <td class="w-80 px-2 text-right">
-            <div class="tooltip tooltip-left" data-tip="View user logs for {{ npda_user }}">
+            <div class="tooltip tooltip-left"
+                 data-tip="View user logs for {{ npda_user }}">
               <a href="{% url 'npdauser-logs' npda_user.pk %}"
                  class="text-rcpch_pink flex justify-center items-center px-2">
                 <svg class="text-rcpch_pink w-8 h-8"
