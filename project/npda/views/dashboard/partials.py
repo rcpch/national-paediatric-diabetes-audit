@@ -321,9 +321,11 @@ def get_moved_out_of_area_partial(request):
 
     calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
 
-    n_moved_out_of_area = calculate_kpis.get_number_of_moved_out_of_area_this_month()
+    n_moved_out_of_area = (
+        calculate_kpis.get_number_of_moved_out_of_area_this_audit_year()
+    )
 
-    context = {"number": n_moved_out_of_area, "units": "(N / month)"}
+    context = {"number": n_moved_out_of_area, "units": "children"}
 
     return render(
         request,
