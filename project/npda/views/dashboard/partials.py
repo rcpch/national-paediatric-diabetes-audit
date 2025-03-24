@@ -312,7 +312,7 @@ def get_transitioned_to_adult_service_partial(request):
     calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
 
     n_transitioned_to_adult_service = (
-        calculate_kpis.calculate_kpi_9_total_service_transitions().total_passed  # this will return None if there are no eligible patients
+        calculate_kpis.calculate_total_service_transitions_to_adults().total_eligible  # this will return None if there are no eligible patients
     )
 
     context = {
@@ -474,19 +474,19 @@ def get_selected_chart_data(selected_chart: str, calculation_date: date, pz_code
         return (
             kpis.calculate_kpi_2_total_new_diagnoses_stratified_by_quarter(),
             "All new diabetes diagnoses by quarter",
-            "Numbers of patients newly diagnosed with any type of diabetes each quarter. These numbers are not cumulative and reflect only new diagnoses in that quarter.",
+            "Numbers of patients newly diagnosed with any type of diabetes each quarter. These numbers include new diagnoses by quarter in blue. Cumulative totals by quarter are shown in grey.",
         )
     elif selected_chart == "new_admissions":
         return (
             kpis.calculate_kpi_46_number_of_admissions_stratified_by_quarter(),
             "All new diabetes admissions by quarter",
-            "Numbers of patients with diabetes admitted to hospital for any reason by quarter. These numbers are not cumulative and reflect only children inpatient in that quarter.",
+            "Numbers of patients with diabetes admitted to hospital for any reason by quarter. These numbers include all admissions by quarter in blue. Cumulative totals by quarter are shown in grey.",
         )
     elif selected_chart == "transitioned_to_adult_service":
         return (
-            kpis.calculate_kpi_9_total_service_transitions_stratified_by_quarter(),
+            kpis.calculate_total_service_transitions_to_adults_stratified_by_quarter(),
             "All children transitioned to adult service by quarter",
-            "Numbers of patients with diabetes transitioned to adult services by quarter. These numbers are not cumulative and reflect only patients who have a date of transition to adult services in that quarter.",
+            "Numbers of patients with diabetes transitioned to adult services by quarter. These numbers include all patients who transition to adults by quarter in blue. Cumulative totals by quarter are shown in grey.",
         )
 
 

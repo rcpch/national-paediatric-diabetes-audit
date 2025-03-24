@@ -982,15 +982,18 @@ class CalculateKPIS:
             patient_querysets=patient_querysets,
         )
 
-    def calculate_kpi_9_total_service_transitions_stratified_by_quarter(
-        self,
-    ) -> dict[
-        Literal[1, 2, 3, 4],
-        dict[Literal["total_passed", "total_eligible", "pct"], int | float],
-    ]:
-        """KPI2's calculate_() method doesn't do this per quarter, so separate method"""
+    def calculate_total_service_transitions_to_adults(self) -> KPIResult:
+        """
+        Not a KPI: Number of patients who transitioned to adults within audit period
 
-        # Denominator - eligible pts
+        Number of eligible patients (measure 1) with
+        * a leaving date in the audit period and reason for leaving as 'Transition to
+        adult
+
+        NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
+        """
         base_eligible_patients, _ = (
             self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
         )
@@ -1005,7 +1008,61 @@ class CalculateKPIS:
         )
 
         # Count eligible patients
-        total_eligible_kpi_9 = eligible_patients.count()
+        total_eligible = eligible_patients.count()
+
+        # Calculate ineligible patients
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # This is just a count so pass/fail doesn't make sense; just set to same
+        # as eligible/ineligible
+        total_passed = None
+        total_failed = None
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=eligible_patients,
+            failed=eligible_patients,
+        )
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+            patient_querysets=patient_querysets,
+        )
+
+    def calculate_total_service_transitions_to_adults_stratified_by_quarter(
+        self,
+    ) -> dict[
+        Literal[1, 2, 3, 4],
+        dict[Literal["total_passed", "total_eligible", "pct"], int | float],
+    ]:
+        """This is not a KPI - total patients transitioning specifically to adults by quarter"""
+
+        # Denominator - eligible pts
+        base_eligible_patients, _ = (
+            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = base_eligible_patients.filter(
+            # a leaving date in the audit period
+            Q(
+                paediatric_diabetes_units__date_leaving_service__range=(
+                    self.AUDIT_DATE_RANGE
+                ),
+            ),
+            Q(
+                paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[0][
+                    0
+                ]
+            ),
+        )
+
+        # Count eligible patients
+        total_eligible = eligible_patients.count()
 
         # Get quarter dates
         quarter_end_dates = [
@@ -1021,23 +1078,22 @@ class CalculateKPIS:
         result = {}
 
         for q, q_end_date in enumerate(quarter_end_dates, start=1):
-            # Eligible patients are those who have a diagnosis date within the year
+            # Eligible patients are those who have a transition date within the year
 
-            # Passing patients are the subset of kpi_2 eligible who have a diagnosis date within the quarter
+            # Passing patients are the subset of kpi_2 eligible who have a transition date within the quarter
             passing_patients = eligible_patients.filter(
-                diagnosis_date__range=(q_end_date - relativedelta(months=3), q_end_date)
+                paediatric_diabetes_units__date_leaving_service__range=(
+                    q_end_date - relativedelta(months=3),
+                    q_end_date,
+                )
             )
             total_passed = passing_patients.count()
 
             kpi_result = {
                 "total_passed": total_passed,
-                "total_eligible": total_eligible_kpi_9,
+                "total_eligible": total_eligible,
                 "pct": round(
-                    (
-                        (total_passed / total_eligible_kpi_9) * 100
-                        if total_eligible_kpi_9
-                        else 0
-                    ),
+                    ((total_passed / total_eligible) * 100 if total_eligible else 0),
                     1,
                 ),
             }
