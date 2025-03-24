@@ -1,8 +1,9 @@
+{% load npda_tags %}
 {% if numerator and denominator %}
     <span class="text-xl font-bold text-rcpch_dark_blue">{{ numerator }}</span>
     /
-    <span class="text-xl font-bold text-rcpch_mid_grey">{{ denominator }}</span> 
+    <span class="text-xl font-bold text-rcpch_mid_grey">{{ denominator }}</span>
 {% else %}
-    <span class="text-xl font-bold text-rcpch_dark_blue">{{ number }}</span>
+    <span class="text-xl font-bold text-rcpch_dark_blue">{{ number|screen_ineligible }}</span>
 {% endif %}
 <span class="text-xs text-rcpch_pink">{{ units }}</span>

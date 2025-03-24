@@ -104,7 +104,7 @@ class VisitForm(forms.ModelForm):
             "hospital_discharge_date": DateInput(),
             "hospital_admission_reason": forms.Select(),
             "dka_additional_therapies": forms.Select(),
-            "hospital_admission_other": forms.TextInput(),
+            "hospital_admission_other": forms.Textarea(),
         }
 
     categories = [
@@ -1070,7 +1070,7 @@ class VisitForm(forms.ModelForm):
                     if hospital_admission_other is not None:
                         raise ValidationError(
                             {
-                                "hospital_admission_other": [
+                                "hospital_admission_reason": [
                                     "Hospital Admission Reason must be 'Other' if 'Other' has been completed."
                                 ]
                             }
@@ -1096,7 +1096,7 @@ class VisitForm(forms.ModelForm):
             if hospital_admission_other is not None and hospital_admission_reason != 6:
                 raise ValidationError(
                     {
-                        "hospital_admission_other": [
+                        "hospital_admission_reason": [
                             "Hospital Admission Reason must be 'Other' if 'Other' is filled in"
                         ]
                     }

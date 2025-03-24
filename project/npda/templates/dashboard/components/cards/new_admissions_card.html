@@ -1,23 +1,17 @@
 {% extends "dashboard/components/bases/base_secondary_card.html" %}
-
 {% block card_title %}
-    New admissions
+    Hospital Admissions
     {% include 'common/docs_icon_link_button.html' with rel_url="developer/kpis/outcomes/#46-number-of-admissions" fa_icon_class="fa-solid fa-eye" %}
+    <span class="text-rcpch_pink tooltip"
+          data-tip="Total number of patients with diabetes admitted to hospital for any reason this audit year"><i class="fa-solid fa-chart-line"></i></span>
 {% endblock %}
-
 {% block card_content %}
-
-<div
-hx-get="{% url 'get_new_admissions_partial' %}"
-hx-trigger="load" hx-swap="innerHTML"
-_="on htmx:afterSwap remove #loading-spinner-new-admissions-card"></div>
-
-
-
-
-<div id="loading-spinner-new-admissions-card"
-class="loading loading-spinner text-rcpch_dark_blue flex flex-grow-1 justify-center items-center h-full w-1/5 mx-auto bg-center">
-</div>
-
-
+    <div hx-get="{% url 'get_new_admissions_partial' %}"
+         hx-trigger="load"
+         hx-swap="innerHTML"
+         _="on htmx:afterSwap remove #loading-spinner-new-admissions-card">
+    </div>
+    <div id="loading-spinner-new-admissions-card"
+         class="loading loading-spinner text-rcpch_dark_blue flex flex-grow-1 justify-center items-center h-full w-1/5 mx-auto bg-center">
+    </div>
 {% endblock %}

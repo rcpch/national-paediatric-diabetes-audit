@@ -89,6 +89,11 @@
                       Fill with Visit Date
                     </button>
                   </div>
+                {% elif field.field.widget|is_textarea %}
+                  <textarea id="{{ field.id_for_label }}"
+                            name="{{ field.html_name }}"
+                            class="input rcpch-input-text rounded-none {% if not can_alter_this_audit_year_submission or not can_use_questionnaire or form.patient.is_in_transfer_in_the_last_year %}opacity-40 pointer-events-none{% endif %}"
+                            {% if field.field.required %}placeholder="Required"{% endif %}>{{ field.value }}</textarea>
                 {% else %}
                   {% if field.id_for_label != 'id_bmi' or field.id_for_label == 'id_bmi' and field.value is not None %}
                     <!-- Hide BMI label if no value -->

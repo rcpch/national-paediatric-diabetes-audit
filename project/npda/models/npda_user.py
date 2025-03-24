@@ -66,7 +66,15 @@ class NPDAUserManager(BaseUserManager):
 
         return user
 
-    def create_superuser(self, first_name, surname, email, password, is_rcpch_audit_team_member=True, role=RCPCH_AUDIT_TEAM):
+    def create_superuser(
+        self,
+        first_name,
+        surname,
+        email,
+        password,
+        is_rcpch_audit_team_member=True,
+        role=RCPCH_AUDIT_TEAM,
+    ):
         """
         Create and save a SuperUser with the given email and password.
         """
@@ -85,17 +93,17 @@ class NPDAUserManager(BaseUserManager):
             is_rcpch_audit_team_member=is_rcpch_audit_team_member,
             is_rcpch_staff=True,
             email_confirmed=True,
-            view_preference=1
+            view_preference=1,
         )
 
         paediatric_diabetes_unit = PaediatricDiabetesUnit.objects.get(
-                pz_code="PZ999",  # RCPCH
+            pz_code="PZ999",  # RCPCH
         )
-        
+
         OrganisationEmployer.objects.create(
             paediatric_diabetes_unit=paediatric_diabetes_unit,
             npda_user=logged_in_user,
-            is_primary_employer=True
+            is_primary_employer=True,
         )
 
         return logged_in_user
