@@ -1914,7 +1914,7 @@ class CalculateKPIS:
         )
 
         return KPIResult(
-            total_eligible=total_eligible_kpi_24,
+            total_eligible=total_eligible_kpi_1,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,

@@ -8,8 +8,9 @@ from project.npda.models import Patient
 from project.npda.tests import utils
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.tests.kpi_calculations.test_calculate_kpis import \
-    assert_kpi_result_equal
+from project.npda.tests.kpi_calculations.test_calculate_kpis import (
+    assert_kpi_result_equal,
+)
 
 
 @pytest.mark.django_db
@@ -120,7 +121,7 @@ def test_kpi_calculation_24(AUDIT_START_DATE):
         ]
     )
 
-    EXPECTED_TOTAL_ELIGIBLE = 8
+    EXPECTED_TOTAL_ELIGIBLE = 14  # 6 passing, 8 ineligible - all children with T1DM
     EXPECTED_TOTAL_INELIGIBLE = 8
     EXPECTED_TOTAL_PASSED = 6
     EXPECTED_TOTAL_FAILED = 2
@@ -159,11 +160,7 @@ def test_kpi_calculation_24_for_patients_who_have_come_off_hcl(AUDIT_START_DATE)
     # Add a more recent visit where they are back on injections
     second_visit_date = first_visit_date + relativedelta(months=3)
 
-    VisitFactory(
-        patient=patient,
-        visit_date=second_visit_date,
-        treatment=1
-    )
+    VisitFactory(patient=patient, visit_date=second_visit_date, treatment=1)
 
     second_result = calc_kpis.calculate_kpi_24_hybrid_closed_loop_system()
     assert second_result.total_passed == 0
