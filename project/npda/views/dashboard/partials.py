@@ -384,7 +384,7 @@ def get_n_on_hcl_partial(request):
         "numerator": hcl_use_kpi_result.total_passed,
         "denominator": hcl_use_kpi_result.total_eligible,
         "units": f"({pct_hcl_use}%)",
-        "cumulative_graph_title": "Hybrid Closed Loop",
+        "description": "Number of children using a hybrid closed loop system as a percentage of all children with type 1 diabetes",
     }
 
     return render(
@@ -420,6 +420,7 @@ def get_pump_partial(request):
         "numerator": pump_kpi_result.total_passed,
         "denominator": pump_kpi_result.total_eligible,
         "units": f"({pct_pump}%)",
+        "description": "Number of children using an insulin pump as a percentage of all children with type 1 diabetes",
     }
 
     return render(
