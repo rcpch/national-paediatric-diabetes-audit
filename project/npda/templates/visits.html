@@ -6,9 +6,27 @@
     <div class="overflow-x-auto">
       <div class="min-w-full inline-block px-10 py-2">
         <div class="w-full overflow-x-auto relative">
-          {% if patient.is_in_transfer_in_the_last_year %}
-            <div class="badge bg-rcpch_pink text-white badge-lg">
-              This patient has been transferred in the last year
+          {% if patient.is_in_transfer_in_the_last_year or is_csv_upload %}
+            <div class="alert alert-info text-white" role="alert">
+              <i class="fa-solid fa-info"></i>
+              <div class="flex flex-col">
+                {% if patient.is_in_transfer_in_the_last_year %}
+                  <span>
+                    This patient has been transferred in the last year.
+                  </span>
+                {% endif %}
+                {% if is_csv_upload %}
+                  <span>
+                    Browsing data from a CSV file. To make changes, edit the file and upload again.
+                  </span>
+                {% endif %}
+              </div>
+              {% if is_csv_upload and can_override_data_upload_rules %}
+                <a href="{{request.path}}?unlock=true" class="btn text-rcpch_red">
+                  <i class="fa-solid fa-lock"></i>
+                  Unlock (Audit Team only)
+                </a>
+              {% endif %}
             </div>
           {% endif %}
           <div>
@@ -122,8 +140,8 @@
             {% endif %}
             <div>
               {% if perms.npda.add_visit %}
-                  {% if is_audit_year_open %}
-                    <a href="{% url 'visit-create' patient_id=patient.pk %}"
+                  {% if can_use_questionnaire %}
+                    <a href="{% url 'visit-create' patient_id=patient.pk %}{% if data_upload_rules_overriden %}?unlock=true{% endif %}"
                       class="bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 mt-40 font-semibold text-white border hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue hover:text-white">
                       Create New Visit
                     </a>
@@ -131,22 +149,6 @@
                     <span class="bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 mt-40 font-semibold text-white border opacity-40 pointer-events-none hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue hover:text-white">
                       Create New Visit
                     </span>
-                    {% if can_override_audit_year_open %}
-                      <details class="dropdown">
-                        <summary class="btn bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 font-semibold text-white">
-                          <i class="fa-solid fa-chevron-down"></i>
-                        </summary>
-                        <ul tabindex="0"
-                            class="dropdown-content menu bg-base-100 text-black font-normal rounded-box z-[1] w-52 p-2 shadow">
-                          <li>
-                              <a href="{% url 'visit-create' patient_id=patient.pk %}" class="text-rcpch_red">
-                                  <i class="fa-solid fa-person-circle-plus"></i>
-                                  Add visit manually (Audit Team only)
-                              </a>
-                          </li>
-                        </ul>
-                      </details>
-                    {% endif %}
                   {% endif %}
               {% endif %}
               <a href="{% url 'patients' %}"

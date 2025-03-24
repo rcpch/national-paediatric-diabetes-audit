@@ -19,15 +19,20 @@ def session_data(request):
 
 def can_do_ui_actions(request):
     session_is_audit_year_open = request.session.get("selected_audit_year") == get_current_audit_year()
+    session_can_upload_csv = request.session.get("can_upload_csv", True)
     session_can_use_questionnaire = request.session.get("can_complete_questionnaire", True)
 
-    can_override_audit_year_open = request.user.is_superuser or getattr(request.user, "is_rcpch_audit_team_member", False)
+    can_override_data_upload_rules = request.user.is_superuser or getattr(request.user, "is_rcpch_audit_team_member", False)
+    data_upload_rules_overriden = can_override_data_upload_rules and request.GET.get("unlock", False)
 
     return {
         "is_audit_year_open": session_is_audit_year_open,
-        "can_override_audit_year_open": can_override_audit_year_open
-        "can_alter_this_audit_year_submission": session_is_audit_year_open or can_override_audit_year_open,
-        "can_use_questionnaire": session_can_use_questionnaire or can_override_audit_year_open,
+        "is_csv_upload": session_can_upload_csv,
+        "is_questionnaire": session_can_use_questionnaire,
+        "can_override_data_upload_rules": can_override_data_upload_rules,
+        "data_upload_rules_overriden": data_upload_rules_overriden,
+        "can_alter_this_audit_year_submission": session_is_audit_year_open or can_override_data_upload_rules,
+        "can_use_questionnaire": session_is_audit_year_open and (session_can_use_questionnaire or data_upload_rules_overriden),
     }
 
 
