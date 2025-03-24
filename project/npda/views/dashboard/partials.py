@@ -133,7 +133,7 @@ def get_metric_scatter_plot(request):
             # if data is None:
             data = json.loads(request_data)
             title = "All new diabetes diagnoses by quarter"
-            tooltip_text = "Numbers of patients newly diagnosed with any type of diabetes each quarter. These numbers are not cumulative and reflect only new diagnoses in that quarter."
+            tooltip_text = "Numbers of patients newly diagnosed with any type of diabetes each quarter. The plots in blue reflect only new diagnoses in that quarter, the plots in grey are cumulative totals."
 
         # Extracting data
         quarters = [f"Q{q}" for q in data]
@@ -179,6 +179,7 @@ def get_metric_scatter_plot(request):
                 ),
                 line=dict(color=colors.RCPCH_LIGHT_BLUE),
                 hovertemplate="Quarter total: <b><i>%{y}</i> children in %{x}</b><extra></extra>",
+                name="Quarterly Total",
             ),
         )
 
@@ -205,7 +206,7 @@ def get_metric_scatter_plot(request):
         fig.update_layout(
             xaxis=dict(title="Quarter", range=[-0.5, len(quarters) - 0.5]),
             yaxis=dict(title="Number of children"),
-            showlegend=False,
+            showlegend=True,
             template="simple_white",  # Clean grid style
             margin=dict(l=0, r=0, t=0, b=0),
         )
