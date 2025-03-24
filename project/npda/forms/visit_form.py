@@ -1031,6 +1031,9 @@ class VisitForm(forms.ModelForm):
         hospital_admission_reason = cleaned_data.get("hospital_admission_reason")
         dka_additional_therapies = cleaned_data.get("dka_additional_therapies")
         hospital_admission_other = cleaned_data.get("hospital_admission_other")
+        # clean hospital admission fields
+        if hospital_admission_other == "None":
+            hospital_admission_other = None
         if any(
             [
                 hospital_admission_date,
