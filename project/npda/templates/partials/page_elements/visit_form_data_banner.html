@@ -1,0 +1,27 @@
+{% if patient.is_in_transfer_in_the_last_year or is_csv_upload %}
+    <div class="alert alert-info text-white" role="alert">
+        <i class="fa-solid fa-info"></i>
+        <div class="flex flex-col">
+            {% if patient.is_in_transfer_in_the_last_year %}
+            <span>
+                This patient has been transferred in the last year.
+            </span>
+            {% endif %}
+            {% if is_csv_upload %}
+            <span>
+            {% if data_upload_rules_overriden %}
+                Manually editing data from a CSV file. Uploading the original file will overwrite any changes.
+            {% elif is_csv_upload %}
+                Browsing data from a CSV file. To make changes, edit the file and upload again.
+            {% endif %}
+            </span>
+            {% endif %}
+        </div>
+        {% if is_csv_upload and can_override_data_upload_rules and not data_upload_rules_overriden %}
+            <a href="{{request.path}}?unlock=true" class="btn text-rcpch_red">
+            <i class="fa-solid fa-lock"></i>
+            Unlock (Audit Team only)
+            </a>
+        {% endif %}
+    </div>
+{% endif %}
