@@ -28,7 +28,7 @@ from project.constants.colors import (
     RCPCH_LIGHTEST_GREY,
 )
 from project.constants import HBA1C_FORMATS
-from project.npda.models import Visit
+from project.npda.models import Visit, AuditPeriod
 from project.npda.views.decorators import login_and_otp_required
 
 
@@ -98,8 +98,6 @@ def patient_ages(request):
 
     template = "dashboard/components/cards/card_partials/patient_ages_partial.html"
 
-    audit_year = request.session.get("selected_audit_year", None)
-
     # Get the number of patients of ages 0-2, 2-5, 5-12, 12-16, 16-19, 19-25
     age_band_counts = {
         "birth_two": 0,
@@ -119,18 +117,18 @@ def patient_ages(request):
         "not_specified": 0,
     }
 
-    audit_start, audit_end = audit_period_for_audit_year(audit_year)
+    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
 
     number_of_patients = 0
 
     if Submission.objects.filter(
-        audit_year__range=(audit_start.year, audit_end.year),
+        audit_year=audit_period.audit_year(),
         submission_active=True,
         paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
     ).exists():
         all_patients_in_this_submission = (
             Submission.objects.filter(
-                audit_year__range=(audit_start.year, audit_end.year),
+                audit_year=audit_period.audit_year(),
                 submission_active=True,
                 paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
             )
@@ -139,10 +137,10 @@ def patient_ages(request):
         )
 
         # This function might get called on historical cohorts, so we need to check if today's date is within the audit period
-        if audit_start <= date.today() <= audit_end:
+        if audit_period.start_date <= date.today() <= audit_period.end_date:
             comparison_date = date.today()
         else:
-            comparison_date = audit_end
+            comparison_date = audit_period.end_date
 
         filter = Q()
         if request.POST.get("diabetes_type"):
@@ -216,7 +214,7 @@ def patient_ages(request):
                 sex_counts["not_specified"] += 1
 
     context = {
-        "audit_year": (audit_start, audit_end),
+        "audit_year": (audit_period.start_date, audit_period.end_date),
         "number_of_patients": number_of_patients,
         "patients_by_age": age_band_counts,
         "diabetes_types": diabetes_types,
@@ -231,9 +229,7 @@ def all_patient_charts(request):
     """
     This function is used to generate all the patient characteristics charts
     """
-    audit_year = request.session.get("selected_audit_year", None)
-
-    audit_start, audit_end = audit_period_for_audit_year(audit_year)
+    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
 
     imd_counts = {
         "1 (most deprived)": 0,
@@ -254,13 +250,13 @@ def all_patient_charts(request):
     }
 
     if Submission.objects.filter(
-        audit_year__range=(audit_start.year, audit_end.year),
+        audit_year=audit_period.audit_year(),
         submission_active=True,
         paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
     ).exists():
         all_patients_in_this_submission = (
             Submission.objects.filter(
-                audit_year__range=(audit_start.year, audit_end.year),
+                audit_year=audit_period.audit_year(),
                 submission_active=True,
                 paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
             )
@@ -315,7 +311,7 @@ def all_patient_charts(request):
     if all_patients_in_this_submission is None:
         visits = None
     else:
-        visits = return_eligible_visits(all_patients_in_this_submission, audit_year)
+        visits = return_eligible_visits(all_patients_in_this_submission, audit_period.audit_year())
         # Create a Pandas DataFrame
     df = pd.DataFrame(visits)
 
@@ -372,7 +368,7 @@ def all_patient_charts(request):
             if diabetes_type_hba1c_mmol_mol_box_plot
             else None
         ),
-        "audit_year": (audit_start, audit_end),
+        "audit_year": (audit_period.start_date, audit_period.end_date),
     }
 
     return render(request, template, context)

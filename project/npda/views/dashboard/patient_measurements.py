@@ -4,7 +4,7 @@ from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.views.dashboard import helpers as hp
 from project.npda.views.patient_report.template_data import KPI_CATEGORY_ATTR_MAP, TEXT
 from project.npda.views.decorators import login_and_otp_required
-from project.npda.models import Visit, Submission
+from project.npda.models import Visit, Submission, AuditPeriod
 
 
 @login_and_otp_required()
@@ -13,13 +13,20 @@ def patient_measurements(request):
     # First need to get the relevant calculations
     pz_code = request.session.get("pz_code")
 
-    selected_audit_year = int(request.session.get("selected_audit_year"))
-    if selected_audit_year <= 2024:
-        # The day after the audit year end date
-        calculation_date = date(selected_audit_year, 4, 1)
+    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
+
+    today = date.today()
+    
+    if audit_period.start_date > today:
+        # Future audit period - likely no data yet but you can still select it
+        calculation_date = audit_period.start_date
+    elif today > audit_period.end_date:
+        # Past audit period
+        calculation_date = audit_period.end_date
     else:
-        today = date.today()
-        calculation_date = date(selected_audit_year, today.month, today.day)
+        # Current audit period
+        calculation_date = today
+    
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
     )
@@ -57,12 +64,12 @@ def patient_measurements(request):
     )
 
     if Submission.objects.filter(
-        audit_year=selected_audit_year,
+        audit_year=audit_period.audit_year(),
         paediatric_diabetes_unit__pz_code=pz_code,
         submission_active=True,
     ).exists():
         current_submission = Submission.objects.get(
-            audit_year=selected_audit_year,
+            audit_year=audit_period.audit_year(),
             paediatric_diabetes_unit__pz_code=pz_code,
             submission_active=True,
         )
@@ -84,7 +91,7 @@ def patient_measurements(request):
         request,
         template_name=template,
         context={
-            "selected_audit_year": selected_audit_year,
+            "selected_audit_year": audit_period.audit_year(),
             "pz_code": pz_code,
             "hba1c_value_counts_stratified_by_diabetes_type": hba1c_value_counts_stratified_by_diabetes_type,
             "submission_visit_error_count": submission_visit_error_count,

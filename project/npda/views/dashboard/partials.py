@@ -27,6 +27,7 @@ from project.npda.models.paediatric_diabetes_unit import (
     PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
 )
 from project.npda.models.submission import Submission
+from project.npda.models.audit_period import AuditPeriod
 from project.npda.views.decorators import login_and_otp_required
 
 logger = logging.getLogger(__name__)
@@ -507,26 +508,31 @@ def submission_and_calculation_date(request):
         )
         return render(request, "dashboard.html")
 
-    selected_audit_year = int(request.session.get("selected_audit_year"))
+    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
 
     if Submission.objects.filter(
         paediatric_diabetes_unit=pdu,
-        audit_year=selected_audit_year,
+        audit_year=audit_period.audit_year(),
         submission_active=True,
     ).exists():
         submission = Submission.objects.get(
             paediatric_diabetes_unit=pdu,
-            audit_year=selected_audit_year,
+            audit_year=audit_period.audit_year(),
             submission_active=True,
         )
     else:
         submission = None
 
-    if selected_audit_year <= date.today().year:
-        # The day after the audit year end date
-        calculation_date = date(selected_audit_year, 4, 1)
+    today = date.today()
+    
+    if audit_period.start_date > today:
+        # Future audit period - likely no data yet but you can still select it
+        calculation_date = audit_period.start_date
+    elif today > audit_period.end_date:
+        # Past audit period
+        calculation_date = audit_period.end_date
     else:
-        today = date.today()
-        calculation_date = date(selected_audit_year, today.month, today.day)
+        # Current audit period
+        calculation_date = today
 
     return submission, calculation_date
