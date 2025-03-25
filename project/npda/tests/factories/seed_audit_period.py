@@ -22,13 +22,16 @@ def _seed_audit_periods_fixture(django_db_setup, django_db_blocker):
             logger.info('NOTE: Test audit periods already seeded! Not re-seeding.')
             return
 
-        logger.info(f"Seeding test audit period 2024-2025.")
+        for start_year in [2024, 2025]:
+            end_year = start_year + 1
 
-        AuditPeriod.objects.create(
-            is_open=True,
-            start_date="2024-01-01",
-            end_date="2025-01-01",
-        )
+            logger.info(f"Seeding test audit period {start_year}-{end_year}.")
+
+            AuditPeriod.objects.create(
+                is_open=True,
+                start_date="{start_year}-04-01",
+                end_date="{end_year}-03-31",
+            )
 
 
 @pytest.fixture(scope="session")
