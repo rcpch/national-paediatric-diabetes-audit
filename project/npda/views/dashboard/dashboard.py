@@ -87,9 +87,23 @@ def dashboard(request):
         return render(request, "dashboard.html")
 
     audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
+    current_date = date.today()
 
-    today = date.today()
-    calculation_date = audit_period.end_date if today > audit_period.end_date else today
+    if audit_period.start_date > current_date:
+        # Future audit period - likely no data yet but you can still select it
+        calculation_date = audit_period.start_date
+        current_quarter = None
+        days_remaining_until_audit_end_date = (audit_period.end_date - current_date).days
+    elif current_date > audit_period.end_date:
+        # Past audit period
+        calculation_date = audit_period.end_date
+        current_quarter = None
+        days_remaining_until_audit_end_date = None
+    else:
+        # Current audit period
+        calculation_date = current_date
+        current_quarter = retrieve_quarter_for_date(current_date)
+        days_remaining_until_audit_end_date = (audit_period.end_date - current_date).days
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -104,21 +118,14 @@ def dashboard(request):
         calculate_kpis.calculate_kpi_2_total_new_diagnoses_stratified_by_quarter()
     )
 
-    # Gather other context vars
-    current_date = date.today()
-    days_remaining_until_audit_end_date = (
-        kpi_calculations_object["audit_end_date"] - current_date
-    ).days
-    current_quarter = retrieve_quarter_for_date(current_date)
-
     context = {
         "scatter_plot_select_list": _scatter_plot_select_list("new_diagnoses"),
         "pdu_object": pdu,
         # "pdu_lead_organisation": pdu_lead_organisation,
         "kpi_calculations_object": kpi_calculations_object,
         "current_date": current_date,
-        "current_quarter": current_quarter if days_remaining_until_audit_end_date >= 0 else None,
-        "days_remaining_until_audit_end_date": days_remaining_until_audit_end_date if days_remaining_until_audit_end_date >=0 else None,
+        "current_quarter": current_quarter,
+        "days_remaining_until_audit_end_date": days_remaining_until_audit_end_date,
         "charts": {
             "new_diagnoses_per_quarter_value_counts_pct": {
                 "no_eligible_patients": kpi_calculations_object[
