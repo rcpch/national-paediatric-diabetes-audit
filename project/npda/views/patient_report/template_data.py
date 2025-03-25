@@ -82,7 +82,7 @@ TEXT = {
         }
     },
     "outcomes": {
-        "title": "Outcomes",
+        "title": "Admissions",
         "description": "Outcomes are presented below for all children and young people with Type 1 diabetes. HbA1c excludes all measurements taken in the first 90 days after diagnosis.",
         "headers": [
             "NHS NUMBER",
@@ -90,8 +90,6 @@ TEXT = {
             "Median HbA1c",
             "Number of Admissions",
             "Number of DKA Admissions",
-            "Required additional psych support",
-            "Albuminuria present",
         ],
         "ineligible_hover_reason": {},
         "key": {
@@ -125,7 +123,7 @@ KPI_CATEGORY_ATTR_MAP = {
     "health_checks": list(range(25, 32)),
     "additional_care_processes": list(range(33, 41)),
     "care_at_diagnosis": list(range(41, 44)),
-    "outcomes": list(range(44, 50)),
+    "outcomes": list(range(44, 48)),
     "treatment": list(
         range(13, 21),
     )

@@ -199,11 +199,8 @@ def get_pt_level_table_data(
         )
         calculate_mean = calculate_kpis_object.calculate_mean
 
-        # kpi 44 mean hba1c
-        # Get the eligible pts
-        kpi_pt_querysets = kpi_calculations_object["calculated_kpi_values"][get_attribute_name(44)][
-            "patient_querysets"
-        ]
+        # Get the base eligible pts (T1DM with complete year of care)
+        kpi_pt_querysets = calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets
 
         # Start with the median hba1c values
         data = get_median_hba1c_values_by_patient(kpi_pt_querysets["eligible"])
@@ -232,13 +229,6 @@ def get_pt_level_table_data(
 
         # Have enough to start constructing the data dict for the table
 
-        kpi_48_passed_pt_pks_queryset: QuerySet = kpi_calculations_object["calculated_kpi_values"][
-            get_attribute_name(48)
-        ]["patient_querysets"]["passed"].values_list("pk", flat=True)
-        kpi_49_passed_pt_pks_queryset: QuerySet = kpi_calculations_object["calculated_kpi_values"][
-            get_attribute_name(49)
-        ]["patient_querysets"]["passed"].values_list("pk", flat=True)
-
         for pt_pk in data:
 
             pt_data: dict = data[pt_pk]
@@ -266,16 +256,6 @@ def get_pt_level_table_data(
                     pt_pk=pt_pk,
                 )
             )
-
-            # kpi 48
-            data[pt_pk][get_attribute_name(48)] = kpi_48_passed_pt_pks_queryset.filter(
-                pk=pt_pk
-            ).exists()
-
-            # kpi 49
-            data[pt_pk][get_attribute_name(49)] = kpi_49_passed_pt_pks_queryset.filter(
-                pk=pt_pk
-            ).exists()
 
         # Finally add the headers. Need to add nhs_number
         headers = ["nhs_number"] + kpi_attr_names
