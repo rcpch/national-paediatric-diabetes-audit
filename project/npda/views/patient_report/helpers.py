@@ -1,16 +1,11 @@
 import logging
-from collections import Counter, defaultdict
+from collections import defaultdict
 from decimal import Decimal
 from typing import Literal
 
 from dateutil.relativedelta import relativedelta
-from django.db.models import QuerySet
 
-from project.constants.ethnicities import ETHNICITIES
-from project.constants.sex_types import SEX_TYPE
-from project.constants.types.kpi_types import KPIRegistry
 from project.npda.kpi_class.kpis import CalculateKPIS
-from project.npda.models.patient import Patient
 from project.npda.views.patient_report import template_data
 
 # LOGGING
@@ -66,13 +61,17 @@ def get_pt_level_table_data(
     get_attribute_name = calculate_kpis_object.kpi_name_registry.get_attribute_name
     kpi_attr_names = [get_attribute_name(i) for i in template_data.KPI_CATEGORY_ATTR_MAP[category]]
 
-
-
     if category == "health_checks":
 
         data = {}
-        all_t1dm_pts = calculate_kpis_object.calculate_kpi_3_total_t1dm().patient_querysets['eligible']
-        all_t1dm_pts_with_complete_year_of_care = calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets['eligible']
+        all_t1dm_pts = calculate_kpis_object.calculate_kpi_3_total_t1dm().patient_querysets[
+            "eligible"
+        ]
+        all_t1dm_pts_with_complete_year_of_care = (
+            calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets[
+                "eligible"
+            ]
+        )
         # First initialise the dict with all T1DM (kpi3)
         for pt in all_t1dm_pts:
             # Set all to None initially as updating as [True | False] if pt in [passed | failed]
@@ -131,10 +130,16 @@ def get_pt_level_table_data(
     elif category == "additional_care_processes":
 
         data = {}
-        
+
         # all t1dm pts
-        all_t1dm_pts = calculate_kpis_object.calculate_kpi_3_total_t1dm().patient_querysets['eligible']
-        all_t1dm_pts_with_complete_year_of_care = calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets['eligible']
+        all_t1dm_pts = calculate_kpis_object.calculate_kpi_3_total_t1dm().patient_querysets[
+            "eligible"
+        ]
+        all_t1dm_pts_with_complete_year_of_care = (
+            calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets[
+                "eligible"
+            ]
+        )
         for pt in all_t1dm_pts:
             # Set all to None initially as updating as [True | False] if pt in [passed | failed]
             # querysets for each kpi -> if not in either, must mean they are ineligible (therefore None)
@@ -144,17 +149,15 @@ def get_pt_level_table_data(
             # complete year of care
             data[pt.pk]["is_complete_year_of_care"] = pt in all_t1dm_pts_with_complete_year_of_care
 
-        
         for kpi_attr_name in kpi_attr_names:
 
             # For each kpi, update the data dict with the pts that have passed and failed
-            kpi_pt_querysets_passed = kpi_calculations_object["calculated_kpi_values"][kpi_attr_name][
-                "patient_querysets"
-            ]
+            kpi_pt_querysets_passed = kpi_calculations_object["calculated_kpi_values"][
+                kpi_attr_name
+            ]["patient_querysets"]
 
             for pt in all_t1dm_pts:
                 data[pt.pk][kpi_attr_name] = pt in kpi_pt_querysets_passed["passed"]
-
 
         # Finally add the headers. Need to add nhs_number
 
@@ -165,8 +168,14 @@ def get_pt_level_table_data(
         data = {}
 
         # all t1dm pts
-        all_t1dm_pts = calculate_kpis_object.calculate_kpi_3_total_t1dm().patient_querysets['eligible']
-        all_t1dm_pts_with_complete_year_of_care = calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets['eligible']
+        all_t1dm_pts = calculate_kpis_object.calculate_kpi_3_total_t1dm().patient_querysets[
+            "eligible"
+        ]
+        all_t1dm_pts_with_complete_year_of_care = (
+            calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets[
+                "eligible"
+            ]
+        )
         for pt in all_t1dm_pts:
             # Set all to None initially as updating as [True | False] if pt in [passed | failed]
             # querysets for each kpi -> if not in either, must mean they are ineligible (therefore None)
@@ -207,9 +216,17 @@ def get_pt_level_table_data(
         calculate_mean = calculate_kpis_object.calculate_mean
 
         # Get the base eligible pts (all T1DM)
-        all_t1dm_pts = calculate_kpis_object.calculate_kpi_3_total_t1dm().patient_querysets['eligible']
-        all_t1dm_pts_with_complete_year_of_care = calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets['eligible']
-        pks_of_t1dm_pts_with_complete_year_of_care = set(all_t1dm_pts_with_complete_year_of_care.values_list('pk', flat=True))
+        all_t1dm_pts = calculate_kpis_object.calculate_kpi_3_total_t1dm().patient_querysets[
+            "eligible"
+        ]
+        all_t1dm_pts_with_complete_year_of_care = (
+            calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets[
+                "eligible"
+            ]
+        )
+        pks_of_t1dm_pts_with_complete_year_of_care = set(
+            all_t1dm_pts_with_complete_year_of_care.values_list("pk", flat=True)
+        )
 
         # Start with the median hba1c values
         data = get_median_hba1c_values_by_patient(all_t1dm_pts)
@@ -267,7 +284,9 @@ def get_pt_level_table_data(
             )
 
             # complete year of care
-            data[pt_pk]["is_complete_year_of_care"] = pt_pk in pks_of_t1dm_pts_with_complete_year_of_care
+            data[pt_pk]["is_complete_year_of_care"] = (
+                pt_pk in pks_of_t1dm_pts_with_complete_year_of_care
+            )
 
         # Finally add the headers. Need to add nhs_number
         headers = ["nhs_number"] + kpi_attr_names
@@ -296,8 +315,14 @@ def get_pt_level_table_data(
         }
 
         # all t1dm pts
-        all_t1dm_pts = calculate_kpis_object.calculate_kpi_3_total_t1dm().patient_querysets['eligible']
-        all_t1dm_pts_with_complete_year_of_care = calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets['eligible']
+        all_t1dm_pts = calculate_kpis_object.calculate_kpi_3_total_t1dm().patient_querysets[
+            "eligible"
+        ]
+        all_t1dm_pts_with_complete_year_of_care = (
+            calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets[
+                "eligible"
+            ]
+        )
 
         # Start constructing the data dict
 
@@ -333,13 +358,17 @@ def get_pt_level_table_data(
                     break
 
             # HCL col -> true or false
-            data[pt.pk][get_attribute_name(24)] = "Yes" if (
-                kpi_calculations_object["calculated_kpi_values"][get_attribute_name(24)][
-                    "patient_querysets"
-                ]["passed"]
-                .filter(pk=pt.pk)
-                .exists()
-            ) else "No"
+            data[pt.pk][get_attribute_name(24)] = (
+                "Yes"
+                if (
+                    kpi_calculations_object["calculated_kpi_values"][get_attribute_name(24)][
+                        "patient_querysets"
+                    ]["passed"]
+                    .filter(pk=pt.pk)
+                    .exists()
+                )
+                else "No"
+            )
 
             # complete year of care
             data[pt.pk]["is_complete_year_of_care"] = pt in all_t1dm_pts_with_complete_year_of_care

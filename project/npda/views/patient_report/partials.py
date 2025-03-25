@@ -1,19 +1,16 @@
 import logging
 from datetime import date
 
-
 # Django imports
 from django.http import HttpResponseBadRequest
-
 # Django imports
 from django.shortcuts import render
 
 from project.npda.kpi_class.kpis import CalculateKPIS
-from project.npda.views.patient_report.helpers import (
-    get_pt_level_table_data,
-)
-from project.npda.views.patient_report.template_data import KPI_CATEGORY_ATTR_MAP, TEXT
 from project.npda.views.decorators import login_and_otp_required
+from project.npda.views.patient_report.helpers import get_pt_level_table_data
+from project.npda.views.patient_report.template_data import (
+    KPI_CATEGORY_ATTR_MAP, TEXT)
 
 logger = logging.getLogger(__name__)
 
