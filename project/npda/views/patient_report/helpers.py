@@ -199,8 +199,8 @@ def get_pt_level_table_data(
         )
         calculate_mean = calculate_kpis_object.calculate_mean
 
-        # Get the base eligible pts (T1DM with complete year of care)
-        kpi_pt_querysets = calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets
+        # Get the base eligible pts (all T1DM)
+        kpi_pt_querysets = calculate_kpis_object.calculate_kpi_3_total_t1dm().patient_querysets
 
         # Start with the median hba1c values
         data = get_median_hba1c_values_by_patient(kpi_pt_querysets["eligible"])
