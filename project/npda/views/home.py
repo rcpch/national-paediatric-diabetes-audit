@@ -21,6 +21,7 @@ from django.conf import settings
 from django_htmx.http import trigger_client_event
 
 from project.npda.general_functions.csv import csv_upload, csv_parse, csv_header
+from ..models import AuditPeriod
 from ..forms.upload import UploadFileForm
 from ..general_functions.session import refresh_session_filters
 from ..general_functions.view_preference import get_or_update_view_preference
@@ -84,7 +85,7 @@ async def home(request):
                 )
                 return redirect("home")
 
-            audit_year = request.session.get("selected_audit_year")
+            audit_period = await AuditPeriod.objects.aget_audit_period_for_request(request)
 
             # CSV is valid, parse any errors and store the data in the tables.
             errors_by_row_index = await csv_upload(
@@ -94,7 +95,7 @@ async def home(request):
                 csv_file_name=user_csv_filename,
                 csv_file_bytes=user_csv_bytes,
                 pdu_pz_code=pz_code,
-                audit_year=audit_year,
+                audit_period=audit_period,
             )
             # log user activity
             VisitActivity = apps.get_model("npda", "VisitActivity")

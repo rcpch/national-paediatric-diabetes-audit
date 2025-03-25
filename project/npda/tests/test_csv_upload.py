@@ -20,7 +20,7 @@ from httpx import HTTPError
 
 from project.npda.general_functions.csv import csv_upload, csv_parse
 from project.constants import csv_definition_for, ALL_DATES
-from project.npda.models import NPDAUser, Patient, Visit
+from project.npda.models import NPDAUser, Patient, Visit, AuditPeriod
 from project.npda.tests.factories.patient_factory import (
     INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
     TODAY,
@@ -131,7 +131,7 @@ def two_patients_with_one_visit_each(dummy_sheets_folder):
 
 
 @pytest.fixture
-def test_user(seed_groups_fixture, seed_users_fixture):
+def test_user(seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture):
     return NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE
     ).first()
@@ -143,6 +143,8 @@ def test_user(seed_groups_fixture, seed_users_fixture):
 async def csv_upload_sync(
     user, dataframe, pdu_pz_code=ALDER_HEY_PZ_CODE, errors_to_return=None
 ):
+    audit_period = await AuditPeriod.objects.afirst()
+
     return await csv_upload(
         user,
         dataframe,
@@ -154,7 +156,7 @@ async def csv_upload_sync(
         csv_file_name=None,
         csv_file_bytes=None,
         pdu_pz_code=pdu_pz_code,
-        audit_year=2024,
+        audit_period=audit_period,
     )
 
 
@@ -258,6 +260,7 @@ def test_multiple_patients(
 def test_missing_date_of_birth(
     seed_groups_per_function_fixture,
     seed_users_per_function_fixture,
+    seed_audit_periods_per_function_fixture,
     single_row_valid_df,
 ):
     # As this test needs full transaction support we can't use our session fixtures
@@ -286,6 +289,7 @@ def test_missing_date_of_birth(
 def test_missing_nhs_number(
     seed_groups_per_function_fixture,
     seed_users_per_function_fixture,
+    seed_audit_periods_per_function_fixture,
     single_row_valid_df,
 ):
     # As these tests need full transaction support we can't use our session fixtures
@@ -314,6 +318,7 @@ def test_missing_nhs_number(
 def test_missing_unique_reference_number(
     seed_groups_per_function_fixture,
     seed_users_per_function_fixture,
+    seed_audit_periods_per_function_fixture,
     single_row_valid_df,
 ):
     # As these tests need full transaction support we can't use our session fixtures
@@ -1028,6 +1033,7 @@ def test_urine_albumin_value_is_rounded_to_one_decimal(test_user, single_row_val
 def test_bad_date_format_on_date_of_birth(
     seed_groups_per_function_fixture,
     seed_users_per_function_fixture,
+    seed_audit_periods_per_function_fixture,
     one_patient_two_visits,
 ):
     # As these tests need full transaction support we can't use our session fixtures

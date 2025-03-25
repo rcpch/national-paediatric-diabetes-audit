@@ -1,5 +1,7 @@
+from asgiref.sync import async_to_sync
+
 from django.contrib.gis.db import models
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, PermissionDenied
 
 
 class AuditPeriodManager(models.Manager):
@@ -14,13 +16,23 @@ class AuditPeriodManager(models.Manager):
 
         return audit_period
 
-    def get_audit_period_for_request(self, request):
-        # TODO MRB: cache all this
-        # TODO MRB: make backwards compatible with old sessions (audit year based rather than period)
-        selected_audit_period_id = request.session.get("selected_audit_period_id", None)
+    async def aget_audit_period_for_request(self, request):
+        selected_audit_year = request.session.get("selected_audit_year", None)
 
-        if selected_audit_period_id:
-            return AuditPeriod.objects.get(pk=selected_audit_period_id)
+        if not selected_audit_year:
+            raise ValidationError("Missing selected_audit_year in session")
+
+        audit_period = await AuditPeriod.objects.filter(
+            start_date__year=selected_audit_year
+        ).afirst()
+
+        if not audit_period.is_open and not (request.user.is_superuser or request.user.is_rcpch_audit_team_member):
+            raise PermissionDenied(f"{audit_period} is not open for submissions")
+        
+        return audit_period
+    
+    def get_audit_period_for_request(self, request):
+        return async_to_sync(self.aget_audit_period_for_request)(request)
 
 
 class AuditPeriod(models.Model):
@@ -29,6 +41,10 @@ class AuditPeriod(models.Model):
     is_open = models.BooleanField()
     start_date = models.DateField()
     end_date = models.DateField()
+
+    # For compatibility with old code
+    def audit_year(self):
+        return self.start_date.year
 
     def display_name(self):
         return f"{self.start_date.year} - {self.end_date.year}"
