@@ -1,8 +1,7 @@
 from datetime import date
-from asgiref.sync import async_to_sync
 
 from django.contrib.gis.db import models
-from django.core.exceptions import ValidationError, PermissionDenied
+from django.core.exceptions import ValidationError
 
 
 class AuditPeriodManager(models.Manager):
@@ -17,23 +16,15 @@ class AuditPeriodManager(models.Manager):
 
         return audit_period
 
-    async def aget_audit_period_for_request(self, request):
+    def get_audit_period_for_request(self, request):
         selected_audit_year = request.session.get("selected_audit_year", None)
 
-        if not selected_audit_year:
-            raise ValidationError("Missing selected_audit_year in session")
-
-        audit_period = await AuditPeriod.objects.filter(
+        # TODO MRB: need to cache these as this is called from a context processor
+        audit_period = AuditPeriod.objects.filter(
             start_date__year=selected_audit_year
-        ).afirst()
-
-        if not audit_period.is_open and not (request.user.is_superuser or request.user.is_rcpch_audit_team_member):
-            raise PermissionDenied(f"{audit_period} is not open for submissions")
+        ).first()
         
         return audit_period
-    
-    def get_audit_period_for_request(self, request):
-        return async_to_sync(self.aget_audit_period_for_request)(request)
 
 
 class AuditPeriod(models.Model):

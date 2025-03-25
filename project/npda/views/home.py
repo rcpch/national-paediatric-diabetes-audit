@@ -85,7 +85,7 @@ async def home(request):
                 )
                 return redirect("home")
 
-            audit_period = await AuditPeriod.objects.aget_audit_period_for_request(request)
+            audit_period = await sync_to_async(AuditPeriod.objects.get_audit_period_for_request)(request)
 
             # CSV is valid, parse any errors and store the data in the tables.
             errors_by_row_index = await csv_upload(

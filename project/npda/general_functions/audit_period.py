@@ -30,11 +30,6 @@ def get_audit_period_for_date(input_date: date) -> tuple[date, date]:
     return audit_start_date, audit_end_date
 
 
-def get_current_audit_year() -> int:
-    (start_date, _) = get_audit_period_for_date(date.today())
-    return start_date.year
-
-
 def get_quarters_for_audit_period(
     audit_start_date: date, audit_end_date: date
 ) -> list[tuple[date, date]]:

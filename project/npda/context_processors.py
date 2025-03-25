@@ -1,6 +1,6 @@
 from datetime import datetime
 from django.conf import settings
-from project.npda.general_functions import get_current_audit_year
+from project.npda.models.audit_period import AuditPeriod
 
 
 def session_data(request):
@@ -27,10 +27,9 @@ def can_alter_this_audit_year_submission(request):
         if request.user.is_rcpch_audit_team_member:
             return {"can_alter_this_audit_year_submission": True}
 
-    if (
-        request.session.get("selected_audit_year") == get_current_audit_year()
-        or request.user.is_superuser
-    ):
+    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
+
+    if audit_period and audit_period.is_open or request.user.is_superuser:
         return {
             "can_alter_this_audit_year_submission": True,
         }
