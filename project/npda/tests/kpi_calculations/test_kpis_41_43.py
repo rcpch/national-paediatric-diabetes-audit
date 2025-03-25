@@ -93,8 +93,6 @@ def test_kpi_calculation_41(
     )
 
     # Create Patients and Visits that should be ineligble (KPI3)
-    # Visit date before audit period
-
     ineligible_patients_visit_date = PatientFactory(
         postcode="ineligible_patients_visit_date",
         visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
@@ -164,10 +162,9 @@ def test_kpi_calculation_42(
     eligible_criteria = {
         "visit__visit_date": DIAB_DIAGNOSIS_91D_BEFORE_END - relativedelta(months=2),
         "date_of_birth": AUDIT_START_DATE - relativedelta(years=10),
+        # T1DM
         "diabetes_type": DIABETES_TYPES[0][0],
-        # any other observation date
-        "visit__height_weight_observation_date": DIAB_DIAGNOSIS_91D_BEFORE_END,
-        # KPI 42 specific
+        # KPI 41 specific
         "diagnosis_date": DIAB_DIAGNOSIS_91D_BEFORE_END,
     }
 
@@ -175,7 +172,7 @@ def test_kpi_calculation_42(
     # thyroid_function_date < 90D before T1DM diagnosis
     passing_patient_1 = PatientFactory(
         postcode="passing_patient_1",
-        # KPI7 eligible
+        # KPI3 eligible
         **eligible_criteria,
         # KPI 42 specific
         visit__thyroid_function_date=DIAB_DIAGNOSIS_91D_BEFORE_END - relativedelta(days=90),
@@ -183,7 +180,7 @@ def test_kpi_calculation_42(
     # only 2nd visit has thyroid_function_date
     passing_patient_2 = PatientFactory(
         postcode="passing_patient_2",
-        # KPI7 eligible
+        # KPI3 eligible
         **eligible_criteria,
         # KPI 42 specific
         visit__thyroid_function_date=None,
@@ -218,39 +215,23 @@ def test_kpi_calculation_42(
         + relativedelta(days=91),
     )
 
-    # Create Patients and Visits that should be ineligble (KPI7)
-    ineligible_patient_not_t1dm = PatientFactory(
-        postcode="ineligible_patient_not_t1dm",
-        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
-        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
-        # not T1DM
-        diabetes_type=DIABETES_TYPES[1][0],
-        # Date of diagnosis inside the audit period
-        diagnosis_date=AUDIT_START_DATE + relativedelta(days=2),
+    # Create Patients and Visits that should be ineligble (KPI3)
+    ineligible_patients_visit_date = PatientFactory(
+        postcode="ineligible_patients_visit_date",
+        visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
     )
-    ineligible_patient_diag_outside_audit_period = PatientFactory(
-        postcode="ineligible_patient_diag_outside_audit_period",
-        visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
-        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
-        # T1DM
-        diabetes_type=DIABETES_TYPES[0][0],
-        # Date of diagnosis outside the audit period
-        diagnosis_date=AUDIT_START_DATE - relativedelta(days=2),
+    ineligible_patients_too_old = PatientFactory(
+        postcode="ineligible_patients_too_old",
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
     )
-    ineligible_patient_diag_90D_before_end = PatientFactory(
-        postcode="ineligible_patient_diag_90D_before_end",
-        visit__visit_date=AUDIT_END_DATE - relativedelta(days=2),
-        # T1DM
-        diabetes_type=DIABETES_TYPES[0][0],
-        # Date of diag 2 days before end of audit period
-        diagnosis_date=AUDIT_END_DATE - relativedelta(days=90),
-        visit__thyroid_function_date=AUDIT_END_DATE - relativedelta(days=90),
+    ineligible_patients_diab_type = PatientFactory(
+        diabetes_type=DIABETES_TYPES[-1][0],
     )
 
     # Create a submission (BEFORE calculating KPIs)
     submission = utils.create_submission(
         AUDIT_START_DATE,
-        pz_code=ineligible_patient_diag_90D_before_end.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
+        pz_code=passing_patient_1.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
     )
     submission.patients.add(*Patient.objects.all())
 
@@ -258,7 +239,7 @@ def test_kpi_calculation_42(
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
     calc_kpis.set_patients_for_calculation(
         pz_codes=[
-            ineligible_patient_diag_90D_before_end.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code
+            passing_patient_1.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code
         ]
     )
 

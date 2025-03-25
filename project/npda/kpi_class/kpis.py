@@ -3166,7 +3166,6 @@ class CalculateKPIS:
         total_passed_query_set = eligible_patients.filter(
             has_valid_coeliac_screen=True
         )
-        breakpoint()
 
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
@@ -3201,19 +3200,19 @@ class CalculateKPIS:
         total_ineligible = self.total_patients_count - total_eligible
 
         # Find patients with an entry for Thyroid Function Observation Date
-        # (item 36) 90 days before or after diabetes diagnosis date
-        eligible_pts_annotated_thyroid_fn_date_visits = eligible_patients.annotate(
-            thyroid_fn_date_valid_visits=Count(
-                "visit",
-                # NOTE: relativedelta not supported
-                filter=Q(
-                    visit__thyroid_function_date__gte=F("diagnosis_date") - timedelta(days=90),
-                    visit__thyroid_function_date__lte=F("diagnosis_date") + timedelta(days=90),
-                ),
-            )
+        # Subquery to check for a valid visit per patient
+        valid_visit_exists = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            thyroid_function_date__gte=F("patient__diagnosis_date") - timedelta(days=90),
+            thyroid_function_date__lte=F("patient__diagnosis_date") + timedelta(days=90),
         )
-        total_passed_query_set = eligible_pts_annotated_thyroid_fn_date_visits.filter(
-            thyroid_fn_date_valid_visits__gte=1
+
+        eligible_patients = eligible_patients.annotate(
+            has_valid_thyroid_fn_date=Exists(valid_visit_exists)
+        )
+
+        total_passed_query_set = eligible_patients.filter(
+            has_valid_thyroid_fn_date=True
         )
 
         total_passed = total_passed_query_set.count()
