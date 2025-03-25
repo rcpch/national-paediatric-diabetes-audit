@@ -176,11 +176,11 @@ def get_pt_level_table_data(
                     )
 
             for pt in kpi_pt_querysets["passed"]:
-                data[pt.pk] = {kpi_attr_name: True}
+                data[pt.pk][kpi_attr_name] = True
                 data[pt.pk]["nhs_number"] = pt.nhs_number or pt.unique_reference_number or "Unknown"
 
             for pt in kpi_pt_querysets["failed"]:
-                data[pt.pk] = {kpi_attr_name: False}
+                data[pt.pk][kpi_attr_name] = False
                 data[pt.pk]["nhs_number"] = pt.nhs_number or pt.unique_reference_number or "Unknown"
 
         # Finally add the headers. Need to add nhs_number
