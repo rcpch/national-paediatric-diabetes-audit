@@ -26,6 +26,8 @@ from django.db.models import (
     Sum,
     When,
     DecimalField,
+    ExpressionWrapper,
+    DateField,
 )
 
 # NPDA Imports
@@ -89,13 +91,9 @@ class CalculateKPIS:
         """
 
         # Set various attributes used in calculations
-        self.calculation_date = (
-            calculation_date if calculation_date is not None else date.today()
-        )
+        self.calculation_date = calculation_date if calculation_date is not None else date.today()
         # Set the start and end audit dates
-        self.audit_start_date, self.audit_end_date = (
-            self._get_audit_start_and_end_dates()
-        )
+        self.audit_start_date, self.audit_end_date = self._get_audit_start_and_end_dates()
         self.AUDIT_DATE_RANGE = (self.audit_start_date, self.audit_end_date)
 
         # Set the return_pt_querysets attribute
@@ -234,8 +232,8 @@ class CalculateKPIS:
                 kpi_number = 320 + int(name_split[2])
 
             # Assign the KPI label
-            return_obj["calculated_kpi_values"][kpi_name]["kpi_label"] = (
-                self._get_kpi_label(kpi_number)
+            return_obj["calculated_kpi_values"][kpi_name]["kpi_label"] = self._get_kpi_label(
+                kpi_number
             )
 
         return return_obj
@@ -248,9 +246,7 @@ class CalculateKPIS:
 
         return kpi_registry.get_rendered_label(kpi_number)
 
-    def _run_kpi_calculation_method(
-        self, kpi_method_name: str
-    ) -> Union[KPIResult | str]:
+    def _run_kpi_calculation_method(self, kpi_method_name: str) -> Union[KPIResult | str]:
         """Will find and run kpi calculation method
         (name schema is calculation_KPI_NAME_MAP_VALUE)
         """
@@ -475,11 +471,7 @@ class CalculateKPIS:
                 "total_passed": total_passed,
                 "total_eligible": total_eligible_kpi_2,
                 "pct": round(
-                    (
-                        (total_passed / total_eligible_kpi_2) * 100
-                        if total_eligible_kpi_2
-                        else 0
-                    ),
+                    ((total_passed / total_eligible_kpi_2) * 100 if total_eligible_kpi_2 else 0),
                     1,
                 ),
             }
@@ -747,11 +739,7 @@ class CalculateKPIS:
                 | Q(total_cholesterol_date__range=(self.AUDIT_DATE_RANGE))
                 | Q(thyroid_function_date__range=(self.AUDIT_DATE_RANGE))
                 | Q(coeliac_screen_date__range=(self.AUDIT_DATE_RANGE))
-                | Q(
-                    psychological_screening_assessment_date__range=(
-                        self.AUDIT_DATE_RANGE
-                    )
-                )
+                | Q(psychological_screening_assessment_date__range=(self.AUDIT_DATE_RANGE))
             ),
             patient=OuterRef("pk"),
             visit_date__range=self.AUDIT_DATE_RANGE,
@@ -762,9 +750,7 @@ class CalculateKPIS:
             valid_kpi_6_visits=Exists(valid_visit_subquery)
         )
 
-        eligible_patients = eligible_pts_annotated_kpi_6_visits.filter(
-            valid_kpi_6_visits__gte=1
-        )
+        eligible_patients = eligible_pts_annotated_kpi_6_visits.filter(valid_kpi_6_visits__gte=1)
 
         # Count eligible patients
         total_eligible = eligible_patients.count()
@@ -831,32 +817,12 @@ class CalculateKPIS:
                     # this requires checking for a date in any of the Visit model's
                     # observation fields (found simply by searching for date fields
                     # with the word 'observation' in the field verbose_name)
-                    Q(
-                        visit__height_weight_observation_date__range=(
-                            self.AUDIT_DATE_RANGE
-                        )
-                    )
+                    Q(visit__height_weight_observation_date__range=(self.AUDIT_DATE_RANGE))
                     | Q(visit__hba1c_date__range=(self.AUDIT_DATE_RANGE))
-                    | Q(
-                        visit__blood_pressure_observation_date__range=(
-                            self.AUDIT_DATE_RANGE
-                        )
-                    )
-                    | Q(
-                        visit__foot_examination_observation_date__range=(
-                            self.AUDIT_DATE_RANGE
-                        )
-                    )
-                    | Q(
-                        visit__retinal_screening_observation_date__range=(
-                            self.AUDIT_DATE_RANGE
-                        )
-                    )
-                    | Q(
-                        visit__albumin_creatinine_ratio_date__range=(
-                            self.AUDIT_DATE_RANGE
-                        )
-                    )
+                    | Q(visit__blood_pressure_observation_date__range=(self.AUDIT_DATE_RANGE))
+                    | Q(visit__foot_examination_observation_date__range=(self.AUDIT_DATE_RANGE))
+                    | Q(visit__retinal_screening_observation_date__range=(self.AUDIT_DATE_RANGE))
+                    | Q(visit__albumin_creatinine_ratio_date__range=(self.AUDIT_DATE_RANGE))
                     | Q(visit__total_cholesterol_date__range=(self.AUDIT_DATE_RANGE))
                     | Q(visit__thyroid_function_date__range=(self.AUDIT_DATE_RANGE))
                     | Q(visit__coeliac_screen_date__range=(self.AUDIT_DATE_RANGE))
@@ -964,11 +930,7 @@ class CalculateKPIS:
 
         eligible_patients = base_eligible_patients.filter(
             # a leaving date in the audit period
-            Q(
-                paediatric_diabetes_units__date_leaving_service__range=(
-                    self.AUDIT_DATE_RANGE
-                )
-            )
+            Q(paediatric_diabetes_units__date_leaving_service__range=(self.AUDIT_DATE_RANGE))
         )
 
         # Count eligible patients
@@ -1016,11 +978,7 @@ class CalculateKPIS:
 
         eligible_patients = base_eligible_patients.filter(
             # a leaving date in the audit period
-            Q(
-                paediatric_diabetes_units__date_leaving_service__range=(
-                    self.AUDIT_DATE_RANGE
-                )
-            )
+            Q(paediatric_diabetes_units__date_leaving_service__range=(self.AUDIT_DATE_RANGE))
         )
 
         # Count eligible patients
@@ -1066,15 +1024,9 @@ class CalculateKPIS:
         eligible_patients = base_eligible_patients.filter(
             # a leaving date in the audit period
             Q(
-                paediatric_diabetes_units__date_leaving_service__range=(
-                    self.AUDIT_DATE_RANGE
-                ),
+                paediatric_diabetes_units__date_leaving_service__range=(self.AUDIT_DATE_RANGE),
             ),
-            Q(
-                paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[0][
-                    0
-                ]
-            ),
+            Q(paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[0][0]),
         )
 
         # Count eligible patients
@@ -1139,11 +1091,7 @@ class CalculateKPIS:
                     current_month_end,
                 )
             ),
-            Q(
-                paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[0][
-                    0
-                ]
-            ),
+            Q(paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[0][0]),
         )
 
         return eligible_patients.count()
@@ -1159,14 +1107,8 @@ class CalculateKPIS:
         )
 
         eligible_patients = base_eligible_patients.filter(
-            Q(
-                paediatric_diabetes_units__date_leaving_service__range=self.AUDIT_DATE_RANGE
-            ),
-            Q(
-                paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[1][
-                    0
-                ]
-            ),
+            Q(paediatric_diabetes_units__date_leaving_service__range=self.AUDIT_DATE_RANGE),
+            Q(paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[1][0]),
         )
 
         return eligible_patients.count()
@@ -1177,11 +1119,7 @@ class CalculateKPIS:
         """
         if not hasattr(self, "kpi_9_eligible_pts_base_query_set"):
             self.kpi_9_eligible_pts_base_query_set = self.patients.filter(
-                Q(
-                    paediatric_diabetes_units__date_leaving_service__range=(
-                        self.AUDIT_DATE_RANGE
-                    )
-                )
+                Q(paediatric_diabetes_units__date_leaving_service__range=(self.AUDIT_DATE_RANGE))
             )
         return self.kpi_9_eligible_pts_base_query_set
 
@@ -1205,15 +1143,9 @@ class CalculateKPIS:
         )
 
         # Filter the Patient queryset based on the subquery
-        base_query_set, _ = (
-            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
-        )
+        base_query_set, _ = self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
         eligible_patients = base_query_set.filter(
-            Q(
-                id__in=Subquery(
-                    Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
-                )
-            )
+            Q(id__in=Subquery(Patient.objects.filter(visit__in=latest_visit_subquery).values("id")))
         )
 
         # Count eligible patients
@@ -1257,23 +1189,15 @@ class CalculateKPIS:
         """
         # Define the subquery to find the latest visit where thyroid_treatment_status__in = 2 or 3
         latest_visit_subquery = (
-            Visit.objects.filter(
-                patient=OuterRef("pk"), thyroid_treatment_status__in=[2, 3]
-            )
+            Visit.objects.filter(patient=OuterRef("pk"), thyroid_treatment_status__in=[2, 3])
             .order_by("-visit_date")
             .values("pk")[:1]
         )
 
         # Filter the Patient queryset based on the subquery
-        base_query_set, _ = (
-            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
-        )
+        base_query_set, _ = self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
         eligible_patients = base_query_set.filter(
-            Q(
-                id__in=Subquery(
-                    Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
-                )
-            )
+            Q(id__in=Subquery(Patient.objects.filter(visit__in=latest_visit_subquery).values("id")))
         )
 
         # Count eligible patients
@@ -1323,15 +1247,9 @@ class CalculateKPIS:
         )
 
         # Filter the Patient queryset based on the subquery
-        base_query_set, _ = (
-            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
-        )
+        base_query_set, _ = self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
         eligible_patients = base_query_set.filter(
-            Q(
-                id__in=Subquery(
-                    Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
-                )
-            )
+            Q(id__in=Subquery(Patient.objects.filter(visit__in=latest_visit_subquery).values("id")))
         )
 
         # Count eligible patients
@@ -1592,9 +1510,7 @@ class CalculateKPIS:
 
         # Define the subquery to find the latest visit
         latest_visit_subquery = (
-            Visit.objects.filter(patient=OuterRef("pk"))
-            .order_by("-visit_date")
-            .values("pk")[:1]
+            Visit.objects.filter(patient=OuterRef("pk")).order_by("-visit_date").values("pk")[:1]
         )
         # Filter the Patient queryset based on the subquery if treatment_regimen = 5
         passed_patients = eligible_patients.filter(
@@ -1796,11 +1712,7 @@ class CalculateKPIS:
         )
         # Filter the Patient queryset based on the subquery
         passed_patients = eligible_patients.filter(
-            Q(
-                id__in=Subquery(
-                    Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
-                )
-            )
+            Q(id__in=Subquery(Patient.objects.filter(visit__in=latest_visit_subquery).values("id")))
         )
         total_passed = passed_patients.count()
         total_failed = total_eligible - total_passed
@@ -1842,11 +1754,7 @@ class CalculateKPIS:
         )
         # Filter the Patient queryset based on the subquery
         passed_patients = eligible_patients.filter(
-            Q(
-                id__in=Subquery(
-                    Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
-                )
-            )
+            Q(id__in=Subquery(Patient.objects.filter(visit__in=latest_visit_subquery).values("id")))
         )
         total_passed = passed_patients.count()
         total_failed = total_eligible - total_passed
@@ -1889,11 +1797,7 @@ class CalculateKPIS:
         )
         # Filter the Patient queryset based on the subquery
         passed_patients = eligible_patients.filter(
-            Q(
-                id__in=Subquery(
-                    Patient.objects.filter(visit__in=latest_visit_subquery).values("id")
-                )
-            )
+            Q(id__in=Subquery(Patient.objects.filter(visit__in=latest_visit_subquery).values("id")))
         )
         total_passed = passed_patients.count()
         total_failed = total_eligible - total_passed
@@ -2066,11 +1970,7 @@ class CalculateKPIS:
                 "total_passed": total_passed,
                 "total_eligible": total_eligible_kpi_24,
                 "pct": round(
-                    (
-                        (total_passed / total_eligible_kpi_24) * 100
-                        if total_eligible_kpi_24
-                        else 0
-                    ),
+                    ((total_passed / total_eligible_kpi_24) * 100 if total_eligible_kpi_24 else 0),
                     1,
                 ),
             }
@@ -2565,13 +2465,10 @@ class CalculateKPIS:
             ]
         )
 
-        actual_health_checks_overall = (
-            total_health_checks_lt_12yo + total_health_checks_gte_12yo
-        )
+        actual_health_checks_overall = total_health_checks_lt_12yo + total_health_checks_gte_12yo
 
         expected_total_health_checks = (
-            eligible_patients_lt_12yo.count() * 3
-            + eligible_patients_gte_12yo.count() * 6
+            eligible_patients_lt_12yo.count() * 3 + eligible_patients_gte_12yo.count() * 6
         )
 
         # Also set pt querysets to be returned if required
@@ -3109,10 +3006,8 @@ class CalculateKPIS:
                 ),
             )
         )
-        total_passed_query_set = (
-            eligible_pts_annotated_dietician_additional_visits.filter(
-                dietician_additional_valid_visits__gte=1
-            )
+        total_passed_query_set = eligible_pts_annotated_dietician_additional_visits.filter(
+            dietician_additional_valid_visits__gte=1
         )
 
         total_passed = total_passed_query_set.count()
@@ -3152,13 +3047,15 @@ class CalculateKPIS:
 
         # Find patients with at least one entry for Influzena Immunisation
         # Recommended (item 24) within the audit period
-        eligible_pts_annotated_flu_immunisation_recommended_date_visits = eligible_patients.annotate(
-            flu_immunisation_recommended_date_valid_visits=Count(
-                "visit",
-                filter=Q(
-                    visit__visit_date__range=self.AUDIT_DATE_RANGE,
-                    visit__flu_immunisation_recommended_date__range=self.AUDIT_DATE_RANGE,
-                ),
+        eligible_pts_annotated_flu_immunisation_recommended_date_visits = (
+            eligible_patients.annotate(
+                flu_immunisation_recommended_date_valid_visits=Count(
+                    "visit",
+                    filter=Q(
+                        visit__visit_date__range=self.AUDIT_DATE_RANGE,
+                        visit__flu_immunisation_recommended_date__range=self.AUDIT_DATE_RANGE,
+                    ),
+                )
             )
         )
         total_passed_query_set = (
@@ -3255,22 +3152,21 @@ class CalculateKPIS:
 
         # Find patients with an entry for Coeliac Disease
         # Screening Date (item 36) 90 days before or after diabetes diagnosis
-        # date
-        eligible_pts_annotated_coeliac_screen_visits = eligible_patients.annotate(
-            coeliac_screen_valid_visits=Count(
-                "visit",
-                # NOTE: relativedelta not supported
-                filter=Q(
-                    visit__coeliac_screen_date__gte=F("diagnosis_date")
-                    - timedelta(days=90),
-                    visit__coeliac_screen_date__lte=F("diagnosis_date")
-                    + timedelta(days=90),
-                ),
-            )
+        # Subquery to check for a valid visit per patient
+        valid_visit_exists = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            coeliac_screen_date__gte=F("patient__diagnosis_date") - timedelta(days=90),
+            coeliac_screen_date__lte=F("patient__diagnosis_date") + timedelta(days=90),
         )
-        total_passed_query_set = eligible_pts_annotated_coeliac_screen_visits.filter(
-            coeliac_screen_valid_visits__gte=1
+
+        eligible_patients = eligible_patients.annotate(
+            has_valid_coeliac_screen=Exists(valid_visit_exists)
         )
+
+        total_passed_query_set = eligible_patients.filter(
+            has_valid_coeliac_screen=True
+        )
+        breakpoint()
 
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
@@ -3311,10 +3207,8 @@ class CalculateKPIS:
                 "visit",
                 # NOTE: relativedelta not supported
                 filter=Q(
-                    visit__thyroid_function_date__gte=F("diagnosis_date")
-                    - timedelta(days=90),
-                    visit__thyroid_function_date__lte=F("diagnosis_date")
-                    + timedelta(days=90),
+                    visit__thyroid_function_date__gte=F("diagnosis_date") - timedelta(days=90),
+                    visit__thyroid_function_date__lte=F("diagnosis_date") + timedelta(days=90),
                 ),
             )
         )
@@ -3355,9 +3249,7 @@ class CalculateKPIS:
 
         # Eligible patients are measure 7 with
         # diagnosis date < (AUDIT_END_DATE - 14 days)
-        base_eligible_patients, _ = (
-            self._get_kpi_3_eligible_pts_base_query_set_and_total_count()
-        )
+        base_eligible_patients, _ = self._get_kpi_3_eligible_pts_base_query_set_and_total_count()
         eligible_patients = base_eligible_patients.filter(
             diagnosis_date__lt=self.audit_end_date - relativedelta(days=14)
         )
@@ -3369,13 +3261,9 @@ class CalculateKPIS:
         # Date of Diabetes Diagnosis (item 7)
         valid_visit_subquery = Visit.objects.filter(
             patient=OuterRef("pk"),
-            carbohydrate_counting_level_three_education_date__gte=F(
-                "patient__diagnosis_date"
-            )
+            carbohydrate_counting_level_three_education_date__gte=F("patient__diagnosis_date")
             - timedelta(days=7),
-            carbohydrate_counting_level_three_education_date__lte=F(
-                "patient__diagnosis_date"
-            )
+            carbohydrate_counting_level_three_education_date__lte=F("patient__diagnosis_date")
             + timedelta(days=14),
         )
 
@@ -3427,14 +3315,10 @@ class CalculateKPIS:
         )
         total_ineligible = self.total_patients_count - total_eligible
 
-        hba1c_values_by_patient = self.get_median_hba1c_values_by_patient(
-            eligible_patients
-        )
+        hba1c_values_by_patient = self.get_median_hba1c_values_by_patient(eligible_patients)
 
         # Extract just the median values
-        median_hba1cs = [
-            values["median"] for values in hba1c_values_by_patient.values()
-        ]
+        median_hba1cs = [values["median"] for values in hba1c_values_by_patient.values()]
 
         # Finally calculate the mean of the medians
         mean_of_median_hba1cs = self.calculate_mean(median_hba1cs)
@@ -3487,13 +3371,9 @@ class CalculateKPIS:
         # calculate_median method
         # We're doing this in Python instead of Django ORM because median
         # aggregation gets complicated
-        hba1c_values_by_patient = defaultdict(
-            lambda: {"hb1ac_values": [], "nhs_number": ""}
-        )
+        hba1c_values_by_patient = defaultdict(lambda: {"hb1ac_values": [], "nhs_number": ""})
         for visit in valid_visits:
-            hba1c_values_by_patient[visit["patient__pk"]]["hb1ac_values"].append(
-                visit["hba1c"]
-            )
+            hba1c_values_by_patient[visit["patient__pk"]]["hb1ac_values"].append(visit["hba1c"])
             hba1c_values_by_patient[visit["patient__pk"]]["nhs_number"] = visit[
                 "patient__nhs_number"
             ]
@@ -3546,14 +3426,10 @@ class CalculateKPIS:
             hba1c_values_by_patient[visit["patient__pk"]].append(visit["hba1c"])
 
         # For each patient, calculate the median of their HbA1c values
-        hba1c_values_by_patient = self.get_median_hba1c_values_by_patient(
-            eligible_patients
-        )
+        hba1c_values_by_patient = self.get_median_hba1c_values_by_patient(eligible_patients)
 
         # Extract just the median values
-        median_hba1cs = [
-            values["median"] for values in hba1c_values_by_patient.values()
-        ]
+        median_hba1cs = [values["median"] for values in hba1c_values_by_patient.values()]
 
         # Finally calculate the median of the medians
         median_of_median_hba1cs = self.calculate_median(median_hba1cs)
@@ -3598,12 +3474,8 @@ class CalculateKPIS:
         )
 
         # Filter eligible patients to just relevant diabetes types
-        eligible_patients_t1dm = eligible_patients.filter(
-            diabetes_type=DIABETES_TYPES[0][0]
-        )
-        eligible_patients_t2dm = eligible_patients.filter(
-            diabetes_type=DIABETES_TYPES[1][0]
-        )
+        eligible_patients_t1dm = eligible_patients.filter(diabetes_type=DIABETES_TYPES[0][0])
+        eligible_patients_t2dm = eligible_patients.filter(diabetes_type=DIABETES_TYPES[1][0])
         eligible_patients_other = eligible_patients.exclude(
             diabetes_type__in=[DIABETES_TYPES[0][0], DIABETES_TYPES[1][0]]
         )
@@ -3638,8 +3510,7 @@ class CalculateKPIS:
                         ),
                         When(
                             Q(hba1c_format=HBA1C_FORMATS[1][0]),
-                            then=(F("hba1c") - Round(Decimal("2.152")))
-                            / Decimal("0.09148"),
+                            then=(F("hba1c") - Round(Decimal("2.152"))) / Decimal("0.09148"),
                         ),
                         default=None,
                         output_field=DecimalField(
@@ -3653,9 +3524,7 @@ class CalculateKPIS:
             )
 
             # From these, calculate the mean and median HbA1c values
-            mean_hba1c_mmol_mol = self._calculate_mean_hba1cs(
-                valid_visits, key="hba1c_mmol_mol"
-            )
+            mean_hba1c_mmol_mol = self._calculate_mean_hba1cs(valid_visits, key="hba1c_mmol_mol")
             median_hba1c_mmol_mol = self._calculate_median_hba1cs(
                 valid_visits, key="hba1c_mmol_mol"
             )
@@ -3673,15 +3542,9 @@ class CalculateKPIS:
             )
 
             hba1c_vals[key] = {
-                "mean_mmol_mol": (
-                    int(mean_hba1c_mmol_mol) if mean_hba1c_mmol_mol else None
-                ),
-                "median_mmol_mol": (
-                    int(median_hba1c_mmol_mol) if median_hba1c_mmol_mol else None
-                ),
-                "mean_percent": (
-                    round(mean_hba1c_percent, 1) if mean_hba1c_percent else None
-                ),
+                "mean_mmol_mol": (int(mean_hba1c_mmol_mol) if mean_hba1c_mmol_mol else None),
+                "median_mmol_mol": (int(median_hba1c_mmol_mol) if median_hba1c_mmol_mol else None),
+                "mean_percent": (round(mean_hba1c_percent, 1) if mean_hba1c_percent else None),
                 "median_percent": (
                     round(median_hba1c_percent, 1) if median_hba1c_percent else None
                 ),
@@ -3762,9 +3625,7 @@ class CalculateKPIS:
                 | Q(hospital_discharge_date__range=self.AUDIT_DATE_RANGE)
             ),
             # valid reason for admission
-            hospital_admission_reason__in=[
-                choice[0] for choice in HOSPITAL_ADMISSION_REASONS
-            ],
+            hospital_admission_reason__in=[choice[0] for choice in HOSPITAL_ADMISSION_REASONS],
             patient=OuterRef("pk"),
             visit_date__range=self.AUDIT_DATE_RANGE,
         )
@@ -3819,9 +3680,7 @@ class CalculateKPIS:
                 | Q(hospital_discharge_date__range=self.AUDIT_DATE_RANGE)
             ),
             # valid reason for admission
-            hospital_admission_reason__in=[
-                choice[0] for choice in HOSPITAL_ADMISSION_REASONS
-            ],
+            hospital_admission_reason__in=[choice[0] for choice in HOSPITAL_ADMISSION_REASONS],
             patient=OuterRef("pk"),
             visit_date__range=self.AUDIT_DATE_RANGE,
         )
@@ -3869,11 +3728,7 @@ class CalculateKPIS:
                 "total_passed": total_passed,
                 "total_eligible": total_eligible_kpi_46,
                 "pct": round(
-                    (
-                        (total_passed / total_eligible_kpi_46) * 100
-                        if total_eligible_kpi_46
-                        else 0
-                    ),
+                    ((total_passed / total_eligible_kpi_46) * 100 if total_eligible_kpi_46 else 0),
                     1,
                 ),
             }
@@ -3935,9 +3790,7 @@ class CalculateKPIS:
         valid_visit_with_admission_count = Visit.objects.filter(
             Q(hospital_admission_date__range=self.AUDIT_DATE_RANGE)
             | Q(hospital_discharge_date__range=self.AUDIT_DATE_RANGE),
-            hospital_admission_reason__in=[
-                choice[0] for choice in HOSPITAL_ADMISSION_REASONS
-            ],
+            hospital_admission_reason__in=[choice[0] for choice in HOSPITAL_ADMISSION_REASONS],
             patient__pk=pt_pk,
             visit_date__range=self.AUDIT_DATE_RANGE,
         ).count()
@@ -4283,9 +4136,7 @@ class CalculateKPIS:
             )
 
         # First get new T1DM diagnoses pts
-        base_query_set, _ = (
-            self._get_kpi_3_eligible_pts_base_query_set_and_total_count()
-        )
+        base_query_set, _ = self._get_kpi_3_eligible_pts_base_query_set_and_total_count()
 
         # Filter for those diagnoses at least 90 days before audit end date
         self.t1dm_pts_diagnosed_90D_before_end_base_query_set = base_query_set.filter(
