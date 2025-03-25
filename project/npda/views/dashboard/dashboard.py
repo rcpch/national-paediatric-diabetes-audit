@@ -87,21 +87,20 @@ def dashboard(request):
         return render(request, "dashboard.html")
 
     audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
+    
     current_date = date.today()
+    calculation_date = audit_period.kpi_calculation_date()
 
     if audit_period.start_date > current_date:
         # Future audit period - likely no data yet but you can still select it
-        calculation_date = audit_period.start_date
         current_quarter = None
         days_remaining_until_audit_end_date = (audit_period.end_date - current_date).days
     elif current_date > audit_period.end_date:
         # Past audit period
-        calculation_date = audit_period.end_date
         current_quarter = None
         days_remaining_until_audit_end_date = None
     else:
         # Current audit period
-        calculation_date = current_date
         current_quarter = retrieve_quarter_for_date(current_date)
         days_remaining_until_audit_end_date = (audit_period.end_date - current_date).days
 

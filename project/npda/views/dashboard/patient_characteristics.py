@@ -136,11 +136,7 @@ def patient_ages(request):
             .patients.all()
         )
 
-        # This function might get called on historical cohorts, so we need to check if today's date is within the audit period
-        if audit_period.start_date <= date.today() <= audit_period.end_date:
-            comparison_date = date.today()
-        else:
-            comparison_date = audit_period.end_date
+        comparison_date = audit_period.kpi_calculation_date()
 
         filter = Q()
         if request.POST.get("diabetes_type"):

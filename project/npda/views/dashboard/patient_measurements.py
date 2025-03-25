@@ -1,4 +1,3 @@
-from datetime import date
 from django.shortcuts import render
 from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.views.dashboard import helpers as hp
@@ -14,18 +13,7 @@ def patient_measurements(request):
     pz_code = request.session.get("pz_code")
 
     audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
-
-    today = date.today()
-    
-    if audit_period.start_date > today:
-        # Future audit period - likely no data yet but you can still select it
-        calculation_date = audit_period.start_date
-    elif today > audit_period.end_date:
-        # Past audit period
-        calculation_date = audit_period.end_date
-    else:
-        # Current audit period
-        calculation_date = today
+    calculation_date = audit_period.kpi_calculation_date()
     
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True

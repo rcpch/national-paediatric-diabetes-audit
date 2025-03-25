@@ -13,6 +13,7 @@ from project.npda.views.patient_report.helpers import (
 )
 from project.npda.views.patient_report.template_data import KPI_CATEGORY_ATTR_MAP, TEXT
 from project.npda.views.decorators import login_and_otp_required
+from project.npda.models import AuditPeriod
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +34,7 @@ def patient_report(request):
     # First need to get the relevant calculations
     pz_code = request.session.get("pz_code")
 
-    selected_audit_year = int(request.session.get("selected_audit_year"))
-    # TODO: remove min clamp once available audit year from preference filter sorted
-    selected_audit_year = max(selected_audit_year, 2024)
-    calculation_date = date(year=selected_audit_year, month=5, day=1)
+    calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
 
     calculate_kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=True)
 

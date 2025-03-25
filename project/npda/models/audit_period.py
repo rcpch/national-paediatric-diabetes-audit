@@ -1,3 +1,4 @@
+from datetime import date
 from asgiref.sync import async_to_sync
 
 from django.contrib.gis.db import models
@@ -51,6 +52,19 @@ class AuditPeriod(models.Model):
 
     def is_allowed_to_edit(self, user):
         return (user and (user.is_superuser or user.is_rcpch_audit_team_member)) or self.is_open
+    
+    def kpi_calculation_date(self):
+        today = date.today()
+    
+        if self.start_date > today:
+            # Future audit period - likely no data yet but you can still select it
+            return self.start_date
+        elif today > self.end_date:
+            # Past audit period
+            return self.end_date
+        else:
+            # Current audit period
+            return today
 
     def clean(self):
         if self.end_date <= self.start_date:

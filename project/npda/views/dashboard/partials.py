@@ -523,16 +523,6 @@ def submission_and_calculation_date(request):
     else:
         submission = None
 
-    today = date.today()
-    
-    if audit_period.start_date > today:
-        # Future audit period - likely no data yet but you can still select it
-        calculation_date = audit_period.start_date
-    elif today > audit_period.end_date:
-        # Past audit period
-        calculation_date = audit_period.end_date
-    else:
-        # Current audit period
-        calculation_date = today
+    calculation_date = audit_period.kpi_calculation_date()
 
     return submission, calculation_date
