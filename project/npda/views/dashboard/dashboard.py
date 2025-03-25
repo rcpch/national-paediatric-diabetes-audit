@@ -117,8 +117,8 @@ def dashboard(request):
         # "pdu_lead_organisation": pdu_lead_organisation,
         "kpi_calculations_object": kpi_calculations_object,
         "current_date": current_date,
-        "current_quarter": current_quarter,
-        "days_remaining_until_audit_end_date": days_remaining_until_audit_end_date,
+        "current_quarter": current_quarter if days_remaining_until_audit_end_date >= 0 else None,
+        "days_remaining_until_audit_end_date": days_remaining_until_audit_end_date if days_remaining_until_audit_end_date >=0 else None,
         "charts": {
             "new_diagnoses_per_quarter_value_counts_pct": {
                 "no_eligible_patients": kpi_calculations_object[

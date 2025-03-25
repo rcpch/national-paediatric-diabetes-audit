@@ -17,14 +17,18 @@ Audit Details
     <p>{{ kpi_calculations_object.audit_end_date }}</p>
   </div>
 </div>
-{% include 'dashboard/hr_with_text.html' with hr_rule_text='Current Quarter' %}
-<div class="flex flex-col justify-center items-center">
-  <p class="text-4xl">Q{{ current_quarter }}</p>
-  <p>({{ current_date }})</p>
-</div>
-{% include 'dashboard/hr_with_text.html' with hr_rule_text='Days Remaining' %}
-<div class="flex flex-col justify-center items-center pb-4">
-  <p class="text-4xl">{{ days_remaining_until_audit_end_date }}</p>
-</div>
+{% if current_quarter %}
+  {% include 'dashboard/hr_with_text.html' with hr_rule_text='Current Quarter' %}
+  <div class="flex flex-col justify-center items-center">
+    <p class="text-4xl">Q{{ current_quarter }}</p>
+    <p>({{ current_date }})</p>
+  </div>
+{% endif %}
+{% if days_remaining_until_audit_end_date %}
+  {% include 'dashboard/hr_with_text.html' with hr_rule_text='Days Remaining' %}
+  <div class="flex flex-col justify-center items-center pb-4">
+    <p class="text-4xl">{{ days_remaining_until_audit_end_date }}</p>
+  </div>
+{% endif %}
 
 {% endblock %}
