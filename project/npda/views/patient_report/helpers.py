@@ -204,10 +204,12 @@ def get_pt_level_table_data(
         calculate_mean = calculate_kpis_object.calculate_mean
 
         # Get the base eligible pts (all T1DM)
-        kpi_pt_querysets = calculate_kpis_object.calculate_kpi_3_total_t1dm().patient_querysets
+        all_t1dm_pts = calculate_kpis_object.calculate_kpi_3_total_t1dm().patient_querysets['eligible']
+        all_t1dm_pts_with_complete_year_of_care = calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets['eligible']
+        pks_of_t1dm_pts_with_complete_year_of_care = set(all_t1dm_pts_with_complete_year_of_care.values_list('pk', flat=True))
 
         # Start with the median hba1c values
-        data = get_median_hba1c_values_by_patient(kpi_pt_querysets["eligible"])
+        data = get_median_hba1c_values_by_patient(all_t1dm_pts)
 
         # data looks like a dict with pt.pk as key and data as value
         # {
@@ -260,6 +262,9 @@ def get_pt_level_table_data(
                     pt_pk=pt_pk,
                 )
             )
+
+            # complete year of care
+            data[pt_pk]["is_complete_year_of_care"] = pt_pk in pks_of_t1dm_pts_with_complete_year_of_care
 
         # Finally add the headers. Need to add nhs_number
         headers = ["nhs_number"] + kpi_attr_names
