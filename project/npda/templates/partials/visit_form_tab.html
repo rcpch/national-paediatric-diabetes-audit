@@ -116,11 +116,23 @@
                     {% endif %}
                   {% endif %}
                 {% endif %}
-                {% for error in field.errors %}
-                  <p>
-                    <strong class="text-rcpch_red">{{ error|escape }}</strong>
-                  </p>
-                {% endfor %}
+                {% if field.name in visit.errors|get_item:field.name %}AARRGGGHHH{% endif %}
+                {% if visit.errors|get_item:field.name %}
+                  {% with visit.errors|get_item:field.name as errors %}
+                    <!-- This is a list of errors stored in the visit to render on page load before the form has been submitted. The if else conditional prevents the same error showing twice if the same error is present on resubmission of the form -->
+                    {% for error in errors %}
+                      <p>
+                        <strong class="text-rcpch_red">{{ error.message }}</strong>
+                      </p>
+                    {% endfor %}
+                  {% endwith %}
+                {% else %}
+                  {% for error in field.errors %}
+                    <p>
+                      <strong class="text-rcpch_red">{{ error|escape }}</strong>
+                    </p>
+                  {% endfor %}
+                {% endif %}
               </div>
             </div>
           {% endwith %}
