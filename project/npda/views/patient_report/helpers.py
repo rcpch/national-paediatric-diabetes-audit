@@ -110,13 +110,6 @@ def get_pt_level_table_data(
                 # Mark as failed
                 data[pt.pk][kpi_attr_name] = False
 
-                # Skip retinal screening as it's not included in the totals
-                if kpi_attr_name == "kpi_30_retinal_screening":
-                    continue
-
-                # Increment the failed count otherwise
-                data[pt.pk]["total"][1] += 1
-
         # Finally add the headers. Need to add nhs_number, is_gte_12yo, and total to the headers
 
         headers = (
