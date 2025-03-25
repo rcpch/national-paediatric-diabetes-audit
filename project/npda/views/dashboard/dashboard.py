@@ -15,6 +15,7 @@ from project.npda.models.paediatric_diabetes_unit import (
     PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
 )
 from project.npda.models.patient import Patient
+from project.npda.models.audit_period import AuditPeriod
 from project.npda.views.decorators import login_and_otp_required
 
 # LOGGING
@@ -85,14 +86,10 @@ def dashboard(request):
         )
         return render(request, "dashboard.html")
 
-    selected_audit_year = int(request.session.get("selected_audit_year"))
+    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
 
-    if selected_audit_year <= 2024:
-        # The day after the audit year end date
-        calculation_date = date(selected_audit_year, 4, 1)
-    else:
-        today = date.today()
-        calculation_date = date(selected_audit_year, today.month, today.day)
+    today = date.today()
+    calculation_date = audit_period.end_date if today > audit_period.end_date else today
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -133,7 +130,7 @@ def dashboard(request):
             "map": json.dumps(
                 dict(
                     pdu_pk=pdu.pk,
-                    selected_audit_year=selected_audit_year,
+                    selected_audit_year=audit_period.audit_year(),
                 )
             ),
         },
