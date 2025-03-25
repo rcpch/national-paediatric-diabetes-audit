@@ -58,6 +58,7 @@ def set_view_preference(client, view_preference, pz_code):
 def test_users_can_only_see_patients_from_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     """Except for RCPCH_AUDIT_TEAM, users should only see patients from their own PDU."""
@@ -84,6 +85,7 @@ def test_users_can_only_see_patients_from_their_pdu(
 def test_rcpch_audit_team_can_see_patients_from_all_pdus(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     gosh_user = NPDAUser.objects.filter(
@@ -120,6 +122,7 @@ def test_rcpch_audit_team_can_see_patients_from_all_pdus(
 def test_user_with_unexpected_view_preference(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     gosh_user = NPDAUser.objects.filter(
@@ -154,6 +157,7 @@ def test_user_with_unexpected_view_preference(
 def test_rcpch_audit_team_can_see_all_patients(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     gosh_user = NPDAUser.objects.filter(
@@ -185,6 +189,7 @@ def test_rcpch_audit_team_can_see_all_patients(
 def test_users_can_only_edit_patients_from_their_own_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     gosh_user = NPDAUser.objects.filter(
@@ -209,6 +214,7 @@ def test_users_can_only_edit_patients_from_their_own_pdu(
 def test_rcpch_audit_team_can_edit_patients_from_any_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     gosh_user = NPDAUser.objects.filter(
@@ -237,6 +243,7 @@ def test_rcpch_audit_team_can_edit_patients_from_any_pdu(
 def test_users_can_only_see_patient_visits_from_their_own_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     gosh_user = NPDAUser.objects.filter(
@@ -261,6 +268,7 @@ def test_users_can_only_see_patient_visits_from_their_own_pdu(
 def test_rcpch_audit_team_can_see_visits_from_all_pdus(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     gosh_user = NPDAUser.objects.filter(
@@ -289,6 +297,7 @@ def test_rcpch_audit_team_can_see_visits_from_all_pdus(
 def test_users_can_only_edit_patient_visits_from_their_own_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     gosh_user = NPDAUser.objects.filter(
@@ -314,6 +323,7 @@ def test_users_can_only_edit_patient_visits_from_their_own_pdu(
 def test_rcpch_audit_team_can_edit_visits_from_all_pdus(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     gosh_user = NPDAUser.objects.filter(

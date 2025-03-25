@@ -48,6 +48,7 @@ def check_all_users_in_pdu(user, users, pz_code):
 def test_npda_user_list_view_users_can_only_see_users_from_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     """Except for RCPCH_AUDIT_TEAM, users should only see users from their own PDU."""
@@ -78,6 +79,7 @@ def test_npda_user_list_view_users_can_only_see_users_from_their_pdu(
 def test_npda_user_list_view_rcpch_audit_team_can_view_all_users(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     """RCPCH_AUDIT_TEAM users can view all users."""
@@ -117,6 +119,7 @@ def test_npda_user_list_view_rcpch_audit_team_can_view_all_users(
 def test_npda_user_list_view_users_cannot_switch_outside_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     ah_user = NPDAUser.objects.filter(
@@ -144,6 +147,7 @@ def test_npda_user_list_view_users_cannot_switch_outside_their_pdu(
 def test_npda_user_list_view_normal_users_cannot_set_their_view_preference_to_national(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     ah_user = NPDAUser.objects.filter(
@@ -169,6 +173,7 @@ def test_npda_user_list_view_normal_users_cannot_set_their_view_preference_to_na
 def test_npda_user_list_view_users_cannot_set_their_view_preference_to_organisation(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     ah_user = NPDAUser.objects.filter(

@@ -83,7 +83,7 @@ class TestQuestionnaireView:
 
     @pytest.fixture(autouse=True)
     def setup(
-        self, seed_groups_fixture, seed_users_fixture, client
+        self, seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
     ):
         self.client = client
 
