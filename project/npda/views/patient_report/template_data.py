@@ -104,12 +104,12 @@ TEXT = {
         "headers": [
             "NHS NUMBER",
             "Treatment Regimen",
-            "Continuous Glucose Monitoring",
+            "Glucose Monitoring",
             "Hybrid Closed Loop",
         ],
         "ineligible_hover_reason": {
             "cgm": "Does not fulfil criteria for KPI 1",
-            "tx_regimen": "Does not fulfil criteria for any of KPIs 13-20",
+            "tx_regimen": "No treatment regimen",
         },
         "key": {
             "pass": "Complete",

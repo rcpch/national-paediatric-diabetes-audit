@@ -131,8 +131,8 @@ def get_pt_level_table_data(
     elif category == "additional_care_processes":
 
         data = {}
-        # Initialise with all eligible pts' pks as the key. Use kpi40 eligible
-        # as this is KPI1 (all eligible pts)
+        
+        # all t1dm pts
         all_t1dm_pts = calculate_kpis_object.calculate_kpi_3_total_t1dm().patient_querysets['eligible']
         all_t1dm_pts_with_complete_year_of_care = calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets['eligible']
         for pt in all_t1dm_pts:
@@ -292,14 +292,13 @@ def get_pt_level_table_data(
             get_attribute_name(22): "Continuous glucose monitor with alarms",
         }
 
-        # Grab eligible patients (KPI 1, same for all)
-        eligible_pts = kpi_calculations_object["calculated_kpi_values"][get_attribute_name(13)][
-            "patient_querysets"
-        ]["eligible"]
+        # all t1dm pts
+        all_t1dm_pts = calculate_kpis_object.calculate_kpi_3_total_t1dm().patient_querysets['eligible']
+        all_t1dm_pts_with_complete_year_of_care = calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets['eligible']
 
         # Start constructing the data dict
 
-        for pt in eligible_pts:
+        for pt in all_t1dm_pts:
 
             # Add nhs number
             data[pt.pk]["nhs_number"] = pt.nhs_number or pt.unique_reference_number or "Unknown"
@@ -331,13 +330,16 @@ def get_pt_level_table_data(
                     break
 
             # HCL col -> true or false
-            data[pt.pk][get_attribute_name(24)] = (
+            data[pt.pk][get_attribute_name(24)] = "Yes" if (
                 kpi_calculations_object["calculated_kpi_values"][get_attribute_name(24)][
                     "patient_querysets"
                 ]["passed"]
                 .filter(pk=pt.pk)
                 .exists()
-            )
+            ) else "No"
+
+            # complete year of care
+            data[pt.pk]["is_complete_year_of_care"] = pt in all_t1dm_pts_with_complete_year_of_care
 
         # Finally add the headers. Need to add nhs_number
         headers = ["nhs_number", "tx_regimen", "cgm", get_attribute_name(24)]

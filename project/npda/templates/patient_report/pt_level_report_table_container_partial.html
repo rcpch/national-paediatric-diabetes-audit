@@ -91,7 +91,7 @@
               {% for pt_pk, results in table_data.row_data.items %}
 
                 <tr class="bg-white border-b hover:bg-gray-100
-                {% if selected == 'health_checks' or selected == 'additional_care_processes' or selected == 'outcomes' %}
+                {% if selected == 'health_checks' or selected == 'additional_care_processes' or selected == 'outcomes' or selected == 'treatment' %}
                     {% if not results|get_item:"is_complete_year_of_care" %}
                         bg-rcpch_charcoal/10
                     {% endif %}
@@ -110,7 +110,7 @@
                                 </a>
                               </span>
                               <div class="tooltip tooltip-right " data-tip="Patient has not completed year of care">
-                                {% if selected == 'health_checks' or selected == 'additional_care_processes' or selected == 'outcomes' %}
+                                {% if selected == 'health_checks' or selected == 'additional_care_processes' or selected == 'outcomes' or selected == 'treatment' %}
                                   {% if not results|get_item:"is_complete_year_of_care" %}
                                     <i class="fa-solid fa-exclamation-triangle text-error"></i>
                                   {% endif %}
@@ -131,6 +131,8 @@
                           {% elif kpi_attr_name == 'cgm' and result is not None %}
                             {{ result }}
                           {% elif kpi_attr_name == 'tx_regimen' and result is not None %}
+                            {{ result }}
+                          {% elif kpi_attr_name == 'kpi_24_hybrid_closed_loop_system' %}
                             {{ result }}
 
                           {% elif result is True %}
@@ -221,7 +223,7 @@
 {% if n_pts > 0 %}
 Total: <span class="font-bold">{{ table_data.row_data|length }} Patient{{ table_data.row_data|length|pluralize }}</span>
 </span>
-{% if selected == 'health_checks' or selected == 'additional_care_processes' or selected == 'outcomes'  %}
+{% if selected == 'health_checks' or selected == 'additional_care_processes' or selected == 'outcomes' or selected == 'treatment' %}
  (all T1DM)
 {% endif %}
 {% else %}
