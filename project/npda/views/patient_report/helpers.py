@@ -66,14 +66,15 @@ def get_pt_level_table_data(
     get_attribute_name = calculate_kpis_object.kpi_name_registry.get_attribute_name
     kpi_attr_names = [get_attribute_name(i) for i in template_data.KPI_CATEGORY_ATTR_MAP[category]]
 
+
+
     if category == "health_checks":
 
         data = {}
-        # First initialise the dict with all pts -> for health checks, this is KPI5 which can be found
-        # via kpi_25's eligible pts
-        for pt in kpi_calculations_object["calculated_kpi_values"]["kpi_25_hba1c"][
-            "patient_querysets"
-        ]["eligible"]:
+        all_t1dm_pts = calculate_kpis_object.calculate_kpi_3_total_t1dm().patient_querysets['eligible']
+        all_t1dm_pts_with_complete_year_of_care = calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets['eligible']
+        # First initialise the dict with all T1DM (kpi3)
+        for pt in all_t1dm_pts:
             # Set all to None initially as updating as [True | False] if pt in [passed | failed]
             # querysets for each kpi -> if not in either, must mean they are ineligible (therefore None)
             data[pt.pk] = {kpi_attr_name: None for kpi_attr_name in kpi_attr_names}
@@ -85,6 +86,9 @@ def get_pt_level_table_data(
             data[pt.pk]["is_gte_12yo"] = pt_is_gte_12yo
             # total = (passed / total)
             data[pt.pk]["total"] = [0, 6 if pt_is_gte_12yo else 3]
+
+            # mark if complete year of care
+            data[pt.pk]["is_complete_year_of_care"] = pt in all_t1dm_pts_with_complete_year_of_care
 
         # For each kpi, update the data dict with the pts that have passed and failed
         for kpi_attr_name in kpi_attr_names:
