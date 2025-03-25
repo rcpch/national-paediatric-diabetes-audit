@@ -25,5 +25,8 @@ def audit_periods_seeder():
             audit_end_date = date(year + 1, 3, 31)
 
             AuditPeriod.objects.create(
-                is_open=year == this_year, start_date=audit_start_date, end_date=audit_end_date
+                is_open=year == this_year,
+                is_visible=year < this_year,
+                start_date=audit_start_date,
+                end_date=audit_end_date
             )

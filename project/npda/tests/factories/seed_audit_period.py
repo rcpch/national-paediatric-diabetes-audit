@@ -29,6 +29,7 @@ def _seed_audit_periods_fixture(django_db_setup, django_db_blocker):
 
             AuditPeriod.objects.create(
                 is_open=True,
+                is_visible=True,
                 start_date=f"{start_year}-04-01",
                 end_date=f"{end_year}-03-31",
             )

@@ -31,6 +31,8 @@ class AuditPeriod(models.Model):
     objects = AuditPeriodManager()
 
     is_open = models.BooleanField()
+    is_visible = models.BooleanField()
+
     start_date = models.DateField()
     end_date = models.DateField()
 

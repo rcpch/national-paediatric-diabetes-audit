@@ -39,17 +39,23 @@ def get_submission_actions(pz_code, audit_year):
     }
 
 
-def get_audit_period_session_data(audit_period):
+def get_audit_period_session_data(audit_period, user):
     AuditPeriod = apps.get_model("npda", "AuditPeriod")
     audit_years = []
 
     for audit_period in AuditPeriod.objects.order_by("start_date").all():
-        audit_years.append(
-            {
-                "year": audit_period.audit_year(),
-                "disabled": not audit_period.is_open
-            }
-        )
+        if audit_period.is_visible or user.is_rcpch_audit_team_member or user.is_superuser:
+            if user.is_rcpch_audit_team_member or user.is_superuser:
+                disabled = False
+            else:
+                disabled = not audit_period.is_open
+
+            audit_years.append(
+                {
+                    "year": audit_period.audit_year(),
+                    "disabled": disabled
+                }
+            )
     
     return {
         "audit_years": audit_years
@@ -77,7 +83,7 @@ def create_session_object(user):
     audit_period = AuditPeriod.objects.get_default_audit_period()
 
     submission_actions = get_submission_actions(pz_code, audit_period.audit_year())
-    audit_period_data = get_audit_period_session_data(audit_period)
+    audit_period_data = get_audit_period_session_data(audit_period, user)
 
     session = {
         "pz_code": pz_code,
@@ -134,7 +140,7 @@ def refresh_session_filters(request, pz_code=None, audit_year=None):
         )
 
     session |= get_submission_actions(pz_code, audit_year)
-    session |= get_audit_period_session_data(audit_period)
+    session |= get_audit_period_session_data(audit_period, request.user)
 
     request.session.update(session)
     request.session.modified = True
