@@ -3243,7 +3243,7 @@ class CalculateKPIS:
         Date of Diabetes Diagnosis (item 7)
 
         Denominator: Number of patients with Type 1 diabetes who were diagnosed
-        at least 14 days before the end of the audit period (<= | >=)
+        at least 14 days before the end of the audit period
         """
 
         # Eligible patients are measure 7 with
@@ -3257,8 +3257,8 @@ class CalculateKPIS:
 
         # Find visits with an entry for Carbohydrate Counting Education
         # (item 42) within 7 days before or 14 days after the
-        # Date of Diabetes Diagnosis (item 7)
-        valid_visit_subquery = Visit.objects.filter(
+        # Subquery to check for a valid visit per patient
+        valid_visit_exists = Visit.objects.filter(
             patient=OuterRef("pk"),
             carbohydrate_counting_level_three_education_date__gte=F("patient__diagnosis_date")
             - timedelta(days=7),
@@ -3266,15 +3266,13 @@ class CalculateKPIS:
             + timedelta(days=14),
         )
 
-        # Annotate eligible patients with a boolean indicating the existence
-        # of a valid Visit. NOTE: doing this because Count has weird behavior
-        # if the first Visit has no valid carb date even if second does
-        eligible_pts_annotated = eligible_patients.annotate(
-            has_valid_visit=Exists(valid_visit_subquery)
+        eligible_patients = eligible_patients.annotate(
+            has_valid_carbohydrate_counting_education_date=Exists(valid_visit_exists)
         )
 
-        # Filter patients who have at least one valid Visit
-        total_passed_query_set = eligible_pts_annotated.filter(has_valid_visit=True)
+        total_passed_query_set = eligible_patients.filter(
+            has_valid_carbohydrate_counting_education_date=True
+        )
 
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
