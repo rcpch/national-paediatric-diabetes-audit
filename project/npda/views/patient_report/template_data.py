@@ -71,9 +71,9 @@ TEXT = {
             "CARBOHYDRATE COUNTING EDUCATION",
         ],
         "ineligible_hover_reason": {
-            "kpi_41_coeliac_disease_screening": "Does not fulfil criteria for KPI 7, diagnosed at least 90 days before the end of the audit period",
-            "kpi_42_thyroid_disease_screening": "Does not fulfil criteria for KPI 7, diagnosed at least 90 days before the end of the audit period",
-            "kpi_43_carbohydrate_counting_education": "Does not fulfil criteria for KPI 7, diagnosed at least 90 days before the end of the audit period",
+            "kpi_41_coeliac_disease_screening": "Diagnosed within 90 days of the end of the audit period",
+            "kpi_42_thyroid_disease_screening": "Diagnosed within 90 days of the end of the audit period",
+            "kpi_43_carbohydrate_counting_education": "Diagnosed within 90 days of the end of the audit period",
         },
         "key": {
             "pass": "Complete",

@@ -164,20 +164,23 @@ def get_pt_level_table_data(
     elif category == "care_at_diagnosis":
         data = {}
 
+        # all t1dm pts
+        all_t1dm_pts = calculate_kpis_object.calculate_kpi_3_total_t1dm().patient_querysets['eligible']
+        all_t1dm_pts_with_complete_year_of_care = calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets['eligible']
+        for pt in all_t1dm_pts:
+            # Set all to None initially as updating as [True | False] if pt in [passed | failed]
+            # querysets for each kpi -> if not in either, must mean they are ineligible (therefore None)
+            data[pt.pk] = {kpi_attr_name: None for kpi_attr_name in kpi_attr_names}
+            # Additional values we can calculate now
+            data[pt.pk]["nhs_number"] = pt.nhs_number or pt.unique_reference_number or "Unknown"
+            # complete year of care
+            data[pt.pk]["is_complete_year_of_care"] = pt in all_t1dm_pts_with_complete_year_of_care
+
         for kpi_attr_name in kpi_attr_names:
 
             kpi_pt_querysets = kpi_calculations_object["calculated_kpi_values"][kpi_attr_name][
                 "patient_querysets"
             ]
-
-            # For each kpi_attribute's eligible pts, add to data dict
-            for pt in kpi_pt_querysets["eligible"]:
-                # If pt not already in, initialise with None for all kpi_attr_names
-                if data.get(pt.pk) is None:
-                    data[pt.pk] = {kpi_attr_name: None for kpi_attr_name in kpi_attr_names}
-                    data[pt.pk]["nhs_number"] = (
-                        pt.nhs_number or pt.unique_reference_number or "Unknown"
-                    )
 
             for pt in kpi_pt_querysets["passed"]:
                 data[pt.pk][kpi_attr_name] = True
