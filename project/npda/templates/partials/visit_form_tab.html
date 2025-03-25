@@ -116,7 +116,6 @@
                     {% endif %}
                   {% endif %}
                 {% endif %}
-                {% if field.name in visit.errors|get_item:field.name %}AARRGGGHHH{% endif %}
                 {% if visit.errors|get_item:field.name %}
                   {% with visit.errors|get_item:field.name as errors %}
                     <!-- This is a list of errors stored in the visit to render on page load before the form has been submitted. The if else conditional prevents the same error showing twice if the same error is present on resubmission of the form -->
