@@ -133,28 +133,28 @@ def get_pt_level_table_data(
         data = {}
         # Initialise with all eligible pts' pks as the key. Use kpi40 eligible
         # as this is KPI1 (all eligible pts)
-        kpi_40_attr_name = calculate_kpis_object.kpi_name_registry.get_attribute_name(40)
-        for pt in kpi_calculations_object["calculated_kpi_values"][kpi_40_attr_name][
-            "patient_querysets"
-        ]["eligible"]:
+        all_t1dm_pts = calculate_kpis_object.calculate_kpi_3_total_t1dm().patient_querysets['eligible']
+        all_t1dm_pts_with_complete_year_of_care = calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets['eligible']
+        for pt in all_t1dm_pts:
             # Set all to None initially as updating as [True | False] if pt in [passed | failed]
             # querysets for each kpi -> if not in either, must mean they are ineligible (therefore None)
             data[pt.pk] = {kpi_attr_name: None for kpi_attr_name in kpi_attr_names}
             # Additional values we can calculate now
             data[pt.pk]["nhs_number"] = pt.nhs_number or pt.unique_reference_number or "Unknown"
+            # complete year of care
+            data[pt.pk]["is_complete_year_of_care"] = pt in all_t1dm_pts_with_complete_year_of_care
 
-        # For each kpi, update the data dict with the pts that have passed and failed
+        
         for kpi_attr_name in kpi_attr_names:
 
-            kpi_pt_querysets = kpi_calculations_object["calculated_kpi_values"][kpi_attr_name][
+            # For each kpi, update the data dict with the pts that have passed and failed
+            kpi_pt_querysets_passed = kpi_calculations_object["calculated_kpi_values"][kpi_attr_name][
                 "patient_querysets"
             ]
 
-            for pt in kpi_pt_querysets["passed"]:
-                data[pt.pk][kpi_attr_name] = True
+            for pt in all_t1dm_pts:
+                data[pt.pk][kpi_attr_name] = pt in kpi_pt_querysets_passed["passed"]
 
-            for pt in kpi_pt_querysets["failed"]:
-                data[pt.pk][kpi_attr_name] = False
 
         # Finally add the headers. Need to add nhs_number
 
