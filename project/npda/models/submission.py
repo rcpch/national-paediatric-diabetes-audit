@@ -12,11 +12,18 @@ class Submission(models.Model):
     Each submission comprises  a list of unique patients and their visits as well as the csv file as a BinaryField.
     """
 
+    # This was the original field before audit_period was introduced. It remains for compatibility.
     audit_year = models.IntegerField(
         "Audit year",
         blank=False,
         null=False,
         help_text="Year the audit is being conducted",
+    )
+
+    audit_period = models.ForeignKey(
+        on_delete=models.RESTRICT,
+        to="npda.AuditPeriod",
+        null=True # for compatibility as we migrate from the old audit_year field
     )
 
     submission_date = models.DateTimeField(
@@ -31,7 +38,7 @@ class Submission(models.Model):
     )
 
     submission_by = models.ForeignKey(
-        on_delete=models.CASCADE,
+        on_delete=models.RESTRICT,
         to="npda.NPDAUser",
     )
 
@@ -64,7 +71,7 @@ class Submission(models.Model):
     )
 
     def __str__(self) -> str:
-        return f"Submission from {self.paediatric_diabetes_unit} for {self.audit_year}"
+        return f"Submission from {self.paediatric_diabetes_unit} for {self.audit_period or self.audit_year}"
 
     class Meta:
         verbose_name = "Submission"
