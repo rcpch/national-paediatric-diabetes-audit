@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 import logging
 import re
+import collections
 
 # Django imports
 from django.core.exceptions import ValidationError
@@ -17,6 +18,7 @@ from project.constants import (
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
     CSV_HEADING_OBJECTS,
+    csv_definition_for
 )
 
 # Logging setup
@@ -30,6 +32,11 @@ class ParsedCSVFile:
     additional_columns: list[str]
     duplicate_columns: list[str]
     parse_type_error_columns: list[str]
+    # Gather all error messages indexed by row number and the field that caused them
+    # csv_upload also has one of these and they are merged before saving
+    # NB: the nested dict is keyed by model field name, not CSV heading
+    # dict[number, dict[str, list[str]]]
+    errors_to_return: collections.defaultdict[int, collections.defaultdict[str, list[str]]]
 
 
 def csv_parse(csv_file, is_jersey=False):
@@ -45,13 +52,15 @@ def csv_parse(csv_file, is_jersey=False):
     # If it does, we will use the column names in the csv file
     # The exception is if the first row of the csv file does not match any of the predefined column names, in which case we will reject the csv
 
+    errors_to_return = collections.defaultdict(lambda: collections.defaultdict(list))
+
     # Define the column names to be used in the csv file: the unique identifier in Jersy is different from the one in England
     if is_jersey:
-        HEADINGS_OBJECTS = UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
+        HEADINGS_LIST = UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
     else:
-        HEADINGS_OBJECTS = UNIQUE_IDENTIFIER_ENGLAND + CSV_HEADING_OBJECTS
+        HEADINGS_LIST = UNIQUE_IDENTIFIER_ENGLAND + CSV_HEADING_OBJECTS
 
-    HEADINGS_LIST = [item["heading"] for item in HEADINGS_OBJECTS]
+    HEADINGS_LIST = [item["heading"] for item in HEADINGS_LIST]
 
     # Convert the predefined column names to lowercase
     lowercase_headings_list = [heading.lower() for heading in HEADINGS_LIST]
@@ -74,16 +83,14 @@ def csv_parse(csv_file, is_jersey=False):
     # The template published on the RCPCH website has trailing spaces on 'Observation Date: Thyroid Function '
     df.columns = df.columns.str.strip()
 
-    # Replace headings which were different from in the old NPDA template with the new
-    for column in df.columns:
-        lowercase_col = column.lower()
+    if df.columns[0].lower() not in lowercase_headings_list:
+        # No header in the source - pass them from our definitions
+        logger.warning(
+            f"CSV file uploaded without column names, using predefined column names"
+        )
 
-        for heading in HEADINGS_OBJECTS:
-            if "alternative_headings" in heading:
-                lowercase_alternative_headings = [h.lower() for h in heading["alternative_headings"]]
-
-                if lowercase_col in lowercase_alternative_headings:
-                    df = df.rename(columns={column: heading["heading"]})
+        # Have to reset back otherwise we get an empty dataframe
+        csv_file.seek(0)
 
     # Pandas has strange behaviour for the first line in a CSV - additional cells become row labels
     # https://github.com/pandas-dev/pandas/issues/47490
@@ -122,8 +129,16 @@ def csv_parse(csv_file, is_jersey=False):
 
     for column in ALL_DATES:
         if column in df.columns:
+            column_before = df[column].copy()
             # Support DD/MM/YYYY and DD/MM/YY
-            df[column] = pd.to_datetime(df[column], format="mixed", dayfirst=True, errors="coerce")
+            column_after = pd.to_datetime(df[column], format="mixed", dayfirst=True, errors="coerce")
+
+            for (row_index, (value_before, value_after)) in enumerate(zip(column_before, column_after)):
+                if not pd.isna(value_before) and pd.isna(value_after):
+                    model_field = csv_definition_for(column)["model_field"]
+                    errors_to_return[row_index][model_field].append("Date format is incorrect (expected DD/MM/YYYY)")
+            
+            df[column] = column_after
 
     # Apply the dtype to non-date columns
     for column, dtype in CSV_DATA_TYPES_MINUS_DATES.items():
@@ -188,4 +203,5 @@ def csv_parse(csv_file, is_jersey=False):
         additional_columns,
         duplicate_columns,
         parse_type_error_columns,
+        errors_to_return
     )

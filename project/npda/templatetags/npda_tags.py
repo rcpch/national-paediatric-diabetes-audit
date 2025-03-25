@@ -90,11 +90,6 @@ def join_with_comma(value):
     return value
 
 
-@register.simple_tag
-def site_contact_email():
-    return settings.SITE_CONTACT_EMAIL
-
-
 @register.filter
 def is_select(widget):
     return isinstance(widget, (forms.Select, forms.SelectMultiple))
@@ -103,6 +98,11 @@ def is_select(widget):
 @register.filter
 def is_dateinput(widget):
     return isinstance(widget, (forms.DateInput))
+
+
+@register.filter
+def is_textarea(widget):
+    return isinstance(widget, (forms.Textarea))
 
 
 @register.filter
@@ -373,9 +373,99 @@ def no_categories_present(categories):
             return False
     return True
 
+
 @register.filter
 def exclude_item(lst, item):
     """Removes an item from a list"""
     if isinstance(lst, list):
         return [i for i in lst if i != item]
     return lst  # Return as-is if it's not a list
+
+
+@register.filter
+def hba1c_units(value, is_ifcc=True):
+    if value is None or value == "" or value == "0" or value == 0 or value < 0:
+        return "-"
+    if is_ifcc:
+        return f"{value} mmol/mol"
+    else:
+        return f"({value} %)"
+
+
+@register.filter
+def percentage(value: str, total: str):
+    if (
+        value is None
+        or total is None
+        or value == ""
+        or total == ""
+        or total == 0
+        or value == 0
+        or total == "0"
+        or value == "0"
+    ):
+        return "-"
+    return f"{round(int(value) / int(total) * 100)}%"
+
+
+@register.filter
+def none_to_dash(value):
+    if value is None or value == "" or value == "0" or value == 0:
+        return "-"
+    return value
+
+
+@register.filter
+def screen_ineligible(value):
+    if value is None or value == "" or value == "0" or value == 0:
+        return 0
+    return value
+
+
+@register.filter
+def employer_match(user_to_match, user):
+    """
+    Checks if the user_to_match has an employer in common with the user (the logged in user)
+    RCPCH staff and audit team members can view all users
+    """
+    if user.is_superuser or user.is_rcpch_staff or user.is_rcpch_audit_team_member:
+        return True
+    for employer in user_to_match.organisation_employers.all():
+        if employer in user.organisation_employers.all():
+            return True
+    return False
+
+
+@register.filter
+def exclude_admin_user_field(field, user):
+    """
+    Excludes the is_admin_user field from the npda user form unless the user is an RCPCH staff member/superuser
+    """
+    if user.is_superuser:
+        return True
+    elif user.is_rcpch_staff or user.is_rcpch_audit_team_member:
+        if field.id_for_label in [
+            "id_is_staff",
+            "id_is_rcpch_staff",
+            "id_is_rcpch_audit_team_member",
+        ]:
+            return True
+        return False
+    if field.id_for_label in [
+        "id_is_staff",
+        "id_is_superuser",
+        "id_is_rcpch_staff",
+        "id_is_rcpch_audit_team_member",
+    ]:
+        return False
+    return True
+
+
+@register.filter
+def include_admin_users(user):
+    """
+    Returns true if the user is an RCPCH staff member or superuser
+    """
+    if user.is_superuser or user.is_rcpch_staff or user.is_rcpch_audit_team_member:
+        return True
+    return False

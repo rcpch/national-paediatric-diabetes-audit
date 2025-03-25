@@ -16,7 +16,12 @@ from project.npda.views.dashboard.dashboard import temp_set_eligible_kpi_7
 from .views import *
 from .views.dashboard import dashboard, partials
 from .views.patient_report import partials as patient_report_partials
+from .views.dashboard.patient_measurements import patient_measurements
 from .views.patient_report import patient_report
+from .views.dashboard.patient_characteristics import (
+    patient_ages,
+    all_patient_charts,
+)
 
 urlpatterns = [
     path("", view=home, name="home"),
@@ -29,6 +34,11 @@ urlpatterns = [
     path("view_preference", view=view_preference, name="view_preference"),
     path("audit-year", view=audit_year, name="audit-year"),
     path("upload_csv", view=upload_csv, name="upload_csv"),
+    path(
+        "switch_paediatric_diabetes_unit",
+        view=switch_paediatric_diabetes_unit,
+        name="switch_paediatric_diabetes_unit",
+    ),
     # Submission views
     path(
         "submissions",
@@ -119,9 +129,9 @@ dashboard_urlpatterns = [
         name="dashboard",
     ),
     path(
-        "get_waffle_chart_partial",
-        view=partials.get_waffle_chart_partial,
-        name="get_waffle_chart_partial",
+        "get_metric_scatter_plot",
+        view=partials.get_metric_scatter_plot,
+        name="get_metric_scatter_plot",
     ),
     path(
         "get_map_chart_partial",
@@ -129,29 +139,39 @@ dashboard_urlpatterns = [
         name="get_map_chart_partial",
     ),
     path(
-        "get_progress_bar_chart_partial",
-        view=partials.get_progress_bar_chart_partial,
-        name="get_progress_bar_chart_partial",
+        "get_new_diagnoses_partial",
+        view=partials.get_new_diagnoses_partial,
+        name="get_new_diagnoses_partial",
     ),
     path(
-        "get_simple_bar_chart_pcts_partial",
-        view=partials.get_simple_bar_chart_pcts_partial,
-        name="get_simple_bar_chart_pcts_partial",
+        "get_new_admissions_partial",
+        view=partials.get_new_admissions_partial,
+        name="get_new_admissions_partial",
     ),
     path(
-        "get_simple_bar_chart_absolutes_partial",
-        view=partials.get_simple_bar_chart_absolutes_partial,
-        name="get_simple_bar_chart_absolutes_partial",
+        "get_transitioned_to_adult_service_partial",
+        view=partials.get_transitioned_to_adult_service_partial,
+        name="get_transitioned_to_adult_service_partial",
     ),
     path(
-        "get_hcl_scatter_plot",
-        view=partials.get_hcl_scatter_plot,
-        name="get_hcl_scatter_plot",
+        "get_moved_out_of_area_partial",
+        view=partials.get_moved_out_of_area_partial,
+        name="get_moved_out_of_area_partial",
     ),
     path(
-        "get_treemap_chart_partial",
-        view=partials.get_treemap_chart_partial,
-        name="get_treemap_chart_partial",
+        "get_n_on_hcl_partial",
+        view=partials.get_n_on_hcl_partial,
+        name="get_n_on_hcl_partial",
+    ),
+    path(
+        "get_pump_partial",
+        view=partials.get_pump_partial,
+        name="get_pump_partial",
+    ),
+    path(
+        "get_cgm_partial",
+        view=partials.get_cgm_partial,
+        name="get_cgm_partial",
     ),
     path(
         "temp_set_eligible_kpi_7",
@@ -162,6 +182,11 @@ dashboard_urlpatterns = [
 
 patient_report_urlpatterns = [
     path(
+        "patient_measurements",
+        view=patient_measurements,
+        name="patient_measurements",
+    ),
+    path(
         "patient_report",
         view=patient_report.patient_report,
         name="patient_report",
@@ -170,6 +195,16 @@ patient_report_urlpatterns = [
         "get_pt_level_report_table",
         view=patient_report_partials.get_pt_level_report_table,
         name="get_pt_level_report_table",
+    ),
+    path(
+        "patient_ages",
+        view=patient_ages,
+        name="patient_ages",
+    ),
+    path(
+        "all_patient_charts",
+        view=all_patient_charts,
+        name="all_patient_charts",
     ),
 ]
 

@@ -1,3 +1,4 @@
+{% load npda_tags %}
 {% for organisation_employer in organisation_employers %}
   {% if organisation_employer.is_primary_employer %}
     <div>
@@ -25,11 +26,14 @@
 {% endfor %}
 <div id="rcpch_organisation_select">
   <div id="add_organisation_button">
-    <button type="button"
-            class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-1.5 px-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue mb-2 text-xs"
-            _="on click toggle .hidden on #id_add_employer then toggle .hidden on #add_submit_button then if my innerHTML is 'Add Employer' set my innerHTML to 'Hide Employers' else set my innerHTML to 'Add Employer'">
-      Add Employer
-    </button>
+    {% if request.user.organisation_employers|length > 1 or request.user|include_admin_users %}
+      {% comment %} remove the add button if the user  {% endcomment %}
+      <button type="button"
+              class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-1.5 px-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue mb-2 text-xs"
+              _="on click toggle .hidden on #id_add_employer then toggle .hidden on #add_submit_button then if my innerHTML is 'Add Employer' set my innerHTML to 'Hide Employers' else set my innerHTML to 'Add Employer'">
+        Add Employer
+      </button>
+    {% endif %}
   </div>
   <div class="flex flex-row">
     {% include 'partials/rcpch_organisation_select.html' with employer_choices=employer_choices selected_organisation=field.value hidden_on_load=True %}

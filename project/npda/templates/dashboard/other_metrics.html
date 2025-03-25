@@ -1,0 +1,69 @@
+{% csrf_token %}
+<!-- Metrics Dashboard -->
+<div class="grid grid-cols-1 gap-4 h-full">
+  <!-- Top Row Metrics -->
+  <div class="grid grid-cols-2 xl:grid-cols-4 gap-4">
+    <!-- New diagnoses -->
+    {% include "dashboard/components/cards/new_diagnoses_card.html" %}
+    <!-- Admissions -->
+    {% include "dashboard/components/cards/new_admissions_card.html" %}
+    <!-- Transitioned to Adult Service -->
+    {% include "dashboard/components/cards/transitioned_to_adult_service_card.html" %}
+    <!-- Moved out of area -->
+    {% include "dashboard/components/cards/moved_out_of_area_card.html" %}
+  </div>
+  <!-- Main Content Area -->
+  <div class="grid grid-cols-1 xl:grid-cols-4 gap-4 h-full">
+    <!-- Graph Section -->
+    <div class="card bg-base-100 shadow-xl flex flex-col md:col-span-3 h-full">
+      <div class="card-body">
+        <div class="">
+          {% if charts.hcl_use_per_quarter_value_counts_pct.no_eligible_patients %}
+            <div class="alert alert-info">
+              <i class="fa-solid fa-person-circle-exclamation"></i> No eligible patients.
+            </div>
+          {% else %}
+            <div hx-get="{% url 'get_metric_scatter_plot' %}"
+                 hx-vals='{ "data" : {{ charts.new_diagnoses_per_quarter_value_counts_pct.data }} }'
+                 hx-trigger="load"
+                 hx-swap="innerHTML"
+                 hx-target="#scatter-plot"
+                 hx-indicator="#loading-spinner-all-patient-charts"
+                 _="on htmx:afterRequest remove #loading-spinner-selected-metric-charts then remove .hidden from #scatter-plot-select">
+            </div>
+            <div id="scatter-plot"></div>
+            <form class="filter mt-5 hidden" id="scatter-plot-select">
+              {% for scatter_plot_select in scatter_plot_select_list %}
+                <input class="btn"
+                       type="radio"
+                       name="scatter_plot_select"
+                       hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                       hx-post="{% url 'get_metric_scatter_plot' %}"
+                       hx-swap="innerHTML"
+                       hx-target="#scatter-plot"
+                       hx-trigger="click"
+                       type="radio"
+                       aria-label="{{ scatter_plot_select.title }}"
+                       value="{{ scatter_plot_select.name }}"
+                       {% if scatter_plot_select.selected %}checked{% endif %}
+                       _="on htmx:afterRequest remove #loading-spinner-selected-metric-charts" />
+              {% endfor %}
+            </form>
+          {% endif %}
+          <div id="loading-spinner-selected-metric-charts"
+               class="loading loading-spinner text-rcpch_dark_blue flex flex-grow-1 justify-center items-center h-full w-1/5 mx-auto bg-center">
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Right Side Metrics -->
+    <div class="flex flex-col gap-4">
+      <!-- Pump -->
+      {% include "dashboard/components/cards/pump_card.html" %}
+      <!-- Closed Loop -->
+      {% include "dashboard/components/cards/n_on_hcl_card.html" %}
+      <!-- CGM -->
+      {% include "dashboard/components/cards/cgm_card.html" %}
+    </div>
+  </div>
+</div>

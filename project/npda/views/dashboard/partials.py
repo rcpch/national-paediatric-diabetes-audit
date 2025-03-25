@@ -1,8 +1,11 @@
 import json
 import logging
+from datetime import date
 
 import plotly.graph_objects as go
 import plotly.io as pio
+from django.apps import apps
+from django.contrib import messages
 
 # Django imports
 from django.http import HttpResponseBadRequest
@@ -16,201 +19,19 @@ from project.npda.general_functions.map import (
     generate_distance_from_organisation_scatterplot_figure,
     get_children_by_pdu_audit_year,
 )
-from project.npda.general_functions.rcpch_nhs_organisations import fetch_organisation_by_ods_code
+from project.npda.general_functions.rcpch_nhs_organisations import (
+    fetch_organisation_by_ods_code,
+)
+from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.models.paediatric_diabetes_unit import (
     PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
 )
-from project.npda.views.dashboard.helpers import (
-    get_list_of_shortened_ticktext_labels,
-)
+from project.npda.models.submission import Submission
 from project.npda.views.decorators import login_and_otp_required
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_CHART_HTML_HEIGHT = "18rem"
-
-
-@login_and_otp_required()
-def get_waffle_chart_partial(request):
-    """HTMX view that accepts a GET request with an object of waffle labels and percentages,
-    returning a waffle chart rendered"""
-
-    try:
-
-        if not request.htmx:
-            return HttpResponseBadRequest("This view is only accessible via HTMX")
-
-        # Fetch data from query parameters
-        data = {}
-        for key, value in request.GET.items():
-            pct = float(value)
-            # If pct is above 1%, take only integer part
-            # otherwise, keep the 0.1% precision
-            if pct >= 1:
-                pct = int(pct)
-            data[key] = pct
-
-        # Handle empty data (eg. if no eligible pts)
-        if not data:
-            return render(request, "dashboard/waffle_chart_partial.html", {"chart_html": None})
-
-        # Ensure percentages sum to 100
-        total = sum(data.values())
-        if total != 100:
-            remainder = int(100 - total)
-            first_category = list(data.keys())[0]
-            data[first_category] += remainder
-
-        is_imd_plot = "quintile" in list(data.keys())[0].lower()
-
-        if is_imd_plot:
-            # IMD quintiles - sort by IMD, given the keys are [1st Quintile, 2nd Quintile,
-            # ..., 5th Quintile]
-            data_sorted = sorted(
-                data.items(),
-                key=lambda item: (
-                    int(item[0][0]) if item[0].lower() not in ["unknown", "null"] else 6
-                ),
-                reverse=False,
-            )
-            # Map labels and colors
-            imd_label_color_map = {
-                "1st Quintile": {"color": colors.RCPCH_RED, "label": "1st"},
-                "2nd Quintile": {"color": colors.RCPCH_ORANGE, "label": "2nd"},
-                "3rd Quintile": {"color": colors.RCPCH_LIGHT_BLUE, "label": "3rd"},
-                "4th Quintile": {"color": colors.RCPCH_STRONG_BLUE, "label": "4th"},
-                "5th Quintile": {"color": colors.RCPCH_DARK_BLUE, "label": "5th"},
-                "Unknown": {"color": colors.RCPCH_LIGHT_GREY, "label": "Unknown"},
-                "Null": {"color": colors.RCPCH_LIGHT_GREY, "label": "Unknown"},
-            }
-            data = [(imd_label_color_map[item[0]]["label"], item[1]) for item in data_sorted]
-            colours = [imd_label_color_map[item[0]]["color"] for item in data_sorted]
-        # Default behaviour - sort data by pct ascending so we put the smallest category top left
-        else:
-            data = sorted(data.items(), key=lambda item: item[1], reverse=False)
-            # TODO: ADD IN A BUNCH OF COLORS HERE. ?COULD SPECIFY COLORS IN GET REQUEST
-            colours = [
-                colors.RCPCH_DARK_BLUE,
-                colors.RCPCH_PINK,
-                colors.RCPCH_MID_GREY,
-                colors.RCPCH_CHARCOAL_DARK,
-                colors.RCPCH_RED,
-                colors.RCPCH_ORANGE,
-                colors.RCPCH_YELLOW,
-                colors.RCPCH_STRONG_GREEN,
-                colors.RCPCH_AQUA_GREEN,
-                colors.RCPCH_PURPLE,
-                colors.RCPCH_PURPLE_LIGHT_TINT2,
-                colors.RCPCH_PURPLE_DARK_TINT,
-                colors.RCPCH_RED_LIGHT_TINT3,
-                colors.RCPCH_ORANGE_LIGHT_TINT3,
-                colors.RCPCH_STRONG_GREEN_LIGHT_TINT3,
-                colors.RCPCH_AQUA_GREEN_LIGHT_TINT3,
-                colors.RCPCH_ORANGE_LIGHT_TINT3,
-                colors.RCPCH_DARK_GREY,
-            ][: len(data)]
-
-        # Prepare waffle chart
-
-        # Create Plotly waffle chart
-        GRID_SIZE = 10  # 10x10 grid
-        Y, X = (
-            GRID_SIZE - 1,
-            0,
-        )  # We start top left and move left to right, top to bottom
-
-        chart_data = []
-        # For each label, add the appropriate number of squares to the chart data
-        for idx, (label, num_squares) in enumerate(data):
-            # For each square, append its data as current r,c, and colour
-            num_squares = int(max(1, num_squares))  # Ensure at least 1 square
-            for _ in range(num_squares):
-                square_data = {
-                    "x": X,
-                    "y": Y,
-                    "colour": colours[idx],
-                    "category": label,
-                }
-                chart_data.append(square_data)
-
-                # Move our position
-
-                # Move X to the right
-                X += 1
-
-                # If we've gone beyond the end of the row, set X to 0 and move Y down
-                if X == GRID_SIZE:
-                    X = 0
-                    Y -= 1
-
-        fig = go.Figure()
-        for square in chart_data:
-
-            fig.add_trace(
-                go.Scatter(
-                    x=[square["x"]],
-                    y=[square["y"]],
-                    mode="markers",
-                    marker=dict(
-                        # Size of the square
-                        size=16,
-                        color=square["colour"],
-                        symbol="square",
-                    ),
-                    name=square["category"],
-                    showlegend=False,
-                    hovertemplate=f"{square['category']}<extra></extra>",
-                )
-            )
-
-        # Add legend
-        for idx, (label, pct) in enumerate(data):
-            fig.add_trace(
-                go.Scatter(
-                    x=[None],
-                    y=[None],
-                    mode="markers",
-                    marker=dict(size=10, color=colours[idx], symbol="square"),
-                    name=f"{pct}% {label}",
-                    # hoverinfo="skip",
-                )
-            )
-
-        fig.update_layout(
-            xaxis=dict(visible=False),
-            yaxis=dict(visible=False),
-            margin=dict(l=0, r=0, t=0, b=0),
-            legend=dict(
-                orientation="h",
-                # Move legend higher above the plot
-                # IMD plot has subtitle so move up less
-                y=1.15 if is_imd_plot else 1.2,
-                x=0.5,
-                xanchor="center",
-                font=dict(size=10),
-            ),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-        )
-
-        # Convert Plotly figure to HTML
-        chart_html = fig.to_html(
-            full_html=False,
-            include_plotlyjs=False,
-            config={
-                "displayModeBar": False,
-            },
-            default_height=DEFAULT_CHART_HTML_HEIGHT,
-        )
-        return render(request, "dashboard/waffle_chart_partial.html", {"chart_html": chart_html})
-
-    except Exception as e:
-        logger.error("Error generating waffle chart", exc_info=True)
-        return render(
-            request,
-            "dashboard/waffle_chart_partial.html",
-            {"error": "Something went wrong!"},
-        )
 
 
 @login_and_otp_required()
@@ -224,7 +45,9 @@ def get_map_chart_partial(request):
     selected_audit_year = request.session.get("selected_audit_year")
 
     try:
-        paediatric_diabetes_unit = PaediatricDiabetesUnitClass.objects.get(pz_code=pz_code)
+        paediatric_diabetes_unit = PaediatricDiabetesUnitClass.objects.get(
+            pz_code=pz_code
+        )
 
         # get lead organisation for the selected PDU
         pdu_lead_organisation = fetch_organisation_by_ods_code(
@@ -284,371 +107,7 @@ def get_map_chart_partial(request):
 
 
 @login_and_otp_required()
-def get_progress_bar_chart_partial(
-    request,
-):
-    """Expects request.GET to contain obj as this struct:
-    {
-        'attr_1': {
-            "count":int,
-            "total":int,
-            "pct":int,
-            "label":str
-        },
-        'attr_2": ...
-    }
-    """
-    try:
-
-        if not request.htmx:
-            return HttpResponseBadRequest("This view is only accessible via HTMX")
-
-        values = {}
-        # Django Query dict makes vals a list so need to extact first val
-        for attr, vals in request.GET.items():
-            # Skip these
-            if attr in [
-                "kpi_8_total_deaths",
-            ]:
-                continue
-
-            values[attr] = json.loads(vals)
-
-        # Create horizontal bar chart with percentages (looking like progress bar)
-        fig = go.Figure()
-
-        # Prepare data for the chart
-
-        labels = [values[attr]["label"] for attr in values]
-        percentages = [values[attr]["pct"] for attr in values]
-        counts = [f"{values[attr]['count']} / {values[attr]['total']}" for attr in values]
-        passed = [values[attr]["count"] for attr in values]
-        eligible = [values[attr]["total"] for attr in values]
-
-        # Add background bars (grey) representing 100% width
-        fig.add_trace(
-            go.Bar(
-                x=[100] * len(values),
-                y=labels,
-                orientation="h",
-                marker=dict(color=colors.RCPCH_LIGHT_GREY),
-                showlegend=False,
-                hoverinfo="none",
-                name="Background",
-            )
-        )
-
-        # Add text annotations above each bar
-        for i, label in enumerate(labels):
-            fig.add_annotation(
-                x=0,  # Start of the bar
-                y=i,
-                text=f"{label} ({counts[i]})",
-                showarrow=False,
-                xanchor="left",
-                yanchor="bottom",
-                font=dict(size=14, color=colors.RCPCH_DARK_BLUE),
-                align="left",
-                yshift=27,  # Shift the text upwards for readability
-            )
-
-        # Add actual data bars (blue)
-        fig.add_trace(
-            go.Bar(
-                x=percentages,
-                y=labels,
-                orientation="h",
-                marker=dict(color=colors.RCPCH_DARK_BLUE),
-                text=[f"{pct}%" for pct in percentages],
-                textposition=["inside" if pct > 5 else "outside" for pct in percentages],
-                insidetextanchor="end",
-                name="Progress",
-                hovertemplate="Eligible passed: %{customdata[0]} / %{customdata[1]}<extra></extra>",
-                customdata=list(zip(passed, eligible)),
-            )
-        )
-
-        # Update layout for nicer aesthet
-        fig.update_layout(
-            margin=dict(l=0, r=0, t=0, b=0),
-            xaxis=dict(
-                visible=False,  # Hide x-axis
-                fixedrange=True,  # Prevent zooming and scrolling on x-axis
-            ),
-            yaxis=dict(
-                showgrid=False,  # Remove grid
-                showticklabels=False,  # Hide y-axis labels
-                fixedrange=True,  # Prevent zooming and scrolling on y-axis
-            ),
-            barmode="overlay",  # Ensure bars overlap properly
-            plot_bgcolor="white",  # White background for clean visuals
-            showlegend=False,  # Hide legend
-            bargap=0.4,  # Increase space between bars
-        )
-
-        chart_html = fig.to_html(
-            full_html=False,
-            include_plotlyjs=False,
-            config={
-                "displayModeBar": False,
-                "scrollZoom": False,  # Disable scroll zoom
-                "doubleClick": False,  # Disable double click zoom
-                "displaylogo": False,  # Hide Plotly logo
-                "modeBarButtonsToRemove": [
-                    "zoom",
-                    "pan",
-                    "select",
-                    "lasso2d",
-                ],  # Remove interactive controls
-            },
-            # Fine tune height based on progress bars
-            default_height=f"{5*len(labels)}rem",
-        )
-
-        return render(
-            request,
-            "dashboard/progress_bar_chart_partial.html",
-            {"chart_html": chart_html},
-        )
-    except Exception as e:
-        logger.error(f"Error generating colored figures chart: {e}", exc_info=True)
-        return render(
-            request,
-            "dashboard/progress_bar_chart_partial.html",
-            {"error": "Something went wrong!"},
-        )
-
-
-@login_and_otp_required()
-def get_simple_bar_chart_pcts_partial(request):
-    """Returns a HTML simple bar chart with percentages for the given data.
-
-    Expects:
-    {
-        'attr_1': {
-            pct: float,
-            count: int,
-            total: int,
-            label: str,
-        },
-        'attr_2': {
-            ...
-        }
-        ...
-    }
-
-    Optionally accepts:
-        request.GET.get("color"): str, hex color code to use for the bars
-    """
-    try:
-
-        if not request.htmx:
-            return HttpResponseBadRequest("This view is only accessible via HTMX")
-
-        # Fetch data from query parameters
-
-        # Bar color
-        if bar_color := request.GET.get("color", None):
-            # Easier just to send the hex code as a string in request url
-            # so add the '#' if it's not there
-            bar_color = f"#{bar_color}" if bar_color[0] != "#" else bar_color
-        else:
-            bar_color = colors.RCPCH_DARK_BLUE
-
-        # NOTE: don't need to handle empty data as the template handles this
-        data_raw = json.loads(request.GET.get("data"))
-
-        yaxis_title = request.GET.get("yaxis_title", "% CYP with T1DM")
-
-        x, y = [], []
-        passed, eligible = [], []
-        for _, values in data_raw.items():
-            x.append(values["label"])
-            y.append(values["pct"])
-            passed.append(values["count"])
-            eligible.append(values["total"])
-
-        # Create the bar chart
-        fig = go.Figure()
-
-        fig.add_trace(
-            go.Bar(
-                x=x,
-                y=y,
-                texttemplate="%{y:.0f}%",
-                textposition="outside",
-                marker=dict(color=bar_color),
-                # We're rendering custom shorter x axis labels so we want the full label here,
-                # therefore passing in as customdata
-                hovertemplate="<em>%{customdata[0]}</em><br>Eligible passed: %{customdata[1]} / %{customdata[2]}<extra></extra>",
-                customdata=list(zip(x, passed, eligible)),
-            )
-        )
-
-        # Update layout for labels and formatting
-        yaxis_args = dict(
-            range=[0, 120],  # Breathing room for percentages above 100
-            tickvals=[0, 25, 50, 75, 100],
-            ticktext=["0", "25", "50", "75", "100"],
-        )
-        fig.update_layout(
-            title="",
-            xaxis_title="",
-            yaxis_title=yaxis_title,
-            yaxis=yaxis_args,
-            template="simple_white",  # Clean grid style
-            # Wrap text
-            xaxis=dict(
-                # Adjust x-axis labels to avoid overlap
-                ticktext=get_list_of_shortened_ticktext_labels(x, cut_off_char_len=10),
-                tickmode="array",
-                tickvals=list(range(len(x))),
-                # Rotate labels if they are too long
-                tickangle=-30,
-                automargin=True,  # Adjust margins for label space
-            ),
-            margin=dict(l=0, r=0, t=0, b=0),
-        )
-
-        chart_html = fig.to_html(
-            full_html=False,
-            include_plotlyjs=False,
-            config={
-                "displayModeBar": False,
-            },
-            default_height=DEFAULT_CHART_HTML_HEIGHT,
-        )
-
-        return render(
-            request,
-            "dashboard/simple_bar_chart_pcts_partial.html",
-            {"chart_html": chart_html},
-        )
-    except Exception as e:
-
-        logger.error(f"Error generating simple bar chart pcts: {e}", exc_info=True)
-
-        return render(
-            request,
-            "dashboard/simple_bar_chart_pcts_partial.html",
-            {"error": "Something went wrong!"},
-        )
-
-
-@login_and_otp_required()
-def get_simple_bar_chart_absolutes_partial(request):
-    """Returns a HTML simple bar chart with absolute counts for the given data.
-
-    Expects (same as get_simple_bar_chart_pcts_partial):
-    {
-        'attr_1': {
-            pct: float,
-            count: int,
-            total: int,
-            label: str,
-        },
-        'attr_2': {
-            ...
-        }
-        ...
-    }
-
-    Optionally accepts:
-        request.GET.get("color"): str, hex color code to use for the bars
-    """
-    try:
-
-        if not request.htmx:
-            return HttpResponseBadRequest("This view is only accessible via HTMX")
-
-        # Fetch data from query parameters
-
-        # Bar color
-        if bar_color := request.GET.get("color", None):
-            # Easier just to send the hex code as a string in request url
-            # so add the '#' if it's not there
-            bar_color = f"#{bar_color}" if bar_color[0] != "#" else bar_color
-        else:
-            bar_color = colors.RCPCH_DARK_BLUE
-
-        # NOTE: don't need to handle empty data as the template handles this
-        data_raw = json.loads(request.GET.get("data"))
-
-        x, y = [], []
-        passed, eligible = [], []
-        pct = []
-        for _, values in data_raw.items():
-            x.append(values["label"])
-            y.append(values["count"])
-            passed.append(values["count"])
-            eligible.append(values["total"])
-            pct.append(values["pct"])
-
-        # Create the bar chart
-        fig = go.Figure()
-
-        fig.add_trace(
-            go.Bar(
-                x=x,
-                y=y,
-                texttemplate="%{y}",
-                textposition="outside",
-                marker=dict(color=bar_color),
-                # We're rendering custom shorter x axis labels so we want the full label here,
-                # therefore passing in as customdata
-                hovertemplate="<em>%{customdata[0]}</em><br>%{customdata[3]}% (%{customdata[1]} / %{customdata[2]})<extra></extra>",
-                customdata=list(zip(x, passed, eligible, pct)),
-            )
-        )
-
-        # Update layout for labels and formatting
-        yaxis_args = dict(
-            range=[0, max(y) * 1.2],  # Breathing room
-        )
-        fig.update_layout(
-            title="",
-            xaxis_title="",
-            yaxis_title="N CYP with T1DM",
-            yaxis=yaxis_args,
-            template="simple_white",  # Clean grid style
-            # Wrap text
-            xaxis=dict(
-                # Adjust x-axis labels to avoid overlap
-                ticktext=get_list_of_shortened_ticktext_labels(x, cut_off_char_len=10),
-                tickmode="array",
-                tickvals=list(range(len(x))),
-                # Rotate labels
-                tickangle=-30,
-                automargin=True,  # Adjust margins for label space
-            ),
-            margin=dict(l=0, r=0, t=0, b=0),
-        )
-
-        chart_html = fig.to_html(
-            full_html=False,
-            include_plotlyjs=False,
-            config={
-                "displayModeBar": False,
-            },
-            default_height=DEFAULT_CHART_HTML_HEIGHT,
-        )
-
-        return render(
-            request,
-            "dashboard/progress_bar_chart_partial.html",
-            {"chart_html": chart_html},
-        )
-    except Exception as e:
-        logger.error(f"Error generating colored figures chart: {e}", exc_info=True)
-        return render(
-            request,
-            "dashboard/progress_bar_chart_partial.html",
-            {"error": "Something went wrong!"},
-        )
-
-
-@login_and_otp_required()
-def get_hcl_scatter_plot(request):
+def get_metric_scatter_plot(request):
     """HTMX view that accepts a GET request with an object of waffle labels and percentages,
     returning a waffle chart rendered.
 
@@ -659,16 +118,31 @@ def get_hcl_scatter_plot(request):
         if not request.htmx:
             return HttpResponseBadRequest("This view is only accessible via HTMX")
 
-        if not (request_data := request.GET.get("data", None)):
-            return HttpResponseBadRequest("No data provided")
+        if request.method == "POST":
+            selected_chart = request.POST["scatter_plot_select"]
+            submission, calculation_date = submission_and_calculation_date(request)
+            data, title, tooltip_text = get_selected_chart_data(
+                selected_chart, calculation_date, request.session.get("pz_code")
+            )
 
-        # Fetch data from query parameters
-        data = json.loads(request_data)
+        if request.method == "GET":
+            if not (request_data := request.GET.get("data", None)):
+                return HttpResponseBadRequest("No data provided")
+
+            # Fetch data from query parameters
+            # if data is None:
+            data = json.loads(request_data)
+            title = "All new diabetes diagnoses by quarter"
+            tooltip_text = "Numbers of patients newly diagnosed with any type of diabetes each quarter. The plots in blue reflect only new diagnoses in that quarter, the plots in grey are cumulative totals."
 
         # Extracting data
         quarters = [f"Q{q}" for q in data]
         percentages = [data[q]["pct"] for q in data]
         passed = [data[q]["total_passed"] for q in data]
+        cumulative_sum = 0
+        incremental_passed = [
+            (cumulative_sum := cumulative_sum + data[q]["total_passed"]) for q in data
+        ]
         eligible = [data[q]["total_eligible"] for q in data]
         all_colors = [colors.RCPCH_LIGHT_BLUE for _ in data]
         # highlight the last quarter
@@ -677,10 +151,26 @@ def get_hcl_scatter_plot(request):
         # Create scatter plot
         fig = go.Figure()
 
+        # cumulative totals
         fig.add_trace(
             go.Scatter(
                 x=quarters,
-                y=percentages,
+                y=incremental_passed,
+                marker=dict(
+                    color=colors.RCPCH_LIGHT_GREY,  # Change to desired color
+                    line=dict(color=colors.RCPCH_LIGHT_GREY, width=1),  # Add border
+                    symbol="square",
+                    size=12,
+                ),
+                hovertemplate="<b>Running Total: <i>%{y}</i> children in %{x}</b><extra></extra>",
+                name="Cumulative Total",
+            ),
+        )
+        # totals by quarter
+        fig.add_trace(
+            go.Scatter(
+                x=quarters,
+                y=passed,
                 mode="lines+markers",
                 marker=dict(
                     size=12,
@@ -688,25 +178,25 @@ def get_hcl_scatter_plot(request):
                     symbol="square",
                 ),
                 line=dict(color=colors.RCPCH_LIGHT_BLUE),
-                hovertemplate="<b>%{x}</b>:Eligible passed: %{customdata[0]} / %{customdata[1]} (%{y:.1f}%)<extra></extra>",
-                customdata=list(zip(passed, eligible)),
-            )
+                hovertemplate="Quarter total: <b><i>%{y}</i> children in %{x}</b><extra></extra>",
+                name="Quarterly Total",
+            ),
         )
 
         # Add annotation for last quarter
-        last_pct = percentages[-1]
+        last_passed = passed[-1]
         # Offset below point if penultimate point higher than final point
         Y_SHIFT = 20
-        if len(percentages) > 1 and percentages[-2] >= last_pct:
+        if len(passed) > 1 and passed[-2] >= last_passed:
             # If the final point is < 10, don't offset below as goes off the chart
-            yshift = -Y_SHIFT if last_pct > (Y_SHIFT) else Y_SHIFT
+            yshift = -Y_SHIFT if last_passed > (Y_SHIFT) else Y_SHIFT
         else:
             # Don't need to account for going off the chart at top as added space
             yshift = Y_SHIFT
         fig.add_annotation(
             x=quarters[-1],
-            y=percentages[-1],
-            text=f"{percentages[-1]}%",
+            y=passed[-1],
+            text=f"{passed[-1]} children in {quarters[-1]}",
             showarrow=False,
             font=dict(color=colors.RCPCH_PINK, size=12),
             yshift=yshift,
@@ -715,8 +205,8 @@ def get_hcl_scatter_plot(request):
         # Layout adjustments
         fig.update_layout(
             xaxis=dict(title="Quarter", range=[-0.5, len(quarters) - 0.5]),
-            yaxis=dict(title="% CYP with HCL Use", range=[0, 110]),
-            showlegend=False,
+            yaxis=dict(title="Number of children"),
+            showlegend=True,
             template="simple_white",  # Clean grid style
             margin=dict(l=0, r=0, t=0, b=0),
         )
@@ -727,145 +217,316 @@ def get_hcl_scatter_plot(request):
             config={
                 "displayModeBar": False,
             },
-            default_height="100%",
+            default_height="12rem",
         )
 
-        return render(
-            request, "dashboard/hcl_scatter_plot_partial.html", {"chart_html": chart_html}
-        )
-    except Exception as e:
-        logger.error("Error generating hcl scatter plot", exc_info=True)
         return render(
             request,
-            "dashboard/hcl_scatter_plot_partial.html",
-            {"error": "Something went wrong!"},
-        )
-
-
-def get_treemap_chart_partial(request):
-    """
-    Expects in request.GET:
-
-    {
-        # A map where keys are all parents, values are their colors (children assigned same color)
-        parent_color_map : {
-            "Other": colors.RCPCH_DARK_BLUE,
-            ...
-        },
-
-        # Child to parent map
-        child_parent_map : {
-            "Not known": "Other",
-            "Any other ethnic group": "Other",
-            ...
-        }
-
-        # A data dict with keys being child names, values being ABSOLUTE counts in whole group
-        data : {
-            "Not known" : 3,
-            ...
-        }
-    }
-    """
-    try:
-
-        if not request.htmx:
-            return HttpResponseBadRequest("This view is only accessible via HTMX")
-
-        # Fetch data from query parameters
-        client_errors = []
-        if not (data := json.loads(request.GET.get("data"))):
-            client_errors.append("No data key provided in request.GET")
-        if not (parent_color_map := json.loads(request.GET.get("parent_color_map"))):
-            client_errors.append("No parent_color_map key provided in request.GET")
-        if not (child_parent_map := json.loads(request.GET.get("child_parent_map"))):
-            client_errors.append("No child_parent_map key provided in request.GET")
-
-        # Validate keys and vals
-        for child in data:
-            if child not in child_parent_map:
-                client_errors.append(f"{child} not found in child_parent_map")
-
-        parents_in_map = set(child_parent_map.values())
-        for parent in parent_color_map:
-            if parent not in parents_in_map:
-                client_errors.append(
-                    f"{parent} from parent_color_map not found in child_parent_map"
-                )
-
-        if len(client_errors) > 0:
-            logger.error(f"Treemap partial bad client request with errors: {client_errors}")
-            return HttpResponseBadRequest(client_errors)
-
-        # Extract lists
-        children = list(data.keys())
-        percentages = list(data.values())
-        parents = [child_parent_map[child] for child in children]  # Assign parents
-
-        # Ensure unique parent labels in the treemap
-        parent_labels = list(set(parents))
-        # Parent values are the sum of their children
-        parent_values = []
-        for parent in parent_labels:
-            parent_values.append(
-                sum([percentages[i] for i in range(len(children)) if parents[i] == parent])
-            )
-
-        # Define all labels (parents first, then children)
-        all_labels = parent_labels + children
-        all_parents = ["ALL"] * len(parent_labels) + parents
-
-        # Define values (parents first, then children)
-        all_values = parent_values + percentages
-
-        # Assign the same color to subcategories as their parent
-        all_colors = {p: parent_color_map[p] for p in parent_labels}  # Assign parent colors
-        all_colors.update(
-            # Apply same color to children
-            {child: parent_color_map[child_parent_map[child]] for child in children}
-        )
-
-        # Create Treemap
-        fig = go.Figure(
-            go.Treemap(
-                labels=all_labels,  # Labels including parents
-                parents=all_parents,  # Hierarchical structure
-                values=all_values,  # Sizes
-                textinfo="label+percent parent",  # Show labels and percentages
-                marker=dict(
-                    # Apply parent colors to subcategories
-                    colors=[all_colors[label] for label in all_labels]
-                ),
-                hovertemplate=(
-                    "<b>%{label}</b><br>" "N=%{value} (%{percentRoot:.0%})<br><extra></extra>"
-                ),
-            )
-        )
-
-        fig.update_layout(
-            margin=dict(l=0, r=0, t=0, b=0),
-        )
-
-        # Convert Plotly figure to HTML
-        chart_html = fig.to_html(
-            full_html=False,
-            include_plotlyjs=False,
-            config={
-                "displayModeBar": False,
+            "dashboard/metric_scatter_plot_partial.html",
+            {
+                "chart_html": chart_html,
+                "chart_title": title,
+                "tooltip_text": tooltip_text,
             },
-            default_height=DEFAULT_CHART_HTML_HEIGHT,
         )
-
-        return render(
-            request,
-            "dashboard/treemap_chart_partial.html",
-            {"chart_html": chart_html},
-        )
-
     except Exception as e:
-        logger.error("Error generating treemap chart", exc_info=True)
+        logger.error("Error generating metric scatter plot", exc_info=True)
         return render(
             request,
-            "dashboard/treemap_chart_partial.html",
+            "dashboard/metric_scatter_plot_partial.html",
             {"error": "Something went wrong!"},
         )
+
+
+@login_and_otp_required()
+def get_new_diagnoses_partial(request):
+    """HTMX view that returns the number of new diagnoses for the current submission"""
+
+    # Get new diagnoses this submission
+    pz_code = request.session.get("pz_code")
+
+    submission, calculation_date = submission_and_calculation_date(request)
+
+    calculate_kpis = CalculateKPIS(
+        calculation_date=calculation_date, return_pt_querysets=False
+    )
+
+    calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+
+    n_diagnoses_this_year = calculate_kpis.calculate_kpi_2_total_new_diagnoses()
+
+    context = {
+        "number": n_diagnoses_this_year.total_eligible,
+        "units": "patients",
+        "description": "New diagnoses this audit year",
+    }
+
+    return render(
+        request,
+        "dashboard/components/cards/card_partials/secondary_card_partial.html",
+        context,
+    )
+
+
+@login_and_otp_required()
+def get_new_admissions_partial(request):
+    """HTMX view that returns the number of new admissions for the current month"""
+
+    # Get new admissions this month
+
+    pz_code = request.session.get("pz_code")
+
+    submission, calculation_date = submission_and_calculation_date(request)
+
+    calculate_kpis = CalculateKPIS(
+        calculation_date=calculation_date, return_pt_querysets=False
+    )
+
+    calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+
+    n_admissions_this_month = (
+        calculate_kpis.calculate_kpi_46_number_of_admissions().total_passed
+    )
+
+    context = {"number": n_admissions_this_month, "units": "children"}
+
+    return render(
+        request,
+        "dashboard/components/cards/card_partials/secondary_card_partial.html",
+        context,
+    )
+
+
+@login_and_otp_required()
+def get_transitioned_to_adult_service_partial(request):
+    """HTMX view that returns the number of patients who have been transitioned to the adult service"""
+
+    pz_code = request.session.get("pz_code")
+
+    submission, calculation_date = submission_and_calculation_date(request)
+
+    calculate_kpis = CalculateKPIS(
+        calculation_date=calculation_date, return_pt_querysets=True
+    )
+
+    calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+
+    n_transitioned_to_adult_service = (
+        calculate_kpis.calculate_total_service_transitions_to_adults().total_eligible  # this will return None if there are no eligible patients
+    )
+
+    context = {
+        "number": n_transitioned_to_adult_service,
+        "units": "children",
+        "description": "Number of children transitioned to adult services this audit year",
+    }
+
+    return render(
+        request,
+        "dashboard/components/cards/card_partials/secondary_card_partial.html",
+        context,
+    )
+
+
+@login_and_otp_required()
+def get_moved_out_of_area_partial(request):
+    """HTMX view that returns the number of patients who have been moved out of area"""
+
+    pz_code = request.session.get("pz_code")
+
+    submission, calculation_date = submission_and_calculation_date(request)
+
+    calculate_kpis = CalculateKPIS(
+        calculation_date=calculation_date, return_pt_querysets=True
+    )
+
+    calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+
+    n_moved_out_of_area = (
+        calculate_kpis.get_number_of_moved_out_of_area_this_audit_year()
+    )
+
+    context = {"number": n_moved_out_of_area, "units": "children"}
+
+    return render(
+        request,
+        "dashboard/components/cards/card_partials/secondary_card_partial.html",
+        context,
+    )
+
+
+@login_and_otp_required()
+def get_n_on_hcl_partial(request):
+    """HTMX view that returns the number of patients who are on HCL"""
+
+    pz_code = request.session.get("pz_code")
+
+    submission, calculation_date = submission_and_calculation_date(request)
+
+    calculate_kpis = CalculateKPIS(
+        calculation_date=calculation_date, return_pt_querysets=True
+    )
+
+    calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+
+    hcl_use_kpi_result = calculate_kpis.calculate_kpi_24_hybrid_closed_loop_system()
+
+    pct_hcl_use = (
+        round(
+            hcl_use_kpi_result.total_passed / hcl_use_kpi_result.total_eligible * 100, 1
+        )
+        if hcl_use_kpi_result.total_eligible is not None
+        and hcl_use_kpi_result.total_eligible > 0
+        else 0
+    )
+
+    context = {
+        "numerator": hcl_use_kpi_result.total_passed,
+        "denominator": hcl_use_kpi_result.total_eligible,
+        "units": f"({pct_hcl_use}%)",
+        "description": "Number of children using a hybrid closed loop system as a percentage of all children with type 1 diabetes",
+    }
+
+    return render(
+        request,
+        "dashboard/components/cards/card_partials/secondary_card_partial.html",
+        context,
+    )
+
+
+@login_and_otp_required()
+def get_pump_partial(request):
+    """HTMX view that returns the number of patients who are on pump"""
+
+    pz_code = request.session.get("pz_code")
+
+    submission, calculation_date = submission_and_calculation_date(request)
+
+    calculate_kpis = CalculateKPIS(
+        calculation_date=calculation_date, return_pt_querysets=True
+    )
+
+    calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+
+    pump_kpi_result = calculate_kpis.calculate_kpi_15_insulin_pump()
+
+    pct_pump = (
+        round(pump_kpi_result.total_passed / pump_kpi_result.total_eligible * 100, 1)
+        if pump_kpi_result.total_eligible > 0
+        else 0
+    )
+
+    context = {
+        "numerator": pump_kpi_result.total_passed,
+        "denominator": pump_kpi_result.total_eligible,
+        "units": f"({pct_pump}%)",
+        "description": "Number of children using an insulin pump as a percentage of all children with type 1 diabetes",
+    }
+
+    return render(
+        request,
+        "dashboard/components/cards/card_partials/secondary_card_partial.html",
+        context,
+    )
+
+
+@login_and_otp_required()
+def get_cgm_partial(request):
+    """HTMX view that returns the number of patients who are on CGM"""
+
+    pz_code = request.session.get("pz_code")
+
+    submission, calculation_date = submission_and_calculation_date(request)
+
+    calculate_kpis = CalculateKPIS(
+        calculation_date=calculation_date, return_pt_querysets=True
+    )
+
+    calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+
+    cgm_kpi_result = calculate_kpis.calculate_kpi_22_real_time_cgm_with_alarms()
+
+    pct_cgm = (
+        round(cgm_kpi_result.total_passed / cgm_kpi_result.total_eligible * 100, 1)
+        if cgm_kpi_result.total_eligible > 0
+        else 0
+    )
+
+    context = {
+        "numerator": cgm_kpi_result.total_passed,
+        "denominator": cgm_kpi_result.total_eligible,
+        "units": f"({pct_cgm}%)",
+    }
+
+    return render(
+        request,
+        "dashboard/components/cards/card_partials/secondary_card_partial.html",
+        context,
+    )
+
+
+def get_selected_chart_data(selected_chart: str, calculation_date: date, pz_code: str):
+    """Return the data for the selected chart"""
+
+    kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=False)
+    kpis.set_patients_for_calculation(pz_codes=[pz_code])
+
+    if selected_chart == "new_diagnoses":
+        return (
+            kpis.calculate_kpi_2_total_new_diagnoses_stratified_by_quarter(),
+            "All new diabetes diagnoses by quarter",
+            "Numbers of patients newly diagnosed with any type of diabetes each quarter. These numbers include new diagnoses by quarter in blue. Cumulative totals by quarter are shown in grey.",
+        )
+    elif selected_chart == "new_admissions":
+        return (
+            kpis.calculate_kpi_46_number_of_admissions_stratified_by_quarter(),
+            "All new diabetes admissions by quarter",
+            "Numbers of patients with diabetes admitted to hospital for any reason by quarter. These numbers include all admissions by quarter in blue. Cumulative totals by quarter are shown in grey.",
+        )
+    elif selected_chart == "transitioned_to_adult_service":
+        return (
+            kpis.calculate_total_service_transitions_to_adults_stratified_by_quarter(),
+            "All children transitioned to adult service by quarter",
+            "Numbers of patients with diabetes transitioned to adult services by quarter. These numbers include all patients who transition to adults by quarter in blue. Cumulative totals by quarter are shown in grey.",
+        )
+
+
+def submission_and_calculation_date(request):
+    # Get new diagnoses this submission
+    pz_code = request.session.get("pz_code")
+
+    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
+        "npda", "PaediatricDiabetesUnit"
+    )
+    try:
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+    except PaediatricDiabetesUnit.DoesNotExist:
+        messages.error(
+            request=request,
+            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
+        )
+        return render(request, "dashboard.html")
+
+    selected_audit_year = int(request.session.get("selected_audit_year"))
+
+    if Submission.objects.filter(
+        paediatric_diabetes_unit=pdu,
+        audit_year=selected_audit_year,
+        submission_active=True,
+    ).exists():
+        submission = Submission.objects.get(
+            paediatric_diabetes_unit=pdu,
+            audit_year=selected_audit_year,
+            submission_active=True,
+        )
+    else:
+        submission = None
+
+    if selected_audit_year <= date.today().year:
+        # The day after the audit year end date
+        calculation_date = date(selected_audit_year, 4, 1)
+    else:
+        today = date.today()
+        calculation_date = date(selected_audit_year, today.month, today.day)
+
+    return submission, calculation_date

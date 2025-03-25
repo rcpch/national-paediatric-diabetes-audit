@@ -15,7 +15,6 @@ from project.npda.models.paediatric_diabetes_unit import (
     PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
 )
 from project.npda.models.patient import Patient
-from project.npda.views.dashboard import helpers as hp
 from project.npda.views.decorators import login_and_otp_required
 
 # LOGGING
@@ -100,131 +99,13 @@ def dashboard(request):
     )
 
     kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
-    # Extract helpers
-    get_attribute_name = calculate_kpis.kpi_name_registry.get_attribute_name
 
     # From this, gather specific chart data required
 
-    # Total eligible patients stratified by diabetes type
-    total_eligible_pts_diabetes_type_value_counts = (
-        hp.get_total_eligible_pts_diabetes_type_value_counts(
-            eligible_pts_queryset=kpi_calculations_object["calculated_kpi_values"][
-                "kpi_1_total_eligible"
-            ]["patient_querysets"]["eligible"]
-        )
+    # new diagnoses
+    new_diagnosis_per_quarter_value_counts_pct = (
+        calculate_kpis.calculate_kpi_2_total_new_diagnoses_stratified_by_quarter()
     )
-
-    # Patient characteristics -> KPI [4, 5, 6, 8, 9, 10, 11, 12]
-    pt_characteristics_value_counts = hp.get_pt_characteristics_value_counts_pct(
-        calculate_kpis.kpi_name_registry,
-        kpi_calculations_object["calculated_kpi_values"],
-    )
-    # Add labels for frontend
-    pt_char_attr_labels_map = {
-        get_attribute_name(4): "Aged 12+",
-        get_attribute_name(5): "Complete year of care",
-        get_attribute_name(6): "Aged 12+ with complete year of care",
-        get_attribute_name(8): "Died",
-        get_attribute_name(9): "Transitioned",
-        get_attribute_name(10): "Coeliac disease",
-        get_attribute_name(11): "Thyroid disease",
-        get_attribute_name(12): "Ketone testing",
-    }
-    for attr_name in pt_char_attr_labels_map:
-        for category in ["care", "died_or_transitioned", "comorbidity_and_testing"]:
-            if attr_name in pt_characteristics_value_counts[category]:
-                pt_characteristics_value_counts[category][attr_name]["label"] = (
-                    pt_char_attr_labels_map[attr_name]
-                )
-
-    # Get TreatmentRegimen / Glucose Monitoring
-    tx_regimen_value_counts_pct = hp.get_tx_regimen_value_counts_pcts(
-        calculate_kpis.kpi_name_registry,
-        kpi_calculations_object["calculated_kpi_values"],
-    )
-
-    glucose_monitoring_value_counts_pct = hp.get_glucose_monitoring_value_counts_pcts(
-        calculate_kpis.kpi_name_registry,
-        kpi_calculations_object["calculated_kpi_values"],
-    )
-
-    # HCL Use
-    hcl_use_per_quarter_value_counts_pct = (
-        calculate_kpis.get_kpi_24_hcl_use_stratified_by_quarter()
-    )
-
-    # Care at diagnosis - kpis 41-43
-    # Get attr names for KPIs 41, 42, 43
-    kpi_41_attr_name = calculate_kpis.kpi_name_registry.get_attribute_name(41)
-    kpi_42_attr_name = calculate_kpis.kpi_name_registry.get_attribute_name(42)
-    kpi_43_attr_name = calculate_kpis.kpi_name_registry.get_attribute_name(43)
-    care_at_diagnosis_value_counts_pct = hp.get_care_at_diagnosis_vcs_pct(
-        kpi_41_values=kpi_calculations_object["calculated_kpi_values"][
-            kpi_41_attr_name
-        ],
-        kpi_42_values=kpi_calculations_object["calculated_kpi_values"][
-            kpi_42_attr_name
-        ],
-        kpi_43_values=kpi_calculations_object["calculated_kpi_values"][
-            kpi_43_attr_name
-        ],
-    )
-
-    # Health checks
-    # Get attr names for KPIs 32.1, 32.2, 32.3
-    kpi_32_2_attr_name = calculate_kpis.kpi_name_registry.get_attribute_name(322)
-    kpi_32_3_attr_name = calculate_kpis.kpi_name_registry.get_attribute_name(323)
-    hc_completion_rate_value_counts_pct = hp.get_hc_completion_rate_vcs(
-        kpi_32_2_values=kpi_calculations_object["calculated_kpi_values"][
-            kpi_32_2_attr_name
-        ],
-        kpi_32_3_values=kpi_calculations_object["calculated_kpi_values"][
-            kpi_32_3_attr_name
-        ],
-    )
-
-    # Additional care processes
-    # Get attr names for KPIs 33-40
-    additional_care_processes_kpi_attr_names = [
-        calculate_kpis.kpi_name_registry.get_attribute_name(kpi)
-        for kpi in range(33, 41)
-    ]
-    additional_care_processes_value_counts_pct = hp.get_additional_care_processes_value_counts(
-        additional_care_processes_kpi_attr_names=additional_care_processes_kpi_attr_names,
-        kpi_calculations_object=kpi_calculations_object["calculated_kpi_values"],
-    )
-
-    # Outcomes
-    # HbA1c 44+45 (mean, median)
-    # Annoyingly have to do this sync inside view as need the calculate_kpis instance
-    hba1c_value_counts_stratified_by_diabetes_type = (
-        hp.get_hba1c_value_counts_stratified_by_diabetes_type(
-            calculate_kpis_instance=calculate_kpis
-        )
-    )
-
-    # Admissions
-    # Get attr names for KPIs 46-7
-    admissions_kpi_attr_names = [
-        calculate_kpis.kpi_name_registry.get_attribute_name(kpi)
-        for kpi in range(46, 48)
-    ]
-    admissions_value_counts_absolute = hp.get_admissions_value_counts_absolute(
-        admissions_kpi_attr_names=admissions_kpi_attr_names,
-        kpi_calculations_object=kpi_calculations_object["calculated_kpi_values"],
-    )
-
-    # Sex, Ethnicity, IMD
-    pt_sex_value_counts, pt_ethnicity_value_counts, pt_imd_value_counts = (
-        hp.get_pt_demographic_value_counts(
-            all_eligible_pts_queryset=kpi_calculations_object["calculated_kpi_values"][
-                "kpi_1_total_eligible"
-            ]["patient_querysets"]["eligible"]
-        )
-    )
-    # Convert to pcts
-    pt_sex_value_counts_pct = hp.convert_value_counts_dict_to_pct(pt_sex_value_counts)
-    pt_imd_value_counts_pct = hp.convert_value_counts_dict_to_pct(pt_imd_value_counts)
 
     # Gather other context vars
     current_date = date.today()
@@ -233,16 +114,8 @@ def dashboard(request):
     ).days
     current_quarter = retrieve_quarter_for_date(current_date)
 
-    ethnicity_parent_color_map = {}
-    ethnicity_child_parent_map = {}
-
-    for parent, entry in constants.ETHNICITY_PARENT_COLOR_MAP.items():
-        ethnicity_parent_color_map[parent] = entry["color"]
-
-        for category in entry["categories"]:
-            ethnicity_child_parent_map[category] = parent
-
     context = {
+        "scatter_plot_select_list": _scatter_plot_select_list("new_diagnoses"),
         "pdu_object": pdu,
         # "pdu_lead_organisation": pdu_lead_organisation,
         "kpi_calculations_object": kpi_calculations_object,
@@ -250,93 +123,12 @@ def dashboard(request):
         "current_quarter": current_quarter,
         "days_remaining_until_audit_end_date": days_remaining_until_audit_end_date,
         "charts": {
-            "total_eligible_patients_stratified_by_diabetes_type": {
-                "data": total_eligible_pts_diabetes_type_value_counts,
-                "labels": list(total_eligible_pts_diabetes_type_value_counts.keys()),
-            },
-            "pt_characteristics_value_counts": {
-                "data": {
-                    "care": json.dumps(pt_characteristics_value_counts["care"]),
-                    "died_or_transitioned": json.dumps(
-                        pt_characteristics_value_counts["died_or_transitioned"]
-                    ),
-                    "comorbidity_and_testing": json.dumps(
-                        pt_characteristics_value_counts["comorbidity_and_testing"]
-                    ),
-                }
-            },
-            "tx_regimen_value_counts_pct": {
+            "new_diagnoses_per_quarter_value_counts_pct": {
                 "no_eligible_patients": kpi_calculations_object[
                     "calculated_kpi_values"
                 ]["kpi_1_total_eligible"]["total_eligible"]
                 == 0,
-                "data": json.dumps(tx_regimen_value_counts_pct),
-            },
-            "glucose_monitoring_value_counts_pct": {
-                "no_eligible_patients": kpi_calculations_object[
-                    "calculated_kpi_values"
-                ]["kpi_1_total_eligible"]["total_eligible"]
-                == 0,
-                "data": json.dumps(glucose_monitoring_value_counts_pct),
-            },
-            "hcl_use_per_quarter_value_counts_pct": {
-                "no_eligible_patients": kpi_calculations_object[
-                    "calculated_kpi_values"
-                ]["kpi_1_total_eligible"]["total_eligible"]
-                == 0,
-                "data": json.dumps(hcl_use_per_quarter_value_counts_pct),
-            },
-            "care_at_diagnosis_value_count": {
-                "no_eligible_patients": all(
-                    [
-                        care_at_diagnosis_value_counts_pct["coeliac_disease_screening"][
-                            "total"
-                        ]
-                        == 0,
-                        care_at_diagnosis_value_counts_pct["thyroid_disease_screening"][
-                            "total"
-                        ]
-                        == 0,
-                        care_at_diagnosis_value_counts_pct[
-                            "carbohydrate_counting_education"
-                        ]["total"]
-                        == 0,
-                    ]
-                ),
-                "data": json.dumps(care_at_diagnosis_value_counts_pct),
-            },
-            "additional_care_processes_value_counts_pct": {
-                "data": json.dumps(additional_care_processes_value_counts_pct),
-            },
-            "hc_completion_rate_value_counts_pct": {
-                "data": json.dumps(hc_completion_rate_value_counts_pct),
-            },
-            "hba1c_value_counts": {
-                "no_eligible_patients": kpi_calculations_object[
-                    "calculated_kpi_values"
-                ]["kpi_1_total_eligible"]["total_eligible"]
-                == 0,
-                # No need to json-ify as data ready to render in template
-                "data": hba1c_value_counts_stratified_by_diabetes_type,
-            },
-            "admissions_value_counts_absolute": {
-                "no_eligible_patients": kpi_calculations_object[
-                    "calculated_kpi_values"
-                ]["kpi_1_total_eligible"]["total_eligible"]
-                == 0,
-                "data": admissions_value_counts_absolute,
-            },
-            "pt_sex_value_counts_pct": {
-                "data": json.dumps(pt_sex_value_counts_pct),
-            },
-            "pt_ethnicity_tree_map_data": {
-                "no_eligible_patients": not pt_ethnicity_value_counts,
-                "data": json.dumps(pt_ethnicity_value_counts),
-                "parent_color_map": json.dumps(ethnicity_parent_color_map),
-                "child_parent_map": json.dumps(ethnicity_child_parent_map),
-            },
-            "pt_imd_value_counts_pct": {
-                "data": json.dumps(pt_imd_value_counts_pct),
+                "data": json.dumps(new_diagnosis_per_quarter_value_counts_pct),
             },
             "map": json.dumps(
                 dict(
@@ -351,3 +143,30 @@ def dashboard(request):
     }
 
     return render(request, template_name=template, context=context)
+
+
+def _scatter_plot_select_list(button_name_selected: str):
+    """
+    Keeps track of which filter buttons are selected in the scatter plot
+    """
+    scatter_buttons = [
+        {
+            "name": "new_diagnoses",
+            "selected": button_name_selected == "new_diagnoses",
+            "enabled": True,
+            "title": "New diagnoses",
+        },
+        {
+            "name": "new_admissions",
+            "selected": button_name_selected == "new_admissions",
+            "enabled": True,
+            "title": "Hospital Admissions",
+        },
+        {
+            "name": "transitioned_to_adult_service",
+            "selected": button_name_selected == "transitioned_to_adult_service",
+            "enabled": True,
+            "title": "Transitioned",
+        },
+    ]
+    return scatter_buttons

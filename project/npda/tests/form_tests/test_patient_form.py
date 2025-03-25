@@ -634,8 +634,6 @@ def test_fail_validation_if_same_patient_twice_in_same_submission(
     assert len(form.errors.as_data()) == 0
     patient = form.save()
 
-    print(pdu_user)
-
     # add the patient to a submission
     Submission = apps.get_model("npda", "Submission")
     submission = Submission.objects.create(

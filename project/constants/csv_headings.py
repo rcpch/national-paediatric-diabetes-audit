@@ -3,7 +3,6 @@ UNIQUE_IDENTIFIER_ENGLAND = (
         "heading": "NHS Number",
         "model_field": "nhs_number",
         "model": "Patient",
-        "alternative_headings": ["NHSNumber"]
     },
 )
 
@@ -22,7 +21,6 @@ CSV_HEADING_OBJECTS = (
         "heading": "Date of Birth",
         "model_field": "date_of_birth",
         "model": "Patient",
-        "alternative_headings": ["DOB"]
     },
     {
         "heading": "Postcode of usual address",
@@ -59,7 +57,6 @@ CSV_HEADING_OBJECTS = (
         "heading": "Death Date",
         "model_field": "death_date",
         "model": "Patient",
-        "alternative_headings": ["Effective Death Date"]
     },
     {
         "heading": "GP Practice Code",
@@ -77,7 +74,6 @@ CSV_HEADING_OBJECTS = (
         "heading": "Visit/Appointment Date",
         "model_field": "visit_date",
         "model": "Visit",
-        "alternative_headings": ["Visit Date"]
     },
     {
         "heading": "Patient Height (cm)",
@@ -99,8 +95,6 @@ CSV_HEADING_OBJECTS = (
         "heading": "HbA1c result format",
         "model_field": "hba1c_format",
         "model": "Visit",
-        # Deliberate typo to accomodate the old NPDA CSV template
-        "alternative_headings": ["HB1AC Result Format"]
     },
     {
         "heading": "Observation Date: Hba1c Value",
@@ -111,7 +105,6 @@ CSV_HEADING_OBJECTS = (
         "heading": "Diabetes Treatment at time of Hba1c measurement",
         "model_field": "treatment",
         "model": "Visit",
-        "alternative_headings": ["Diabetes Treatment at the time of HbA1c measurement"]
     },
     {
         "heading": "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
@@ -142,7 +135,6 @@ CSV_HEADING_OBJECTS = (
         "heading": "Foot Assessment / Examination Date",
         "model_field": "foot_examination_observation_date",
         "model": "Visit",
-        "alternative_headings": ["Foot Assessment/Examination Date"]
     },
     {
         "heading": "Retinal Screening date",
@@ -188,7 +180,6 @@ CSV_HEADING_OBJECTS = (
         "heading": "At time of, or following measurement of thyroid function, was the patient prescribed any thyroid treatment?",
         "model_field": "thyroid_treatment_status",
         "model": "Visit",
-        "alternative_headings": ["At the time of, or following measurement of thyroid function, was the patient prescribed any thyroid treatment?"]
     },
     {
         "heading": "Observation Date: Coeliac Disease Screening",
@@ -199,15 +190,11 @@ CSV_HEADING_OBJECTS = (
         "heading": "Has the patient been recommended a Gluten-free diet?",
         "model_field": "gluten_free_diet",
         "model": "Visit",
-        # sic from the old NPDA template (eugh non breaking spaces)
-        "alternative_headings": ["Has the patient been\xa0recommended a Gluten-free\xa0diet?"]
     },
     {
         "heading": "Observation Date - Psychological Screening Assessment",
         "model_field": "psychological_screening_assessment_date",
         "model": "Visit",
-        # sic from the old NPDA template
-        "alternative_headings": ["Observation Date -Psychological Assessment Screening"]
     },
     {
         "heading": "Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?",
@@ -228,7 +215,6 @@ CSV_HEADING_OBJECTS = (
         "heading": "Date of Level 3 carbohydrate counting education received",
         "model_field": "carbohydrate_counting_level_three_education_date",
         "model": "Visit",
-        "alternative_headings": ["Date Level 3 carbohydrate counting education received"]
     },
     {
         "heading": "Was the patient offered an additional appointment with a paediatric dietitian?",

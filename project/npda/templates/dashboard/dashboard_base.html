@@ -1,7 +1,5 @@
 {% url 'dashboard' as hx_get %}
-{% comment %} ADDS KONVA FOR WAFFLE PLOTS JUST WHEN THIS TEMPLATE IS RENDERED {% endcomment %}
-<script src="https://unpkg.com/konva@9/konva.min.js"></script>
-<div class="lg:container mx-auto p-4 font-montserrat text-rcpch_dark_blue"
+<div class="mx-10 p-4 font-montserrat text-rcpch_dark_blue"
      id="dashboard"
      hx-get="{{ hx_get }}"
      hx-trigger="dashboard from:body"
@@ -12,56 +10,37 @@
     </p>
     <p class="text-center">This data has not been validated by the NPDA team.</p>
   </div>
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-    <!-- PDU Information Card -->
-    {% include 'dashboard/components/cards/pdu_card.html' %}
-    <!-- Audit Details Card -->
-    {% include 'dashboard/components/cards/audit_details_card.html' %}
-    <div class="flex flex-col gap-3">
-      <!-- Total Eligible Patients Card -->
-      {% include 'dashboard/components/cards/total_eligible_patients_card.html' %}
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+    <!-- ROW 1 -->
+    <div class="col-span-12 xl:col-span-3">
+      <!-- PDU Card -->
+      {% include 'dashboard/components/cards/pdu_card.html' with pdu_object=pdu_object %}
     </div>
-  </div>
-  <!-- UNIT REPORT -->
-  <h1 class="text-5xl text-center my-6">Unit Report</h1>
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-    <!-- PATIENT CHARACTERISTICS CARD -->
-    {% include 'dashboard/components/cards/patient_characteristics_card.html' %}
-    <div class="flex flex-col gap-3">
-      <!-- TREATMENT REGIMEN CARD -->
-      {% include 'dashboard/components/cards/treatment_regimen_card.html' %}
-      <!-- GLUCOSE MONITORING CARD -->
-      {% include 'dashboard/components/cards/glucose_monitoring_card.html' %}
+    <div class="col-span-12 xl:col-span-3">
+      <!-- Audit Details Card -->
+      {% include 'dashboard/components/cards/audit_details_card.html' with kpi_calculations_object=kpi_calculations_object current_quarter=current_quarter current_date=current_date days_remaining_until_audit_end_date=days_remaining_until_audit_end_date %}
     </div>
-    <div class="flex flex-col gap-4">
-      <div class="flex flex-col gap-3">
-        <!-- HBa1c CARD -->
-        {% include 'dashboard/components/cards/hba1c_card.html' %}
-        <!-- ADMISSIONS CARD -->
-        {% include 'dashboard/components/cards/admissions_card.html' %}
-      </div>
-      <!-- HCL CARD -->
-      {% include 'dashboard/components/cards/hcl_use_card.html' %}
+    <div class="col-span-12 xl:col-span-6">
+      <!-- Patient Measurements Card -->
+      {% include 'dashboard/components/cards/patient_measurements_card.html' with patient_measurements=patient_measurements %}
     </div>
-  </div>
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 my-4">
-    <!-- HEALTH CHECKS COMPLETION RATE CARD -->
-    {% include 'dashboard/components/cards/health_checks_completion_rate_card.html' %}
-    <!-- ADDITIONAL CARE PROCESSES CARD -->
-    {% include 'dashboard/components/cards/additional_care_processes_card.html' %}
-    <!-- care at diagnosis CARD -->
-    {% include 'dashboard/components/cards/care_at_diagnosis_card.html' %}
-  </div>
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 my-4">
-    <!-- SEX CARD -->
-    {% include 'dashboard/components/cards/sex_card.html' %}
-    <!-- ETHNICITY CARD -->
-    {% include 'dashboard/components/cards/ethnicity_card.html' %}
-    <!-- IMD CARD -->
-    {% include 'dashboard/components/cards/imd_card.html' %}
-  </div>
-  <!-- IMD MAP CARD -->
-  <div class="grid grid-cols-1 min-h-80">
-    {% include 'dashboard/components/cards/imd_map_card.html' with scatterplot_of_cases_for_selected_organisation=charts.scatterplot_of_cases_for_selected_organisation pdu_lead_organisation=pdu_lead_organisation pdu_object=pdu_object %}
+    <!-- ROW 2 -->
+    <div class="col-span-12 xl:col-span-6">
+      <!-- Patient Characteristics Card -->
+      {% include 'dashboard/components/cards/patient_characteristics_card.html' %}
+    </div>
+    <div class="col-span-12 xl:col-span-6">
+      <!-- Other Metrics Card -->
+      {% include 'dashboard/other_metrics.html' with scatter_plot_select_list=scatter_plot_select_list %}
+    </div>
+    <!-- ROW 3 -->
+    <div class="col-span-12 xl:col-span-12">
+      {% include 'dashboard/components/cards/all_patient_charts.html' %}
+    </div>
+    <!-- ROW 4 -->
+    <div class="col-span-12 xl:col-span-12">
+      <!-- Map Card -->
+      {% include 'dashboard/components/cards/imd_map_card.html' with scatterplot_of_cases_for_selected_organisation=charts.scatterplot_of_cases_for_selected_organisation pdu_lead_organisation=pdu_lead_organisation pdu_object=pdu_object %}
+    </div>
   </div>
 </div>

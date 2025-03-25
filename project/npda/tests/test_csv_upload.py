@@ -2,6 +2,7 @@ import dataclasses
 import datetime
 import tempfile
 import csv
+import collections
 from io import StringIO
 from decimal import Decimal
 from unittest.mock import AsyncMock, patch
@@ -139,10 +140,17 @@ def test_user(seed_groups_fixture, seed_users_fixture):
 # The database is not rolled back if we used the built in async support for pytest
 # https://github.com/pytest-dev/pytest-asyncio/issues/226
 @async_to_sync
-async def csv_upload_sync(user, dataframe, pdu_pz_code=ALDER_HEY_PZ_CODE):
+async def csv_upload_sync(
+    user, dataframe, pdu_pz_code=ALDER_HEY_PZ_CODE, errors_to_return=None
+):
     return await csv_upload(
         user,
         dataframe,
+        errors_to_return=(
+            collections.defaultdict(lambda: collections.defaultdict(list))
+            if errors_to_return is None
+            else errors_to_return
+        ),
         csv_file_name=None,
         csv_file_bytes=None,
         pdu_pz_code=pdu_pz_code,
@@ -168,14 +176,14 @@ def modify_raw_csv(csv_str, start=None, end=None, replacements={}):
     end_ix = len(rows) if end is None else end - 1
 
     rows = rows[start_ix:end_ix]
-    
+
     for replacement in replacements:
         row_ix = replacement["row"] - 1
         column_ix = header.index(replacement["column"])
         value = replacement["value"]
 
         rows[row_ix][column_ix] = value
-    
+
     output = StringIO()
     writer = csv.writer(output)
 
@@ -539,13 +547,12 @@ def test_diagnosis_date_before_date_of_birth(test_user, single_row_valid_df):
     single_row_valid_df["Date of Diabetes Diagnosis"] = pd.to_datetime(diagnosis_date)
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
-    
+
     assert "diagnosis_date" in errors[0]
     error_message = errors[0]["diagnosis_date"][0]
 
     assert (
-        error_message
-        == "'Date of Diabetes Diagnosis' cannot be before 'Date of Birth'"
+        error_message == "'Date of Diabetes Diagnosis' cannot be before 'Date of Birth'"
     )
 
     patient = Patient.objects.first()
@@ -555,8 +562,7 @@ def test_diagnosis_date_before_date_of_birth(test_user, single_row_valid_df):
 
     error_message = patient.errors["diagnosis_date"][0]["message"]
     assert (
-        error_message
-        == "'Date of Diabetes Diagnosis' cannot be before 'Date of Birth'"
+        error_message == "'Date of Diabetes Diagnosis' cannot be before 'Date of Birth'"
     )
 
 
@@ -652,10 +658,7 @@ def test_death_date_before_date_of_birth(test_user, single_row_valid_df):
     assert "death_date" in errors[0]
 
     error_message = errors[0]["death_date"][0]
-    assert (
-        error_message
-        == "'Death Date' cannot be before 'Date of Birth'"
-    )
+    assert error_message == "'Death Date' cannot be before 'Date of Birth'"
 
     patient = Patient.objects.first()
 
@@ -663,10 +666,7 @@ def test_death_date_before_date_of_birth(test_user, single_row_valid_df):
     assert "death_date" in patient.errors
 
     error_message = patient.errors["death_date"][0]["message"]
-    assert (
-        error_message
-        == "'Death Date' cannot be before 'Date of Birth'"
-    )
+    assert error_message == "'Death Date' cannot be before 'Date of Birth'"
 
 
 @pytest.mark.django_db
@@ -916,27 +916,16 @@ def test_invalid_nhs_number_column_name(test_user, dummy_sheet_csv):
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/741
 @pytest.mark.django_db
-def test_invalid_date_of_birth_column_name_with_mixed_case_column_headers(test_user, dummy_sheet_csv):
-    csv = dummy_sheet_csv.replace("Date of Birth", "DOB").replace("HbA1c result format", "HBA1C Result Format")
+def test_invalid_date_of_birth_column_name_with_mixed_case_column_headers(
+    test_user, dummy_sheet_csv
+):
+    csv = dummy_sheet_csv.replace("Date of Birth", "DOB").replace(
+        "HbA1c result format", "HBA1C Result Format"
+    )
     results = read_csv_from_str(csv)
 
-    assert results.missing_columns == []
-    assert results.additional_columns == []
-
-
-# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/741
-@pytest.mark.django_db
-def test_old_template_headers(test_user, dummy_sheet_csv_old_headers):
-    csv = dummy_sheet_csv_old_headers
-    results = read_csv_from_str(csv)
-
-    assert results.missing_columns == []
-    assert results.additional_columns == []
-
-    csv_upload_sync(test_user, results.df)
-
-    assert(Patient.objects.count() > 0)
-    assert(Visit.objects.count() > 0)
+    assert results.missing_columns == ["Date of Birth"]
+    assert results.additional_columns == ["DOB"]
 
 
 @pytest.mark.django_db
@@ -1071,26 +1060,47 @@ def test_bad_date_format_on_date_of_birth(
     ), "There should be no patients in the database after the test"
 
 
-@pytest.mark.skip("Can't distinguish between a bad date format or a missing date until https://github.com/rcpch/national-paediatric-diabetes-audit/pull/752")
 @pytest.mark.django_db
 def test_bad_date_format_on_date_of_diagnosis(test_user, single_row_valid_df):
     df = single_row_valid_df
 
-    column = "Date of Level 3 carbohydrate counting education received"
+    column = "Date of Diabetes Diagnosis"
 
     df[column] = df[column].astype(str)
     df[column] = "beep"
 
     csv = df.to_csv(index=False, date_format="%d/%m/%Y")
 
-    df = read_csv_from_str(csv).df
-    errors = csv_upload_sync(test_user, df)
+    # Slightly janky - date format errors are returned separately from parse_csv
+    # as they are swallowed up into NaT and we cannot later distinguish between
+    # that an the cell being empty in the CSV upload. To avoid rewriting all the usage
+    # of csv_upload_sync across all tests we assert in two stages here
+    errors = read_csv_from_str(csv).errors_to_return
 
     assert len(errors) == 1
-    assert "date_of_diagnosis" in errors[0]
+    assert "diagnosis_date" in errors[0]
+    assert (
+        errors[0]["diagnosis_date"][0]
+        == "Date format is incorrect (expected DD/MM/YYYY)"
+    )
 
-    assert(Patient.objects.count() == 1)
-    assert(Patient.objects.first().diagnosis_date is None)
+    errors = csv_upload_sync(test_user, df, errors_to_return=errors)
+    assert "diagnosis_date" in errors[0]
+    assert (
+        errors[0]["diagnosis_date"][0]
+        == "Date format is incorrect (expected DD/MM/YYYY)"
+    )
+
+    assert Patient.objects.count() == 1
+    patient = Patient.objects.first()
+
+    assert patient.diagnosis_date is None
+
+    assert "diagnosis_date" in patient.errors
+    assert (
+        patient.errors["diagnosis_date"][0]["message"]
+        == "Date format is incorrect (expected DD/MM/YYYY)"
+    )
 
 
 @pytest.mark.django_db
@@ -2264,10 +2274,13 @@ def test_smoking_status_missing_fails_validation(test_user, single_row_valid_df)
     assert visit.smoking_status is None
 
 
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/791
 @pytest.mark.django_db
-def test_smoking_status_date_missing_fails_validation(test_user, single_row_valid_df):
+def test_smoking_status_smoker_does_not_require_cessation_referral_date(
+    test_user, single_row_valid_df
+):
     """
-    Test that a missing smoking status date is rejected
+    Test that smoking status is accepted
     """
     single_row_valid_df.loc[
         0,
@@ -2277,12 +2290,12 @@ def test_smoking_status_date_missing_fails_validation(test_user, single_row_vali
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
 
-    assert "smoking_cessation_referral_date" in errors[0]
+    assert len(errors) == 0
 
     visit = Visit.objects.first()
 
-    assert visit.smoking_status is 2
     assert visit.smoking_cessation_referral_date is None
+    assert visit.smoking_status == 2
 
 
 """
@@ -2828,7 +2841,7 @@ def test_inpatient_admission_dka_additional_therapies_hospital_admission_also_pr
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
 
-    assert "hospital_admission_other" in errors[0]
+    assert "hospital_admission_reason" in errors[0]
 
     visit = Visit.objects.first()
 
@@ -3060,15 +3073,10 @@ def test_visit_date_not_before_diagnosis_date(test_user, single_row_valid_df):
 )
 @pytest.mark.django_db
 def test_alternative_formats_for_sex(test_user, dummy_sheet_csv, alternative, expected):
-    one_row_csv = modify_raw_csv(dummy_sheet_csv,
-        end=2, # exclusive
-        replacements = [
-            {
-                "row": 1,
-                "column": "Stated gender",
-                "value": alternative
-            }
-        ]
+    one_row_csv = modify_raw_csv(
+        dummy_sheet_csv,
+        end=2,  # exclusive
+        replacements=[{"row": 1, "column": "Stated gender", "value": alternative}],
     )
 
     df = read_csv_from_str(one_row_csv).df
@@ -3082,18 +3090,13 @@ def test_alternative_formats_for_sex(test_user, dummy_sheet_csv, alternative, ex
 
 @pytest.mark.django_db
 def test_mix_of_standard_and_alternative_formats_for_sex(test_user, dummy_sheet_csv):
-    two_rows_csv = modify_raw_csv(dummy_sheet_csv,
-        start=2, # inclusive
-        end=4, # exclusive
-        replacements = [
-            {
-                "row": 2,
-                "column": "Stated gender",
-                "value": "M"
-            }
-        ]
+    two_rows_csv = modify_raw_csv(
+        dummy_sheet_csv,
+        start=2,  # inclusive
+        end=4,  # exclusive
+        replacements=[{"row": 2, "column": "Stated gender", "value": "M"}],
     )
-    
+
     df = read_csv_from_str(two_rows_csv).df
 
     # Double check we do have different patients
@@ -3107,24 +3110,20 @@ def test_mix_of_standard_and_alternative_formats_for_sex(test_user, dummy_sheet_
     assert patient1.sex == 1
     assert patient2.sex == 1
 
+
 @pytest.mark.parametrize(
     "value",
     [
         pytest.param("7"),
         pytest.param("TOO_LONG"),
-    ]
+    ],
 )
 @pytest.mark.django_db
 def test_bad_data_for_ethnic_category(test_user, dummy_sheet_csv, value):
-    one_row_csv = modify_raw_csv(dummy_sheet_csv,
-        end=2, # exclusive
-        replacements = [
-            {
-                "row": 1,
-                "column": "Ethnic Category",
-                "value": value
-            }
-        ]
+    one_row_csv = modify_raw_csv(
+        dummy_sheet_csv,
+        end=2,  # exclusive
+        replacements=[{"row": 1, "column": "Ethnic Category", "value": value}],
     )
 
     df = read_csv_from_str(one_row_csv).df
@@ -3155,32 +3154,37 @@ def test_bad_data_for_ethnic_category(test_user, dummy_sheet_csv, value):
         pytest.param("dietician_additional_appointment_offered"),
         pytest.param("ketone_meter_training"),
         pytest.param("hospital_admission_reason"),
-        pytest.param("dka_additional_therapies")
-    ]
+        pytest.param("dka_additional_therapies"),
+    ],
 )
 @pytest.mark.django_db
-def test_bad_data_for_positive_small_integer_fields(test_user, dummy_sheet_csv, model_field):
+def test_bad_data_for_positive_small_integer_fields(
+    test_user, dummy_sheet_csv, model_field
+):
     headings = csv_definition_for(model_field)
-    
+
     column = headings["heading"]
     model = apps.get_model("npda", headings["model"])
 
     for [value, expected, assertion_message] in [
         [94, None, f"Failed to handle {model_field} with incorrect choice (94)"],
         [-1, None, f"Failed to handle {model_field} with -1 (negative number)"],
-        [9999, None, f"Failed to handle {model_field} with 9999 (value bigger than int8)"],
-        [32768, None, f"Failed to handle {model_field} 32768 (value bigger than Django small integer field)"],
-        ["STRING", None, f"Failed to handle unexpected string for {model_field}"]
+        [
+            9999,
+            None,
+            f"Failed to handle {model_field} with 9999 (value bigger than int8)",
+        ],
+        [
+            32768,
+            None,
+            f"Failed to handle {model_field} 32768 (value bigger than Django small integer field)",
+        ],
+        ["STRING", None, f"Failed to handle unexpected string for {model_field}"],
     ]:
-        one_row_csv = modify_raw_csv(dummy_sheet_csv,
-            end=2, # exclusive
-            replacements = [
-                {
-                    "row": 1,
-                    "column": column,
-                    "value": value
-                }
-            ]
+        one_row_csv = modify_raw_csv(
+            dummy_sheet_csv,
+            end=2,  # exclusive
+            replacements=[{"row": 1, "column": column, "value": value}],
         )
 
         df = read_csv_from_str(one_row_csv).df
@@ -3198,12 +3202,13 @@ def test_bad_data_for_positive_small_integer_fields(test_user, dummy_sheet_csv, 
         if hasattr(instance, "errors"):
             assert model_field in instance.errors
 
+
 @pytest.mark.parametrize(
     "model_field",
     [
         pytest.param("systolic_blood_pressure"),
         pytest.param("diastolic_blood_pressure"),
-    ]
+    ],
 )
 @pytest.mark.django_db
 def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
@@ -3212,15 +3217,10 @@ def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
     column = headings["heading"]
     model = apps.get_model("npda", headings["model"])
 
-    one_row_csv = modify_raw_csv(dummy_sheet_csv,
-        end=2, # exclusive
-        replacements = [
-            {
-                "row": 1,
-                "column": column,
-                "value": "STRING"
-            }
-        ]
+    one_row_csv = modify_raw_csv(
+        dummy_sheet_csv,
+        end=2,  # exclusive
+        replacements=[{"row": 1, "column": column, "value": "STRING"}],
     )
 
     df = read_csv_from_str(one_row_csv).df
@@ -3236,7 +3236,6 @@ def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
     assert model_field in instance.errors
 
 
-@pytest.mark.skip(reason="https://github.com/rcpch/national-paediatric-diabetes-audit/issues/488")
 @pytest.mark.parametrize(
     "model_field",
     [
@@ -3259,8 +3258,8 @@ def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
         pytest.param("flu_immunisation_recommended_date"),
         pytest.param("sick_day_rules_training_date"),
         pytest.param("hospital_admission_date"),
-        pytest.param("hospital_discharge_date")
-    ]
+        pytest.param("hospital_discharge_date"),
+    ],
 )
 @pytest.mark.django_db
 def test_bad_data_for_date_fields(test_user, dummy_sheet_csv, model_field):
@@ -3269,28 +3268,29 @@ def test_bad_data_for_date_fields(test_user, dummy_sheet_csv, model_field):
     column = headings["heading"]
     model = apps.get_model("npda", headings["model"])
 
-    one_row_csv = modify_raw_csv(dummy_sheet_csv,
-        end=2, # exclusive
-        replacements = [
-            {
-                "row": 1,
-                "column": column,
-                "value": "NOT A DATE"
-            }
-        ]
+    one_row_csv = modify_raw_csv(
+        dummy_sheet_csv,
+        end=2,  # exclusive
+        replacements=[{"row": 1, "column": column, "value": "NOT A DATE"}],
     )
 
-    df = read_csv_from_str(one_row_csv).df
+    results = read_csv_from_str(one_row_csv)
 
-    errors = csv_upload_sync(test_user, df)
+    # Slightly janky - date format errors are returned separately from parse_csv
+    # as they are swallowed up into NaT and we cannot later distinguish between
+    # that an the cell being empty in the CSV upload. To avoid rewriting all the usage
+    # of csv_upload_sync across all tests we assert in two stages here
+    errors = results.errors_to_return
 
     assert len(errors) > 0
+    assert model_field in errors[0]
+
+    csv_upload_sync(test_user, results.df, errors_to_return=errors)
+
     assert model.objects.count() == 1
 
     instance = model.objects.first()
-
     assert getattr(instance, model_field) == None
-    assert model_field in instance.errors
 
 
 @pytest.mark.parametrize(
@@ -3300,8 +3300,8 @@ def test_bad_data_for_date_fields(test_user, dummy_sheet_csv, model_field):
         pytest.param("weight"),
         pytest.param("hba1c"),
         pytest.param("albumin_creatinine_ratio"),
-        pytest.param("total_cholesterol")         
-    ]
+        pytest.param("total_cholesterol"),
+    ],
 )
 @pytest.mark.django_db
 def test_bad_data_for_decimal_fields(test_user, dummy_sheet_csv, model_field):
@@ -3310,15 +3310,10 @@ def test_bad_data_for_decimal_fields(test_user, dummy_sheet_csv, model_field):
     column = headings["heading"]
     model = apps.get_model("npda", headings["model"])
 
-    one_row_csv = modify_raw_csv(dummy_sheet_csv,
-        end=2, # exclusive
-        replacements = [
-            {
-                "row": 1,
-                "column": column,
-                "value": "STRING"
-            }
-        ]
+    one_row_csv = modify_raw_csv(
+        dummy_sheet_csv,
+        end=2,  # exclusive
+        replacements=[{"row": 1, "column": column, "value": "STRING"}],
     )
 
     df = read_csv_from_str(one_row_csv).df
