@@ -86,8 +86,8 @@ TEXT = {
         "description": "Outcomes are presented below for all children and young people with Type 1 diabetes. HbA1c excludes all measurements taken in the first 90 days after diagnosis.",
         "headers": [
             "NHS NUMBER",
-            "Mean HbA1c",
-            "Median HbA1c",
+            "Mean HbA1c mmol/mol (%)",
+            "Median HbA1c mmol/mol (%)",
             "Number of Admissions",
             "Number of DKA Admissions",
         ],
