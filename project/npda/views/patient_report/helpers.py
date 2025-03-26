@@ -22,6 +22,7 @@ from django.db.models import (
     ExpressionWrapper,
     DateField,
 )
+from datetime import date, timedelta
 from project.npda.models.db_functions import Round
 from project.constants.hba1c_format import HBA1C_FORMATS
 from project.npda.kpi_class.kpis import CalculateKPIS
@@ -192,14 +193,22 @@ def get_pt_level_table_data(
         data = {}
 
         # all t1dm pts
+        today = date.today()
         all_t1dm_pts = (
-            calculate_kpis_object.calculate_kpi_3_total_t1dm().patient_querysets[
-                "eligible"
-            ]
+            calculate_kpis_object.calculate_kpi_3_total_t1dm()
+            .patient_querysets["eligible"]
+            .filter(
+                # Additional filter for only those diagnosed within 90 days of today
+                Q(diagnosis_date__gte=today - timedelta(days=90))
+            )
         )
+
         all_t1dm_pts_with_complete_year_of_care = calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets[
             "eligible"
-        ]
+        ].filter(
+                # Additional filter for only those diagnosed within 90 days of today
+                Q(diagnosis_date__gte=today - timedelta(days=90))
+            )
         for pt in all_t1dm_pts:
             # Set all to None initially as updating as [True | False] if pt in [passed | failed]
             # querysets for each kpi -> if not in either, must mean they are ineligible (therefore None)
@@ -218,13 +227,19 @@ def get_pt_level_table_data(
                 kpi_attr_name
             ]["patient_querysets"]
 
-            for pt in kpi_pt_querysets["passed"]:
+            for pt in kpi_pt_querysets["passed"].filter(
+                # Additional filter for only those diagnosed within 90 days of today
+                Q(diagnosis_date__gte=today - timedelta(days=90))
+            ):
                 data[pt.pk][kpi_attr_name] = True
                 data[pt.pk]["nhs_number"] = (
                     pt.nhs_number or pt.unique_reference_number or "Unknown"
                 )
 
-            for pt in kpi_pt_querysets["failed"]:
+            for pt in kpi_pt_querysets["failed"].filter(
+                # Additional filter for only those diagnosed within 90 days of today
+                Q(diagnosis_date__gte=today - timedelta(days=90))
+            ):
                 data[pt.pk][kpi_attr_name] = False
                 data[pt.pk]["nhs_number"] = (
                     pt.nhs_number or pt.unique_reference_number or "Unknown"
@@ -298,7 +313,7 @@ def get_pt_level_table_data(
             hba1c_values_by_patient[visit["patient__pk"]].append(
                 visit["hba1c_mmol_mol"]
             )
-        
+
         for pt_pk in hba1c_values_by_patient:
             hba1c_values = hba1c_values_by_patient[pt_pk]
             # Calculate this patient's mean & median hba1c value in mmol/mol
