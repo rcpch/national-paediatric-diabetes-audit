@@ -1,10 +1,14 @@
+from decimal import Decimal
 from enum import Enum
 import logging
 from datetime import date
+from collections import defaultdict
 
 # Django imports
 from django.shortcuts import render
 from django.views.generic import ListView
+from project.constants.hba1c_format import HBA1C_FORMATS
+from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
 from project.npda.models import Patient
 from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.views.decorators import login_and_otp_required
@@ -28,6 +32,7 @@ from django.db.models import (
     CharField,
     Value,
 )
+from project.npda.models.db_functions import Round
 from project.npda.views.patient_report.helpers import get_pt_level_table_data
 from project.npda.views.patient_report.template_data import KPI_CATEGORY_ATTR_MAP, TEXT
 
@@ -431,7 +436,50 @@ class PatientReportView(ListView):
 
         elif self.selected_category == "admissions":
             pt_qs = pt_qs.annotate(
-                num_admissions=Count("admissions", distinct=True),
+                number_of_admissions=Count(
+                    "visit",
+                    filter=Q(
+                        Q(
+                            visit__hospital_admission_date__range=calculate_kpis.AUDIT_DATE_RANGE
+                        )
+                        | Q(
+                            visit__hospital_discharge_date__range=calculate_kpis.AUDIT_DATE_RANGE
+                        )
+                    )
+                    & Q(
+                        visit__hospital_admission_reason__in=[
+                            choice[0] for choice in HOSPITAL_ADMISSION_REASONS
+                        ]
+                    )
+                    & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE),
+                    distinct=True,
+                ),
+                # Annotate with the number of DKA admissions (kpi_47)
+                number_of_dka_admissions=Count(
+                    "visit",
+                    filter=Q(
+                        Q(
+                            visit__hospital_admission_date__range=calculate_kpis.AUDIT_DATE_RANGE
+                        )
+                        | Q(
+                            visit__hospital_discharge_date__range=calculate_kpis.AUDIT_DATE_RANGE
+                        )
+                    )
+                    & Q(
+                        # DKA reason is index 1 in HOSPITAL_ADMISSION_REASONS
+                        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[1][
+                            0
+                        ]
+                    )
+                    & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE),
+                    distinct=True,
+                ),
+            ).values(
+                "pk",
+                "nhs_number",
+                "is_complete_year_of_care",
+                "number_of_admissions",
+                "number_of_dka_admissions",
             )
         elif self.selected_category == "treatment":
             pt_qs = pt_qs.annotate(
@@ -550,10 +598,105 @@ class PatientReportView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # All categories
+
+        # Add table categories to the context
         context["table_categories"] = TableCategories.choices()
-        # Selected category
         context["selected_category"] = self.selected_category
+
+        # If we're on the outcomes page, add HbA1c data -> doing this here because Means and Medians
+        # too complicated to do in the queryset
+        if self.selected_category == TableCategories.ADMISSIONS.value:
+            # Get the paginated patients from context
+            paginated_patients = context['patients']
+
+            # Get the patient IDs from the current page
+            patient_ids = set([p['pk'] for p in paginated_patients])
+
+            # Create CalculateKPIS object (or you could store it as an instance variable in get_queryset)
+            selected_audit_year = int(self.request.session.get("selected_audit_year"))
+            selected_audit_year = max(selected_audit_year, 2024)
+            calculation_date = date(year=selected_audit_year, month=5, day=1)
+
+            calculate_kpis = CalculateKPIS(
+                calculation_date=calculation_date, return_pt_querysets=True
+            )
+
+            # Set relevant patients
+            pz_code = self.request.session.get("pz_code")
+            calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+
+            # Get HbA1c values for just the patients on this page
+            valid_visits_with_hba1c = (
+                calculate_kpis._get_valid_visits_for_kpi_44_and_45(
+                    Patient.objects.filter(pk__in=patient_ids)
+                )
+                .annotate(
+                    hba1c_mmol_mol=Case(
+                        When(
+                            Q(hba1c_format=HBA1C_FORMATS[0][0]),
+                            then=F("hba1c"),
+                        ),
+                        When(
+                            Q(hba1c_format=HBA1C_FORMATS[1][0]),
+                            then=(F("hba1c") - Round(Decimal("2.152")))
+                            / Decimal("0.09148"),
+                        ),
+                        default=None,
+                        output_field=DecimalField(
+                            max_digits=5,
+                            decimal_places=2,
+                        ),
+                    )
+                )
+                .values(
+                    "hba1c_mmol_mol",
+                    "patient__pk",
+                )
+                .filter(hba1c_mmol_mol__isnull=False)
+            )
+
+            # Group HbA1c values by patient
+            hba1c_values_by_patient = defaultdict(list)
+            for visit in valid_visits_with_hba1c:
+                hba1c_values_by_patient[visit["patient__pk"]].append(
+                    visit["hba1c_mmol_mol"]
+                )
+
+            # Annotate each patient in the paginated queryset with HbA1c values
+            for patient in paginated_patients:
+                hba1c_values = hba1c_values_by_patient.get(patient['pk'], [])
+                if hba1c_values:
+                    # Calculate mean and median HbA1c
+                    mean_hba1c_mmol_mol = calculate_kpis.calculate_mean(hba1c_values)
+                    median_hba1c_mmol_mol = calculate_kpis.calculate_median(
+                        hba1c_values
+                    )
+
+                    # Add the values to the patient object
+                    patient['kpi_44_mean_hba1c'] = round(mean_hba1c_mmol_mol)
+                    patient['kpi_45_median_hba1c'] = round(median_hba1c_mmol_mol)
+
+                    # Convert to percentage format
+                    patient['mean_hba1c_pct'] = round(
+                        (0.09148 * mean_hba1c_mmol_mol) + 2.152
+                        if mean_hba1c_mmol_mol > 0 and mean_hba1c_mmol_mol is not None
+                        else None,
+                        1,
+                    )
+                    patient['median_hba1c_pct'] = round(
+                        (0.09148 * median_hba1c_mmol_mol) + 2.152
+                        if median_hba1c_mmol_mol > 0
+                        and median_hba1c_mmol_mol is not None
+                        else None,
+                        1,
+                    )
+                else:
+                    # Set default values if no HbA1c readings
+                    patient['kpi_44_mean_hba1c'] = None
+                    patient['kpi_45_median_hba1c'] = None
+                    patient['mean_hba1c_pct'] = None
+                    patient['median_hba1c_pct'] = None
+
         return context
 
     def get_template_names(self) -> list[str]:
