@@ -5,10 +5,70 @@
 {% endblock %}
 
 {% block table_headers %}
-      <th class="whitespace-normal break-words">NHS Number</th>
-      <th class="whitespace-normal break-words">Treatment regimen</th>
-      <th class="whitespace-normal break-words">Glucose monitoring</th>
-      <th class="whitespace-normal break-words">HCL</th>
+      <th class="whitespace-normal break-words">NHS Number
+        <span
+          hx-get="?category=treatment&sort=nhs_number&order=asc"
+          hx-target="#table-area"
+          hx-swap="innerHTML"
+          class="cursor-pointer">
+          <i class="fa-solid fa-up-long {% if sort_field == 'nhs_number' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+        </span>
+        <span
+          hx-get="?category=treatment&sort=nhs_number&order=desc"
+          hx-target="#table-area"
+          hx-swap="innerHTML"
+          class="cursor-pointer">
+          <i class="fa-solid fa-down-long {% if sort_field == 'nhs_number' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+        </span>
+      </th>
+      <th class="whitespace-normal break-words">Treatment regimen
+        <span
+          hx-get="?category=treatment&sort=treatment_regimen&order=asc"
+          hx-target="#table-area"
+          hx-swap="innerHTML"
+          class="cursor-pointer">
+          <i class="fa-solid fa-up-long {% if sort_field == 'treatment_regimen' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+        </span>
+        <span
+          hx-get="?category=treatment&sort=treatment_regimen&order=desc"
+          hx-target="#table-area"
+          hx-swap="innerHTML"
+          class="cursor-pointer">
+          <i class="fa-solid fa-down-long {% if sort_field == 'treatment_regimen' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+        </span>
+      </th>
+      <th class="whitespace-normal break-words">Glucose monitoring
+        <span
+          hx-get="?category=treatment&sort=glucose_monitoring&order=asc"
+          hx-target="#table-area"
+          hx-swap="innerHTML"
+          class="cursor-pointer">
+          <i class="fa-solid fa-up-long {% if sort_field == 'glucose_monitoring' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+        </span>
+        <span
+          hx-get="?category=treatment&sort=glucose_monitoring&order=desc"
+          hx-target="#table-area"
+          hx-swap="innerHTML"
+          class="cursor-pointer">
+          <i class="fa-solid fa-down-long {% if sort_field == 'glucose_monitoring' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+        </span>
+      </th>
+      <th class="whitespace-normal break-words">HCL
+        <span
+          hx-get="?category=treatment&sort=hcl&order=asc"
+          hx-target="#table-area"
+          hx-swap="innerHTML"
+          class="cursor-pointer">
+          <i class="fa-solid fa-up-long {% if sort_field == 'hcl' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+        </span>
+        <span
+          hx-get="?category=treatment&sort=hcl&order=desc"
+          hx-target="#table-area"
+          hx-swap="innerHTML"
+          class="cursor-pointer">
+          <i class="fa-solid fa-down-long {% if sort_field == 'hcl' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+        </span>
+      </th>
 {% endblock %}
 
 {% block table_body %}
