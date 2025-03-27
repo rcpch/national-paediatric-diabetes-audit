@@ -597,15 +597,17 @@ class PatientReportView(ListView):
             )
 
         # Add ordering
-        if sort_field:
-            # Handle sort direction
-            if sort_order == "desc":
-                sort_field = f"-{sort_field}"
-            pt_qs = pt_qs.order_by(sort_field)
-        else:
-            # Default ordering
-            pt_qs = pt_qs.order_by("nhs_number")
-            
+        # Special handling for HbA1c sorting since these are calculated fields
+        if sort_field not in ["kpi_44_mean_hba1c", "kpi_45_median_hba1c"]:
+            if sort_field:
+                # Handle sort direction
+                if sort_order == "desc":
+                    sort_field = f"-{sort_field}"
+                pt_qs = pt_qs.order_by(sort_field)
+            else:
+                # Default ordering
+                pt_qs = pt_qs.order_by("nhs_number")
+
         return pt_qs
 
     def get_context_data(self, **kwargs):
@@ -614,7 +616,7 @@ class PatientReportView(ListView):
         # Add table categories to the context
         context["table_categories"] = TableCategories.choices()
         context["selected_category"] = self.selected_category
-        
+
         # Add sorting parameters to the context for pagination links
         context["sort_field"] = self.request.GET.get("sort", "")
         context["sort_order"] = self.request.GET.get("order", "asc")
@@ -623,10 +625,10 @@ class PatientReportView(ListView):
         # too complicated to do in the queryset
         if self.selected_category == TableCategories.ADMISSIONS.value:
             # Get the paginated patients from context
-            paginated_patients = context['patients']
+            paginated_patients = context["patients"]
 
             # Get the patient IDs from the current page
-            patient_ids = set([p['pk'] for p in paginated_patients])
+            patient_ids = set([p["pk"] for p in paginated_patients])
 
             # Create CalculateKPIS object (or you could store it as an instance variable in get_queryset)
             selected_audit_year = int(self.request.session.get("selected_audit_year"))
@@ -680,7 +682,7 @@ class PatientReportView(ListView):
 
             # Annotate each patient in the paginated queryset with HbA1c values
             for patient in paginated_patients:
-                hba1c_values = hba1c_values_by_patient.get(patient['pk'], [])
+                hba1c_values = hba1c_values_by_patient.get(patient["pk"], [])
                 if hba1c_values:
                     # Calculate mean and median HbA1c
                     mean_hba1c_mmol_mol = calculate_kpis.calculate_mean(hba1c_values)
@@ -689,17 +691,17 @@ class PatientReportView(ListView):
                     )
 
                     # Add the values to the patient object
-                    patient['kpi_44_mean_hba1c'] = round(mean_hba1c_mmol_mol)
-                    patient['kpi_45_median_hba1c'] = round(median_hba1c_mmol_mol)
+                    patient["kpi_44_mean_hba1c"] = round(mean_hba1c_mmol_mol)
+                    patient["kpi_45_median_hba1c"] = round(median_hba1c_mmol_mol)
 
                     # Convert to percentage format
-                    patient['mean_hba1c_pct'] = round(
+                    patient["mean_hba1c_pct"] = round(
                         (0.09148 * mean_hba1c_mmol_mol) + 2.152
                         if mean_hba1c_mmol_mol > 0 and mean_hba1c_mmol_mol is not None
                         else None,
                         1,
                     )
-                    patient['median_hba1c_pct'] = round(
+                    patient["median_hba1c_pct"] = round(
                         (0.09148 * median_hba1c_mmol_mol) + 2.152
                         if median_hba1c_mmol_mol > 0
                         and median_hba1c_mmol_mol is not None
@@ -708,10 +710,24 @@ class PatientReportView(ListView):
                     )
                 else:
                     # Set default values if no HbA1c readings
-                    patient['kpi_44_mean_hba1c'] = None
-                    patient['kpi_45_median_hba1c'] = None
-                    patient['mean_hba1c_pct'] = None
-                    patient['median_hba1c_pct'] = None
+                    patient["kpi_44_mean_hba1c"] = None
+                    patient["kpi_45_median_hba1c"] = None
+                    patient["mean_hba1c_pct"] = None
+                    patient["median_hba1c_pct"] = None
+
+            # Sort by HbA1c values if requested
+            sort_field = self.request.GET.get("sort")
+            sort_order = self.request.GET.get("order", "asc")
+
+            # Special handling for HbA1c sorting since these are calculated fields
+            if sort_field in ["kpi_44_mean_hba1c", "kpi_45_median_hba1c"]:
+                reverse = sort_order == "desc"
+                # None values need special handling - put them at the end
+                context["patients"] = sorted(
+                    paginated_patients,
+                    key=lambda p: (p[sort_field] is None, p[sort_field] or 0),
+                    reverse=reverse,
+                )
 
         return context
 
