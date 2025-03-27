@@ -55,7 +55,8 @@
                         </div>
                       {% endif %}
                       {% if field.help_text.reference %}
-                        <div class="tooltip" data-tip="{{ field.help_text.reference }}">
+                        <div class="tooltip tooltip-right"
+                             data-tip="{{ field.help_text.reference }}">
                           <i class="fa fa-book text-rcpch_pink"></i>
                         </div>
                       {% endif %}
@@ -70,7 +71,8 @@
                           class="select rcpch-select rounded-none {% if not can_alter_this_audit_year_submission or not can_use_questionnaire or form.patient.is_in_transfer_in_the_last_year %}opacity-40 pointer-events-none{% endif %}">
                     {% for choice in field.field.choices %}
                       <option value="{{ choice.0 }}"
-                              {% if field.value|stringformat:'s' == choice.0|stringformat:'s' %} selected="{{ field.value }}" {% endif %}>
+                              {% if field.value|stringformat:'s' == choice.0|stringformat:'s' %} selected="{{ field.value }}" {% endif %}
+                              {% if field|disable_fields:form %}disabled{% endif %}>
                         {{ choice.1 }}
                       </option>
                     {% endfor %}
@@ -140,3 +142,81 @@
     </div>
   {% endfor %}
 </div>
+{% block extra_js %}
+  <script>
+  // Function to handle field dependencies
+  function handleFieldDependency(sourceId, rules) {
+    const sourceElement = document.getElementById(sourceId);
+    if (!sourceElement) return;
+
+    // Function to apply rules based on source value
+    function applyRules() {
+      const sourceValue = sourceElement.value;
+
+      // Loop through each rule
+      rules.forEach(rule => {
+        const targetElement = document.getElementById(rule.targetId);
+        if (!targetElement) return;
+
+        // Check if the rule condition is met
+        const conditionMet = rule.condition(sourceValue);
+
+        // Apply the appropriate action
+        targetElement.disabled = !conditionMet;
+
+        if (!conditionMet) {
+          targetElement.value = '';
+          targetElement.classList.add('opacity-40');
+        } else {
+          targetElement.classList.remove('opacity-40');
+        }
+      });
+    }
+
+    // Apply rules on load
+    applyRules();
+
+    // Add event listener for changes
+    sourceElement.addEventListener('change', applyRules);
+  }
+
+  // Initialize all field dependencies when the page is loaded
+  document.addEventListener('DOMContentLoaded', function() {
+    // Treatment field dependencies
+    handleFieldDependency('id_treatment', [
+      {
+        targetId: 'id_closed_loop_system',
+        condition: value => value === '3' || value === '6' || value === ''
+      }
+    ]);
+
+    // Hospital admission reason dependencies
+    handleFieldDependency('id_hospital_admission_reason', [
+      {
+        targetId: 'id_dka_additional_therapies',
+        condition: value => value === '2'
+      },
+      {
+        targetId: 'id_hospital_admission_other',
+        condition: value => value === '6'
+      }
+    ]);
+
+    // Smoking status dependencies
+    handleFieldDependency('id_smoking_status', [
+      {
+        targetId: 'id_smoking_cessation_referral_date',
+        condition: value => value === '2' || value === '3'
+      }
+    ]);
+
+    // additional paediatric dietician appointment
+    handleFieldDependency('id_dietician_additional_appointment_offered', [
+      {
+        targetId: 'id_dietician_additional_appointment_date',
+        condition: value => value === '1'
+      }
+    ]);
+  });
+  </script>
+{% endblock %}
