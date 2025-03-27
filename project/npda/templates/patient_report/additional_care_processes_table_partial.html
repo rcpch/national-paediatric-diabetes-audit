@@ -1,15 +1,5 @@
 <!-- Category filter buttons -->
-<div class="mb-4 flex gap-2">
-  {% for value, label in table_categories %}
-    <button
-      hx-get="?category={{ value }}"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="btn {% if selected_category == value %}btn-primary{% else %}btn-outline{% endif %}">
-      {{ label }}
-    </button>
-  {% endfor %}
-</div>
+{% include "patient_report/menu_tab_buttons.html" with selected_category=selected_category %}
 
 <!-- Patient table -->
 <table class="table w-full">
