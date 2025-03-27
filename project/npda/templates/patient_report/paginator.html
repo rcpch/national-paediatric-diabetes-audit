@@ -1,14 +1,16 @@
 {% if is_paginated %}
 <div class="mt-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 
-  <!-- Page info -->
-  <div class="text-sm text-gray-600">
-    Page {{ page_obj.number }} of {{ paginator.num_pages }}
-  </div>
+
 
   {% comment %} TOTAL PATIENTS {% endcomment %}
   <div class="text-bold text-gray-600">
     Showing all {{ paginator.count }} patients with T1DM
+  </div>
+
+  <!-- Page info -->
+  <div class="text-sm text-gray-600">
+    Page {{ page_obj.number }} of {{ paginator.num_pages }}
   </div>
 
   <!-- Navigation buttons -->
