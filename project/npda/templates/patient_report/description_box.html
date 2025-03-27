@@ -1,14 +1,16 @@
-<div class="bg-white border border-gray-300 rounded-lg shadow text-rcpch_dark_blue h-full p-2 my-2">
-  <!-- CURRENT SELECTION DESCRIPTION -->
-  <div class="flex flex-col">
-    <div class="flex items-center">
-      <p class="font-bold text-rcpch_dark_blue">Description</p>
-    </div>
+<!-- COLLAPSIBLE DESCRIPTION BOX -->
+<details class="bg-white border border-gray-300 rounded-lg shadow text-rcpch_dark_blue p-2 my-2"
+       onmouseover="this.setAttribute('open', 'true')"
+       onmouseout="this.removeAttribute('open')">
+  <summary class="font-bold text-rcpch_dark_blue cursor-pointer">Description</summary>
+
+  <!-- DESCRIPTION CONTENT -->
+  <div class="mt-2">
     <p>{{ description }}</p>
   </div>
 
+  <!-- KEYS -->
   <div class="flex justify-between items-center">
-    {% comment %} KEYS {% endcomment %}
     <div class="flex flex-col my-2 gap-2">
       <p class="font-bold text-rcpch_dark_blue">Key</p>
       <div class="flex gap-4">
@@ -26,8 +28,5 @@
         </div>
       </div>
     </div>
-
-
   </div>
-
-</div>
+</details>
