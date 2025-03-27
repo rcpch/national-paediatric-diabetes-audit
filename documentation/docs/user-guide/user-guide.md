@@ -233,7 +233,6 @@ The Unit Report tab contains various interactive charts that provide detailed in
 
 - ***New Diagnoses Plots*** – Tooltips are included to explain the difference between cumulative and quarterly values, providing clarity on how the data is presented.
 
-A legend can be added if needed, but tooltips have been implemented to save space while maintaining accessibility.
 
 ### Patient Report
 
