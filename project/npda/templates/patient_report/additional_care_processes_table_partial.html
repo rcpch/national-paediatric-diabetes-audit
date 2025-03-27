@@ -1,18 +1,16 @@
-<!-- Category filter buttons -->
-{% include "patient_report/menu_tab_buttons.html" with selected_category=selected_category %}
+{% extends "patient_report/base_table.html" %}
 
+{% block description_box %}
 {% include "patient_report/description_box.html" with description="These additional care processes are recommended by NICE for children and young people with Type 1 diabetes of all ages (and ineligible otherwise), with the exception of smoking status and referral to smoking cessation services, which apply to young people aged 12 and above." %}
+{% endblock %}
 
-<!-- Patient table -->
-<table class="table w-full">
-  <thead>
-    <tr class="bg-base-200">
+{% block table_headers %}
       <th>NHS Number</th>
       <th>Psychological Screening Assessment Date</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for patient in patients %}
+{% endblock %}
+
+{% block table_body %}
+  {% for patient in patients %}
     <tr>
       <td>{{ patient.nhs_number }}</td>
       <td>{{ patient.visit__psychological_screening_assessment_date }}</td>
@@ -21,10 +19,6 @@
     <tr>
       <td colspan="2" class="text-center text-gray-500">No patients found.</td>
     </tr>
-    {% endfor %}
+  {% endfor %}
+{% endblock %}
 
-  </tbody>
-</table>
-
-<!-- Pagination -->
-{% include "patient_report/paginator.html" %}
