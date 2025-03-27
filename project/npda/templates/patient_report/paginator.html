@@ -6,6 +6,11 @@
     Page {{ page_obj.number }} of {{ paginator.num_pages }}
   </div>
 
+  {% comment %} TOTAL PATIENTS {% endcomment %}
+  <div class="text-bold text-gray-600">
+    Showing all {{ paginator.count }} patients with T1DM
+  </div>
+
   <!-- Navigation buttons -->
   <div class="join">
     {% if page_obj.has_previous %}
