@@ -5,7 +5,7 @@
 
   {% comment %} TOTAL PATIENTS {% endcomment %}
   <div class="text-bold text-gray-600">
-    Showing {{ patients.count }} patient{{ patients.count|pluralize }} with T1DM
+    Showing {{ patients.count }} patient{{ patients.count|pluralize }} with T1DM (total: {{paginator.count}})
   </div>
 
   {% if is_paginated %}

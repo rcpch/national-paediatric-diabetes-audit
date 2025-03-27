@@ -25,6 +25,8 @@ from django.db.models import (
     ExpressionWrapper,
     DateField,
     BooleanField,
+    CharField,
+    Value,
 )
 from project.npda.views.patient_report.helpers import get_pt_level_table_data
 from project.npda.views.patient_report.template_data import KPI_CATEGORY_ATTR_MAP, TEXT
@@ -427,7 +429,120 @@ class PatientReportView(ListView):
                 )
             )
 
-        print(pt_qs)
+        elif self.selected_category == "admissions":
+            pt_qs = pt_qs.annotate(
+                num_admissions=Count("admissions", distinct=True),
+            )
+        elif self.selected_category == "treatment":
+            pt_qs = pt_qs.annotate(
+                treatment_regimen=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_13_one_to_three_injections_per_day()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=Value("1-3 injections/day"),
+                    ),
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_14_four_or_more_injections_per_day()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=Value("4+ injections/day"),
+                    ),
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_15_insulin_pump()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=Value("Insulin pump"),
+                    ),
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_16_one_to_three_injections_plus_other_medication()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=Value("1-3 injections + blood glucose lowering meds"),
+                    ),
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_17_four_or_more_injections_plus_other_medication()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=Value("4+ injections + blood glucose lowering meds"),
+                    ),
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_18_insulin_pump_plus_other_medication()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=Value("Insulin pump + blood glucose lowering meds"),
+                    ),
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_19_dietary_management_alone()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=Value("Dietary management alone"),
+                    ),
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_20_dietary_management_plus_other_medication()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=Value("Dietary management + blood glucose lowering meds"),
+                    ),
+                    default=Value("No treatment regimen"),
+                    output_field=CharField(),
+                ),
+                glucose_monitoring=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_21_flash_glucose_monitor()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=Value("Flash glucose monitor"),
+                    ),
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_22_real_time_cgm_with_alarms()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=Value("Continuous glucose monitor with alarms"),
+                    ),
+                    default=Value("No glucose monitoring"),
+                    output_field=CharField(),
+                ),
+                hcl=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_24_hybrid_closed_loop_system()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=Value("Yes"),
+                    ),
+                    default=Value("No"),
+                    output_field=CharField(),
+                ),
+            ).values(
+                "pk",
+                "nhs_number",
+                "is_complete_year_of_care",
+                "treatment_regimen",
+                "glucose_monitoring",
+                "hcl",
+            )
 
         # Add ordering
         pt_qs = pt_qs.order_by("nhs_number")
@@ -453,6 +568,10 @@ class PatientReportView(ListView):
                 return ["patient_report/additional_care_processes_table_partial.html"]
             elif self.selected_category == TableCategories.CARE_AT_DIAGNOSIS.value:
                 return ["patient_report/care_at_diagnosis_table_partial.html"]
+            elif self.selected_category == TableCategories.ADMISSIONS.value:
+                return ["patient_report/admissions_table_partial.html"]
+            elif self.selected_category == TableCategories.TREATMENT.value:
+                return ["patient_report/treatment_table_partial.html"]
             else:
                 return ["patient_report/health_checks_table_partial.html"]
 
