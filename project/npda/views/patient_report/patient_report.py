@@ -365,6 +365,69 @@ class PatientReportView(ListView):
                 "influenza_immunisation_recommended",
                 "sick_day_rules_advice",
             )
+        elif self.selected_category == "care_at_diagnosis":
+            # Need to filter for those diagnosed within 90 days of today
+            today = date.today()
+            all_t1dm_pts = all_t1dm_pts.filter(
+                Q(diagnosis_date__gte=today - relativedelta(days=90))
+            )
+            all_t1dm_pts_with_complete_year_of_care = (
+                all_t1dm_pts_with_complete_year_of_care.filter(
+                    Q(diagnosis_date__gte=today - relativedelta(days=90))
+                )
+            )
+
+            pt_qs = (
+                pt_qs.filter(Q(diagnosis_date__gte=today - relativedelta(days=90)))
+                .annotate(
+                    coeliac_disease_screening=Case(
+                        When(
+                            Exists(
+                                calculate_kpis.calculate_kpi_41_coeliac_disease_screening()
+                                .patient_querysets["passed"]
+                                .filter(pk=OuterRef("pk"))
+                            ),
+                            then=True,
+                        ),
+                        default=False,
+                        output_field=BooleanField(),
+                    ),
+                    thyroid_disease_screening=Case(
+                        When(
+                            Exists(
+                                calculate_kpis.calculate_kpi_42_thyroid_disease_screening()
+                                .patient_querysets["passed"]
+                                .filter(pk=OuterRef("pk"))
+                            ),
+                            then=True,
+                        ),
+                        default=False,
+                        output_field=BooleanField(),
+                    ),
+                    carbohydrate_counting_education=Case(
+                        When(
+                            Exists(
+                                calculate_kpis.calculate_kpi_43_carbohydrate_counting_education()
+                                .patient_querysets["passed"]
+                                .filter(pk=OuterRef("pk"))
+                            ),
+                            then=True,
+                        ),
+                        default=False,
+                        output_field=BooleanField(),
+                    ),
+                )
+                .values(
+                    "pk",
+                    "nhs_number",
+                    "is_complete_year_of_care",
+                    "coeliac_disease_screening",
+                    "thyroid_disease_screening",
+                    "carbohydrate_counting_education",
+                )
+            )
+
+        print(pt_qs)
 
         # Add ordering
         pt_qs = pt_qs.order_by("nhs_number")
@@ -388,6 +451,8 @@ class PatientReportView(ListView):
                 == TableCategories.ADDITIONAL_CARE_PROCESSES.value
             ):
                 return ["patient_report/additional_care_processes_table_partial.html"]
+            elif self.selected_category == TableCategories.CARE_AT_DIAGNOSIS.value:
+                return ["patient_report/care_at_diagnosis_table_partial.html"]
             else:
                 return ["patient_report/health_checks_table_partial.html"]
 
