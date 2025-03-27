@@ -7,14 +7,16 @@ import pytest
 from dateutil.relativedelta import relativedelta
 
 from project.constants.albuminuria_stage import ALBUMINURIA_STAGES
-from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
+from project.constants.hospital_admission_reasons import \
+    HOSPITAL_ADMISSION_REASONS
 from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
 from project.npda.tests import utils
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.tests.kpi_calculations.test_calculate_kpis import assert_kpi_result_equal
+from project.npda.tests.kpi_calculations.test_calculate_kpis import \
+    assert_kpi_result_equal
 
 # Logging
 logger = logging.getLogger(__name__)

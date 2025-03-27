@@ -85,11 +85,22 @@ Excluding:
 
 ---
 
-## 6. Number of patients with documented carbohydrate counting education
+## 6. Total number of patients with T1DM who have completed a year of care and are aged 12 or older
 
 #### Calculation
 
-Number of eligible patients with an entry for Carbohydrate Counting Education (item 42) within 7 days before or 14 days after the Date of Diabetes Diagnosis (item 7)
+Total number of patients with:
+
+- a valid NHS number
+- an observation within the audit period
+- Age 12 and above at the start of the audit period
+- Diagnosis of Type 1 diabetes
+
+Excluding:
+
+- Date of diagnosis within the audit period
+- Date of leaving service within the audit period
+- Date of death within the audit period
 
 **Data Items**: 7, 42
 

@@ -177,6 +177,7 @@ def audit_year(request):
     """
     if request.method == "POST":
         audit_year = request.POST.get("audit_year_select_name", None)
+        audit_year = int(audit_year) if audit_year else None
 
         refresh_session_filters(request, audit_year=audit_year)
 
