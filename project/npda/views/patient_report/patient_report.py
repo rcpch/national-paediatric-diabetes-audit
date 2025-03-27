@@ -81,6 +81,10 @@ class PatientReportView(ListView):
         # Get the category from the request
         category = request.GET.get("category", TableCategories.default())
 
+        # Get sorting parameters
+        sort_field = request.GET.get("sort")
+        sort_order = request.GET.get("order", "asc")
+
         # Validate and set the category
         if category not in TableCategories.values():
             raise ValueError(f"Invalid category: {category}")
@@ -593,7 +597,15 @@ class PatientReportView(ListView):
             )
 
         # Add ordering
-        pt_qs = pt_qs.order_by("nhs_number")
+        if sort_field:
+            # Handle sort direction
+            if sort_order == "desc":
+                sort_field = f"-{sort_field}"
+            pt_qs = pt_qs.order_by(sort_field)
+        else:
+            # Default ordering
+            pt_qs = pt_qs.order_by("nhs_number")
+            
         return pt_qs
 
     def get_context_data(self, **kwargs):
@@ -602,6 +614,10 @@ class PatientReportView(ListView):
         # Add table categories to the context
         context["table_categories"] = TableCategories.choices()
         context["selected_category"] = self.selected_category
+        
+        # Add sorting parameters to the context for pagination links
+        context["sort_field"] = self.request.GET.get("sort", "")
+        context["sort_order"] = self.request.GET.get("order", "asc")
 
         # If we're on the outcomes page, add HbA1c data -> doing this here because Means and Medians
         # too complicated to do in the queryset

@@ -5,13 +5,118 @@
 {% endblock %}
 
 {% block table_headers %}
-  <th>NHS Number</th>
-  <th>HBA1c</th>
-  <th>BMI</th>
-  <th>Thyroid Screen</th>
-  <th>Blood Pressure</th>
-  <th>Urinary Albumin</th>
-  <th>Foot Exam</th>
+  <th>NHS Number
+    <span
+      hx-get="?category=health_checks&sort=nhs_number&order=asc"
+      hx-target="#table-area"
+      hx-swap="innerHTML"
+      class="cursor-pointer">
+      <i class="fa-solid fa-up-long {% if sort_field == 'nhs_number' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+    <span
+      hx-get="?category=health_checks&sort=nhs_number&order=desc"
+      hx-target="#table-area"
+      hx-swap="innerHTML"
+      class="cursor-pointer">
+      <i class="fa-solid fa-down-long {% if sort_field == 'nhs_number' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+  </th>
+  <th>HBA1c
+    <span
+      hx-get="?category=health_checks&sort=passed_hba1c&order=desc"
+      hx-target="#table-area"
+      hx-swap="innerHTML"
+      class="cursor-pointer">
+      <i class="fa-solid fa-up-long {% if sort_field == 'passed_hba1c' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+    <span
+      hx-get="?category=health_checks&sort=passed_hba1c&order=asc"
+      hx-target="#table-area"
+      hx-swap="innerHTML"
+      class="cursor-pointer">
+      <i class="fa-solid fa-down-long {% if sort_field == 'passed_hba1c' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+  </th>
+  <th>BMI
+    <span
+      hx-get="?category=health_checks&sort=passed_bmi&order=desc"
+      hx-target="#table-area"
+      hx-swap="innerHTML"
+      class="cursor-pointer">
+      <i class="fa-solid fa-up-long {% if sort_field == 'passed_bmi' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+    <span
+      hx-get="?category=health_checks&sort=passed_bmi&order=asc"
+      hx-target="#table-area"
+      hx-swap="innerHTML"
+      class="cursor-pointer">
+      <i class="fa-solid fa-down-long {% if sort_field == 'passed_bmi' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+  </th>
+  <th>Thyroid Screen
+    <span
+      hx-get="?category=health_checks&sort=passed_thyroid_screen&order=desc"
+      hx-target="#table-area"
+      hx-swap="innerHTML"
+      class="cursor-pointer">
+      <i class="fa-solid fa-up-long {% if sort_field == 'passed_thyroid_screen' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+    <span
+      hx-get="?category=health_checks&sort=passed_thyroid_screen&order=asc"
+      hx-target="#table-area"
+      hx-swap="innerHTML"
+      class="cursor-pointer">
+      <i class="fa-solid fa-down-long {% if sort_field == 'passed_thyroid_screen' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+  </th>
+  <th>Blood Pressure
+    <span
+      hx-get="?category=health_checks&sort=passed_blood_pressure&order=desc"
+      hx-target="#table-area"
+      hx-swap="innerHTML"
+      class="cursor-pointer">
+      <i class="fa-solid fa-up-long {% if sort_field == 'passed_blood_pressure' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+    <span
+      hx-get="?category=health_checks&sort=passed_blood_pressure&order=asc"
+      hx-target="#table-area"
+      hx-swap="innerHTML"
+      class="cursor-pointer">
+      <i class="fa-solid fa-down-long {% if sort_field == 'passed_blood_pressure' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+  </th>
+  <th>Urinary Albumin
+    <span
+      hx-get="?category=health_checks&sort=passed_urinary_albumin&order=desc"
+      hx-target="#table-area"
+      hx-swap="innerHTML"
+      class="cursor-pointer">
+      <i class="fa-solid fa-up-long {% if sort_field == 'passed_urinary_albumin' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+    <span
+      hx-get="?category=health_checks&sort=passed_urinary_albumin&order=asc"
+      hx-target="#table-area"
+      hx-swap="innerHTML"
+      class="cursor-pointer">
+      <i class="fa-solid fa-down-long {% if sort_field == 'passed_urinary_albumin' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+  </th>
+  <th>Foot Exam
+    <span
+      hx-get="?category=health_checks&sort=passed_foot_exam&order=desc"
+      hx-target="#table-area"
+      hx-swap="innerHTML"
+      class="cursor-pointer">
+      <i class="fa-solid fa-up-long {% if sort_field == 'passed_foot_exam' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+    <span
+      hx-get="?category=health_checks&sort=passed_foot_exam&order=asc"
+      hx-target="#table-area"
+      hx-swap="innerHTML"
+      class="cursor-pointer">
+      <i class="fa-solid fa-down-long {% if sort_field == 'passed_foot_exam' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+  </th>
   <th>Total</th>
   <th>Eye Screen</th>
 {% endblock %}
