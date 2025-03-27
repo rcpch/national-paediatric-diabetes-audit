@@ -1,26 +1,23 @@
-<!-- Category filter buttons -->
-{% include "patient_report/menu_tab_buttons.html" with selected_category=selected_category %}
+{% extends "patient_report/base_table.html" %}
 
+{% block description_box %}
 {% include "patient_report/description_box.html" with description="HbA1c, BMI, and thyroid screen must be completed annually for all children and young people with Type 1 diabetes. Urinary albumin, blood pressure, and foot exam are mandatory for young people aged 12 and above. Eye screening is mandatory every 2 years for young people aged 12 and above, unless retinopathy was observed at a previous screen." %}
+{% endblock %}
 
-<!-- Patient table -->
-<div class="table-container h-[60vh] overflow-y-auto">
-  <table class="table w-full">
-    <thead class="sticky top-0 z-10">
-      <tr class="bg-rcpch_dark_blue text-white">
-        <th>NHS Number</th>
-        <th>HBA1c</th>
-        <th>BMI</th>
-        <th>Thyroid Screen</th>
-        <th>Blood Pressure</th>
-        <th>Urinary Albumin</th>
-        <th>Foot Exam</th>
-        <th>Total</th>
-        <th>Eye Screen</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for patient in patients %}
+{% block table_headers %}
+  <th>NHS Number</th>
+  <th>HBA1c</th>
+  <th>BMI</th>
+  <th>Thyroid Screen</th>
+  <th>Blood Pressure</th>
+  <th>Urinary Albumin</th>
+  <th>Foot Exam</th>
+  <th>Total</th>
+  <th>Eye Screen</th>
+{% endblock %}
+
+{% block table_body %}
+  {% for patient in patients %}
       <tr
       class="{% if not patient.is_complete_year_of_care %}bg-gray-500/10{% endif %}"
       >
@@ -51,16 +48,10 @@
           {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_retinal_screening %}
         </td>
       </tr>
-      {% empty %}
-      <tr>
-        <td colspan="2" class="text-center text-gray-500">No patients found.</td>
-      </tr>
-      {% endfor %}
-
-    </tbody>
-  </table>
-</div>
-
-<!-- Pagination -->
-{% include "patient_report/paginator.html" %}
+    {% empty %}
+    <tr>
+      <td colspan="2" class="text-center text-gray-500">No patients found.</td>
+    </tr>
+  {% endfor %}
+{% endblock %}
 
