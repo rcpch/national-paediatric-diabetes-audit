@@ -6,14 +6,28 @@
 
 {% block table_headers %}
       <th>NHS Number</th>
-      <th>Psychological Screening Assessment Date</th>
+      <th>HBA1C 4+</th>
+      <th>Psychological assessment</th>
+      <th>Smoking status screened</th>
+      <th>Referral to smoking cessation service</th>
+      <th>Additional dietetic appointment offered</th>
+      <th>Patients attending additional dietetic appointment</th>
+      <th>Influenza immunisation recommended</th>
+      <th>Sick day rules advice</th>
 {% endblock %}
 
 {% block table_body %}
   {% for patient in patients %}
     <tr>
-      <td>{{ patient.nhs_number }}</td>
-      <td>{{ patient.visit__psychological_screening_assessment_date }}</td>
+      <td>{% include "patient_report/components/pt_identifier_value.html" with patient_pk=patient.pk is_complete_year_of_care=patient.is_complete_year_of_care identifier=patient.nhs_number %}</td>
+      <td>{% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.hba1c_4plus %}</td>
+      <td>{% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.psychological_assessment %}</td>
+      <td>{% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.smoking_status %}</td>
+      <td>{% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.smoking_cessation_referral %}</td>
+      <td>{% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.additional_dietetic_appt_offered %}</td>
+      <td>{% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.pts_attending_additional_dietetic_appt %}</td>
+      <td>{% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.influenza_immunisation_recommended %}</td>
+      <td>{% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.sick_day_rules_advice %}</td>
     </tr>
     {% empty %}
     <tr>

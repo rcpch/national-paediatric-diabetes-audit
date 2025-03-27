@@ -255,10 +255,115 @@ class PatientReportView(ListView):
                 "passed_retinal_screening",
             )
         elif self.selected_category == "additional_care_processes":
-            pt_qs = pt_qs.values(
+            pt_qs = pt_qs.annotate(
+                hba1c_4plus=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_33_hba1c_4plus()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
+                    ),
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+                psychological_assessment=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_34_psychological_assessment()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
+                    ),
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+                smoking_status=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_35_smoking_status_screened()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
+                    ),
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+                smoking_cessation_referral=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_36_referral_to_smoking_cessation_service()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
+                    ),
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+                additional_dietetic_appt_offered=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_37_additional_dietetic_appointment_offered()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
+                    ),
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+                pts_attending_additional_dietetic_appt=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_38_patients_attending_additional_dietetic_appointment()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
+                    ),
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+                influenza_immunisation_recommended=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_39_influenza_immunisation_recommended()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
+                    ),
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+                sick_day_rules_advice=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_39_influenza_immunisation_recommended()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
+                    ),
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+            ).values(
                 "pk",
                 "nhs_number",
-                "visit__psychological_screening_assessment_date",
+                "is_complete_year_of_care",
+                "hba1c_4plus",
+                "psychological_assessment",
+                "smoking_status",
+                "smoking_cessation_referral",
+                "additional_dietetic_appt_offered",
+                "pts_attending_additional_dietetic_appt",
+                "influenza_immunisation_recommended",
+                "sick_day_rules_advice",
             )
 
         # Add ordering
