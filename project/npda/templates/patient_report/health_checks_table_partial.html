@@ -2,29 +2,60 @@
 {% include "patient_report/menu_tab_buttons.html" with selected_category=selected_category %}
 
 <!-- Patient table -->
-<table class="table w-full">
-  <thead>
-    <tr class="bg-base-200">
-      <th>NHS Number</th>
-      <th>Unique Reference Number</th>
-      <th>HbA1c</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for patient in patients %}
-    <tr>
-      <td>{{ patient.nhs_number }}</td>
-      <td>{{ patient.unique_reference_number }}</td>
-      <td>{{ patient.visit__hba1c }}</td>
-    </tr>
-    {% empty %}
-    <tr>
-      <td colspan="2" class="text-center text-gray-500">No patients found.</td>
-    </tr>
-    {% endfor %}
+<div class="table-container h-[60vh] overflow-y-auto">
+  <table class="table w-full">
+    <thead>
+      <tr class="bg-base-200">
+        <th>NHS Number</th>
+        <th>HBA1c</th>
+        <th>BMI</th>
+        <th>Thyroid Screen</th>
+        <th>Blood Pressure</th>
+        <th>Urinary Albumin</th>
+        <th>Foot Exam</th>
+        <th>Total</th>
+        <th>Eye Screen</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for patient in patients %}
+      <tr
+      class="{% if not patient.is_complete_year_of_care %}bg-gray-500/10{% endif %}"
+      >
+        <td>{{ patient.nhs_number }}</td>
 
-  </tbody>
-</table>
+        <td>
+          {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_hba1c %}
+        </td>
+        <td>
+          {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_bmi %}
+        </td>
+        <td>
+          {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_thyroid_screen %}
+        </td>
+        <td>
+          {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_blood_pressure %}
+        </td>
+        <td>
+          {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_urinary_albumin %}
+        </td>
+        <td>
+          {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_foot_exam %}
+        </td>
+        <td>{{ patient.num_passed }} / {{ patient.num_total }}</td>
+        <td>
+          {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_retinal_screening %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="2" class="text-center text-gray-500">No patients found.</td>
+      </tr>
+      {% endfor %}
+
+    </tbody>
+  </table>
+</div>
 
 <!-- Pagination -->
 {% include "patient_report/paginator.html" %}

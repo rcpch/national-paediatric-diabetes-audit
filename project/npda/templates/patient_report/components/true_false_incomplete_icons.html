@@ -1,0 +1,10 @@
+{% if result is True %}
+{% comment %} PASS {% endcomment %}
+  <i class="fa-solid fa-circle-check text-success"></i>
+{% elif result is False %}
+{% comment %} FAIL {% endcomment %}
+<i class="fa-solid fa-circle-exclamation text-error"></i>
+{% else %}
+{% comment %} INELIGIBLE {% endcomment %}
+  <i class="fa-solid fa-ban text-muted"></i>
+{% endif %}

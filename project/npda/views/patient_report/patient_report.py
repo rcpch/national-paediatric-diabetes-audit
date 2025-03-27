@@ -8,15 +8,23 @@ from django.views.generic import ListView
 from project.npda.models import Patient
 from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.views.decorators import login_and_otp_required
+from dateutil.relativedelta import relativedelta
 from django.db.models import (
     Case,
-    When,
-    Value,
-    BooleanField,
-    F,
-    ExpressionWrapper,
-    IntegerField,
     Count,
+    Exists,
+    F,
+    IntegerField,
+    OuterRef,
+    Q,
+    QuerySet,
+    Subquery,
+    Sum,
+    When,
+    DecimalField,
+    ExpressionWrapper,
+    DateField,
+    BooleanField,
 )
 from project.npda.views.patient_report.helpers import get_pt_level_table_data
 from project.npda.views.patient_report.template_data import KPI_CATEGORY_ATTR_MAP, TEXT
@@ -40,7 +48,7 @@ class TableCategories(Enum):
 
     @classmethod
     def choices(cls):
-        # Return a list of tuples (value, label)    
+        # Return a list of tuples (value, label)
         return [
             (cls.HEALTH_CHECKS.value, "Health Checks"),
             (cls.ADDITIONAL_CARE_PROCESSES.value, "Additional Care Processes"),
@@ -58,7 +66,7 @@ class PatientReportView(ListView):
     model = Patient
     template_name = "patient_report/new_patient_report.html"
     context_object_name = "patients"
-    paginate_by = 10
+    paginate_by = 20
 
     def get_queryset(self):
         request = self.request
@@ -87,14 +95,162 @@ class PatientReportView(ListView):
         # Set relevant patients
         calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
 
-        # Run the relevant subset of calculations
-        selected_kpis = KPI_CATEGORY_ATTR_MAP[self.selected_category]
+        # These are our base querysets (only T1DM)
+        all_t1dm_pts = calculate_kpis.calculate_kpi_3_total_t1dm().patient_querysets[
+            "eligible"
+        ]
+        # This is used to mark if they have completed a year of care
+        all_t1dm_pts_with_complete_year_of_care = (
+            calculate_kpis.calculate_kpi_5_total_t1dm_complete_year().patient_querysets[
+                "eligible"
+            ]
+        )
 
-        pt_qs = Patient.objects.all()
+        pt_qs = all_t1dm_pts.annotate(
+            is_complete_year_of_care=Case(
+                When(
+                    Exists(
+                        all_t1dm_pts_with_complete_year_of_care.filter(
+                            pk=OuterRef("pk")
+                        )
+                    ),
+                    then=True,
+                ),
+                default=False,
+                output_field=BooleanField(),
+            )
+        )
+
         if self.selected_category == "health_checks":
-            pt_qs = pt_qs.values(
+            pt_qs = pt_qs.annotate(
+                is_gte_12yo=Q(
+                    date_of_birth__lte=calculation_date - relativedelta(years=12)
+                ),
+                passed_hba1c=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_25_hba1c()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
+                    ),
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+                passed_bmi=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_26_bmi()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
+                    ),
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+                passed_thyroid_screen=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_27_thyroid_screen()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
+                    ),
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+                passed_blood_pressure=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_28_blood_pressure()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
+                    ),
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+                passed_urinary_albumin=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_29_urinary_albumin()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
+                    ),
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+                passed_retinal_screening=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_30_retinal_screening()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
+                    ),
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+                passed_foot_exam=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_31_foot_examination()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
+                    ),
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+                num_passed=Case(
+                    When(
+                        is_gte_12yo=True,
+                        then=(
+                            Case(When(passed_hba1c=True, then=1), default=0)
+                            + Case(When(passed_bmi=True, then=1), default=0)
+                            + Case(When(passed_thyroid_screen=True, then=1), default=0)
+                            + Case(When(passed_blood_pressure=True, then=1), default=0)
+                            + Case(When(passed_urinary_albumin=True, then=1), default=0)
+                            + Case(When(passed_foot_exam=True, then=1), default=0)
+                        ),
+                    ),
+                    When(
+                        is_gte_12yo=False,
+                        then=(
+                            Case(When(passed_hba1c=True, then=1), default=0)
+                            + Case(When(passed_bmi=True, then=1), default=0)
+                            + Case(When(passed_thyroid_screen=True, then=1), default=0)
+                        ),
+                    ),
+                    default=0,
+                    output_field=IntegerField(),
+                ),
+                num_total=Case(
+                    When(is_gte_12yo=True, then=6),
+                    When(is_gte_12yo=False, then=3),
+                    default=0,
+                    output_field=IntegerField(),
+                ),
+            ).values(
                 "nhs_number",
-                "visit__hba1c",
+                "is_complete_year_of_care",
+                "passed_hba1c",
+                "passed_bmi",
+                "passed_thyroid_screen",
+                "passed_blood_pressure",
+                "passed_urinary_albumin",
+                "passed_foot_exam",
+                "num_passed",
+                "num_total",
+                "passed_retinal_screening",
             )
         elif self.selected_category == "additional_care_processes":
             pt_qs = pt_qs.values(
@@ -102,6 +258,8 @@ class PatientReportView(ListView):
                 "visit__psychological_screening_assessment_date",
             )
 
+        # Add ordering
+        pt_qs = pt_qs.order_by("nhs_number")
         return pt_qs
 
     def get_context_data(self, **kwargs):
