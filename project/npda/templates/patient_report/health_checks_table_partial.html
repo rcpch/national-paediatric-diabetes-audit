@@ -6,8 +6,8 @@
 <!-- Patient table -->
 <div class="table-container h-[60vh] overflow-y-auto">
   <table class="table w-full">
-    <thead>
-      <tr class="bg-base-200">
+    <thead class="sticky top-0 z-10">
+      <tr class="bg-rcpch_dark_blue text-white">
         <th>NHS Number</th>
         <th>HBA1c</th>
         <th>BMI</th>
@@ -24,7 +24,9 @@
       <tr
       class="{% if not patient.is_complete_year_of_care %}bg-gray-500/10{% endif %}"
       >
-        <td>{{ patient.nhs_number }}</td>
+        <td>
+          {% include "patient_report/components/pt_identifier_value.html" with patient_pk=patient.pk is_complete_year_of_care=patient.is_complete_year_of_care identifier=patient.nhs_number %}
+        </td>
 
         <td>
           {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_hba1c %}

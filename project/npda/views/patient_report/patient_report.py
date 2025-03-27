@@ -106,6 +106,7 @@ class PatientReportView(ListView):
             ]
         )
 
+        # Add on whether they have completed a year of care (used for bg colour across all tables)
         pt_qs = all_t1dm_pts.annotate(
             is_complete_year_of_care=Case(
                 When(
@@ -240,6 +241,7 @@ class PatientReportView(ListView):
                     output_field=IntegerField(),
                 ),
             ).values(
+                "pk",
                 "nhs_number",
                 "is_complete_year_of_care",
                 "passed_hba1c",
@@ -254,6 +256,7 @@ class PatientReportView(ListView):
             )
         elif self.selected_category == "additional_care_processes":
             pt_qs = pt_qs.values(
+                "pk",
                 "nhs_number",
                 "visit__psychological_screening_assessment_date",
             )
