@@ -1,0 +1,33 @@
+<div class="bg-white border border-gray-300 rounded-lg shadow text-rcpch_dark_blue h-full p-2 my-2">
+  <!-- CURRENT SELECTION DESCRIPTION -->
+  <div class="flex flex-col">
+    <div class="flex items-center">
+      <p class="font-bold text-rcpch_dark_blue">Description</p>
+    </div>
+    <p>{{ description }}</p>
+  </div>
+
+  <div class="flex justify-between items-center">
+    {% comment %} KEYS {% endcomment %}
+    <div class="flex flex-col my-2 gap-2">
+      <p class="font-bold text-rcpch_dark_blue">Key</p>
+      <div class="flex gap-4">
+        <div class="flex gap-2 items-center">
+          <i class="fa-solid fa-circle-check text-success"></i>
+          <p>Complete</p>
+        </div>
+        <div class="flex gap-2 items-center">
+          <i class="fa-solid fa-circle-exclamation text-error"></i>
+          <p>Incomplete</p>
+        </div>
+        <div class="flex gap-2 items-center">
+          <i class="fa-solid fa-ban text-muted"></i>
+          <p>Not required</p>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
+
+</div>
