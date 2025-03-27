@@ -206,6 +206,16 @@ patient_report_urlpatterns = [
         view=all_patient_charts,
         name="all_patient_charts",
     ),
+    path(
+        "new_patient_report",
+        view=patient_report.PatientReportView.as_view(),
+        name="new_patient_report",
+    ),
+    path(
+        "new_patient_table_partial",
+        view=patient_report.PatientReportView.as_view(),
+        name="new_patient_table_partial",
+    ),
 ]
 
 # Collate all URL patterns
