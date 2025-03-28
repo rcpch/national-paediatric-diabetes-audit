@@ -188,13 +188,13 @@ patient_report_urlpatterns = [
     ),
     path(
         "patient_report",
-        view=patient_report.patient_report,
+        view=patient_report.PatientReportView.as_view(),
         name="patient_report",
     ),
-    path(
-        "get_patient_level_report_partial",
-        view=patient_report_partials.get_patient_level_report_partial,
-        name="get_patient_level_report_partial",
+	path(
+        "patient_table_partial",
+        view=patient_report.PatientReportView.as_view(),
+        name="patient_table_partial",
     ),
     path(
         "patient_ages",
@@ -205,16 +205,6 @@ patient_report_urlpatterns = [
         "all_patient_charts",
         view=all_patient_charts,
         name="all_patient_charts",
-    ),
-    path(
-        "new_patient_report",
-        view=patient_report.PatientReportView.as_view(),
-        name="new_patient_report",
-    ),
-    path(
-        "new_patient_table_partial",
-        view=patient_report.PatientReportView.as_view(),
-        name="new_patient_table_partial",
     ),
 ]
 
