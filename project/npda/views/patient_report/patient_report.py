@@ -1,40 +1,33 @@
+import logging
+from collections import defaultdict
+from datetime import date
 from decimal import Decimal
 from enum import Enum
-import logging
-from datetime import date
-from collections import defaultdict
 
-# Django imports
-from django.shortcuts import render
-from django.views.generic import ListView
-from project.constants.hba1c_format import HBA1C_FORMATS
-from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
-from project.npda.models import Patient
-from project.npda.kpi_class.kpis import CalculateKPIS
-from project.npda.views.decorators import login_and_otp_required
 from dateutil.relativedelta import relativedelta
 from django.db.models import (
+    BooleanField,
     Case,
+    CharField,
     Count,
+    DecimalField,
     Exists,
     F,
     IntegerField,
     OuterRef,
     Q,
-    QuerySet,
-    Subquery,
-    Sum,
-    When,
-    DecimalField,
-    ExpressionWrapper,
-    DateField,
-    BooleanField,
-    CharField,
     Value,
+    When,
 )
+
+# Django imports
+from django.views.generic import ListView
+
+from project.constants.hba1c_format import HBA1C_FORMATS
+from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
+from project.npda.kpi_class.kpis import CalculateKPIS
+from project.npda.models import Patient
 from project.npda.models.db_functions import Round
-from project.npda.views.patient_report.helpers import get_pt_level_table_data
-from project.npda.views.patient_report.template_data import KPI_CATEGORY_ATTR_MAP, TEXT
 
 # Django imports
 
