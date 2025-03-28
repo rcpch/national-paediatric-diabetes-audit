@@ -1,4 +1,7 @@
+
 <div class="mt-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+
+
 
   {% comment %} TOTAL PATIENTS {% endcomment %}
   <div class="text-bold text-gray-600">
@@ -15,14 +18,14 @@
   <div class="join">
     {% if page_obj.has_previous %}
       <a
-        hx-get="?category={{ selected_category }}{% if sort_field %}&sort={{ sort_field }}&order={{ sort_order }}{% endif %}&page=1"
+        hx-get="?category={{ selected_category }}&page=1"
         hx-target="#table-area"
         hx-swap="innerHTML"
         class="join-item btn btn-outline">
         First
       </a>
       <a
-        hx-get="?category={{ selected_category }}{% if sort_field %}&sort={{ sort_field }}&order={{ sort_order }}{% endif %}&page={{ page_obj.previous_page_number }}"
+        hx-get="?category={{ selected_category }}&page={{ page_obj.previous_page_number }}"
         hx-target="#table-area"
         hx-swap="innerHTML"
         class="join-item btn btn-outline">
@@ -35,14 +38,14 @@
 
     {% if page_obj.has_next %}
       <a
-        hx-get="?category={{ selected_category }}{% if sort_field %}&sort={{ sort_field }}&order={{ sort_order }}{% endif %}&page={{ page_obj.next_page_number }}"
+        hx-get="?category={{ selected_category }}&page={{ page_obj.next_page_number }}"
         hx-target="#table-area"
         hx-swap="innerHTML"
         class="join-item btn btn-outline">
         Next
       </a>
       <a
-        hx-get="?category={{ selected_category }}{% if sort_field %}&sort={{ sort_field }}&order={{ sort_order }}{% endif %}&page={{ paginator.num_pages }}"
+        hx-get="?category={{ selected_category }}&page={{ paginator.num_pages }}"
         hx-target="#table-area"
         hx-swap="innerHTML"
         class="join-item btn btn-outline">

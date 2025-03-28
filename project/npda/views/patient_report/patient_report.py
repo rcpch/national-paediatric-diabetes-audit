@@ -107,9 +107,17 @@ class PatientReportView(ListView):
         calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
 
         # These are our base querysets (only T1DM)
-        all_t1dm_pts = calculate_kpis.calculate_kpi_3_total_t1dm().patient_querysets[
-            "eligible"
-        ]
+        patient_identifier = (
+            "nhs_number" if pz_code != "PZ248" else "unique_reference_number"
+        )
+        all_t1dm_pts = (
+            calculate_kpis.calculate_kpi_3_total_t1dm()
+            .patient_querysets["eligible"]
+            # Differentiate between Jersey and England
+            .annotate(
+                patient_identifier=F(patient_identifier),
+            )
+        )
         # This is used to mark if they have completed a year of care
         all_t1dm_pts_with_complete_year_of_care = (
             calculate_kpis.calculate_kpi_5_total_t1dm_complete_year().patient_querysets[
@@ -269,7 +277,7 @@ class PatientReportView(ListView):
                 ),
             ).values(
                 "pk",
-                "nhs_number",
+                "patient_identifier",
                 "is_complete_year_of_care",
                 "passed_hba1c",
                 "passed_bmi",
@@ -381,7 +389,7 @@ class PatientReportView(ListView):
                 ),
             ).values(
                 "pk",
-                "nhs_number",
+                "patient_identifier",
                 "is_complete_year_of_care",
                 "hba1c_4plus",
                 "psychological_assessment",
@@ -446,7 +454,7 @@ class PatientReportView(ListView):
                 )
                 .values(
                     "pk",
-                    "nhs_number",
+                    "patient_identifier",
                     "is_complete_year_of_care",
                     "coeliac_disease_screening",
                     "thyroid_disease_screening",
@@ -496,7 +504,7 @@ class PatientReportView(ListView):
                 ),
             ).values(
                 "pk",
-                "nhs_number",
+                "patient_identifier",
                 "is_complete_year_of_care",
                 "number_of_admissions",
                 "number_of_dka_admissions",
@@ -605,7 +613,7 @@ class PatientReportView(ListView):
                 ),
             ).values(
                 "pk",
-                "nhs_number",
+                "patient_identifier",
                 "is_complete_year_of_care",
                 "treatment_regimen",
                 "glucose_monitoring",
@@ -628,6 +636,12 @@ class PatientReportView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
+        # Jersey
+        if self.request.session.get("pz_code") == "PZ248":
+            context["is_jersey"] = True
+        else:
+            context["is_jersey"] = False
 
         # Add table categories to the context
         context["table_categories"] = TableCategories.choices()

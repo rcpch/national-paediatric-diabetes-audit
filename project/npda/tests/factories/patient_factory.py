@@ -98,7 +98,7 @@ class PatientFactory(factory.django.DjangoModelFactory):
     postcode = VALID_FIELDS["postcode"]
     gp_practice_ods_code = VALID_FIELDS["gp_practice_ods_code"]
 
-    diabetes_type = factory.lazy_attribute(lambda x: random.choice(DIABETES_TYPES)[0])
+    diabetes_type = DIABETES_TYPES[0][0]
     sex = factory.lazy_attribute(lambda x: random.choice([sex.value for sex in Sex]))
     ethnicity = factory.lazy_attribute(lambda x: random.choice(ETHNICITIES)[0])
 

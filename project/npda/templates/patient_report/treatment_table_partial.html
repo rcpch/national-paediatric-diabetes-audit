@@ -5,7 +5,12 @@
 {% endblock %}
 
 {% block table_headers %}
-      <th class="whitespace-normal break-words">NHS Number
+      <th class="whitespace-normal break-words">
+        {% if is_jersey %}
+          Unique Reference Number
+        {% else %}
+          NHS Number
+        {% endif %}
         <div class="block">
           <span
             hx-get="?category=treatment&sort=nhs_number&order=asc"
@@ -84,14 +89,14 @@
     <tr
     class="{% if not patient.is_complete_year_of_care %}bg-gray-500/10{% endif %}"
     >
-      <td>{% include "patient_report/components/pt_identifier_value.html" with patient_pk=patient.pk is_complete_year_of_care=patient.is_complete_year_of_care identifier=patient.nhs_number %}</td>
+      <td>{% include "patient_report/components/pt_identifier_value.html" with patient_pk=patient.pk is_complete_year_of_care=patient.is_complete_year_of_care patient_identifier=patient.patient_identifier %}</td>
       <td>{{patient.treatment_regimen}}</td>
       <td>{{patient.glucose_monitoring}}</td>
       <td>{{patient.hcl}}</td>
     </tr>
     {% empty %}
     <tr>
-      <td colspan="2" class="text-center text-gray-500">No patients found.</td>
+      <td colspan="4" class="text-center text-gray-500">No patients found.</td>
     </tr>
   {% endfor %}
 {% endblock %}

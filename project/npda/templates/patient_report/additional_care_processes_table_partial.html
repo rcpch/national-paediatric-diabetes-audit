@@ -5,7 +5,12 @@
 {% endblock %}
 
 {% block table_headers %}
-  <th class="whitespace-normal break-words">NHS Number
+  <th class="whitespace-normal break-words">
+    {% if is_jersey %}
+    Unique Reference Number
+    {% else %}
+      NHS Number
+    {% endif %}
     <div class="block">
       <span
         hx-get="?category=additional_care_processes&sort=nhs_number&order=asc"
@@ -174,7 +179,7 @@
     <tr
     class="{% if not patient.is_complete_year_of_care %}bg-gray-500/10{% endif %}"
     >
-      <td>{% include "patient_report/components/pt_identifier_value.html" with patient_pk=patient.pk is_complete_year_of_care=patient.is_complete_year_of_care identifier=patient.nhs_number %}</td>
+      <td>{% include "patient_report/components/pt_identifier_value.html" with patient_pk=patient.pk is_complete_year_of_care=patient.is_complete_year_of_care patient_identifier=patient.patient_identifier %}</td>
       <td>{% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.hba1c_4plus %}</td>
       <td>{% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.psychological_assessment %}</td>
       <td>{% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.smoking_status %}</td>
