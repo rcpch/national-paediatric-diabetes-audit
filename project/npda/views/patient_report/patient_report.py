@@ -284,6 +284,7 @@ class PatientReportView(ListView):
             )
         elif self.selected_category == "additional_care_processes":
             pt_qs = pt_qs.annotate(
+                
                 hba1c_4plus=Case(
                     When(
                         Exists(
@@ -308,6 +309,9 @@ class PatientReportView(ListView):
                     default=False,
                     output_field=BooleanField(),
                 ),
+                is_gte_12yo=Q(
+                    date_of_birth__lte=calculation_date - relativedelta(years=12)
+                ),
                 smoking_status=Case(
                     When(
                         Exists(
@@ -317,7 +321,11 @@ class PatientReportView(ListView):
                         ),
                         then=True,
                     ),
-                    default=False,
+                    default=Case(
+                        When(is_gte_12yo=True, then=False),
+                        default=None,
+                        output_field=BooleanField(),
+                    ),
                     output_field=BooleanField(),
                 ),
                 smoking_cessation_referral=Case(
@@ -329,7 +337,11 @@ class PatientReportView(ListView):
                         ),
                         then=True,
                     ),
-                    default=False,
+                    default=Case(
+                        When(is_gte_12yo=True, then=False),
+                        default=None,
+                        output_field=BooleanField(),
+                    ),
                     output_field=BooleanField(),
                 ),
                 additional_dietetic_appt_offered=Case(
@@ -651,6 +663,11 @@ class PatientReportView(ListView):
                 "urinary_albumin": "Not required as less than 12 years old",
                 "foot_exam": "Not required as less than 12 years old",
                 "retinal_screening": "Not required as less than 12 years old",
+            }
+        elif self.selected_category == TableCategories.ADDITIONAL_CARE_PROCESSES.value:
+            context["ineligible_reasons"] = {
+                "smoking_status": "Not required as less than 12 years old",
+                "smoking_cessation_referral": "Not required as less than 12 years old",
             }
         # If we're on the outcomes page, add HbA1c data -> doing this here because Means and Medians
         # too complicated to do in the queryset

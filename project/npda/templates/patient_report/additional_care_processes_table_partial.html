@@ -182,8 +182,8 @@
       <td>{% include "patient_report/components/pt_identifier_value.html" with patient_pk=patient.pk is_complete_year_of_care=patient.is_complete_year_of_care patient_identifier=patient.patient_identifier %}</td>
       <td>{% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.hba1c_4plus %}</td>
       <td>{% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.psychological_assessment %}</td>
-      <td>{% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.smoking_status %}</td>
-      <td>{% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.smoking_cessation_referral %}</td>
+      <td>{% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.smoking_status ineligible_reason=ineligible_reasons.smoking_status %}</td>
+      <td>{% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.smoking_cessation_referral ineligible_reason=ineligible_reasons.smoking_cessation_referral %}</td>
       <td>{% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.additional_dietetic_appt_offered %}</td>
       <td>{% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.pts_attending_additional_dietetic_appt %}</td>
       <td>{% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.influenza_immunisation_recommended %}</td>
