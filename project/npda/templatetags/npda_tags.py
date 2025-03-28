@@ -199,7 +199,7 @@ def get_item(dictionary: dict, key: str):
     try:
         return dictionary.get(key, "")
     except Exception:
-        logger.error(f"Error getting value from dictionary: {dictionary=} {key=}")
+        # logger.error(f"Error getting value from dictionary: {dictionary=} {key=}") # this is quite noisy in the logs and not unexpected so commenting out
         return ""
 
 
