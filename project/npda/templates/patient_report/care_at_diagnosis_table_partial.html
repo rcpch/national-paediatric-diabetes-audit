@@ -1,73 +1,81 @@
 {% extends "patient_report/base_table.html" %}
 
 {% block description_box %}
-{% include "patient_report/description_box.html" with description="Children and young people with Type 1 diabetes should be screened for thyroid disease and coeliac disease within 90 days of diagnosis. Newly diagnosed children and young people should also receive level 3 carbohydrate counting education within 14 days of diagnosis." %}
+{% include "patient_report/description_box.html" with description="Children and young people with Type 1 diabetes should be screened for thyroid disease and coeliac disease within 90 days of diagnosis. Newly diagnosed children and young people should also receive level 3 carbohydrate counting education within 14 days of diagnosis. NOTE: this is limited to only children diagnosed within 90 days of today." %}
 {% endblock %}
 
 {% block table_headers %}
   <th class="whitespace-normal break-words">NHS Number
-    <span
-      hx-get="?category=care_at_diagnosis&sort=nhs_number&order=asc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-up-long {% if sort_field == 'nhs_number' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
-    <span
-      hx-get="?category=care_at_diagnosis&sort=nhs_number&order=desc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-down-long {% if sort_field == 'nhs_number' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
+    <div class="block">
+      <span
+        hx-get="?category=care_at_diagnosis&sort=nhs_number&order=asc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'nhs_number' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span
+        hx-get="?category=care_at_diagnosis&sort=nhs_number&order=desc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'nhs_number' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
   </th>
   <th class="whitespace-normal break-words">Coeliac disease screening
-    <span
-      hx-get="?category=care_at_diagnosis&sort=coeliac_disease_screening&order=desc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-up-long {% if sort_field == 'coeliac_disease_screening' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
-    <span
-      hx-get="?category=care_at_diagnosis&sort=coeliac_disease_screening&order=asc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-down-long {% if sort_field == 'coeliac_disease_screening' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
+    <div class="block">
+      <span
+        hx-get="?category=care_at_diagnosis&sort=coeliac_disease_screening&order=desc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'coeliac_disease_screening' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span
+        hx-get="?category=care_at_diagnosis&sort=coeliac_disease_screening&order=asc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'coeliac_disease_screening' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
   </th>
   <th class="whitespace-normal break-words">Thyroid disease screening
-    <span
-      hx-get="?category=care_at_diagnosis&sort=thyroid_disease_screening&order=desc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-up-long {% if sort_field == 'thyroid_disease_screening' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
-    <span
-      hx-get="?category=care_at_diagnosis&sort=thyroid_disease_screening&order=asc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-down-long {% if sort_field == 'thyroid_disease_screening' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
+    <div class="block">
+      <span
+        hx-get="?category=care_at_diagnosis&sort=thyroid_disease_screening&order=desc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'thyroid_disease_screening' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span
+        hx-get="?category=care_at_diagnosis&sort=thyroid_disease_screening&order=asc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'thyroid_disease_screening' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
   </th>
   <th class="whitespace-normal break-words">Carbohydrate counting education
-    <span
-      hx-get="?category=care_at_diagnosis&sort=carbohydrate_counting_education&order=desc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-up-long {% if sort_field == 'carbohydrate_counting_education' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
-    <span
-      hx-get="?category=care_at_diagnosis&sort=carbohydrate_counting_education&order=asc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-down-long {% if sort_field == 'carbohydrate_counting_education' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
+    <div class="block">
+      <span
+        hx-get="?category=care_at_diagnosis&sort=carbohydrate_counting_education&order=desc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'carbohydrate_counting_education' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span
+        hx-get="?category=care_at_diagnosis&sort=carbohydrate_counting_education&order=asc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'carbohydrate_counting_education' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
   </th>
 {% endblock %}
 

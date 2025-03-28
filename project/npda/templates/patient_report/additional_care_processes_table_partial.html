@@ -6,148 +6,166 @@
 
 {% block table_headers %}
   <th class="whitespace-normal break-words">NHS Number
-    <span
-      hx-get="?category=additional_care_processes&sort=nhs_number&order=asc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-up-long {% if sort_field == 'nhs_number' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
-    <span
-      hx-get="?category=additional_care_processes&sort=nhs_number&order=desc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-down-long {% if sort_field == 'nhs_number' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
+    <div class="block">
+      <span
+        hx-get="?category=additional_care_processes&sort=nhs_number&order=asc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'nhs_number' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span
+        hx-get="?category=additional_care_processes&sort=nhs_number&order=desc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'nhs_number' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
   </th>
   <th class="whitespace-normal break-words">HBA1C 4+
-    <span
-      hx-get="?category=additional_care_processes&sort=hba1c_4plus&order=desc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-up-long {% if sort_field == 'hba1c_4plus' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
-    <span
-      hx-get="?category=additional_care_processes&sort=hba1c_4plus&order=asc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-down-long {% if sort_field == 'hba1c_4plus' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
+    <div class="block">
+      <span
+        hx-get="?category=additional_care_processes&sort=hba1c_4plus&order=desc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'hba1c_4plus' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span
+        hx-get="?category=additional_care_processes&sort=hba1c_4plus&order=asc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'hba1c_4plus' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
   </th>
   <th class="whitespace-normal break-words">Psychological assessment
-    <span
-      hx-get="?category=additional_care_processes&sort=psychological_assessment&order=desc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-up-long {% if sort_field == 'psychological_assessment' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
-    <span
-      hx-get="?category=additional_care_processes&sort=psychological_assessment&order=asc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-down-long {% if sort_field == 'psychological_assessment' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
+    <div class="block">
+      <span
+        hx-get="?category=additional_care_processes&sort=psychological_assessment&order=desc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'psychological_assessment' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span
+        hx-get="?category=additional_care_processes&sort=psychological_assessment&order=asc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'psychological_assessment' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
   </th>
   <th class="whitespace-normal break-words">Smoking status screened
-    <span
-      hx-get="?category=additional_care_processes&sort=smoking_status&order=desc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-up-long {% if sort_field == 'smoking_status' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
-    <span
-      hx-get="?category=additional_care_processes&sort=smoking_status&order=asc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-down-long {% if sort_field == 'smoking_status' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
+    <div class="block">
+      <span
+        hx-get="?category=additional_care_processes&sort=smoking_status&order=desc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'smoking_status' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span
+        hx-get="?category=additional_care_processes&sort=smoking_status&order=asc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'smoking_status' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
   </th>
   <th class="whitespace-normal break-words">Referral to smoking cessation service
-    <span
-      hx-get="?category=additional_care_processes&sort=smoking_cessation_referral&order=desc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-up-long {% if sort_field == 'smoking_cessation_referral' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
-    <span
-      hx-get="?category=additional_care_processes&sort=smoking_cessation_referral&order=asc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-down-long {% if sort_field == 'smoking_cessation_referral' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
+    <div class="block">
+      <span
+        hx-get="?category=additional_care_processes&sort=smoking_cessation_referral&order=desc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'smoking_cessation_referral' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span
+        hx-get="?category=additional_care_processes&sort=smoking_cessation_referral&order=asc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'smoking_cessation_referral' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
   </th>
   <th class="whitespace-normal break-words">Additional dietetic appointment offered
-    <span
-      hx-get="?category=additional_care_processes&sort=additional_dietetic_appt_offered&order=desc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-up-long {% if sort_field == 'additional_dietetic_appt_offered' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
-    <span
-      hx-get="?category=additional_care_processes&sort=additional_dietetic_appt_offered&order=asc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-down-long {% if sort_field == 'additional_dietetic_appt_offered' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
+    <div class="block">
+      <span
+        hx-get="?category=additional_care_processes&sort=additional_dietetic_appt_offered&order=desc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'additional_dietetic_appt_offered' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span
+        hx-get="?category=additional_care_processes&sort=additional_dietetic_appt_offered&order=asc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'additional_dietetic_appt_offered' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
   </th>
   <th class="whitespace-normal break-words">Patients attending additional dietetic appointment
-    <span
-      hx-get="?category=additional_care_processes&sort=pts_attending_additional_dietetic_appt&order=desc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-up-long {% if sort_field == 'pts_attending_additional_dietetic_appt' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
-    <span
-      hx-get="?category=additional_care_processes&sort=pts_attending_additional_dietetic_appt&order=asc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-down-long {% if sort_field == 'pts_attending_additional_dietetic_appt' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
+    <div class="block">
+      <span
+        hx-get="?category=additional_care_processes&sort=pts_attending_additional_dietetic_appt&order=desc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'pts_attending_additional_dietetic_appt' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span
+        hx-get="?category=additional_care_processes&sort=pts_attending_additional_dietetic_appt&order=asc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'pts_attending_additional_dietetic_appt' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
   </th>
   <th class="whitespace-normal break-words">Influenza immunisation recommended
-    <span
-      hx-get="?category=additional_care_processes&sort=influenza_immunisation_recommended&order=desc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-up-long {% if sort_field == 'influenza_immunisation_recommended' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
-    <span
-      hx-get="?category=additional_care_processes&sort=influenza_immunisation_recommended&order=asc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-down-long {% if sort_field == 'influenza_immunisation_recommended' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
+    <div class="block">
+      <span
+        hx-get="?category=additional_care_processes&sort=influenza_immunisation_recommended&order=desc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'influenza_immunisation_recommended' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span
+        hx-get="?category=additional_care_processes&sort=influenza_immunisation_recommended&order=asc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'influenza_immunisation_recommended' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
   </th>
   <th class="whitespace-normal break-words">Sick day rules advice
-    <span
-      hx-get="?category=additional_care_processes&sort=sick_day_rules_advice&order=desc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-up-long {% if sort_field == 'sick_day_rules_advice' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
-    <span
-      hx-get="?category=additional_care_processes&sort=sick_day_rules_advice&order=asc"
-      hx-target="#table-area"
-      hx-swap="innerHTML"
-      class="cursor-pointer">
-      <i class="fa-solid fa-down-long {% if sort_field == 'sick_day_rules_advice' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
-    </span>
+    <div class="block">
+      <span
+        hx-get="?category=additional_care_processes&sort=sick_day_rules_advice&order=desc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'sick_day_rules_advice' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span
+        hx-get="?category=additional_care_processes&sort=sick_day_rules_advice&order=asc"
+        hx-target="#table-area"
+        hx-swap="innerHTML"
+        class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'sick_day_rules_advice' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
   </th>
 {% endblock %}
 
