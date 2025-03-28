@@ -183,7 +183,11 @@ class PatientReportView(ListView):
                         ),
                         then=True,
                     ),
-                    default=False,
+                    default=Case(
+                        When(is_gte_12yo=True, then=False),
+                        default=None,
+                        output_field=BooleanField(),
+                    ),
                     output_field=BooleanField(),
                 ),
                 passed_urinary_albumin=Case(
@@ -195,7 +199,11 @@ class PatientReportView(ListView):
                         ),
                         then=True,
                     ),
-                    default=False,
+                    default=Case(
+                        When(is_gte_12yo=True, then=False),
+                        default=None,
+                        output_field=BooleanField(),
+                    ),
                     output_field=BooleanField(),
                 ),
                 passed_retinal_screening=Case(
@@ -207,7 +215,11 @@ class PatientReportView(ListView):
                         ),
                         then=True,
                     ),
-                    default=False,
+                    default=Case(
+                        When(is_gte_12yo=True, then=False),
+                        default=None,
+                        output_field=BooleanField(),
+                    ),
                     output_field=BooleanField(),
                 ),
                 passed_foot_exam=Case(
@@ -219,7 +231,11 @@ class PatientReportView(ListView):
                         ),
                         then=True,
                     ),
-                    default=False,
+                    default=Case(
+                        When(is_gte_12yo=True, then=False),
+                        default=None,
+                        output_field=BooleanField(),
+                    ),
                     output_field=BooleanField(),
                 ),
                 num_passed=Case(
