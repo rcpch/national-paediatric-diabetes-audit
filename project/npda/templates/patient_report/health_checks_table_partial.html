@@ -140,17 +140,17 @@
           {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_thyroid_screen %}
         </td>
         <td>
-          {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_blood_pressure %}
+          {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_blood_pressure ineligible_reason=ineligible_reasons.blood_pressure %}
         </td>
         <td>
-          {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_urinary_albumin %}
+          {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_urinary_albumin ineligible_reason=ineligible_reasons.urinary_albumin %}
         </td>
         <td>
-          {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_foot_exam %}
+          {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_foot_exam ineligible_reason=ineligible_reasons.foot_exam %}
         </td>
         <td>{{ patient.num_passed }} / {{ patient.num_total }}</td>
         <td>
-          {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_retinal_screening %}
+          {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_retinal_screening ineligible_reason=ineligible_reasons.retinal_screening %}
         </td>
       </tr>
     {% empty %}

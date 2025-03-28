@@ -6,5 +6,13 @@
 <i class="fa-solid fa-circle-exclamation text-error"></i>
 {% else %}
 {% comment %} INELIGIBLE {% endcomment %}
-  <i class="fa-solid fa-ban text-muted"></i>
+  <div class="tooltip tooltip-bottom" data-tip="
+  {% if ineligible_reason %}
+    {{ ineligible_reason }}
+  {% else %}
+    Not required
+  {% endif %}
+   ">
+    <i class="fa-solid fa-ban text-muted"></i>
+  </div>
 {% endif %}

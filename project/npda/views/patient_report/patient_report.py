@@ -637,6 +637,14 @@ class PatientReportView(ListView):
         context["sort_field"] = self.request.GET.get("sort", "")
         context["sort_order"] = self.request.GET.get("order", "asc")
 
+        if self.selected_category == TableCategories.HEALTH_CHECKS.value:
+            # Set ineligible reasons
+            context["ineligible_reasons"] = {
+                "blood_pressure": "Not required as less than 12 years old",
+                "urinary_albumin": "Not required as less than 12 years old",
+                "foot_exam": "Not required as less than 12 years old",
+                "retinal_screening": "Not required as less than 12 years old",
+            }
         # If we're on the outcomes page, add HbA1c data -> doing this here because Means and Medians
         # too complicated to do in the queryset
         if self.selected_category == TableCategories.ADMISSIONS.value:
