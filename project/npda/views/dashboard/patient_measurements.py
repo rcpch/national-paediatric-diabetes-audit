@@ -2,7 +2,6 @@ from datetime import date
 from django.shortcuts import render
 from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.views.dashboard import helpers as hp
-from project.npda.views.patient_report.template_data import KPI_CATEGORY_ATTR_MAP, TEXT
 from project.npda.views.decorators import login_and_otp_required
 from project.npda.models import Visit, Submission
 
