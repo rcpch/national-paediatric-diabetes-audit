@@ -7,6 +7,7 @@ from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
 from project.npda.tests import utils
 from project.npda.tests.factories.patient_factory import PatientFactory
+from project.npda.tests.factories.visit_factory import VisitFactory
 from project.npda.tests.kpi_calculations.test_calculate_kpis import \
     assert_kpi_result_equal
 
@@ -119,7 +120,7 @@ def test_kpi_calculation_24(AUDIT_START_DATE):
         ]
     )
 
-    EXPECTED_TOTAL_ELIGIBLE = 8
+    EXPECTED_TOTAL_ELIGIBLE = 14  # 6 passing, 8 ineligible - all children with T1DM
     EXPECTED_TOTAL_INELIGIBLE = 8
     EXPECTED_TOTAL_PASSED = 6
     EXPECTED_TOTAL_FAILED = 2
@@ -135,3 +136,30 @@ def test_kpi_calculation_24(AUDIT_START_DATE):
         expected=EXPECTED_KPIRESULT,
         actual=calc_kpis.calculate_kpi_24_hybrid_closed_loop_system(),
     )
+
+
+# Edge case found as part of https://github.com/rcpch/national-paediatric-diabetes-audit/issues/797
+@pytest.mark.django_db
+def test_kpi_calculation_24_for_patients_who_have_come_off_hcl(AUDIT_START_DATE):
+    first_visit_date = AUDIT_START_DATE + relativedelta(days=2)
+
+    patient = PatientFactory(
+        visit__visit_date=first_visit_date,
+        date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        visit__treatment=3,
+        visit__closed_loop_system=2,
+    )
+
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    calc_kpis.set_patients_for_calculation(Patient.objects.filter(pk__in=[patient.pk]))
+
+    first_result = calc_kpis.calculate_kpi_24_hybrid_closed_loop_system()
+    assert first_result.total_passed == 1
+
+    # Add a more recent visit where they are back on injections
+    second_visit_date = first_visit_date + relativedelta(months=3)
+
+    VisitFactory(patient=patient, visit_date=second_visit_date, treatment=1)
+
+    second_result = calc_kpis.calculate_kpi_24_hybrid_closed_loop_system()
+    assert second_result.total_passed == 0

@@ -18,12 +18,38 @@
       {% for npda_user in npdauser_list %}
         <tr class="text-rcpch_light_blue bg-white border-b border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white">
           <td class="text-left">
-            <div class="tooltip tooltip-right" data-tip="NPDA User Unique ID">
-              <a href="{% url 'npdauser-update' npda_user.pk %}"
-                 class="text-rcpch_pink px-2 hover:text-rcpch_dark_blue">
-                <strong>{{ npda_user.pk }}</strong>
-              </a>
-            </div>
+            {% if npda_user.number_of_pdu_memberships < 2 %}
+              <div class="tooltip tooltip-right"
+                   data-tip="NPDA User Unique ID {% if perms.npda.change_npdauser %}. Click to view and edit user details{% endif %}">
+                {% if perms.npda.change_npdauser %}
+                  <span class="flex flex-row text-left">
+                    <a href="{% url 'npdauser-update' npda_user.pk %}"
+                       class="btn btn-wide flex p-1 h-full hover:text-rcpch_pink px-2 text-rcpch_dark_blue">
+                      <strong>{{ npda_user.pk }}</strong>
+                    </a>
+                  </span>
+                {% else %}
+                  <div class="btn btn-wide flex p-1 h-full hover:text-rcpch_pink px-2 text-rcpch_dark_blue">
+                    <strong>{{ npda_user.pk }}</strong>
+                  </div>
+                {% endif %}
+              </div>
+            {% else %}
+              {% if npda_user|employer_match:request.user and perms.npda.change_npda_user %}
+                <span class="tooltip tooltip-right"
+                      data-tip="Member of {{ npda_user.number_of_pdu_memberships }} PDUs. Click to view and edit user details">
+                  <a href="{% url 'npdauser-update' npda_user.pk %}"
+                     class="hover:text-rcpch_pink px-2 text-rcpch_dark_blue btn btn-wide flex p-1 h-full">
+                    <strong>{{ npda_user.pk }} <i class="fa-solid fa-hospital fa-xl"></i></strong>
+                  </a>
+                </span>
+              {% else %}
+                <span class="flex flex-row text-left hover:text-rcpch_pink px-2 text-rcpch_dark_blue btn btn-wide flex p-1 h-full tooltip tooltip-right"
+                      data-tip="Member of {{ npda_user.number_of_pdu_memberships }} PDUs at least one of which differs from yours. Please contact NPDA to make changes to {{ npda_user }}'s account'.">
+                  <strong>{{ npda_user.pk }} <i class="fa-solid fa-hospital fa-xl"></i></strong>
+                </span>
+              {% endif %}
+            {% endif %}
           </td>
           <td class="text-left">{{ npda_user.get_full_name }}</td>
           <td>
@@ -156,7 +182,8 @@
           </td>
           <td class="px-6 text-left">{{ npda_user.get_role_display }}</td>
           <td class="w-80 px-2 text-right">
-            <div class="tooltip tooltip-left" data-tip="View user logs for {{ npda_user }}">
+            <div class="tooltip tooltip-left"
+                 data-tip="View user logs for {{ npda_user }}">
               <a href="{% url 'npdauser-logs' npda_user.pk %}"
                  class="text-rcpch_pink flex justify-center items-center px-2">
                 <svg class="text-rcpch_pink w-8 h-8"

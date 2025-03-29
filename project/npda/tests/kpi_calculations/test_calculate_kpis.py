@@ -12,13 +12,12 @@ from django.db.models import QuerySet
 from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult, kpi_registry
 from project.npda.models.patient import Patient
 from project.npda.models.submission import Submission
-from project.npda.models.visit import Visit
 from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
-from project.npda.tests.factories.paediatrics_diabetes_unit_factory import (
-    PaediatricsDiabetesUnitFactory,
-)
+from project.npda.tests.factories.paediatrics_diabetes_unit_factory import \
+    PaediatricsDiabetesUnitFactory
 from project.npda.tests.factories.patient_factory import PatientFactory
-from project.npda.tests.UserDataClasses import test_user_audit_centre_reader_data
+from project.npda.tests.UserDataClasses import \
+    test_user_audit_centre_reader_data
 
 # Logging
 logger = logging.getLogger(__name__)

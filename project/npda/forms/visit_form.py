@@ -104,7 +104,7 @@ class VisitForm(forms.ModelForm):
             "hospital_discharge_date": DateInput(),
             "hospital_admission_reason": forms.Select(),
             "dka_additional_therapies": forms.Select(),
-            "hospital_admission_other": forms.TextInput(),
+            "hospital_admission_other": forms.Textarea(),
         }
 
     categories = [
@@ -990,21 +990,14 @@ class VisitForm(forms.ModelForm):
         )
         smoking_status = cleaned_data.get("smoking_status")
         if smoking_status:
-            if smoking_status == 2:  # Current  smoking status: must supply a date
-                measure_must_have_date_and_value(
-                    smoking_cessation_referral_date,
-                    "smoking_cessation_referral_date",
-                    [{"smoking_status": smoking_status}],
+            if smoking_status != 2 and smoking_cessation_referral_date is not None:
+                raise ValidationError(
+                    {
+                        "smoking_cessation_referral_date": [
+                            "Smoking Cessation Referral Date must be left empty if patient is not a current smoker or status is unknown."
+                        ]
+                    }
                 )
-            else:
-                if smoking_cessation_referral_date is not None:
-                    raise ValidationError(
-                        {
-                            "smoking_cessation_referral_date": [
-                                "Smoking Cessation Referral Date must be left empty if patient is not a current smoker or status is unknown."
-                            ]
-                        }
-                    )
         else:
             if smoking_cessation_referral_date is not None:
                 raise ValidationError(
@@ -1038,6 +1031,9 @@ class VisitForm(forms.ModelForm):
         hospital_admission_reason = cleaned_data.get("hospital_admission_reason")
         dka_additional_therapies = cleaned_data.get("dka_additional_therapies")
         hospital_admission_other = cleaned_data.get("hospital_admission_other")
+        # clean hospital admission fields
+        if hospital_admission_other == "None":
+            hospital_admission_other = None
         if any(
             [
                 hospital_admission_date,
@@ -1077,7 +1073,7 @@ class VisitForm(forms.ModelForm):
                     if hospital_admission_other is not None:
                         raise ValidationError(
                             {
-                                "hospital_admission_other": [
+                                "hospital_admission_reason": [
                                     "Hospital Admission Reason must be 'Other' if 'Other' has been completed."
                                 ]
                             }
@@ -1103,7 +1099,7 @@ class VisitForm(forms.ModelForm):
             if hospital_admission_other is not None and hospital_admission_reason != 6:
                 raise ValidationError(
                     {
-                        "hospital_admission_other": [
+                        "hospital_admission_reason": [
                             "Hospital Admission Reason must be 'Other' if 'Other' is filled in"
                         ]
                     }

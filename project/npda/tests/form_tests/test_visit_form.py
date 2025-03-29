@@ -1372,6 +1372,24 @@ def test_smoking_status_date_when_non_smoker_form_fails_validation():
     assert "smoking_cessation_referral_date" in form.errors
 
 
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/791
+@pytest.mark.django_db
+def test_smoking_status_smoker_does_not_require_cessation_referral_date():
+    patient = PatientFactory()
+
+    form = VisitForm(
+        data={
+            "visit_date": "2025-01-01",  # Required for validation
+            "smoking_status": 2,  # current smoker
+        },
+        initial={"patient": patient},
+    )
+    # Trigger the cleaners
+    assert form.is_valid(), f"Form should be valid but got {form.errors}"
+    assert "smoking_status" not in form.errors
+    assert "smoking_cessation_referral_date" not in form.errors
+
+
 """
 Dietician tests
 """
@@ -1752,7 +1770,7 @@ def test_inpatient_admission_stabilisation_hospital_admission_other_provided_fai
         form.is_valid() == False
     ), f"Inpatient admission for stabilisation with hospital admission other should fail"
     assert (
-        "hospital_admission_other" in form.errors
+        "hospital_admission_reason" in form.errors
     ), "Hospital admission other should be in errors as hospital admission for stabilisation"
 
 
@@ -1832,7 +1850,7 @@ def test_inpatient_admission_dka_additional_therapies_hospital_admission_also_pr
         form.is_valid() == False
     ), f"Inpatient admission for DKA with additional therapies and hospital_admission_other should fail"
     assert (
-        "hospital_admission_other" in form.errors
+        "hospital_admission_reason" in form.errors
     ), "hospital_admission_other should be in errors as hospital admission for DKA"
 
 

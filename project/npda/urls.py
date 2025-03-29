@@ -34,6 +34,11 @@ urlpatterns = [
     path("view_preference", view=view_preference, name="view_preference"),
     path("audit-year", view=audit_year, name="audit-year"),
     path("upload_csv", view=upload_csv, name="upload_csv"),
+    path(
+        "switch_paediatric_diabetes_unit",
+        view=switch_paediatric_diabetes_unit,
+        name="switch_paediatric_diabetes_unit",
+    ),
     # Submission views
     path(
         "submissions",
@@ -124,9 +129,9 @@ dashboard_urlpatterns = [
         name="dashboard",
     ),
     path(
-        "get_hcl_scatter_plot",
-        view=partials.get_hcl_scatter_plot,
-        name="get_hcl_scatter_plot",
+        "get_metric_scatter_plot",
+        view=partials.get_metric_scatter_plot,
+        name="get_metric_scatter_plot",
     ),
     path(
         "get_map_chart_partial",

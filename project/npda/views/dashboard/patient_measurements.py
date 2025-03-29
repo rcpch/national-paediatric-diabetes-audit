@@ -59,19 +59,22 @@ def patient_measurements(request):
     if Submission.objects.filter(
         audit_year=selected_audit_year,
         paediatric_diabetes_unit__pz_code=pz_code,
+        paediatric_diabetes_unit__active=True,
         submission_active=True,
     ).exists():
         current_submission = Submission.objects.get(
             audit_year=selected_audit_year,
             paediatric_diabetes_unit__pz_code=pz_code,
+            paediatric_diabetes_unit__active=True,
             submission_active=True,
         )
         visits = Visit.objects.filter(patient__in=current_submission.patients.all())
-        submission_visits_with_errors = visits.filter(errors__isnull=False).count()
+        submission_visits_with_errors = visits.filter(errors__isnull=False)
+        submission_visit_error_count = submission_visits_with_errors.count()
         submission_date = current_submission.submission_date
-        affected_patients = current_submission.patients.count()
+        affected_patients = submission_visits_with_errors.values("patient").distinct().count()
     else:
-        submission_visits_with_errors = 0
+        submission_visit_error_count = 0
         submission_date = None
         affected_patients = 0
 
@@ -86,7 +89,7 @@ def patient_measurements(request):
             "selected_audit_year": selected_audit_year,
             "pz_code": pz_code,
             "hba1c_value_counts_stratified_by_diabetes_type": hba1c_value_counts_stratified_by_diabetes_type,
-            "submission_visit_error_count": submission_visits_with_errors,
+            "submission_visit_error_count": submission_visit_error_count,
             "submission_date": submission_date,
             "affected_patients": affected_patients,
         },

@@ -71,9 +71,9 @@ TEXT = {
             "CARBOHYDRATE COUNTING EDUCATION",
         ],
         "ineligible_hover_reason": {
-            "kpi_41_coeliac_disease_screening": "Does not fulfil criteria for KPI 7, diagnosed at least 90 days before the end of the audit period",
-            "kpi_42_thyroid_disease_screening": "Does not fulfil criteria for KPI 7, diagnosed at least 90 days before the end of the audit period",
-            "kpi_43_carbohydrate_counting_education": "Does not fulfil criteria for KPI 7, diagnosed at least 90 days before the end of the audit period",
+            "kpi_41_coeliac_disease_screening": "Diagnosed within 90 days of the end of the audit period",
+            "kpi_42_thyroid_disease_screening": "Diagnosed within 90 days of the end of the audit period",
+            "kpi_43_carbohydrate_counting_education": "Diagnosed within 90 days of the end of the audit period",
         },
         "key": {
             "pass": "Complete",
@@ -82,16 +82,14 @@ TEXT = {
         }
     },
     "outcomes": {
-        "title": "Outcomes",
+        "title": "Admissions",
         "description": "Outcomes are presented below for all children and young people with Type 1 diabetes. HbA1c excludes all measurements taken in the first 90 days after diagnosis.",
         "headers": [
             "NHS NUMBER",
-            "Mean HbA1c",
-            "Median HbA1c",
+            "Mean HbA1c mmol/mol (%)",
+            "Median HbA1c mmol/mol (%)",
             "Number of Admissions",
             "Number of DKA Admissions",
-            "Required additional psych support",
-            "Albuminuria present",
         ],
         "ineligible_hover_reason": {},
         "key": {
@@ -106,12 +104,12 @@ TEXT = {
         "headers": [
             "NHS NUMBER",
             "Treatment Regimen",
-            "Continuous Glucose Monitoring",
+            "Glucose Monitoring",
             "Hybrid Closed Loop",
         ],
         "ineligible_hover_reason": {
             "cgm": "Does not fulfil criteria for KPI 1",
-            "tx_regimen": "Does not fulfil criteria for any of KPIs 13-20",
+            "tx_regimen": "No treatment regimen",
         },
         "key": {
             "pass": "Complete",
@@ -125,7 +123,7 @@ KPI_CATEGORY_ATTR_MAP = {
     "health_checks": list(range(25, 32)),
     "additional_care_processes": list(range(33, 41)),
     "care_at_diagnosis": list(range(41, 44)),
-    "outcomes": list(range(44, 50)),
+    "outcomes": list(range(44, 48)),
     "treatment": list(
         range(13, 21),
     )

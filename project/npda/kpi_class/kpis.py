@@ -26,6 +26,8 @@ from django.db.models import (
     Sum,
     When,
     DecimalField,
+    ExpressionWrapper,
+    DateField,
 )
 
 # NPDA Imports
@@ -217,7 +219,6 @@ class CalculateKPIS:
         return_obj["calculated_kpi_values"] = {}
 
         for kpi_name, kpi_result in calculated_kpis.items():
-
             # First assign the kpi_name : kpi_result
             return_obj["calculated_kpi_values"][kpi_name] = kpi_result
 
@@ -332,8 +333,8 @@ class CalculateKPIS:
 
         # Set the query set as an attribute to be used in subsequent KPI calculations
         self.total_kpi_1_eligible_pts_base_query_set = self.patients.filter(
-            # Valid attributes
             (
+                # Valid attributes
                 (Q(nhs_number__isnull=False) | Q(unique_reference_number__isnull=False))
                 & Q(date_of_birth__isnull=False)
                 # Visit / admisison date within audit period
@@ -433,6 +434,61 @@ class CalculateKPIS:
             patient_querysets=patient_querysets,
         )
 
+    def calculate_kpi_2_total_new_diagnoses_stratified_by_quarter(
+        self,
+    ) -> dict[
+        Literal[1, 2, 3, 4],
+        dict[Literal["total_passed", "total_eligible", "pct"], int | float],
+    ]:
+        """KPI2's calculate_() method doesn't do this per quarter, so separate method"""
+
+        # Denominator - eligible pts
+        total_kpi_1_eligible_pts_base_query_set, total_eligible_kpi_1 = (
+            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+        )
+
+        # Get quarter dates
+        quarter_end_dates = [
+            quarter[1]
+            for quarter in get_quarters_for_audit_period(
+                audit_start_date=self.audit_start_date,
+                audit_end_date=self.audit_end_date,
+            )
+        ]
+        # Only up to current quarter
+        current_quarter = retrieve_quarter_for_date(date.today())
+        quarter_end_dates = quarter_end_dates[:current_quarter]
+        result = {}
+        eligible_patients_kpi_2 = total_kpi_1_eligible_pts_base_query_set.filter(
+            diagnosis_date__range=(self.AUDIT_DATE_RANGE)
+        )
+        for q, q_end_date in enumerate(quarter_end_dates, start=1):
+            # Eligible patients are those who have a diagnosis date within the year
+            total_eligible_kpi_2 = eligible_patients_kpi_2.count()
+
+            # Passing patients are the subset of kpi_2 eligible who have a diagnosis date within the quarter
+            passing_patients = eligible_patients_kpi_2.filter(
+                diagnosis_date__range=(q_end_date - relativedelta(months=3), q_end_date)
+            )
+            total_passed = passing_patients.count()
+
+            kpi_result = {
+                "total_passed": total_passed,
+                "total_eligible": total_eligible_kpi_2,
+                "pct": round(
+                    (
+                        (total_passed / total_eligible_kpi_2) * 100
+                        if total_eligible_kpi_2
+                        else 0
+                    ),
+                    1,
+                ),
+            }
+
+            result[q] = kpi_result
+
+        return result
+
     def get_new_diagnoses_this_month(self) -> int:
         """Returns the number of new diagnoses for the current month"""
         if not hasattr(self, "kpi_2_total_eligible"):
@@ -475,6 +531,10 @@ class CalculateKPIS:
             Q(diabetes_type=DIABETES_TYPES[0][0])
         )
 
+        # Set as attribute to be reused for subsequent KPIs
+        self.kpi_3_eligible_pts_base_query_set = eligible_patients
+        self.kpi_3_total_eligible = eligible_patients.count()
+
         # Count eligible patients
         total_eligible = eligible_patients.count()
 
@@ -500,6 +560,20 @@ class CalculateKPIS:
             total_passed=total_passed,
             total_failed=total_failed,
             patient_querysets=patient_querysets,
+        )
+
+    def _get_kpi_3_eligible_pts_base_query_set_and_total_count(
+        self,
+    ) -> Tuple[QuerySet, int]:
+        """
+        Returns the base query set for KPI 3 and the total count of eligible patients
+        """
+        if not hasattr(self, "kpi_3_eligible_pts_base_query_set"):
+            self.calculate_kpi_3_total_t1dm()
+
+        return (
+            self.kpi_3_eligible_pts_base_query_set,
+            self.kpi_3_total_eligible,
         )
 
     def calculate_kpi_4_total_t1dm_gte_12yo(self) -> KPIResult:
@@ -746,8 +820,8 @@ class CalculateKPIS:
         # (additionally specifies visit date). So we need to make a new
         # query set
         eligible_patients = self.patients.filter(
-            # Valid attributes
             (
+                # Valid attributes
                 (Q(nhs_number__isnull=False) | Q(unique_reference_number__isnull=False))
                 & Q(date_of_birth__isnull=False)
                 # * Age < 25y years at the start of the audit period
@@ -927,6 +1001,126 @@ class CalculateKPIS:
             patient_querysets=patient_querysets,
         )
 
+    def calculate_total_service_transitions_to_adults(self) -> KPIResult:
+        """
+        Not a KPI: Number of patients who transitioned to adults within audit period
+
+        Number of eligible patients (measure 1) with
+        * a leaving date in the audit period and reason for leaving as 'Transition to
+        adult
+
+        NOTE: just a count so pass/fail doesn't make sense; these should be
+        discarded as they're set to the same value as eligible/ineligible in
+        the returned KPIResult object.
+        """
+        base_eligible_patients, _ = (
+            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = base_eligible_patients.filter(
+            # a leaving date in the audit period
+            Q(
+                paediatric_diabetes_units__date_leaving_service__range=(
+                    self.AUDIT_DATE_RANGE
+                )
+            )
+        )
+
+        # Count eligible patients
+        total_eligible = eligible_patients.count()
+
+        # Calculate ineligible patients
+        total_ineligible = self.total_patients_count - total_eligible
+
+        # This is just a count so pass/fail doesn't make sense; just set to same
+        # as eligible/ineligible
+        total_passed = None
+        total_failed = None
+
+        # Also set pt querysets to be returned if required
+        patient_querysets = self._get_pt_querysets_object(
+            eligible=eligible_patients,
+            # Just counts so pass/fail doesn't make sense; just set to same
+            passed=eligible_patients,
+            failed=eligible_patients,
+        )
+
+        return KPIResult(
+            total_eligible=total_eligible,
+            total_ineligible=total_ineligible,
+            total_passed=total_passed,
+            total_failed=total_failed,
+            patient_querysets=patient_querysets,
+        )
+
+    def calculate_total_service_transitions_to_adults_stratified_by_quarter(
+        self,
+    ) -> dict[
+        Literal[1, 2, 3, 4],
+        dict[Literal["total_passed", "total_eligible", "pct"], int | float],
+    ]:
+        """This is not a KPI - total patients transitioning specifically to adults by quarter"""
+
+        # Denominator - eligible pts
+        base_eligible_patients, _ = (
+            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+        )
+
+        eligible_patients = base_eligible_patients.filter(
+            # a leaving date in the audit period
+            Q(
+                paediatric_diabetes_units__date_leaving_service__range=(
+                    self.AUDIT_DATE_RANGE
+                ),
+            ),
+            Q(
+                paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[0][
+                    0
+                ]
+            ),
+        )
+
+        # Count eligible patients
+        total_eligible = eligible_patients.count()
+
+        # Get quarter dates
+        quarter_end_dates = [
+            quarter[1]
+            for quarter in get_quarters_for_audit_period(
+                audit_start_date=self.audit_start_date,
+                audit_end_date=self.audit_end_date,
+            )
+        ]
+        # Only up to current quarter
+        current_quarter = retrieve_quarter_for_date(date.today())
+        quarter_end_dates = quarter_end_dates[:current_quarter]
+        result = {}
+
+        for q, q_end_date in enumerate(quarter_end_dates, start=1):
+            # Eligible patients are those who have a transition date within the year
+
+            # Passing patients are the subset of kpi_2 eligible who have a transition date within the quarter
+            passing_patients = eligible_patients.filter(
+                paediatric_diabetes_units__date_leaving_service__range=(
+                    q_end_date - relativedelta(months=3),
+                    q_end_date,
+                )
+            )
+            total_passed = passing_patients.count()
+
+            kpi_result = {
+                "total_passed": total_passed,
+                "total_eligible": total_eligible,
+                "pct": round(
+                    ((total_passed / total_eligible) * 100 if total_eligible else 0),
+                    1,
+                ),
+            }
+
+            result[q] = kpi_result
+
+        return result
+
     def get_number_of_transitioned_to_adult_service_this_month(self) -> int:
         """
         Returns the number of patients who have been transitioned to the adult service this month
@@ -957,7 +1151,7 @@ class CalculateKPIS:
 
         return eligible_patients.count()
 
-    def get_number_of_moved_out_of_area_this_month(self) -> int:
+    def get_number_of_moved_out_of_area_this_audit_year(self) -> int:
         """
         Returns the number of patients who have been moved out of area this month
 
@@ -967,16 +1161,9 @@ class CalculateKPIS:
             self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
         )
 
-        today = date.today()
-        current_month_start = date(today.year, today.month, 1)
-        current_month_end = date(today.year, today.month + 1, 1)
-
         eligible_patients = base_eligible_patients.filter(
             Q(
-                paediatric_diabetes_units__date_leaving_service__range=(
-                    current_month_start,
-                    current_month_end,
-                )
+                paediatric_diabetes_units__date_leaving_service__range=self.AUDIT_DATE_RANGE
             ),
             Q(
                 paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[1][
@@ -1295,7 +1482,7 @@ class CalculateKPIS:
         Calculates KPI 15: Insulin pump (including those using a pump as part of a hybrid closed loop)
 
         Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment
-        regimen (item 20) is 3 = Insulin pump
+        regimen (item 20) is 3 = Insulin pump or 6 = Insulin pump therapy plus other blood glucose lowering medication
 
         Denominator: Total number of eligible patients (measure 1)
         """
@@ -1309,18 +1496,16 @@ class CalculateKPIS:
 
         # Define the subquery to find the latest visit
         latest_visit_subquery = (
-            Visit.objects.filter(
-                patient=OuterRef("pk"),
-            )
+            Visit.objects.filter(patient=OuterRef("pk"), treatment__isnull=False)
             .order_by("-visit_date")
             .values("pk")[:1]
         )
-        # Filter the Patient queryset based on the subquery if treatment_regimen = 3
+        # Filter the Patient queryset based on the subquery and treatments
         passed_patients = eligible_patients.filter(
             Q(
                 id__in=Subquery(
                     Patient.objects.filter(
-                        visit__in=latest_visit_subquery, visit__treatment=3
+                        visit__in=latest_visit_subquery, visit__treatment__in=[3, 6]
                     ).values("id")
                 )
             )
@@ -1754,13 +1939,7 @@ class CalculateKPIS:
 
         # Eligible kpi24 patients are those who are either on an insulin pump or insulin pump therapy
         eligible_kpi_24_latest_visit_subquery = (
-            Visit.objects.filter(patient=OuterRef("pk"))
-            .filter(
-                # Either:
-                # 3 = insulin pump
-                # or 6 = Insulin pump therapy plus other blood glucose lowering medication
-                Q(treatment__in=[3, 6])
-            )
+            Visit.objects.filter(patient=OuterRef("pk"), treatment__isnull=False)
             .order_by("-visit_date")
             .values("pk")[:1]
         )
@@ -1768,7 +1947,8 @@ class CalculateKPIS:
             Q(
                 id__in=Subquery(
                     Patient.objects.filter(
-                        visit__in=eligible_kpi_24_latest_visit_subquery
+                        visit__in=eligible_kpi_24_latest_visit_subquery,
+                        visit__treatment__in=[3, 6],
                     ).values("id")
                 )
             )
@@ -1809,7 +1989,7 @@ class CalculateKPIS:
         )
 
         return KPIResult(
-            total_eligible=total_eligible_kpi_24,
+            total_eligible=total_eligible_kpi_1,
             total_ineligible=total_ineligible,
             total_passed=total_passed,
             total_failed=total_failed,
@@ -3072,28 +3252,24 @@ class CalculateKPIS:
         extra filter for diabetes diagnosis < (AUDIT_END_DATE - 90 DAYS)
         """
         eligible_patients, total_eligible = (
-            self._get_total_pts_new_t1dm_diag_90D_before_audit_end_base_query_set_and_total_count()
+            self._get_total_pts_t1dm_diag_90D_before_audit_end_base_query_set_and_total_count()
         )
         total_ineligible = self.total_patients_count - total_eligible
 
         # Find patients with an entry for Coeliac Disease
         # Screening Date (item 36) 90 days before or after diabetes diagnosis
-        # date
-        eligible_pts_annotated_coeliac_screen_visits = eligible_patients.annotate(
-            coeliac_screen_valid_visits=Count(
-                "visit",
-                # NOTE: relativedelta not supported
-                filter=Q(
-                    visit__coeliac_screen_date__gte=F("diagnosis_date")
-                    - timedelta(days=90),
-                    visit__coeliac_screen_date__lte=F("diagnosis_date")
-                    + timedelta(days=90),
-                ),
-            )
+        # Subquery to check for a valid visit per patient
+        valid_visit_exists = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            coeliac_screen_date__gte=F("patient__diagnosis_date") - timedelta(days=90),
+            coeliac_screen_date__lte=F("patient__diagnosis_date") + timedelta(days=90),
         )
-        total_passed_query_set = eligible_pts_annotated_coeliac_screen_visits.filter(
-            coeliac_screen_valid_visits__gte=1
+
+        eligible_patients = eligible_patients.annotate(
+            has_valid_coeliac_screen=Exists(valid_visit_exists)
         )
+
+        total_passed_query_set = eligible_patients.filter(has_valid_coeliac_screen=True)
 
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
@@ -3121,30 +3297,28 @@ class CalculateKPIS:
         Numerator: Number of eligible patients with an entry for Thyroid Function Observation Date (item 34) within 90 days (<= | >=) of Date of Diabetes Diagnosis (item 7)
 
         Denominator: Number of patients with Type 1 diabetes who were diagnosed at least 90 days before the end of the audit period
-
-        (NOTE: measure 7 AND diabetes diagnosis date < (AUDIT_END_DATE - 90 days))
         """
         eligible_patients, total_eligible = (
-            self._get_total_pts_new_t1dm_diag_90D_before_audit_end_base_query_set_and_total_count()
+            self._get_total_pts_t1dm_diag_90D_before_audit_end_base_query_set_and_total_count()
         )
         total_ineligible = self.total_patients_count - total_eligible
 
         # Find patients with an entry for Thyroid Function Observation Date
-        # (item 36) 90 days before or after diabetes diagnosis date
-        eligible_pts_annotated_thyroid_fn_date_visits = eligible_patients.annotate(
-            thyroid_fn_date_valid_visits=Count(
-                "visit",
-                # NOTE: relativedelta not supported
-                filter=Q(
-                    visit__thyroid_function_date__gte=F("diagnosis_date")
-                    - timedelta(days=90),
-                    visit__thyroid_function_date__lte=F("diagnosis_date")
-                    + timedelta(days=90),
-                ),
-            )
+        # Subquery to check for a valid visit per patient
+        valid_visit_exists = Visit.objects.filter(
+            patient=OuterRef("pk"),
+            thyroid_function_date__gte=F("patient__diagnosis_date")
+            - timedelta(days=90),
+            thyroid_function_date__lte=F("patient__diagnosis_date")
+            + timedelta(days=90),
         )
-        total_passed_query_set = eligible_pts_annotated_thyroid_fn_date_visits.filter(
-            thyroid_fn_date_valid_visits__gte=1
+
+        eligible_patients = eligible_patients.annotate(
+            has_valid_thyroid_fn_date=Exists(valid_visit_exists)
+        )
+
+        total_passed_query_set = eligible_patients.filter(
+            has_valid_thyroid_fn_date=True
         )
 
         total_passed = total_passed_query_set.count()
@@ -3175,15 +3349,13 @@ class CalculateKPIS:
         Date of Diabetes Diagnosis (item 7)
 
         Denominator: Number of patients with Type 1 diabetes who were diagnosed
-        at least 14 days before the end of the audit period (<= | >=)
-
-        (NOTE: Measure 7 AND diabetes diagnosis date < (AUDIT_END_DATE - 14 days))
+        at least 14 days before the end of the audit period
         """
 
         # Eligible patients are measure 7 with
         # diagnosis date < (AUDIT_END_DATE - 14 days)
         base_eligible_patients, _ = (
-            self._get_total_kpi_7_eligible_pts_base_query_set_and_total_count()
+            self._get_kpi_3_eligible_pts_base_query_set_and_total_count()
         )
         eligible_patients = base_eligible_patients.filter(
             diagnosis_date__lt=self.audit_end_date - relativedelta(days=14)
@@ -3193,8 +3365,8 @@ class CalculateKPIS:
 
         # Find visits with an entry for Carbohydrate Counting Education
         # (item 42) within 7 days before or 14 days after the
-        # Date of Diabetes Diagnosis (item 7)
-        valid_visit_subquery = Visit.objects.filter(
+        # Subquery to check for a valid visit per patient
+        valid_visit_exists = Visit.objects.filter(
             patient=OuterRef("pk"),
             carbohydrate_counting_level_three_education_date__gte=F(
                 "patient__diagnosis_date"
@@ -3206,15 +3378,13 @@ class CalculateKPIS:
             + timedelta(days=14),
         )
 
-        # Annotate eligible patients with a boolean indicating the existence
-        # of a valid Visit. NOTE: doing this because Count has weird behavior
-        # if the first Visit has no valid carb date even if second does
-        eligible_pts_annotated = eligible_patients.annotate(
-            has_valid_visit=Exists(valid_visit_subquery)
+        eligible_patients = eligible_patients.annotate(
+            has_valid_carbohydrate_counting_education_date=Exists(valid_visit_exists)
         )
 
-        # Filter patients who have at least one valid Visit
-        total_passed_query_set = eligible_pts_annotated.filter(has_valid_visit=True)
+        total_passed_query_set = eligible_patients.filter(
+            has_valid_carbohydrate_counting_education_date=True
+        )
 
         total_passed = total_passed_query_set.count()
         total_failed = total_eligible - total_passed
@@ -3450,7 +3620,6 @@ class CalculateKPIS:
                 eligible_patients_other,
             ),
         ):
-
             # Retrieve all visits with valid HbA1c values
             valid_visits = (
                 self._get_valid_visits_for_kpi_44_and_45(
@@ -3612,7 +3781,7 @@ class CalculateKPIS:
 
         # Also set pt querysets to be returned if required
         patient_querysets = self._get_pt_querysets_object(
-            eligible=eligible_patients,
+            eligible=eligible_pts_annotated,
             passed=total_passed_query_set,
         )
 
@@ -3623,6 +3792,91 @@ class CalculateKPIS:
             total_failed=total_failed,
             patient_querysets=patient_querysets,
         )
+
+    def calculate_kpi_46_number_of_admissions_stratified_by_quarter(
+        self,
+    ) -> dict[
+        Literal[1, 2, 3, 4],
+        dict[Literal["total_passed", "total_eligible", "pct"], int | float],
+    ]:
+        """KPI46's calculate_() method doesn't do this per quarter, so separate method"""
+
+        # Denominator - eligible pts
+        eligible_patients, total_eligible = (
+            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+        )
+
+        # Find patients with at least one valid admission
+        # Get the visits that match the valid admission criteria
+        valid_visit_subquery = Visit.objects.filter(
+            # admission start date OR discharge date within audit period
+            Q(
+                Q(hospital_admission_date__range=self.AUDIT_DATE_RANGE)
+                | Q(hospital_discharge_date__range=self.AUDIT_DATE_RANGE)
+            ),
+            # valid reason for admission
+            hospital_admission_reason__in=[
+                choice[0] for choice in HOSPITAL_ADMISSION_REASONS
+            ],
+            patient=OuterRef("pk"),
+            visit_date__range=self.AUDIT_DATE_RANGE,
+        )
+
+        # Annotate eligible patients with a boolean indicating the existence
+        # of a valid Visit. NOTE: doing this because Count has weird behavior
+        # if the first Visit has no valid value even if second does
+        eligible_pts_annotated = eligible_patients.annotate(
+            has_valid_visit=Exists(valid_visit_subquery)
+        )
+
+        # Filter patients who have at least one valid Visit
+        total_passed_query_set = eligible_pts_annotated.filter(has_valid_visit=True)
+        self.kpi_46_total_admissions_queryset = total_passed_query_set
+
+        # Count eligible patients
+        total_eligible_kpi_46 = eligible_pts_annotated.count()
+
+        # Get quarter dates
+        quarter_end_dates = [
+            quarter[1]
+            for quarter in get_quarters_for_audit_period(
+                audit_start_date=self.audit_start_date,
+                audit_end_date=self.audit_end_date,
+            )
+        ]
+        # Only up to current quarter
+        current_quarter = retrieve_quarter_for_date(date.today())
+        quarter_end_dates = quarter_end_dates[:current_quarter]
+        result = {}
+
+        for q, q_end_date in enumerate(quarter_end_dates, start=1):
+            # Eligible patients are those who have a hospital admission within the year
+
+            # Passing patients are the subset of kpi_46 eligible who have a hospital admission within the quarter
+            passing_patients = eligible_pts_annotated.filter(
+                visit__hospital_admission_date__range=(
+                    q_end_date - relativedelta(months=3),
+                    q_end_date,
+                )
+            )
+            total_passed = passing_patients.count()
+
+            kpi_result = {
+                "total_passed": total_passed,
+                "total_eligible": total_eligible_kpi_46,
+                "pct": round(
+                    (
+                        (total_passed / total_eligible_kpi_46) * 100
+                        if total_eligible_kpi_46
+                        else 0
+                    ),
+                    1,
+                ),
+            }
+
+            result[q] = kpi_result
+
+        return result
 
     def get_number_of_admissions_this_month(self) -> int:
         """Returns the number of admissions for the current month
@@ -3889,7 +4143,7 @@ class CalculateKPIS:
         logger.debug(f"===QuerySet:{str(patient_queryset)}===")
         logger.debug(f"==={self.AUDIT_DATE_RANGE=}===\n")
         for item in patient_queryset.values("postcode", *attrs):
-            logger.debug(f'Patient Name: {item["postcode"]}')
+            logger.debug(f"Patient Name: {item['postcode']}")
             del item["postcode"]
             logger.debug(pformat(item) + "\n")
 
@@ -4005,19 +4259,16 @@ class CalculateKPIS:
             self.kpi_7_total_eligible,
         )
 
-    def _get_total_pts_new_t1dm_diag_90D_before_audit_end_base_query_set_and_total_count(
+    def _get_total_pts_t1dm_diag_90D_before_audit_end_base_query_set_and_total_count(
         self,
     ) -> Tuple[QuerySet, int]:
         """Enables reuse of the base query set for denominator in KPIS 41-43
-        (patients with new T1DM, diagnosed at least 90 days before audit end
+        (patients with T1DM, diagnosed at least 90 days before audit end
         date).
 
         Returns:
             QuerySet: Base query set of eligible patients for KPIs 41-43
             int: base query set count of total eligible patients for KPI 41-43
-
-        NOTE: this is essentially KPI 7 plus an extra filter for diagnosis_date
-        < 90 days before audit end date
         """
 
         # This might be run already so check if attribute exists
@@ -4029,7 +4280,7 @@ class CalculateKPIS:
 
         # First get new T1DM diagnoses pts
         base_query_set, _ = (
-            self._get_total_kpi_7_eligible_pts_base_query_set_and_total_count()
+            self._get_kpi_3_eligible_pts_base_query_set_and_total_count()
         )
 
         # Filter for those diagnoses at least 90 days before audit end date
@@ -4068,7 +4319,6 @@ class CalculateKPIS:
 
         length = len(values)
         if length % 2 == 0:
-
             # even number, take mean
             middle_1 = cleaned_values[(length // 2) - 1]
             middle_2 = cleaned_values[length // 2]

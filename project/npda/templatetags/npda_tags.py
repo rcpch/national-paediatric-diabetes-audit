@@ -90,11 +90,6 @@ def join_with_comma(value):
     return value
 
 
-@register.simple_tag
-def site_contact_email():
-    return settings.SITE_CONTACT_EMAIL
-
-
 @register.filter
 def is_select(widget):
     return isinstance(widget, (forms.Select, forms.SelectMultiple))
@@ -103,6 +98,11 @@ def is_select(widget):
 @register.filter
 def is_dateinput(widget):
     return isinstance(widget, (forms.DateInput))
+
+
+@register.filter
+def is_textarea(widget):
+    return isinstance(widget, (forms.Textarea))
 
 
 @register.filter
@@ -199,7 +199,7 @@ def get_item(dictionary: dict, key: str):
     try:
         return dictionary.get(key, "")
     except Exception:
-        logger.error(f"Error getting value from dictionary: {dictionary=} {key=}")
+        # logger.error(f"Error getting value from dictionary: {dictionary=} {key=}") # this is quite noisy in the logs and not unexpected so commenting out
         return ""
 
 
@@ -413,3 +413,74 @@ def none_to_dash(value):
     if value is None or value == "" or value == "0" or value == 0:
         return "-"
     return value
+
+
+@register.filter
+def screen_ineligible(value):
+    if value is None or value == "" or value == "0" or value == 0:
+        return 0
+    return value
+
+
+@register.filter
+def employer_match(user_to_match, user):
+    """
+    Checks if the user_to_match has an employer in common with the user (the logged in user)
+    RCPCH staff and audit team members can view all users
+    """
+    if user.is_superuser or user.is_rcpch_staff or user.is_rcpch_audit_team_member:
+        return True
+    for employer in user_to_match.organisation_employers.all():
+        if employer in user.organisation_employers.all():
+            return True
+    return False
+
+
+@register.filter
+def exclude_admin_user_field(field, user):
+    """
+    Excludes the is_admin_user field from the npda user form unless the user is an RCPCH staff member/superuser
+    """
+    if user.is_superuser:
+        return True
+    elif user.is_rcpch_staff or user.is_rcpch_audit_team_member:
+        if field.id_for_label in [
+            "id_is_staff",
+            "id_is_rcpch_staff",
+            "id_is_rcpch_audit_team_member",
+        ]:
+            return True
+        return False
+    if field.id_for_label in [
+        "id_is_staff",
+        "id_is_superuser",
+        "id_is_rcpch_staff",
+        "id_is_rcpch_audit_team_member",
+    ]:
+        return False
+    return True
+
+
+@register.filter
+def include_admin_users(user):
+    """
+    Returns true if the user is an RCPCH staff member or superuser
+    """
+    if user.is_superuser or user.is_rcpch_staff or user.is_rcpch_audit_team_member:
+        return True
+    return False
+
+
+@register.filter
+def disable_fields(field, form):
+    """
+    Tag for dependent fields
+    """
+    if (
+        form.instance.treatment not in [None, 3, 6]
+        and field.id_for_label == "id_closed_loop_system"
+    ):
+        # closed loop system not disabled if pump selected
+        return True
+
+    return False

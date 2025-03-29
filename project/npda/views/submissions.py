@@ -16,12 +16,13 @@ from project.npda.views.decorators import login_and_otp_required
 
 # RCPCH imports
 from .mixins import CheckCurrentAuditYearMixin, LoginAndOTPRequiredMixin
-from ..models import Submission
+from ..models import Submission, OrganisationEmployer, PaediatricDiabetesUnit
 from ..general_functions.csv import (
     download_csv,
     download_xlsx,
     csv_parse,
 )
+from ..general_functions.session import refresh_session_filters
 
 
 class SubmissionsListView(
@@ -92,6 +93,7 @@ class SubmissionsListView(
             submission_active=True,
             audit_year=self.request.session.get("selected_audit_year"),
             paediatric_diabetes_unit__pz_code=self.request.session.get("pz_code"),
+            paediatric_diabetes_unit__active=True,
         ).first()  # there can be only one of these
         if requested_active_submission:
             if requested_active_submission.errors:
@@ -192,4 +194,33 @@ class SubmissionsListView(
 
 @login_and_otp_required()
 def upload_csv(request):
-    return render(request, "upload_csv/file_upload.html")
+    context = {"employers": OrganisationEmployer.objects.filter(npda_user=request.user)}
+    return render(request, "upload_csv/file_upload.html", context=context)
+
+
+@login_and_otp_required()
+def switch_paediatric_diabetes_unit(request):
+    """
+    Switch the Paediatric Diabetes Unit in the session.
+    This is an HTMX view.
+    """
+    template = "partials/submission_employer_selector.html"
+    error_message = None
+
+    selected_pz_code = request.POST.get("employers")
+    if selected_pz_code == request.session.get("pz_code"):
+        return HttpResponse(status=200)
+
+    try:
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=selected_pz_code)
+    except PaediatricDiabetesUnit.DoesNotExist as error:
+        error_message = f"Error: {error}. Please contact the NPDA team."
+
+    context = {
+        "employers": OrganisationEmployer.objects.filter(npda_user=request.user),
+        "error_message": error_message,
+    }
+    # update the session with the new PDU
+    refresh_session_filters(request, selected_pz_code)
+
+    return render(request, template, context=context)

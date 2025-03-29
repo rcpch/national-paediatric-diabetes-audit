@@ -90,6 +90,7 @@ async def home(request):
             errors_by_row_index = await csv_upload(
                 user=request.user,
                 dataframe=parsed_csv.df,
+                errors_to_return=parsed_csv.errors_to_return,
                 csv_file_name=user_csv_filename,
                 csv_file_bytes=user_csv_bytes,
                 pdu_pz_code=pz_code,
@@ -176,6 +177,7 @@ def audit_year(request):
     """
     if request.method == "POST":
         audit_year = request.POST.get("audit_year_select_name", None)
+        audit_year = int(audit_year) if audit_year else None
 
         refresh_session_filters(request, audit_year=audit_year)
 

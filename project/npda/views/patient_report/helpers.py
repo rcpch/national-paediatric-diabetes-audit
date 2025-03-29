@@ -1,16 +1,31 @@
 import logging
-from collections import Counter, defaultdict
+from collections import defaultdict
 from decimal import Decimal
 from typing import Literal
 
 from dateutil.relativedelta import relativedelta
-from django.db.models import QuerySet
 
-from project.constants.ethnicities import ETHNICITIES
-from project.constants.sex_types import SEX_TYPE
-from project.constants.types.kpi_types import KPIRegistry
+# Django imports
+from django.db.models import (
+    Case,
+    Count,
+    Exists,
+    F,
+    IntegerField,
+    OuterRef,
+    Q,
+    QuerySet,
+    Subquery,
+    Sum,
+    When,
+    DecimalField,
+    ExpressionWrapper,
+    DateField,
+)
+from datetime import date, timedelta
+from project.npda.models.db_functions import Round
+from project.constants.hba1c_format import HBA1C_FORMATS
 from project.npda.kpi_class.kpis import CalculateKPIS
-from project.npda.models.patient import Patient
 from project.npda.views.patient_report import template_data
 
 # LOGGING
@@ -64,37 +79,49 @@ def get_pt_level_table_data(
     """
 
     get_attribute_name = calculate_kpis_object.kpi_name_registry.get_attribute_name
-    kpi_attr_names = [get_attribute_name(i) for i in template_data.KPI_CATEGORY_ATTR_MAP[category]]
+    kpi_attr_names = [
+        get_attribute_name(i) for i in template_data.KPI_CATEGORY_ATTR_MAP[category]
+    ]
 
     if category == "health_checks":
-
         data = {}
-        # First initialise the dict with all pts -> for health checks, this is KPI5 which can be found
-        # via kpi_25's eligible pts
-        for pt in kpi_calculations_object["calculated_kpi_values"]["kpi_25_hba1c"][
-            "patient_querysets"
-        ]["eligible"]:
+        all_t1dm_pts = (
+            calculate_kpis_object.calculate_kpi_3_total_t1dm().patient_querysets[
+                "eligible"
+            ]
+        )
+        all_t1dm_pts_with_complete_year_of_care = calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets[
+            "eligible"
+        ]
+        # First initialise the dict with all T1DM (kpi3)
+        for pt in all_t1dm_pts:
             # Set all to None initially as updating as [True | False] if pt in [passed | failed]
             # querysets for each kpi -> if not in either, must mean they are ineligible (therefore None)
             data[pt.pk] = {kpi_attr_name: None for kpi_attr_name in kpi_attr_names}
             # Additional values we can calculate now
-            data[pt.pk]["nhs_number"] = pt.nhs_number or pt.unique_reference_number or "Unknown"
+            data[pt.pk]["nhs_number"] = (
+                pt.nhs_number or pt.unique_reference_number or "Unknown"
+            )
             pt_is_gte_12yo = (
-                pt.date_of_birth <= calculate_kpis_object.audit_start_date - relativedelta(years=12)
+                pt.date_of_birth
+                <= calculate_kpis_object.audit_start_date - relativedelta(years=12)
             )
             data[pt.pk]["is_gte_12yo"] = pt_is_gte_12yo
             # total = (passed / total)
             data[pt.pk]["total"] = [0, 6 if pt_is_gte_12yo else 3]
 
+            # mark if complete year of care
+            data[pt.pk]["is_complete_year_of_care"] = (
+                pt in all_t1dm_pts_with_complete_year_of_care
+            )
+
         # For each kpi, update the data dict with the pts that have passed and failed
         for kpi_attr_name in kpi_attr_names:
-
-            kpi_pt_querysets = kpi_calculations_object["calculated_kpi_values"][kpi_attr_name][
-                "patient_querysets"
-            ]
+            kpi_pt_querysets = kpi_calculations_object["calculated_kpi_values"][
+                kpi_attr_name
+            ]["patient_querysets"]
 
             for pt in kpi_pt_querysets["passed"]:
-
                 # Mark as completed
                 data[pt.pk][kpi_attr_name] = True
 
@@ -106,16 +133,8 @@ def get_pt_level_table_data(
                 data[pt.pk]["total"][0] += 1
 
             for pt in kpi_pt_querysets["failed"]:
-
                 # Mark as failed
                 data[pt.pk][kpi_attr_name] = False
-
-                # Skip retinal screening as it's not included in the totals
-                if kpi_attr_name == "kpi_30_retinal_screening":
-                    continue
-
-                # Increment the failed count otherwise
-                data[pt.pk]["total"][1] += 1
 
         # Finally add the headers. Need to add nhs_number, is_gte_12yo, and total to the headers
 
@@ -132,32 +151,38 @@ def get_pt_level_table_data(
         return headers, data
 
     elif category == "additional_care_processes":
-
         data = {}
-        # Initialise with all eligible pts' pks as the key. Use kpi40 eligible
-        # as this is KPI1 (all eligible pts)
-        kpi_40_attr_name = calculate_kpis_object.kpi_name_registry.get_attribute_name(40)
-        for pt in kpi_calculations_object["calculated_kpi_values"][kpi_40_attr_name][
-            "patient_querysets"
-        ]["eligible"]:
+
+        # all t1dm pts
+        all_t1dm_pts = (
+            calculate_kpis_object.calculate_kpi_3_total_t1dm().patient_querysets[
+                "eligible"
+            ]
+        )
+        all_t1dm_pts_with_complete_year_of_care = calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets[
+            "eligible"
+        ]
+        for pt in all_t1dm_pts:
             # Set all to None initially as updating as [True | False] if pt in [passed | failed]
             # querysets for each kpi -> if not in either, must mean they are ineligible (therefore None)
             data[pt.pk] = {kpi_attr_name: None for kpi_attr_name in kpi_attr_names}
             # Additional values we can calculate now
-            data[pt.pk]["nhs_number"] = pt.nhs_number or pt.unique_reference_number or "Unknown"
+            data[pt.pk]["nhs_number"] = (
+                pt.nhs_number or pt.unique_reference_number or "Unknown"
+            )
+            # complete year of care
+            data[pt.pk]["is_complete_year_of_care"] = (
+                pt in all_t1dm_pts_with_complete_year_of_care
+            )
 
-        # For each kpi, update the data dict with the pts that have passed and failed
         for kpi_attr_name in kpi_attr_names:
+            # For each kpi, update the data dict with the pts that have passed and failed
+            kpi_pt_querysets_passed = kpi_calculations_object["calculated_kpi_values"][
+                kpi_attr_name
+            ]["patient_querysets"]
 
-            kpi_pt_querysets = kpi_calculations_object["calculated_kpi_values"][kpi_attr_name][
-                "patient_querysets"
-            ]
-
-            for pt in kpi_pt_querysets["passed"]:
-                data[pt.pk][kpi_attr_name] = True
-
-            for pt in kpi_pt_querysets["failed"]:
-                data[pt.pk][kpi_attr_name] = False
+            for pt in all_t1dm_pts:
+                data[pt.pk][kpi_attr_name] = pt in kpi_pt_querysets_passed["passed"]
 
         # Finally add the headers. Need to add nhs_number
 
@@ -167,28 +192,58 @@ def get_pt_level_table_data(
     elif category == "care_at_diagnosis":
         data = {}
 
+        # all t1dm pts
+        today = date.today()
+        all_t1dm_pts = (
+            calculate_kpis_object.calculate_kpi_3_total_t1dm()
+            .patient_querysets["eligible"]
+            .filter(
+                # Additional filter for only those diagnosed within 90 days of today
+                Q(diagnosis_date__gte=today - timedelta(days=90))
+            )
+        )
+
+        all_t1dm_pts_with_complete_year_of_care = calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets[
+            "eligible"
+        ].filter(
+                # Additional filter for only those diagnosed within 90 days of today
+                Q(diagnosis_date__gte=today - timedelta(days=90))
+            )
+        for pt in all_t1dm_pts:
+            # Set all to None initially as updating as [True | False] if pt in [passed | failed]
+            # querysets for each kpi -> if not in either, must mean they are ineligible (therefore None)
+            data[pt.pk] = {kpi_attr_name: None for kpi_attr_name in kpi_attr_names}
+            # Additional values we can calculate now
+            data[pt.pk]["nhs_number"] = (
+                pt.nhs_number or pt.unique_reference_number or "Unknown"
+            )
+            # complete year of care
+            data[pt.pk]["is_complete_year_of_care"] = (
+                pt in all_t1dm_pts_with_complete_year_of_care
+            )
+
         for kpi_attr_name in kpi_attr_names:
+            kpi_pt_querysets = kpi_calculations_object["calculated_kpi_values"][
+                kpi_attr_name
+            ]["patient_querysets"]
 
-            kpi_pt_querysets = kpi_calculations_object["calculated_kpi_values"][kpi_attr_name][
-                "patient_querysets"
-            ]
+            for pt in kpi_pt_querysets["passed"].filter(
+                # Additional filter for only those diagnosed within 90 days of today
+                Q(diagnosis_date__gte=today - timedelta(days=90))
+            ):
+                data[pt.pk][kpi_attr_name] = True
+                data[pt.pk]["nhs_number"] = (
+                    pt.nhs_number or pt.unique_reference_number or "Unknown"
+                )
 
-            # For each kpi_attribute's eligible pts, add to data dict
-            for pt in kpi_pt_querysets["eligible"]:
-                # If pt not already in, initialise with None for all kpi_attr_names
-                if data.get(pt.pk) is None:
-                    data[pt.pk] = {kpi_attr_name: None for kpi_attr_name in kpi_attr_names}
-                    data[pt.pk]["nhs_number"] = (
-                        pt.nhs_number or pt.unique_reference_number or "Unknown"
-                    )
-
-            for pt in kpi_pt_querysets["passed"]:
-                data[pt.pk] = {kpi_attr_name: True}
-                data[pt.pk]["nhs_number"] = pt.nhs_number or pt.unique_reference_number or "Unknown"
-
-            for pt in kpi_pt_querysets["failed"]:
-                data[pt.pk] = {kpi_attr_name: False}
-                data[pt.pk]["nhs_number"] = pt.nhs_number or pt.unique_reference_number or "Unknown"
+            for pt in kpi_pt_querysets["failed"].filter(
+                # Additional filter for only those diagnosed within 90 days of today
+                Q(diagnosis_date__gte=today - timedelta(days=90))
+            ):
+                data[pt.pk][kpi_attr_name] = False
+                data[pt.pk]["nhs_number"] = (
+                    pt.nhs_number or pt.unique_reference_number or "Unknown"
+                )
 
         # Finally add the headers. Need to add nhs_number
         headers = ["nhs_number"] + kpi_attr_names
@@ -196,70 +251,93 @@ def get_pt_level_table_data(
         return headers, data
 
     elif category == "outcomes":
-
         # Need to do some manual work as calculate_kpi methods perform aggregations of individual
         # pt values.
 
-        # access helper methods
-        get_median_hba1c_values_by_patient = (
-            calculate_kpis_object.get_median_hba1c_values_by_patient
+        # Get the base eligible pts (all T1DM)
+        all_t1dm_pts = (
+            calculate_kpis_object.calculate_kpi_3_total_t1dm().patient_querysets[
+                "eligible"
+            ]
         )
-        calculate_mean = calculate_kpis_object.calculate_mean
-
-        # kpi 44 mean hba1c
-        # Get the eligible pts
-        kpi_pt_querysets = kpi_calculations_object["calculated_kpi_values"][get_attribute_name(44)][
-            "patient_querysets"
+        all_t1dm_pts_with_complete_year_of_care = calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets[
+            "eligible"
         ]
+        pks_of_t1dm_pts_with_complete_year_of_care = set(
+            all_t1dm_pts_with_complete_year_of_care.values_list("pk", flat=True)
+        )
+
+        data = defaultdict(dict)
+        for pt in all_t1dm_pts:
+            data[pt.pk]["nhs_number"] = (
+                pt.nhs_number or pt.unique_reference_number or "Unknown"
+            )
 
         # Start with the median hba1c values
-        data = get_median_hba1c_values_by_patient(kpi_pt_querysets["eligible"])
+        valid_visits_with_hba1c_values = (
+            calculate_kpis_object._get_valid_visits_for_kpi_44_and_45(all_t1dm_pts)
+            .annotate(
+                # convert HbA1c % to mmol/mol when necessary
+                hba1c_mmol_mol=Case(
+                    When(
+                        Q(hba1c_format=HBA1C_FORMATS[0][0]),
+                        then=F("hba1c"),
+                    ),
+                    When(
+                        Q(hba1c_format=HBA1C_FORMATS[1][0]),
+                        then=(F("hba1c") - Round(Decimal("2.152")))
+                        / Decimal("0.09148"),
+                    ),
+                    default=None,
+                    output_field=DecimalField(
+                        max_digits=5,
+                        decimal_places=2,
+                    ),
+                )
+            )
+            .values(
+                "hba1c_mmol_mol",
+                "patient__pk",
+                "patient__nhs_number",
+                "patient__unique_reference_number",
+            )
+            .filter(hba1c_mmol_mol__isnull=False)
+        )
 
-        # data looks like a dict with pt.pk as key and data as value
-        # {
-        #     164: {
-        #         "hb1ac_values": [
-        #             Decimal("85.00"),
-        #             ...
-        #             Decimal("74.00"),
-        #         ],
-        #         "median": 77.0, <------------------- median value
-        #         "nhs_number": "4739254131",
-        #     },
-        #     165: {
-        #         "hb1ac_values": [
-        #             Decimal("78.00"),
-        #             ...
-        #             Decimal("59.00"),
-        #         ],
-        #         "median": 77.0,
-        #         "nhs_number": "4373272123",
-        #     },
-        # }
+        # Group HbA1c values by patient ID into a list so can use
+        # calculate_median method
+        # We're doing this in Python instead of Django ORM because median
+        # aggregation gets complicated
+        hba1c_values_by_patient = defaultdict(list)
+        for visit in valid_visits_with_hba1c_values:
+            hba1c_values_by_patient[visit["patient__pk"]].append(
+                visit["hba1c_mmol_mol"]
+            )
 
-        # Have enough to start constructing the data dict for the table
+        for pt_pk in hba1c_values_by_patient:
+            hba1c_values = hba1c_values_by_patient[pt_pk]
+            # Calculate this patient's mean & median hba1c value in mmol/mol
+            mean_hba1c_mmol_mol = calculate_kpis_object.calculate_mean(hba1c_values)
+            median_hba1c_mmol_mol = calculate_kpis_object.calculate_median(hba1c_values)
 
-        kpi_48_passed_pt_pks_queryset: QuerySet = kpi_calculations_object["calculated_kpi_values"][
-            get_attribute_name(48)
-        ]["patient_querysets"]["passed"].values_list("pk", flat=True)
-        kpi_49_passed_pt_pks_queryset: QuerySet = kpi_calculations_object["calculated_kpi_values"][
-            get_attribute_name(49)
-        ]["patient_querysets"]["passed"].values_list("pk", flat=True)
+            data[pt_pk]["kpi_44_mean_hba1c"] = round(mean_hba1c_mmol_mol)
+            data[pt_pk]["kpi_45_median_hba1c"] = round(median_hba1c_mmol_mol)
 
-        for pt_pk in data:
-
-            pt_data: dict = data[pt_pk]
-
-            # Whilst iterating, need to also add 'mean' hba1c values per patient's values object
-            hba1cs: list[Decimal] = pt_data.pop("hb1ac_values")
-            data[pt_pk]["kpi_44_mean_hba1c"] = round(calculate_mean(hba1cs), 1)
-            # Rename
-            data[pt_pk]["kpi_45_median_hba1c"] = round(pt_data.pop("median"), 1)
+            # convert to %
+            data[pt_pk]["mean_hba1c_pct"] = round(
+                (0.09148 * mean_hba1c_mmol_mol) + 2.152
+                if mean_hba1c_mmol_mol > 0 and mean_hba1c_mmol_mol is not None
+                else None,
+                1,
+            )
+            data[pt_pk]["median_hba1c_pct"] = round(
+                (0.09148 * median_hba1c_mmol_mol) + 2.152
+                if median_hba1c_mmol_mol > 0 and median_hba1c_mmol_mol is not None
+                else None,
+                1,
+            )
 
             # Remaining kpis 46-49
-            # NOTE: because each key is already all eligible pts, we just need to find
-            # relevant values for each key
-
             # Kpi 46
             data[pt_pk][get_attribute_name(46)] = (
                 calculate_kpis_object.get_number_of_admissions_for_patient(
@@ -274,18 +352,16 @@ def get_pt_level_table_data(
                 )
             )
 
-            # kpi 48
-            data[pt_pk][get_attribute_name(48)] = kpi_48_passed_pt_pks_queryset.filter(
-                pk=pt_pk
-            ).exists()
-
-            # kpi 49
-            data[pt_pk][get_attribute_name(49)] = kpi_49_passed_pt_pks_queryset.filter(
-                pk=pt_pk
-            ).exists()
+            # complete year of care
+            data[pt_pk]["is_complete_year_of_care"] = (
+                pt_pk in pks_of_t1dm_pts_with_complete_year_of_care
+            )
 
         # Finally add the headers. Need to add nhs_number
         headers = ["nhs_number"] + kpi_attr_names
+
+        # Convert defaultdict to dict
+        data = dict(data)
 
         return headers, data
 
@@ -310,17 +386,23 @@ def get_pt_level_table_data(
             get_attribute_name(22): "Continuous glucose monitor with alarms",
         }
 
-        # Grab eligible patients (KPI 1, same for all)
-        eligible_pts = kpi_calculations_object["calculated_kpi_values"][get_attribute_name(13)][
-            "patient_querysets"
-        ]["eligible"]
+        # all t1dm pts
+        all_t1dm_pts = (
+            calculate_kpis_object.calculate_kpi_3_total_t1dm().patient_querysets[
+                "eligible"
+            ]
+        )
+        all_t1dm_pts_with_complete_year_of_care = calculate_kpis_object.calculate_kpi_5_total_t1dm_complete_year().patient_querysets[
+            "eligible"
+        ]
 
         # Start constructing the data dict
 
-        for pt in eligible_pts:
-
+        for pt in all_t1dm_pts:
             # Add nhs number
-            data[pt.pk]["nhs_number"] = pt.nhs_number or pt.unique_reference_number or "Unknown"
+            data[pt.pk]["nhs_number"] = (
+                pt.nhs_number or pt.unique_reference_number or "Unknown"
+            )
 
             # Tx regimen col -> find the first True value in the tx_vals_attr_map
             data[pt.pk]["tx_regimen"] = None
@@ -339,9 +421,9 @@ def get_pt_level_table_data(
             data[pt.pk]["cgm"] = None
             for glucose_monitoring_kpi_attr in cgm_attr_vals_map:
                 if (
-                    kpi_calculations_object["calculated_kpi_values"][glucose_monitoring_kpi_attr][
-                        "patient_querysets"
-                    ]["passed"]
+                    kpi_calculations_object["calculated_kpi_values"][
+                        glucose_monitoring_kpi_attr
+                    ]["patient_querysets"]["passed"]
                     .filter(pk=pt.pk)
                     .exists()
                 ):
@@ -350,11 +432,20 @@ def get_pt_level_table_data(
 
             # HCL col -> true or false
             data[pt.pk][get_attribute_name(24)] = (
-                kpi_calculations_object["calculated_kpi_values"][get_attribute_name(24)][
-                    "patient_querysets"
-                ]["passed"]
-                .filter(pk=pt.pk)
-                .exists()
+                "Yes"
+                if (
+                    kpi_calculations_object["calculated_kpi_values"][
+                        get_attribute_name(24)
+                    ]["patient_querysets"]["passed"]
+                    .filter(pk=pt.pk)
+                    .exists()
+                )
+                else "No"
+            )
+
+            # complete year of care
+            data[pt.pk]["is_complete_year_of_care"] = (
+                pt in all_t1dm_pts_with_complete_year_of_care
             )
 
         # Finally add the headers. Need to add nhs_number
