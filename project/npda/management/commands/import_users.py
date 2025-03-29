@@ -9,6 +9,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 # NPDA imports
+from project.constants.user import TITLES
 from project.npda.general_functions import group_for_role
 
 PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
@@ -16,6 +17,13 @@ OrganisationEmployer = apps.get_model("npda", "OrganisationEmployer")
 NPDAUser = apps.get_model("npda", "NPDAUser")
 
 logger = logging.getLogger(__name__)
+
+
+def title_to_choice(title_to_find):
+    for (choice, title) in TITLES:
+        if title_to_find.lower() == title.lower():
+            return choice
+    return None
 
 
 class Command(BaseCommand):
@@ -46,9 +54,9 @@ class Command(BaseCommand):
             for row in reader:
                 first_name = row["first_name"]
                 surname = row["surname"]
-                title = row["title"]
+                title = title_to_choice(row["title"]) if row["title"] else None
                 email = row["email"].lower()
-                role = row["role"]
+                role = int(row["role"])
                 pz_code = row["pz_code"]
 
                 # find the PZ code
@@ -61,6 +69,7 @@ class Command(BaseCommand):
 
                 # find the group
                 group = group_for_role(role)
+
                 if not group:
                     raise CommandError(f"Group for role {role} does not exist.")
 
