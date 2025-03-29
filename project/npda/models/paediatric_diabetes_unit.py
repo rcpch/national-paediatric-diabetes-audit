@@ -49,6 +49,15 @@ class PaediatricDiabetesUnit(models.Model):
         blank=True,
         null=True,
     )
+    active = models.BooleanField(
+        default=True,
+        help_text="Is the PDU active?",
+    )
+    last_updated = models.DateTimeField(
+        help_text="Last updated date",
+        blank=True,
+        null=True,
+    )
 
     class Meta:
         verbose_name = "Paediatric Diabetes Unit"

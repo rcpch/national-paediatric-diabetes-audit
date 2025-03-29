@@ -31,11 +31,12 @@ class PatientAdmin(admin.ModelAdmin):
 
 @admin.register(PaediatricDiabetesUnit)
 class PaediatricDiabetesUnitAdmin(admin.ModelAdmin):
-    search_fields = ("pk", "pz_code")
+    search_fields = ("pk", "pz_code", "lead_organisation_ods_code", "lead_organisation_name")
     list_display = (
         "pz_code",
         "lead_organisation_ods_code",
         "lead_organisation_name",
+        "active",
     )
     ordering = ("lead_organisation_name",)
 

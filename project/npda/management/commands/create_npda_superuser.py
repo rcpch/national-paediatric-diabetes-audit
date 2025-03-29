@@ -1,5 +1,6 @@
 import os
 
+from django.apps import apps
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 
@@ -34,6 +35,7 @@ class Command(BaseCommand):
                 email=LOCAL_DEV_ADMIN_EMAIL,
                 password=LOCAL_DEV_ADMIN_PASSWORD
             )
+            
             self.stdout.write(self.style.SUCCESS("Successfully created the superuser."))
         else:
             self.stdout.write(self.style.WARNING("Superuser already exists."))

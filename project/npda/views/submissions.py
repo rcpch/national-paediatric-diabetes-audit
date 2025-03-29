@@ -93,6 +93,7 @@ class SubmissionsListView(
             submission_active=True,
             audit_year=self.request.session.get("selected_audit_year"),
             paediatric_diabetes_unit__pz_code=self.request.session.get("pz_code"),
+            paediatric_diabetes_unit__active=True,
         ).first()  # there can be only one of these
         if requested_active_submission:
             if requested_active_submission.errors:
