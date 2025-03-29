@@ -149,6 +149,7 @@ class PatientListView(
             # PDU view
             filtered_patients &= Q(
                 submissions__paediatric_diabetes_unit__pz_code=pz_code,
+                submissions__paediatric_diabetes_unit__active=True
             )
 
         patient_queryset = patient_queryset.filter(filtered_patients)
@@ -214,6 +215,7 @@ class PatientListView(
             submission = (
                 Submission.objects.filter(
                     paediatric_diabetes_unit__pz_code=pz_code,
+                    paediatric_diabetes_unit__active=True,
                     audit_year=selected_audit_year,
                 )
                 .order_by("-submission_date")

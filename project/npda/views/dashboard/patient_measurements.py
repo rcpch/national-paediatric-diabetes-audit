@@ -59,11 +59,13 @@ def patient_measurements(request):
     if Submission.objects.filter(
         audit_year=selected_audit_year,
         paediatric_diabetes_unit__pz_code=pz_code,
+        paediatric_diabetes_unit__active=True,
         submission_active=True,
     ).exists():
         current_submission = Submission.objects.get(
             audit_year=selected_audit_year,
             paediatric_diabetes_unit__pz_code=pz_code,
+            paediatric_diabetes_unit__active=True,
             submission_active=True,
         )
         visits = Visit.objects.filter(patient__in=current_submission.patients.all())

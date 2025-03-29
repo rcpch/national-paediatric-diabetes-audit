@@ -37,30 +37,35 @@ def paediatric_diabetes_units_seeder():
                 pdu.get("primary_organisation") or {}
             ).get("ods_code")
             lead_organisation_name = (pdu.get("primary_organisation") or {}).get("name")
-            if not lead_organisation_ods_code:
+            last_updated = pdu.get("last_updated") or None
+            active = pdu.get("active") or None
+
+            is_rcpch = pdu["pz_code"] == "PZ999"
+
+            if not lead_organisation_ods_code and not is_rcpch:
                 logger.warning(
                     f"Primary organisation ODS code not found for PDU: {pdu['pz_code']}"
                 )
                 continue
-            if not parent_ods_code:
+            if not parent_ods_code and not is_rcpch:
                 logger.warning(
                     f"Parent ODS code not found for PDU: {pdu['pz_code']}"
                 )
                 continue
-            if not parent_name:
+            if not parent_name and not is_rcpch:
                 logger.warning(f"Parent name not found for PDU: {pdu['pz_code']}")
                 continue
-            if not network_name:
+            if not network_name and not is_rcpch:
                 logger.warning(
                     f"Network name not found for PDU: {pdu['pz_code']}"
                 )
                 continue
-            if not network_code:
+            if not network_code and not is_rcpch:
                 logger.warning(
                     f"Network code not found for PDU: {pdu['pz_code']}"
                 )
                 continue
-            if not lead_organisation_ods_code:
+            if not lead_organisation_ods_code and not is_rcpch:
                 logger.warning(
                     f"Lead organisation ODS code not found for PDU: {pdu['pz_code']}"
                 )
@@ -68,16 +73,25 @@ def paediatric_diabetes_units_seeder():
             if not pdu["pz_code"]:
                 logger.warning(f"PZ code not found for PDU: {pdu['pz_code']}")
                 continue
-            new_pdu, created = PaediatricDiabetesUnit.objects.update_or_create(
-                pz_code=pdu["pz_code"],
-                defaults={
+            if active is not None and active is True:
+                default ={
                     "lead_organisation_ods_code": lead_organisation_ods_code,
                     "lead_organisation_name": lead_organisation_name,
                     "parent_ods_code": parent_ods_code,
                     "parent_name": parent_name,
                     "paediatric_diabetes_network_code": network_code,
                     "paediatric_diabetes_network_name": network_name,
-                },
+                    "active": active,
+                    "last_updated": last_updated,
+                }
+            else:
+                default = {
+                    "active": False,
+                    "last_updated": last_updated,
+                }
+            new_pdu, created = PaediatricDiabetesUnit.objects.update_or_create(
+                pz_code=pdu["pz_code"],
+                defaults=default,
             )
         except DatabaseError as e:
             logger.error(f"Error creating PaediatricDiabetesUnit: {e}")
