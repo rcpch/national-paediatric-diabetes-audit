@@ -33,13 +33,46 @@ def paediatric_diabetes_units_seeder():
             parent_name = (pdu.get("parent") or {}).get("name")
             network_name = (pdu.get("paediatric_diabetes_network") or {}).get("name")
             network_code = (pdu.get("paediatric_diabetes_network") or {}).get("pn_code")
+            lead_organisation_ods_code = (
+                pdu.get("primary_organisation") or {}
+            ).get("ods_code")
+            lead_organisation_name = (pdu.get("primary_organisation") or {}).get("name")
+            if not lead_organisation_ods_code:
+                logger.warning(
+                    f"Primary organisation ODS code not found for PDU: {pdu['pz_code']}"
+                )
+                continue
+            if not parent_ods_code:
+                logger.warning(
+                    f"Parent ODS code not found for PDU: {pdu['pz_code']}"
+                )
+                continue
+            if not parent_name:
+                logger.warning(f"Parent name not found for PDU: {pdu['pz_code']}")
+                continue
+            if not network_name:
+                logger.warning(
+                    f"Network name not found for PDU: {pdu['pz_code']}"
+                )
+                continue
+            if not network_code:
+                logger.warning(
+                    f"Network code not found for PDU: {pdu['pz_code']}"
+                )
+                continue
+            if not lead_organisation_ods_code:
+                logger.warning(
+                    f"Lead organisation ODS code not found for PDU: {pdu['pz_code']}"
+                )
+                continue
+            if not pdu["pz_code"]:
+                logger.warning(f"PZ code not found for PDU: {pdu['pz_code']}")
+                continue
             new_pdu, created = PaediatricDiabetesUnit.objects.update_or_create(
                 pz_code=pdu["pz_code"],
                 defaults={
-                    "lead_organisation_ods_code": pdu["primary_organisation"][
-                        "ods_code"
-                    ],
-                    "lead_organisation_name": pdu["primary_organisation"]["name"],
+                    "lead_organisation_ods_code": lead_organisation_ods_code,
+                    "lead_organisation_name": lead_organisation_name,
                     "parent_ods_code": parent_ods_code,
                     "parent_name": parent_name,
                     "paediatric_diabetes_network_code": network_code,
