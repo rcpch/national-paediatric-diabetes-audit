@@ -21,6 +21,7 @@ from .views.dashboard.patient_characteristics import (
     patient_ages,
     all_patient_charts,
 )
+from .views.navbar import generate_breadcrumbs
 
 urlpatterns = [
     path("", view=home, name="home"),
@@ -38,6 +39,7 @@ urlpatterns = [
         view=switch_paediatric_diabetes_unit,
         name="switch_paediatric_diabetes_unit",
     ),
+    path("breadcrumbs", view=generate_breadcrumbs, name="breadcrumbs"),
     # Submission views
     path(
         "submissions",

@@ -1,0 +1,12 @@
+<div class="breadcrumbs text-xs font-montserrat font-semibold" id="breadcrumb-container" class="flex flex-row"
+  {% if not request.htmx %} hx-get="{% url 'breadcrumbs' %}" hx-trigger="load once" hx-swap="innerHTML" {% endif %}>
+  <ul>
+    <li class="flex flex-row">
+      {% include "navbar/components/nav_link.html" with url_name="dashboard" nav_text="Dashboard" %}
+    </li>
+    {% for breadcrumb in breadcrumbs %}
+        <li class="flex flex-row"><a href="{{ breadcrumb.url }}">{{ breadcrumb.name }}</a></li>
+    {% endfor %}
+  </ul>
+</div>
+
