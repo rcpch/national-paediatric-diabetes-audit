@@ -119,7 +119,7 @@
             <div>
               {% if perms.npda.add_visit %}
                   {% if can_use_questionnaire %}
-                    <a href="{% url 'visit-create' patient_id=patient.pk %}{% if data_upload_rules_overriden %}?unlock=true{% endif %}"
+                    <a href="{% url 'visit-create' patient_id=patient.pk %}{% if data_upload_rules_overridden %}?unlock=true{% endif %}"
                       class="bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 mt-40 font-semibold text-white border hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue hover:text-white">
                       Create New Visit
                     </a>
