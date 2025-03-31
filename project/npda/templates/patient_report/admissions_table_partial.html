@@ -1,122 +1,113 @@
 {% extends "patient_report/base_table.html" %}
-
 {% block description_box %}
-{% include "patient_report/description_box.html" with description="Outcomes are presented below for all children and young people with Type 1 diabetes. HbA1c excludes all measurements taken in the first 90 days after diagnosis." %}
+  {% include "patient_report/description_box.html" with description="Outcomes are presented below for all children and young people <i><b>with Type 1 diabetes</b></i>. HbA1c excludes all measurements taken in the first 90 days after diagnosis. <b>Note this list is filtered to include only children with T1 diabetes who have had an inpatient admission in the audit period.</b>" %}
 {% endblock %}
-
 {% block table_headers %}
-      <th class="whitespace-normal break-words">
-        {% if is_jersey %}
-          Unique Reference Number
-        {% else %}
-          NHS Number
-        {% endif %}
-        <div class="block">
-          <span
-            hx-get="?category=admissions&sort=nhs_number&order=asc"
+  <th class="whitespace-normal break-words">
+    {% if is_jersey %}
+      Unique Reference Number
+    {% else %}
+      NHS Number
+    {% endif %}
+    <div class="block">
+      <span hx-get="?category=admissions&sort=nhs_number&order=asc"
             hx-target="#table-area"
             hx-swap="innerHTML"
             class="cursor-pointer">
-            <i class="fa-solid fa-up-long {% if sort_field == 'nhs_number' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
-          </span>
-          <span
-            hx-get="?category=admissions&sort=nhs_number&order=desc"
+        <i class="fa-solid fa-up-long {% if sort_field == 'nhs_number' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span hx-get="?category=admissions&sort=nhs_number&order=desc"
             hx-target="#table-area"
             hx-swap="innerHTML"
             class="cursor-pointer">
-            <i class="fa-solid fa-down-long {% if sort_field == 'nhs_number' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
-          </span>
-        </div>
-      </th>
-      <th class="whitespace-normal break-words">Mean HbA1c mmol/mol (%)
-        <div class="block">
-          <span
-            hx-get="?category=admissions&sort=kpi_44_mean_hba1c&order=asc"
+        <i class="fa-solid fa-down-long {% if sort_field == 'nhs_number' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
+  </th>
+  <th class="whitespace-normal break-words">
+    Mean HbA1c mmol/mol (%)
+    <div class="block">
+      <span hx-get="?category=admissions&sort=kpi_44_mean_hba1c&order=asc"
             hx-target="#table-area"
             hx-swap="innerHTML"
             class="cursor-pointer">
-            <i class="fa-solid fa-up-long {% if sort_field == 'kpi_44_mean_hba1c' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
-          </span>
-          <span
-            hx-get="?category=admissions&sort=kpi_44_mean_hba1c&order=desc"
+        <i class="fa-solid fa-up-long {% if sort_field == 'kpi_44_mean_hba1c' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span hx-get="?category=admissions&sort=kpi_44_mean_hba1c&order=desc"
             hx-target="#table-area"
             hx-swap="innerHTML"
             class="cursor-pointer">
-            <i class="fa-solid fa-down-long {% if sort_field == 'kpi_44_mean_hba1c' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
-          </span>
-        </div>
-      </th>
-      <th class="whitespace-normal break-words">Median HbA1c mmol/mol (%)
-        <div class="block">
-          <span
-            hx-get="?category=admissions&sort=kpi_45_median_hba1c&order=asc"
+        <i class="fa-solid fa-down-long {% if sort_field == 'kpi_44_mean_hba1c' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
+  </th>
+  <th class="whitespace-normal break-words">
+    Median HbA1c mmol/mol (%)
+    <div class="block">
+      <span hx-get="?category=admissions&sort=kpi_45_median_hba1c&order=asc"
             hx-target="#table-area"
             hx-swap="innerHTML"
             class="cursor-pointer">
-            <i class="fa-solid fa-up-long {% if sort_field == 'kpi_45_median_hba1c' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
-          </span>
-          <span
-            hx-get="?category=admissions&sort=kpi_45_median_hba1c&order=desc"
+        <i class="fa-solid fa-up-long {% if sort_field == 'kpi_45_median_hba1c' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span hx-get="?category=admissions&sort=kpi_45_median_hba1c&order=desc"
             hx-target="#table-area"
             hx-swap="innerHTML"
             class="cursor-pointer">
-            <i class="fa-solid fa-down-long {% if sort_field == 'kpi_45_median_hba1c' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
-          </span>
-        </div>
-      </th>
-      <th class="whitespace-normal break-words">Number of admissions
-        <div class="block">
-          <span
-            hx-get="?category=admissions&sort=number_of_admissions&order=asc"
+        <i class="fa-solid fa-down-long {% if sort_field == 'kpi_45_median_hba1c' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
+  </th>
+  <th class="whitespace-normal break-words">
+    Number of admissions
+    <div class="block">
+      <span hx-get="?category=admissions&sort=number_of_admissions&order=asc"
             hx-target="#table-area"
             hx-swap="innerHTML"
             class="cursor-pointer">
-            <i class="fa-solid fa-up-long {% if sort_field == 'number_of_admissions' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
-          </span>
-          <span
-            hx-get="?category=admissions&sort=number_of_admissions&order=desc"
+        <i class="fa-solid fa-up-long {% if sort_field == 'number_of_admissions' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span hx-get="?category=admissions&sort=number_of_admissions&order=desc"
             hx-target="#table-area"
             hx-swap="innerHTML"
             class="cursor-pointer">
-            <i class="fa-solid fa-down-long {% if sort_field == 'number_of_admissions' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
-          </span>
-        </div>
-      </th>
-      <th class="whitespace-normal break-words">Number of DKA admissions
-        <div class="block">
-          <span
-            hx-get="?category=admissions&sort=number_of_dka_admissions&order=asc"
+        <i class="fa-solid fa-down-long {% if sort_field == 'number_of_admissions' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
+  </th>
+  <th class="whitespace-normal break-words">
+    Number of DKA admissions
+    <div class="block">
+      <span hx-get="?category=admissions&sort=number_of_dka_admissions&order=asc"
             hx-target="#table-area"
             hx-swap="innerHTML"
             class="cursor-pointer">
-            <i class="fa-solid fa-up-long {% if sort_field == 'number_of_dka_admissions' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
-          </span>
-          <span
-            hx-get="?category=admissions&sort=number_of_dka_admissions&order=desc"
+        <i class="fa-solid fa-up-long {% if sort_field == 'number_of_dka_admissions' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span hx-get="?category=admissions&sort=number_of_dka_admissions&order=desc"
             hx-target="#table-area"
             hx-swap="innerHTML"
             class="cursor-pointer">
-            <i class="fa-solid fa-down-long {% if sort_field == 'number_of_dka_admissions' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
-          </span>
-        </div>
-      </th>
+        <i class="fa-solid fa-down-long {% if sort_field == 'number_of_dka_admissions' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
+  </th>
 {% endblock %}
-{{hba1c_data}}
+{{ hba1c_data }}
 {% block table_body %}
   {% for patient in patients %}
-    <tr
-    class="{% if not patient.is_complete_year_of_care %}bg-gray-500/10{% endif %}"
-    >
-      <td>{% include "patient_report/components/pt_identifier_value.html" with patient_pk=patient.pk is_complete_year_of_care=patient.is_complete_year_of_care patient_identifier=patient.patient_identifier %}</td>
-      <td>{{patient.kpi_44_mean_hba1c}} ({{patient.mean_hba1c_pct}}%)</td>
-      <td>{{patient.kpi_45_median_hba1c}} ({{patient.median_hba1c_pct}}%)</td>
-      <td>{{patient.number_of_admissions}}</td>
-      <td>{{patient.number_of_dka_admissions}}</td>
+    <tr class="{% if not patient.is_complete_year_of_care %}bg-gray-500/10{% endif %}">
+      <td>
+        {% include "patient_report/components/pt_identifier_value.html" with patient_pk=patient.pk is_complete_year_of_care=patient.is_complete_year_of_care patient_identifier=patient.patient_identifier %}
+      </td>
+      <td>{{ patient.kpi_44_mean_hba1c }} ({{ patient.mean_hba1c_pct }}%)</td>
+      <td>{{ patient.kpi_45_median_hba1c }} ({{ patient.median_hba1c_pct }}%)</td>
+      <td>{{ patient.number_of_admissions }}</td>
+      <td>{{ patient.number_of_dka_admissions }}</td>
     </tr>
-    {% empty %}
+  {% empty %}
     <tr>
       <td colspan="5" class="text-center text-gray-500">No patients found.</td>
     </tr>
   {% endfor %}
 {% endblock %}
-

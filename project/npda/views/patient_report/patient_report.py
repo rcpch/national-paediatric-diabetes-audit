@@ -507,7 +507,10 @@ class PatientReportView(ListView):
                     & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE),
                     distinct=True,
                 ),
-            ).values(
+            ).filter(
+                Q(number_of_admissions__gt=0)
+                | Q(number_of_dka_admissions__gt=0)
+                ).values(
                 "pk",
                 "patient_identifier",
                 "is_complete_year_of_care",
