@@ -32,8 +32,8 @@ def can_do_ui_actions(request):
         "can_override_data_upload_rules": can_override_data_upload_rules,
         "data_upload_rules_overridden": data_upload_rules_overridden,
         # For compatibility with existing templates
-        "can_alter_this_audit_year_submission": session_is_audit_year_open or can_override_data_upload_rules,
-        "can_use_questionnaire": session_is_audit_year_open and (session_can_use_questionnaire or data_upload_rules_overridden),
+        "can_alter_this_audit_year_submission": data_upload_rules_overridden or session_is_audit_year_open,
+        "can_use_questionnaire": data_upload_rules_overridden or (session_is_audit_year_open and session_can_use_questionnaire),
     }
 
 
