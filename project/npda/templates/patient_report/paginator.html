@@ -8,11 +8,11 @@
     <!-- Navigation buttons -->
     <div class="join">
       {% if page_obj.has_previous %}
-        <a hx-get="?category={{ selected_category }}&page=1"
+        <a hx-get="?category={{ selected_category }}&page=1&sort={{ sort_field }}&order={{ sort_order }}"
            hx-target="#table-area"
            hx-swap="innerHTML"
            class="join-item btn btn-outline">First</a>
-        <a hx-get="?category={{ selected_category }}&page={{ page_obj.previous_page_number }}"
+        <a hx-get="?category={{ selected_category }}&page={{ page_obj.previous_page_number }}&sort={{ sort_field }}&order={{ sort_order }}"
            hx-target="#table-area"
            hx-swap="innerHTML"
            class="join-item btn btn-outline">Previous</a>
@@ -21,14 +21,14 @@
         <button class="join-item btn btn-outline btn-disabled">Previous</button>
       {% endif %}
       {% if page_obj.has_next %}
-        <a hx-get="?category={{ selected_category }}&page={{ page_obj.next_page_number }}"
+        <a hx-get="?category={{ selected_category }}&page={{ page_obj.next_page_number }}&sort={{ sort_field }}&order={{ sort_order }}"
            hx-target="#table-area"
            hx-swap="innerHTML"
            class="join-item btn btn-outline">Next</a>
-        <a hx-get="?category={{ selected_category }}&page={{ paginator.num_pages }}"
-           hx-target="#table-area"
-           hx-swap="innerHTML"
-           class="join-item btn btn-outline">Last</a>
+        <a hx-get="?category={{ selected_category }}&page={{ paginator.num_pages }}"&sort={{ sort_field }}&order={{ sort_order }}"
+          hx-target="#table-area"
+          hx-swap="innerHTML"
+        class="join-item btn btn-outline">Last</a>
       {% else %}
         <button class="join-item btn btn-outline btn-disabled">Next</button>
         <button class="join-item btn btn-outline btn-disabled">Last</button>
