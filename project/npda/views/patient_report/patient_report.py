@@ -66,7 +66,7 @@ class PatientReportView(ListView):
     model = Patient
     template_name = "patient_report/new_patient_report.html"
     context_object_name = "patients"
-    paginate_by = 10
+    paginate_by = 50
 
     def calculate_hba1c_values(self, pt_qs):
         """Helper function to calculate HbA1c values for a queryset."""
