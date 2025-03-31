@@ -6,11 +6,7 @@
     <div class="overflow-x-auto">
       <div class="min-w-full inline-block px-10 py-2">
         <div class="w-full overflow-x-auto relative">
-          {% if patient.is_in_transfer_in_the_last_year %}
-            <div class="badge bg-rcpch_pink text-white badge-lg">
-              This patient has been transferred in the last year
-            </div>
-          {% endif %}
+          {% include 'partials/page_elements/data_rules_banner.html' %}
           <div>
             <strong>All {{ paediatric_diabetes_unit.lead_organisation_name }} ({{ paediatric_diabetes_unit.pz_code }}) Visits (April {{ submission.audit_year }} - March {{ request.session.selected_audit_year|add:'1' }}) for {% nhs_number_vs_urn pz_code %} {% nhs_number_vs_urn pz_code patient %} (NPDA ID-{{ patient.pk }})</strong>
           </div>
@@ -120,16 +116,22 @@
                 </div>
               </div>
             {% endif %}
-            {% if perms.npda.add_visit %}
-              {% if can_alter_this_audit_year_submission %}
-                <a href="{% url 'visit-create' patient_id=patient.pk %}"
-                   class="bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 mt-40 font-semibold text-white border hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue hover:text-white">Create New Visit</a>
-              {% else %}
-                <span class="bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 mt-40 font-semibold text-white border opacity-40 pointer-events-none hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue hover:text-white">Create New Visit</span>
+            <div>
+              {% if perms.npda.add_visit %}
+                  {% if can_use_questionnaire %}
+                    <a href="{% url 'visit-create' patient_id=patient.pk %}{% if data_upload_rules_overridden %}?unlock=true{% endif %}"
+                      class="bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 mt-40 font-semibold text-white border hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue hover:text-white">
+                      Create New Visit
+                    </a>
+                  {% else %}
+                    <span class="bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 mt-40 font-semibold text-white border opacity-40 pointer-events-none hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue hover:text-white">
+                      Create New Visit
+                    </span>
+                  {% endif %}
               {% endif %}
-            {% endif %}
-            <a href="{% url 'patients' %}"
-               class="bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 mt-40 font-semibold text-white border hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue hover:text-white">Back to Patient List</a>
+              <a href="{% url 'patients' %}"
+                class="bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 mt-40 ml-3 font-semibold text-white border hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue hover:text-white">Back to Patient List</a>
+            </div>
             <div class="py-20">
               {% include 'partials/visit_list_tips.html' with pz_code=pz_code patient=patient %}
             </div>

@@ -2,7 +2,10 @@
 {% load npda_tags %}
 {% csrf_token %}
 {% block content %}
-  <div class="flex justify-center bg-white py-8">
+  <div class="flex justify-center bg-white py-4">
+    {% include 'partials/page_elements/data_rules_banner.html' %}
+  </div>
+  <div class="flex justify-center bg-white">
     <div class="max-w-full lg:max-w-[75%] px-2 bg-white font-montserrat">
       <strong>
         {{ title }} - NPDA ID {{ patient.pk }} ({% nhs_number_vs_urn pz_code %} {% nhs_number_vs_urn pz_code patient %}) at {{ paediatric_diabetes_unit.lead_organisation_name }} ({{ paediatric_diabetes_unit.pz_code }})
@@ -18,7 +21,7 @@
             <div class="md:flex md:items-center mb-6 mt-2 {% if background_colour %}bg-{{ background_colour }}{% endif %}">
               <div class="md:w-1/3">
                 <label for="{{ field.id_for_label }}"
-                       class="block text-gray-700 {% if field.errors %}text-rcpch_red{% endif %} font-bold md:text-right mb-1 md:mb-0 pr-4">
+                       class="block text-gray-700 {% if field.errors %}text-rcpch_red{% endif %} font-bold md:text-right mb-1 md:mb-0 pr-4 {% if not can_alter_this_audit_year_submission or not can_use_questionnaire or form.patient.is_in_transfer_in_the_last_year %} pointer-events-none {% endif %}">
                   {% if field.errors %}
                     <span class="fa-stack text-rcpch_red">
                       <i class="fa-circle fa-stack-1x fas"></i>

@@ -40,7 +40,7 @@
                 {% if field.id_for_label != 'id_bmi' or field.id_for_label == 'id_bmi' and field.value is not None %}
                   <!-- Hide BMI label if no value -->
                   <label for="{{ field.id_for_label }}"
-                         class="block {% if errors %} text-rcpch_red {% else %} text-gray-700 {% endif %} font-bold mb-1 md:mb-0 pr-4">
+                         class="block {% if errors %} text-rcpch_red {% else %} text-gray-700 {% endif %} font-bold mb-1 md:mb-0 pr-4 {% if not can_alter_this_audit_year_submission or not can_use_questionnaire or form.patient.is_in_transfer_in_the_last_year %} pointer-events-none {% endif %}">
                     <small>
                       {% if errors %}
                         <span class="fa-stack text-rcpch_red">
