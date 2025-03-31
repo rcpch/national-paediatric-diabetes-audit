@@ -1,6 +1,6 @@
 {% extends "patient_report/base_table.html" %}
 {% block description_box %}
-  {% include "patient_report/description_box.html" with description="Children and young people with Type 1 diabetes should be screened for thyroid disease and coeliac disease within 90 days of diagnosis. Newly diagnosed children and young people should also receive level 3 carbohydrate counting education within 14 days of diagnosis. <b>NOTE: this list is filtered to include only children diagnosed within the last 90 days.</b>" %}
+  {% include "patient_report/description_box.html" with description="Children and young people with Type 1 diabetes should be screened for thyroid disease and coeliac disease within 90 days of diagnosis. Newly diagnosed children and young people should also receive level 3 carbohydrate counting education within 14 days of diagnosis. <b>NOTE: this list is filtered to include only children diagnosed within the last 90 days.</b>" proportion="of all those diagnosed with T1 diabetes in the audit year." %}
 {% endblock %}
 {% block table_headers %}
   <th class="whitespace-normal break-words">

@@ -1,6 +1,6 @@
 {% extends "patient_report/base_table.html" %}
 {% block description_box %}
-  {% include "patient_report/description_box.html" with description="These additional care processes are recommended by NICE for children and young people <i><b>with Type 1 diabetes</b></i> of all ages, with the exception of smoking status and referral to smoking cessation services, which apply only to young people aged 12 y and above." %}
+  {% include "patient_report/description_box.html" with description="These additional care processes are recommended by NICE for children and young people <i><b>with Type 1 diabetes</b></i> of all ages, with the exception of smoking status and referral to smoking cessation services, which apply only to young people aged 12 y and above." proportion="of all those (both under and over 12y) with T1 diabetes" %}
 {% endblock %}
 {% block table_headers %}
   <th class="whitespace-normal break-words">
