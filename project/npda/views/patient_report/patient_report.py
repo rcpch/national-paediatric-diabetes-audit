@@ -613,12 +613,15 @@ class PatientReportView(ListView):
                 "hcl",
             )
             pass
+        
+        # Sort the queryset based on the selected sort field and order
         if sort_field:
+            # Handle sort direction
             if sort_order == "desc":
                 sort_field = f"-{sort_field}"
-            # Check if sort field is related to HbA1c, if so, we need to sort using calculated values
+
+            # Handle HbA1c sorting
             if sort_field.replace("-","") in ["kpi_44_mean_hba1c", "kpi_45_median_hba1c"]:
-                # Sort using python sort, as django orm does not know about the calculated fields.
                 reverse = sort_order == "desc"
                 pt_qs = sorted(
                     pt_qs,
@@ -627,8 +630,12 @@ class PatientReportView(ListView):
                 )
             else:
                 pt_qs = pt_qs.order_by(sort_field)
+                pt_qs = self.calculate_hba1c_values(pt_qs)
         else:
+            # Default ordering
             pt_qs = pt_qs.order_by("nhs_number")
+            pt_qs = self.calculate_hba1c_values(pt_qs)
+
         return pt_qs
     
     def get_context_data(self, **kwargs):
