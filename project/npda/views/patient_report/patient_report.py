@@ -66,74 +66,94 @@ class PatientReportView(ListView):
     model = Patient
     template_name = "patient_report/new_patient_report.html"
     context_object_name = "patients"
-    paginate_by = 20
+    paginate_by = 50
 
-    def get_queryset(self):
-        request = self.request
-
-        # Get the category from the request
-        category = request.GET.get("category", TableCategories.default())
-
-        # Get sorting parameters
-        sort_field = request.GET.get("sort")
-        sort_order = request.GET.get("order", "asc")
-
-        # Validate and set the category
-        if category not in TableCategories.values():
-            raise ValueError(f"Invalid category: {category}")
-        self.selected_category = category
-
-        # First need to get the relevant calculations
-        pz_code = request.session.get("pz_code")
-
-        selected_audit_year = int(request.session.get("selected_audit_year"))
-        # TODO: remove min clamp once available audit year from preference filter sorted
+    def calculate_hba1c_values(self, pt_qs):
+        """Helper function to calculate HbA1c values for a queryset."""
+        patient_ids = set(pt_qs.values_list("pk", flat=True))
+        selected_audit_year = int(self.request.session.get("selected_audit_year"))
         selected_audit_year = max(selected_audit_year, 2024)
         calculation_date = date(year=selected_audit_year, month=5, day=1)
-
         calculate_kpis = CalculateKPIS(
             calculation_date=calculation_date, return_pt_querysets=True
         )
-        get_attribute_name = calculate_kpis.kpi_name_registry.get_attribute_name
-
-        # Set relevant patients
+        pz_code = self.request.session.get("pz_code")
         calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
-
-        # These are our base querysets (only T1DM)
-        patient_identifier = (
-            "nhs_number" if pz_code != "PZ248" else "unique_reference_number"
-        )
-        all_t1dm_pts = (
-            calculate_kpis.calculate_kpi_3_total_t1dm()
-            .patient_querysets["eligible"]
-            # Differentiate between Jersey and England
+        valid_visits_with_hba1c = (
+            calculate_kpis._get_valid_visits_for_kpi_44_and_45(
+                Patient.objects.filter(pk__in=patient_ids)
+            )
             .annotate(
-                patient_identifier=F(patient_identifier),
-            )
-        )
-        # This is used to mark if they have completed a year of care
-        all_t1dm_pts_with_complete_year_of_care = (
-            calculate_kpis.calculate_kpi_5_total_t1dm_complete_year().patient_querysets[
-                "eligible"
-            ]
-        )
-
-        # Add on whether they have completed a year of care (used for bg colour across all tables)
-        pt_qs = all_t1dm_pts.annotate(
-            is_complete_year_of_care=Case(
-                When(
-                    Exists(
-                        all_t1dm_pts_with_complete_year_of_care.filter(
-                            pk=OuterRef("pk")
-                        )
+                hba1c_mmol_mol=Case(
+                    When(
+                        Q(hba1c_format=HBA1C_FORMATS[0][0]),
+                        then=F("hba1c"),
                     ),
-                    then=True,
-                ),
-                default=False,
-                output_field=BooleanField(),
+                    When(
+                        Q(hba1c_format=HBA1C_FORMATS[1][0]),
+                        then=(F("hba1c") - Round(Decimal("2.152")))
+                        / Decimal("0.09148"),
+                    ),
+                    default=None,
+                    output_field=DecimalField(max_digits=5, decimal_places=2),
+                )
             )
+            .values("hba1c_mmol_mol", "patient__pk")
+            .filter(hba1c_mmol_mol__isnull=False)
         )
-
+        hba1c_values_by_patient = defaultdict(list)
+        for visit in valid_visits_with_hba1c:
+            hba1c_values_by_patient[visit["patient__pk"]].append(
+                visit["hba1c_mmol_mol"]
+            )
+        for patient in pt_qs:
+            hba1c_values = hba1c_values_by_patient.get(patient["pk"], [])
+            if hba1c_values:
+                mean_hba1c_mmol_mol = calculate_kpis.calculate_mean(hba1c_values)
+                median_hba1c_mmol_mol = calculate_kpis.calculate_median(
+                    hba1c_values
+                )
+                patient["kpi_44_mean_hba1c"] = round(mean_hba1c_mmol_mol)
+                patient["kpi_45_median_hba1c"] = round(median_hba1c_mmol_mol)
+                patient["mean_hba1c_pct"] = round(
+                    (0.09148 * mean_hba1c_mmol_mol) + 2.152
+                    if mean_hba1c_mmol_mol > 0 and mean_hba1c_mmol_mol is not None
+                    else None,
+                    1,
+                )
+                patient["median_hba1c_pct"] = round(
+                    (0.09148 * median_hba1c_mmol_mol) + 2.152
+                    if median_hba1c_mmol_mol > 0
+                    and median_hba1c_mmol_mol is not None
+                    else None,
+                    1,
+                )
+            else:
+                patient["kpi_44_mean_hba1c"] = None
+                patient["kpi_45_median_hba1c"] = None
+                patient["mean_hba1c_pct"] = None
+                patient["median_hba1c_pct"] = None
+        return pt_qs
+    
+    def get_queryset(self):
+        request = self.request
+        category = request.GET.get("category", TableCategories.default())
+        sort_field = request.GET.get("sort")
+        sort_order = request.GET.get("order", "asc")
+        if category not in TableCategories.values():
+            raise ValueError(f"Invalid category: {category}")
+        self.selected_category = category
+        pz_code = request.session.get("pz_code")
+        selected_audit_year = max(int(request.session.get("selected_audit_year")), 2024)
+        calculation_date = date(year=selected_audit_year, month=5, day=1)
+        calculate_kpis = CalculateKPIS(
+            calculation_date=calculation_date, return_pt_querysets=True
+        )
+        calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+        patient_identifier = "nhs_number" if pz_code != "PZ248" else "unique_reference_number"
+        all_t1dm_pts = calculate_kpis.calculate_kpi_3_total_t1dm().patient_querysets["eligible"].annotate(patient_identifier=F(patient_identifier))
+        all_t1dm_pts_with_complete_year_of_care = calculate_kpis.calculate_kpi_5_total_t1dm_complete_year().patient_querysets["eligible"]
+        pt_qs = all_t1dm_pts.annotate(is_complete_year_of_care=Case(When(Exists(all_t1dm_pts_with_complete_year_of_care.filter(pk=OuterRef("pk"))), then=True), default=False, output_field=BooleanField()))
         if self.selected_category == "health_checks":
             pt_qs = pt_qs.annotate(
                 is_gte_12yo=Q(
@@ -282,6 +302,7 @@ class PatientReportView(ListView):
                 "num_total",
                 "passed_retinal_screening",
             )
+            pass
         elif self.selected_category == "additional_care_processes":
             pt_qs = pt_qs.annotate(
                 
@@ -405,8 +426,8 @@ class PatientReportView(ListView):
                 "influenza_immunisation_recommended",
                 "sick_day_rules_advice",
             )
+            pass
         elif self.selected_category == "care_at_diagnosis":
-            # Need to filter for those diagnosed within 90 days of today
             today = date.today()
             all_t1dm_pts = all_t1dm_pts.filter(
                 Q(diagnosis_date__gte=today - relativedelta(days=90))
@@ -466,54 +487,21 @@ class PatientReportView(ListView):
                     "carbohydrate_counting_education",
                 )
             )
-
+            pass
         elif self.selected_category == "admissions":
             pt_qs = pt_qs.annotate(
                 number_of_admissions=Count(
                     "visit",
-                    filter=Q(
-                        Q(
-                            visit__hospital_admission_date__range=calculate_kpis.AUDIT_DATE_RANGE
-                        )
-                        | Q(
-                            visit__hospital_discharge_date__range=calculate_kpis.AUDIT_DATE_RANGE
-                        )
-                    )
-                    & Q(
-                        visit__hospital_admission_reason__in=[
-                            choice[0] for choice in HOSPITAL_ADMISSION_REASONS
-                        ]
-                    )
-                    & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE),
+                    filter=Q(Q(visit__hospital_admission_date__range=calculate_kpis.AUDIT_DATE_RANGE) | Q(visit__hospital_discharge_date__range=calculate_kpis.AUDIT_DATE_RANGE)) & Q(visit__hospital_admission_reason__in=[choice[0] for choice in HOSPITAL_ADMISSION_REASONS]) & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE),
                     distinct=True,
                 ),
-                # Annotate with the number of DKA admissions (kpi_47)
                 number_of_dka_admissions=Count(
                     "visit",
-                    filter=Q(
-                        Q(
-                            visit__hospital_admission_date__range=calculate_kpis.AUDIT_DATE_RANGE
-                        )
-                        | Q(
-                            visit__hospital_discharge_date__range=calculate_kpis.AUDIT_DATE_RANGE
-                        )
-                    )
-                    & Q(
-                        # DKA reason is index 1 in HOSPITAL_ADMISSION_REASONS
-                        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[1][
-                            0
-                        ]
-                    )
-                    & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE),
+                    filter=Q(Q(visit__hospital_admission_date__range=calculate_kpis.AUDIT_DATE_RANGE) | Q(visit__hospital_discharge_date__range=calculate_kpis.AUDIT_DATE_RANGE)) & Q(visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[1][0]) & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE),
                     distinct=True,
                 ),
-            ).values(
-                "pk",
-                "patient_identifier",
-                "is_complete_year_of_care",
-                "number_of_admissions",
-                "number_of_dka_admissions",
-            )
+            ).filter(Q(number_of_admissions__gt=0) | Q(number_of_dka_admissions__gt=0)).values("pk", "patient_identifier", "is_complete_year_of_care", "number_of_admissions", "number_of_dka_admissions")
+            pt_qs = self.calculate_hba1c_values(pt_qs)
         elif self.selected_category == "treatment":
             pt_qs = pt_qs.annotate(
                 treatment_regimen=Case(
@@ -624,21 +612,32 @@ class PatientReportView(ListView):
                 "glucose_monitoring",
                 "hcl",
             )
+            pass
+        
+        # Sort the queryset based on the selected sort field and order
+        if sort_field:
+            # Handle sort direction
+            if sort_order == "desc":
+                sort_field = f"-{sort_field}"
 
-        # Add ordering
-        # Special handling for HbA1c sorting since these are calculated fields
-        if sort_field not in ["kpi_44_mean_hba1c", "kpi_45_median_hba1c"]:
-            if sort_field:
-                # Handle sort direction
-                if sort_order == "desc":
-                    sort_field = f"-{sort_field}"
-                pt_qs = pt_qs.order_by(sort_field)
+            # Handle HbA1c sorting
+            if sort_field.replace("-","") in ["kpi_44_mean_hba1c", "kpi_45_median_hba1c"]:
+                reverse = sort_order == "desc"
+                pt_qs = sorted(
+                    pt_qs,
+                    key=lambda p: (p[sort_field.replace("-","")] is None, p[sort_field.replace("-","")] or 0),
+                    reverse=reverse,
+                )
             else:
-                # Default ordering
-                pt_qs = pt_qs.order_by("nhs_number")
+                pt_qs = pt_qs.order_by(sort_field)
+                pt_qs = self.calculate_hba1c_values(pt_qs)
+        else:
+            # Default ordering
+            pt_qs = pt_qs.order_by("nhs_number")
+            pt_qs = self.calculate_hba1c_values(pt_qs)
 
         return pt_qs
-
+    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
@@ -669,113 +668,6 @@ class PatientReportView(ListView):
                 "smoking_status": "Not required as less than 12 years old",
                 "smoking_cessation_referral": "Not required as less than 12 years old",
             }
-        # If we're on the outcomes page, add HbA1c data -> doing this here because Means and Medians
-        # too complicated to do in the queryset
-        if self.selected_category == TableCategories.ADMISSIONS.value:
-            # Get the paginated patients from context
-            paginated_patients = context["patients"]
-
-            # Get the patient IDs from the current page
-            patient_ids = set([p["pk"] for p in paginated_patients])
-
-            # Create CalculateKPIS object (or you could store it as an instance variable in get_queryset)
-            selected_audit_year = int(self.request.session.get("selected_audit_year"))
-            selected_audit_year = max(selected_audit_year, 2024)
-            calculation_date = date(year=selected_audit_year, month=5, day=1)
-
-            calculate_kpis = CalculateKPIS(
-                calculation_date=calculation_date, return_pt_querysets=True
-            )
-
-            # Set relevant patients
-            pz_code = self.request.session.get("pz_code")
-            calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
-
-            # Get HbA1c values for just the patients on this page
-            valid_visits_with_hba1c = (
-                calculate_kpis._get_valid_visits_for_kpi_44_and_45(
-                    Patient.objects.filter(pk__in=patient_ids)
-                )
-                .annotate(
-                    hba1c_mmol_mol=Case(
-                        When(
-                            Q(hba1c_format=HBA1C_FORMATS[0][0]),
-                            then=F("hba1c"),
-                        ),
-                        When(
-                            Q(hba1c_format=HBA1C_FORMATS[1][0]),
-                            then=(F("hba1c") - Round(Decimal("2.152")))
-                            / Decimal("0.09148"),
-                        ),
-                        default=None,
-                        output_field=DecimalField(
-                            max_digits=5,
-                            decimal_places=2,
-                        ),
-                    )
-                )
-                .values(
-                    "hba1c_mmol_mol",
-                    "patient__pk",
-                )
-                .filter(hba1c_mmol_mol__isnull=False)
-            )
-
-            # Group HbA1c values by patient
-            hba1c_values_by_patient = defaultdict(list)
-            for visit in valid_visits_with_hba1c:
-                hba1c_values_by_patient[visit["patient__pk"]].append(
-                    visit["hba1c_mmol_mol"]
-                )
-
-            # Annotate each patient in the paginated queryset with HbA1c values
-            for patient in paginated_patients:
-                hba1c_values = hba1c_values_by_patient.get(patient["pk"], [])
-                if hba1c_values:
-                    # Calculate mean and median HbA1c
-                    mean_hba1c_mmol_mol = calculate_kpis.calculate_mean(hba1c_values)
-                    median_hba1c_mmol_mol = calculate_kpis.calculate_median(
-                        hba1c_values
-                    )
-
-                    # Add the values to the patient object
-                    patient["kpi_44_mean_hba1c"] = round(mean_hba1c_mmol_mol)
-                    patient["kpi_45_median_hba1c"] = round(median_hba1c_mmol_mol)
-
-                    # Convert to percentage format
-                    patient["mean_hba1c_pct"] = round(
-                        (0.09148 * mean_hba1c_mmol_mol) + 2.152
-                        if mean_hba1c_mmol_mol > 0 and mean_hba1c_mmol_mol is not None
-                        else None,
-                        1,
-                    )
-                    patient["median_hba1c_pct"] = round(
-                        (0.09148 * median_hba1c_mmol_mol) + 2.152
-                        if median_hba1c_mmol_mol > 0
-                        and median_hba1c_mmol_mol is not None
-                        else None,
-                        1,
-                    )
-                else:
-                    # Set default values if no HbA1c readings
-                    patient["kpi_44_mean_hba1c"] = None
-                    patient["kpi_45_median_hba1c"] = None
-                    patient["mean_hba1c_pct"] = None
-                    patient["median_hba1c_pct"] = None
-
-            # Sort by HbA1c values if requested
-            sort_field = self.request.GET.get("sort")
-            sort_order = self.request.GET.get("order", "asc")
-
-            # Special handling for HbA1c sorting since these are calculated fields
-            if sort_field in ["kpi_44_mean_hba1c", "kpi_45_median_hba1c"]:
-                reverse = sort_order == "desc"
-                # None values need special handling - put them at the end
-                context["patients"] = sorted(
-                    paginated_patients,
-                    key=lambda p: (p[sort_field] is None, p[sort_field] or 0),
-                    reverse=reverse,
-                )
 
         return context
 

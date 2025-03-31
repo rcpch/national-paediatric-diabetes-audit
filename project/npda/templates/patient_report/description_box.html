@@ -1,13 +1,19 @@
 <!-- COLLAPSIBLE DESCRIPTION BOX -->
 <details class="bg-white border border-gray-300 rounded-lg shadow text-rcpch_dark_blue p-2 my-2"
-    open>
-  <summary class="font-bold text-rcpch_dark_blue cursor-pointer">Description</summary>
-
+         open>
+  <summary class="font-bold text-rcpch_dark_blue cursor-pointer">
+    Description
+  </summary>
   <!-- DESCRIPTION CONTENT -->
   <div class="mt-2">
     <p>{{ description }}</p>
   </div>
-
+  <div class="flex flex-col my-2 gap-2">
+    <p class="font-bold text-rcpch_dark_blue">Total</p>
+    <div class="text-bold">
+      Showing {{ patients.count }} patient{{ patients.count|pluralize }} {{ proportion }} (total: {{ paginator.count }})
+    </div>
+  </div>
   <!-- KEYS -->
   <div class="flex justify-between items-center">
     <div class="flex flex-col my-2 gap-2">
@@ -24,6 +30,10 @@
         <div class="flex gap-2 items-center">
           <i class="fa-solid fa-ban text-muted"></i>
           <p>Not required</p>
+        </div>
+        <div class="flex gap-2 items-center">
+          <i class="fa-solid fa-calendar-days text-rcpch_orange"></i>
+          <p>Incomplete year of care</p>
         </div>
       </div>
     </div>
