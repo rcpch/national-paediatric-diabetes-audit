@@ -5,11 +5,7 @@
      hx-get="{{ hx_get }}"
      hx-trigger="dashboard from:body"
      hx-swap="innerHTML">
-  <div class="my-6">
-    <p class="text-center text-gray-500 mt-2">
-      Calculated at {{ kpi_calculations_object.calculation_datetime }}
-    </p>
-    <p class="text-center pb-4">This data has not been validated by the NPDA team.</p>
+  <div class="my-2">
     <div class="flex w-full gap-4">
       <a href="{% url 'patient_report' %}"
           class="flex-1 flex justify-center items-center bg-rcpch_light_blue border-[6px] border-rcpch_light_blue btn-sm h-auto px-2 py-1 font-semibold text-center text-white rounded-none hover:bg-rcpch_pink hover:border-rcpch_pink hover:text-white">
@@ -24,6 +20,10 @@
           User Guide
       </a>
     </div>
+    <p class="text-center text-gray-500 mt-4">
+      Calculated at {{ kpi_calculations_object.calculation_datetime }}
+    </p>
+    <p class="text-center">This data has not been validated by the NPDA team.</p>
   </div>
   <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
     <!-- ROW 1 -->
