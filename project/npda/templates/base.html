@@ -35,12 +35,12 @@
     {% block nav %}
       {% include 'navbar/nav.html' %}
     {% endblock %}
+    {% include 'partials/closing_down_sale.html' %}
     {% block content %}{% endblock %}
     {% include 'footer.html' %}
     {% block toasts %}
       {% include 'toasts.html' %}
     {% endblock %}
-
     <!-- ADDS AUTO LOGOUT REDIRECT TO LOGIN PAGE SCRIPT -->
     {{ redirect_to_login_immediately }}
   </body>
