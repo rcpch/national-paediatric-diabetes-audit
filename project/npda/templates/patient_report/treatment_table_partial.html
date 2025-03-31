@@ -78,7 +78,7 @@
 {% endblock %}
 {% block table_body %}
   {% for patient in patients %}
-    <tr class="{% if not patient.is_complete_year_of_care %}bg-gray-500/10{% endif %}">
+    <tr class="{% if not patient.is_complete_year_of_care %}bg-rcpch_orange_light_tint3{% endif %}">
       <td>
         {% include "patient_report/components/pt_identifier_value.html" with patient_pk=patient.pk is_complete_year_of_care=patient.is_complete_year_of_care patient_identifier=patient.patient_identifier %}
       </td>

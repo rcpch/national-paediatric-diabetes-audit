@@ -1,14 +1,18 @@
-<span class="tooltip tooltip-right block flex flex-row"
-      data-tip="View patient's visits">
+<span class="tooltip tooltip-right flex flex-row items-center"
+      data-tip="View patient's visits"
+      style="display: inline-flex;
+             align-items: center">
   <a href="{% url 'patient_visits' patient_pk %}"
-     class="block w-full h-full">
+     class="block w-full h-full flex flex-row items-center">
     {{ patient_identifier }}
-    <i class="fa-solid fa-arrow-up-right-from-square text-rcpch_strong_blue"></i>
+    <i class="fa-solid fa-arrow-up-right-from-square text-rcpch_strong_blue ml-1"></i>
   </a>
   {% if not is_complete_year_of_care %}
-    <div class="tooltip tooltip-right "
-         data-tip="Patient has not completed year of care">
+    <span class="tooltip tooltip-right ml-1 inline-flex items-center"
+          data-tip="Patient has not completed year of care"
+          style="display: inline-flex;
+                 align-items: center">
       <i class="fa-solid fa-calendar-days text-rcpch_orange"></i>
-    </div>
+    </span>
   {% endif %}
 </span>
