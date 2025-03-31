@@ -50,7 +50,10 @@ class Command(BaseCommand):
 
         with open(file_path, "r") as file:
             reader = csv.DictReader(file)
+            
             index = 0
+            unique_emails = set()
+
             for row in reader:
                 first_name = row["first_name"]
                 surname = row["surname"]
@@ -101,15 +104,23 @@ class Command(BaseCommand):
                 # add the user to the group
                 user.groups.add(group)
 
-                # create the organisation employer
-                OrganisationEmployer.objects.create(
+                if not OrganisationEmployer.objects.filter(
                     paediatric_diabetes_unit=pdu,
                     npda_user=user,
-                    is_primary_employer=True,
-                )
+                ).exists():
+                    # create the organisation employer
+                    OrganisationEmployer.objects.create(
+                        paediatric_diabetes_unit=pdu,
+                        npda_user=user,
+                        # primary employer is the first one we see for that user 
+                        is_primary_employer=not email in unique_emails,
+                    )
+                
                 index += 1
+                unique_emails.add(email)
 
                 logger.info(
                     f"User {email} successfully created as {group.name} in {pdu}."
                 )
-        logger.info(f"🔥 {index} users successfully created.")
+        
+        logger.info(f"🔥 {index} rows processed, {len(unique_emails)} users successfully created or updated.")
