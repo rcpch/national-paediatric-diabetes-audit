@@ -1,18 +1,29 @@
 {% load npda_tags %}
 {% if user.is_authenticated %}
-  <li class="">
-    {% include "navbar/components/nav_link.html" with url_name="dashboard" nav_text="Unit Report" %}
-  </li>
-  <li class="">
-    {% include "navbar/components/nav_link.html" with url_name="patient_report" nav_text="Patient Report" %}
-  </li>
-  <li class="">
-    {% include "navbar/components/nav_link.html" with url_name="patients" nav_text="Patient Data" %}
-  </li>
+  <div class="flex flex-col items-center">
+    <ul class="flex justify-center">
+      <li class="">
+        {% include "navbar/components/nav_link.html" with url_name="dashboard" nav_text="Unit Report" %}
+      </li>
+      <li class="">
+        {% include "navbar/components/nav_link.html" with url_name="patient_report" nav_text="Patient Report" %}
+      </li>
+      <li class="">
+        {% include "navbar/components/nav_link.html" with url_name="patients" nav_text="Patient Data" %}
+      </li>
+      <li>
+        <a href="{% docs_url %}"
+        class="text-xs font-montserrat font-semibold   text-gray-700  text-gray-400 hover:text-rcpch_light_blue hover:bg-transparent hover:underline underline-offset-8">
+        User Guide
+        </a>
+      </li>
+    </ul>
+    <div class="breadcrumbs text-xs font-montserrat font-semibold" >
+      <ul>
+        <li class="flex flex-row"><a>Home</a></li>
+        <li class="flex flex-row"><a>Documents</a></li>
+        <li class="flex flex-row"><a>Add Document</a></li>
+      </ul>
+    </div>
+  </div>
 {% endif %}
-<li>
-  <a href="{% docs_url %}"
-     class="text-xs font-montserrat font-semibold   text-gray-700  text-gray-400 hover:text-rcpch_light_blue hover:bg-transparent hover:underline underline-offset-8">
-    User Guide
-  </a>
-</li>
