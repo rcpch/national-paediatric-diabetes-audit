@@ -142,7 +142,6 @@
             const tab = tabs[i];
 
             anchor = tab.nextElementSibling.querySelector(`a[name="${anchorName}"]`);
-            console.log({ anchorName, tab, anchor, nextElementSibling: tab.nextElementSibling, selector: `a[name="${anchorName}"]` });
 
             if(anchor) {
               tab.checked = true;

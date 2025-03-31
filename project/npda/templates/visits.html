@@ -33,7 +33,7 @@
                           {% if item.present %}
                             <span class="bg-{{ item.colour }} px-1 py-0.25 mx-1 my-1 text-sm font-semibold text-white">
                               <small>
-                                <div class="tooltip tooltip-bottom visible text-center text-white hover:text-white"
+                                <div class="tooltip tooltip-right visible text-center text-white hover:text-white"
                                      {% if item.errors %} data-tip='{% for error in item.errors.values|flatten %}{{ error|escape }}{% endfor %}
                                      '
                                      {% endif %}>

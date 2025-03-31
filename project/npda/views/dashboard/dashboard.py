@@ -166,7 +166,7 @@ def _scatter_plot_select_list(button_name_selected: str):
             "name": "transitioned_to_adult_service",
             "selected": button_name_selected == "transitioned_to_adult_service",
             "enabled": True,
-            "title": "Transitioned to Adults",
+            "title": "Transitioned",
         },
     ]
     return scatter_buttons

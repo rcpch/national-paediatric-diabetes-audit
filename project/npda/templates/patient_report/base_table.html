@@ -1,0 +1,26 @@
+<!-- Category filter buttons -->
+{% include "patient_report/menu_tab_buttons.html" with selected_category=selected_category %}
+
+<!-- Description box -->
+{% block description_box %}
+{% endblock %}
+
+<!-- Patient table -->
+<div class="table-container h-[60vh] overflow-y-auto">
+  <table class="table w-full text-center table-fixed">
+    <thead class="sticky top-0 z-10">
+      <tr class="bg-rcpch_dark_blue text-white">
+        {% block table_headers %}
+        {% endblock %}
+      </tr>
+    </thead>
+    <tbody>
+      {% block table_body %}
+      {% endblock %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Pagination -->
+{% include "patient_report/paginator.html" %}
+

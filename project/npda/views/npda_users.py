@@ -156,7 +156,7 @@ class NPDAUserCreateView(
         new_employer_pz_code = form.cleaned_data["add_employer"]
         if new_employer_pz_code:
             # a new employer has been added
-            pdu = PaediatricDiabetesUnit.objects.get(pz_code=new_employer_pz_code)
+            pdu = PaediatricDiabetesUnit.objects.get(pz_code=new_employer_pz_code, active=True)
             OrganisationEmployer.objects.create(
                 paediatric_diabetes_unit=pdu,
                 npda_user=new_user,

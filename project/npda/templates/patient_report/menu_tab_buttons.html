@@ -1,0 +1,17 @@
+<div class="mb-4 flex gap-2 flex-wrap">
+  {% for value, label in table_categories %}
+    <button
+      hx-get="?category={{ value }}"
+      hx-target="#table-area"
+      hx-swap="innerHTML"
+      class="btn
+      {% if selected_category == value %}
+      bg-rcpch_pink text-white
+      {% else %}
+      bg-rcpch_lightest_grey
+      {% endif %}"
+      >
+      {{ label }}
+    </button>
+  {% endfor %}
+</div>

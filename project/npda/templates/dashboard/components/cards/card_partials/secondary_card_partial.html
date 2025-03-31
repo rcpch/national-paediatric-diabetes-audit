@@ -6,4 +6,9 @@
 {% else %}
     <span class="text-xl font-bold text-rcpch_dark_blue">{{ number|screen_ineligible }}</span>
 {% endif %}
-<span class="text-xs text-rcpch_pink">{{ units }}</span>
+{% if description %}
+    <span class="text-xs text-rcpch_pink tooltip"
+          data-tip="{{ description|safe }}">{{ units }} <i class="fa fa-circle-question"></i></span>
+{% else %}
+    <span class="text-xs text-rcpch_pink">{{ units }}</span>
+{% endif %}

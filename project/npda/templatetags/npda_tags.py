@@ -199,7 +199,7 @@ def get_item(dictionary: dict, key: str):
     try:
         return dictionary.get(key, "")
     except Exception:
-        logger.error(f"Error getting value from dictionary: {dictionary=} {key=}")
+        # logger.error(f"Error getting value from dictionary: {dictionary=} {key=}") # this is quite noisy in the logs and not unexpected so commenting out
         return ""
 
 
@@ -468,4 +468,19 @@ def include_admin_users(user):
     """
     if user.is_superuser or user.is_rcpch_staff or user.is_rcpch_audit_team_member:
         return True
+    return False
+
+
+@register.filter
+def disable_fields(field, form):
+    """
+    Tag for dependent fields
+    """
+    if (
+        form.instance.treatment not in [None, 3, 6]
+        and field.id_for_label == "id_closed_loop_system"
+    ):
+        # closed loop system not disabled if pump selected
+        return True
+
     return False

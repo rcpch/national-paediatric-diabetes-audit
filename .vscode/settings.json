@@ -1,4 +1,7 @@
 {
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  },
   "python.languageServer": "Pylance",
   "python.analysis.typeCheckingMode": "off",
   "files.associations": {

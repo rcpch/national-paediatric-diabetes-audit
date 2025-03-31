@@ -32,14 +32,12 @@ def group_for_role(role_key):
         group = Group.objects.get(name=TRUST_AUDIT_TEAM_EDIT_ACCESS)
     elif role_key == AUDIT_CENTRE_READER:
         group = Group.objects.get(name=TRUST_AUDIT_TEAM_VIEW_ONLY)
-
     elif role_key == RCPCH_AUDIT_TEAM:
         group = Group.objects.get(name=NPDA_AUDIT_TEAM_FULL_ACCESS)
-
     elif role_key == RCPCH_AUDIT_PATIENT_FAMILY:
         group = Group.objects.get(name=PATIENT_ACCESS)
     else:
         # no group
         group = Group.objects.get(name=TRUST_AUDIT_TEAM_VIEW_ONLY)
-
+    
     return group

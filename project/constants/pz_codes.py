@@ -1027,12 +1027,12 @@ NPDA_ORGANISATIONS = [
         "organisation_name": "University College London Hospital",
         "trust_name": "UNIVERSITY COLLEGE LONDON HOSPITALS NHS FOUNDATION TRUST",
     },
-    {
-        "ods_code": "RW6",
-        "npda_code": "PZ206",
-        "organisation_name": "The Pennine Acute Hospitals NHS Trust",
-        "trust_name": "NORTHERN CARE ALLIANCE NHS FOUNDATION TRUST",
-    },
+    # {
+    #     "ods_code": "RW6",
+    #     "npda_code": "PZ206",
+    #     "organisation_name": "The Pennine Acute Hospitals NHS Trust",
+    #     "trust_name": "NORTHERN CARE ALLIANCE NHS FOUNDATION TRUST",
+    # },
     {
         "ods_code": "RTP04",
         "npda_code": "PZ213",

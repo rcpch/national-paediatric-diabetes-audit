@@ -127,12 +127,14 @@ def patient_ages(request):
         audit_year__range=(audit_start.year, audit_end.year),
         submission_active=True,
         paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
+        paediatric_diabetes_unit__active=True,
     ).exists():
         all_patients_in_this_submission = (
             Submission.objects.filter(
                 audit_year__range=(audit_start.year, audit_end.year),
                 submission_active=True,
                 paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
+                paediatric_diabetes_unit__active=True,
             )
             .get()
             .patients.all()
@@ -248,19 +250,23 @@ def all_patient_charts(request):
         "Mixed": 0,
         "Asian": 0,
         "Black": 0,
-        "Other/Not Stated/Unknown": 0,
+        "Other": 0,
+        "Not Stated": 0,
+        "Unknown": 0,
     }
 
     if Submission.objects.filter(
         audit_year__range=(audit_start.year, audit_end.year),
         submission_active=True,
         paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
+        paediatric_diabetes_unit__active=True,
     ).exists():
         all_patients_in_this_submission = (
             Submission.objects.filter(
                 audit_year__range=(audit_start.year, audit_end.year),
                 submission_active=True,
                 paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
+                paediatric_diabetes_unit__active=True,
             )
             .get()
             .patients.all()
@@ -295,8 +301,12 @@ def all_patient_charts(request):
                 ethnicity_counts["Asian"] += 1
             if patient["ethnicity"] in ["M", "N", "P"]:
                 ethnicity_counts["Black"] += 1
-            if patient["ethnicity"] in ["S", "Z", "99"]:
-                ethnicity_counts["Other/Not Stated/Unknown"] += 1
+            if patient["ethnicity"] in ["S"]:
+                ethnicity_counts["Other"] += 1
+            if patient["ethnicity"] in ["Z"]:
+                ethnicity_counts["Not Stated"] += 1
+            if patient["ethnicity"] in ["99"]:
+                ethnicity_counts["Unknown"] += 1
     else:
         all_patients_in_this_submission = None
 
@@ -397,11 +407,21 @@ def _build_pie_chart(field):
             RCPCH_LIGHT_BLUE,  # White
             RCPCH_YELLOW,  # Mixed
             RCPCH_PINK,  # Asian
-            RCPCH_MID_GREY,  # Black
-            RCPCH_DARK_BLUE,  # Other
+            RCPCH_DARK_BLUE,  # Black
+            RCPCH_MID_GREY,  # Other
+            RCPCH_LIGHTEST_GREY,  # Not Stated
+            RCPCH_LIGHT_GREY,  # Unknown
         ]
         title = "<b>Ethnicity Distribution</b>"
-        legend_order = ["White", "Mixed", "Asian", "Black", "Other/Not Stated/Unknown"]
+        legend_order = [
+            "White",
+            "Mixed",
+            "Asian",
+            "Black",
+            "Other",
+            "Not Stated",
+            "Unknown",
+        ]
         legend_title = "Ethnicity"
 
     return colors, title, legend_order, legend_title

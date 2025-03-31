@@ -1,0 +1,14 @@
+<span class="tooltip tooltip-right block" data-tip="View patient's visits">
+  <a href="{% url 'patient_visits' patient_pk %}" class="block w-full h-full">
+    {{ patient_identifier }}
+  <i class="fa-solid fa-arrow-up-right-from-square text-rcpch_strong_blue"></i>
+  </a>
+</span>
+<div class="tooltip tooltip-right " data-tip="Patient has not completed year of care">
+
+    {% if not is_complete_year_of_care %}
+      <i class="fa-solid fa-exclamation-triangle text-error"></i>
+    {% endif %}
+
+</div>
+</div>
