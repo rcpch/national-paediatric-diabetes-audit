@@ -1,4 +1,5 @@
 {% extends "patient_report/base_table.html" %}
+{% load npda_tags %}
 {% block description_box %}
   {% include "patient_report/description_box.html" with description="Outcomes are presented below for all children and young people <i><b>with Type 1 diabetes</b></i>. HbA1c excludes all measurements taken in the first 90 days after diagnosis. <b>Note this list is filtered to include only children with T1 diabetes who have had an inpatient admission in the audit period.</b>" proportion="of all those admitted (for any reason) in the audit year." %}
 {% endblock %}
@@ -100,8 +101,12 @@
       <td>
         {% include "patient_report/components/pt_identifier_value.html" with patient_pk=patient.pk is_complete_year_of_care=patient.is_complete_year_of_care patient_identifier=patient.patient_identifier %}
       </td>
-      <td>{{ patient.kpi_44_mean_hba1c }} ({{ patient.mean_hba1c_pct }}%)</td>
-      <td>{{ patient.kpi_45_median_hba1c }} ({{ patient.median_hba1c_pct }}%)</td>
+      <td>
+        {{ patient.kpi_44_mean_hba1c|none_to_dash }} ({{ patient.mean_hba1c_pct|none_to_dash }}%)
+      </td>
+      <td>
+        {{ patient.kpi_45_median_hba1c|none_to_dash }} ({{ patient.median_hba1c_pct|none_to_dash }}%)
+      </td>
       <td>{{ patient.number_of_admissions }}</td>
       <td>{{ patient.number_of_dka_admissions }}</td>
     </tr>
