@@ -19,10 +19,6 @@ def generate_breadcrumbs(request):
         if current_url.startswith(base_url):
             current_url = current_url.replace(base_url, "")
 
-
-    print(f"Here is my tidied current_url with the local host removed: {current_url}")
-
-
     current_url = current_url.strip("/")
     segments = current_url.split("/")
     breadcrumbs = []
@@ -39,13 +35,7 @@ def generate_breadcrumbs(request):
             name = segment.replace("_", " ").replace("-", " ").title()
 
         breadcrumbs.append({"name": name, "url": current_url})
-    
-    print(f"{segments}")
-    print(f"previous url: {current_url}")
-    print("Breadcrumbs context:", {"breadcrumbs": breadcrumbs})
 
     breadcrumb_html = render_to_string("navbar/components/breadcrumbs.html", {"breadcrumbs": breadcrumbs}, request=request)
-
-    print("Generated HTML:", breadcrumb_html)
 
     return HttpResponse(breadcrumb_html)
