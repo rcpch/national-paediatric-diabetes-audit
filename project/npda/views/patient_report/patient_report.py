@@ -66,7 +66,7 @@ class PatientReportView(ListView):
     model = Patient
     template_name = "patient_report/new_patient_report.html"
     context_object_name = "patients"
-    paginate_by = 20
+    paginate_by = 50
 
     def get_queryset(self):
         request = self.request
