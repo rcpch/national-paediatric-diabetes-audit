@@ -89,3 +89,32 @@ Two Factor Authentication is either by email or Microsoft Authenticator on a mob
 #### Captcha
 
 In addition to the above methods of authentication, a rotating image of numbers or letters is used to ensure only humans can gain access.
+
+#### Importing Users
+
+For first use, a command line script can be used to import all users from a spreadsheet.
+
+key fields include:
+- first_name
+- surname
+- title
+- email
+- role
+- pz_code
+
+title can be blank. If provided it must be an integer - one of:
+1. Mr
+2. Mrs
+3. Ms
+4. Dr
+5. Professor
+
+role cannot be blank. It must be an integer - one of:
+1. Coordinator
+2. Editor
+3. Reader
+4. RCPCH Audit Team
+7. RCPCH Audit Children and Family
+
+from the command line:
+`python manage.py import_users --file path`
