@@ -422,8 +422,8 @@ class ResetPasswordForm(PasswordResetForm):
         """Override Django's default behaviour to allow users with unusable passwords
         to reset their password, as that is how they are imported from CSV.
         """
-        email_field_name = UserModel.get_email_field_name()
-        active_users = UserModel._default_manager.filter(
+        email_field_name = NPDAUser.get_email_field_name()
+        active_users = NPDAUser._default_manager.filter(
             **{
                 "%s__iexact" % email_field_name: email,
                 "is_active": True,
