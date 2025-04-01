@@ -1,5 +1,7 @@
 # National Paediatric Diabetes Audit (NPDA)
 
+test ci
+
 A Django project to upload and edit data for the NPDA
 
 It needs some environment variables stored in ```envs/.env``` to work (see example.env)
