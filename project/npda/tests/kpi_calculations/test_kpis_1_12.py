@@ -330,6 +330,8 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
         # KPI1 eligible
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
+        # Date of diagnosis outside the audit period
+        diagnosis_date=AUDIT_START_DATE - relativedelta(days=2),
         # Date of leaving service within the audit period
         # transfer date only not None if they have left
         transfer__date_leaving_service=None,
@@ -341,7 +343,9 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
         # KPI1 eligible
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
-        # Date of death within the audit period"
+        # Date of diagnosis outside the audit period
+        diagnosis_date=AUDIT_START_DATE - relativedelta(days=2),
+        # Date of death within the audit period
         death_date=None,
         diabetes_type=DIABETES_TYPES[0][0],  # T1DM
     )
@@ -368,7 +372,7 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
         # KPI1 eligible
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
-        # Date of diagnosis within the audit period
+        # Date of diagnosis outside the audit period
         diagnosis_date=AUDIT_START_DATE - relativedelta(days=2),
     )
     ineligible_patient_diag_within_audit_period = PatientFactory(
@@ -394,7 +398,7 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
         # KPI1 eligible
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
-        # Date of death within the audit period"
+        # Date of death within the audit period
         death_date=AUDIT_START_DATE + relativedelta(days=2),
         diabetes_type=DIABETES_TYPES[0][0],  # T1DM
     )
@@ -465,6 +469,8 @@ def test_kpi_calculation_6(AUDIT_START_DATE):
             # KPI1 eligible
             # Age 12 and above at the start of the audit period
             date_of_birth=AUDIT_START_DATE - relativedelta(years=12),
+            # Date of diagnosis outside the audit period
+            diagnosis_date=AUDIT_START_DATE - relativedelta(days=2),
             # Diagnosis of Type 1 diabetes
             diabetes_type=DIABETES_TYPES[0][0],
             # an observation within the audit period
@@ -481,6 +487,8 @@ def test_kpi_calculation_6(AUDIT_START_DATE):
         # KPI1 eligible
         # Age 12 and above at the start of the audit period
         date_of_birth=AUDIT_START_DATE - relativedelta(years=12),
+        # Date of diagnosis outside the audit period
+        diagnosis_date=AUDIT_START_DATE - relativedelta(days=2),
         # Diagnosis of Type 1 diabetes
         diabetes_type=DIABETES_TYPES[0][0],
         # observations all None
