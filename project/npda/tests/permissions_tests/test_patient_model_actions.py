@@ -19,9 +19,13 @@ ALDER_HEY_PZ_CODE = "PZ074"
 
 
 def create_submission_with_patient(user):
+    # HACK: Workaround this test depending on the default audit year
+    #       that is set after logging in.
+    #       https://github.com/rcpch/national-paediatric-diabetes-audit/issues/876
+    #       See you next year unless addressed in https://github.com/rcpch/national-paediatric-diabetes-audit/pull/865.
     submission = Submission.objects.create(
-        audit_year=2024,
-        submission_date="2024-04-01T00:00:00Z",
+        audit_year=2025,
+        submission_date="2025-04-01T00:00:00Z",
         submission_active=True,
         submission_by=user,
         paediatric_diabetes_unit=user.organisation_employers.first(),
