@@ -43,7 +43,7 @@ def test_height_and_weight_set_correctly():
         data={
             "height": "60",
             "weight": "50",
-            "height_weight_observation_date": "2025-01-01",
+            "height_weight_observation_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -63,7 +63,7 @@ def test_height_and_weight_missing_values():
         data={
             "height": None,
             "weight": None,
-            "height_weight_observation_date": "2025-01-01",
+            "height_weight_observation_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -108,7 +108,7 @@ def test_dgc_results_saved():
         data={
             "height": "60",
             "weight": "50",
-            "height_weight_observation_date": "2025-01-01",
+            "height_weight_observation_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -143,7 +143,7 @@ def test_partial_dgc_results_saved():
         data={
             "height": "60",
             "weight": "50",
-            "height_weight_observation_date": "2025-01-01",
+            "height_weight_observation_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -176,7 +176,7 @@ def test_dgc_height_validation_error():
         data={
             "height": "60",
             "weight": "50",
-            "height_weight_observation_date": "2025-01-01",
+            "height_weight_observation_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -199,7 +199,7 @@ def test_dgc_weight_validation_error():
         data={
             "height": "60",
             "weight": "50",
-            "height_weight_observation_date": "2025-01-01",
+            "height_weight_observation_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -222,7 +222,7 @@ def test_dgc_bmi_validation_error():
         data={
             "height": "60",
             "weight": "50",
-            "height_weight_observation_date": "2025-01-01",
+            "height_weight_observation_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -250,7 +250,7 @@ def test_hba1c_value_ifcc_less_than_20_form_fail_validation():
         data={
             "hba1c": "2",
             "hba1c_format": "2",  # IFCC (mmol/mol)
-            "hba1c_date": "2025-01-01",
+            "hba1c_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -269,10 +269,10 @@ def test_hba1c_value_dcct_less_than_20_form_pass_validation():
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",  # Required for validation
+            "visit_date": "2026-01-01",  # Required for validation
             "hba1c": "5",
             "hba1c_format": "2",  # DCCT (%)
-            "hba1c_date": "2025-01-01",
+            "hba1c_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -291,7 +291,7 @@ def test_hba1c_value_ifcc_more_than_195_form_validation():
         data={
             "hba1c": "200",
             "hba1c_format": "1",  # IFCC (mmol/mol)
-            "hba1c_date": "2025-01-01",
+            "hba1c_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -313,7 +313,7 @@ def test_hba1c_value_dcct_more_than_20_form_fails_validation():
         data={
             "hba1c": "25",
             "hba1c_format": "2",  # DCCT (%)
-            "hba1c_date": "2025-01-01",
+            "hba1c_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -333,7 +333,7 @@ def test_hba1c_value_dcct_less_than_3_form_fails_validation():
         data={
             "hba1c": "2",
             "hba1c_format": "2",  # DCCT (%)
-            "hba1c_date": "2025-01-01",
+            "hba1c_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -353,7 +353,7 @@ def test_hba1c_missing_form_fails_validation():
         data={
             "hba1c": None,
             "hba1c_format": "2",  # DCCT (%)
-            "hba1c_date": "2025-01-01",
+            "hba1c_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -416,7 +416,7 @@ def test_hba1c_date_and_hba1c_format_hba1c_all_missing_form_passes_validation():
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",  # Required for validation
+            "visit_date": "2026-01-01",  # Required for validation
             "hba1c": None,
             "hba1c_format": None,  # DCCT (%)
             "hba1c_date": None,
@@ -446,7 +446,7 @@ def test_treatment_closed_loop_form_passes_validation():
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",  # Required for validation
+            "visit_date": "2026-01-01",  # Required for validation
             "treatment": "3",  # Insulin pump
             "closed_loop_system": "1",  # Closed loop system (licenced)
         },
@@ -510,10 +510,10 @@ def test_blood_pressure_values_form_passes_validation():
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",  # Required for validation
+            "visit_date": "2026-01-01",  # Required for validation
             "systolic_blood_pressure": "120",
             "diastolic_blood_pressure": "80",
-            "blood_pressure_observation_date": "2025-01-01",
+            "blood_pressure_observation_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -532,7 +532,7 @@ def test_blood_pressure_missing_values_form_fails_validation():
         data={
             "systolic_blood_pressure": None,
             "diastolic_blood_pressure": "80",
-            "blood_pressure_observation_date": "2025-01-01",
+            "blood_pressure_observation_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -574,7 +574,7 @@ def test_systolic_blood_pressure_over_240_form_fails_validation():
         data={
             "systolic_blood_pressure": "250",
             "diastolic_blood_pressure": "80",
-            "blood_pressure_observation_date": "2025-01-01",
+            "blood_pressure_observation_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -595,7 +595,7 @@ def test_systolic_blood_pressure_below_80_form_fails_validation():
         data={
             "systolic_blood_pressure": "60",
             "diastolic_blood_pressure": "80",
-            "blood_pressure_observation_date": "2025-01-01",
+            "blood_pressure_observation_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -616,7 +616,7 @@ def test_diastolic_blood_pressure_over_120_form_fails_validation():
         data={
             "systolic_blood_pressure": "120",
             "diastolic_blood_pressure": "125",
-            "blood_pressure_observation_date": "2025-01-01",
+            "blood_pressure_observation_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -637,7 +637,7 @@ def test_diastolic_blood_pressure_below_20_form_fails_validation():
         data={
             "systolic_blood_pressure": "120",
             "diastolic_blood_pressure": "15",
-            "blood_pressure_observation_date": "2025-01-01",
+            "blood_pressure_observation_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -661,9 +661,9 @@ def test_decs_value_form_passes_validation():
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",  # Required for validation
+            "visit_date": "2026-01-01",  # Required for validation
             "retinal_screening_result": 1,  # Normal
-            "retinal_screening_observation_date": "2025-01-01",
+            "retinal_screening_observation_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -681,7 +681,7 @@ def test_decs_value_unrecognized_form_fails_validation():
     form = VisitForm(
         data={
             "retinal_screening_result": 94,  # invalid
-            "retinal_screening_observation_date": "2025-01-01",
+            "retinal_screening_observation_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -701,7 +701,7 @@ def test_decs_value_none_form_fails_validation():
     form = VisitForm(
         data={
             "retinal_screening_result": None,  # invalid
-            "retinal_screening_observation_date": "2025-01-01",
+            "retinal_screening_observation_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -745,9 +745,9 @@ def test_urine_albumin_value_form_passes_validation():
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",  # Required for validation
+            "visit_date": "2026-01-01",  # Required for validation
             "albumin_creatinine_ratio": 10,
-            "albumin_creatinine_ratio_date": "2025-01-01",
+            "albumin_creatinine_ratio_date": "2026-01-01",
             "albuminuria_stage": 1,  # Normal
         },
         initial={"patient": patient},
@@ -766,7 +766,7 @@ def test_urine_albumin_impossible_value_form_fails_validation():
     form = VisitForm(
         data={
             "albumin_creatinine_ratio": 10,
-            "albumin_creatinine_ratio_date": "2025-01-01",
+            "albumin_creatinine_ratio_date": "2026-01-01",
             "albuminuria_stage": 8,  # Impossible
         },
         initial={"patient": patient},
@@ -787,7 +787,7 @@ def test_urine_albumin_value_below_range_form_fails_validation():
     form = VisitForm(
         data={
             "albumin_creatinine_ratio": -5,
-            "albumin_creatinine_ratio_date": "2025-01-01",
+            "albumin_creatinine_ratio_date": "2026-01-01",
             "albuminuria_stage": 2,  # microalbuminuria
         },
         initial={"patient": patient},
@@ -808,7 +808,7 @@ def test_urine_albumin_value_above_range_form_fails_validation():
     form = VisitForm(
         data={
             "albumin_creatinine_ratio": 1000,
-            "albumin_creatinine_ratio_date": "2025-01-01",
+            "albumin_creatinine_ratio_date": "2026-01-01",
             "albuminuria_stage": 3,  # macroalbuminuria
         },
         initial={"patient": patient},
@@ -829,7 +829,7 @@ def test_urine_albumin_value_missing_form_fails_validation():
     form = VisitForm(
         data={
             "albumin_creatinine_ratio": None,
-            "albumin_creatinine_ratio_date": "2025-01-01",
+            "albumin_creatinine_ratio_date": "2026-01-01",
             "albuminuria_stage": 2,  # micrralbuminuria
         },
         initial={"patient": patient},
@@ -850,7 +850,7 @@ def test_urine_albumin_stage_missing_form_fails_validation():
     form = VisitForm(
         data={
             "albumin_creatinine_ratio": 10,
-            "albumin_creatinine_ratio_date": "2025-01-01",
+            "albumin_creatinine_ratio_date": "2026-01-01",
             "albuminuria_stage": None,  # microalbuminuria
         },
         initial={"patient": patient},
@@ -898,9 +898,9 @@ def test_total_cholesterol_value_form_passes_validation():
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",  # Required for validation
+            "visit_date": "2026-01-01",  # Required for validation
             "total_cholesterol": 4,
-            "total_cholesterol_date": "2025-01-01",
+            "total_cholesterol_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -919,7 +919,7 @@ def test_total_cholesterol_value_below_range_form_fails_validation():
     form = VisitForm(
         data={
             "total_cholesterol": 1,
-            "total_cholesterol_date": "2025-01-01",
+            "total_cholesterol_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -939,7 +939,7 @@ def test_total_cholesterol_value_above_range_form_fails_validation():
     form = VisitForm(
         data={
             "total_cholesterol": 20,
-            "total_cholesterol_date": "2025-01-01",
+            "total_cholesterol_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -959,7 +959,7 @@ def test_total_cholesterol_value_missing_form_fails_validation():
     form = VisitForm(
         data={
             "total_cholesterol": None,
-            "total_cholesterol_date": "2025-01-01",
+            "total_cholesterol_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -1004,9 +1004,9 @@ def test_thyroid_treatment_status_form_passes_validation():
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",  # Required for validation
+            "visit_date": "2026-01-01",  # Required for validation
             "thyroid_treatment_status": 2,  # Thyroxine for hypothyroidism
-            "thyroid_function_date": "2025-01-01",
+            "thyroid_function_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -1026,7 +1026,7 @@ def test_thyroid_treatment_status_unrecognized_form_fails_validation():
     form = VisitForm(
         data={
             "thyroid_treatment_status": 94,  # invalid
-            "thyroid_function_date": "2025-01-01",
+            "thyroid_function_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -1047,7 +1047,7 @@ def test_thyroid_treatment_status_none_form_fails_validation():
     form = VisitForm(
         data={
             "thyroid_treatment_status": None,  # invalid
-            "thyroid_function_date": "2025-01-01",
+            "thyroid_function_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -1087,7 +1087,7 @@ def test_thyroid_function_date_none_form_passes_validation_if_treatment_not_pres
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",  # Required for validation
+            "visit_date": "2026-01-01",  # Required for validation
             "thyroid_treatment_status": 1,
             "thyroid_function_date": None,
         },
@@ -1113,9 +1113,9 @@ def test_coeliac_treatment_status_form_passes_validation():
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",  # Required for validation
+            "visit_date": "2026-01-01",  # Required for validation
             "gluten_free_diet": 1,  # Normal
-            "coeliac_screen_date": "2025-01-01",
+            "coeliac_screen_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -1135,7 +1135,7 @@ def test_coeliac_treatment_status_unrecognized_form_fails_validation():
     form = VisitForm(
         data={
             "gluten_free_diet": 94,  # invalid
-            "coeliac_screen_date": "2025-01-01",
+            "coeliac_screen_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -1153,7 +1153,7 @@ def test_coeliac_treatment_status_none_form_passes_validation():
     form = VisitForm(
         data={
             "gluten_free_diet": None,  # invalid
-            "coeliac_screen_date": "2025-01-01",
+            "coeliac_screen_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -1191,9 +1191,9 @@ def test_psychological_status_form_passes_validation():
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",  # Required for validation
+            "visit_date": "2026-01-01",  # Required for validation
             "psychological_additional_support_status": 1,  # Normal
-            "psychological_screening_assessment_date": "2025-01-01",
+            "psychological_screening_assessment_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -1213,7 +1213,7 @@ def test_psychological_status_unrecognized_form_fails_validation():
     form = VisitForm(
         data={
             "psychological_additional_support_status": 94,  # invalid
-            "psychological_screening_assessment_date": "2025-01-01",
+            "psychological_screening_assessment_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -1233,7 +1233,7 @@ def test_psychological_status_none_form_fails_validation():
     form = VisitForm(
         data={
             "psychological_additional_support_status": None,  # invalid
-            "psychological_screening_assessment_date": "2025-01-01",
+            "psychological_screening_assessment_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -1266,7 +1266,7 @@ def test_psychological_screen_date_none_with_status_unknown_passes_validation():
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",  # Required for validation
+            "visit_date": "2026-01-01",  # Required for validation
             "psychological_additional_support_status": 99,  # Unknown
             "psychological_screening_assessment_date": None,
         },
@@ -1291,9 +1291,9 @@ def test_smoking_status_smoker_form_passes_validation():
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",  # Required for validation
+            "visit_date": "2026-01-01",  # Required for validation
             "smoking_status": 2,  # current smoker
-            "smoking_cessation_referral_date": "2025-01-01",
+            "smoking_cessation_referral_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -1312,7 +1312,7 @@ def test_smoking_status_non_smoker_form_passes_validation():
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",  # Required for validation
+            "visit_date": "2026-01-01",  # Required for validation
             "smoking_status": 1,  # non smoker
             "smoking_cessation_referral_date": None,
         },
@@ -1334,7 +1334,7 @@ def test_smoking_status_unrecognized_form_fails_validation():
     form = VisitForm(
         data={
             "smoking_status": 94,  # invalid
-            "smoking_cessation_referral_date": "2025-01-01",
+            "smoking_cessation_referral_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -1359,7 +1359,7 @@ def test_smoking_status_date_when_non_smoker_form_fails_validation():
     form = VisitForm(
         data={
             "smoking_status": 1,  # Non-smoker
-            "smoking_cessation_referral_date": "2025-01-01",
+            "smoking_cessation_referral_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -1379,7 +1379,7 @@ def test_smoking_status_smoker_does_not_require_cessation_referral_date():
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",  # Required for validation
+            "visit_date": "2026-01-01",  # Required for validation
             "smoking_status": 2,  # current smoker
         },
         initial={"patient": patient},
@@ -1404,10 +1404,10 @@ def test_dietician_referral_status_additional_offered_form_passes_validation():
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",  # Required for validation
+            "visit_date": "2026-01-01",  # Required for validation
             "dietician_additional_appointment_offered": 1,  # Yes
-            "dietician_additional_appointment_date": "2025-01-01",
-            "carbohydrate_counting_level_three_education_date": "2025-01-01",
+            "dietician_additional_appointment_date": "2026-01-01",
+            "carbohydrate_counting_level_three_education_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -1426,10 +1426,10 @@ def test_dietician_no_additional_offered_form_passes_validation():
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",  # Required for validation
+            "visit_date": "2026-01-01",  # Required for validation
             "dietician_additional_appointment_offered": 2,  # No
             "dietician_additional_appointment_date": None,
-            "carbohydrate_counting_level_three_education_date": "2025-01-01",
+            "carbohydrate_counting_level_three_education_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -1450,8 +1450,8 @@ def test_dietician_no_additional_offered_date_provided_fail_validation():
     form = VisitForm(
         data={
             "dietician_additional_appointment_offered": 2,  # No
-            "dietician_additional_appointment_date": "2025-01-01",
-            "carbohydrate_counting_level_three_education_date": "2025-01-01",
+            "dietician_additional_appointment_date": "2026-01-01",
+            "carbohydrate_counting_level_three_education_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -1474,10 +1474,10 @@ def test_dietician_additional_offered_date_missing_passes_validation():
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",  # Required for validation
+            "visit_date": "2026-01-01",  # Required for validation
             "dietician_additional_appointment_offered": 1,  # Yes
             "dietician_additional_appointment_date": None,
-            "carbohydrate_counting_level_three_education_date": "2025-01-01",
+            "carbohydrate_counting_level_three_education_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -1500,8 +1500,8 @@ def test_dietician_additional_offered_no_but_date_offered_fail_validation():
     form = VisitForm(
         data={
             "dietician_additional_appointment_offered": 2,  # No
-            "dietician_additional_appointment_date": "2025-01-01",
-            "carbohydrate_counting_level_three_education_date": "2025-01-01",
+            "dietician_additional_appointment_date": "2026-01-01",
+            "carbohydrate_counting_level_three_education_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -1527,9 +1527,9 @@ def test_inpatient_admission_stabilisation_passes_validation():
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",  # Required for validation
-            "hospital_admission_date": "2025-01-01",
-            "hospital_discharge_date": "2025-01-08",
+            "visit_date": "2026-01-01",  # Required for validation
+            "hospital_admission_date": "2026-01-01",
+            "hospital_discharge_date": "2026-01-08",
             "hospital_admission_reason": 1,  # patient stabilisation
             # dka_additional_therapies
             # hospital_admission_other
@@ -1554,7 +1554,7 @@ def test_inpatient_admission_stabilisation_missing_date_fails_validation():
     form = VisitForm(
         data={
             "hospital_admission_date": None,
-            "hospital_discharge_date": "2025-01-08",
+            "hospital_discharge_date": "2026-01-08",
             "hospital_admission_reason": 1,  # patient stabilisation
             # dka_additional_therapies
             # hospital_admission_other
@@ -1578,8 +1578,8 @@ def test_inpatient_admission_stabilisation_discharge_date_before_admission_date_
 
     form = VisitForm(
         data={
-            "hospital_admission_date": "2025-01-10",
-            "hospital_discharge_date": "2025-01-08",
+            "hospital_admission_date": "2026-01-10",
+            "hospital_discharge_date": "2026-01-08",
             "hospital_admission_reason": 1,  # patient stabilisation
             # dka_additional_therapies
             # hospital_admission_other
@@ -1600,12 +1600,12 @@ def test_inpatient_admission_stabilisation_discharge_date_before_diagnosis_date_
     Test that inpatient admission for stabilisation is rejected if discharge date before admission date
     """
     patient = PatientFactory()
-    patient.diagnosis_date = datetime.date(2025, 1, 10)
+    patient.diagnosis_date = datetime.date(2026, 1, 10)
 
     form = VisitForm(
         data={
-            "hospital_admission_date": "2025-01-01",
-            "hospital_discharge_date": "2025-01-08",
+            "hospital_admission_date": "2026-01-01",
+            "hospital_discharge_date": "2026-01-08",
             "hospital_admission_reason": 1,  # patient stabilisation
             # dka_additional_therapies
             # hospital_admission_other
@@ -1626,12 +1626,12 @@ def test_inpatient_admission_stabilisation_admission_date_more_than_eleven_days_
     Test that inpatient admission for stabilisation is rejected if diagnosis date is more than 11 days before admission date
     """
     patient = PatientFactory()
-    patient.diagnosis_date = datetime.date(2025, 1, 15)
+    patient.diagnosis_date = datetime.date(2026, 1, 15)
 
     form = VisitForm(
         data={
-            "hospital_admission_date": "2025-01-01",
-            "hospital_discharge_date": "2025-01-016",
+            "hospital_admission_date": "2026-01-01",
+            "hospital_discharge_date": "2026-01-016",
             "hospital_admission_reason": 1,  # patient stabilisation
             # dka_additional_therapies
             # hospital_admission_other
@@ -1652,13 +1652,13 @@ def test_inpatient_admission_stabilisation_admission_date_less_than_eleven_days_
     Test that inpatient admission for stabilisation passes if admission date is within 11 days of diagnosis date
     """
     patient = PatientFactory()
-    patient.diagnosis_date = datetime.date(2025, 1, 15)
+    patient.diagnosis_date = datetime.date(2026, 1, 15)
 
     form = VisitForm(
         data={
-            "visit_date": "2025-02-01",  # Required for validation
-            "hospital_admission_date": "2025-01-10",
-            "hospital_discharge_date": "2025-01-16",
+            "visit_date": "2026-02-01",  # Required for validation
+            "hospital_admission_date": "2026-01-10",
+            "hospital_discharge_date": "2026-01-16",
             "hospital_admission_reason": 1,  # patient stabilisation
             # dka_additional_therapies
             # hospital_admission_other
@@ -1680,9 +1680,9 @@ def test_inpatient_admission_stabilisation_when_diagnosis_date_missing():
 
     form = VisitForm(
         data={
-            "visit_date": "2025-02-01",  # Required for validation
-            "hospital_admission_date": "2025-01-01",
-            "hospital_discharge_date": "2025-01-08",
+            "visit_date": "2026-02-01",  # Required for validation
+            "hospital_admission_date": "2026-01-01",
+            "hospital_discharge_date": "2026-01-08",
             "hospital_admission_reason": 1,  # patient stabilisation
             # dka_additional_therapies
             # hospital_admission_other
@@ -1700,12 +1700,12 @@ def test_inpatient_admission_stabilisation_discharge_date_after_date_of_death_fa
     Test that inpatient admission for stabilisation is rejected if discharge date before admission date
     """
     patient = PatientFactory()
-    patient.death_date = datetime.date(2025, 1, 1)
+    patient.death_date = datetime.date(2026, 1, 1)
 
     form = VisitForm(
         data={
-            "hospital_admission_date": "2025-01-01",
-            "hospital_discharge_date": "2025-01-08",
+            "hospital_admission_date": "2026-01-01",
+            "hospital_discharge_date": "2026-01-08",
             "hospital_admission_reason": 1,  # patient stabilisation
             # dka_additional_therapies
             # hospital_admission_other
@@ -1729,8 +1729,8 @@ def test_inpatient_admission_stabilisation_dka_additional_therapies_provided_fai
 
     form = VisitForm(
         data={
-            "hospital_admission_date": "2025-01-01",
-            "hospital_discharge_date": "2025-01-08",
+            "hospital_admission_date": "2026-01-01",
+            "hospital_discharge_date": "2026-01-08",
             "hospital_admission_reason": 1,  # patient stabilisation
             "dka_additional_therapies": 1,  # hypertonic saline
             # hospital_admission_other
@@ -1756,8 +1756,8 @@ def test_inpatient_admission_stabilisation_hospital_admission_other_provided_fai
 
     form = VisitForm(
         data={
-            "hospital_admission_date": "2025-01-01",
-            "hospital_discharge_date": "2025-01-08",
+            "hospital_admission_date": "2026-01-01",
+            "hospital_discharge_date": "2026-01-08",
             "hospital_admission_reason": 1,  # patient stabilisation
             "hospital_admission_other": "Other reason",
             "dka_additional_therapies": None,
@@ -1783,9 +1783,9 @@ def test_inpatient_admission_dka_passes_validation():
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",  # Required for validation
-            "hospital_admission_date": "2025-01-01",
-            "hospital_discharge_date": "2025-01-08",
+            "visit_date": "2026-01-01",  # Required for validation
+            "hospital_admission_date": "2026-01-01",
+            "hospital_discharge_date": "2026-01-08",
             "hospital_admission_reason": 2,  # DKA
             "dka_additional_therapies": 1,  # hypertonic saline
         },
@@ -1809,8 +1809,8 @@ def test_inpatient_admission_dka_additional_therapies_missing_fails_validation()
 
     form = VisitForm(
         data={
-            "hospital_admission_date": "2025-01-01",
-            "hospital_discharge_date": "2025-01-08",
+            "hospital_admission_date": "2026-01-01",
+            "hospital_discharge_date": "2026-01-08",
             "hospital_admission_reason": 2,  # DKA
             "dka_additional_therapies": None,
         },
@@ -1836,8 +1836,8 @@ def test_inpatient_admission_dka_additional_therapies_hospital_admission_also_pr
 
     form = VisitForm(
         data={
-            "hospital_admission_date": "2025-01-01",
-            "hospital_discharge_date": "2025-01-08",
+            "hospital_admission_date": "2026-01-01",
+            "hospital_discharge_date": "2026-01-08",
             "hospital_admission_reason": 2,  # DKA
             "dka_additional_therapies": 1,  # hypertonic saline
             "hospital_admission_other": "Other reason",
@@ -1863,9 +1863,9 @@ def test_inpatient_admission_other_passes_validation():
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",  # Required for validation
-            "hospital_admission_date": "2025-01-01",
-            "hospital_discharge_date": "2025-01-08",
+            "visit_date": "2026-01-01",  # Required for validation
+            "hospital_admission_date": "2026-01-01",
+            "hospital_discharge_date": "2026-01-08",
             "hospital_admission_reason": 6,  # Other
             "hospital_admission_other": "Other reason",
         },
@@ -1889,8 +1889,8 @@ def test_inpatient_admission_other_missing_fails_validation():
 
     form = VisitForm(
         data={
-            "hospital_admission_date": "2025-01-01",
-            "hospital_discharge_date": "2025-01-08",
+            "hospital_admission_date": "2026-01-01",
+            "hospital_discharge_date": "2026-01-08",
             "hospital_admission_reason": 6,  # Other
             "hospital_admission_other": None,
         },
@@ -1920,7 +1920,7 @@ def test_visit_date_provided_passes_validation():
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",
+            "visit_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -1955,11 +1955,11 @@ def test_visit_date_after_diagnosis_date_passes_validation():
     Test that visit date after diagnosis date is accepted
     """
     patient = PatientFactory()
-    patient.diagnosis_date = datetime.date(2025, 1, 1)
+    patient.diagnosis_date = datetime.date(2026, 1, 1)
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-10",
+            "visit_date": "2026-01-10",
         },
         initial={"patient": patient},
     )
@@ -1977,11 +1977,11 @@ def test_visit_date_before_diagnosis_date_fails_validation():
     Test that visit date before diagnosis date is rejected
     """
     patient = PatientFactory()
-    patient.diagnosis_date = datetime.date(2025, 1, 10)
+    patient.diagnosis_date = datetime.date(2026, 1, 10)
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",
+            "visit_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -1997,11 +1997,11 @@ def test_visit_date_after_death_date_fails_validation():
     Test that visit date after death date is rejected
     """
     patient = PatientFactory()
-    patient.death_date = datetime.date(2025, 1, 1)
+    patient.death_date = datetime.date(2026, 1, 1)
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-10",
+            "visit_date": "2026-01-10",
         },
         initial={"patient": patient},
     )
@@ -2017,11 +2017,11 @@ def test_visit_date_before_death_date_passes_validation():
     Test that visit date before death date is accepted
     """
     patient = PatientFactory()
-    patient.death_date = datetime.date(2025, 1, 10)
+    patient.death_date = datetime.date(2026, 1, 10)
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",
+            "visit_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
@@ -2039,11 +2039,11 @@ def test_visit_date_before_birth_date_fails_validation():
     Test that visit date before birth date is rejected
     """
     patient = PatientFactory()
-    patient.date_of_birth = datetime.date(2025, 1, 10)
+    patient.date_of_birth = datetime.date(2026, 1, 10)
 
     form = VisitForm(
         data={
-            "visit_date": "2025-01-01",
+            "visit_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
