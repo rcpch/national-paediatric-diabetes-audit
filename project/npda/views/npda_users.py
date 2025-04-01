@@ -432,7 +432,7 @@ class ResetPasswordForm(PasswordResetForm):
         return (
             u
             for u in active_users
-            and _unicode_ci_compare(email, getattr(u, email_field_name))
+            if _unicode_ci_compare(email, getattr(u, email_field_name))
         )
 
 
