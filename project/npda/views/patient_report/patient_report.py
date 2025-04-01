@@ -633,7 +633,7 @@ class PatientReportView(ListView):
                 pt_qs = self.calculate_hba1c_values(pt_qs)
         else:
             # Default ordering
-            pt_qs = pt_qs.order_by("nhs_number")
+            pt_qs = pt_qs.order_by("-is_complete_year_of_care", "nhs_number")
             pt_qs = self.calculate_hba1c_values(pt_qs)
 
         return pt_qs
@@ -668,7 +668,19 @@ class PatientReportView(ListView):
                 "smoking_status": "Not required as less than 12 years old",
                 "smoking_cessation_referral": "Not required as less than 12 years old",
             }
-
+        
+        first_complete_year_of_care = False
+        if context["sort_field"] == "":
+            patients = context["patients"]
+            for patient in patients:
+                if not patient["is_complete_year_of_care"] and not first_complete_year_of_care:
+                    first_complete_year_of_care = True
+                    patient["is_first_complete_year_of_care"] = True
+                else:
+                    patient["is_first_complete_year_of_care"] = False
+            context["patients"]=patients
+        
+        
         return context
 
     def get_template_names(self) -> list[str]:

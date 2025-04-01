@@ -163,6 +163,13 @@
 {% endblock %}
 {% block table_body %}
   {% for patient in patients %}
+    {% if  patient.is_first_complete_year_of_care %}
+      <thead class="bg-rcpch_strong_blue text-xs text-white text-gray-700 uppercase bg-gray-50">
+        <tr>
+          <th colspan="9">These patients are completing their first year of care.</th>
+        </tr>
+      </thead>
+    {% endif %}
     <tr class="{% if not patient.is_complete_year_of_care %}bg-rcpch_orange_light_tint3{% endif %}">
       <td>
         {% include "patient_report/components/pt_identifier_value.html" with patient_pk=patient.pk is_complete_year_of_care=patient.is_complete_year_of_care patient_identifier=patient.patient_identifier %}
@@ -194,7 +201,7 @@
     </tr>
   {% empty %}
     <tr>
-      <td colspan="2" class="text-center text-gray-500">No patients found.</td>
+      <td colspan="9" class="text-center text-gray-500">No patients found.</td>
     </tr>
   {% endfor %}
 {% endblock %}
