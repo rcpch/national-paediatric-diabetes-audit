@@ -1,11 +1,13 @@
 from datetime import datetime, timedelta
 import logging
+import unicodedata
 
 from django.apps import apps
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.views import PasswordResetView
 from django.contrib.messages.views import SuccessMessageMixin
 from django.db.models import Count, Case, When, BooleanField
@@ -41,6 +43,19 @@ from .mixins import LoginAndOTPRequiredMixin
 # from ..signals import password_reset_sent
 
 logger = logging.getLogger(__name__)
+
+
+def _unicode_ci_compare(s1, s2):
+    """
+    Perform case-insensitive comparison of two identifiers, using the
+    recommended algorithm from Unicode Technical Report 36, section
+    2.11.2(B)(2).
+    """
+    return (
+        unicodedata.normalize("NFKC", s1).casefold()
+        == unicodedata.normalize("NFKC", s2).casefold()
+    )
+
 
 """
 NPDAUser list and NPDAUser creation, deletion and update
@@ -402,13 +417,32 @@ class NPDAUserLogsListView(LoginAndOTPRequiredMixin, ListView):
 """
 Authentication and password change
 """
+class ResetPasswordForm(PasswordResetForm):
+    def get_users(self, email):
+        """Override Django's default behaviour to allow inactive users with unusable passwords
+        to reset their password, as that is how they are imported from CSV.
+        """
+        print(f"!! ResetPasswordForm.get_users called with email: {email}")
+        email_field_name = NPDAUser.get_email_field_name()
+        users = NPDAUser._default_manager.filter(
+            **{
+                "%s__iexact" % email_field_name: email
+            }
+        )
+        ret = list(
+            u
+            for u in users
+            if _unicode_ci_compare(email, getattr(u, email_field_name))
+        )
+        print(f"!! ResetPasswordForm.get_users returning {ret}")
+        return ret
 
 
 class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
     """
     Custom password reset view that sends a password reset email to the user
     """
-
+    form_class = ResetPasswordForm
     template_name = "registration/password_reset.html"
     html_email_template_name = "registration/password_reset_email.html"
     email_template_name = strip_tags("registration/password_reset_email.html")
