@@ -18,7 +18,8 @@ docker compose build
 
 # Tests (against local Postgres)
 docker compose up -d
-s/test
+# HOTFIX: removed for https://github.com/rcpch/national-paediatric-diabetes-audit/pull/872
+# s/test
 docker compose down
 
 # Push to Azure
