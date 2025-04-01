@@ -419,23 +419,21 @@ Authentication and password change
 """
 class ResetPasswordForm(PasswordResetForm):
     def get_users(self, email):
-        """Override Django's default behaviour to allow inactive users with unusable passwords
+        """Override Django's default behaviour to allow users with unusable passwords
         to reset their password, as that is how they are imported from CSV.
         """
-        print(f"!! ResetPasswordForm.get_users called with email: {email}")
-        email_field_name = NPDAUser.get_email_field_name()
-        users = NPDAUser._default_manager.filter(
+        email_field_name = UserModel.get_email_field_name()
+        active_users = UserModel._default_manager.filter(
             **{
-                "%s__iexact" % email_field_name: email
+                "%s__iexact" % email_field_name: email,
+                "is_active": True,
             }
         )
-        ret = list(
+        return (
             u
-            for u in users
-            if _unicode_ci_compare(email, getattr(u, email_field_name))
+            for u in active_users
+            and _unicode_ci_compare(email, getattr(u, email_field_name))
         )
-        print(f"!! ResetPasswordForm.get_users returning {ret}")
-        return ret
 
 
 class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
