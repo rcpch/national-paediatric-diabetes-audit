@@ -7,10 +7,23 @@ import logging
 from django.apps import apps
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
-from django.contrib.auth import get_user_model
 
+# NPDA imports
+from project.constants.user import TITLES
+from project.npda.general_functions import group_for_role
+
+PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+OrganisationEmployer = apps.get_model("npda", "OrganisationEmployer")
+NPDAUser = apps.get_model("npda", "NPDAUser")
 
 logger = logging.getLogger(__name__)
+
+
+def title_to_choice(title_to_find):
+    for (choice, title) in TITLES:
+        if title_to_find.lower() == title.lower():
+            return choice
+    return None
 
 
 class Command(BaseCommand):
@@ -34,8 +47,6 @@ class Command(BaseCommand):
 
         if not path.exists(file_path):
             raise CommandError(f"File does not exist: {file_path}")
-        
-        user_model = get_user_model()
 
         with open(file_path, "r") as file:
             reader = csv.DictReader(file)
@@ -46,28 +57,70 @@ class Command(BaseCommand):
             for row in reader:
                 first_name = row["first_name"]
                 surname = row["surname"]
-                title = row["title"]
+                title = title_to_choice(row["title"]) if row["title"] else None
                 email = row["email"].lower()
                 role = int(row["role"])
                 pz_code = row["pz_code"]
 
-                user = user_model.objects.create_or_update_user(
-                    email=email,
-                    password=None,
-                    role=role,
-                    pz_code=pz_code,
-                    title=title,
-                    first_name=first_name,
-                    surname=surname,
-                    # primary employer is the first row we see for that email
-                    is_primary_employer=not email in unique_emails,
+                # find the PZ code
+                try:
+                    pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+                except PaediatricDiabetesUnit.DoesNotExist:
+                    raise CommandError(
+                        f"Paediatric Diabetes Unit with code {pz_code} does not exist."
+                    )
+
+                # find the group
+                group = group_for_role(role)
+
+                if not group:
+                    raise CommandError(f"Group for role {role} does not exist.")
+
+                # create or update the user
+                if NPDAUser.objects.filter(email=email).exists():
+                    user = NPDAUser.objects.get(email=email)
+                else:
+                    user = NPDAUser()
+
+                user.first_name = first_name
+                user.surname = surname
+                user.title = title
+                user.email = email
+                user.is_active = True
+                user.is_staff = False  # staff we will create manually
+                user.is_superuser = False  # superusers we will create manually
+                user.is_rcpch_audit_team_member = (
+                    False  # audit team members we will create manually
                 )
+                user.is_rcpch_staff = False  # staff we will create manually
+                user.is_patient_or_carer = False  # patients we will create manually
+                user.view_preference = 1  # PDU view
+                user.date_joined = timezone.now()
+                user.role = role
+                user.email_confirmed = False
+                user.password_last_set = timezone.now()
+                user.set_unusable_password()
+                user.save()
+                # add the user to the group
+                user.groups.add(group)
+
+                if not OrganisationEmployer.objects.filter(
+                    paediatric_diabetes_unit=pdu,
+                    npda_user=user,
+                ).exists():
+                    # create the organisation employer
+                    OrganisationEmployer.objects.create(
+                        paediatric_diabetes_unit=pdu,
+                        npda_user=user,
+                        # primary employer is the first one we see for that user 
+                        is_primary_employer=not email in unique_emails,
+                    )
                 
                 index += 1
                 unique_emails.add(email)
 
                 logger.info(
-                    f"User {email} successfully created in {pz_code}. Groups: {[group.name for group in user.groups.all()]}"
+                    f"User {email} successfully created as {group.name} in {pdu}."
                 )
         
         logger.info(f"🔥 {index} rows processed, {len(unique_emails)} users successfully created or updated.")

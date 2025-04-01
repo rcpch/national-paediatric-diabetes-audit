@@ -6,22 +6,11 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.gis.db import models
 from django.db.models.functions import Lower
 from django.contrib.gis.db.models import UniqueConstraint
-from django.apps import apps
 
 import citext
 
 from ...constants import *
 from ..general_functions import *
-
-
-def title_to_choice(title_to_find):
-    if not title_to_find:
-        return None
-
-    for (choice, title) in TITLES:
-        if title_to_find.lower() == title.lower():
-            return choice
-    return None
 
 
 class NPDAUserManager(BaseUserManager):
@@ -34,12 +23,10 @@ class NPDAUserManager(BaseUserManager):
     All clinicians must be associated with a organisation trust
     """
 
-    def create_or_update_user(self, email, password, role, pz_code, is_primary_employer=False, **extra_fields):
+    def create_user(self, email, password, role, **extra_fields):
         """
         Create and save a User with the given email and password.
         """
-        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-        OrganisationEmployer = apps.get_model("npda", "OrganisationEmployer")
 
         if not email:
             raise ValueError(_("You must provide an email address"))
@@ -47,51 +34,27 @@ class NPDAUserManager(BaseUserManager):
         if not role:
             raise ValueError(_("You must provide your role in the NPDA audit."))
 
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-
         email = self.normalize_email(str(email))
+        user = self.model(
+            email=email,
+            password=password,
+            role=role,
+            **extra_fields,
+        )
 
-        user = self.filter(email=email).first()
-
-        if not user:
-            user = self.model(
-                email=email,
-                password=password,
-                role=role,
-                **extra_fields,
-            )
-
-            if password:
-                user.set_password(password)
-            else:
-                user.set_unusable_password()
-            
-            user.password_last_set = timezone.now()
-            user.date_joined = timezone.now()
-        
-        
-        if extra_fields.get("title"):
-            user.title = title_to_choice(extra_fields.get("title"))
-        else:
-            user.title = None
+        user.set_password(password)
         if not user.view_preference:
             user.view_preference = 1  # PDU level view preference
         if not extra_fields.get("is_superuser"):
             user.is_superuser = False
         if not extra_fields.get("is_active"):
             user.is_active = False
-        if not extra_fields.get("is_staff"):
-            user.is_staff = False
-        if not extra_fields.get("is_rcpch_audit_team_member"):
-            user.is_rcpch_audit_team_member = False
-        if not extra_fields.get("is_rcpch_staff"):
-            user.is_rcpch_staff = False
-        if not extra_fields.get("is_patient_or_carer"):
-            user.is_patient_or_carer = False
         # user not active until has confirmed by email
         if not extra_fields.get("email_confirmed"):
             user.email_confirmed = False
-        
+        # set time password has been updated
+        user.password_last_set = timezone.now()
+        user.date_joined = timezone.now()
         user.save()
 
         """
@@ -101,18 +64,6 @@ class NPDAUserManager(BaseUserManager):
         user.save()
         user.groups.add(group)
 
-        # Attach PDU
-        if not OrganisationEmployer.objects.filter(
-            paediatric_diabetes_unit=pdu,
-            npda_user=user,
-        ).exists():
-            # create the organisation employer
-            OrganisationEmployer.objects.create(
-                paediatric_diabetes_unit=pdu,
-                npda_user=user,
-                is_primary_employer=is_primary_employer,
-            )
-
         return user
 
     def create_superuser(
@@ -120,24 +71,42 @@ class NPDAUserManager(BaseUserManager):
         first_name,
         surname,
         email,
-        password
+        password,
+        is_rcpch_audit_team_member=True,
+        role=RCPCH_AUDIT_TEAM,
     ):
-        return self.create_or_update_user(
-            pz_code="PZ999",  # RCPCH
+        """
+        Create and save a SuperUser with the given email and password.
+        """
+        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+        OrganisationEmployer = apps.get_model("npda", "OrganisationEmployer")
+
+        logged_in_user = self.create_user(
             email=email.lower(),
             password=password,
             first_name=first_name,
             last_name=surname,
-            role=RCPCH_AUDIT_TEAM,
+            role=role,
             is_superuser=True,
             is_active=True,
             is_staff=True,
-            is_rcpch_audit_team_member=True,
+            is_rcpch_audit_team_member=is_rcpch_audit_team_member,
             is_rcpch_staff=True,
             email_confirmed=True,
             view_preference=1,
+        )
+
+        paediatric_diabetes_unit = PaediatricDiabetesUnit.objects.get(
+            pz_code="PZ999",  # RCPCH
+        )
+
+        OrganisationEmployer.objects.create(
+            paediatric_diabetes_unit=paediatric_diabetes_unit,
+            npda_user=logged_in_user,
             is_primary_employer=True,
         )
+
+        return logged_in_user
 
 
 class NPDAUser(AbstractUser, PermissionsMixin):
