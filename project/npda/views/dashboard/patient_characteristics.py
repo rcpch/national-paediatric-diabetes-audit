@@ -124,14 +124,14 @@ def patient_ages(request):
     number_of_patients = 0
 
     if Submission.objects.filter(
-        audit_year__range=(audit_start.year, audit_end.year),
+        audit_year=audit_start.year,
         submission_active=True,
         paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
         paediatric_diabetes_unit__active=True,
     ).exists():
         all_patients_in_this_submission = (
             Submission.objects.filter(
-                audit_year__range=(audit_start.year, audit_end.year),
+                audit_year=audit_start.year,
                 submission_active=True,
                 paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
                 paediatric_diabetes_unit__active=True,
@@ -256,14 +256,14 @@ def all_patient_charts(request):
     }
 
     if Submission.objects.filter(
-        audit_year__range=(audit_start.year, audit_end.year),
+        audit_year=audit_start.year,
         submission_active=True,
         paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
         paediatric_diabetes_unit__active=True,
     ).exists():
         all_patients_in_this_submission = (
             Submission.objects.filter(
-                audit_year__range=(audit_start.year, audit_end.year),
+                audit_year=audit_start.year,
                 submission_active=True,
                 paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
                 paediatric_diabetes_unit__active=True,

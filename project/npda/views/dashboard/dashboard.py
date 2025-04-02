@@ -9,6 +9,7 @@ from django.contrib import messages
 from django.shortcuts import render
 
 from project import constants
+from project.npda.general_functions.audit_period import audit_period_for_audit_year
 from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
 from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.models.paediatric_diabetes_unit import (
@@ -87,12 +88,13 @@ def dashboard(request):
 
     selected_audit_year = int(request.session.get("selected_audit_year"))
 
-    if selected_audit_year <= 2024:
-        # The day after the audit year end date
-        calculation_date = date(selected_audit_year, 4, 1)
+    # This function might get called on historical cohorts, so we need to check if today's date is within the audit period
+    audit_start, audit_end = audit_period_for_audit_year(selected_audit_year)
+    if audit_start <= date.today() <= audit_end:
+        calculation_date = date.today()
     else:
-        today = date.today()
-        calculation_date = date(selected_audit_year, today.month, today.day)
+        calculation_date = audit_start
+
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -108,18 +110,18 @@ def dashboard(request):
     )
 
     # Gather other context vars
-    current_date = date.today()
+    
     days_remaining_until_audit_end_date = (
-        kpi_calculations_object["audit_end_date"] - current_date
+        kpi_calculations_object["audit_end_date"] - calculation_date
     ).days
-    current_quarter = retrieve_quarter_for_date(current_date)
+    current_quarter = retrieve_quarter_for_date(calculation_date)
 
     context = {
         "scatter_plot_select_list": _scatter_plot_select_list("new_diagnoses"),
         "pdu_object": pdu,
         # "pdu_lead_organisation": pdu_lead_organisation,
         "kpi_calculations_object": kpi_calculations_object,
-        "current_date": current_date,
+        "current_date": calculation_date,
         "current_quarter": current_quarter,
         "days_remaining_until_audit_end_date": days_remaining_until_audit_end_date,
         "charts": {
