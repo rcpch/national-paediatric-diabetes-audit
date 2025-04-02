@@ -10,7 +10,8 @@ from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.views import PasswordResetView
 from django.contrib.messages.views import SuccessMessageMixin
-from django.db.models import Count, Case, When, BooleanField
+from django.core.exceptions import PermissionDenied
+from django.db.models import Count
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
@@ -290,6 +291,12 @@ class NPDAUserUpdateView(
         if request.htmx:
             # these are HTMX post requests from the edit user form
             # the return value is a partial view of the employers list, with the select, delete and set primary employer buttons
+
+            if not request.user.has_perm("npda.change_npdauser"):
+                raise PermissionDenied(
+                    "You do not have permission to edit this user. Contact the NPDA for assistance."
+                )
+
             selected_npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
             if request.POST.get("update") == "delete":
                 # delete the selected employer
