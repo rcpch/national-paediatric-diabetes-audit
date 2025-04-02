@@ -284,6 +284,10 @@ class NPDAUserUpdateView(
         return context
     
     def form_valid(self, form):
+        if not self.request.user.has_perm("npda.change_npdauser"):
+                raise PermissionDenied(
+                    "You do not have permission to edit this user. Contact the NPDA for assistance."
+                )
         user = form.save(commit=True)
         # remove all groups and add the user to the right group
         user.groups.clear()
