@@ -456,7 +456,7 @@ class CalculateKPIS:
             )
         ]
         # Only up to current quarter
-        current_quarter = retrieve_quarter_for_date(date.today())
+        current_quarter = retrieve_quarter_for_date(self.calculation_date)
         quarter_end_dates = quarter_end_dates[:current_quarter]
         result = {}
         eligible_patients_kpi_2 = total_kpi_1_eligible_pts_base_query_set.filter(
