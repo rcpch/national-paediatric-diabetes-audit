@@ -282,6 +282,15 @@ class NPDAUserUpdateView(
             .order_by("-is_primary_employer")
         )
         return context
+    
+    def form_valid(self, form):
+        user = form.save(commit=True)
+        # remove all groups and add the user to the right group
+        user.groups.clear()
+        group = group_for_role(user.role)
+        if group:
+            user.groups.add(group)
+        return super().form_valid(form)
 
     def post(self, request: HttpRequest, *args: str, **kwargs) -> HttpResponse:
         """
@@ -290,6 +299,7 @@ class NPDAUserUpdateView(
         """
         if request.htmx:
             # these are HTMX post requests from the edit user form
+            # it is not called on submission of the form, only of the employers list
             # the return value is a partial view of the employers list, with the select, delete and set primary employer buttons
 
             if not request.user.has_perm("npda.change_npdauser"):
@@ -384,6 +394,8 @@ class NPDAUserUpdateView(
             return redirect(redirect_url)
         else:
             return super().post(request, *args, **kwargs)
+
+        
 
 
 class NPDAUserDeleteView(

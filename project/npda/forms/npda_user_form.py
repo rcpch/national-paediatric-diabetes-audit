@@ -12,6 +12,8 @@ from django.utils.translation import gettext as _
 # third party imports
 from captcha.fields import CaptchaField
 
+from project.npda.general_functions.group_for_group import group_for_role
+
 # RCPCH imports
 from ...constants.styles.form_styles import *
 from ..models import NPDAUser, VisitActivity
@@ -150,6 +152,7 @@ class NPDAUpdatePasswordForm(SetPasswordForm):
                 ip_address=None,  # cannot get ip address here as it is not a request
             )  # password reset successful - activity 5
             user.save()
+
         return user
 
 
