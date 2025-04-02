@@ -172,19 +172,24 @@ dashboard_urlpatterns = [
         view=partials.get_cgm_partial,
         name="get_cgm_partial",
     ),
-    path(
-        "temp_set_eligible_kpi_7",
-        view=dashboard.temp_set_eligible_kpi_7,
-        name="temp_set_eligible_kpi_7",
+	path(
+        "patient_ages",
+        view=patient_ages,
+        name="patient_ages",
     ),
-]
-
-patient_report_urlpatterns = [
     path(
+        "all_patient_charts",
+        view=all_patient_charts,
+        name="all_patient_charts",
+    ),
+	path(
         "patient_measurements",
         view=patient_measurements,
         name="patient_measurements",
     ),
+]
+
+patient_report_urlpatterns = [
     path(
         "patient_report",
         view=patient_report.PatientReportView.as_view(),
@@ -194,16 +199,6 @@ patient_report_urlpatterns = [
         "patient_table_partial",
         view=patient_report.PatientReportView.as_view(),
         name="patient_table_partial",
-    ),
-    path(
-        "patient_ages",
-        view=patient_ages,
-        name="patient_ages",
-    ),
-    path(
-        "all_patient_charts",
-        view=all_patient_charts,
-        name="all_patient_charts",
     ),
 ]
 
