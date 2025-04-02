@@ -93,7 +93,7 @@ def dashboard(request):
     if audit_start <= date.today() <= audit_end:
         calculation_date = date.today()
     else:
-        calculation_date = audit_end # audit_start
+        calculation_date = audit_start
 
 
     calculate_kpis = CalculateKPIS(

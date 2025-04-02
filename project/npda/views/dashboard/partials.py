@@ -520,6 +520,7 @@ def submission_and_calculation_date(request):
             audit_year=selected_audit_year,
             submission_active=True,
         )
+        
     else:
         submission = None
 
@@ -528,6 +529,6 @@ def submission_and_calculation_date(request):
     if audit_start <= date.today() <= audit_end:
         calculation_date = date.today()
     else:
-        calculation_date = audit_end # audit_start
+        calculation_date = audit_start
 
     return submission, calculation_date
