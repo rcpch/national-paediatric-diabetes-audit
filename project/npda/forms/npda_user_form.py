@@ -106,6 +106,12 @@ class NPDAUserForm(forms.ModelForm):
             self.data = self.data.copy()
             self.data.pop("add_employer", None)
 
+            if not self.request.user.has_perm("npda.change_npdauser"):
+                self.fields['email'].widget.attrs['disabled'] = True
+                self.fields["email"].help_text = _(
+                    "You cannot change the email address of this user."
+                )
+
 
 class NPDAUpdatePasswordForm(SetPasswordForm):
     # form show when setting or resetting password
