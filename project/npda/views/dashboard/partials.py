@@ -14,6 +14,7 @@ from django.http import HttpResponseBadRequest
 from django.shortcuts import render
 
 import project.constants.colors as colors
+from project.npda.general_functions.audit_period import audit_period_for_audit_year
 from project.npda.general_functions.map import (
     generate_dataframe_and_aggregated_distance_data_from_cases,
     generate_distance_from_organisation_scatterplot_figure,
@@ -522,11 +523,11 @@ def submission_and_calculation_date(request):
     else:
         submission = None
 
-    if selected_audit_year <= date.today().year:
-        # The day after the audit year end date
-        calculation_date = date(selected_audit_year, 4, 1)
+    # This function might get called on historical cohorts, so we need to check if today's date is within the audit period
+    audit_start, audit_end = audit_period_for_audit_year(selected_audit_year)
+    if audit_start <= date.today() <= audit_end:
+        calculation_date = date.today()
     else:
-        today = date.today()
-        calculation_date = date(selected_audit_year, today.month, today.day)
+        calculation_date = audit_end # audit_start
 
     return submission, calculation_date

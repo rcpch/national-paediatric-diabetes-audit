@@ -110,18 +110,18 @@ def dashboard(request):
     )
 
     # Gather other context vars
-    current_date = date.today()
+    
     days_remaining_until_audit_end_date = (
-        kpi_calculations_object["audit_end_date"] - current_date
+        kpi_calculations_object["audit_end_date"] - calculation_date
     ).days
-    current_quarter = retrieve_quarter_for_date(current_date)
+    current_quarter = retrieve_quarter_for_date(calculation_date)
 
     context = {
         "scatter_plot_select_list": _scatter_plot_select_list("new_diagnoses"),
         "pdu_object": pdu,
         # "pdu_lead_organisation": pdu_lead_organisation,
         "kpi_calculations_object": kpi_calculations_object,
-        "current_date": current_date,
+        "current_date": calculation_date,
         "current_quarter": current_quarter,
         "days_remaining_until_audit_end_date": days_remaining_until_audit_end_date,
         "charts": {
