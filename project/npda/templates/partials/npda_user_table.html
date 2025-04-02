@@ -20,8 +20,8 @@
           <td class="text-left">
             {% if npda_user.number_of_pdu_memberships < 2 %}
               <div class="tooltip tooltip-right"
-                   data-tip="NPDA User Unique ID {% if perms.npda.change_npdauser %}. Click to view and edit user details{% endif %}">
-                {% if perms.npda.change_npdauser %}
+                   data-tip="NPDA User Unique ID {% if perms.npda.view_npdauser %}. Click to view {% if perms.npda.change_npdauser %}and edit{% endif %} user details{% endif %}">
+                {% if perms.npda.view_npdauser %}
                   <span class="flex flex-row text-left">
                     <a href="{% url 'npdauser-update' npda_user.pk %}"
                        class="btn btn-wide flex p-1 h-full hover:text-rcpch_pink px-2 text-rcpch_dark_blue">
@@ -35,7 +35,7 @@
                 {% endif %}
               </div>
             {% else %}
-              {% if npda_user|employer_match:request.user and perms.npda.change_npda_user %}
+              {% if npda_user|employer_match:request.user and perms.npda.view_npda_user %}
                 <span class="tooltip tooltip-right"
                       data-tip="Member of {{ npda_user.number_of_pdu_memberships }} PDUs. Click to view and edit user details">
                   <a href="{% url 'npdauser-update' npda_user.pk %}"

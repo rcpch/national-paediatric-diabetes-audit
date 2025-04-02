@@ -21,7 +21,6 @@ from django.views.generic import ListView
 
 # third party imports
 from two_factor.views import LoginView as TwoFactorLoginView
-from django_htmx.http import trigger_client_event
 
 # RCPCH imports
 from ..models import (
@@ -35,7 +34,6 @@ from ..general_functions import (
     send_email_to_recipients,
     group_for_role,
     organisations_adapter,
-    refresh_session_filters,
 )
 from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
 from .mixins import LoginAndOTPRequiredMixin
@@ -243,7 +241,7 @@ class NPDAUserUpdateView(
     Handle update of patient in audit
     """
 
-    permission_required = "npda.change_npdauser"
+    permission_required = "npda.view_npdauser"
     permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
 
     model = NPDAUser

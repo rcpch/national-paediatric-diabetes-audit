@@ -484,3 +484,17 @@ def disable_fields(field, form):
         return True
 
     return False
+
+@register.filter(name='attr')
+def add_attributes(field, attributes):
+    attrs = {}
+    definition = attributes.split(',')
+
+    for d in definition:
+        if '=' not in d:
+            attrs['class'] = d
+        else:
+            key, val = d.split('=', 1)
+            attrs[key] = val
+
+    return field.as_widget(attrs=attrs)
