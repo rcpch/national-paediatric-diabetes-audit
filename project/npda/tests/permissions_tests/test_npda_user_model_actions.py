@@ -252,8 +252,6 @@ def test_reader_cannot_upload_csv(
     # check the response status code
     assert response.status_code == HTTPStatus.FORBIDDEN
 
-=======
-
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/906
 @pytest.mark.django_db
 def test_coordinators_cannot_change_their_role(
