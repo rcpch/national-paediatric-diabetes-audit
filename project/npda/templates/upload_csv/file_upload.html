@@ -1,5 +1,14 @@
 {% extends 'base.html' %}
 {% block content %}
+  {% if not perms.npda.can_upload_csv %}
+    <alert class="alert alert-error shadow-lg">
+    <div>
+      <i class="fa-solid fa-circle-exclamation fa-2xl"></i>
+      <span class="font-bold">You do not have permission to upload CSV files.</span>
+      <p class="text-sm">Please contact your administrator for assistance.</p>
+    </div>
+    </alert>
+  {% endif %}
   <div class="w-full flex flex-col justify-center items-center min-h-fit">
     <div class="container flex flex-col justify-center items-center my-20">
       <div class="w-6/12 mb-12">
@@ -36,12 +45,13 @@
           Drag &amp; drop your NPDA CSV file here, or
         </p>
         <div class="bg-rcpch_dark_blue flex justify-center items-center px-6 py-4 mb-4">
-          <label class="font-montserrat px-4 py-2 mr-4 text-white bg-gray-600 cursor-pointer">
+          <label class="font-montserrat px-4 py-2 mr-4 text-white bg-gray-600 cursor-pointer ">
             Choose file
             <input id="upload_input"
                    type="file"
                    name="csv_upload"
                    class="hidden"
+                   {% if not perms.npda.can_upload_csv %}disabled{% endif %}
                    onchange="updateFilename(this)"
                    accept=".csv" />
           </label>
