@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
-  {% if not perms.npda.can_upload_csv %}
+  {% if not perms.npda.can_submit_csv %}
     <alert class="alert alert-error shadow-lg">
     <div>
       <i class="fa-solid fa-circle-exclamation fa-2xl"></i>
@@ -51,7 +51,7 @@
                    type="file"
                    name="csv_upload"
                    class="hidden"
-                   {% if not perms.npda.can_upload_csv %}disabled{% endif %}
+                   {% if not perms.npda.can_submit_csv %}disabled{% endif %}
                    onchange="updateFilename(this)"
                    accept=".csv" />
           </label>
