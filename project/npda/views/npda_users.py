@@ -38,6 +38,7 @@ from ..general_functions import (
 )
 from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
 from .mixins import LoginAndOTPRequiredMixin
+from ...constants import RCPCH_AUDIT_TEAM
 
 # from ..signals import password_reset_sent
 
@@ -174,6 +175,11 @@ class NPDAUserCreateView(
             raise PermissionDenied(
                 f"{new_user_pz_code} is inactive. Contact the NPDA for assistance."
             )
+        
+        if form.cleaned_data["role"] == RCPCH_AUDIT_TEAM and not (self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member):
+            raise PermissionDenied(
+                "You do not have permission to add a user with RCPCH Audit Team role."
+            )
 
         new_user = form.save(commit=False)
         new_user.set_unusable_password()
@@ -267,9 +273,15 @@ class NPDAUserUpdateView(
 
     def form_valid(self, form):
         if not self.request.user.has_perm("npda.change_npdauser"):
-                raise PermissionDenied(
-                    "You do not have permission to edit this user. Contact the NPDA for assistance."
-                )
+            raise PermissionDenied(
+                "You do not have permission to edit this user. Contact the NPDA for assistance."
+            )
+        
+        if form.cleaned_data["role"] == RCPCH_AUDIT_TEAM and not (self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member):
+            raise PermissionDenied(
+                "You do not have permission to add a user with RCPCH Audit Team role."
+            )
+        
         user = form.save(commit=True)
         # remove all groups and add the user to the right group
         user.groups.clear()
