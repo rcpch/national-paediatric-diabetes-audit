@@ -54,6 +54,7 @@ def groups_seeder(
         {"codename": "change_npdauser", "content_type": npdauserContentType},
         {"codename": "add_npdauser", "content_type": npdauserContentType},
         {"codename": "delete_npdauser", "content_type": npdauserContentType},
+
     ]
 
     READER_PERMISSIONS = [
@@ -106,6 +107,7 @@ def groups_seeder(
         {"codename": "change_npdauser", "content_type": npdauserContentType},
         {"codename": "add_npdauser", "content_type": npdauserContentType},
         {"codename": "delete_npdauser", "content_type": npdauserContentType},
+
     ]
 
     PATIENT_PERMISSIONS = [
@@ -130,6 +132,9 @@ def groups_seeder(
             "codename": CAN_ALLOCATE_NPDA_LEAD_CENTRE[0],
             "content_type": transferContentType,
         },
+
+        {"codename": "can_submit_csv", "content_type": npdauserContentType},
+        {"codename": "can_download_csv", "content_type": npdauserContentType},
     ]
 
     """
@@ -154,6 +159,9 @@ def groups_seeder(
             "codename": CAN_TRANSFER_NPDA_LEAD_CENTRE[0],
             "content_type": transferContentType,
         },
+
+        {"codename": "can_submit_csv", "content_type": npdauserContentType},
+        {"codename": "can_download_csv", "content_type": npdauserContentType},
     ]
 
     PATIENT_ACCESS_PERMISSIONS = [

@@ -251,6 +251,8 @@ class NPDAUser(AbstractUser, PermissionsMixin):
         permissions = [
             CAN_PUBLISH_NPDA_DATA,
             CAN_CONSENT_TO_AUDIT_PARTICIPATION,
+            CAN_SUBMIT_CSV,
+            CAN_DOWNLOAD_CSV
         ]
         ordering = ("surname",)
 
