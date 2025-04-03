@@ -51,7 +51,8 @@
             <div class="pl-1 pr-1">
                 <ul class="menu menu-horizontal">
                     <li>
-                        <a href="{% url 'upload_csv' %}" class="btn btn-info text-white">
+                        <a href="{% url 'upload_csv' %}"
+                           class="btn btn-info text-white {% if not perms.npda.can_upload_csv %}btn-disabled{% endif %}">
                             <i class="fa-solid fa-upload"></i>
                             Upload CSV
                         </a>
@@ -71,13 +72,14 @@
                     {% include 'partials/page_elements/quality_report_popup.html' %}
                     <!-- Pop up which shows data protection guidance for original data download -->
                     {% include 'partials/page_elements/original_data_popup.html' %}
-                    <li tabindex="0" role="button" class="btn btn-info text-white dropdown dropdown-bottom dropdown-end w-12 p-0 flex">
+                    <li tabindex="0"
+                        role="button"
+                        class="btn btn-info text-white dropdown dropdown-bottom dropdown-end w-12 p-0 flex">
                         <i class="fa-solid fa-chevron-down"></i>
                         <ul tabindex="0"
                             class="dropdown-content menu bg-base-100 text-black font-normal rounded-box z-[1] w-52 p-2 shadow">
                             <li>
-                                <button type="button"
-                                    onclick="original_data_modal.showModal()">
+                                <button type="button" onclick="original_data_modal.showModal()">
                                     <i class="fa-solid fa-download"></i>
                                     Download original file
                                 </a>

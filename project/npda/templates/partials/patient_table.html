@@ -244,7 +244,7 @@
             </a>
           {% else %}
             <a href="{% url 'upload_csv' %}"
-               class="btn btn-info h-auto w-full md:w-auto">
+               class="btn btn-info h-auto w-full md:w-auto {% if not perms.npda.can_upload_csv %}btn-disabled{% endif %}">
               <i class="fa-solid fa-person-circle-plus"></i>
               Upload CSV
             </a>
