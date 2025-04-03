@@ -27,6 +27,13 @@ from project.constants.user import RCPCH_AUDIT_TEAM
 from project.npda.models import NPDAUser
 from project.npda.tests.utils import login_and_verify_user
 
+from project.npda.tests.UserDataClasses import (
+    test_user_audit_centre_reader_data,
+    test_user_audit_centre_editor_data,
+    test_user_audit_centre_coordinator_data,
+    test_user_rcpch_audit_team_data,
+)
+
 logger = logging.getLogger(__name__)
 
 ALDER_HEY_PZ_CODE = "PZ074"
@@ -192,3 +199,56 @@ def test_npda_user_list_view_users_cannot_set_their_view_preference_to_organisat
 
     users = response.context_data["object_list"]
     check_all_users_in_pdu(ah_user, users, ALDER_HEY_PZ_CODE)
+
+@pytest.mark.django_db
+def test_editor_can_upload_csv(
+    seed_groups_fixture, seed_users_fixture, client, dummy_sheets_folder
+):
+    # create a test user with the editor role
+    editor_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+    client = login_and_verify_user(client, editor_user)
+    # create a test CSV file
+    
+    file = dummy_sheets_folder / "dummy_sheet.csv"
+
+    # upload the CSV file by posting to  'home' view
+    url = reverse("home")
+    with open(file, "rb") as f:
+        response = client.post(
+            url,
+            {"csv_file": f},
+            content_type="multipart/form-data",
+        )
+    # check the response status code
+    assert response.status_code != HTTPStatus.FORBIDDEN
+    # tricky test as it is hard to check the response as it is a redirect from an async call
+    # this tests is really to check that the upload is not forbidden
+
+@pytest.mark.django_db
+def test_reader_cannot_upload_csv(
+    seed_groups_fixture, seed_users_fixture, client, dummy_sheets_folder
+):
+    # create a test user with the editor role
+    reader_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_reader_data.role,
+    ).first()
+    client = login_and_verify_user(client, reader_user)
+    # create a test CSV file
+    
+    file = dummy_sheets_folder / "dummy_sheet.csv"
+
+    # upload the CSV file by posting to  'home' view
+    url = reverse("home")
+    with open(file, "rb") as f:
+        response = client.post(
+            url,
+            {"csv_file": f},
+            content_type="multipart/form-data",
+        )
+    # check the response status code
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
