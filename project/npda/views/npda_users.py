@@ -10,7 +10,8 @@ from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.views import PasswordResetView
 from django.contrib.messages.views import SuccessMessageMixin
-from django.db.models import Count, Case, When, BooleanField
+from django.core.exceptions import PermissionDenied
+from django.db.models import Count
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
@@ -21,7 +22,6 @@ from django.views.generic import ListView
 
 # third party imports
 from two_factor.views import LoginView as TwoFactorLoginView
-from django_htmx.http import trigger_client_event
 
 # RCPCH imports
 from ..models import (
@@ -35,7 +35,6 @@ from ..general_functions import (
     send_email_to_recipients,
     group_for_role,
     organisations_adapter,
-    refresh_session_filters,
 )
 from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
 from .mixins import LoginAndOTPRequiredMixin
@@ -243,7 +242,7 @@ class NPDAUserUpdateView(
     Handle update of patient in audit
     """
 
-    permission_required = "npda.change_npdauser"
+    permission_required = "npda.view_npdauser"
     permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
 
     model = NPDAUser
@@ -283,6 +282,19 @@ class NPDAUserUpdateView(
             .order_by("-is_primary_employer")
         )
         return context
+    
+    def form_valid(self, form):
+        if not self.request.user.has_perm("npda.change_npdauser"):
+                raise PermissionDenied(
+                    "You do not have permission to edit this user. Contact the NPDA for assistance."
+                )
+        user = form.save(commit=True)
+        # remove all groups and add the user to the right group
+        user.groups.clear()
+        group = group_for_role(user.role)
+        if group:
+            user.groups.add(group)
+        return super().form_valid(form)
 
     def post(self, request: HttpRequest, *args: str, **kwargs) -> HttpResponse:
         """
@@ -291,7 +303,14 @@ class NPDAUserUpdateView(
         """
         if request.htmx:
             # these are HTMX post requests from the edit user form
+            # it is not called on submission of the form, only of the employers list
             # the return value is a partial view of the employers list, with the select, delete and set primary employer buttons
+
+            if not request.user.has_perm("npda.change_npdauser"):
+                raise PermissionDenied(
+                    "You do not have permission to edit this user. Contact the NPDA for assistance."
+                )
+
             selected_npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
             if request.POST.get("update") == "delete":
                 # delete the selected employer
@@ -379,6 +398,8 @@ class NPDAUserUpdateView(
             return redirect(redirect_url)
         else:
             return super().post(request, *args, **kwargs)
+
+        
 
 
 class NPDAUserDeleteView(
