@@ -454,8 +454,14 @@ class CalculateKPIS:
             )
         ]
         # Only up to current quarter
-        current_quarter = retrieve_quarter_for_date(self.calculation_date)
+        if self.calculation_date == date.today():
+            # Get the current quarter
+            current_quarter = retrieve_quarter_for_date(self.calculation_date)
+        else:
+            # This is for a previous audit period: we need to get the quarter for the whole year
+            current_quarter = retrieve_quarter_for_date(self.audit_end_date)
         quarter_end_dates = quarter_end_dates[:current_quarter]
+        
         result = {}
         eligible_patients_kpi_2 = total_kpi_1_eligible_pts_base_query_set.filter(
             diagnosis_date__range=(self.AUDIT_DATE_RANGE)
