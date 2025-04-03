@@ -221,7 +221,39 @@ def test_coordinators_cannot_change_their_role(
 
 
 @pytest.mark.django_db
-def test_coordinators_cannot_change_their_employer(
+def test_coordinators_cannot_change_their_employer_htmx(
+    seed_groups_fixture,
+    seed_users_fixture,
+    client,
+):
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=AUDIT_CENTRE_COORDINATOR
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    url = reverse("npdauser-update", kwargs={ "pk": user.pk })
+
+    response = client.post(url, data={
+        "email": user.email,
+        "first_name": user.first_name,
+        "surname": user.surname,
+        "add_employer": GOSH_PZ_CODE
+    }, **{
+        # Gated on request.htmx
+        "HTTP_HX-Request": "true",
+    })
+
+    user.refresh_from_db()
+    employers = [e.pz_code for e in user.organisation_employers.all()]
+
+    assert employers == [ALDER_HEY_PZ_CODE]
+
+
+# Not actually used in the UI but possible to construct manually
+@pytest.mark.django_db
+def test_coordinators_cannot_change_their_employer_post(
     seed_groups_fixture,
     seed_users_fixture,
     client,
@@ -237,15 +269,13 @@ def test_coordinators_cannot_change_their_employer(
 
     response = client.post(url, data={
         "add_employer": GOSH_PZ_CODE
-    }, **{
-        # Gated on request.htmx
-        "HTTP_HX-Request": "true",
     })
 
     user.refresh_from_db()
     employers = [e.pz_code for e in user.organisation_employers.all()]
 
     assert employers == [ALDER_HEY_PZ_CODE]
+
 
 
 @pytest.mark.django_db

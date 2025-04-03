@@ -159,6 +159,22 @@ class NPDAUserCreateView(
     def form_valid(self, form):
         PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
 
+        new_user_pz_code = form.cleaned_data["add_employer"] or self.request.session.get("pz_code")
+
+        my_pz_codes = self.request.user.organisation_employers.values_list("pz_code", flat=True)
+
+        if new_user_pz_code not in my_pz_codes:
+            raise PermissionDenied(
+                f"You do not have permission to add users to {new_user_pz_code}. Contact the NPDA for assistance."
+            )
+        
+        new_user_pdu = PaediatricDiabetesUnit.objects.get(pz_code=new_user_pz_code)
+
+        if not new_user_pdu.active and not (self.request.user.is_rcpch_audit_team_member or self.request.user.is_superuser):
+            raise PermissionDenied(
+                f"{new_user_pz_code} is inactive. Contact the NPDA for assistance."
+            )
+
         new_user = form.save(commit=False)
         new_user.set_unusable_password()
         new_user.is_active = True
@@ -166,49 +182,15 @@ class NPDAUserCreateView(
         new_user.view_preference = 1  # PDU level view preference
         new_user.save()
 
-        # add the user to the appropriate organisation
-        new_employer_pz_code = form.cleaned_data["add_employer"]
-        if new_employer_pz_code:
-            # a new employer has been added
-            pdu = PaediatricDiabetesUnit.objects.get(pz_code=new_employer_pz_code, active=True)
-            OrganisationEmployer.objects.create(
-                paediatric_diabetes_unit=pdu,
-                npda_user=new_user,
-                is_primary_employer=True,
-            )
-            new_user.refresh_from_db()
-        else:
-            # create the new users using the pz_code stored in the session
-            OrganisationEmployer.objects.create(
-                paediatric_diabetes_unit=PaediatricDiabetesUnit.objects.get(
-                    pz_code=self.request.session.get("pz_code")
-                ),
-                npda_user=new_user,
-                is_primary_employer=True,
-            )
-        try:
-            new_user.save()
-        except Exception as error:
-            messages.error(
-                self.request,
-                f"Error: {error}. Account not created. Please contact the NPDA team if this issue persists.",
-            )
-            return redirect(
-                "npda_users",
-            )
+        OrganisationEmployer.objects.create(
+            paediatric_diabetes_unit=new_user_pdu,
+            npda_user=new_user,
+            is_primary_employer=True,
+        )
 
         # add the user to the appropriate group
         new_group = group_for_role(new_user.role)
-        try:
-            new_user.groups.add(new_group)
-        except Exception as error:
-            messages.error(
-                self.request,
-                f"Error: {error}. Account not created. Please contact NPDA team if this issue persists.",
-            )
-            return redirect(
-                "npda_users",
-            )
+        new_user.groups.add(new_group)
 
         # user created - send email with reset link to new user
         subject = "Password Reset Requested"
@@ -282,7 +264,7 @@ class NPDAUserUpdateView(
             .order_by("-is_primary_employer")
         )
         return context
-    
+
     def form_valid(self, form):
         if not self.request.user.has_perm("npda.change_npdauser"):
                 raise PermissionDenied(
@@ -340,11 +322,23 @@ class NPDAUserUpdateView(
                 # add the user to the appropriate organisation
                 new_employer_pz_code = request.POST.get("add_employer")
                 if new_employer_pz_code:
+                    my_pz_codes = self.request.user.organisation_employers.values_list("pz_code", flat=True)
+
+                    if new_employer_pz_code not in my_pz_codes:
+                        raise PermissionDenied(
+                            f"You do not have permission to add users to {new_employer_pz_code}. Contact the NPDA for assistance."
+                        )
+
                     # a new employer has been added
-                    # fetch the object from the API using the PZ code
                     selected_pdu = PaediatricDiabetesUnit.objects.get(
                         pz_code=new_employer_pz_code
                     )
+
+                    if not selected_pdu.active and not (self.request.user.is_rcpch_audit_team_member or self.request.user.is_superuser):
+                        raise PermissionDenied(
+                            f"{new_user_pz_code} is inactive. Contact the NPDA for assistance."
+                        )
+
                     OrganisationEmployer.objects.update_or_create(
                         paediatric_diabetes_unit=selected_pdu,
                         npda_user=selected_npda_user,
