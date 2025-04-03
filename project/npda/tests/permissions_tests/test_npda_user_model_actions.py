@@ -22,7 +22,7 @@ import pytest
 # 3rd party imports
 from django.urls import reverse
 
-from project.constants.user import RCPCH_AUDIT_TEAM
+from project.constants.user import RCPCH_AUDIT_TEAM, AUDIT_CENTRE_COORDINATOR
 # E12 imports
 from project.npda.models import NPDAUser
 from project.npda.tests.utils import login_and_verify_user
@@ -192,3 +192,82 @@ def test_npda_user_list_view_users_cannot_set_their_view_preference_to_organisat
 
     users = response.context_data["object_list"]
     check_all_users_in_pdu(ah_user, users, ALDER_HEY_PZ_CODE)
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/906
+@pytest.mark.django_db
+def test_coordinators_cannot_change_their_role(
+    seed_groups_fixture,
+    seed_users_fixture,
+    client,
+):
+    user = NPDAUser.objects.filter(role=AUDIT_CENTRE_COORDINATOR).first()
+    client = login_and_verify_user(client, user)
+
+    url = reverse("npdauser-update", kwargs={ "pk": user.pk })
+
+    response = client.post(url, {
+        "role": RCPCH_AUDIT_TEAM
+    })
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+    user = user.refresh_from_db()
+    assert user.role == AUDIT_CENTRE_COORDINATOR
+
+
+@pytest.mark.django_db
+def test_coordinators_cannot_change_their_employer(
+    seed_groups_fixture,
+    seed_users_fixture,
+    client,
+):
+    ah_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=AUDIT_CENTRE_COORDINATOR
+    ).first()
+
+    client = login_and_verify_user(client, ah_user)
+
+    url = reverse("npdauser-update", kwargs={ "pk": ah_user.pk })
+
+    response = client.post(url, {
+        "add_employer": GOSH_PZ_CODE
+    })
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+    ah_user = user.refresh_from_db()
+    employers = [e.pz_code for e in ah_user.organisation_employers.all()]
+
+    assert employers == [ALDER_HEY_PZ_CODE]
+
+
+@pytest.mark.django_db
+def test_coordinators_cannot_create_users_outside_of_their_pdu(
+    seed_groups_fixture,
+    seed_users_fixture,
+    client,
+):
+    user_count_before = NPDAUser.objects.count()
+
+    ah_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=AUDIT_CENTRE_COORDINATOR
+    ).first()
+
+    client = login_and_verify_user(client, ah_user)
+
+    url = reverse("npdauser-update", kwargs={ "pk": ah_user.pk })
+
+    response = client.post(url, {
+        "first_name": "Bob",
+        "last_name": "Bobertson",
+        "role": AUDIT_CENTRE_COORDINATOR,
+        "add_employer": GOSH_PZ_CODE
+    })
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+    user_count_after = NPDAUser.objects.count()
+    assert user_count_after == user_count_before
