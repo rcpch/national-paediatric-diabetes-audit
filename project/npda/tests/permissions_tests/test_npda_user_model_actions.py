@@ -22,7 +22,7 @@ import pytest
 # 3rd party imports
 from django.urls import reverse
 
-from project.constants.user import RCPCH_AUDIT_TEAM, AUDIT_CENTRE_COORDINATOR
+from project.constants.user import RCPCH_AUDIT_TEAM, AUDIT_CENTRE_COORDINATOR, TRUST_AUDIT_TEAM_COORDINATOR_ACCESS
 # E12 imports
 from project.npda.models import NPDAUser
 from project.npda.tests.utils import login_and_verify_user
@@ -207,13 +207,17 @@ def test_coordinators_cannot_change_their_role(
     url = reverse("npdauser-update", kwargs={ "pk": user.pk })
 
     response = client.post(url, {
+        "email": user.email,
+        "first_name": user.first_name,
+        "surname": user.surname,
         "role": RCPCH_AUDIT_TEAM
     })
 
-    assert response.status_code == HTTPStatus.FORBIDDEN
-
-    user = user.refresh_from_db()
+    user.refresh_from_db()
     assert user.role == AUDIT_CENTRE_COORDINATOR
+    
+    assert user.groups.count() == 1
+    assert user.groups.first().name == TRUST_AUDIT_TEAM_COORDINATOR_ACCESS
 
 
 @pytest.mark.django_db
@@ -222,23 +226,27 @@ def test_coordinators_cannot_change_their_employer(
     seed_users_fixture,
     client,
 ):
-    ah_user = NPDAUser.objects.filter(
+    user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
         role=AUDIT_CENTRE_COORDINATOR
     ).first()
 
-    client = login_and_verify_user(client, ah_user)
+    client = login_and_verify_user(client, user)
 
-    url = reverse("npdauser-update", kwargs={ "pk": ah_user.pk })
+    url = reverse("npdauser-update", kwargs={ "pk": user.pk })
 
-    response = client.post(url, {
+    response = client.post(url, data={
+        "email": user.email,
+        "first_name": user.first_name,
+        "surname": user.surname,
         "add_employer": GOSH_PZ_CODE
+    }, **{
+        # Gated on request.htmx
+        "HTTP_HX-Request": "true",
     })
 
-    assert response.status_code == HTTPStatus.FORBIDDEN
-
-    ah_user = user.refresh_from_db()
-    employers = [e.pz_code for e in ah_user.organisation_employers.all()]
+    user.refresh_from_db()
+    employers = [e.pz_code for e in user.organisation_employers.all()]
 
     assert employers == [ALDER_HEY_PZ_CODE]
 
@@ -258,16 +266,43 @@ def test_coordinators_cannot_create_users_outside_of_their_pdu(
 
     client = login_and_verify_user(client, ah_user)
 
-    url = reverse("npdauser-update", kwargs={ "pk": ah_user.pk })
+    url = reverse("npdauser-create")
 
     response = client.post(url, {
         "first_name": "Bob",
-        "last_name": "Bobertson",
+        "surname": "Bobertson",
+        "email": "bob@bobertson.com",
         "role": AUDIT_CENTRE_COORDINATOR,
         "add_employer": GOSH_PZ_CODE
     })
 
-    assert response.status_code == HTTPStatus.FORBIDDEN
+    user_count_after = NPDAUser.objects.count()
+    assert user_count_after == user_count_before
+
+
+@pytest.mark.django_db
+def test_coordinators_cannot_create_audit_team_members(
+    seed_groups_fixture,
+    seed_users_fixture,
+    client,
+):
+    user_count_before = NPDAUser.objects.count()
+
+    ah_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=AUDIT_CENTRE_COORDINATOR
+    ).first()
+
+    client = login_and_verify_user(client, ah_user)
+
+    url = reverse("npdauser-create")
+
+    response = client.post(url, {
+        "first_name": "Bob",
+        "surname": "Bobertson",
+        "email": "bob@bobertson.com",
+        "role": RCPCH_AUDIT_TEAM,
+    })
 
     user_count_after = NPDAUser.objects.count()
     assert user_count_after == user_count_before
