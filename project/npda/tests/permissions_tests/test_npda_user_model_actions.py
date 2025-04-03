@@ -236,9 +236,6 @@ def test_coordinators_cannot_change_their_employer(
     url = reverse("npdauser-update", kwargs={ "pk": user.pk })
 
     response = client.post(url, data={
-        "email": user.email,
-        "first_name": user.first_name,
-        "surname": user.surname,
         "add_employer": GOSH_PZ_CODE
     }, **{
         # Gated on request.htmx
@@ -306,3 +303,66 @@ def test_coordinators_cannot_create_audit_team_members(
 
     user_count_after = NPDAUser.objects.count()
     assert user_count_after == user_count_before
+
+
+# These tests pass already before fixing https://github.com/rcpch/national-paediatric-diabetes-audit/issues/906
+# as handled by CheckPDUInstanceMixin but leaving them in for completeness sake.
+@pytest.mark.django_db
+def test_coordinators_cannot_delete_users_outside_of_their_pdu(
+    seed_groups_fixture,
+    seed_users_fixture,
+    client,
+):
+    user_count_before = NPDAUser.objects.count()
+
+    ah_coordinator = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=AUDIT_CENTRE_COORDINATOR
+    ).first()
+
+    gosh_coordinator = NPDAUser.objects.filter(
+        organisation_employers__pz_code=GOSH_PZ_CODE,
+        role=AUDIT_CENTRE_COORDINATOR
+    ).first()
+
+    client = login_and_verify_user(client, ah_coordinator)
+
+    url = reverse("npdauser-delete", kwargs={ "pk": gosh_coordinator.pk })
+
+    response = client.post(url)
+
+    user_count_after = NPDAUser.objects.count()
+    assert user_count_after == user_count_before
+
+
+@pytest.mark.django_db
+def test_coordinators_cannot_add_employers_outside_of_their_pdu(
+    seed_groups_fixture,
+    seed_users_fixture,
+    client,
+):
+    ah_coordinator = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=AUDIT_CENTRE_COORDINATOR
+    ).first()
+
+    gosh_coordinator = NPDAUser.objects.filter(
+        organisation_employers__pz_code=GOSH_PZ_CODE,
+        role=AUDIT_CENTRE_COORDINATOR
+    ).first()
+
+    client = login_and_verify_user(client, ah_coordinator)
+
+    url = reverse("npdauser-update", kwargs={ "pk": gosh_coordinator.pk })
+
+    response = client.post(url, data={
+        "add_employer": ALDER_HEY_PZ_CODE
+    }, **{
+        # Gated on request.htmx
+        "HTTP_HX-Request": "true",
+    })
+
+    gosh_coordinator.refresh_from_db()
+    employers = [e.pz_code for e in gosh_coordinator.organisation_employers.all()]
+
+    assert employers == [GOSH_PZ_CODE]
