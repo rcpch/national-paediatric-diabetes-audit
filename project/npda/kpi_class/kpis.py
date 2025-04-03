@@ -1096,7 +1096,11 @@ class CalculateKPIS:
             )
         ]
         # Only up to current quarter
-        current_quarter = retrieve_quarter_for_date(self.calculation_date)
+        if self.calculation_date == date.today():
+            current_quarter = retrieve_quarter_for_date(self.calculation_date)
+        else:
+            # This is for a previous audit period: we need to get the quarter for the whole year
+            current_quarter = retrieve_quarter_for_date(self.audit_end_date)
         quarter_end_dates = quarter_end_dates[:current_quarter]
         result = {}
 
@@ -2022,7 +2026,10 @@ class CalculateKPIS:
             )
         ]
         # Only up to current quarter
-        current_quarter = retrieve_quarter_for_date(self.calculation_date)
+        if self.calculation_date == date.today():
+            current_quarter = retrieve_quarter_for_date(self.calculation_date)
+        else:
+            current_quarter = retrieve_quarter_for_date(self.audit_end_date)
         quarter_end_dates = quarter_end_dates[:current_quarter]
         result = {}
         for q, q_end_date in enumerate(quarter_end_dates, start=1):
@@ -3849,7 +3856,10 @@ class CalculateKPIS:
             )
         ]
         # Only up to current quarter
-        current_quarter = retrieve_quarter_for_date(self.calculation_date)
+        if self.calculation_date == date.today():
+            current_quarter = retrieve_quarter_for_date(self.calculation_date)
+        else:
+            current_quarter = retrieve_quarter_for_date(self.audit_end_date)
         quarter_end_dates = quarter_end_dates[:current_quarter]
         result = {}
 
