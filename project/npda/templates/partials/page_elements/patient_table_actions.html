@@ -58,7 +58,7 @@
                         </a>
                     </li>
                     <li>
-                        <button class="btn {% if submission_error_count > 0 %} btn-warning {% else %} btn-success {% endif %} text-white"
+                        <button class="btn {% if submission_error_count > 0 %} btn-warning {% else %} btn-success {% endif %} text-white {% if not perms.npda.can_download_csv %}btn-disabled{% endif %}"
                                 type="button"
                                 onclick="quality_report_modal.showModal()">
                             <i class="fa-solid fa-file-excel"></i>
@@ -79,7 +79,9 @@
                         <ul tabindex="0"
                             class="dropdown-content menu bg-base-100 text-black font-normal rounded-box z-[1] w-52 p-2 shadow">
                             <li>
-                                <button type="button" onclick="original_data_modal.showModal()">
+                                <button type="button"
+                                        onclick="original_data_modal.showModal()"
+                                        class="{% if not perms.npda.can_download_csv %}btn-disabled{% endif %}">
                                     <i class="fa-solid fa-download"></i>
                                     Download original file
                                 </a>
