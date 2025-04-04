@@ -4,6 +4,9 @@ on:
   issues:
     types:
       - opened
+  pull_request:
+    types:
+      - opened
 
 jobs:
   add-to-project:
@@ -14,5 +17,4 @@ jobs:
         with:
           project-url: https://github.com/orgs/rcpch/projects/13
           github-token: ${{ secrets.AUTO_ADD_TO_PROJECT_TOKEN }}
-          fields: |
-            Status: Triage
+
