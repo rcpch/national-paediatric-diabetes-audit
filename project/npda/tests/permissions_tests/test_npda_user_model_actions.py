@@ -246,9 +246,9 @@ def test_coordinators_cannot_change_their_employer_htmx(
     })
 
     user.refresh_from_db()
-    employers = [e.pz_code for e in user.organisation_employers.all()]
+    employers = { e.pz_code for e in user.organisation_employers.all() }
 
-    assert employers == [ALDER_HEY_PZ_CODE]
+    assert employers == { ALDER_HEY_PZ_CODE }
 
 
 # Not actually used in the UI but possible to construct manually
@@ -272,9 +272,9 @@ def test_coordinators_cannot_change_their_employer_post(
     })
 
     user.refresh_from_db()
-    employers = [e.pz_code for e in user.organisation_employers.all()]
+    employers = { e.pz_code for e in user.organisation_employers.all() }
 
-    assert employers == [ALDER_HEY_PZ_CODE]
+    assert employers == { ALDER_HEY_PZ_CODE }
 
 
 
@@ -305,6 +305,43 @@ def test_coordinators_cannot_create_users_outside_of_their_pdu(
 
     user_count_after = NPDAUser.objects.count()
     assert user_count_after == user_count_before
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/911
+@pytest.mark.django_db
+def test_audit_team_can_create_users_outside_of_their_pdu(
+    seed_groups_fixture,
+    seed_users_fixture,
+    client,
+):
+    user_count_before = NPDAUser.objects.count()
+
+    audit_team_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=RCPCH_AUDIT_TEAM
+    ).first()
+
+    client = login_and_verify_user(client, audit_team_user)
+
+    url = reverse("npdauser-create")
+
+    response = client.post(url, {
+        "first_name": "Bob",
+        "surname": "Bobertson",
+        "email": "bob@bobertson.com",
+        "role": AUDIT_CENTRE_COORDINATOR,
+        "add_employer": GOSH_PZ_CODE
+    })
+
+    user_count_after = NPDAUser.objects.count()
+    assert user_count_after == (user_count_before + 1)
+
+    new_user = NPDAUser.objects.filter(
+        email="bob@bobertson.com"
+    ).first()
+
+    assert new_user.organisation_employers.count() == 1
+    assert new_user.organisation_employers.first().pz_code == GOSH_PZ_CODE
 
 
 @pytest.mark.django_db
@@ -393,6 +430,40 @@ def test_coordinators_cannot_add_employers_outside_of_their_pdu(
     })
 
     gosh_coordinator.refresh_from_db()
-    employers = [e.pz_code for e in gosh_coordinator.organisation_employers.all()]
+    employers = { e.pz_code for e in gosh_coordinator.organisation_employers.all() }
 
-    assert employers == [GOSH_PZ_CODE]
+    assert employers == { GOSH_PZ_CODE }
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/911
+@pytest.mark.django_db
+def test_audit_team_can_add_employers_outside_of_their_pdu(
+    seed_groups_fixture,
+    seed_users_fixture,
+    client,
+):
+    audit_team_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=RCPCH_AUDIT_TEAM
+    ).first()
+
+    ah_coordinator = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=AUDIT_CENTRE_COORDINATOR
+    ).first()
+
+    client = login_and_verify_user(client, audit_team_user)
+
+    url = reverse("npdauser-update", kwargs={ "pk": ah_coordinator.pk })
+
+    response = client.post(url, data={
+        "add_employer": GOSH_PZ_CODE
+    }, **{
+        # Gated on request.htmx
+        "HTTP_HX-Request": "true",
+    })
+
+    ah_coordinator.refresh_from_db()
+    employers = { e.pz_code for e in ah_coordinator.organisation_employers.all() }
+
+    assert employers == { ALDER_HEY_PZ_CODE, GOSH_PZ_CODE }

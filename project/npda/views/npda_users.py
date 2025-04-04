@@ -164,7 +164,7 @@ class NPDAUserCreateView(
 
         my_pz_codes = self.request.user.organisation_employers.values_list("pz_code", flat=True)
 
-        if new_user_pz_code not in my_pz_codes:
+        if new_user_pz_code not in my_pz_codes and not (self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member):
             raise PermissionDenied(
                 f"You do not have permission to add users to {new_user_pz_code}. Contact the NPDA for assistance."
             )
@@ -336,7 +336,7 @@ class NPDAUserUpdateView(
                 if new_employer_pz_code:
                     my_pz_codes = self.request.user.organisation_employers.values_list("pz_code", flat=True)
 
-                    if new_employer_pz_code not in my_pz_codes:
+                    if new_employer_pz_code not in my_pz_codes and not (self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member):
                         raise PermissionDenied(
                             f"You do not have permission to add users to {new_employer_pz_code}. Contact the NPDA for assistance."
                         )
