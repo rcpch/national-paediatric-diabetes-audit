@@ -246,9 +246,9 @@ def test_coordinators_cannot_change_their_employer_htmx(
     })
 
     user.refresh_from_db()
-    employers = [e.pz_code for e in user.organisation_employers.all()]
+    employers = { e.pz_code for e in user.organisation_employers.all() }
 
-    assert employers == [ALDER_HEY_PZ_CODE]
+    assert employers == { ALDER_HEY_PZ_CODE }
 
 
 # Not actually used in the UI but possible to construct manually
@@ -272,9 +272,9 @@ def test_coordinators_cannot_change_their_employer_post(
     })
 
     user.refresh_from_db()
-    employers = [e.pz_code for e in user.organisation_employers.all()]
+    employers = { e.pz_code for e in user.organisation_employers.all() }
 
-    assert employers == [ALDER_HEY_PZ_CODE]
+    assert employers == { ALDER_HEY_PZ_CODE }
 
 
 
@@ -430,9 +430,9 @@ def test_coordinators_cannot_add_employers_outside_of_their_pdu(
     })
 
     gosh_coordinator.refresh_from_db()
-    employers = [e.pz_code for e in gosh_coordinator.organisation_employers.all()]
+    employers = { e.pz_code for e in gosh_coordinator.organisation_employers.all() }
 
-    assert employers == [GOSH_PZ_CODE]
+    assert employers == { GOSH_PZ_CODE }
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/911
@@ -464,6 +464,6 @@ def test_audit_team_can_add_employers_outside_of_their_pdu(
     })
 
     ah_coordinator.refresh_from_db()
-    employers = [e.pz_code for e in ah_coordinator.organisation_employers.all()]
+    employers = { e.pz_code for e in ah_coordinator.organisation_employers.all() }
 
-    assert employers == [ALDER_HEY_PZ_CODE, GOSH_PZ_CODE]
+    assert employers == { ALDER_HEY_PZ_CODE, GOSH_PZ_CODE }
