@@ -122,12 +122,14 @@ class NPDAUpdatePasswordForm(SetPasswordForm):
 
     def __init__(self, user, *args, **kwargs):
         self.user = user
-        if (
-            self.user.is_rcpch_audit_team_member
-            or self.user.is_superuser
-            or self.user.is_rcpch_staff
-        ):
-            self.is_admin = True
+
+        if user:
+            self.is_admin = (
+                user.is_rcpch_audit_team_member
+                or user.is_superuser
+                or user.is_rcpch_staff
+            )
+        
         super(SetPasswordForm, self).__init__(*args, **kwargs)
 
     def clean(self) -> dict[str]:
