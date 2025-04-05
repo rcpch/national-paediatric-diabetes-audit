@@ -98,11 +98,11 @@
                       {% nhs_number_vs_urn pz_code patient %} (NPDA ID {{ patient.pk }}) has no visits yet...
                     </h1>
                     <i class="fa-solid fa-hand-sparkles text-5xl text-rcpch_light_blue opacity-0 animate-sparkle mt-2"></i>
-                    {% if can_alter_this_audit_year_submission %}
+                    {% if perms.npda.add_visit %}
                       <div class="py-6">
                         {% if request.session.can_complete_questionnaire %}
                           <a href="{% url 'visit-create' patient_id=patient.pk %}"
-                             class="btn btn-info h-auto w-full md:w-auto">
+                             class="btn btn-info h-auto w-full md:w-auto {% if not perms.npda.add_visit %}btn-disabled{% endif %}">
                             <i class="fa-solid fa-person-circle-plus"></i>
                             Add visit
                           </a>
@@ -118,19 +118,19 @@
             {% endif %}
             <div>
               {% if perms.npda.add_visit %}
-                  {% if can_use_questionnaire %}
-                    <a href="{% url 'visit-create' patient_id=patient.pk %}{% if data_upload_rules_overridden %}?unlock=true{% endif %}"
-                      class="bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 mt-40 font-semibold text-white border hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue hover:text-white">
-                      Create New Visit
-                    </a>
-                  {% else %}
-                    <span class="bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 mt-40 font-semibold text-white border opacity-40 pointer-events-none hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue hover:text-white">
-                      Create New Visit
-                    </span>
-                  {% endif %}
+                {% if can_use_questionnaire %}
+                  <a href="{% url 'visit-create' patient_id=patient.pk %}{% if data_upload_rules_overridden %}?unlock=true{% endif %}"
+                     class="btn bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 mt-40 font-semibold text-white border hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue hover:text-white {% if not perms.npda.add_visit %}btn-disabled{% endif %}">
+                    Create New Visit
+                  </a>
+                {% else %}
+                  <span class="btn bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 mt-40 font-semibold text-white border opacity-40 pointer-events-none hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue hover:text-white {% if not perms.npda.add_visit %}btn-disabled{% endif %}">
+                    Create New Visit
+                  </span>
+                {% endif %}
               {% endif %}
               <a href="{% url 'patients' %}"
-                class="bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 mt-40 ml-3 font-semibold text-white border hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue hover:text-white">Back to Patient List</a>
+                 class="bg-rcpch_light_blue border-rcpch_light_blue px-3 py-2.5 mt-40 ml-3 font-semibold text-white border hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue hover:text-white]">Back to Patient List</a>
             </div>
             <div class="py-20">
               {% include 'partials/visit_list_tips.html' with pz_code=pz_code patient=patient %}
