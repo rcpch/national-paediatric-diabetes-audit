@@ -26,6 +26,7 @@ The last group has no real implementation at the moment but in time it is hoped 
 | Visit    | ✔️   |    -   |    -   |    -   | ------ |
 | Site     | ✔️   |    -   |    -   |    -   | ------ |
 | NPDAUser | ✔️   |    -   |    -   |    -   | ------ |
+| Submission | ✔️   |    -   |   -    |    -   | ------ |
 
 ### Editor
 
@@ -34,7 +35,8 @@ The last group has no real implementation at the moment but in time it is hoped 
 | Patient  | ✔️   |    ✔️   |    -   |    ✔️   | ------ |
 | Visit    | ✔️   |    ✔️   |    -   |    ✔️   | ------ |
 | Site     | -    |    -   |    -   |    -   | ------ |
-| NPDAUser | ✔️   |    -   |    -   |    -   | ------ |
+| NPDAUser | ✔️   |    -   |    -   |    -   | CAN_DOWNLOAD_CSV, CAN_SUBMIT_CSV |
+| Submission | ✔️   |    -   |   -    |    -   | ------ |
 
 ### Coordinator
 
@@ -43,7 +45,8 @@ The last group has no real implementation at the moment but in time it is hoped 
 | Patient  | ✔️   |    ✔️   |    -   |    ✔️   | CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING, CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT |
 | Visit    | ✔️   |    ✔️   |    -   |    ✔️   | ------- |
 | Site     | -    |    -   |    -   |    -   | ------ |
-| NPDAUser | ✔️   |    ✔️   |    ✔️   |    ✔️   | ------ |
+| NPDAUser | ✔️   |    ✔️   |    ✔️   |    ✔️   | CAN_SUBMIT_CSV, CAN_DOWNLOAD_CSV |
+| Submission | ✔️   |    -   |   -    |    -   | ------ |
 
 
 ### RCPCH Audit Team
@@ -53,7 +56,8 @@ The last group has no real implementation at the moment but in time it is hoped 
 | Patient  | ✔️   |    ✔️   |    ✔️   |    ✔️   | CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING, CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING, CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT |
 | Visit    | ✔️   |    ✔️   |    ✔️   |    ✔️   | ------ |
 | Site     | ✔️   |    ✔️   |    ✔️   |    ✔️   | CAN_EDIT_NPDA_LEAD_CENTRE, CAN_ALLOCATE_NPDA_LEAD_CENTRE, CAN_TRANSFER_NPDA_LEAD_CENTRE, CAN_DELETE_NPDA_LEAD_CENTRE, CAN_PUBLISH_NPDA_DATA |
-| NPDAUser | ✔️   |    ✔️   |    ✔️   |    ✔️   | ------ |
+| NPDAUser | ✔️   |    ✔️   |    ✔️   |    ✔️   | CAN_SUBMIT_CSV, CAN_DOWNLOAD_CSV |
+| Submission | ✔️   |    ✔️   |    ✔️   |    ✔️   | ------ |
 
 
 #### NPDAUser model

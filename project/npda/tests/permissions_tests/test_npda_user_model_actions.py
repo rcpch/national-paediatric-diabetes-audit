@@ -20,12 +20,20 @@ from http import HTTPStatus
 # Python imports
 import pytest
 # 3rd party imports
+from django.apps import apps
+from django.utils import timezone
 from django.urls import reverse
 
 from project.constants.user import RCPCH_AUDIT_TEAM, AUDIT_CENTRE_COORDINATOR, TRUST_AUDIT_TEAM_COORDINATOR_ACCESS
 # E12 imports
-from project.npda.models import NPDAUser
+from project.npda.general_functions.audit_period import get_current_audit_year
+from project.npda.general_functions.csv import csv_parse
+from project.npda.models import NPDAUser, Submission
+from project.npda.tests.factories.patient_factory import PatientFactory
+from project.npda.tests.factories.visit_factory import VisitFactory
 from project.npda.tests.utils import login_and_verify_user
+
+from django.contrib.auth.models import Permission, Group
 
 from project.npda.tests.UserDataClasses import (
     test_user_audit_centre_reader_data,
@@ -34,11 +42,17 @@ from project.npda.tests.UserDataClasses import (
     test_user_rcpch_audit_team_data,
 )
 
+
 logger = logging.getLogger(__name__)
 
 ALDER_HEY_PZ_CODE = "PZ074"
 
 GOSH_PZ_CODE = "PZ196"
+
+@pytest.fixture
+def valid_df(dummy_sheets_folder):
+    file = dummy_sheets_folder / "dummy_sheet.csv"
+    return csv_parse(file).df
 
 
 def check_all_users_in_pdu(user, users, pz_code):
@@ -454,3 +468,290 @@ def test_coordinators_cannot_add_employers_outside_of_their_pdu(
     employers = [e.pz_code for e in gosh_coordinator.organisation_employers.all()]
 
     assert employers == [GOSH_PZ_CODE]
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "user_data",
+    [
+        test_user_audit_centre_editor_data,
+        test_user_audit_centre_coordinator_data,
+        test_user_rcpch_audit_team_data,
+    ],
+)
+def test_users_can_download_csv(
+    client,
+    seed_groups_fixture,
+    seed_users_fixture,
+    user_data,
+    seed_groups_and_permissions
+):
+    """Test that editor, coordinator, and RCPCH audit team users can download CSV files."""
+
+    # Create a test user and log in
+    test_user = NPDAUser.objects.filter(
+        role=user_data.role,
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+    ).first()
+
+    client = login_and_verify_user(client, test_user)
+
+    # Create a test submission
+    submission = Submission.objects.create(
+        audit_year=get_current_audit_year(),
+        submission_date=timezone.now(),
+        submission_active=True,
+        submission_by=test_user,
+        paediatric_diabetes_unit=test_user.organisation_employers.first(),
+        csv_file=b"test_csv_data",
+        csv_file_name="test_csv_file.csv",
+        errors={},
+    )
+
+    Transfer = apps.get_model("npda.Transfer")
+    patient = PatientFactory()
+    # Update the transfer to match the user's PDU
+    Transfer.objects.filter(patient=patient).update(
+        paediatric_diabetes_unit=test_user.organisation_employers.first(),
+    )
+    submission.patients.add(patient)
+    # Create a test visit for the patient
+    VisitFactory(patient=patient)
+
+    # Make a POST request to download the CSV file (HTMX)
+    url = reverse("submissions")
+    response = client.post(
+        url,
+        {"submit-data": "download-data", "audit_id": submission.pk},
+        headers={"HX-Request": "true"},  # Simulate HTMX request
+    )
+
+    # Check that the response is successful and has the correct content type for a file download
+    assert response.status_code == HTTPStatus.OK
+    assert response.has_header("Content-Disposition")
+    assert "attachment" in response["Content-Disposition"]
+    assert "filename" in response["Content-Disposition"]
+    assert response["Content-Type"] == "text/csv"
+
+@pytest.mark.django_db
+def test_reader_cannot_download_csv(
+    client,
+    seed_groups_fixture,
+    seed_users_fixture,
+):
+    """Test that the reader cannot download CSV files."""
+
+    # Create a test user and log in
+    editor_user = NPDAUser.objects.filter(
+        role=test_user_audit_centre_reader_data.role,
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+    ).first()
+
+    client = login_and_verify_user(client, editor_user)
+
+    # Create a test submission
+    submission = Submission.objects.create(
+        audit_year=get_current_audit_year(),
+        submission_date=timezone.now(),
+        submission_active=True,
+        submission_by=editor_user,
+        paediatric_diabetes_unit=editor_user.organisation_employers.first(),
+        csv_file=b"test_csv_data",
+        csv_file_name="test_csv_file.csv",
+        errors={},
+    )
+
+    Transfer = apps.get_model("npda.Transfer")
+    patient = PatientFactory()
+    # Update the transfer to match the user's PDU
+    Transfer.objects.filter(patient=patient).update(
+        paediatric_diabetes_unit=editor_user.organisation_employers.first(),
+    )
+    submission.patients.add(patient)
+    # Create a test visit for the patient
+    VisitFactory(patient=patient)
+
+    # Make a POST request to download the CSV file (HTMX)
+    url = reverse("submissions")
+    response = client.post(
+        url,
+        {"submit-data": "download-data", "audit_id": submission.pk},
+        headers={"HX-Request": "true"},  # Simulate HTMX request
+    )
+
+    # Check that the response is successful and has the correct content type for a file download
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "user_data",
+    [
+        test_user_audit_centre_editor_data,
+        test_user_audit_centre_coordinator_data,
+        test_user_rcpch_audit_team_data,
+    ],
+)
+def test_users_can_download_report(
+    client,
+    seed_groups_fixture,
+    seed_users_fixture,
+    user_data,
+    valid_df,
+    dummy_sheet_csv,
+):
+    """Test that editor, coordinator, and RCPCH audit team users can download the validation report."""
+
+    # Create a test user and log in
+    test_user = NPDAUser.objects.filter(
+        role=user_data.role,
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+    ).first()
+
+    client = login_and_verify_user(client, test_user)
+
+    # Create a test submission
+    submission = Submission.objects.create(
+        audit_year=get_current_audit_year(),
+        submission_date=timezone.now(),
+        submission_active=True,
+        submission_by=test_user,
+        paediatric_diabetes_unit=test_user.organisation_employers.first(),
+        csv_file=valid_df.to_csv(index=False).encode("utf-8"),
+        csv_file_name="test_csv_file.csv",
+        errors={},
+    )
+
+    Transfer = apps.get_model("npda.Transfer")
+    patient = PatientFactory()
+    # Update the transfer to match the user's PDU
+    Transfer.objects.filter(patient=patient).update(
+        paediatric_diabetes_unit=test_user.organisation_employers.first(),
+    )
+    submission.patients.add(patient)
+    # Create a test visit for the patient
+    VisitFactory(patient=patient)
+
+    # Make a POST request to download the report (HTMX)
+    url = reverse("submissions")
+    response = client.post(
+        url,
+        {"submit-data": "download-report", "audit_id": submission.pk},
+        headers={"HX-Request": "true"},  # Simulate HTMX request
+    )
+
+    # Check that the response is successful and has the correct content type for a file download (likely xlsx)
+    assert response.status_code == HTTPStatus.OK
+    assert response.has_header("Content-Disposition")
+    assert "attachment" in response["Content-Disposition"]
+    assert "filename" in response["Content-Disposition"]
+    assert response["Content-Type"] == "text/csv"
+
+@pytest.mark.django_db
+def test_rcpch_audit_team_can_delete_submission(
+    client,
+    seed_groups_fixture,
+    seed_users_fixture,
+    valid_df,
+):
+    """Test that RCPCH audit team members can delete submissions."""
+
+    # Create a test RCPCH audit team user and log in
+    audit_team_user = NPDAUser.objects.filter(
+        role=test_user_rcpch_audit_team_data.role,
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+    ).first()
+
+    client = login_and_verify_user(client, audit_team_user)
+
+    # Create a test submission
+    submission = Submission.objects.create(
+        audit_year=get_current_audit_year(),
+        submission_date=timezone.now(),
+        submission_active=False, # cannot delete active submissions without first creating a new one
+        submission_by=audit_team_user,
+        paediatric_diabetes_unit=audit_team_user.organisation_employers.first(),
+        csv_file=valid_df.to_csv(index=False).encode("utf-8"),
+        csv_file_name="test_csv_file.csv",
+        errors={},
+    )
+
+    Transfer = apps.get_model("npda.Transfer")
+    patient = PatientFactory()
+    # Update the transfer to match the user's PDU
+    Transfer.objects.filter(patient=patient).update(
+        paediatric_diabetes_unit=audit_team_user.organisation_employers.first(),
+    )
+    submission.patients.add(patient)
+    # Create a test visit for the patient
+    VisitFactory(patient=patient)
+
+    # Make a POST request to delete the data (HTMX)
+    url = reverse("submissions")
+    response = client.post(
+        url,
+        {"submit-data": "delete-data", "audit_id": submission.pk},
+        headers={"HX-Request": "true"},  # Simulate HTMX request
+        follow=True
+    )
+    # Check that the deletion was successful (we expect a success message in the response)
+    assert response.status_code == HTTPStatus.OK
+    assert Submission.objects.filter(pk=submission.pk).count() == 0
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "user_data",
+    [
+        test_user_audit_centre_editor_data,
+        test_user_audit_centre_coordinator_data,
+    ],
+)
+def test_non_rcpch_audit_team_cannot_delete_submission(
+    client,
+    seed_groups_fixture,
+    seed_users_fixture,
+    user_data,
+    valid_df,
+):
+    """Test that editors and coordinators cannot delete submissions."""
+
+    # Create a test user (editor or coordinator) and log in
+    non_deleting_user = NPDAUser.objects.filter(
+        role=user_data.role,
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+    ).first()
+
+    client = login_and_verify_user(client, non_deleting_user)
+
+    # Create a test submission
+    submission = Submission.objects.create(
+        audit_year=get_current_audit_year(),
+        submission_date=timezone.now(),
+        submission_active=True,
+        submission_by=non_deleting_user,
+        paediatric_diabetes_unit=non_deleting_user.organisation_employers.first(),
+        csv_file=valid_df.to_csv(index=False).encode("utf-8"),
+        csv_file_name="test_csv_file.csv",
+        errors={},
+    )
+
+    Transfer = apps.get_model("npda.Transfer")
+    patient = PatientFactory()
+    # Update the transfer to match the user's PDU
+    Transfer.objects.filter(patient=patient).update(
+        paediatric_diabetes_unit=non_deleting_user.organisation_employers.first(),
+    )
+    submission.patients.add(patient)
+    # Create a test visit for the patient
+    VisitFactory(patient=patient)
+
+    # Make a POST request to delete the data (HTMX)
+    url = reverse("submissions")
+    response = client.post(
+        url,
+        {"submit-data": "delete-data", "audit_id": submission.pk},
+        headers={"HX-Request": "true"},  # Simulate HTMX request
+    )
+
+    # Check that the deletion was NOT successful
+    assert response.status_code == HTTPStatus.FORBIDDEN  # The view might re-render with an error
+    assert Submission.objects.filter(pk=submission.pk).exists()

@@ -1,11 +1,11 @@
 # Python imports
 from typing import Any, Iterable
-from datetime import date
 import json
 
 # Django imports
 from django.apps import apps
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Case, When, F, Value
 from django.db.models.functions import Concat
 from django.http import HttpResponse
@@ -135,8 +135,14 @@ class SubmissionsListView(
         If the value of "submit-data" is "download-data", the original csv is downloaded.
         If the value of "submit-data" is "download-report", the commented xlsx (with validation remarks) is downloaded.
         """
+        
         button_name = request.POST.get("submit-data")
         if button_name == "delete-data":
+            # check if the user has permission to delete submissions
+            if not request.user.has_perm("npda.delete_submission"):
+                raise PermissionDenied(
+                    "You do not have permission to delete submissions.",
+                )
             # retrieve the  submission instance
             submission = Submission.objects.filter(
                 pk=request.POST.get("audit_id")
@@ -165,12 +171,22 @@ class SubmissionsListView(
             messages.success(request, "Cohort submission deleted successfully")
 
         if button_name == "download-data":
+            # check if the user has permission to download submissions
+            if not request.user.has_perm("npda.can_download_csv"):
+                raise PermissionDenied(
+                    "You do not have permission to download CSVs.",
+                )
             submission = Submission.objects.filter(
                 pk=request.POST.get("audit_id")
             ).get()
             return download_csv(request, submission.id)
 
         if button_name == "download-report":
+            # check if the user has permission to download submissions
+            if not request.user.has_perm("npda.can_download_csv"):
+                raise PermissionDenied(
+                    "You do not have permission to download submissions.",
+                )
             submission = Submission.objects.filter(
                 pk=request.POST.get("audit_id")
             ).get()
