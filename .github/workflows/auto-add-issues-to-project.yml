@@ -4,13 +4,17 @@ on:
   issues:
     types:
       - opened
+  pull_request:
+    types:
+      - opened
 
 jobs:
   add-to-project:
-    name: Add issue or PR to project automatically
+    name: Add issue to project and column
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/add-to-project@v0.5.0
+      - uses: actions/add-to-project@v1.0.2
         with:
-          project-url: https://github.com/orgs/rcpch/projects/13 #NPDA Project
+          project-url: https://github.com/orgs/rcpch/projects/13
           github-token: ${{ secrets.AUTO_ADD_TO_PROJECT_TOKEN }}
+
