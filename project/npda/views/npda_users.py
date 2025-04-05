@@ -427,7 +427,7 @@ class NPDAUserDeleteView(
     success_url = reverse_lazy("npda_users")
 
 
-class NPDAUserLogsListView(LoginAndOTPRequiredMixin, ListView):
+class NPDAUserLogsListView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, ListView):
     template_name = "npda_user_logs.html"
     model = VisitActivity
 
