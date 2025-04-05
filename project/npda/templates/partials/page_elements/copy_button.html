@@ -24,14 +24,10 @@
     navigator.clipboard.writeText(text).then(() => {
       // Change to check icon
       button.classList.add('btn-success');
-      console.log('updated icon', button.className);
       // Reset icon after 1.5 seconds
       setTimeout(() => {
         button.classList.remove('btn-success');
-        console.log('reset icon', button.className);
       }, 1500);
-    }).catch(err => {
-      console.error('Failed to copy text: ', err);
     });
   }
 </script>
