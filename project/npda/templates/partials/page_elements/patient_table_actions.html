@@ -78,14 +78,16 @@
                         <i class="fa-solid fa-chevron-down"></i>
                         <ul tabindex="0"
                             class="dropdown-content menu bg-base-100 text-black font-normal rounded-box z-[1] w-52 p-2 shadow">
-                            <li>
-                                <button type="button"
-                                        onclick="original_data_modal.showModal()"
-                                        class="{% if not perms.npda.can_download_csv %}btn-disabled{% endif %}">
-                                    <i class="fa-solid fa-download"></i>
-                                    Download original file
-                                </a>
-                            </li>
+                            {% if perms.npda.can_download_csv %}
+                                <li>
+                                    <button type="button"
+                                            onclick="original_data_modal.showModal()"
+                                            class="{% if not perms.npda.can_download_csv %}btn-disabled{% endif %}">
+                                        <i class="fa-solid fa-download"></i>
+                                        Download original file
+                                    </a>
+                                </li>
+                            {% endif %}
                             <li>
                                 <a href="{% url 'submissions' %}">
                                     <i class="fa-solid fa-timeline"></i>
