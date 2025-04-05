@@ -21,33 +21,30 @@ from http import HTTPStatus
 import pytest
 # 3rd party imports
 from django.apps import apps
-from django.utils import timezone
+from django.test import Client
 from django.urls import reverse
+from django.utils import timezone
 
-from project.constants.user import RCPCH_AUDIT_TEAM, AUDIT_CENTRE_COORDINATOR, TRUST_AUDIT_TEAM_COORDINATOR_ACCESS
+from project.constants.user import (AUDIT_CENTRE_COORDINATOR, RCPCH_AUDIT_TEAM,
+                                    TRUST_AUDIT_TEAM_COORDINATOR_ACCESS)
 # E12 imports
 from project.npda.general_functions.audit_period import get_current_audit_year
 from project.npda.general_functions.csv import csv_parse
 from project.npda.models import NPDAUser, Submission
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.tests.utils import login_and_verify_user
-
-from django.contrib.auth.models import Permission, Group
-
 from project.npda.tests.UserDataClasses import (
-    test_user_audit_centre_reader_data,
-    test_user_audit_centre_editor_data,
     test_user_audit_centre_coordinator_data,
-    test_user_rcpch_audit_team_data,
-)
-
+    test_user_audit_centre_editor_data, test_user_audit_centre_reader_data,
+    test_user_rcpch_audit_team_data)
+from project.npda.tests.utils import login_and_verify_user
 
 logger = logging.getLogger(__name__)
 
 ALDER_HEY_PZ_CODE = "PZ074"
 
 GOSH_PZ_CODE = "PZ196"
+
 
 @pytest.fixture
 def valid_df(dummy_sheets_folder):
@@ -122,7 +119,9 @@ def test_npda_user_list_view_rcpch_audit_team_can_view_all_users(
     # The user still defaults to seeing users from just their PDU
     # This is the request made when you click the "All" button on the switcher in the UI
     set_view_preference_response = client.post(
-        reverse("view_preference"), {"view_preference": 2}, headers={"HX-Request": "true"}
+        reverse("view_preference"),
+        {"view_preference": 2},
+        headers={"HX-Request": "true"},
     )
 
     assert set_view_preference_response.status_code == HTTPStatus.NO_CONTENT
@@ -173,7 +172,9 @@ def test_npda_user_list_view_normal_users_cannot_set_their_view_preference_to_na
     client = login_and_verify_user(client, ah_user)
 
     set_view_preference_response = client.post(
-        reverse("view_preference"), {"view_preference": 2}, headers={"HX-Request": "true"}
+        reverse("view_preference"),
+        {"view_preference": 2},
+        headers={"HX-Request": "true"},
     )
 
     assert set_view_preference_response.status_code == HTTPStatus.FORBIDDEN
@@ -199,7 +200,9 @@ def test_npda_user_list_view_users_cannot_set_their_view_preference_to_organisat
     client = login_and_verify_user(client, ah_user)
 
     set_view_preference_response = client.post(
-        reverse("view_preference"), {"view_preference": 0}, headers={"HX-Request": "true"}
+        reverse("view_preference"),
+        {"view_preference": 0},
+        headers={"HX-Request": "true"},
     )
 
     assert set_view_preference_response.status_code == HTTPStatus.BAD_REQUEST
@@ -214,6 +217,7 @@ def test_npda_user_list_view_users_cannot_set_their_view_preference_to_organisat
     users = response.context_data["object_list"]
     check_all_users_in_pdu(ah_user, users, ALDER_HEY_PZ_CODE)
 
+
 @pytest.mark.django_db
 def test_editor_can_upload_csv(
     seed_groups_fixture, seed_users_fixture, client, dummy_sheets_folder
@@ -225,7 +229,7 @@ def test_editor_can_upload_csv(
     ).first()
     client = login_and_verify_user(client, editor_user)
     # create a test CSV file
-    
+
     file = dummy_sheets_folder / "dummy_sheet.csv"
 
     # upload the CSV file by posting to  'home' view
@@ -241,6 +245,7 @@ def test_editor_can_upload_csv(
     # tricky test as it is hard to check the response as it is a redirect from an async call
     # this tests is really to check that the upload is not forbidden
 
+
 @pytest.mark.django_db
 def test_reader_cannot_upload_csv(
     seed_groups_fixture, seed_users_fixture, client, dummy_sheets_folder
@@ -252,7 +257,7 @@ def test_reader_cannot_upload_csv(
     ).first()
     client = login_and_verify_user(client, reader_user)
     # create a test CSV file
-    
+
     file = dummy_sheets_folder / "dummy_sheet.csv"
 
     # upload the CSV file by posting to  'home' view
@@ -266,6 +271,7 @@ def test_reader_cannot_upload_csv(
     # check the response status code
     assert response.status_code == HTTPStatus.FORBIDDEN
 
+
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/906
 @pytest.mark.django_db
 def test_coordinators_cannot_change_their_role(
@@ -276,18 +282,21 @@ def test_coordinators_cannot_change_their_role(
     user = NPDAUser.objects.filter(role=AUDIT_CENTRE_COORDINATOR).first()
     client = login_and_verify_user(client, user)
 
-    url = reverse("npdauser-update", kwargs={ "pk": user.pk })
+    url = reverse("npdauser-update", kwargs={"pk": user.pk})
 
-    response = client.post(url, {
-        "email": user.email,
-        "first_name": user.first_name,
-        "surname": user.surname,
-        "role": RCPCH_AUDIT_TEAM
-    })
+    response = client.post(
+        url,
+        {
+            "email": user.email,
+            "first_name": user.first_name,
+            "surname": user.surname,
+            "role": RCPCH_AUDIT_TEAM,
+        },
+    )
 
     user.refresh_from_db()
     assert user.role == AUDIT_CENTRE_COORDINATOR
-    
+
     assert user.groups.count() == 1
     assert user.groups.first().name == TRUST_AUDIT_TEAM_COORDINATOR_ACCESS
 
@@ -299,28 +308,31 @@ def test_coordinators_cannot_change_their_employer_htmx(
     client,
 ):
     user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
-        role=AUDIT_CENTRE_COORDINATOR
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE, role=AUDIT_CENTRE_COORDINATOR
     ).first()
 
     client = login_and_verify_user(client, user)
 
-    url = reverse("npdauser-update", kwargs={ "pk": user.pk })
+    url = reverse("npdauser-update", kwargs={"pk": user.pk})
 
-    response = client.post(url, data={
-        "email": user.email,
-        "first_name": user.first_name,
-        "surname": user.surname,
-        "add_employer": GOSH_PZ_CODE
-    }, **{
-        # Gated on request.htmx
-        "HTTP_HX-Request": "true",
-    })
+    response = client.post(
+        url,
+        data={
+            "email": user.email,
+            "first_name": user.first_name,
+            "surname": user.surname,
+            "add_employer": GOSH_PZ_CODE,
+        },
+        **{
+            # Gated on request.htmx
+            "HTTP_HX-Request": "true",
+        },
+    )
 
     user.refresh_from_db()
-    employers = { e.pz_code for e in user.organisation_employers.all() }
+    employers = {e.pz_code for e in user.organisation_employers.all()}
 
-    assert employers == { ALDER_HEY_PZ_CODE }
+    assert employers == {ALDER_HEY_PZ_CODE}
 
 
 # Not actually used in the UI but possible to construct manually
@@ -331,23 +343,19 @@ def test_coordinators_cannot_change_their_employer_post(
     client,
 ):
     user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
-        role=AUDIT_CENTRE_COORDINATOR
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE, role=AUDIT_CENTRE_COORDINATOR
     ).first()
 
     client = login_and_verify_user(client, user)
 
-    url = reverse("npdauser-update", kwargs={ "pk": user.pk })
+    url = reverse("npdauser-update", kwargs={"pk": user.pk})
 
-    response = client.post(url, data={
-        "add_employer": GOSH_PZ_CODE
-    })
+    response = client.post(url, data={"add_employer": GOSH_PZ_CODE})
 
     user.refresh_from_db()
-    employers = { e.pz_code for e in user.organisation_employers.all() }
+    employers = {e.pz_code for e in user.organisation_employers.all()}
 
-    assert employers == { ALDER_HEY_PZ_CODE }
-
+    assert employers == {ALDER_HEY_PZ_CODE}
 
 
 @pytest.mark.django_db
@@ -359,21 +367,23 @@ def test_coordinators_cannot_create_users_outside_of_their_pdu(
     user_count_before = NPDAUser.objects.count()
 
     ah_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
-        role=AUDIT_CENTRE_COORDINATOR
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE, role=AUDIT_CENTRE_COORDINATOR
     ).first()
 
     client = login_and_verify_user(client, ah_user)
 
     url = reverse("npdauser-create")
 
-    response = client.post(url, {
-        "first_name": "Bob",
-        "surname": "Bobertson",
-        "email": "bob@bobertson.com",
-        "role": AUDIT_CENTRE_COORDINATOR,
-        "add_employer": GOSH_PZ_CODE
-    })
+    response = client.post(
+        url,
+        {
+            "first_name": "Bob",
+            "surname": "Bobertson",
+            "email": "bob@bobertson.com",
+            "role": AUDIT_CENTRE_COORDINATOR,
+            "add_employer": GOSH_PZ_CODE,
+        },
+    )
 
     user_count_after = NPDAUser.objects.count()
     assert user_count_after == user_count_before
@@ -389,28 +399,28 @@ def test_audit_team_can_create_users_outside_of_their_pdu(
     user_count_before = NPDAUser.objects.count()
 
     audit_team_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
-        role=RCPCH_AUDIT_TEAM
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE, role=RCPCH_AUDIT_TEAM
     ).first()
 
     client = login_and_verify_user(client, audit_team_user)
 
     url = reverse("npdauser-create")
 
-    response = client.post(url, {
-        "first_name": "Bob",
-        "surname": "Bobertson",
-        "email": "bob@bobertson.com",
-        "role": AUDIT_CENTRE_COORDINATOR,
-        "add_employer": GOSH_PZ_CODE
-    })
+    response = client.post(
+        url,
+        {
+            "first_name": "Bob",
+            "surname": "Bobertson",
+            "email": "bob@bobertson.com",
+            "role": AUDIT_CENTRE_COORDINATOR,
+            "add_employer": GOSH_PZ_CODE,
+        },
+    )
 
     user_count_after = NPDAUser.objects.count()
     assert user_count_after == (user_count_before + 1)
 
-    new_user = NPDAUser.objects.filter(
-        email="bob@bobertson.com"
-    ).first()
+    new_user = NPDAUser.objects.filter(email="bob@bobertson.com").first()
 
     assert new_user.organisation_employers.count() == 1
     assert new_user.organisation_employers.first().pz_code == GOSH_PZ_CODE
@@ -425,20 +435,22 @@ def test_coordinators_cannot_create_audit_team_members(
     user_count_before = NPDAUser.objects.count()
 
     ah_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
-        role=AUDIT_CENTRE_COORDINATOR
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE, role=AUDIT_CENTRE_COORDINATOR
     ).first()
 
     client = login_and_verify_user(client, ah_user)
 
     url = reverse("npdauser-create")
 
-    response = client.post(url, {
-        "first_name": "Bob",
-        "surname": "Bobertson",
-        "email": "bob@bobertson.com",
-        "role": RCPCH_AUDIT_TEAM,
-    })
+    response = client.post(
+        url,
+        {
+            "first_name": "Bob",
+            "surname": "Bobertson",
+            "email": "bob@bobertson.com",
+            "role": RCPCH_AUDIT_TEAM,
+        },
+    )
 
     user_count_after = NPDAUser.objects.count()
     assert user_count_after == user_count_before
@@ -455,20 +467,18 @@ def test_coordinators_cannot_delete_users_outside_of_their_pdu(
     user_count_before = NPDAUser.objects.count()
 
     ah_coordinator = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
-        role=AUDIT_CENTRE_COORDINATOR
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE, role=AUDIT_CENTRE_COORDINATOR
     ).first()
 
     gosh_coordinator = NPDAUser.objects.filter(
-        organisation_employers__pz_code=GOSH_PZ_CODE,
-        role=AUDIT_CENTRE_COORDINATOR
+        organisation_employers__pz_code=GOSH_PZ_CODE, role=AUDIT_CENTRE_COORDINATOR
     ).first()
 
     client = login_and_verify_user(client, ah_coordinator)
 
-    url = reverse("npdauser-delete", kwargs={ "pk": gosh_coordinator.pk })
+    url = reverse("npdauser-delete", kwargs={"pk": gosh_coordinator.pk})
 
-    response = client.post(url)
+    client.post(url)
 
     user_count_after = NPDAUser.objects.count()
     assert user_count_after == user_count_before
@@ -481,30 +491,30 @@ def test_coordinators_cannot_add_employers_outside_of_their_pdu(
     client,
 ):
     ah_coordinator = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
-        role=AUDIT_CENTRE_COORDINATOR
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE, role=AUDIT_CENTRE_COORDINATOR
     ).first()
 
     gosh_coordinator = NPDAUser.objects.filter(
-        organisation_employers__pz_code=GOSH_PZ_CODE,
-        role=AUDIT_CENTRE_COORDINATOR
+        organisation_employers__pz_code=GOSH_PZ_CODE, role=AUDIT_CENTRE_COORDINATOR
     ).first()
 
     client = login_and_verify_user(client, ah_coordinator)
 
-    url = reverse("npdauser-update", kwargs={ "pk": gosh_coordinator.pk })
+    url = reverse("npdauser-update", kwargs={"pk": gosh_coordinator.pk})
 
-    response = client.post(url, data={
-        "add_employer": ALDER_HEY_PZ_CODE
-    }, **{
-        # Gated on request.htmx
-        "HTTP_HX-Request": "true",
-    })
+    response = client.post(
+        url,
+        data={"add_employer": ALDER_HEY_PZ_CODE},
+        **{
+            # Gated on request.htmx
+            "HTTP_HX-Request": "true",
+        },
+    )
 
     gosh_coordinator.refresh_from_db()
-    employers = { e.pz_code for e in gosh_coordinator.organisation_employers.all() }
+    employers = {e.pz_code for e in gosh_coordinator.organisation_employers.all()}
 
-    assert employers == { GOSH_PZ_CODE }
+    assert employers == {GOSH_PZ_CODE}
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/911
@@ -515,30 +525,32 @@ def test_audit_team_can_add_employers_outside_of_their_pdu(
     client,
 ):
     audit_team_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
-        role=RCPCH_AUDIT_TEAM
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE, role=RCPCH_AUDIT_TEAM
     ).first()
 
     ah_coordinator = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
-        role=AUDIT_CENTRE_COORDINATOR
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE, role=AUDIT_CENTRE_COORDINATOR
     ).first()
 
     client = login_and_verify_user(client, audit_team_user)
 
-    url = reverse("npdauser-update", kwargs={ "pk": ah_coordinator.pk })
+    url = reverse("npdauser-update", kwargs={"pk": ah_coordinator.pk})
 
-    response = client.post(url, data={
-        "add_employer": GOSH_PZ_CODE
-    }, **{
-        # Gated on request.htmx
-        "HTTP_HX-Request": "true",
-    })
+    response = client.post(
+        url,
+        data={"add_employer": GOSH_PZ_CODE},
+        **{
+            # Gated on request.htmx
+            "HTTP_HX-Request": "true",
+        },
+    )
 
     ah_coordinator.refresh_from_db()
-    employers = { e.pz_code for e in ah_coordinator.organisation_employers.all() }
+    employers = {e.pz_code for e in ah_coordinator.organisation_employers.all()}
 
-    assert employers == { ALDER_HEY_PZ_CODE, GOSH_PZ_CODE }
+    assert employers == {ALDER_HEY_PZ_CODE, GOSH_PZ_CODE}
+
+
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     "user_data",
@@ -601,6 +613,7 @@ def test_users_can_download_csv(
     assert "filename" in response["Content-Disposition"]
     assert response["Content-Type"] == "text/csv"
 
+
 @pytest.mark.django_db
 def test_reader_cannot_download_csv(
     client,
@@ -649,6 +662,7 @@ def test_reader_cannot_download_csv(
 
     # Check that the response is successful and has the correct content type for a file download
     assert response.status_code == HTTPStatus.FORBIDDEN
+
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
@@ -714,6 +728,7 @@ def test_users_can_download_report(
     assert "filename" in response["Content-Disposition"]
     assert response["Content-Type"] == "text/csv"
 
+
 @pytest.mark.django_db
 def test_rcpch_audit_team_can_delete_submission(
     client,
@@ -735,7 +750,7 @@ def test_rcpch_audit_team_can_delete_submission(
     submission = Submission.objects.create(
         audit_year=get_current_audit_year(),
         submission_date=timezone.now(),
-        submission_active=False, # cannot delete active submissions without first creating a new one
+        submission_active=False,  # cannot delete active submissions without first creating a new one
         submission_by=audit_team_user,
         paediatric_diabetes_unit=audit_team_user.organisation_employers.first(),
         csv_file=valid_df.to_csv(index=False).encode("utf-8"),
@@ -759,7 +774,7 @@ def test_rcpch_audit_team_can_delete_submission(
         url,
         {"submit-data": "delete-data", "audit_id": submission.pk},
         headers={"HX-Request": "true"},  # Simulate HTMX request
-        follow=True
+        follow=True,
     )
     # Check that the deletion was successful (we expect a success message in the response)
     assert response.status_code == HTTPStatus.OK
@@ -822,5 +837,38 @@ def test_non_rcpch_audit_team_cannot_delete_submission(
     )
 
     # Check that the deletion was NOT successful
-    assert response.status_code == HTTPStatus.FORBIDDEN  # The view might re-render with an error
+    assert (
+        response.status_code == HTTPStatus.FORBIDDEN
+    )  # The view might re-render with an error
     assert Submission.objects.filter(pk=submission.pk).exists()
+
+
+@pytest.mark.django_db
+def test_users_cant_see_user_logs_for_different_pdus_users(
+    client: Client,
+    seed_groups_fixture,
+    seed_users_fixture,
+):
+    """Test that users cannot see user logs for different PDU users."""
+
+    # Create a test user
+    test_user = NPDAUser.objects.filter(
+        role=test_user_audit_centre_editor_data.role,
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+    ).first()
+
+    # Create a test user for a different PDU
+    different_pdu_user = NPDAUser.objects.filter(
+        role=test_user_audit_centre_editor_data.role,
+        organisation_employers__pz_code=GOSH_PZ_CODE,
+    ).first()
+
+    # Login user
+    client = login_and_verify_user(client, test_user)
+
+    # Make a GET request to the user logs page
+    url = reverse("npdauser-logs", kwargs={"npdauser_id": different_pdu_user.pk})
+    response = client.get(url)
+
+    # Check that the response is forbidden
+    assert response.status_code == HTTPStatus.FORBIDDEN
