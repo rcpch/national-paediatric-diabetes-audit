@@ -10,6 +10,7 @@ from project.npda.models.npda_user import NPDAUser
 from project.npda.tests.model_tests.test_submissions import ALDER_HEY_PZ_CODE
 from project.npda.tests.utils import login_and_verify_user
 from project.npda.tests.test_csv_upload import mock_remote_calls
+from project.npda.tests.UserDataClasses import test_user_audit_centre_coordinator_data
 
 
 @pytest.mark.django_db
@@ -29,10 +30,11 @@ def test_generate_csv_upload_to_view(
     """
 
     # Get a user
-    ah_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
+    ah_coordinator_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_coordinator_data.role,
     ).first()
-    client = login_and_verify_user(client, ah_user)
+    client = login_and_verify_user(client, ah_coordinator_user)
 
     # Directory to store generated CSV files
     tmpdir_path = str(tmpdir)

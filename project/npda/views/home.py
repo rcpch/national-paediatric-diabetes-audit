@@ -11,6 +11,7 @@ from datetime import date
 # Django imports
 from django.apps import apps
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.http import HttpResponse
@@ -45,6 +46,10 @@ async def home(request):
         return redirect("dashboard")
 
     if request.method == "POST":
+        has_perm = await sync_to_async(request.user.has_perm)("npda.can_submit_csv")
+        if not has_perm:
+            raise PermissionDenied("You do not have permission to upload CSV files.")
+        
         form = UploadFileForm(request.POST, request.FILES)
         user_csv = request.FILES["csv_upload"]
         user_csv_filename = user_csv.name
