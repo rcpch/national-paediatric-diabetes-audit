@@ -19,24 +19,32 @@ from http import HTTPStatus
 
 # Python imports
 import pytest
+
 # 3rd party imports
 from django.apps import apps
 from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
 
-from project.constants.user import (AUDIT_CENTRE_COORDINATOR, RCPCH_AUDIT_TEAM,
-                                    TRUST_AUDIT_TEAM_COORDINATOR_ACCESS)
+from project.constants.user import (
+    AUDIT_CENTRE_COORDINATOR,
+    RCPCH_AUDIT_TEAM,
+    TRUST_AUDIT_TEAM_COORDINATOR_ACCESS,
+)
+
 # E12 imports
 from project.npda.general_functions.audit_period import get_current_audit_year
 from project.npda.general_functions.csv import csv_parse
 from project.npda.models import NPDAUser, Submission
+from project.npda.models.visitactivity import VisitActivity
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
 from project.npda.tests.UserDataClasses import (
     test_user_audit_centre_coordinator_data,
-    test_user_audit_centre_editor_data, test_user_audit_centre_reader_data,
-    test_user_rcpch_audit_team_data)
+    test_user_audit_centre_editor_data,
+    test_user_audit_centre_reader_data,
+    test_user_rcpch_audit_team_data,
+)
 from project.npda.tests.utils import login_and_verify_user
 
 logger = logging.getLogger(__name__)
@@ -872,3 +880,56 @@ def test_users_cant_see_user_logs_for_different_pdus_users(
 
     # Check that the response is forbidden
     assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_editors_and_readers_can_only_view_their_own_logs(
+    client: Client,
+    seed_groups_fixture,
+    seed_users_fixture,
+):
+    """Test that editors and readers can only view their own logs."""
+
+    # Create another user in same PDU
+    another_user_same_pdu = NPDAUser.objects.filter(
+        role=test_user_rcpch_audit_team_data.role,
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+    ).first()
+    # Get another user in different PDU
+    another_user_different_pdu = NPDAUser.objects.filter(
+        role=test_user_audit_centre_reader_data.role,
+        organisation_employers__pz_code=GOSH_PZ_CODE,
+    ).first()
+
+    # Get test users
+    editor_user = NPDAUser.objects.filter(
+        role=test_user_audit_centre_editor_data.role,
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+    ).first()
+    reader_user = NPDAUser.objects.filter(
+        role=test_user_audit_centre_reader_data.role,
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+    ).first()
+
+    for user in [editor_user, reader_user]:
+        # Login user
+        client = login_and_verify_user(client, user)
+
+        # Check they can see their own logs
+        url = reverse("npdauser-logs", kwargs={"npdauser_id": user.pk})
+        response = client.get(url)
+        assert response.status_code == HTTPStatus.OK
+
+        # Make a GET request to the other user's logs
+        # NOTE: though the test_users_cant_see_user_logs_for_different_pdus_users already checks that
+        # the user cannot see logs for users in different PDUs, no harm in checking again
+        for other_user in [another_user_same_pdu, another_user_different_pdu]:
+            url = reverse("npdauser-logs", kwargs={"npdauser_id": other_user.pk})
+            response = client.get(url)
+
+            # Check that the response is forbidden
+            assert response.status_code == HTTPStatus.FORBIDDEN, (
+                f"User {user.first_name} ({user.organisation_employers.first().pz_code}) should not be able to see logs for user {other_user.first_name} ({other_user.organisation_employers.first().pz_code})"
+            )
+
+    # Also check the other users can see all logs
