@@ -910,15 +910,21 @@ def test_editors_and_readers_can_only_view_their_own_logs(
         role=test_user_audit_centre_reader_data.role,
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
     ).first()
+    coordinator_user = NPDAUser.objects.filter(
+        role=test_user_audit_centre_coordinator_data.role,
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+    ).first()
 
-    for user in [editor_user, reader_user]:
+    for user in [editor_user, reader_user, coordinator_user]:
         # Login user
         client = login_and_verify_user(client, user)
 
         # Check they can see their own logs
         url = reverse("npdauser-logs", kwargs={"npdauser_id": user.pk})
         response = client.get(url)
-        assert response.status_code == HTTPStatus.OK
+        assert response.status_code == HTTPStatus.OK, (
+            f"User {user.first_name} ({user.organisation_employers.first().pz_code}) should be able to see their own logs"
+        )
 
         # Make a GET request to the other user's logs
         # NOTE: though the test_users_cant_see_user_logs_for_different_pdus_users already checks that
@@ -928,8 +934,57 @@ def test_editors_and_readers_can_only_view_their_own_logs(
             response = client.get(url)
 
             # Check that the response is forbidden
-            assert response.status_code == HTTPStatus.FORBIDDEN, (
-                f"User {user.first_name} ({user.organisation_employers.first().pz_code}) should not be able to see logs for user {other_user.first_name} ({other_user.organisation_employers.first().pz_code})"
-            )
+            # Coordinators CAN see other users' logs in their PDU
+            if user.role == test_user_audit_centre_coordinator_data.role:
+                if (
+                    other_user.organisation_employers.first().pz_code
+                    == user.organisation_employers.first().pz_code
+                ):
+                    assert response.status_code == HTTPStatus.OK, (
+                        f"User {user.first_name} ({user.organisation_employers.first().pz_code}) should be able to see logs for user {other_user.first_name} ({other_user.organisation_employers.first().pz_code})"
+                    )
+                else:
+                    assert response.status_code == HTTPStatus.FORBIDDEN, (
+                        f"User {user.first_name} ({user.organisation_employers.first().pz_code}) should not be able to see logs for user {other_user.first_name} ({other_user.organisation_employers.first().pz_code})"
+                    )
+            else:
+                # Readers and editors CANNOT see any other logs
+                assert response.status_code == HTTPStatus.FORBIDDEN, (
+                    f"User {user.first_name} ({user.organisation_employers.first().pz_code}) should not be able to see logs for user {other_user.first_name} ({other_user.organisation_employers.first().pz_code})"
+                )
 
     # Also check the other users can see all logs
+    rcpch_audit_team_user = NPDAUser.objects.filter(
+        role=test_user_rcpch_audit_team_data.role,
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+    ).first()
+
+    for user_should_see_all_logs in [
+        rcpch_audit_team_user,
+    ]:
+        client = login_and_verify_user(client, user_should_see_all_logs)
+
+        # Self
+        url = reverse(
+            "npdauser-logs", kwargs={"npdauser_id": user_should_see_all_logs.pk}
+        )
+        response = client.get(url)
+        assert response.status_code == HTTPStatus.OK, (
+            f"User {user_should_see_all_logs.first_name} ({user_should_see_all_logs.organisation_employers.first().pz_code}) should be able to see their own logs"
+        )
+
+        # Other users in same PDU
+        for other_user in [another_user_same_pdu, another_user_different_pdu]:
+            url = reverse("npdauser-logs", kwargs={"npdauser_id": other_user.pk})
+            response = client.get(url)
+            assert response.status_code == HTTPStatus.OK, (
+                f"User {user_should_see_all_logs.first_name} ({user_should_see_all_logs.organisation_employers.first().pz_code}) should be able to see logs for user {other_user.first_name} ({other_user.organisation_employers.first().pz_code})"
+            )
+
+        # Other users in different PDU
+        for other_user in [another_user_different_pdu]:
+            url = reverse("npdauser-logs", kwargs={"npdauser_id": other_user.pk})
+            response = client.get(url)
+            assert response.status_code == HTTPStatus.OK, (
+                f"User {user_should_see_all_logs.first_name} ({user_should_see_all_logs.organisation_employers.first().pz_code}) should be able to see logs for user {other_user.first_name} ({other_user.organisation_employers.first().pz_code})"
+            )

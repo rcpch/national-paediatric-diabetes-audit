@@ -23,6 +23,9 @@ from django.views.generic import ListView
 # third party imports
 from two_factor.views import LoginView as TwoFactorLoginView
 
+from project.constants.user import AUDIT_CENTRE_COORDINATOR
+from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
+
 # RCPCH imports
 from ..models import (
     NPDAUser,
@@ -38,7 +41,7 @@ from ..general_functions import (
 )
 from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
 from .mixins import LoginAndOTPRequiredMixin
-from ...constants import RCPCH_AUDIT_TEAM
+from ...constants import RCPCH_AUDIT_TEAM, AUDIT_CENTRE_READER, AUDIT_CENTRE_EDITOR
 
 # from ..signals import password_reset_sent
 
@@ -431,9 +434,68 @@ class NPDAUserDeleteView(
     success_url = reverse_lazy("npda_users")
 
 
-class NPDAUserLogsListView(LoginAndOTPRequiredMixin, CheckPDUInstanceMixin, ListView):
+class NPDAUserLogsListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, ListView):
     template_name = "npda_user_logs.html"
     model = VisitActivity
+    permission_required = "npda.view_visitactivity"
+    permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
+
+    def has_permission(self):
+        """
+        Custom permission check:
+        - Readers and Editors can only view their own logs.
+        - Coordinators can view logs for any user in their PDU.
+        - RCPCH Audit Team can view logs for any user.
+        """
+        # Get the user whose logs are being viewed
+        npdauser_id = self.kwargs.get("npdauser_id")
+        if not npdauser_id:
+            return False
+
+        try:
+            npda_user = NPDAUser.objects.get(pk=npdauser_id)
+        except NPDAUser.DoesNotExist:
+            return False
+
+        # If user is a Reader or Editor, they can only see their own logs
+        logged_in_user: NPDAUser = self.request.user
+        is_reader_or_editor = logged_in_user.role in [
+            AUDIT_CENTRE_READER,
+            AUDIT_CENTRE_EDITOR,
+        ]
+
+        # Readers and Editors can only view their own logs
+        if is_reader_or_editor and logged_in_user.pk != npda_user.pk:
+            logger.warning(
+                f"Reader or Editor user {logged_in_user.email} tried to view logs for another user {npda_user.email}"
+            )
+            return False
+
+        # Coordinators can view logs for any user in their PDU
+        if logged_in_user.role == AUDIT_CENTRE_COORDINATOR:
+            try:
+                requested_pdu = npda_user.organisation_employers.get(
+                    pz_code__in=logged_in_user.organisation_employers.all().values_list(
+                        "pz_code", flat=True
+                    ),
+                )
+            except PaediatricDiabetesUnit.DoesNotExist:
+                logger.warning(f"Requested PDU for user {npda_user.email} not found")
+                return False
+            except Exception as e:
+                logger.error(
+                    f"Error getting requested PDU for user {npda_user.email}: {e}"
+                )
+                return False
+
+            if requested_pdu != npda_user.organisation_employers.first():
+                logger.warning(
+                    f"Coordinator user {logged_in_user.email} tried to view logs for another user {npda_user.email} in a different PDU {requested_pdu.pz_code}"
+                )
+                return False
+
+        # RCPCH Audit Team can view logs for any user
+        return True
 
     def get_context_data(self, **kwargs):
         npdauser_id = self.kwargs.get("npdauser_id")
