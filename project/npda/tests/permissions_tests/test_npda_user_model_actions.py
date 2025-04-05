@@ -553,7 +553,6 @@ def test_users_can_download_csv(
     seed_groups_fixture,
     seed_users_fixture,
     user_data,
-    seed_groups_and_permissions
 ):
     """Test that editor, coordinator, and RCPCH audit team users can download CSV files."""
 
