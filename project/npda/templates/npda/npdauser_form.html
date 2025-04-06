@@ -68,7 +68,14 @@
                      {% if field.value %}value="{{ field.value }}"{% endif %}
                      class="input rcpch-input-text">
             {% else %}
-              {% if field|exclude_admin_user_field:request.user %}{{ field }}{% endif %}
+              {% if field|exclude_admin_user_field:request.user %}
+                <input type="checkbox"
+                       name="{{ field.name }}"
+                       id="{{ field.id_for_label }}"
+                       class="toggle border-rcpch_light_blue hover:bg-rcpch_pink bg-rcpch_grey js-toggle-checkbox {% if form.is_staff.value %}border-rcpch_pink bg-rcpch_pink{% endif %}"
+                       {% if form.is_staff.value %}checked{% endif %} />
+                <!-- disabled in the form class if not correct permissions -->
+              {% endif %}
             {% endif %}
             {% for error in field.errors %}
               <div role="alert" class="alert alert-error py-1 my-0 rounded-none">
@@ -104,4 +111,18 @@
       {% endif %}
     </form>
   </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkboxes = document.querySelectorAll('.js-toggle-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    this.classList.add('border-rcpch_pink','bg-rcpch_pink');
+                } else {
+                    this.classList.remove('border-rcpch_pink', 'bg-rcpch_pink');
+                }
+            });
+        });
+    });
+  </script>
 {% endblock %}
