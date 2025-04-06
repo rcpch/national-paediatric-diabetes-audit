@@ -16,6 +16,7 @@ import os
 import logging
 
 from dotenv import load_dotenv
+from azure.identity import DefaultAzureCredential
 
 #  django imports
 from django.core.management.utils import get_random_secret_key
@@ -358,3 +359,15 @@ redis_params = f"?ssl_cert_reqs=required" if REDIS_USE_SSL else ""
 CELERY_BROKER_URL = f"{redis_protocol}://{redis_auth}{REDIS_HOSTNAME}:{REDIS_PORT}/{REDIS_DATABASE_NUMBER}{redis_params}"
 
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
+
+def get_redis_token():
+    credential = DefaultAzureCredential()
+    redis_resource_id = os.environ.get("MANAGED_IDENTITY_OBJECT_ID")  # The resource ID for Azure Redis
+    token_object = credential.get_token(redis_resource_id)
+    return token_object.token
+
+if DEBUG is False:
+    REDIS_PASSWORD = get_redis_token()
+    REDIS_USERNAME = os.environ.get("MANAGED_IDENTITY_OBJECT_ID") # Set this as an environment variable
+
+    REDIS_URL = f"redis://{REDIS_USERNAME}:{REDIS_PASSWORD}@{REDIS_HOSTNAME}:{REDIS_PORT}/0"

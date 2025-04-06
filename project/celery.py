@@ -6,6 +6,8 @@ from celery import Task
 from django.conf import settings
 import django
 
+from azure.identity import DefaultAzureCredential
+
 # Logging setup
 logger = logging.getLogger(__name__)
 
@@ -27,6 +29,22 @@ app.conf.update(
         "global_keyprefix": "{rest}:"
     }
 )
+
+def get_redis_token():
+    credential = DefaultAzureCredential()
+    redis_resource_id = "https://redis.azure.com"
+    token_object = credential.get_token(redis_resource_id)
+    return token_object.token
+
+broker_host = os.environ.get("REDIS_HOST")
+broker_port = os.environ.get("REDIS_PORT", 6379)
+broker_password = get_redis_token()
+broker_username = os.environ.get("MANAGED_IDENTITY_OBJECT_ID") # Set this as an environment variable
+
+broker_url = f"redis://{broker_username}:{broker_password}@{broker_host}:{broker_port}/0"
+
+CELERY_BROKER_URL = broker_url
+CELERY_RESULT_BACKEND = broker_url # If using Redis as result backend
 
 app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
 
