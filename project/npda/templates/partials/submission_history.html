@@ -12,9 +12,10 @@
     <h1 class="font-montserrat text-md text-rcpch_dark_blue font-semibold">
       All Submissions Nationally
     </h1>
+    <input type="checkbox" class="toggle bg:rcpch_light_blue text-rcpch_dark_blue font-semibold checked:rcpch_pink" {% if done_value %}checked{% endif %} hx-trigger="change" hx-get="{% url 'submissions' %}" hx-target="#submissions_table" hx-name="inactive-toggle" value={{ done_value }} hx-vals='{"done": "true"}' hx-vals:unchecked='{"done": "false"}' />
   {% endif %}
   {% if submissions %}
-    <div class="max-h-screen overflow-clip p-4">
+    <div class="max-h-screen overflow-clip">
       <div class="w-full overflow-x-auto overflow-y-auto"
            style="max-height:inherit">
         <table class="font-montserrat table-pin-cols table mb-5 text-sm text-left text-gray-500 border-collapse table-auto">

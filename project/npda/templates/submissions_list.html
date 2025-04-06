@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-{% load npda_tags %}
 {% load static %}
 {% block content %}
   <section class="mb-5 container-mx-auto flex items-center justify-center">
@@ -22,53 +21,16 @@
   </section>
   {% if request.user.view_preference == 2 %}
     <section class="mb-5 container-mx-auto flex items-center justify-center">
-      <div class="w-full">
+      <div class="w-full"
+           hx-get="/submissions"
+           hx-trigger="submissions from:body"
+           hx-target="#submission_stats"
+           id="submission_stats">
         <div class="flex flex-col justify-center px-10">
-          <div>
-            <div>
-              <div class="relative">
-                <div id="column_chart" class="w-full mt-5 mx-2">{{ column_chart|safe }}</div>
-              </div>
-            </div>
+          <div class="relative">
+            <div id="column_chart" class="w-full mt-5 mx-2">{{ column_chart|safe }}</div>
           </div>
-          <div class="stats shadow text-rcpch_pink">
-            <div class="stat place-items-center">
-              <div class="stat-title">Latest Submission</div>
-              <div class="stat-value">
-                {{ submission_statistics.latest_submission.pdu.lead_organisation_name|none_to_dash }} ({{ submission_statistics.latest_submission.pdu.pz_code|none_to_dash }})
-              </div>
-              <div class="stat-desc">
-                {{ submission_statistics.latest_submission.submission_date|none_to_dash }}
-              </div>
-            </div>
-            <div class="stat place-items-center">
-              <div class="stat-title">Submission with fewest Errors</div>
-              <div class="stat-value">
-                {{ submission_statistics.fewest_errors.error_number|none_to_dash }}
-              </div>
-              <div class="stat-desc">
-                {{ submission_statistics.fewest_errors.pdu.lead_organisation_name|none_to_dash }} ({{ submission_statistics.fewest_errors.pdu.pz_code|none_to_dash }})
-              </div>
-            </div>
-            <div class="stat place-items-center">
-              <div class="stat-title">Most Patients</div>
-              <div class="stat-value">
-                {{ submission_statistics.most_patients.patient_number }}
-              </div>
-              <div class="stat-desc">
-                {{ submission_statistics.most_patients.pdu.lead_organisation_name }} ({{ submission_statistics.most_patients.pdu.pz_code }})
-              </div>
-            </div>
-            <div class="stat place-items-center">
-              <div class="stat-title">Most Visits/Patient</div>
-              <div class="stat-value">
-                {{ submission_statistics.most_visits.visit_number_per_patient }}
-              </div>
-              <div class="stat-desc">
-                {{ submission_statistics.most_visits.pdu.lead_organisation_name }} ({{ submission_statistics.most_patients.pdu.pz_code }})
-              </div>
-            </div>
-          </div>
+          {% include 'partials/submission_stats.html' with submission_statistics=submission_statistics %}
         </div>
       </div>
     </section>

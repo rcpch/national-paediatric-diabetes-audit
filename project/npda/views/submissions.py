@@ -90,6 +90,7 @@ class SubmissionsListView(
         else:
             is_jersey = False
         context = super().get_context_data(**kwargs)
+        context["done_value"] = False
         context["pz_code"] = self.request.session.get("pz_code")
         context["selected_audit_year"] = self.request.session.get("selected_audit_year")
         Patient = apps.get_model("npda", "Patient")
@@ -184,6 +185,14 @@ class SubmissionsListView(
             # Otherwise, returns the full template
             # The partial template is used to update the submission history table when a new PDU is selected
             # This is done with a custom htmx trigger in the PDU selector
+            done_value = request.GET.get('done')
+            if done_value == "true":
+                self.get_queryset().filter(submission_active=True)
+            else:
+                self.get_queryset()
+            context = self.get_context_data(object_list=self.object_list)
+            context["done"] = done_value
+
             template = "partials/submission_history.html"
         return render(request=request, template_name=template, context=context)
 
@@ -339,8 +348,6 @@ def submission_stats(selected_audit_year):
     - the paediatric diabetes unit with the most visits
     """
 
-    
-    
     # Retrieve the latest submission data for the selected audit year
     latest_submission_data = Submission.objects.filter(
         audit_year=selected_audit_year,
@@ -382,10 +389,10 @@ def submission_stats(selected_audit_year):
         '-visits_per_patient'
     ).first()
 
-    latest_submission_paediatric_diabetes_unit, submission_date = getattr(latest_submission_data, "paediatric_diabetes_unit", None), getattr(latest_submission_data,"submission_date") if latest_submission_data else (None, None)
-    fewest_errors_paediatric_diabetes_unit, error_number = getattr(fewest_errors, "paediatric_diabetes_unit", None), fewest_errors.error_count if fewest_errors else (None, None)
-    most_patients_paediatric_diabetes_unit, patient_number = getattr(most_patients, "paediatric_diabetes_unit", None), most_patients.patient_count if most_patients else (None, None)
-    most_visits_paediatric_diabetes_unit, visit_number = getattr(most_visits, "paediatric_diabetes_unit", None), most_visits.visits_per_patient if most_visits else (None, None)
+    latest_submission_paediatric_diabetes_unit, submission_date = getattr(latest_submission_data, "paediatric_diabetes_unit", None), getattr(latest_submission_data,"submission_date", None)
+    fewest_errors_paediatric_diabetes_unit, error_number = getattr(fewest_errors, "paediatric_diabetes_unit", None), getattr(fewest_errors,"error_count", None)
+    most_patients_paediatric_diabetes_unit, patient_number = getattr(most_patients, "paediatric_diabetes_unit", None), getattr(most_patients,"patient_count", None)
+    most_visits_paediatric_diabetes_unit, visit_number = getattr(most_visits, "paediatric_diabetes_unit", None), getattr(most_visits,"visits_per_patient", None)
 
     # Create a dictionary to store the statistics
     submission_statistics = {
