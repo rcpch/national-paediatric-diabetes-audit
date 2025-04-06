@@ -95,6 +95,7 @@ class SubmissionsListView(
         Patient = apps.get_model("npda", "Patient")
         context["data"] = None  # data stores csv summary data if a submission exists
         context["column_chart"] = None
+        context["submission_statistics"] = None
         requested_active_submission = self.object_list.filter(
             submission_active=True,
             audit_year=self.request.session.get("selected_audit_year"),
@@ -166,6 +167,7 @@ class SubmissionsListView(
             ).values("pz_code", "lead_organisation_name", "latest_submission_quarter")
             column_chart = create_column_chart(paediatric_diabetes_units, selected_audit_year)
             context["column_chart"] = column_chart.to_html(full_html=False)
+            context["submission_statistics"] = submission_stats(selected_audit_year)
 
         return context
 
@@ -306,11 +308,6 @@ def create_column_chart(pdus_by_latest_submission, selected_audit_year):
     # Create a Pandas DataFrame
     df = pd.DataFrame(pdus_by_latest_submission)
 
-    # Define colors for the x-axis labels
-   # Determine colors for each PZ code label
-    x_label_colors = ['red' if pd.isna(q) else 'black' for q in df['latest_submission_quarter']]
-    pz_codes = df['pz_code'].tolist()
-
     # Create the Plotly column chart
     fig = go.Figure(data=[go.Bar(x=df['pz_code'], y=df['latest_submission_quarter'], marker_color=RCPCH_LIGHT_BLUE)])
 
@@ -332,3 +329,84 @@ def create_column_chart(pdus_by_latest_submission, selected_audit_year):
     )
 
     return fig
+
+def submission_stats(selected_audit_year):
+    """
+    View to display submission statistics.
+    - the paediatric diabetes unit with the most recent submission
+    - the paediatric diabetes unit with the least errors
+    - the paediatric diabetes unit with the most patients
+    - the paediatric diabetes unit with the most visits
+    """
+
+    
+    
+    # Retrieve the latest submission data for the selected audit year
+    latest_submission_data = Submission.objects.filter(
+        audit_year=selected_audit_year,
+        submission_date__gte=date.today(),
+        paediatric_diabetes_unit__active=True,
+        submission_active=True
+    ).order_by(
+        '-submission_date'
+    ).first()
+
+    fewest_errors = Submission.objects.filter(
+        audit_year = selected_audit_year,
+        submission_active=True,
+        paediatric_diabetes_unit__active=True
+    ).annotate(
+        error_count=Count('errors')
+    ).order_by(
+        'error_count'
+    ).first()
+
+    most_patients = Submission.objects.filter(
+        audit_year = selected_audit_year,
+        submission_active=True,
+        paediatric_diabetes_unit__active=True
+    ).annotate(
+        patient_count=Count('patients')
+    ).order_by(
+        '-patient_count'
+    ).first()
+
+    most_visits = Submission.objects.filter(
+        audit_year = selected_audit_year,
+        submission_active=True,
+        paediatric_diabetes_unit__active=True
+    ).annotate(
+        visit_count=Count('patients__visit'),
+        visits_per_patient=Count('patients')/Count('patients__visit')
+    ).order_by(
+        '-visits_per_patient'
+    ).first()
+
+    lastest_submission_paediatric_diabetes_unit, submission_date = latest_submission_data.paediatric_diabetes_unit, latest_submission_data.submission_date
+    fewest_errors_paediatric_diabetes_unit, error_number = fewest_errors.paediatric_diabetes_unit, fewest_errors.error_count
+    most_patients_paediatric_diabetes_unit, patient_number = most_patients.paediatric_diabetes_unit, most_patients.patient_count
+    most_visits_paediatric_diabetes_unit, visit_number = most_visits.paediatric_diabetes_unit, most_visits.visits_per_patient
+
+    # Create a dictionary to store the statistics
+    submission_statistics = {
+        "latest_submission": {
+            "pdu": lastest_submission_paediatric_diabetes_unit,
+            "submission_date": submission_date,
+        },
+        "fewest_errors": {
+            "pdu": fewest_errors_paediatric_diabetes_unit,
+            "error_number": error_number,
+        },
+        "most_patients": {
+            "pdu": most_patients_paediatric_diabetes_unit,
+            "patient_number": patient_number,
+        },
+        "most_visits": {
+            "pdu": most_visits_paediatric_diabetes_unit,
+            "visit_number_per_patient": visit_number,
+        },
+    }
+    return submission_statistics
+
+
+    
