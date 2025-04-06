@@ -345,29 +345,28 @@ USE_I18N = True
 
 USE_TZ = True
 
-REDIS_HOSTNAME = os.getenv("REDIS_HOSTNAME")
-REDIS_PORT = os.getenv("REDIS_PORT")
-REDIS_DATABASE_NUMBER = os.getenv("REDIS_DATABASE_NUMBER")
-REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD")
+REDIS_HOST = os.environ.get('REDIS_HOST')
+REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
+REDIS_PASSWORD = None
 
-REDIS_USE_SSL = os.environ.get("REDIS_USE_SSL")
+credential = DefaultAzureCredential()
 
-redis_protocol = 'rediss' if REDIS_USE_SSL else 'redis'
-redis_auth = f":{REDIS_PASSWORD}@" if REDIS_PASSWORD else ""
-redis_params = f"?ssl_cert_reqs=required" if REDIS_USE_SSL else ""
+try:
+    token = credential.get_token("https://redis.azure.com/.default")
+    REDIS_PASSWORD = token.secret
+except Exception as e:
+    print(f"Error getting Azure AD token for Redis in Django: {e}")
+    # Handle the error appropriately
+    pass
 
-CELERY_BROKER_URL = f"{redis_protocol}://{redis_auth}{REDIS_HOSTNAME}:{REDIS_PORT}/{REDIS_DATABASE_NUMBER}{redis_params}"
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/2",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
 
-CELERY_RESULT_BACKEND = CELERY_BROKER_URL
-
-def get_redis_token():
-    credential = DefaultAzureCredential()
-    redis_resource_id = os.environ.get("MANAGED_IDENTITY_OBJECT_ID")  # The resource ID for Azure Redis
-    token_object = credential.get_token(redis_resource_id)
-    return token_object.token
-
-if DEBUG is False:
-    REDIS_PASSWORD = get_redis_token()
-    REDIS_USERNAME = os.environ.get("MANAGED_IDENTITY_OBJECT_ID") # Set this as an environment variable
-
-    REDIS_URL = f"redis://{REDIS_USERNAME}:{REDIS_PASSWORD}@{REDIS_HOSTNAME}:{REDIS_PORT}/0"
+CELERY_RESULT_BACKEND = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/1"
