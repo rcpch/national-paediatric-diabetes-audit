@@ -122,14 +122,14 @@
           {% if request.user.view_preference == 2 %}
             <td class="w-1/12 text-center">
               <div class="tooltip tooltip-top">
-                {% for item in npda_user.organisation_employers.all %}
-                  <span class="tooltip tooltip-left"
-                        data-tip="{{ item.lead_organisation_name }}">
-                    <i class="fa-solid fa-hospital fa-xl text-rcpch_pink ml-2 mr-2"></i>
+                <span class="tooltip tooltip-left"
+                      data-tip="{% for item in npda_user.organisation_employers.all %}{{ item.lead_organisation_name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                  <i class="fa-solid fa-hospital fa-xl text-rcpch_pink ml-2 mr-2"></i>
+                  {% for item in npda_user.organisation_employers.all %}
                     {{ item }}
                     {% if not forloop.last %},{% endif %}
-                  </span>
-                {% endfor %}
+                  {% endfor %}
+                </span>
               </div>
             </td>
           {% endif %}
