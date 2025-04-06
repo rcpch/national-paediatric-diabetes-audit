@@ -1,6 +1,10 @@
 {% load npda_tags %}
 <h1 class="font-montserrat text-md text-rcpch_dark_blue font-semibold">
-  NPDA Users at {{ lead_organisation }} ({{ chosen_pdu }})
+  {% if request.user.view_preference == 1 %}
+    NPDA Users at {{ lead_organisation }} ({{ chosen_pdu }})
+  {% elif request.user.view_preference == 2 %}
+    National View - All NPDA Users
+  {% endif %}
 </h1>
 {% if npdauser_list %}
   <table class="font-montserrat table-md w-full table mb-5 text-sm text-left text-gray-400 text-gray-500 rtl:text-right">
@@ -10,6 +14,9 @@
         <th scope="col" class="w-2/12">Name</th>
         <th scope="col" class="w-3/12 px-0">Email</th>
         <th scope="col" class="-mx-6 w-3/12 text-left">Memberships</th>
+        {% if request.user.view_preference == 2 %}
+          <th scope="col" class="w-1/12 text-center">PDU</th>
+        {% endif %}
         <th scope="col" class="w-2/12">Role</th>
         <th class="w-1/12 text-center">Logs</th>
       </tr>
@@ -112,6 +119,20 @@
               {% endif %}
             </span>
           </td>
+          {% if request.user.view_preference == 2 %}
+            <td class="w-1/12 text-center">
+              <div class="tooltip tooltip-top">
+                {% for item in npda_user.organisation_employers.all %}
+                  <span class="tooltip tooltip-left"
+                        data-tip="{{ item.lead_organisation_name }}">
+                    <i class="fa-solid fa-hospital fa-xl text-rcpch_pink ml-2 mr-2"></i>
+                    {{ item }}
+                    {% if not forloop.last %},{% endif %}
+                  </span>
+                {% endfor %}
+              </div>
+            </td>
+          {% endif %}
           <td class="px-6 text-left">{{ npda_user.get_role_display }}</td>
           <td class="w-80 px-2 text-right">
             <div class="tooltip tooltip-left"

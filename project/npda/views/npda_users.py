@@ -84,7 +84,7 @@ class NPDAUserListView(
         return (
             NPDAUser.objects.filter(organisation_employers__pz_code=pz_code)
             .annotate(number_of_pdu_memberships=flag_field)
-            .order_by("surname")
+            .order_by("surname", "organisation_employers__pz_code")
         )
 
     def get_context_data(self, **kwargs):
