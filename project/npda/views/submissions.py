@@ -382,15 +382,15 @@ def submission_stats(selected_audit_year):
         '-visits_per_patient'
     ).first()
 
-    lastest_submission_paediatric_diabetes_unit, submission_date = latest_submission_data.paediatric_diabetes_unit, latest_submission_data.submission_date
-    fewest_errors_paediatric_diabetes_unit, error_number = fewest_errors.paediatric_diabetes_unit, fewest_errors.error_count
-    most_patients_paediatric_diabetes_unit, patient_number = most_patients.paediatric_diabetes_unit, most_patients.patient_count
-    most_visits_paediatric_diabetes_unit, visit_number = most_visits.paediatric_diabetes_unit, most_visits.visits_per_patient
+    latest_submission_paediatric_diabetes_unit, submission_date = getattr(latest_submission_data, "paediatric_diabetes_unit", None), getattr(latest_submission_data,"submission_date") if latest_submission_data else (None, None)
+    fewest_errors_paediatric_diabetes_unit, error_number = getattr(fewest_errors, "paediatric_diabetes_unit", None), fewest_errors.error_count if fewest_errors else (None, None)
+    most_patients_paediatric_diabetes_unit, patient_number = getattr(most_patients, "paediatric_diabetes_unit", None), most_patients.patient_count if most_patients else (None, None)
+    most_visits_paediatric_diabetes_unit, visit_number = getattr(most_visits, "paediatric_diabetes_unit", None), most_visits.visits_per_patient if most_visits else (None, None)
 
     # Create a dictionary to store the statistics
     submission_statistics = {
         "latest_submission": {
-            "pdu": lastest_submission_paediatric_diabetes_unit,
+            "pdu": latest_submission_paediatric_diabetes_unit,
             "submission_date": submission_date,
         },
         "fewest_errors": {

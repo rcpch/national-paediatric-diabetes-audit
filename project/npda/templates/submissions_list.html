@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load npda_tags %}
 {% load static %}
 {% block content %}
   <section class="mb-5 container-mx-auto flex items-center justify-center">
@@ -34,19 +35,19 @@
             <div class="stat place-items-center">
               <div class="stat-title">Latest Submission</div>
               <div class="stat-value">
-                {{ submission_statistics.latest_submission.pdu.lead_organisation_name }} ({{ submission_statistics.latest_submission.pdu.pz_code }})
+                {{ submission_statistics.latest_submission.pdu.lead_organisation_name|none_to_dash }} ({{ submission_statistics.latest_submission.pdu.pz_code|none_to_dash }})
               </div>
               <div class="stat-desc">
-                {{ submission_statistics.latest_submission.submission_date }}
+                {{ submission_statistics.latest_submission.submission_date|none_to_dash }}
               </div>
             </div>
             <div class="stat place-items-center">
               <div class="stat-title">Submission with fewest Errors</div>
               <div class="stat-value">
-                {{ submission_statistics.fewest_errors.error_number }}
+                {{ submission_statistics.fewest_errors.error_number|none_to_dash }}
               </div>
               <div class="stat-desc">
-                {{ submission_statistics.fewest_errors.pdu.lead_organisation_name }} ({{ submission_statistics.fewest_errors.pdu.pz_code }})
+                {{ submission_statistics.fewest_errors.pdu.lead_organisation_name|none_to_dash }} ({{ submission_statistics.fewest_errors.pdu.pz_code|none_to_dash }})
               </div>
             </div>
             <div class="stat place-items-center">
