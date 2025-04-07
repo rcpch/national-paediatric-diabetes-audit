@@ -87,7 +87,7 @@ class NPDAUserListView(
         return (
             NPDAUser.objects.filter(organisation_employers__pz_code=pz_code)
             .annotate(number_of_pdu_memberships=flag_field)
-            .order_by("surname")
+            .order_by("surname", "organisation_employers__pz_code")
         )
 
     def get_context_data(self, **kwargs):
@@ -296,7 +296,9 @@ class NPDAUserUpdateView(
     def post(self, request: HttpRequest, *args: str, **kwargs) -> HttpResponse:
         """
         Override POST method to resend email if recipient create account token has expired
-        TODO: Only Superusers or Coordinators can do this
+        TODO: Only Superusers or Coordinators can do this. Also the HTMX post request
+        to update the employers list is handled here. The HTMX post request is not
+        handled in the form_valid method as it is not a form submission.
         """
         if request.htmx:
             # these are HTMX post requests from the edit user form
@@ -351,7 +353,7 @@ class NPDAUserUpdateView(
 
                     if not selected_pdu.active and not (self.request.user.is_rcpch_audit_team_member or self.request.user.is_superuser):
                         raise PermissionDenied(
-                            f"{new_user_pz_code} is inactive. Contact the NPDA for assistance."
+                            f"{selected_pdu} is inactive. Contact the NPDA for assistance."
                         )
 
                     OrganisationEmployer.objects.update_or_create(
@@ -373,6 +375,8 @@ class NPDAUserUpdateView(
                 requesting_user=self.request.user, user_instance=user_instance
             )
 
+            print('choices ',organisation_choices)
+
             return render(
                 request=request,
                 template_name="partials/employers.html",
@@ -383,7 +387,7 @@ class NPDAUserUpdateView(
                     )
                     .all()
                     .order_by("-is_primary_employer"),
-                    "organisation_choices": organisation_choices,
+                    "employer_choices": organisation_choices,
                 },
             )
         if "resend_email" in request.POST:

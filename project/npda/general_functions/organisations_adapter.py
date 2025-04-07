@@ -34,7 +34,7 @@ def paediatric_diabetes_units_to_populate_select_field(
             # return all paediatric diabetes units excluding those were the user is employed
             filtered_pdus = PaediatricDiabetesUnit.objects.all().exclude(
                 npda_users__npda_user=user_instance,
-                active=False
+                active=True
             )
         else:
             # return only those paediatric diabetes units that a user is already affiliated with

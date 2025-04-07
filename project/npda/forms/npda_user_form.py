@@ -51,11 +51,7 @@ class NPDAUserForm(forms.ModelForm):
             "first_name": forms.TextInput(attrs={"class": TEXT_INPUT}),
             "surname": forms.TextInput(attrs={"class": TEXT_INPUT}),
             "email": forms.EmailInput(attrs={"class": TEXT_INPUT}),
-            "is_staff": forms.CheckboxInput(
-                attrs={
-                    "class": "toggle border-rcpch_light_blue bg-rcpch_light_blue checked:bg-rcpch_pink_light_tint2 checked:border-rcpch_pink hover:bg-rcpch_pink"
-                }
-            ),
+            "is_staff": forms.CheckboxInput(attrs={"class": "toggle border-rcpch_light_blue js-toggle-checkbox"}),
             "is_superuser": forms.CheckboxInput(
                 attrs={
                     "class": "toggle border-rcpch_light_blue bg-rcpch_light_blue checked:bg-rcpch_pink_light_tint2 checked:border-rcpch_pink hover:bg-rcpch_pink"
