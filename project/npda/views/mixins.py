@@ -127,8 +127,8 @@ class CheckPDUInstanceMixin(AccessMixin):
 
         Transfer = apps.get_model("npda", "Transfer")
 
-        # get PDU assigned to user who is trying to access a view
-        user_pdu = request.user.organisation_employers.first().pz_code
+        # get PDUs assigned to user who is trying to access a view
+        user_pdus = [org.pz_code for org in request.user.organisation_employers.all()]
 
         # get pdu that user is requesting access of
         requested_pdu = ""
@@ -150,7 +150,7 @@ class CheckPDUInstanceMixin(AccessMixin):
         if (
             request.user.is_superuser
             or request.user.is_rcpch_audit_team_member
-            or (requested_pdu == user_pdu)
+            or (requested_pdu in user_pdus)
         ):
             return super().dispatch(request, *args, **kwargs)
 
@@ -159,7 +159,7 @@ class CheckPDUInstanceMixin(AccessMixin):
                 "User %s is unverified. Tried accessing %s but only has access to %s",
                 request.user,
                 requested_pdu,
-                user_pdu,
+                user_pdus,
             )
             raise PermissionDenied()
 
