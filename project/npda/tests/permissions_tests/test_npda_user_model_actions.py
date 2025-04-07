@@ -24,11 +24,16 @@ from django.apps import apps
 from django.utils import timezone
 from django.urls import reverse
 
-from project.constants.user import RCPCH_AUDIT_TEAM, AUDIT_CENTRE_COORDINATOR, TRUST_AUDIT_TEAM_COORDINATOR_ACCESS
+from project.constants.user import (
+    RCPCH_AUDIT_TEAM,
+    AUDIT_CENTRE_COORDINATOR,
+    TRUST_AUDIT_TEAM_COORDINATOR_ACCESS,
+    AUDIT_CENTRE_READER
+)
 # E12 imports
 from project.npda.general_functions.audit_period import get_current_audit_year
 from project.npda.general_functions.csv import csv_parse
-from project.npda.models import NPDAUser, Submission
+from project.npda.models import NPDAUser, Submission, OrganisationEmployer
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
 from project.npda.tests.utils import login_and_verify_user
@@ -539,6 +544,68 @@ def test_audit_team_can_add_employers_outside_of_their_pdu(
     employers = { e.pz_code for e in ah_coordinator.organisation_employers.all() }
 
     assert employers == { ALDER_HEY_PZ_CODE, GOSH_PZ_CODE }
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/846
+@pytest.mark.django_db
+def test_coordinators_with_multiple_employers_can_update_users_in_all_of_them(
+    seed_groups_fixture,
+    seed_users_fixture,
+    client,
+):
+    gosh_reader = NPDAUser.objects.filter(
+        organisation_employers__pz_code=GOSH_PZ_CODE,
+        role=AUDIT_CENTRE_READER
+    ).first()
+
+    ah_coordinator = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=AUDIT_CENTRE_COORDINATOR
+    ).first()
+
+    ah_reader = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=AUDIT_CENTRE_READER
+    ).first()
+
+    # Add ah_coordinator to GOSH
+    OrganisationEmployer.objects.create(
+        npda_user=ah_coordinator,
+        paediatric_diabetes_unit=gosh_reader.organisation_employers.first(),
+        is_primary_employer=False
+    )
+
+    client = login_and_verify_user(client, ah_coordinator)
+
+    url = reverse("npdauser-update", kwargs={ "pk": gosh_reader.pk })
+
+    # Change name just to test permissions are ok
+    response = client.post(url, data={
+        "first_name": "Bob",
+        "surname": "Bobertson",
+        "email": gosh_reader.email,
+        "role": AUDIT_CENTRE_READER,
+    })
+
+    gosh_reader.refresh_from_db()
+    assert gosh_reader.first_name == "Bob"
+    assert gosh_reader.surname == "Bobertson"
+
+    url = reverse("npdauser-update", kwargs={ "pk": ah_reader.pk })
+
+    # Change name just to test permissions are ok
+    response = client.post(url, data={
+        "first_name": "Bob",
+        "surname": "Bobertson",
+        "email": ah_reader.email,
+        "role": AUDIT_CENTRE_READER,
+    })
+
+    ah_reader.refresh_from_db()
+    assert ah_reader.first_name == "Bob"
+    assert ah_reader.surname == "Bobertson"
+
+
+
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     "user_data",
