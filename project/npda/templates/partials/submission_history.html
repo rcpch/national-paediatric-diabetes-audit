@@ -138,7 +138,6 @@
                         {% if perms.npda.delete_submission %}
                           {% comment %}only those with permission can see this button{% endcomment %}
                           <button name="submit-data"
-                                  disabled="true"
                                   value="delete-data"
                                   type="submit"
                                   class="join-item bg-rcpch_red text-white font-semibold hover:text-white py-1 px-2 border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint btn-sm rounded-none {% if submission.submission_active %}opacity-50 cursor-not-allowed{% endif %}  h-auto">

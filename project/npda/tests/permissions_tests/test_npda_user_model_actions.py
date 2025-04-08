@@ -591,7 +591,6 @@ def test_users_can_download_csv(
     response = client.post(
         url,
         {"submit-data": "download-data", "audit_id": submission.pk},
-        headers={"HX-Request": "true"},  # Simulate HTMX request
     )
 
     # Check that the response is successful and has the correct content type for a file download
@@ -644,7 +643,6 @@ def test_reader_cannot_download_csv(
     response = client.post(
         url,
         {"submit-data": "download-data", "audit_id": submission.pk},
-        headers={"HX-Request": "true"},  # Simulate HTMX request
     )
 
     # Check that the response is successful and has the correct content type for a file download
@@ -704,7 +702,6 @@ def test_users_can_download_report(
     response = client.post(
         url,
         {"submit-data": "download-report", "audit_id": submission.pk},
-        headers={"HX-Request": "true"},  # Simulate HTMX request
     )
 
     # Check that the response is successful and has the correct content type for a file download (likely xlsx)
@@ -758,7 +755,6 @@ def test_rcpch_audit_team_can_delete_submission(
     response = client.post(
         url,
         {"submit-data": "delete-data", "audit_id": submission.pk},
-        headers={"HX-Request": "true"},  # Simulate HTMX request
         follow=True
     )
     # Check that the deletion was successful (we expect a success message in the response)
@@ -818,7 +814,6 @@ def test_non_rcpch_audit_team_cannot_delete_submission(
     response = client.post(
         url,
         {"submit-data": "delete-data", "audit_id": submission.pk},
-        headers={"HX-Request": "true"},  # Simulate HTMX request
     )
 
     # Check that the deletion was NOT successful
