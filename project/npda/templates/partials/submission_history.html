@@ -12,7 +12,19 @@
     <h1 class="font-montserrat text-md text-rcpch_dark_blue font-semibold">
       All Submissions Nationally
     </h1>
-    <input type="checkbox" class="toggle bg:rcpch_light_blue text-rcpch_dark_blue font-semibold checked:rcpch_pink" {% if done_value %}checked{% endif %} hx-trigger="change" hx-get="{% url 'submissions' %}" hx-target="#submissions_table" hx-name="inactive-toggle" value={{ done_value }} hx-vals='{"done": "true"}' hx-vals:unchecked='{"done": "false"}' />
+    <span class="label-text text-rcpch_dark_blue font-semibold flex flex-row items-center">
+      <input type="checkbox"
+             class="toggle text-rcpch_dark_blue font-semibold checked:bg-rcpch_pink checked:border-rcpch_pink checked:text-rcpch_pink"
+             name="toggle_inactive_submissions"
+             hx-trigger="change"
+             value="on"
+             {% if toggle_inactive_submissions == "on" %}checked="checked"{% endif %}
+             hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+             hx-post="{% url 'submissions' %}"
+             hx-include="this"
+             hx-target="#submissions_table" />
+      <label class="label cursor-pointer">Show inactive submissions</label>
+    </span>
   {% endif %}
   {% if submissions %}
     <div class="max-h-screen overflow-clip">
@@ -184,3 +196,9 @@
     {% endif %}
   {% endif %}
 </div>
+<script>
+  {% comment %} const toggle = document.getElementsByName('inactive-toggle')[0]; {% endcomment %}
+  {% comment %} console.log(toggle.checked) {% endcomment %}
+
+
+</script>

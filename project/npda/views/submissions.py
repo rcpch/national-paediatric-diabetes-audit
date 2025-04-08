@@ -90,7 +90,6 @@ class SubmissionsListView(
         else:
             is_jersey = False
         context = super().get_context_data(**kwargs)
-        context["done_value"] = False
         context["pz_code"] = self.request.session.get("pz_code")
         context["selected_audit_year"] = self.request.session.get("selected_audit_year")
         Patient = apps.get_model("npda", "Patient")
@@ -174,26 +173,17 @@ class SubmissionsListView(
 
     def get(self, request, *args, **kwargs):
         """
-        Handle the HTMX GET request
+        Handle the HTMX GET request to filter submissions based on the 'done' parameter.
         """
-        self.object_list = self.get_queryset().order_by("-submission_date")
+        queryset = self.get_queryset().order_by("-submission_date")
+        self.object_list = queryset
         context = self.get_context_data(object_list=self.object_list)
+        
         template = self.template_name
 
         if request.htmx:
-            # If the request is an HTMX request from the PDU selector or Audit Year selector, returns the partial template
-            # Otherwise, returns the full template
-            # The partial template is used to update the submission history table when a new PDU is selected
-            # This is done with a custom htmx trigger in the PDU selector
-            done_value = request.GET.get('done')
-            if done_value == "true":
-                self.get_queryset().filter(submission_active=True)
-            else:
-                self.get_queryset()
-            context = self.get_context_data(object_list=self.object_list)
-            context["done"] = done_value
-
             template = "partials/submission_history.html"
+
         return render(request=request, template_name=template, context=context)
 
     def post(self, request, *args, **kwargs):
@@ -204,6 +194,26 @@ class SubmissionsListView(
         If the value of "submit-data" is "download-data", the original csv is downloaded.
         If the value of "submit-data" is "download-report", the commented xlsx (with validation remarks) is downloaded.
         """
+        if request.htmx:
+            # HTMX request
+            template = "partials/submission_history.html"
+            queryset = self.get_queryset().order_by("-submission_date")
+            toggle_result = request.POST.get('toggle_inactive_submissions', "off")
+
+            # If toggle is OFF (not submitted/unchecked), only show active submissions
+            # If toggle is ON (checked), show all submissions
+            if toggle_result != 'on':
+                toggle_result = "off"
+            else:
+                toggle_result = "on"  # Keep it "on" if it was sent as "on"
+                queryset = queryset.filter(submission_active=True)
+
+            self.object_list = queryset
+            print(f"Toggle result after: {toggle_result}")
+            context = self.get_context_data(object_list=self.object_list)
+            context["toggle_inactive_submissions"] = toggle_result
+            return render(request=request, template_name=template, context=context)
+
         
         button_name = request.POST.get("submit-data")
         if button_name == "delete-data":
