@@ -13,7 +13,11 @@
     <meta name="theme-color" content="#ffffff" />
     <meta name="latest_git_commit" content="{{ latest_git_commit }}" />
     <title>National Paediatric Diabetes Audit Platform | RCPCH</title>
-    <link rel="icon" href="/favicon.ico" />
+    <!-- Favicon -->
+    <link rel="icon" href="{% static 'favicon.ico' %}" />
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon-32x32.png' %}" />
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'favicon-16x16.png' %}" />
+    <link rel="apple-touch-icon" href="{% static 'favicon-32x32.png' %}" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"
