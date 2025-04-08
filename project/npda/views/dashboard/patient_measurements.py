@@ -1,7 +1,7 @@
 from django.shortcuts import render
+from project.npda.general_functions.audit_period import audit_period_for_audit_year
 from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.views.dashboard import helpers as hp
-from project.npda.views.patient_report.template_data import KPI_CATEGORY_ATTR_MAP, TEXT
 from project.npda.views.decorators import login_and_otp_required
 from project.npda.models import Visit, Submission, AuditPeriod
 
@@ -54,11 +54,13 @@ def patient_measurements(request):
     if Submission.objects.filter(
         audit_year=audit_period.audit_year(),
         paediatric_diabetes_unit__pz_code=pz_code,
+        paediatric_diabetes_unit__active=True,
         submission_active=True,
     ).exists():
         current_submission = Submission.objects.get(
             audit_year=audit_period.audit_year(),
             paediatric_diabetes_unit__pz_code=pz_code,
+            paediatric_diabetes_unit__active=True,
             submission_active=True,
         )
         visits = Visit.objects.filter(patient__in=current_submission.patients.all())

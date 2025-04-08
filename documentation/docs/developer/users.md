@@ -26,6 +26,7 @@ The last group has no real implementation at the moment but in time it is hoped 
 | Visit    | ✔️   |    -   |    -   |    -   | ------ |
 | Site     | ✔️   |    -   |    -   |    -   | ------ |
 | NPDAUser | ✔️   |    -   |    -   |    -   | ------ |
+| Submission | ✔️   |    -   |   -    |    -   | ------ |
 
 ### Editor
 
@@ -34,7 +35,8 @@ The last group has no real implementation at the moment but in time it is hoped 
 | Patient  | ✔️   |    ✔️   |    -   |    ✔️   | ------ |
 | Visit    | ✔️   |    ✔️   |    -   |    ✔️   | ------ |
 | Site     | -    |    -   |    -   |    -   | ------ |
-| NPDAUser | ✔️   |    -   |    -   |    -   | ------ |
+| NPDAUser | ✔️   |    -   |    -   |    -   | CAN_DOWNLOAD_CSV, CAN_SUBMIT_CSV |
+| Submission | ✔️   |    -   |   -    |    -   | ------ |
 
 ### Coordinator
 
@@ -43,7 +45,8 @@ The last group has no real implementation at the moment but in time it is hoped 
 | Patient  | ✔️   |    ✔️   |    -   |    ✔️   | CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING, CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT |
 | Visit    | ✔️   |    ✔️   |    -   |    ✔️   | ------- |
 | Site     | -    |    -   |    -   |    -   | ------ |
-| NPDAUser | ✔️   |    ✔️   |    ✔️   |    ✔️   | ------ |
+| NPDAUser | ✔️   |    ✔️   |    ✔️   |    ✔️   | CAN_SUBMIT_CSV, CAN_DOWNLOAD_CSV |
+| Submission | ✔️   |    -   |   -    |    -   | ------ |
 
 
 ### RCPCH Audit Team
@@ -53,7 +56,8 @@ The last group has no real implementation at the moment but in time it is hoped 
 | Patient  | ✔️   |    ✔️   |    ✔️   |    ✔️   | CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING, CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING, CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT |
 | Visit    | ✔️   |    ✔️   |    ✔️   |    ✔️   | ------ |
 | Site     | ✔️   |    ✔️   |    ✔️   |    ✔️   | CAN_EDIT_NPDA_LEAD_CENTRE, CAN_ALLOCATE_NPDA_LEAD_CENTRE, CAN_TRANSFER_NPDA_LEAD_CENTRE, CAN_DELETE_NPDA_LEAD_CENTRE, CAN_PUBLISH_NPDA_DATA |
-| NPDAUser | ✔️   |    ✔️   |    ✔️   |    ✔️   | ------ |
+| NPDAUser | ✔️   |    ✔️   |    ✔️   |    ✔️   | CAN_SUBMIT_CSV, CAN_DOWNLOAD_CSV |
+| Submission | ✔️   |    ✔️   |    ✔️   |    ✔️   | ------ |
 
 
 #### NPDAUser model
@@ -89,3 +93,32 @@ Two Factor Authentication is either by email or Microsoft Authenticator on a mob
 #### Captcha
 
 In addition to the above methods of authentication, a rotating image of numbers or letters is used to ensure only humans can gain access.
+
+#### Importing Users
+
+For first use, a command line script can be used to import all users from a spreadsheet.
+
+key fields include:
+- first_name
+- surname
+- title
+- email
+- role
+- pz_code
+
+title can be blank. If provided it must be an integer - one of:
+1. Mr
+2. Mrs
+3. Ms
+4. Dr
+5. Professor
+
+role cannot be blank. It must be an integer - one of:
+1. Coordinator
+2. Editor
+3. Reader
+4. RCPCH Audit Team
+7. RCPCH Audit Children and Family
+
+from the command line:
+`python manage.py import_users --file path`

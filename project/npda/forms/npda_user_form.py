@@ -12,6 +12,8 @@ from django.utils.translation import gettext as _
 # third party imports
 from captcha.fields import CaptchaField
 
+from project.npda.general_functions.group_for_group import group_for_role
+
 # RCPCH imports
 from ...constants.styles.form_styles import *
 from ..models import NPDAUser, VisitActivity
@@ -49,11 +51,7 @@ class NPDAUserForm(forms.ModelForm):
             "first_name": forms.TextInput(attrs={"class": TEXT_INPUT}),
             "surname": forms.TextInput(attrs={"class": TEXT_INPUT}),
             "email": forms.EmailInput(attrs={"class": TEXT_INPUT}),
-            "is_staff": forms.CheckboxInput(
-                attrs={
-                    "class": "toggle border-rcpch_light_blue bg-rcpch_light_blue checked:bg-rcpch_pink_light_tint2 checked:border-rcpch_pink hover:bg-rcpch_pink"
-                }
-            ),
+            "is_staff": forms.CheckboxInput(attrs={"class": "toggle border-rcpch_light_blue js-toggle-checkbox"}),
             "is_superuser": forms.CheckboxInput(
                 attrs={
                     "class": "toggle border-rcpch_light_blue bg-rcpch_light_blue checked:bg-rcpch_pink_light_tint2 checked:border-rcpch_pink hover:bg-rcpch_pink"
@@ -106,6 +104,12 @@ class NPDAUserForm(forms.ModelForm):
             self.data = self.data.copy()
             self.data.pop("add_employer", None)
 
+            if not self.request.user.has_perm("npda.change_npdauser"):
+                self.fields['email'].widget.attrs['disabled'] = True
+                self.fields["email"].help_text = _(
+                    "You cannot change the email address of this user."
+                )
+
 
 class NPDAUpdatePasswordForm(SetPasswordForm):
     # form show when setting or resetting password
@@ -114,12 +118,14 @@ class NPDAUpdatePasswordForm(SetPasswordForm):
 
     def __init__(self, user, *args, **kwargs):
         self.user = user
-        if (
-            self.user.is_rcpch_audit_team_member
-            or self.user.is_superuser
-            or self.user.is_rcpch_staff
-        ):
-            self.is_admin = True
+
+        if user:
+            self.is_admin = (
+                user.is_rcpch_audit_team_member
+                or user.is_superuser
+                or user.is_rcpch_staff
+            )
+        
         super(SetPasswordForm, self).__init__(*args, **kwargs)
 
     def clean(self) -> dict[str]:
@@ -144,6 +150,7 @@ class NPDAUpdatePasswordForm(SetPasswordForm):
                 ip_address=None,  # cannot get ip address here as it is not a request
             )  # password reset successful - activity 5
             user.save()
+
         return user
 
 

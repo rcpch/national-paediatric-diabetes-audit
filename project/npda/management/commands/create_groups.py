@@ -19,8 +19,10 @@ from ....constants import (
     CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING,
     CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
     CAN_PUBLISH_NPDA_DATA,
+    CAN_SUBMIT_CSV,
+    CAN_DOWNLOAD_CSV,
 )
-from project.npda.models import NPDAUser, Patient, Visit, Transfer
+from project.npda.models import NPDAUser, Patient, Visit, Transfer, Submission
 
 
 def groups_seeder(
@@ -30,6 +32,7 @@ def groups_seeder(
     visitContentType = ContentType.objects.get_for_model(Visit)
     npdauserContentType = ContentType.objects.get_for_model(NPDAUser)
     transferContentType = ContentType.objects.get_for_model(Transfer)
+    submissionContentType = ContentType.objects.get_for_model(Submission)
 
     """
     Note view permissions include viewing users, but not creating, updating or deleting them
@@ -54,6 +57,8 @@ def groups_seeder(
         {"codename": "change_npdauser", "content_type": npdauserContentType},
         {"codename": "add_npdauser", "content_type": npdauserContentType},
         {"codename": "delete_npdauser", "content_type": npdauserContentType},
+        
+        
     ]
 
     READER_PERMISSIONS = [
@@ -106,6 +111,12 @@ def groups_seeder(
         {"codename": "change_npdauser", "content_type": npdauserContentType},
         {"codename": "add_npdauser", "content_type": npdauserContentType},
         {"codename": "delete_npdauser", "content_type": npdauserContentType},
+        # Submission
+        {"codename": "view_submission", "content_type": submissionContentType},
+        {"codename": "change_submission", "content_type": submissionContentType},
+        {"codename": "add_submission", "content_type": submissionContentType},
+        {"codename": "delete_submission", "content_type": submissionContentType},
+
     ]
 
     PATIENT_PERMISSIONS = [
@@ -130,6 +141,9 @@ def groups_seeder(
             "codename": CAN_ALLOCATE_NPDA_LEAD_CENTRE[0],
             "content_type": transferContentType,
         },
+
+        {"codename": "can_submit_csv", "content_type": npdauserContentType},
+        {"codename": "can_download_csv", "content_type": npdauserContentType},
     ]
 
     """
@@ -154,6 +168,9 @@ def groups_seeder(
             "codename": CAN_TRANSFER_NPDA_LEAD_CENTRE[0],
             "content_type": transferContentType,
         },
+
+        {"codename": "can_submit_csv", "content_type": npdauserContentType},
+        {"codename": "can_download_csv", "content_type": npdauserContentType},
     ]
 
     PATIENT_ACCESS_PERMISSIONS = [

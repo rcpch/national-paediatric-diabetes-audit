@@ -1,14 +1,17 @@
 from datetime import datetime, timedelta
 import logging
+import unicodedata
 
 from django.apps import apps
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.views import PasswordResetView
 from django.contrib.messages.views import SuccessMessageMixin
-from django.db.models import Count, Case, When, BooleanField
+from django.core.exceptions import PermissionDenied
+from django.db.models import Count
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
@@ -19,7 +22,6 @@ from django.views.generic import ListView
 
 # third party imports
 from two_factor.views import LoginView as TwoFactorLoginView
-from django_htmx.http import trigger_client_event
 
 # RCPCH imports
 from ..models import (
@@ -33,14 +35,27 @@ from ..general_functions import (
     send_email_to_recipients,
     group_for_role,
     organisations_adapter,
-    refresh_session_filters,
 )
 from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
 from .mixins import LoginAndOTPRequiredMixin
+from ...constants import RCPCH_AUDIT_TEAM
 
 # from ..signals import password_reset_sent
 
 logger = logging.getLogger(__name__)
+
+
+def _unicode_ci_compare(s1, s2):
+    """
+    Perform case-insensitive comparison of two identifiers, using the
+    recommended algorithm from Unicode Technical Report 36, section
+    2.11.2(B)(2).
+    """
+    return (
+        unicodedata.normalize("NFKC", s1).casefold()
+        == unicodedata.normalize("NFKC", s2).casefold()
+    )
+
 
 """
 NPDAUser list and NPDAUser creation, deletion and update
@@ -69,7 +84,7 @@ class NPDAUserListView(
         return (
             NPDAUser.objects.filter(organisation_employers__pz_code=pz_code)
             .annotate(number_of_pdu_memberships=flag_field)
-            .order_by("surname")
+            .order_by("surname", "organisation_employers__pz_code")
         )
 
     def get_context_data(self, **kwargs):
@@ -145,6 +160,27 @@ class NPDAUserCreateView(
     def form_valid(self, form):
         PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
 
+        new_user_pz_code = form.cleaned_data["add_employer"] or self.request.session.get("pz_code")
+
+        my_pz_codes = self.request.user.organisation_employers.values_list("pz_code", flat=True)
+
+        if new_user_pz_code not in my_pz_codes and not (self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member):
+            raise PermissionDenied(
+                f"You do not have permission to add users to {new_user_pz_code}. Contact the NPDA for assistance."
+            )
+        
+        new_user_pdu = PaediatricDiabetesUnit.objects.get(pz_code=new_user_pz_code)
+
+        if not new_user_pdu.active and not (self.request.user.is_rcpch_audit_team_member or self.request.user.is_superuser):
+            raise PermissionDenied(
+                f"{new_user_pz_code} is inactive. Contact the NPDA for assistance."
+            )
+        
+        if form.cleaned_data["role"] == RCPCH_AUDIT_TEAM and not (self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member):
+            raise PermissionDenied(
+                "You do not have permission to add a user with RCPCH Audit Team role."
+            )
+
         new_user = form.save(commit=False)
         new_user.set_unusable_password()
         new_user.is_active = True
@@ -152,49 +188,15 @@ class NPDAUserCreateView(
         new_user.view_preference = 1  # PDU level view preference
         new_user.save()
 
-        # add the user to the appropriate organisation
-        new_employer_pz_code = form.cleaned_data["add_employer"]
-        if new_employer_pz_code:
-            # a new employer has been added
-            pdu = PaediatricDiabetesUnit.objects.get(pz_code=new_employer_pz_code)
-            OrganisationEmployer.objects.create(
-                paediatric_diabetes_unit=pdu,
-                npda_user=new_user,
-                is_primary_employer=True,
-            )
-            new_user.refresh_from_db()
-        else:
-            # create the new users using the pz_code stored in the session
-            OrganisationEmployer.objects.create(
-                paediatric_diabetes_unit=PaediatricDiabetesUnit.objects.get(
-                    pz_code=self.request.session.get("pz_code")
-                ),
-                npda_user=new_user,
-                is_primary_employer=True,
-            )
-        try:
-            new_user.save()
-        except Exception as error:
-            messages.error(
-                self.request,
-                f"Error: {error}. Account not created. Please contact the NPDA team if this issue persists.",
-            )
-            return redirect(
-                "npda_users",
-            )
+        OrganisationEmployer.objects.create(
+            paediatric_diabetes_unit=new_user_pdu,
+            npda_user=new_user,
+            is_primary_employer=True,
+        )
 
         # add the user to the appropriate group
         new_group = group_for_role(new_user.role)
-        try:
-            new_user.groups.add(new_group)
-        except Exception as error:
-            messages.error(
-                self.request,
-                f"Error: {error}. Account not created. Please contact NPDA team if this issue persists.",
-            )
-            return redirect(
-                "npda_users",
-            )
+        new_user.groups.add(new_group)
 
         # user created - send email with reset link to new user
         subject = "Password Reset Requested"
@@ -228,7 +230,7 @@ class NPDAUserUpdateView(
     Handle update of patient in audit
     """
 
-    permission_required = "npda.change_npdauser"
+    permission_required = "npda.view_npdauser"
     permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
 
     model = NPDAUser
@@ -269,14 +271,42 @@ class NPDAUserUpdateView(
         )
         return context
 
+    def form_valid(self, form):
+        if not self.request.user.has_perm("npda.change_npdauser"):
+            raise PermissionDenied(
+                "You do not have permission to edit this user. Contact the NPDA for assistance."
+            )
+        
+        if form.cleaned_data["role"] == RCPCH_AUDIT_TEAM and not (self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member):
+            raise PermissionDenied(
+                "You do not have permission to add a user with RCPCH Audit Team role."
+            )
+        
+        user = form.save(commit=True)
+        # remove all groups and add the user to the right group
+        user.groups.clear()
+        group = group_for_role(user.role)
+        if group:
+            user.groups.add(group)
+        return super().form_valid(form)
+
     def post(self, request: HttpRequest, *args: str, **kwargs) -> HttpResponse:
         """
         Override POST method to resend email if recipient create account token has expired
-        TODO: Only Superusers or Coordinators can do this
+        TODO: Only Superusers or Coordinators can do this. Also the HTMX post request
+        to update the employers list is handled here. The HTMX post request is not
+        handled in the form_valid method as it is not a form submission.
         """
         if request.htmx:
             # these are HTMX post requests from the edit user form
+            # it is not called on submission of the form, only of the employers list
             # the return value is a partial view of the employers list, with the select, delete and set primary employer buttons
+
+            if not request.user.has_perm("npda.change_npdauser"):
+                raise PermissionDenied(
+                    "You do not have permission to edit this user. Contact the NPDA for assistance."
+                )
+
             selected_npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
             if request.POST.get("update") == "delete":
                 # delete the selected employer
@@ -306,11 +336,23 @@ class NPDAUserUpdateView(
                 # add the user to the appropriate organisation
                 new_employer_pz_code = request.POST.get("add_employer")
                 if new_employer_pz_code:
+                    my_pz_codes = self.request.user.organisation_employers.values_list("pz_code", flat=True)
+
+                    if new_employer_pz_code not in my_pz_codes and not (self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member):
+                        raise PermissionDenied(
+                            f"You do not have permission to add users to {new_employer_pz_code}. Contact the NPDA for assistance."
+                        )
+
                     # a new employer has been added
-                    # fetch the object from the API using the PZ code
                     selected_pdu = PaediatricDiabetesUnit.objects.get(
                         pz_code=new_employer_pz_code
                     )
+
+                    if not selected_pdu.active and not (self.request.user.is_rcpch_audit_team_member or self.request.user.is_superuser):
+                        raise PermissionDenied(
+                            f"{selected_pdu} is inactive. Contact the NPDA for assistance."
+                        )
+
                     OrganisationEmployer.objects.update_or_create(
                         paediatric_diabetes_unit=selected_pdu,
                         npda_user=selected_npda_user,
@@ -330,6 +372,8 @@ class NPDAUserUpdateView(
                 requesting_user=self.request.user, user_instance=user_instance
             )
 
+            print('choices ',organisation_choices)
+
             return render(
                 request=request,
                 template_name="partials/employers.html",
@@ -340,7 +384,7 @@ class NPDAUserUpdateView(
                     )
                     .all()
                     .order_by("-is_primary_employer"),
-                    "organisation_choices": organisation_choices,
+                    "employer_choices": organisation_choices,
                 },
             )
         if "resend_email" in request.POST:
@@ -364,6 +408,8 @@ class NPDAUserUpdateView(
             return redirect(redirect_url)
         else:
             return super().post(request, *args, **kwargs)
+
+        
 
 
 class NPDAUserDeleteView(
@@ -402,13 +448,30 @@ class NPDAUserLogsListView(LoginAndOTPRequiredMixin, ListView):
 """
 Authentication and password change
 """
+class ResetPasswordForm(PasswordResetForm):
+    def get_users(self, email):
+        """Override Django's default behaviour to allow users with unusable passwords
+        to reset their password, as that is how they are imported from CSV.
+        """
+        email_field_name = NPDAUser.get_email_field_name()
+        active_users = NPDAUser._default_manager.filter(
+            **{
+                "%s__iexact" % email_field_name: email,
+                "is_active": True,
+            }
+        )
+        return (
+            u
+            for u in active_users
+            if _unicode_ci_compare(email, getattr(u, email_field_name))
+        )
 
 
 class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
     """
     Custom password reset view that sends a password reset email to the user
     """
-
+    form_class = ResetPasswordForm
     template_name = "registration/password_reset.html"
     html_email_template_name = "registration/password_reset_email.html"
     email_template_name = strip_tags("registration/password_reset_email.html")

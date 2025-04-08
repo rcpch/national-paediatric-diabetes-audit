@@ -69,6 +69,7 @@ def create_session_object(user):
     """
     AuditPeriod = apps.get_model("npda", "AuditPeriod")
     OrganisationEmployer = apps.get_model("npda", "OrganisationEmployer")
+    
     primary_organisation = OrganisationEmployer.objects.filter(
         npda_user=user, is_primary_employer=True
     ).get()
@@ -131,7 +132,8 @@ def refresh_session_filters(request, pz_code=None, audit_year=None):
 
         session["pz_code"] = pz_code
         session["lead_organisation"] = PaediatricDiabetesUnit.objects.get(
-            pz_code=pz_code
+            pz_code=pz_code,
+            active=True
         ).lead_organisation_name
         session["pdu_choices"] = list(
             organisations_adapter.paediatric_diabetes_units_to_populate_select_field(

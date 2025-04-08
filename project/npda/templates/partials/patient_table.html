@@ -234,7 +234,7 @@
         {% endif %}
       </h1>
       <i class="fa-solid fa-hand-sparkles text-5xl text-rcpch_light_blue opacity-0 animate-sparkle mt-2"></i>
-      {% if can_alter_this_audit_year_submission %}
+      {% if perms.npda.add_patient %}
         <div class="py-6">
           {% if request.session.can_complete_questionnaire %}
             <a href="{% url 'patient-add' %}"
@@ -244,7 +244,7 @@
             </a>
           {% else %}
             <a href="{% url 'upload_csv' %}"
-               class="btn btn-info h-auto w-full md:w-auto">
+               class="btn btn-info h-auto w-full md:w-auto {% if not perms.npda.can_submit_csv %}btn-disabled{% endif %}">
               <i class="fa-solid fa-person-circle-plus"></i>
               Upload CSV
             </a>

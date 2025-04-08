@@ -44,7 +44,8 @@
                 <!-- include all selects except the rpch employers select which is used in the partial employers.html -->
                 <select id="{{ field.id_for_label }}"
                         name="{{ field.html_name }}"
-                        class="select rcpch-select rounded-none {% if field.id_for_label == 'id_add_employer' %}hidden{% endif %}">
+                        class="select rcpch-select rounded-none {% if field.id_for_label == 'id_add_employer' %}hidden{% endif %}"
+                        {% if not perms.npda.change_npdauser %}disabled{% endif %}>
                   {% for choice in field.field.choices %}
                     {% if not show_rcpch_team and choice.1 == "RCPCH Audit Team" %}
                       <!-- Do nothing, hide Audit Team option if not already in audit team-->
@@ -58,15 +59,23 @@
                 </select>
               {% endif %}
             {% elif field.field.widget|is_emailfield %}
-              {{ field }}
+              {{ field }}<!-- disabled in the form class if not correct permissions -->
             {% elif field.field.widget|is_textinput %}
               <input type="text"
                      id="{{ field.id_for_label }}"
                      name="{{ field.html_name }}"
+                     {% if not perms.npda.change_npdauser %}disabled{% endif %}
                      {% if field.value %}value="{{ field.value }}"{% endif %}
                      class="input rcpch-input-text">
             {% else %}
-              {% if field|exclude_admin_user_field:request.user %}{{ field }}{% endif %}
+              {% if field|exclude_admin_user_field:request.user %}
+                <input type="checkbox"
+                       name="{{ field.name }}"
+                       id="{{ field.id_for_label }}"
+                       class="toggle border-rcpch_light_blue hover:bg-rcpch_pink bg-rcpch_grey js-toggle-checkbox {% if form.is_staff.value %}border-rcpch_pink bg-rcpch_pink{% endif %}"
+                       {% if form.is_staff.value %}checked{% endif %} />
+                <!-- disabled in the form class if not correct permissions -->
+              {% endif %}
             {% endif %}
             {% for error in field.errors %}
               <div role="alert" class="alert alert-error py-1 my-0 rounded-none">
@@ -84,7 +93,7 @@
       {% endfor %}
       <button type="submit"
               value="Submit"
-              class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 mt-20 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue mb-5">
+              class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 mt-20 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue mb-5 {% if not perms.npda.change_npdauser %}btn-disabled opacity-50 cursor-not-allowed pointer-events-none {% endif %}">
         {{ button_title }}
       </button>
       <a class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 mt-20 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue"
@@ -93,13 +102,27 @@
         {% if not npda_user.email_confirmed %}
           <button value="Submit"
                   name="resend_email"
-                  class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 mt-20 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">
+                  class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 mt-20 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue {% if not perms.npda.change_npdauser %}disabled{% endif %}">
             Resend Confirmation Email
           </button>
         {% endif %}
-        <a class="bg-rcpch_red text-white font-semibold hover:text-white py-2.5 px-3 mt-20 border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint"
-           href="{% url 'npdauser-delete' npdauser.pk %}">Delete</a>
+        <a class="bg-rcpch_red text-white font-semibold hover:text-white py-2.5 px-3 mt-20 border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint {% if not perms.npda.change_npdauser %}btn-disabled opacity-50 cursor-not-allowed pointer-events-none {% endif %}"
+           href="{% url 'npdauser-delete' npdauser.pk %}{% if not perms.npda.change_npdauser %}disabled{% endif %}">Delete</a>
       {% endif %}
     </form>
   </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkboxes = document.querySelectorAll('.js-toggle-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    this.classList.add('border-rcpch_pink','bg-rcpch_pink');
+                } else {
+                    this.classList.remove('border-rcpch_pink', 'bg-rcpch_pink');
+                }
+            });
+        });
+    });
+  </script>
 {% endblock %}

@@ -1,7 +1,8 @@
 {
   "recommendations": [
     // Recommended extensions...
-    "ms-python.black-formatter", // Python formatter
+    "charliermarsh.ruff", // Ruff for Python Linting + format
+    // "ms-python.black-formatter", // Python formatter
     "batisteo.vscode-django", // Django support
     "junstyle.vscode-django-support", // Django Template Support Intellisense
     "monosans.djlint", // Linting Support for Django (.html)

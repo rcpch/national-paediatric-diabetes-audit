@@ -9,6 +9,7 @@ from django.contrib import messages
 from django.shortcuts import render
 
 from project import constants
+from project.npda.general_functions.audit_period import audit_period_for_audit_year
 from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
 from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.models.paediatric_diabetes_unit import (
@@ -122,7 +123,7 @@ def dashboard(request):
         "pdu_object": pdu,
         # "pdu_lead_organisation": pdu_lead_organisation,
         "kpi_calculations_object": kpi_calculations_object,
-        "current_date": current_date,
+        "current_date": calculation_date,
         "current_quarter": current_quarter,
         "days_remaining_until_audit_end_date": days_remaining_until_audit_end_date,
         "charts": {

@@ -1,0 +1,180 @@
+{% extends "patient_report/base_table.html" %}
+{% block description_box %}
+  {% include "patient_report/description_box.html" with description="HbA1c, BMI, and thyroid screen must be completed annually for all children and young people <i><b>with Type 1 diabetes</i></b>. Urinary albumin, blood pressure, and foot exam are mandatory for young people aged 12 and above. Eye screening is mandatory every 2 years for young people aged 12 and above, unless retinopathy was observed at a previous screen." proportion="of all children and young people with T1 diabetes." %}
+{% endblock %}
+{% block table_headers %}
+  <th class="whitespace-normal break-words">
+    {% if is_jersey %}
+      Unique Reference Number
+    {% else %}
+      NHS Number {{ sort_field }}
+    {% endif %}
+    <div class="block">
+      <span hx-get="?category=health_checks&sort=nhs_number&order=asc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'nhs_number' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span hx-get="?category=health_checks&sort=nhs_number&order=desc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'nhs_number' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
+  </div>
+</th>
+<th class="whitespace-normal break-words">
+  HBA1c
+  <div class="block">
+    <span hx-get="?category=health_checks&sort=passed_hba1c&order=desc"
+          hx-target="#table-area"
+          hx-swap="innerHTML"
+          class="cursor-pointer">
+      <i class="fa-solid fa-up-long {% if sort_field == 'passed_hba1c' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+    <span hx-get="?category=health_checks&sort=passed_hba1c&order=asc"
+          hx-target="#table-area"
+          hx-swap="innerHTML"
+          class="cursor-pointer">
+      <i class="fa-solid fa-down-long {% if sort_field == 'passed_hba1c' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+  </div>
+</th>
+<th class="whitespace-normal break-words">
+  BMI
+  <div class="block">
+    <span hx-get="?category=health_checks&sort=passed_bmi&order=desc"
+          hx-target="#table-area"
+          hx-swap="innerHTML"
+          class="cursor-pointer">
+      <i class="fa-solid fa-up-long {% if sort_field == 'passed_bmi' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+    <span hx-get="?category=health_checks&sort=passed_bmi&order=asc"
+          hx-target="#table-area"
+          hx-swap="innerHTML"
+          class="cursor-pointer">
+      <i class="fa-solid fa-down-long {% if sort_field == 'passed_bmi' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+  </div>
+</th>
+<th class="whitespace-normal break-words">
+  Thyroid Screen
+  <div class="block">
+    <span hx-get="?category=health_checks&sort=passed_thyroid_screen&order=desc"
+          hx-target="#table-area"
+          hx-swap="innerHTML"
+          class="cursor-pointer">
+      <i class="fa-solid fa-up-long {% if sort_field == 'passed_thyroid_screen' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+    <span hx-get="?category=health_checks&sort=passed_thyroid_screen&order=asc"
+          hx-target="#table-area"
+          hx-swap="innerHTML"
+          class="cursor-pointer">
+      <i class="fa-solid fa-down-long {% if sort_field == 'passed_thyroid_screen' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+  </div>
+</th>
+<th class="whitespace-normal break-words">
+  Blood Pressure
+  <div class="block">
+    <span hx-get="?category=health_checks&sort=passed_blood_pressure&order=desc"
+          hx-target="#table-area"
+          hx-swap="innerHTML"
+          class="cursor-pointer">
+      <i class="fa-solid fa-up-long {% if sort_field == 'passed_blood_pressure' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+    <span hx-get="?category=health_checks&sort=passed_blood_pressure&order=asc"
+          hx-target="#table-area"
+          hx-swap="innerHTML"
+          class="cursor-pointer">
+      <i class="fa-solid fa-down-long {% if sort_field == 'passed_blood_pressure' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+  </div>
+</th>
+<th class="whitespace-normal break-words">
+  Urinary Albumin
+  <div class="block">
+    <span hx-get="?category=health_checks&sort=passed_urinary_albumin&order=desc"
+          hx-target="#table-area"
+          hx-swap="innerHTML"
+          class="cursor-pointer">
+      <i class="fa-solid fa-up-long {% if sort_field == 'passed_urinary_albumin' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+    <span hx-get="?category=health_checks&sort=passed_urinary_albumin&order=asc"
+          hx-target="#table-area"
+          hx-swap="innerHTML"
+          class="cursor-pointer">
+      <i class="fa-solid fa-down-long {% if sort_field == 'passed_urinary_albumin' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+  </div>
+</th>
+<th class="whitespace-normal break-words">
+  Foot Exam
+  <div class="block">
+    <span hx-get="?category=health_checks&sort=passed_foot_exam&order=desc"
+          hx-target="#table-area"
+          hx-swap="innerHTML"
+          class="cursor-pointer">
+      <i class="fa-solid fa-up-long {% if sort_field == 'passed_foot_exam' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+    <span hx-get="?category=health_checks&sort=passed_foot_exam&order=asc"
+          hx-target="#table-area"
+          hx-swap="innerHTML"
+          class="cursor-pointer">
+      <i class="fa-solid fa-down-long {% if sort_field == 'passed_foot_exam' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+    </span>
+  </div>
+</th>
+<th class="whitespace-normal break-words">
+  <span class="tooltip tooltip-bottom"
+        data-tip="patients under 12y must complete only 3 measures. Those over 12y must complete all 6.">
+    <i class="fa-solid fa-circle-info text-white"></i>
+    Total
+  </span>
+</th>
+<th class="whitespace-normal break-words">Eye Screen</th>
+{% endblock %}
+{% block table_body %}
+  {% for patient in patients %}
+    {% if  patient.is_first_complete_year_of_care %}
+      <thead class="bg-rcpch_strong_blue text-xs text-white text-gray-700 uppercase bg-gray-50">
+        <tr>
+          <th colspan="9">These patients are completing their first year of care.</th>
+        </tr>
+      </thead>
+    {% endif %}
+    <tr class="{% if not patient.is_complete_year_of_care %}bg-rcpch_orange_light_tint3{% endif %}">
+      <td>
+        {% include "patient_report/components/pt_identifier_value.html" with patient_pk=patient.pk is_complete_year_of_care=patient.is_complete_year_of_care patient_identifier=patient.patient_identifier %}
+      </td>
+      <td>
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_hba1c %}
+      </td>
+      <td>
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_bmi %}
+      </td>
+      <td>
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_thyroid_screen %}
+      </td>
+      <td>
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_blood_pressure ineligible_reason=ineligible_reasons.blood_pressure %}
+      </td>
+      <td>
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_urinary_albumin ineligible_reason=ineligible_reasons.urinary_albumin %}
+      </td>
+      <td>
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_foot_exam ineligible_reason=ineligible_reasons.foot_exam %}
+      </td>
+      <td>{{ patient.num_passed }} / {{ patient.num_total }}</td>
+      <td>
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_retinal_screening ineligible_reason=ineligible_reasons.retinal_screening %}
+      </td>
+    </tr>
+  {% empty %}
+    <tr>
+      <td colspan="9" class="text-center text-gray-500">No patients found.</td>
+    </tr>
+  {% endfor %}
+{% endblock %}

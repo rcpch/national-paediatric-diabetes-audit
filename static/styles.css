@@ -28,7 +28,7 @@
     font-weight: 300;
   }
   .rcpch-toggle {
-    @apply toggle border-rcpch_dark_blue bg-rcpch_light_blue checked:bg-rcpch_pink_light_tint2 checked:border-rcpch_pink;
+    @apply toggle border-rcpch_dark_blue bg-rcpch_lightest_grey checked:bg-rcpch_pink_light_tint2 checked:border-rcpch_pink;
   }
 
   .text-success {

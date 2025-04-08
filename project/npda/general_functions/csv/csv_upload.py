@@ -181,18 +181,20 @@ async def csv_upload(
 
     # get the PDU object
     # TODO #249 MRB: handle case where PDU does not exist
-    pdu = await PaediatricDiabetesUnit.objects.aget(pz_code=pdu_pz_code)
+    pdu = await PaediatricDiabetesUnit.objects.aget(pz_code=pdu_pz_code, active=True)
 
     # Set previous submission to inactive
     if await Submission.objects.filter(
         paediatric_diabetes_unit__pz_code=pdu.pz_code,
+        paediatric_diabetes_unit__active=True,
         audit_year=audit_period.audit_year(),
         submission_active=True,
     ).aexists():
         original_submission = await Submission.objects.filter(
             submission_active=True,
             paediatric_diabetes_unit__pz_code=pdu.pz_code,
-            audit_year=audit_period.audit_year()
+            paediatric_diabetes_unit__active=True,
+            audit_year=audit_period.audit_year(),
         ).aget()  # there can be only one of these - store it in a variable in case we need to revert
     else:
         original_submission = None

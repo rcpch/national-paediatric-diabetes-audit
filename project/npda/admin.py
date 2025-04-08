@@ -22,21 +22,22 @@ class OrganisationEmployerAdmin(admin.ModelAdmin):
 
 @admin.register(NPDAUser)
 class NPDAUserAdmin(admin.ModelAdmin):
-    search_fields = ("surname_icontains", "pk")
+    search_fields = ("surname__icontains", "nhs_number","pk")
 
 
 @admin.register(Patient)
 class PatientAdmin(admin.ModelAdmin):
-    search_fields = ("nhs_number_icontains", "pk", "unique_reference_number_icontains")
+    search_fields = ("nhs_number__icontains", "pk", "unique_reference_number__icontains")
 
 
 @admin.register(PaediatricDiabetesUnit)
 class PaediatricDiabetesUnitAdmin(admin.ModelAdmin):
-    search_fields = ("pk", "pz_code")
+    search_fields = ("pk", "pz_code", "lead_organisation_ods_code", "lead_organisation_name")
     list_display = (
         "pz_code",
         "lead_organisation_ods_code",
         "lead_organisation_name",
+        "active",
     )
     ordering = ("lead_organisation_name",)
 

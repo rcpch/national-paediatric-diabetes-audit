@@ -51,6 +51,7 @@ class Submission(models.Model):
         "CSV file name",
         help_text="Name of the uploaded CSV file",
         null=True,
+        blank=True
     )
 
     errors = models.JSONField(

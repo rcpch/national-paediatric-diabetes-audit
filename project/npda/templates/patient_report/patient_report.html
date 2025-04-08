@@ -2,16 +2,14 @@
 {% load static %}
 {% load npda_tags %}
 {% block content %}
-
-<div class="lg:container mx-auto p-4 font-montserrat text-rcpch_dark_blue">
-  <div class="my-6">
-    <p class="text-center text-gray-500 mt-2">
-      Calculated at {{ kpi_calculations_object.calculation_datetime }}
-    </p>
-    <p class="text-center">This data has not been validated by the NPDA team.</p>
+  <div class="p-4 font-montserrat text-rcpch_dark_blue">
+    <!-- SELECT TABS & TABLE -->
+    <div class="p-4" hx-boost="true">
+      <h1 class="text-2xl font-bold mb-4">Patient Report</h1>
+      <div id="table-area" hx-swap="innerHTML">
+        {% comment %} Just the default table, htmx views swap this out {% endcomment %}
+        {% include "patient_report/health_checks_table_partial.html" with sort_field=sort_field sort_order=sort_order %}
+      </div>
+    </div>
   </div>
-  <!-- SELECT TABS & TABLE -->
-  {% include 'patient_report/pt_level_report_table_container_partial.html' with text=text selected=selected highlight=highlight table_data=table_data %}
-</div>
-
 {% endblock content %}

@@ -223,6 +223,17 @@ If you work at multiple PDUs, you can select your PDU by clicking ‘Filters’ 
 Please note that the graphs within this tab display unvalidated and uncleaned data, meaning figures may differ from those published in the Quarterly Reporting Dashboard and the NPDA annual reporting.
 The unit report is intended to give you a quick view of your unit’s data
 
+## Unit Report - Interactive Charts and Tooltips
+
+The Unit Report tab contains various interactive charts that provide detailed insights into your unit's data. To access additional information within the charts, hover your cursor over specific elements:
+
+- ***Box and Whisker Plots*** – Hovering over black dots in these plots will reveal a scatter plot of individual patients, identifiable by NHS number. This allows you to see where each patient sits within the overall cohort distribution.
+
+- ***Statistical Values*** – Key statistics such as interquartile range (IQR), medians, and means are displayed when hovering over different parts of the chart.
+
+- ***New Diagnoses Plots*** – Tooltips are included to explain the difference between cumulative and quarterly values, providing clarity on how the data is presented.
+
+
 ### Patient Report
 
 ![image](https://github.com/user-attachments/assets/b06cf147-cc5a-41e1-beaf-2cfa00e8fea5)

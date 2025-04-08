@@ -1,0 +1,38 @@
+<div class="mt-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+  {% comment %} TOTAL PATIENTS {% endcomment %}
+  {% if is_paginated %}
+    <!-- Page info -->
+    <div class="text-sm text-gray-600">
+      Page {{ page_obj.number }} of {{ paginator.num_pages }}
+    </div>
+    <!-- Navigation buttons -->
+    <div class="join">
+      {% if page_obj.has_previous %}
+        <a hx-get="?category={{ selected_category }}&page=1&sort={{ sort_field }}&order={{ sort_order }}"
+           hx-target="#table-area"
+           hx-swap="innerHTML"
+           class="join-item btn btn-outline">First</a>
+        <a hx-get="?category={{ selected_category }}&page={{ page_obj.previous_page_number }}&sort={{ sort_field }}&order={{ sort_order }}"
+           hx-target="#table-area"
+           hx-swap="innerHTML"
+           class="join-item btn btn-outline">Previous</a>
+      {% else %}
+        <button class="join-item btn btn-outline btn-disabled">First</button>
+        <button class="join-item btn btn-outline btn-disabled">Previous</button>
+      {% endif %}
+      {% if page_obj.has_next %}
+        <a hx-get="?category={{ selected_category }}&page={{ page_obj.next_page_number }}&sort={{ sort_field }}&order={{ sort_order }}"
+           hx-target="#table-area"
+           hx-swap="innerHTML"
+           class="join-item btn btn-outline">Next</a>
+        <a hx-get="?category={{ selected_category }}&page={{ paginator.num_pages }}"&sort={{ sort_field }}&order={{ sort_order }}"
+          hx-target="#table-area"
+          hx-swap="innerHTML"
+        class="join-item btn btn-outline">Last</a>
+      {% else %}
+        <button class="join-item btn btn-outline btn-disabled">Next</button>
+        <button class="join-item btn btn-outline btn-disabled">Last</button>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>

@@ -1,0 +1,207 @@
+{% extends "patient_report/base_table.html" %}
+{% block description_box %}
+  {% include "patient_report/description_box.html" with description="These additional care processes are recommended by NICE for children and young people <i><b>with Type 1 diabetes</b></i> of all ages, with the exception of smoking status and referral to smoking cessation services, which apply only to young people aged 12 y and above." proportion="of all those (both under and over 12y) with T1 diabetes" %}
+{% endblock %}
+{% block table_headers %}
+  <th class="whitespace-normal break-words">
+    {% if is_jersey %}
+      Unique Reference Number
+    {% else %}
+      NHS Number
+    {% endif %}
+    <div class="block">
+      <span hx-get="?category=additional_care_processes&sort=nhs_number&order=asc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'nhs_number' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span hx-get="?category=additional_care_processes&sort=nhs_number&order=desc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'nhs_number' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
+  </th>
+  <th class="whitespace-normal break-words">
+    HBA1C 4+
+    <div class="block">
+      <span hx-get="?category=additional_care_processes&sort=hba1c_4plus&order=desc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'hba1c_4plus' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span hx-get="?category=additional_care_processes&sort=hba1c_4plus&order=asc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'hba1c_4plus' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
+  </th>
+  <th class="whitespace-normal break-words">
+    Psychological assessment
+    <div class="block">
+      <span hx-get="?category=additional_care_processes&sort=psychological_assessment&order=desc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'psychological_assessment' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span hx-get="?category=additional_care_processes&sort=psychological_assessment&order=asc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'psychological_assessment' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
+  </th>
+  <th class="whitespace-normal break-words">
+    Smoking status screened
+    <div class="block">
+      <span hx-get="?category=additional_care_processes&sort=smoking_status&order=desc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'smoking_status' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span hx-get="?category=additional_care_processes&sort=smoking_status&order=asc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'smoking_status' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
+  </th>
+  <th class="whitespace-normal break-words">
+    Referral to smoking cessation service
+    <div class="block">
+      <span hx-get="?category=additional_care_processes&sort=smoking_cessation_referral&order=desc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'smoking_cessation_referral' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span hx-get="?category=additional_care_processes&sort=smoking_cessation_referral&order=asc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'smoking_cessation_referral' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
+  </th>
+  <th class="whitespace-normal break-words">
+    Additional dietetic appointment offered
+    <div class="block">
+      <span hx-get="?category=additional_care_processes&sort=additional_dietetic_appt_offered&order=desc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'additional_dietetic_appt_offered' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span hx-get="?category=additional_care_processes&sort=additional_dietetic_appt_offered&order=asc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'additional_dietetic_appt_offered' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
+  </th>
+  <th class="whitespace-normal break-words">
+    Patients attending additional dietetic appointment
+    <div class="block">
+      <span hx-get="?category=additional_care_processes&sort=pts_attending_additional_dietetic_appt&order=desc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'pts_attending_additional_dietetic_appt' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span hx-get="?category=additional_care_processes&sort=pts_attending_additional_dietetic_appt&order=asc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'pts_attending_additional_dietetic_appt' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
+  </th>
+  <th class="whitespace-normal break-words">
+    Influenza immunisation recommended
+    <div class="block">
+      <span hx-get="?category=additional_care_processes&sort=influenza_immunisation_recommended&order=desc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'influenza_immunisation_recommended' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span hx-get="?category=additional_care_processes&sort=influenza_immunisation_recommended&order=asc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'influenza_immunisation_recommended' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
+  </th>
+  <th class="whitespace-normal break-words">
+    Sick day rules advice
+    <div class="block">
+      <span hx-get="?category=additional_care_processes&sort=sick_day_rules_advice&order=desc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'sick_day_rules_advice' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span hx-get="?category=additional_care_processes&sort=sick_day_rules_advice&order=asc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'sick_day_rules_advice' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
+  </th>
+{% endblock %}
+{% block table_body %}
+  {% for patient in patients %}
+    {% if  patient.is_first_complete_year_of_care %}
+      <thead class="bg-rcpch_strong_blue text-xs text-white text-gray-700 uppercase bg-gray-50">
+        <tr>
+          <th colspan="9">These patients are completing their first year of care.</th>
+        </tr>
+      </thead>
+    {% endif %}
+    <tr class="{% if not patient.is_complete_year_of_care %}bg-rcpch_orange_light_tint3{% endif %}">
+      <td>
+        {% include "patient_report/components/pt_identifier_value.html" with patient_pk=patient.pk is_complete_year_of_care=patient.is_complete_year_of_care patient_identifier=patient.patient_identifier %}
+      </td>
+      <td>
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.hba1c_4plus %}
+      </td>
+      <td>
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.psychological_assessment %}
+      </td>
+      <td>
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.smoking_status ineligible_reason=ineligible_reasons.smoking_status %}
+      </td>
+      <td>
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.smoking_cessation_referral ineligible_reason=ineligible_reasons.smoking_cessation_referral %}
+      </td>
+      <td>
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.additional_dietetic_appt_offered %}
+      </td>
+      <td>
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.pts_attending_additional_dietetic_appt %}
+      </td>
+      <td>
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.influenza_immunisation_recommended %}
+      </td>
+      <td>
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.sick_day_rules_advice %}
+      </td>
+    </tr>
+  {% empty %}
+    <tr>
+      <td colspan="9" class="text-center text-gray-500">No patients found.</td>
+    </tr>
+  {% endfor %}
+{% endblock %}

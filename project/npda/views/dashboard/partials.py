@@ -14,6 +14,7 @@ from django.http import HttpResponseBadRequest
 from django.shortcuts import render
 
 import project.constants.colors as colors
+from project.npda.general_functions.audit_period import audit_period_for_audit_year
 from project.npda.general_functions.map import (
     generate_dataframe_and_aggregated_distance_data_from_cases,
     generate_distance_from_organisation_scatterplot_figure,
@@ -520,9 +521,10 @@ def submission_and_calculation_date(request):
             audit_year=audit_period.audit_year(),
             submission_active=True,
         )
+        
     else:
         submission = None
-
+    
     calculation_date = audit_period.kpi_calculation_date()
 
     return submission, calculation_date
