@@ -42,6 +42,7 @@ gunicorn>=22.0.0
 celery==5.4.0
 flower==2.0.1
 redis==5.2.1
+django-redis==5.4.0
 
 # Automatically reloading Celery on file changes
 watchdog==6.0.0
