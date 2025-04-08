@@ -3,13 +3,14 @@ import pytest
 # Django imports
 from django.apps import apps
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.timezone import make_aware
 from http import HTTPStatus
 
 # RCPCH imports
 from project.constants.user import RCPCH_AUDIT_TEAM
 from project.npda.models import Patient, Submission, NPDAUser
-from project.npda.general_functions import get_current_audit_year
+from project.npda.general_functions import get_audit_period_for_date
 from project.npda.tests.utils import login_and_verify_user
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
@@ -20,9 +21,11 @@ ALDER_HEY_PZ_CODE = "PZ074"
 
 
 def create_submission_with_patient(user):
+    (audit_start_date, _) = get_audit_period_for_date(timezone.now())
+
     submission = Submission.objects.create(
-        audit_year=get_current_audit_year(),
-        submission_date=f"{get_current_audit_year()}-04-01T00:00:00Z",
+        audit_year=audit_start_date.year,
+        submission_date=f"{audit_start_date.year}-04-01T00:00:00Z",
         submission_active=True,
         submission_by=user,
         paediatric_diabetes_unit=user.organisation_employers.first(),

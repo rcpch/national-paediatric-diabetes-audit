@@ -1,6 +1,9 @@
 from datetime import date
 from dateutil.relativedelta import relativedelta
 
+# IMPORTANT NOTE!
+# Where possible use start_date and end_date from the AuditPeriod model instead of these helpers
+
 
 def get_audit_period_for_date(input_date: date) -> tuple[date, date]:
     """Get the start and end date of the audit period for the given date.

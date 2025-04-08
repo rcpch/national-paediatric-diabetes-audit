@@ -31,7 +31,7 @@ from project.constants.user import (
     AUDIT_CENTRE_READER
 )
 # E12 imports
-from project.npda.general_functions.audit_period import get_current_audit_year
+from project.npda.general_functions.audit_period import get_audit_period_for_date
 from project.npda.general_functions.csv import csv_parse
 from project.npda.models import NPDAUser, Submission, OrganisationEmployer
 from project.npda.tests.factories.patient_factory import PatientFactory
@@ -636,9 +636,11 @@ def test_users_can_download_csv(
 
     client = login_and_verify_user(client, test_user)
 
+    (audit_start_date, _) = get_audit_period_for_date(timezone.now())
+
     # Create a test submission
     submission = Submission.objects.create(
-        audit_year=get_current_audit_year(),
+        audit_year=audit_start_date.year,
         submission_date=timezone.now(),
         submission_active=True,
         submission_by=test_user,
@@ -689,9 +691,11 @@ def test_reader_cannot_download_csv(
 
     client = login_and_verify_user(client, editor_user)
 
+    (audit_start_date, _) = get_audit_period_for_date(timezone.now())
+
     # Create a test submission
     submission = Submission.objects.create(
-        audit_year=get_current_audit_year(),
+        audit_year=audit_start_date.year,
         submission_date=timezone.now(),
         submission_active=True,
         submission_by=editor_user,
@@ -749,9 +753,11 @@ def test_users_can_download_report(
 
     client = login_and_verify_user(client, test_user)
 
+    (audit_start_date, _) = get_audit_period_for_date(timezone.now())
+
     # Create a test submission
     submission = Submission.objects.create(
-        audit_year=get_current_audit_year(),
+        audit_year=audit_start_date.year,
         submission_date=timezone.now(),
         submission_active=True,
         submission_by=test_user,
@@ -803,9 +809,11 @@ def test_rcpch_audit_team_can_delete_submission(
 
     client = login_and_verify_user(client, audit_team_user)
 
+    (audit_start_date, _) = get_audit_period_for_date(timezone.now())
+
     # Create a test submission
     submission = Submission.objects.create(
-        audit_year=get_current_audit_year(),
+        audit_year=audit_start_date.year,
         submission_date=timezone.now(),
         submission_active=False, # cannot delete active submissions without first creating a new one
         submission_by=audit_team_user,
@@ -863,9 +871,11 @@ def test_non_rcpch_audit_team_cannot_delete_submission(
 
     client = login_and_verify_user(client, non_deleting_user)
 
+    (audit_start_date, _) = get_audit_period_for_date(timezone.now())
+
     # Create a test submission
     submission = Submission.objects.create(
-        audit_year=get_current_audit_year(),
+        audit_year=audit_start_date.year,
         submission_date=timezone.now(),
         submission_active=True,
         submission_by=non_deleting_user,
