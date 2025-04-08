@@ -22,30 +22,26 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 broker_url = os.environ.get('CELERY_BROKER_URL')
 result_backend = os.environ.get('CELERY_RESULT_BACKEND')
 
-
-REDIS_HOST = os.environ.get('REDIS_HOST')  # Your Redis hostname (e.g., <your-cache>.redis.cache.windows.net)
-REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
-REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD')  # Your Redis password
 # Local development Redis configuration
-# Default Redis configuration for local development
+REDIS_HOSTNAME = os.environ.get('REDIS_HOSTNAME')  
+REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
+REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD')  
 
-broker_url = f"redis://{':' + REDIS_PASSWORD + '@' if REDIS_PASSWORD else ''}{REDIS_HOST}:{REDIS_PORT}/0"
-result_backend = f"redis://{':' + REDIS_PASSWORD + '@' if REDIS_PASSWORD else ''}{REDIS_HOST}:{REDIS_PORT}/1"
+broker_url = f"redis://{':' + REDIS_PASSWORD + '@' if REDIS_PASSWORD else ''}{REDIS_HOSTNAME}:{REDIS_PORT}/0"
+result_backend = f"redis://{':' + REDIS_PASSWORD + '@' if REDIS_PASSWORD else ''}{REDIS_HOSTNAME}:{REDIS_PORT}/1"
 
-# Conditional configuration for Azure environment
+
 # Conditional configuration for Azure environment
 if "AZURE_CONTAINER_ENVIRONMENT" in os.environ:
-    REDIS_HOST_AZURE = os.environ.get('REDIS_HOST_AZURE')  # Azure-specific host
-    REDIS_PORT_AZURE = os.environ.get('REDIS_PORT_AZURE', '6379') # Azure-specific port
-    REDIS_PASSWORD_AZURE = None
+    REDIS_PASSWORD = None # Set to None as we will use Azure AD token
 
     credential = DefaultAzureCredential()
 
     try:
         token = credential.get_token("https://redis.azure.com/.default")
-        REDIS_PASSWORD_AZURE = token.secret
-        broker_url = f"redis://:{REDIS_PASSWORD_AZURE}@{REDIS_HOST_AZURE}:{REDIS_PORT_AZURE}/0"
-        result_backend = f"redis://:{REDIS_PASSWORD_AZURE}@{REDIS_HOST_AZURE}:{REDIS_PORT_AZURE}/1"
+        REDIS_PASSWORD = token.secret
+        broker_url = f"redis://:{REDIS_PASSWORD}@{REDIS_HOSTNAME}:{REDIS_PORT}/0"
+        result_backend = f"redis://:{REDIS_PASSWORD}@{REDIS_HOSTNAME}:{REDIS_PORT}/1"
         app.conf.update(
             broker_transport_options={
                 "global_keyprefix": "{queue}:"

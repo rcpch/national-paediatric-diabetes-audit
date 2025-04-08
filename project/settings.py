@@ -346,35 +346,33 @@ USE_I18N = True
 USE_TZ = True
 
 # Default Redis configuration (for local development)
-REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
+REDIS_HOSTNAME = os.environ.get('REDIS_HOSTNAME', 'localhost')
 REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
 REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD')
 
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": f"redis://{':' + REDIS_PASSWORD + '@' if REDIS_PASSWORD else ''}{REDIS_HOST}:{REDIS_PORT}/2",
+        "LOCATION": f"redis://{':' + REDIS_PASSWORD + '@' if REDIS_PASSWORD else ''}{REDIS_HOSTNAME}:{REDIS_PORT}/2",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
     }
 }
 
-CELERY_RESULT_BACKEND = f"redis://{':' + REDIS_PASSWORD + '@' if REDIS_PASSWORD else ''}{REDIS_HOST}:{REDIS_PORT}/1"
+CELERY_RESULT_BACKEND = f"redis://{':' + REDIS_PASSWORD + '@' if REDIS_PASSWORD else ''}{REDIS_HOSTNAME}:{REDIS_PORT}/1"
 
 # Conditional configuration for Azure environment
 if "AZURE_CONTAINER_ENVIRONMENT" in os.environ:
-    REDIS_HOST_AZURE = os.environ.get('REDIS_HOST_AZURE') 
-    REDIS_PORT_AZURE = os.environ.get('REDIS_PORT_AZURE', '6379')
-    REDIS_PASSWORD_AZURE = None
+    REDIS_PASSWORD = None # set to None as we will get it from Azure AD
 
     credential = DefaultAzureCredential()
 
     try:
         token = credential.get_token("https://redis.azure.com/.default")
-        REDIS_PASSWORD_AZURE = token.secret
-        CACHES["default"]["LOCATION"] = f"redis://:{REDIS_PASSWORD_AZURE}@{REDIS_HOST_AZURE}:{REDIS_PORT_AZURE}/2"
-        CELERY_RESULT_BACKEND = f"redis://:{REDIS_PASSWORD_AZURE}@{REDIS_HOST_AZURE}:{REDIS_PORT_AZURE}/1"
+        REDIS_PASSWORD = token.secret
+        CACHES["default"]["LOCATION"] = f"redis://:{REDIS_PASSWORD}@{REDIS_HOSTNAME}:{REDIS_PORT}/2"
+        CELERY_RESULT_BACKEND = f"redis://:{REDIS_PASSWORD}@{REDIS_HOSTNAME}:{REDIS_PORT}/1"
     except Exception as e:
         logger.error(f"Error getting Azure AD token for Redis in Django: {e}")
         pass
