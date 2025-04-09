@@ -19,7 +19,6 @@ class AuditPeriodManager(models.Manager):
     def get_audit_period_for_request(self, request):
         selected_audit_year = request.session.get("selected_audit_year", None)
 
-        # TODO MRB: need to cache these as this is called from a context processor
         audit_period = AuditPeriod.objects.filter(
             start_date__year=selected_audit_year
         ).first()

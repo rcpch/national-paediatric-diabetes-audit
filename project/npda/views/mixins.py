@@ -11,6 +11,7 @@ from django.contrib.auth.mixins import AccessMixin
 from project.npda.general_functions.audit_period import get_audit_period_for_date
 from project.npda.models.npda_user import NPDAUser
 from project.npda.models.patient import Patient
+from project.npda.models.audit_period import AuditPeriod
 
 
 logger = logging.getLogger(__name__)
@@ -206,7 +207,28 @@ class CheckCanCompleteQuestionnaireMixin(AccessMixin):
       - The submission is not a CSV upload
         - and the operation is a GET (the UI has code to display read only)
         - or you are a superuser or audit team member
+    
+    It also returns context data for templates to conditionally render UI based on the type of upload.
     """
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
+
+        session_is_audit_year_open = audit_period and audit_period.is_open
+        session_can_upload_csv = self.request.session.get("can_upload_csv", True)
+        session_can_use_questionnaire = self.request.session.get("can_complete_questionnaire", True)
+
+        can_override_data_upload_rules = self.request.user.is_superuser or getattr(self.request.user, "is_rcpch_audit_team_member", False)
+        data_upload_rules_overridden = can_override_data_upload_rules and self.request.GET.get("unlock", False)
+
+        return context | {
+            "is_csv_upload": session_can_upload_csv,
+            "is_questionnaire": session_can_use_questionnaire,
+            "can_override_data_upload_rules": can_override_data_upload_rules,
+            "data_upload_rules_overridden": data_upload_rules_overridden,
+            "can_use_questionnaire": data_upload_rules_overridden or (session_is_audit_year_open and session_can_use_questionnaire),
+        }
 
     def dispatch(self, request, *args, **kwargs):
         # Check if the user has the permission to complete the questionnaire
