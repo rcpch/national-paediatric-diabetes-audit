@@ -226,7 +226,11 @@ def test_npda_user_list_view_users_cannot_set_their_view_preference_to_organisat
 
 @pytest.mark.django_db
 def test_editor_can_upload_csv(
-    seed_groups_fixture, seed_users_fixture, client, dummy_sheets_folder
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    dummy_sheets_folder
 ):
     # create a test user with the editor role
     editor_user = NPDAUser.objects.filter(
@@ -253,7 +257,11 @@ def test_editor_can_upload_csv(
 
 @pytest.mark.django_db
 def test_reader_cannot_upload_csv(
-    seed_groups_fixture, seed_users_fixture, client, dummy_sheets_folder
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    dummy_sheets_folder
 ):
     # create a test user with the editor role
     reader_user = NPDAUser.objects.filter(
@@ -281,6 +289,7 @@ def test_reader_cannot_upload_csv(
 def test_coordinators_cannot_change_their_role(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     user = NPDAUser.objects.filter(role=AUDIT_CENTRE_COORDINATOR).first()
@@ -306,6 +315,7 @@ def test_coordinators_cannot_change_their_role(
 def test_coordinators_cannot_change_their_employer_htmx(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     user = NPDAUser.objects.filter(
@@ -338,6 +348,7 @@ def test_coordinators_cannot_change_their_employer_htmx(
 def test_coordinators_cannot_change_their_employer_post(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     user = NPDAUser.objects.filter(
@@ -364,6 +375,7 @@ def test_coordinators_cannot_change_their_employer_post(
 def test_coordinators_cannot_create_users_outside_of_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     user_count_before = NPDAUser.objects.count()
@@ -394,6 +406,7 @@ def test_coordinators_cannot_create_users_outside_of_their_pdu(
 def test_audit_team_can_create_users_outside_of_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     user_count_before = NPDAUser.objects.count()
@@ -430,6 +443,7 @@ def test_audit_team_can_create_users_outside_of_their_pdu(
 def test_coordinators_cannot_create_audit_team_members(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     user_count_before = NPDAUser.objects.count()
@@ -460,6 +474,7 @@ def test_coordinators_cannot_create_audit_team_members(
 def test_coordinators_cannot_delete_users_outside_of_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     user_count_before = NPDAUser.objects.count()
@@ -488,6 +503,7 @@ def test_coordinators_cannot_delete_users_outside_of_their_pdu(
 def test_coordinators_cannot_add_employers_outside_of_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     ah_coordinator = NPDAUser.objects.filter(
@@ -522,6 +538,7 @@ def test_coordinators_cannot_add_employers_outside_of_their_pdu(
 def test_audit_team_can_add_employers_outside_of_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     audit_team_user = NPDAUser.objects.filter(
@@ -555,6 +572,7 @@ def test_audit_team_can_add_employers_outside_of_their_pdu(
 def test_coordinators_with_multiple_employers_can_update_users_in_all_of_them(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     gosh_reader = NPDAUser.objects.filter(
@@ -624,6 +642,7 @@ def test_users_can_download_csv(
     client,
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     user_data,
 ):
     """Test that editor, coordinator, and RCPCH audit team users can download CSV files."""
@@ -680,6 +699,7 @@ def test_reader_cannot_download_csv(
     client,
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
 ):
     """Test that the reader cannot download CSV files."""
 
@@ -739,6 +759,7 @@ def test_users_can_download_report(
     client,
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     user_data,
     valid_df,
     dummy_sheet_csv,
@@ -797,6 +818,7 @@ def test_rcpch_audit_team_can_delete_submission(
     client,
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     valid_df,
 ):
     """Test that RCPCH audit team members can delete submissions."""
@@ -858,6 +880,7 @@ def test_non_rcpch_audit_team_cannot_delete_submission(
     client,
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     user_data,
     valid_df,
 ):
