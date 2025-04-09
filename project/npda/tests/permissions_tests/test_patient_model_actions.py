@@ -9,7 +9,7 @@ from http import HTTPStatus
 
 # RCPCH imports
 from project.constants.user import RCPCH_AUDIT_TEAM
-from project.npda.models import Patient, Submission, NPDAUser
+from project.npda.models import Patient, Submission, NPDAUser, AuditPeriod
 from project.npda.general_functions import get_audit_period_for_date
 from project.npda.tests.utils import login_and_verify_user
 from project.npda.tests.factories.patient_factory import PatientFactory
@@ -21,11 +21,11 @@ ALDER_HEY_PZ_CODE = "PZ074"
 
 
 def create_submission_with_patient(user):
-    (audit_start_date, _) = get_audit_period_for_date(timezone.now())
+    audit_period = AuditPeriod.objects.get_default_audit_period()
 
     submission = Submission.objects.create(
-        audit_year=audit_start_date.year,
-        submission_date=f"{audit_start_date.year}-04-01T00:00:00Z",
+        audit_year=audit_period.start_date.year,
+        submission_date=f"{audit_period.start_date.year}-04-01T00:00:00Z",
         submission_active=True,
         submission_by=user,
         paediatric_diabetes_unit=user.organisation_employers.first(),
