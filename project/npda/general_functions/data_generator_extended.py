@@ -430,7 +430,7 @@ class FakePatientCreator:
             dietician_additional_appointment_date: date
         """
         dietician_additional_appointment_offered = random.choice(YES_NO_UNKNOWN)[0]
-        dietician_additional_appointment_date = visit_date
+        dietician_additional_appointment_date = visit_date if dietician_additional_appointment_offered == 1 else None
         return {
             "dietician_additional_appointment_offered": dietician_additional_appointment_offered,
             "dietician_additional_appointment_date": dietician_additional_appointment_date,
@@ -465,8 +465,8 @@ class FakePatientCreator:
         hospital_admission_date = visit_date
         hospital_discharge_date = visit_date
         hospital_admission_reason = random.choice(HOSPITAL_ADMISSION_REASONS)[0]
-        dka_additional_therapies = random.choice(DKA_ADDITIONAL_THERAPIES)[0]
-        hospital_admission_other = None
+        dka_additional_therapies = random.choice(DKA_ADDITIONAL_THERAPIES)[0] if hospital_admission_reason == 2 else None
+        hospital_admission_other = "test admission description" if hospital_admission_reason == 6 else None
         return {
             "hospital_admission_date": hospital_admission_date,
             "hospital_discharge_date": hospital_discharge_date,
@@ -568,10 +568,10 @@ class FakePatientCreator:
                 [1, 2, 4, 5, 7, 8, 9]
             )  # insulin or non-insulin options compatible with type 2 diabetes
 
-        if diabetes_type == 1:
+        if diabetes_type == 1 and treatment in [3, 6]:
             closed_loop_system = random.choice(CLOSED_LOOP_TYPES)[0]
         else:
-            closed_loop_system = YES_NO_UNKNOWN[0][0]  # No
+            closed_loop_system = None
 
         return treatment, closed_loop_system
 
@@ -703,7 +703,7 @@ class FakePatientCreator:
             smoking_cessation_referral_date: date
         """
         smoking_status = random.choice(SMOKING_STATUS)[0]
-        smoking_cessation_referral_date = visit_date
+        smoking_cessation_referral_date = visit_date if smoking_status == 2 else None
         return smoking_status, smoking_cessation_referral_date
 
     def _carbohydrate_counting_observations(self, visit_date: date):
