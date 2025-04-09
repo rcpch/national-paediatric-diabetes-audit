@@ -26,12 +26,12 @@ from ..general_functions.csv import (
     download_csv,
     download_xlsx,
 )
-from .mixins import CheckCurrentAuditYearMixin, LoginAndOTPRequiredMixin
+from .mixins import LoginAndOTPRequiredMixin
 from ..models import Submission, OrganisationEmployer, PaediatricDiabetesUnit
 
 
 class SubmissionsListView(
-    LoginAndOTPRequiredMixin, CheckCurrentAuditYearMixin, ListView
+    LoginAndOTPRequiredMixin, ListView
 ):
     """
     The SubmissionsListView class.
