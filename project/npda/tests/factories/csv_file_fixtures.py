@@ -6,6 +6,6 @@ def dummy_sheets_folder(request):
 
 @pytest.fixture
 def dummy_sheet_csv(dummy_sheets_folder):
-    file = dummy_sheets_folder / 'dummy_sheet.csv'
+    file = dummy_sheets_folder / 'dummy_sheet_test.csv'
     with open(file, 'r') as f:
         return f.read()

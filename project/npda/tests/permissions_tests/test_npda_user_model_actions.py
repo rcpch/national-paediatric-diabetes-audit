@@ -56,7 +56,7 @@ GOSH_PZ_CODE = "PZ196"
 
 @pytest.fixture
 def valid_df(dummy_sheets_folder):
-    file = dummy_sheets_folder / "dummy_sheet.csv"
+    file = dummy_sheets_folder / "dummy_sheet_test.csv"
     return csv_parse(file).df
 
 
@@ -231,7 +231,7 @@ def test_editor_can_upload_csv(
     client = login_and_verify_user(client, editor_user)
     # create a test CSV file
     
-    file = dummy_sheets_folder / "dummy_sheet.csv"
+    file = dummy_sheets_folder / "dummy_sheet_test.csv"
 
     # upload the CSV file by posting to  'home' view
     url = reverse("home")
@@ -258,7 +258,7 @@ def test_reader_cannot_upload_csv(
     client = login_and_verify_user(client, reader_user)
     # create a test CSV file
     
-    file = dummy_sheets_folder / "dummy_sheet.csv"
+    file = dummy_sheets_folder / "dummy_sheet_test.csv"
 
     # upload the CSV file by posting to  'home' view
     url = reverse("home")
