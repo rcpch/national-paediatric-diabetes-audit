@@ -59,6 +59,32 @@ async def test_invalid_postcode():
         assert(type(result.postcode) is ValidationError)
 
 
+@pytest.mark.parametrize(
+    "postcode",
+    [
+        pytest.param("ZZ993CZ"),
+        pytest.param("ZZ99 3GZ"),
+        pytest.param("ZZ993GZ"),
+        pytest.param("ZZ99 3GZ"),
+        pytest.param("ZZ993WZ"),
+        pytest.param("ZZ99 3WZ"),
+        pytest.param("ZZ993VZ"),
+        pytest.param("ZZ99 3VZ"),
+    ],
+)
+async def test_special_nhs_postcodes(postcode):
+    with patch("project.npda.forms.external_patient_validators.validate_postcode") as mock:
+        result = await validate_patient_async(
+            postcode=postcode,
+            gp_practice_ods_code=None,
+            gp_practice_postcode=None,
+            async_client=async_client
+        )
+
+        assert(result.postcode == postcode)
+        assert not mock.called
+
+
 async def test_http_error_validating_postcode():
     with patch("project.npda.forms.external_patient_validators.validate_postcode", AsyncMock(side_effect=HTTPError("oopsie!"))):
         result = await validate_patient_async(

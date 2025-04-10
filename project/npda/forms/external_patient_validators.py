@@ -17,6 +17,7 @@ from ..general_functions import (
     location_for_postcode,
 )
 
+from ...constants.postcodes import UNKNOWN_POSTCODES_NO_SPACES
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,9 @@ async def _validate_postcode(
     postcode: str | None, async_client: AsyncClient
 ) -> str | None:
     if postcode:
+        if postcode.replace(" ", "").upper() in UNKNOWN_POSTCODES_NO_SPACES:
+            return postcode
+
         try:
             normalised_postcode = await validate_postcode(postcode, async_client)
 
