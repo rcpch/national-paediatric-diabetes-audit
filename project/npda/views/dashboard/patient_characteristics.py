@@ -495,6 +495,13 @@ def get_median_hba1c_by_patient(audit_start, audit_end, patients):
     """
     Retrieves the median HbA1c (mmol/mol) for each patient within the audit period,
     along with other patient demographics for plotting.
+    Somewhat duplicate code from the KPI class so could be rationalized. 
+    This filters all the visits for the patients in the audit period and then annotates
+    the hba1c values to convert them to mmol/mol if they are in percent and vice versa.
+    It then calculates the median of the visits per patient and returns the data.
+    This is all now done in Python rather than SQL as it was getting too complex.
+    The function returns a list of dictionaries with the patient ID and their median HbA1c values as 
+    well as their demographics important for the box whisker plots.
     """
     visits_annotated = (
         Visit.objects.filter(
