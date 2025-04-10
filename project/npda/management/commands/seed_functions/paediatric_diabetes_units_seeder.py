@@ -97,14 +97,14 @@ def paediatric_diabetes_units_seeder():
             logger.error(f"Error creating PaediatricDiabetesUnit: {e}")
             continue
 
-        # if new_pdu.lead_organisation_geocoordinates is None:
-        #     geocoordinates = fetch_organisation_by_ods_code(
-        #         ods_code=new_pdu.lead_organisation_ods_code
-        #     )
-        #     new_pdu.lead_organisation_geocoordinates = Point(
-        #         x=geocoordinates["longitude"],
-        #         y=geocoordinates["latitude"],
-        #         srid=4326,
-        #     )
-        #     new_pdu.save()
-        #     logger.info(f"Geocoordinates for {new_pdu.lead_organisation_name} updated")
+        if new_pdu.lead_organisation_geocoordinates is None:
+            geocoordinates = fetch_organisation_by_ods_code(
+                ods_code=new_pdu.lead_organisation_ods_code
+            )
+            new_pdu.lead_organisation_geocoordinates = Point(
+                x=geocoordinates["longitude"],
+                y=geocoordinates["latitude"],
+                srid=4326,
+            )
+            new_pdu.save()
+            logger.info(f"Geocoordinates for {new_pdu.lead_organisation_name} updated")

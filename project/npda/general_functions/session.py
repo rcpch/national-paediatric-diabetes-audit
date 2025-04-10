@@ -104,9 +104,9 @@ def refresh_session_filters(request, pz_code=None, audit_year=None):
 
     audit_year = audit_year or request.session.get("selected_audit_year")
 
-    audit_period = AuditPeriod.objects.filter(
+    audit_period = AuditPeriod.objects.get(
         start_date__year=audit_year
-    ).first()
+    )
 
     session["selected_audit_year"] = audit_year
 
