@@ -358,3 +358,9 @@ redis_params = f"?ssl_cert_reqs=required" if REDIS_USE_SSL else ""
 CELERY_BROKER_URL = f"{redis_protocol}://{redis_auth}{REDIS_HOSTNAME}:{REDIS_PORT}/{REDIS_DATABASE_NUMBER}{redis_params}"
 
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
+
+# Required for STS to work - see https://docs.djangoproject.com/en/5.2/ref/middleware/#http-strict-transport-security
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SECURE_HSTS_SECONDS = os.environ.get("SECURE_HSTS_SECONDS")
+SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get("SECURE_HSTS_INCLUDE_SUBDOMAINS")
+SECURE_HSTS_PRELOAD = os.environ.get("SECURE_HSTS_PRELOAD")
