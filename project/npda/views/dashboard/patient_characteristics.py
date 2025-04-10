@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 # Django imports
-from django.db.models import Q, F, Case, When, DecimalField
+from django.db.models import Q, F, Case, When, DecimalField, Func
 from django.db.models.functions import Round
 from django.shortcuts import render
 
@@ -319,9 +319,13 @@ def all_patient_charts(request):
     if all_patients_in_this_submission is None:
         visits = None
     else:
-        visits = return_eligible_visits(all_patients_in_this_submission, audit_year)
+        # visits = return_eligible_visits(all_patients_in_this_submission, audit_year)
+        visits = get_median_hba1c_by_patient(
+            audit_start, audit_end, all_patients_in_this_submission
+        )
         # Create a Pandas DataFrame
-    df = pd.DataFrame(visits)
+    print(visits)
+    df = pd.DataFrame(list(visits))
 
     # Create the box plot for sex
     sex_hba1c_mmol_mol_box_plot = create_box_plot(df, "sex") if not df.empty else None
@@ -488,28 +492,18 @@ def create_piechart(dict_counts, field):
 def counts_are_zero(counts):
     return all(count == 0 for count in counts.values())
 
-
-def return_eligible_visits(patients, audit_year):
-
-    visit_value_cols = {
-        "patient__pk",
-        "hba1c_mmol_mol",
-        "hba1c_percent",
-        "patient__nhs_number",
-        "patient__sex",
-        "patient__diabetes_type",
-        "patient__index_of_multiple_deprivation_quintile",
-    }
-
-    audit_start, audit_end = audit_period_for_audit_year(audit_year)
-    return (
+def get_median_hba1c_by_patient(audit_start, audit_end, patients):
+    """
+    Retrieves the median HbA1c (mmol/mol) for each patient within the audit period,
+    along with other patient demographics for plotting.
+    """
+    visits_annotated = (
         Visit.objects.filter(
             visit_date__range=(audit_start, audit_end),
             hba1c_date__gt=F("patient__diagnosis_date") + timedelta(days=90),
             patient__in=patients,
             hba1c__isnull=False,
-        )
-        .annotate(
+        ).annotate(
             hba1c_mmol_mol=Case(
                 When(
                     hba1c_format=HBA1C_FORMATS[0][0],
@@ -517,8 +511,7 @@ def return_eligible_visits(patients, audit_year):
                 ),
                 When(
                     hba1c_format=HBA1C_FORMATS[1][0],
-                    then=Round((F("hba1c") - Decimal("2.152")) / Decimal("0.09148")),
-                    # HbA1c (mmol/mol) = (HbA1c (%) - 2.152) / 0.09148
+                    then=Round((F("hba1c") - Decimal("2.152")) / Decimal("0.09148"), 2),
                 ),
                 default=F("hba1c"),
                 output_field=DecimalField(max_digits=5, decimal_places=2, null=True),
@@ -532,12 +525,94 @@ def return_eligible_visits(patients, audit_year):
                     hba1c_format=HBA1C_FORMATS[0][0],
                     then=Round(
                         F("hba1c") * Decimal("0.09148") + Decimal("2.152"), 1
-                    ),  # 0.09148 * HbA1c (mmol/mol)) + 2.152
+                    ),
                 ),
             ),
         )
-        .values(*visit_value_cols)
+        .order_by("patient", "hba1c_mmol_mol")
     )
+
+    aggregated_data = (
+        visits_annotated.values("patient__nhs_number", "patient__pk", "patient__sex",
+                                "patient__index_of_multiple_deprivation_quintile",
+                                "patient__diabetes_type")
+        .annotate(
+            median_hba1c_mmol_mol=Func(
+                F("hba1c_mmol_mol"),
+                function="percentile_cont",
+                template="%(function)s(0.5) WITHIN GROUP (ORDER BY %(expressions)s)",
+                output_field=DecimalField(max_digits=5, decimal_places=2, null=True),
+            ),
+        )
+        .order_by("patient__nhs_number")
+    )
+
+    return aggregated_data
+
+# def return_eligible_visits(patients, audit_year):
+
+#     visit_value_cols = {
+#         "patient__pk",
+#         "hba1c_mmol_mol",
+#         "hba1c_percent",
+#         "patient__nhs_number",
+#         "patient__sex",
+#         "patient__diabetes_type",
+#         "patient__index_of_multiple_deprivation_quintile",
+#         "median_hba1c_mmol_mol",
+#     }
+
+#     audit_start, audit_end = audit_period_for_audit_year(audit_year)
+    
+#     visits = Visit.objects.filter(
+#             visit_date__range=(audit_start, audit_end),
+#             hba1c_date__gt=F("patient__diagnosis_date") + timedelta(days=90),
+#             patient__in=patients,
+#             hba1c__isnull=False,
+#         ).annotate(
+#             hba1c_mmol_mol=Case(
+#                 When(
+#                     hba1c_format=HBA1C_FORMATS[0][0],
+#                     then=F("hba1c"),
+#                 ),
+#                 When(
+#                     hba1c_format=HBA1C_FORMATS[1][0],
+#                     then=Round((F("hba1c") - Decimal("2.152")) / Decimal("0.09148")),
+#                     # HbA1c (mmol/mol) = (HbA1c (%) - 2.152) / 0.09148
+#                 ),
+#                 default=F("hba1c"),
+#                 output_field=DecimalField(max_digits=5, decimal_places=2, null=True),
+#             ),
+#             hba1c_percent=Case(
+#                 When(
+#                     hba1c_format=HBA1C_FORMATS[1][0],
+#                     then=F("hba1c"),
+#                 ),
+#                 When(
+#                     hba1c_format=HBA1C_FORMATS[0][0],
+#                     then=Round(
+#                         F("hba1c") * Decimal("0.09148") + Decimal("2.152"), 1
+#                     ),  # 0.09148 * HbA1c (mmol/mol)) + 2.152
+#                 ),
+#             ),
+#         ).order_by("patient")  # Order visits by patient for aggregation
+    
+#     return visits.annotate(
+#             median_hba1c_mmol_mol=Func(
+#                 F("hba1c_mmol_mol"),
+#                 function="percentile_cont",
+#                 name="median",
+#                 template="%(function)s(0.5) WITHIN GROUP (ORDER BY %(expressions)s)",
+#                 output_field=DecimalField(max_digits=5, decimal_places=2, null=True),
+#             ),
+#             nhs_number=F("patient__nhs_number"),
+#             sex=F("patient__sex"),
+#             diabetes_type=F("patient__diabetes_type"),
+#             index_of_multiple_deprivation_quintile=F("patient__index_of_multiple_deprivation_quintile"),
+#         ).order_by(
+#             "patient__nhs_number"
+#         ) .values(*visit_value_cols)
+    
 
 
 def _build_box_plot(
@@ -564,11 +639,11 @@ def _build_box_plot(
                     hovertemplate=f"{item}: No data available<extra></extra>",
                 )
             )
-    else:
-        # Round the percentage to 1 decimal place
-        df["hba1c_percent"] = df["hba1c_percent"].apply(
-            lambda x: round(x, 1) if pd.notnull(x) else x
-        )
+    # else:
+    #     # Round the percentage to 1 decimal place
+    #     df["hba1c_percent"] = df["hba1c_percent"].apply(
+    #         lambda x: round(x, 1) if pd.notnull(x) else x
+    #     )
 
         # For each category in the specified order, add a trace
         for item in category_order:
@@ -581,7 +656,7 @@ def _build_box_plot(
                 # Category has data - add normal box plot
                 fig.add_trace(
                     go.Box(
-                        y=subset["hba1c_mmol_mol"],
+                        y=subset["median_hba1c_mmol_mol"],
                         name=item,
                         marker_color=line_colors[item],
                         fillcolor=fill_colors[item],
@@ -597,7 +672,7 @@ def _build_box_plot(
                 fig.add_trace(
                     go.Scatter(
                         x=[item] * len(subset),  # Position scatter points over the box
-                        y=subset["hba1c_mmol_mol"],
+                        y=subset["median_hba1c_mmol_mol"],
                         mode="markers",
                         marker=dict(color="black", size=3, opacity=0.6),
                         name=f"{item} mmol/mol",
