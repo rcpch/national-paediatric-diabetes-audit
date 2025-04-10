@@ -98,6 +98,13 @@ async def _gp_details_from_postcode(
         normalised_postcode = await validate_postcode(
             gp_practice_postcode, async_client
         )
+
+        if not normalised_postcode:
+            raise ValidationError(
+                "Invalid GP practice with postcode %(postcode)s",
+                params={"postcode": gp_practice_postcode},
+            )
+
         ods_code = await gp_ods_code_for_postcode(normalised_postcode, async_client)
 
         if not ods_code:
