@@ -56,7 +56,7 @@ GOSH_PZ_CODE = "PZ196"
 
 @pytest.fixture
 def valid_df(dummy_sheets_folder):
-    file = dummy_sheets_folder / "dummy_sheet.csv"
+    file = dummy_sheets_folder / "dummy_sheet_test.csv"
     return csv_parse(file).df
 
 
@@ -240,7 +240,7 @@ def test_editor_can_upload_csv(
     client = login_and_verify_user(client, editor_user)
     # create a test CSV file
     
-    file = dummy_sheets_folder / "dummy_sheet.csv"
+    file = dummy_sheets_folder / "dummy_sheet_test.csv"
 
     # upload the CSV file by posting to  'home' view
     url = reverse("home")
@@ -271,7 +271,7 @@ def test_reader_cannot_upload_csv(
     client = login_and_verify_user(client, reader_user)
     # create a test CSV file
     
-    file = dummy_sheets_folder / "dummy_sheet.csv"
+    file = dummy_sheets_folder / "dummy_sheet_test.csv"
 
     # upload the CSV file by posting to  'home' view
     url = reverse("home")
@@ -684,7 +684,6 @@ def test_users_can_download_csv(
     response = client.post(
         url,
         {"submit-data": "download-data", "audit_id": submission.pk},
-        headers={"HX-Request": "true"},  # Simulate HTMX request
     )
 
     # Check that the response is successful and has the correct content type for a file download
@@ -740,7 +739,6 @@ def test_reader_cannot_download_csv(
     response = client.post(
         url,
         {"submit-data": "download-data", "audit_id": submission.pk},
-        headers={"HX-Request": "true"},  # Simulate HTMX request
     )
 
     # Check that the response is successful and has the correct content type for a file download
@@ -803,7 +801,6 @@ def test_users_can_download_report(
     response = client.post(
         url,
         {"submit-data": "download-report", "audit_id": submission.pk},
-        headers={"HX-Request": "true"},  # Simulate HTMX request
     )
 
     # Check that the response is successful and has the correct content type for a file download (likely xlsx)
@@ -860,7 +857,6 @@ def test_rcpch_audit_team_can_delete_submission(
     response = client.post(
         url,
         {"submit-data": "delete-data", "audit_id": submission.pk},
-        headers={"HX-Request": "true"},  # Simulate HTMX request
         follow=True
     )
     # Check that the deletion was successful (we expect a success message in the response)
@@ -923,7 +919,6 @@ def test_non_rcpch_audit_team_cannot_delete_submission(
     response = client.post(
         url,
         {"submit-data": "delete-data", "audit_id": submission.pk},
-        headers={"HX-Request": "true"},  # Simulate HTMX request
     )
 
     # Check that the deletion was NOT successful

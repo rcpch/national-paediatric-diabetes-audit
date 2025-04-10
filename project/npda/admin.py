@@ -17,22 +17,53 @@ from django.contrib.sessions.models import Session
 
 @admin.register(OrganisationEmployer)
 class OrganisationEmployerAdmin(admin.ModelAdmin):
-    search_fields = ("name", "pk", "lead_organisation_ods_code", "pz_code")
+    search_fields = (
+        "pk",
+        "paediatric_diabetes_unit__pz_code",
+        "paediatric_diabetes_unit__lead_organisation_ods_code",
+        "paediatric_diabetes_unit__lead_organisation_name",
+        "npda_user__email",
+        "npda_user__first_name",
+        "npda_user__surname",
+    )
+    list_display = (
+        "pk",
+        "paediatric_diabetes_unit__pz_code",
+        "paediatric_diabetes_unit__lead_organisation_name",
+        "npda_user__email",
+        "npda_user__first_name",
+        "npda_user__surname",
+    )
 
 
 @admin.register(NPDAUser)
 class NPDAUserAdmin(admin.ModelAdmin):
-    search_fields = ("surname__icontains", "nhs_number","pk")
+    search_fields = (
+        "pk",
+        "email__icontains",
+        "first_name__icontains",
+        "surname__icontains",
+    )
+    list_display = ("email", "first_name", "surname", "role")
 
 
 @admin.register(Patient)
 class PatientAdmin(admin.ModelAdmin):
-    search_fields = ("nhs_number__icontains", "pk", "unique_reference_number__icontains")
+    search_fields = (
+        "nhs_number__icontains",
+        "pk",
+        "unique_reference_number__icontains",
+    )
 
 
 @admin.register(PaediatricDiabetesUnit)
 class PaediatricDiabetesUnitAdmin(admin.ModelAdmin):
-    search_fields = ("pk", "pz_code", "lead_organisation_ods_code", "lead_organisation_name")
+    search_fields = (
+        "pk",
+        "pz_code",
+        "lead_organisation_ods_code",
+        "lead_organisation_name",
+    )
     list_display = (
         "pz_code",
         "lead_organisation_ods_code",
@@ -69,7 +100,6 @@ class AuditPeriodAdmin(admin.ModelAdmin):
 
 @admin.register(Session)
 class SessionAdmin(admin.ModelAdmin):
-
     list_display = [
         "session_key",
         "user_id",

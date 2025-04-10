@@ -1,0 +1,33 @@
+{% comment %}
+  Copy Button Template
+  Usage: {% include 'partials/page_elements/copy_button.html' with value="text_to_copy" tooltip="Copy to clipboard" %}
+
+  Parameters:
+  - value: The text to copy when the button is clicked
+  - tooltip: Optional tooltip text to display on hover
+  - button_class: Optional additional CSS classes for the button
+  - icon_class: Optional additional CSS classes for the icon
+  - size: Optional size (xs, sm, md, lg) - defaults to sm
+{% endcomment %}
+
+<button
+  class="btn btn-circle btn-{{ size|default:'sm' }} btn-primary tooltip tooltip-right {% if button_class %}{{ button_class }}{% endif %}"
+  data-tip="{{ tooltip|default:'Copy to clipboard' }}"
+  onclick="copyToClipboard('{{ value }}', this)"
+  aria-label="Copy {{ value }} to clipboard">
+  <i class="fa-solid fa-clipboard {% if icon_class %}{{ icon_class }}{% endif %}" id="icon-{{ value|slugify }}"></i>
+</button>
+
+<script>
+  function copyToClipboard(text, button) {
+    // Copy text to clipboard
+    navigator.clipboard.writeText(text).then(() => {
+      // Change to check icon
+      button.classList.add('btn-success');
+      // Reset icon after 1.5 seconds
+      setTimeout(() => {
+        button.classList.remove('btn-success');
+      }, 1500);
+    });
+  }
+</script>

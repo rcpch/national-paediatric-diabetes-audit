@@ -80,13 +80,13 @@ ALDER_HEY_PZ_CODE = "PZ074"
 
 @pytest.fixture
 def valid_df(dummy_sheets_folder):
-    file = dummy_sheets_folder / "dummy_sheet.csv"
+    file = dummy_sheets_folder / "dummy_sheet_test.csv"
     return csv_parse(file).df
 
 
 @pytest.fixture
 def single_row_valid_df(dummy_sheets_folder):
-    file = dummy_sheets_folder / "dummy_sheet.csv"
+    file = dummy_sheets_folder / "dummy_sheet_test.csv"
     df = csv_parse(file).df
     df = df.head(1)
 
@@ -95,7 +95,7 @@ def single_row_valid_df(dummy_sheets_folder):
 
 @pytest.fixture
 def one_patient_two_visits(dummy_sheets_folder):
-    file = dummy_sheets_folder / "dummy_sheet.csv"
+    file = dummy_sheets_folder / "dummy_sheet_test.csv"
     df = csv_parse(file).df
 
     df = df.head(2)
@@ -106,7 +106,7 @@ def one_patient_two_visits(dummy_sheets_folder):
 
 @pytest.fixture
 def two_patients_first_with_two_visits_second_with_one(dummy_sheets_folder):
-    file = dummy_sheets_folder / "dummy_sheet.csv"
+    file = dummy_sheets_folder / "dummy_sheet_test.csv"
     df = csv_parse(file).df
 
     df = df.head(3)
@@ -119,7 +119,7 @@ def two_patients_first_with_two_visits_second_with_one(dummy_sheets_folder):
 
 @pytest.fixture
 def two_patients_with_one_visit_each(dummy_sheets_folder):
-    file = dummy_sheets_folder / "dummy_sheet.csv"
+    file = dummy_sheets_folder / "dummy_sheet_test.csv"
     df = csv_parse(file).df
 
     df = df.drop([0]).head(2).reset_index(drop=True)
