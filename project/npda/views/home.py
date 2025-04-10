@@ -91,6 +91,8 @@ async def home(request):
                 return redirect("home")
 
             audit_period = await sync_to_async(AuditPeriod.objects.get_audit_period_for_request)(request)
+            if not audit_period.is_open and not (request.user.is_superuser or request.user.is_rcpch_audit_team_member):
+                raise PermissionDenied(f"Upload is closed for {audit_period.audit_year()}.")
 
             # CSV is valid, parse any errors and store the data in the tables.
             errors_by_row_index = await csv_upload(
