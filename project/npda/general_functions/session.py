@@ -45,15 +45,9 @@ def get_audit_period_session_data(audit_period, user):
 
     for audit_period in AuditPeriod.objects.order_by("start_date").all():
         if audit_period.is_visible or user.is_rcpch_audit_team_member or user.is_superuser:
-            if user.is_rcpch_audit_team_member or user.is_superuser:
-                disabled = False
-            else:
-                disabled = not audit_period.is_open
-
             audit_years.append(
                 {
-                    "year": audit_period.audit_year(),
-                    "disabled": disabled
+                    "year": audit_period.audit_year()
                 }
             )
     

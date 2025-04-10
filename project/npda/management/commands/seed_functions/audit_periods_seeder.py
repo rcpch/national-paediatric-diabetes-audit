@@ -20,13 +20,13 @@ def audit_periods_seeder():
     else:
         # 2023 was the last year with the old system
         # we uploaded data from then to test this one 
-        for year in range(2023, next_year):
+        for year in range(2023, next_year + 1):
             audit_start_date = date(year, 4, 1)
             audit_end_date = date(year + 1, 3, 31)
 
             AuditPeriod.objects.create(
                 is_open=year == this_year,
-                is_visible=year < this_year,
+                is_visible=year <= this_year,
                 start_date=audit_start_date,
                 end_date=audit_end_date
             )
