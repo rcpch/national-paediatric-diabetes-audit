@@ -24,8 +24,8 @@ def create_submission_with_patient(user):
     audit_period = AuditPeriod.objects.get_default_audit_period()
 
     submission = Submission.objects.create(
-        audit_year=audit_period.start_date.year,
-        submission_date=f"{audit_period.start_date.year}-04-01T00:00:00Z",
+        audit_year=audit_period.audit_year(),
+        submission_date=f"{audit_period.audit_year()}-04-01T00:00:00Z",
         submission_active=True,
         submission_by=user,
         paediatric_diabetes_unit=user.organisation_employers.first(),
