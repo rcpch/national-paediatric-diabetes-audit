@@ -8,7 +8,6 @@ from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.mixins import AccessMixin
 
-from project.npda.general_functions.audit_period import get_audit_period_for_date
 from project.npda.models.npda_user import NPDAUser
 from project.npda.models.patient import Patient
 from project.npda.models.audit_period import AuditPeriod
@@ -167,35 +166,25 @@ class CheckPDUInstanceMixin(AccessMixin):
 
 class CheckCurrentAuditYearMixin(AccessMixin):
     """
-    A mixin that checks whether the user is trying to update/create or delete data for the current audit year
+    A mixin that checks whether the user is trying to update/create or delete data for an open audit year
     If trying to access data for a different audit year, it will log a warning and return a HttpResponseForbidden
     """
 
     def dispatch(self, request, *args, **kwargs):
-        # Check if the user is trying to access data for the current audit period
-        audit_start_date, audit_end_data = get_audit_period_for_date(
-            datetime.now().date()
-        )
-        selected_audit_year = int(request.session.get("selected_audit_year"))
-        if selected_audit_year < audit_start_date.year:
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
+
+        if not audit_period:
             logger.warning(
-                f"User {request.user} tried to create/edit or delete data in a previous audit year."
+                f"User {request.user} tried to create/edit or delete data in an unknown audit period."
             )
-            if request.user.is_superuser or request.user.is_rcpch_audit_team_member:
-                # Allow superusers and RCPCH audit team members to create/edit or update  data for previous audit years
-                return super().dispatch(request, *args, **kwargs)
-
             raise PermissionDenied()
-
-        if selected_audit_year > audit_end_data.year:
-            logger.warning(
-                f"User {request.user} tried to create/edit or delete data in a future audit year."
-            )
-            if request.user.is_superuser or request.user.is_rcpch_audit_team_member:
-                # Allow superusers and RCPCH audit team members to create/edit or update  data for future audit years
-                return super().dispatch(request, *args, **kwargs)
-
-            raise PermissionDenied()
+        
+        if not audit_period.is_open:
+            if not request.user.is_superuser and not request.user.is_rcpch_audit_team_member:
+                logger.warning(
+                    f"User {request.user} tried to create/edit or delete data in a closed audit year."
+                )
+                raise PermissionDenied()
 
         return super().dispatch(request, *args, **kwargs)
 
