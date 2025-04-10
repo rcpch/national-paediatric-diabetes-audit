@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 # Django imports
-from django.db.models import Q, F, Case, When, DecimalField, Func
+from django.db.models import Q, F, Case, When, DecimalField, Func, Subquery, OuterRef
 from django.db.models.functions import Round
 from django.shortcuts import render
 
@@ -14,7 +14,7 @@ import plotly.graph_objects as go
 
 # Project imports
 from project.npda.general_functions.audit_period import audit_period_for_audit_year
-from project.npda.models import Submission
+from project.npda.models import Submission, Patient
 from project.constants.colors import (
     RCPCH_LIGHT_BLUE,
     RCPCH_LIGHT_BLUE_TINT1,
@@ -324,8 +324,7 @@ def all_patient_charts(request):
             audit_start, audit_end, all_patients_in_this_submission
         )
         # Create a Pandas DataFrame
-    print(visits)
-    df = pd.DataFrame(list(visits))
+    df = pd.DataFrame(visits)
 
     # Create the box plot for sex
     sex_hba1c_mmol_mol_box_plot = create_box_plot(df, "sex") if not df.empty else None
@@ -334,11 +333,11 @@ def all_patient_charts(request):
     if not df.empty:
         # We may not have IMD for all patients (invalid postcodes, ZZ99 etc)
         df_all_with_imd = df.dropna(
-            subset=["patient__index_of_multiple_deprivation_quintile"]
+            subset=["index_of_multiple_deprivation_quintile"]
         )
         # We may not have IMD for all patients (invalid postcodes, ZZ99 etc)
         df_all_with_imd = df.dropna(
-            subset=["patient__index_of_multiple_deprivation_quintile"]
+            subset=["index_of_multiple_deprivation_quintile"]
         )
         imd_hba1c_mmol_mol_box_plot = create_box_plot(
             df_all_with_imd,
@@ -516,102 +515,54 @@ def get_median_hba1c_by_patient(audit_start, audit_end, patients):
                 default=F("hba1c"),
                 output_field=DecimalField(max_digits=5, decimal_places=2, null=True),
             ),
-            hba1c_percent=Case(
-                When(
-                    hba1c_format=HBA1C_FORMATS[1][0],
-                    then=F("hba1c"),
-                ),
-                When(
-                    hba1c_format=HBA1C_FORMATS[0][0],
-                    then=Round(
-                        F("hba1c") * Decimal("0.09148") + Decimal("2.152"), 1
-                    ),
-                ),
-            ),
-        )
-        .order_by("patient", "hba1c_mmol_mol")
+        ).order_by("patient")
     )
 
-    aggregated_data = (
-        visits_annotated.values("patient__nhs_number", "patient__pk", "patient__sex",
-                                "patient__index_of_multiple_deprivation_quintile",
-                                "patient__diabetes_type")
-        .annotate(
-            median_hba1c_mmol_mol=Func(
-                F("hba1c_mmol_mol"),
-                function="percentile_cont",
-                template="%(function)s(0.5) WITHIN GROUP (ORDER BY %(expressions)s)",
-                output_field=DecimalField(max_digits=5, decimal_places=2, null=True),
-            ),
-        )
-        .order_by("patient__nhs_number")
-    )
-
-    return aggregated_data
-
-# def return_eligible_visits(patients, audit_year):
-
-#     visit_value_cols = {
-#         "patient__pk",
-#         "hba1c_mmol_mol",
-#         "hba1c_percent",
-#         "patient__nhs_number",
-#         "patient__sex",
-#         "patient__diabetes_type",
-#         "patient__index_of_multiple_deprivation_quintile",
-#         "median_hba1c_mmol_mol",
-#     }
-
-#     audit_start, audit_end = audit_period_for_audit_year(audit_year)
+    # calculate medians in Python
+    patient_hba1cs = {}
+    for visit in visits_annotated.values('patient', 'hba1c_mmol_mol'):
+        patient_id = visit['patient']
+        hba1c = visit['hba1c_mmol_mol']
+        if hba1c is not None:
+            if patient_id not in patient_hba1cs:
+                patient_hba1cs[patient_id] = []
+            patient_hba1cs[patient_id].append(hba1c)
     
-#     visits = Visit.objects.filter(
-#             visit_date__range=(audit_start, audit_end),
-#             hba1c_date__gt=F("patient__diagnosis_date") + timedelta(days=90),
-#             patient__in=patients,
-#             hba1c__isnull=False,
-#         ).annotate(
-#             hba1c_mmol_mol=Case(
-#                 When(
-#                     hba1c_format=HBA1C_FORMATS[0][0],
-#                     then=F("hba1c"),
-#                 ),
-#                 When(
-#                     hba1c_format=HBA1C_FORMATS[1][0],
-#                     then=Round((F("hba1c") - Decimal("2.152")) / Decimal("0.09148")),
-#                     # HbA1c (mmol/mol) = (HbA1c (%) - 2.152) / 0.09148
-#                 ),
-#                 default=F("hba1c"),
-#                 output_field=DecimalField(max_digits=5, decimal_places=2, null=True),
-#             ),
-#             hba1c_percent=Case(
-#                 When(
-#                     hba1c_format=HBA1C_FORMATS[1][0],
-#                     then=F("hba1c"),
-#                 ),
-#                 When(
-#                     hba1c_format=HBA1C_FORMATS[0][0],
-#                     then=Round(
-#                         F("hba1c") * Decimal("0.09148") + Decimal("2.152"), 1
-#                     ),  # 0.09148 * HbA1c (mmol/mol)) + 2.152
-#                 ),
-#             ),
-#         ).order_by("patient")  # Order visits by patient for aggregation
+    # Calculate median for each patient
+    patient_medians = []
+    for patient_id, hba1cs in patient_hba1cs.items():
+        sorted_hba1cs = sorted(hba1cs)
+        n = len(sorted_hba1cs)
+        if n == 0:
+            continue
+        if n % 2 == 0:
+            median = (sorted_hba1cs[n//2 - 1] + sorted_hba1cs[n//2]) / 2
+        else:
+            median = sorted_hba1cs[n//2]
+        patient_medians.append({'patient': patient_id, 'median_hba1c_mmol_mol': median})
     
-#     return visits.annotate(
-#             median_hba1c_mmol_mol=Func(
-#                 F("hba1c_mmol_mol"),
-#                 function="percentile_cont",
-#                 name="median",
-#                 template="%(function)s(0.5) WITHIN GROUP (ORDER BY %(expressions)s)",
-#                 output_field=DecimalField(max_digits=5, decimal_places=2, null=True),
-#             ),
-#             nhs_number=F("patient__nhs_number"),
-#             sex=F("patient__sex"),
-#             diabetes_type=F("patient__diabetes_type"),
-#             index_of_multiple_deprivation_quintile=F("patient__index_of_multiple_deprivation_quintile"),
-#         ).order_by(
-#             "patient__nhs_number"
-#         ) .values(*visit_value_cols)
+    # Filter patients to only those with medians
+    patient_ids = [p['patient'] for p in patient_medians]
+    
+    # Create a dictionary mapping patient IDs to their median values for quicker lookup
+    median_map = {p['patient']: p['median_hba1c_mmol_mol'] for p in patient_medians}
+    
+    # Then get patient data and attach medians
+    patients_with_medians = list(Patient.objects.filter(pk__in=patient_ids).values(
+        'pk', 'nhs_number', 'sex', 'diabetes_type', 'index_of_multiple_deprivation_quintile'
+    ))
+    
+    # Attach median values and calculate percentage equivalent
+    final_data = []
+    for patient in patients_with_medians:
+        median_mmol_mol = median_map[patient['pk']]
+        median_percent = round(median_mmol_mol * Decimal("0.09148") + Decimal("2.152"), 1)
+        
+        patient['median_hba1c_mmol_mol'] = median_mmol_mol
+        patient['median_hba1c_percent'] = median_percent
+        final_data.append(patient)
+    
+    return final_data
     
 
 
@@ -639,62 +590,57 @@ def _build_box_plot(
                     hovertemplate=f"{item}: No data available<extra></extra>",
                 )
             )
-    # else:
-    #     # Round the percentage to 1 decimal place
-    #     df["hba1c_percent"] = df["hba1c_percent"].apply(
-    #         lambda x: round(x, 1) if pd.notnull(x) else x
-    #     )
 
-        # For each category in the specified order, add a trace
-        for item in category_order:
-            # Find rows where patient field equals the current category
-            subset = (
-                df[df[f"patient__{field}"] == item] if not df.empty else pd.DataFrame()
+    # For each category in the specified order, add a trace
+    for item in category_order:
+        # Find rows where patient field equals the current category
+        subset = (
+            df[df[f"{field}"] == item] if not df.empty else pd.DataFrame()
+        )
+
+        if len(subset) > 0:
+            # Category has data - add normal box plot
+            fig.add_trace(
+                go.Box(
+                    y=subset["median_hba1c_mmol_mol"],
+                    name=item,
+                    marker_color=line_colors[item],
+                    fillcolor=fill_colors[item],
+                    boxmean=True,
+                    hoverlabel=dict(bgcolor=fill_colors[item]),
+                    hoverinfo="y",
+                )
             )
 
-            if len(subset) > 0:
-                # Category has data - add normal box plot
-                fig.add_trace(
-                    go.Box(
-                        y=subset["median_hba1c_mmol_mol"],
-                        name=item,
-                        marker_color=line_colors[item],
-                        fillcolor=fill_colors[item],
-                        boxmean=True,
-                        hoverlabel=dict(bgcolor=fill_colors[item]),
-                        hoverinfo="y",
-                    )
-                )
+            custom_data = subset.to_dict("records")
 
-                custom_data = subset.to_dict("records")
-
-                # Add scatter plot on top for individual points
-                fig.add_trace(
-                    go.Scatter(
-                        x=[item] * len(subset),  # Position scatter points over the box
-                        y=subset["median_hba1c_mmol_mol"],
-                        mode="markers",
-                        marker=dict(color="black", size=3, opacity=0.6),
-                        name=f"{item} mmol/mol",
-                        showlegend=False,  # Don't duplicate legend entries
-                        customdata=custom_data,
-                        hovertemplate="HbA1c: %{y}<extra></extra> mmol/mol (%{customdata.hba1c_percent} %) for patient %{customdata.patient__pk} (NHS: %{customdata.patient__nhs_number})",
-                    )
+            # Add scatter plot on top for individual points
+            fig.add_trace(
+                go.Scatter(
+                    x=[item] * len(subset),  # Position scatter points over the box
+                    y=subset["median_hba1c_mmol_mol"],
+                    mode="markers",
+                    marker=dict(color="black", size=3, opacity=0.6),
+                    name=f"{item} mmol/mol",
+                    showlegend=False,  # Don't duplicate legend entries
+                    customdata=custom_data,
+                    hovertemplate="HbA1c: %{y}<extra></extra> mmol/mol (%{customdata.median_hba1c_percent} %) for patient %{customdata.pk} (NHS: %{customdata.nhs_number})",
                 )
-            else:
-                # Category has no data - add "empty" box plot
-                fig.add_trace(
-                    go.Box(
-                        y=[None],  # Empty data
-                        name=item,
-                        marker_color="rgba(200, 200, 200, 0.5)",  # Light grey
-                        fillcolor="rgba(220, 220, 220, 0.5)",  # Lighter grey
-                        line=dict(width=1, color="rgba(200, 200, 200, 0.5)"),
-                        boxpoints=False,  # Don't show outlier points
-                        hoverinfo="name",
-                        hovertemplate=f"{item}: No data available<extra></extra>",
-                    )
+            )
+        else:
+            # Category has no data - add "empty" box plot
+            fig.add_trace(
+                go.Box(
+                    y=[None],  # Empty data
+                    name=item,
+                    marker_color="rgba(200, 200, 200, 0.5)",  # Light grey
+                    fillcolor="rgba(220, 220, 220, 0.5)",  # Lighter grey
+                    line=dict(width=1, color="rgba(200, 200, 200, 0.5)"),
+                    boxpoints=False,  # Don't show outlier points
+                    hoverinfo="name",
+                    hovertemplate=f"{item}: No data available<extra></extra>",
                 )
+            )
 
     # Set layout with explicit category ordering
     fig.update_layout(
@@ -810,11 +756,11 @@ def create_box_plot(df, field):
                 if key is not None:  # Skip None for now
                     dummy_rows.append(
                         {
-                            f"patient__{field}": value,
-                            "hba1c_mmol_mol": float(
+                            f"{field}": value,
+                            "median_hba1c_mmol_mol": float(
                                 "nan"
                             ),  # Use NaN for missing values
-                            "hba1c_percent": float("nan"),
+                            # "median_hba1c_percent": float("nan"),
                         }
                     )
 
@@ -822,17 +768,17 @@ def create_box_plot(df, field):
             dummy_df = pd.DataFrame(dummy_rows)
 
             # Map the actual data
-            df[f"patient__{field}"] = df[f"patient__{field}"].map(mapping_object)
+            df[f"{field}"] = df[f"{field}"].map(mapping_object)
 
             # Combine with actual data (only used to ensure all categories present)
             combined_df = pd.concat([df, dummy_df], ignore_index=True)
             df = combined_df
         else:
-            df[f"patient__{field}"] = df[f"patient__{field}"].map(mapping_object)
+            df[f"{field}"] = df[f"{field}"].map(mapping_object)
 
         # Convert Decimal to float for plotting
-        df["hba1c_mmol_mol"] = df["hba1c_mmol_mol"].astype(float)
-        df["hba1c_percent"] = df["hba1c_percent"].astype(float)
+        df["median_hba1c_mmol_mol"] = df["median_hba1c_mmol_mol"].astype(float)
+        df["median_hba1c_percent"] = df["median_hba1c_percent"].astype(float)
 
     boxplot = _build_box_plot(
         df,
