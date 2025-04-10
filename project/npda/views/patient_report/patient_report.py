@@ -75,10 +75,9 @@ class PatientReportView(
     context_object_name = "patients"
     paginate_by = 50
 
-    def _calculate_hba1c_values(self, pt_qs):
+    def _calculate_hba1c_values(self, pt_qs, calculation_date):
         """Helper function to calculate HbA1c values for a queryset."""
         patient_ids = set(pt_qs.values_list("pk", flat=True))
-        calculation_date = AuditPeriod.objects.get_audit_period_for_request(self.request).kpi_calculation_date()
         calculate_kpis = CalculateKPIS(
             calculation_date=calculation_date, return_pt_querysets=True
         )
@@ -146,8 +145,7 @@ class PatientReportView(
             raise ValueError(f"Invalid category: {category}")
         self.selected_category = category
         pz_code = request.session.get("pz_code")
-        selected_audit_year = max(int(request.session.get("selected_audit_year")), 2024)
-        calculation_date = date(year=selected_audit_year, month=5, day=1)
+        calculation_date = AuditPeriod.objects.get_audit_period_for_request(self.request).kpi_calculation_date()
         calculate_kpis = CalculateKPIS(
             calculation_date=calculation_date, return_pt_querysets=True
         )
@@ -563,7 +561,7 @@ class PatientReportView(
                     "number_of_dka_admissions",
                 )
             )
-            pt_qs = self._calculate_hba1c_values(pt_qs)
+            pt_qs = self._calculate_hba1c_values(pt_qs, calculation_date)
         elif self.selected_category == "treatment":
             pt_qs = pt_qs.annotate(
                 treatment_regimen=Case(
@@ -698,11 +696,11 @@ class PatientReportView(
                 )
             else:
                 pt_qs = pt_qs.order_by(sort_field)
-                pt_qs = self._calculate_hba1c_values(pt_qs)
+                pt_qs = self._calculate_hba1c_values(pt_qs, calculation_date)
         else:
             # Default ordering
             pt_qs = pt_qs.order_by("-is_complete_year_of_care", "nhs_number")
-            pt_qs = self._calculate_hba1c_values(pt_qs)
+            pt_qs = self._calculate_hba1c_values(pt_qs, calculation_date)
 
         return pt_qs
 
