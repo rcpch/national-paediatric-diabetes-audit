@@ -8,6 +8,7 @@ from asgiref.sync import async_to_sync
 
 from django.core.exceptions import ValidationError
 from httpx import HTTPError, AsyncClient
+from dateutil.relativedelta import relativedelta
 
 from ..general_functions.dgc_centile_calculations import (
     calculate_centiles_z_scores,
@@ -74,6 +75,12 @@ async def validate_visit_async(
             logger.warning("Observation date is not specified. Cannot calculate centiles and z-scores.")
         
         return ret
+    
+    # Growth charts stop at 20 years old. The NPDA also stops around there but with the transition to adult care
+    # sometimes 20 year olds can appear in the dataset.
+    twentieth_bithday = birth_date + relativedelta(years=20)
+    if observation_date >= twentieth_bithday:
+        observation_date = twentieth_bithday - relativedelta(days=1)
 
     if sex == 1:
         sex = "male"
