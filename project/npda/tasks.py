@@ -26,7 +26,7 @@ def upload_csv_task(submission_id):
 
     submission = Submission.objects.get(id=submission_id)
 
-    logger.info(f"This is the submission to process: {submission}")
+    logger.info(f"This is the submission to process: {submission} [{submission.id}]")
 
     # CSV parsing errors are done inline in the route that handles the file upload
     parsed_csv = csv_parse(
