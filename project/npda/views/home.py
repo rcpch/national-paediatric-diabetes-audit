@@ -33,6 +33,7 @@ from ..forms.upload import UploadFileForm
 from ..general_functions.session import refresh_session_filters
 from ..general_functions.view_preference import get_or_update_view_preference
 from ..models import PaediatricDiabetesUnit
+from ..tasks import upload_csv_task
 
 # RCPCH imports
 from .decorators import login_and_otp_required
@@ -59,6 +60,9 @@ async def home(request):
             raise PermissionDenied("You do not have permission to upload CSV files.")
         
         form = UploadFileForm(request.POST, request.FILES)
+
+        use_celery = request.POST.get("use_celery", False)
+
         user_csv = request.FILES["csv_upload"]
         user_csv_filename = user_csv.name
         # We are eventually storing the CSV file as a BinaryField so have to hold it in memory
@@ -112,9 +116,17 @@ async def home(request):
                 ip_address=request.META.get("REMOTE_ADDR"),
             )
 
+            if use_celery:
+                # If the user has selected to use celery, run the task in the background
+                upload_csv_task.delay(new_submission.id)
+                messages.success(
+                    request=request,
+                    message="CSV has been uploaded. The data is being processed in the background.",
+                )
+                return redirect("upload_csv")
+
             # CSV is valid, parse any errors and store the data in the tables.
             errors_by_row_index = await csv_upload(
-                user=request.user,
                 dataframe=parsed_csv.df,
                 errors_to_return=parsed_csv.errors_to_return,
                 csv_file_name=user_csv_filename,
