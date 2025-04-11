@@ -1501,14 +1501,11 @@ class CalculateKPIS:
         # )
 
         # Denominator
-        total_kpi_1_eligible_pts_base_query_set, _ = (
-            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+        total_kpi_3_eligible_pts_base_query_set, _ = (
+            self._get_kpi_3_eligible_pts_base_query_set_and_total_count()
         )
 
-        total_eligible_patients_t1dm_queryset = total_kpi_1_eligible_pts_base_query_set.filter(
-            diabetes_type=DIABETES_TYPES[0][0]
-        )
-        total_eligible_kpi_t1dm = total_eligible_patients_t1dm_queryset.count()
+        total_eligible_kpi_t1dm = total_kpi_3_eligible_pts_base_query_set.count()
 
         total_ineligible = self.total_patients_count - total_eligible_kpi_t1dm
 
@@ -1519,7 +1516,7 @@ class CalculateKPIS:
             .values("pk")[:1]
         )
         # Filter the Patient queryset based on the subquery and treatments
-        passed_patients = total_kpi_1_eligible_pts_base_query_set.filter(
+        passed_patients = total_kpi_3_eligible_pts_base_query_set.filter(
             Q(
                 id__in=Subquery(
                     Patient.objects.filter(
@@ -1533,7 +1530,7 @@ class CalculateKPIS:
 
         # Also set pt querysets to be returned if required
         patient_querysets = self._get_pt_querysets_object(
-            eligible=total_kpi_1_eligible_pts_base_query_set,
+            eligible=total_kpi_3_eligible_pts_base_query_set,
             passed=passed_patients,
         )
 
@@ -1892,12 +1889,12 @@ class CalculateKPIS:
         """
         Calculates KPI 23: Number of patients with Type 1 diabetes using a real time continuous glucose monitor (CGM) with alarms
 
-        Numerator: Total number of eligible patients with Type 1 diabetes (measure 2)
+        Numerator: Total number of eligible patients with Type 1 diabetes (measure 3)
 
         Denominator: Number of eligible patients whose most recent entry (based on visit date) for blood glucose monitoring (item 22) is 4 = Real time continuous glucose monitor with alarms
         """
         eligible_patients, total_eligible = (
-            self._get_total_kpi_2_eligible_pts_base_query_set_and_total_count()
+            self._get_kpi_3_eligible_pts_base_query_set_and_total_count()
         )
 
         total_ineligible = self.total_patients_count - total_eligible
@@ -1951,14 +1948,12 @@ class CalculateKPIS:
             * or 4 = Closed loop system (licence status unknown)
         """
         # Denominator
-        total_kpi_1_eligible_pts_base_query_set, _ = (
-            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+        total_kpi_3_eligible_pts_base_query_set, _ = (
+            self._get_kpi_3_eligible_pts_base_query_set_and_total_count()
         )
 
-        total_eligible_patients_t1dm_queryset = total_kpi_1_eligible_pts_base_query_set.filter(
-            diabetes_type=DIABETES_TYPES[0][0]
-        )
-        total_eligible_kpi_t1dm = total_eligible_patients_t1dm_queryset.count()
+        
+        total_eligible_kpi_t1dm = total_kpi_3_eligible_pts_base_query_set.count()
 
         # Eligible kpi24 patients are those who are either on an insulin pump or insulin pump therapy
         eligible_kpi_24_latest_visit_subquery = (
@@ -1966,7 +1961,7 @@ class CalculateKPIS:
             .order_by("-visit_date")
             .values("pk")[:1]
         )
-        eligible_patients_kpi_24 = total_kpi_1_eligible_pts_base_query_set.filter(
+        eligible_patients_kpi_24 = total_kpi_3_eligible_pts_base_query_set.filter(
             Q(
                 id__in=Subquery(
                     Patient.objects.filter(
@@ -2028,18 +2023,11 @@ class CalculateKPIS:
         """KPI24's calculate_() method doesn't do this per quarter, so separate method"""
 
         # Denominator - eligible pts
-        total_kpi_1_eligible_pts_base_query_set, total_eligible_kpi_1 = (
-            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
+        total_kpi_3_eligible_pts_base_query_set, total_eligible_kpi_3 = (
+            self._total_kpi_3_eligible_pts_base_query_set_and_total_count()
         )
-        # Denominator
-        total_kpi_1_eligible_pts_base_query_set, _ = (
-            self._get_total_kpi_1_eligible_pts_base_query_set_and_total_count()
-        )
-
-        total_eligible_patients_t1dm_queryset = total_kpi_1_eligible_pts_base_query_set.filter(
-            diabetes_type=DIABETES_TYPES[0][0]
-        )
-        total_eligible_kpi_t1dm = total_eligible_patients_t1dm_queryset.count()
+        
+        total_eligible_kpi_t1dm = total_kpi_3_eligible_pts_base_query_set.count()
 
         # Get quarter dates
         quarter_end_dates = [
@@ -2072,7 +2060,7 @@ class CalculateKPIS:
                 .order_by("-visit_date")
                 .values("pk")[:1]
             )
-            eligible_patients_kpi_24 = total_eligible_patients_t1dm_queryset.filter(
+            eligible_patients_kpi_24 = total_kpi_3_eligible_pts_base_query_set.filter(
                 Q(
                     id__in=Subquery(
                         Patient.objects.filter(

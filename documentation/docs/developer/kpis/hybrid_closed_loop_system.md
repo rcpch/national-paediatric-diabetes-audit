@@ -15,7 +15,7 @@ AND whose most recent entry for item 21 (based on visit date) is either
 - or 3 = Closed loop system (DIY, unlicenced)
 - or 4 = Closed loop system (licence status unknown)
 
-**Denominator**: Total number of eligible patients with Type 1 diabetes.
+**Denominator**: Total number of eligible patients with Type 1 diabetes (measure 3)
 
 **Data Items**: 13, 20, 21
 

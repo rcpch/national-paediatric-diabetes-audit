@@ -28,9 +28,9 @@
 
 ### Calculation
 
-**Numerator**: Total number of eligible patients with Type 1 diabetes (measure 2)
+**Numerator**: Number of eligible patients whose most recent entry (based on visit date) for blood glucose monitoring (item 22) is 4 = Real time continuous glucose monitor with alarms
 
-**Denominator**: Number of eligible patients whose most recent entry (based on visit date) for blood glucose monitoring (item 22) is 4 = Real time continuous glucose monitor with alarms
+**Denominator**: Total number of eligible patients with Type 1 diabetes (measure 3)
 
 **Data Items**: 13, 22
 
