@@ -166,7 +166,6 @@ async def csv_upload_sync(
     )
 
     return await csv_upload(
-        user,
         dataframe,
         errors_to_return=(
             collections.defaultdict(lambda: collections.defaultdict(list))

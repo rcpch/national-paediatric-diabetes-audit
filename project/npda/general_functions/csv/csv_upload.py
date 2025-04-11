@@ -85,7 +85,7 @@ async def tidy_up_old_submissions(pdu, new_submission):
 
 
 async def csv_upload(
-    user, dataframe, errors_to_return, csv_file_name, submission
+    dataframe, errors_to_return, csv_file_name, submission
 ):
     """
     Processes standardised NPDA csv file and persists results in NPDA tables
