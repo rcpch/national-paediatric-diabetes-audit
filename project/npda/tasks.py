@@ -6,7 +6,7 @@ from asgiref.sync import async_to_sync
 
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 from project.npda.models.submission import Submission
-from project.npda.general_functions.csv import csv_parse, csv_upload
+from project.npda.general_functions.csv import csv_parse, csv_upload, tidy_up_old_submissions
 
 logger = logging.getLogger(__name__)
 
@@ -35,10 +35,16 @@ def upload_csv_task(submission_id):
     )
 
     csv_upload_sync = async_to_sync(csv_upload)
+    tidy_up_old_submissions_sync = async_to_sync(tidy_up_old_submissions)
 
     csv_upload_sync(
         dataframe=parsed_csv.df,
         errors_to_return=parsed_csv.errors_to_return,
         csv_file_name=submission.csv_file_name,
         submission=submission,
+    )
+
+    tidy_up_old_submissions_sync(
+        pdu=submission.paediatric_diabetes_unit,
+        new_submission=submission,
     )
