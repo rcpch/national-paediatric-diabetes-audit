@@ -30,7 +30,7 @@
 
 **Numerator**: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is 3 = Insulin pump Insulin pump or 6 = Insulin pump therapy plus other blood glucose lowering medication
 
-**Denominator**: Total number of eligible patients (measure 1)
+**Denominator**: Total number of eligible patients with T1D diabetes (measure 3)
 
 **Data Items**: 13, 20
 
@@ -66,7 +66,7 @@
 
 **Numerator**: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is 6 = Insulin pump therapy plus other blood glucose lowering medication
 
-**Denominator**: Total number of eligible patients (measure 1)
+**Denominator**: Total number of eligible patients with t1 diabetes (measure 3)
 
 **Data Items**: 13, 20
 
