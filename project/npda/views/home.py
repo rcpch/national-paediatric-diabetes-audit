@@ -16,15 +16,23 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.http import HttpResponse
 from django.conf import settings
+from django.utils import timezone
 
 
 # HTMX imports
 from django_htmx.http import trigger_client_event
 
-from project.npda.general_functions.csv import csv_upload, csv_parse, csv_header
+from project.npda.general_functions.csv import (
+    csv_upload,
+    csv_parse,
+    csv_header,
+    create_csv_submission,
+    tidy_up_old_submissions
+)
 from ..forms.upload import UploadFileForm
 from ..general_functions.session import refresh_session_filters
 from ..general_functions.view_preference import get_or_update_view_preference
+from ..models import PaediatricDiabetesUnit
 
 # RCPCH imports
 from .decorators import login_and_otp_required
@@ -58,6 +66,10 @@ async def home(request):
 
         pz_code = request.session.get("pz_code")
         is_jersey = pz_code == "PZ248"
+
+        # TODO MRB: check pdu is active and I'm not a superuser?
+        pdu = await PaediatricDiabetesUnit.objects.aget(pz_code=pz_code)
+
         if request.session.get("can_upload_csv") is True:
             # check to see if the CSV is valid - cannot accept CSVs with no header. All other header errors are non-lethal but are reported back to the user
             try:
@@ -91,26 +103,25 @@ async def home(request):
 
             audit_year = request.session.get("selected_audit_year")
 
+            new_submission = await create_csv_submission(
+                pdu=pdu,
+                audit_year=audit_year,
+                csv_file_bytes=user_csv_bytes,
+                csv_file_name=user_csv_filename,
+                user=request.user,
+                ip_address=request.META.get("REMOTE_ADDR"),
+            )
+
             # CSV is valid, parse any errors and store the data in the tables.
             errors_by_row_index = await csv_upload(
                 user=request.user,
                 dataframe=parsed_csv.df,
                 errors_to_return=parsed_csv.errors_to_return,
                 csv_file_name=user_csv_filename,
-                csv_file_bytes=user_csv_bytes,
-                pdu_pz_code=pz_code,
-                audit_year=audit_year,
+                submission=new_submission,
             )
-            # log user activity
-            VisitActivity = apps.get_model("npda", "VisitActivity")
-            try:
-                await VisitActivity.objects.acreate(
-                    activity=8,
-                    ip_address=request.META.get("REMOTE_ADDR"),
-                    npdauser=request.user,
-                )  # uploaded csv - activity 8
-            except Exception as e:
-                logger.error(f"Failed to log user activity: {e}")
+
+            await tidy_up_old_submissions(pdu, new_submission)
 
             # update the session fields - this stores that the user has uploaded a csv and disables the ability to use the questionnaire
             await sync_to_async(refresh_session_filters)(request)
