@@ -169,14 +169,14 @@ async def home(request):
     return render(request=request, template_name=template, context=context)
 
 
-def download_template(request, region):
+def download_template(request):
     """
     Creates the template csv for users to fill out and upload into NPDA
     """
-    if region == "england_wales":
-        file = csv_header()
-    elif region == "jersey":
-        file = csv_header(is_jersey=True)
+
+    is_jersey = request.session.get("pz_code") == "PZ248"
+    file = csv_header(is_jersey=is_jersey)
+
     return HttpResponse(
         file,
         content_type="text/csv",
