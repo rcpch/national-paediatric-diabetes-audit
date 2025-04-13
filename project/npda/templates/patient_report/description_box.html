@@ -11,7 +11,7 @@
   <div class="flex flex-col my-2 gap-2">
     <p class="font-bold text-rcpch_dark_blue">Total</p>
     <div class="text-bold">
-      Showing {{ patients.count }} patient{{ patients.count|pluralize }} {{ proportion }} (total: {{ paginator.count }})
+      Showing {{ patients|length }} (out of {{ paginator.count }}) patient{{ patients|length|pluralize }} {{ proportion }}
     </div>
   </div>
   <!-- KEYS -->

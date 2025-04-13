@@ -1,6 +1,6 @@
 {% extends "patient_report/base_table.html" %}
 {% block description_box %}
-  {% include "patient_report/description_box.html" with description="HbA1c, BMI, and thyroid screen must be completed annually for all children and young people <i><b>with Type 1 diabetes</i></b>. Urinary albumin, blood pressure, and foot exam are mandatory for young people aged 12 and above. Eye screening is mandatory every 2 years for young people aged 12 and above, unless retinopathy was observed at a previous screen." proportion="of all children and young people with T1 diabetes." %}
+  {% include "patient_report/description_box.html" with description="HbA1c, BMI, and thyroid screen must be completed annually for all children and young people <i><b>with T1DM</i></b>. Urinary albumin, blood pressure, and foot exam are mandatory for young people aged 12 and above. Eye screening is mandatory every 2 years for young people aged 12 and above, unless retinopathy was observed at a previous screen." proportion="with T1DM." %}
 {% endblock %}
 {% block table_headers %}
   <th class="whitespace-normal break-words">
@@ -129,7 +129,7 @@
 </th>
 <th class="whitespace-normal break-words">
   <span class="tooltip tooltip-bottom"
-        data-tip="patients under 12y must complete only 3 measures. Those over 12y must complete all 6.">
+        data-tip="CYP under 12y must complete only 3 measures. CYP 12y and above must complete all 6.">
     <i class="fa-solid fa-circle-info text-white"></i>
     Total
   </span>
