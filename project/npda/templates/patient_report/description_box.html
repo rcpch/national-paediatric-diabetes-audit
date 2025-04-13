@@ -9,10 +9,24 @@
     <p>{{ description }}</p>
   </div>
   <div class="flex flex-col my-2 gap-2">
-    <p class="font-bold text-rcpch_dark_blue">Total</p>
+    <p class="font-bold text-rcpch_dark_blue">Patients shown</p>
     <div class="text-bold">
-      Showing {{ patients|length }} (out of {{ paginator.count }}) patient{{ patients|length|pluralize }} {{ proportion }}
+      {% if paginator.count == 0 %}
+        No patients found.
+      {% else %}
+        {% if patients|length > 1 %}
+          Showing {{ patients|length }} (out of {{ paginator.count }}) patient{{ patients|length|pluralize }} {{ proportion }}
+        {% else %}
+          Showing {{ patients|length }} patient{{ patients|length|pluralize }} {{ proportion }}
+        {% endif %}
+        per page.
+
+        {% if extra %}
+          <p class="font-bold text-rcpch_dark_blue">{{ extra }}</p>
+        {% endif %}
+      {% endif %}
     </div>
+
   </div>
   <!-- KEYS -->
   <div class="flex justify-between items-center">
