@@ -7,7 +7,7 @@ import random
 from project.npda.models import Patient, Visit
 from project.constants import DIABETES_TYPES, HBA1C_FORMATS
 from project.npda.views.dashboard.patient_characteristics import (
-    return_eligible_visits,
+    get_median_hba1c_by_patient,
     audit_period_for_audit_year,
 )
 from project.npda.tests.factories.patient_factory import PatientFactory
@@ -133,63 +133,64 @@ class TestReturnEligibleVisits:
             "audit_end": audit_end,
         }
 
-    def test_mmol_mol_format_conversion(self, setup_patients_and_visits):
+    def test_mmol_mol_format_and_median_conversion(self, setup_patients_and_visits):
         """Test HbA1c values in mmol/mol format are correctly processed"""
         # Get the test data
         patient_data = setup_patients_and_visits
         patient_mmol = patient_data["patient_mmol"]
-        audit_year = patient_data["audit_year"]
+        audit_start, audit_end = audit_period_for_audit_year(patient_data["audit_year"])
 
         # Get visits using the function
-        visits = return_eligible_visits([patient_mmol], audit_year)
+        visits = get_median_hba1c_by_patient(audit_start=audit_start, audit_end=audit_end, patients=[patient_mmol])
         visit_data = list(visits)
 
         # Assertions
         assert len(visit_data) == 1
-        assert visit_data[0]["hba1c_mmol_mol"] == Decimal("58.0")
+        assert visit_data[0]["median_hba1c_mmol_mol"] == Decimal("58.0")
 
         # Calculate expected HbA1c percent conversion
         expected_percent = round(
             Decimal("58.0") * Decimal("0.09148") + Decimal("2.152"), 1
         )
-        assert visit_data[0]["hba1c_percent"] == expected_percent
+        assert visit_data[0]["median_hba1c_percent"] == expected_percent
 
     def test_percent_format_conversion(self, setup_patients_and_visits):
         """Test HbA1c values in % format are correctly processed"""
         # Get the test data
         patient_data = setup_patients_and_visits
         patient_percent = patient_data["patient_percent"]
-        audit_year = patient_data["audit_year"]
+        audit_start, audit_end = audit_period_for_audit_year(patient_data["audit_year"])
 
         # Get visits using the function
-        visits = return_eligible_visits([patient_percent], audit_year)
+        visits = get_median_hba1c_by_patient(audit_start=audit_start, audit_end=audit_end, patients=[patient_percent])
         visit_data = list(visits)
 
         # Assertions
         assert len(visit_data) == 1
-        assert visit_data[0]["hba1c_percent"] == Decimal("7.5")
+        assert visit_data[0]["median_hba1c_percent"] == Decimal("7.5")
 
         # Calculate expected HbA1c mmol/mol conversion
         expected_mmol_mol = round(
-            (Decimal("7.5") - Decimal("2.152")) / Decimal("0.09148")
+            (Decimal("7.5") - Decimal("2.152")) / Decimal("0.09148"),2
         )
-        assert visit_data[0]["hba1c_mmol_mol"] == expected_mmol_mol
+        
+        assert visit_data[0]["median_hba1c_mmol_mol"] == expected_mmol_mol
 
     def test_eligibility_criteria(self, setup_patients_and_visits):
         """Test that visits must meet eligibility criteria"""
         # Get the test data
         patient_data = setup_patients_and_visits
         patient_mmol = patient_data["patient_mmol"]
-        audit_year = patient_data["audit_year"]
+        audit_start, audit_end = audit_period_for_audit_year(patient_data["audit_year"])
 
         # Get visits using the function
-        visits = return_eligible_visits([patient_mmol], audit_year)
+        visits = get_median_hba1c_by_patient(audit_start=audit_start, audit_end=audit_end, patients=[patient_mmol])
         visit_data = list(visits)
 
         # Should only return 1 valid visit (excluding early_visit and null_hba1c_visit)
         assert len(visit_data) == 1
         # The visit should have HbA1c value 58.0 mmol/mol
-        assert visit_data[0]["hba1c_mmol_mol"] == Decimal("58.0")
+        assert visit_data[0]["median_hba1c_mmol_mol"] == Decimal("58.0")
 
     def test_audit_year_filter(self, setup_patients_and_visits):
         """Test that visits are filtered by audit year"""
@@ -198,32 +199,97 @@ class TestReturnEligibleVisits:
         patient_mmol = patient_data["patient_mmol"]
         patient_prev_year = patient_data["patient_prev_year"]
         patient_next_year = patient_data["patient_next_year"]
-        audit_year = patient_data["audit_year"]
 
         # Get visits for previous audit year
-        visits_prev_year = return_eligible_visits([patient_prev_year], audit_year - 1)
+        audit_start, audit_end = audit_period_for_audit_year(patient_data["audit_year"]-1)
+        visits_prev_year = get_median_hba1c_by_patient(audit_start=audit_start, audit_end=audit_end, patients=[patient_prev_year])
         visits_prev_year_data = list(visits_prev_year)
 
         # Get visits for current audit year
-        visits_current_year = return_eligible_visits([patient_mmol], audit_year)
+        audit_start, audit_end = audit_period_for_audit_year(patient_data["audit_year"])
+        visits_current_year = get_median_hba1c_by_patient(audit_start=audit_start, audit_end=audit_end, patients=[patient_mmol])
         visits_current_year_data = list(visits_current_year)
 
         # Get visits for next audit year
-        visits_next_year = return_eligible_visits([patient_next_year], audit_year + 1)
+        audit_start, audit_end = audit_period_for_audit_year(patient_data["audit_year"]+1)
+        visits_next_year = get_median_hba1c_by_patient(audit_start=audit_start, audit_end=audit_end, patients=[patient_next_year])
         visits_next_year_data = list(visits_next_year)
 
         # Assertions
         assert len(visits_prev_year_data) == 1
-        assert visits_prev_year_data[0]["hba1c_mmol_mol"] == Decimal("55.0")
+        assert visits_prev_year_data[0]["median_hba1c_mmol_mol"] == Decimal("55.0")
 
         assert len(visits_current_year_data) == 1
-        assert visits_current_year_data[0]["hba1c_mmol_mol"] == Decimal("58.0")
+        assert visits_current_year_data[0]["median_hba1c_mmol_mol"] == Decimal("58.0")
 
         assert len(visits_next_year_data) == 1
-        assert visits_next_year_data[0]["hba1c_mmol_mol"] == Decimal("52.0")
+        assert visits_next_year_data[0]["median_hba1c_mmol_mol"] == Decimal("52.0")
 
         # Check that no visits are returned for the wrong audit year
-        wrong_year_visits = return_eligible_visits(
-            [patient_mmol, patient_prev_year, patient_next_year], audit_year + 2
-        )
+        audit_start, audit_end = audit_period_for_audit_year(patient_data["audit_year"]+2)
+        wrong_year_visits = get_median_hba1c_by_patient(audit_start=audit_start, audit_end=audit_end, patients=[patient_mmol, patient_prev_year, patient_next_year])
         assert len(list(wrong_year_visits)) == 0
+    
+    def test_median_hba1c_mmol_mol_from_three_visits(self, setup_patients_and_visits):
+        """Test median HbA1c calculation from three visits"""
+        # Get the test data
+        patient_data = setup_patients_and_visits
+        patient_mmol = patient_data["patient_mmol"]
+        audit_start, audit_end = audit_period_for_audit_year(patient_data["audit_year"])
+
+        # Create additional visits for the same patient
+        VisitFactory(
+            patient=patient_mmol,
+            visit_date=audit_start + timedelta(days=random.randint(30, 150)),
+            hba1c_date=audit_start + timedelta(days=random.randint(30, 150)),
+            hba1c=Decimal("60.0"),
+            hba1c_format=HBA1C_FORMATS[0][0],  # mmol/mol
+        )
+
+        VisitFactory(
+            patient=patient_mmol,
+            visit_date=audit_start + timedelta(days=random.randint(30, 150)),
+            hba1c_date=audit_start + timedelta(days=random.randint(30, 150)),
+            hba1c=Decimal("62.0"),
+            hba1c_format=HBA1C_FORMATS[0][0],  # mmol/mol
+        )
+
+        # Get visits using the function
+        visits = get_median_hba1c_by_patient(audit_start=audit_start, audit_end=audit_end, patients=[patient_mmol])
+        visit_data = list(visits)
+
+        # Assertions
+        assert len(visit_data) == 1
+        assert visit_data[0]["median_hba1c_mmol_mol"] == Decimal("60.0")
+    
+    def test_median_hba1c_percent_from_three_visits(self, setup_patients_and_visits):
+        """Test median HbA1c calculation from three visits"""
+        # Get the test data
+        patient_data = setup_patients_and_visits
+        patient_percent = patient_data["patient_percent"]
+        audit_start, audit_end = audit_period_for_audit_year(patient_data["audit_year"])
+
+        # Create additional visits for the same patient
+        VisitFactory(
+            patient=patient_percent,
+            visit_date=audit_start + timedelta(days=random.randint(30, 150)),
+            hba1c_date=audit_start + timedelta(days=random.randint(30, 150)),
+            hba1c=Decimal("7.8"),
+            hba1c_format=HBA1C_FORMATS[1][0],  # %
+        )
+
+        VisitFactory(
+            patient=patient_percent,
+            visit_date=audit_start + timedelta(days=random.randint(30, 150)),
+            hba1c_date=audit_start + timedelta(days=random.randint(30, 150)),
+            hba1c=Decimal("8.0"),
+            hba1c_format=HBA1C_FORMATS[1][0],  # %
+        )
+
+        # Get visits using the function
+        visits = get_median_hba1c_by_patient(audit_start=audit_start, audit_end=audit_end, patients=[patient_percent])
+        visit_data = list(visits)
+
+        # Assertions
+        assert len(visit_data) == 1
+        assert visit_data[0]["median_hba1c_percent"] == Decimal("7.8")

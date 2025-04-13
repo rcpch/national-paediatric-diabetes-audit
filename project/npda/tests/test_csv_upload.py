@@ -18,9 +18,19 @@ from django.core.exceptions import ValidationError
 from django.contrib.gis.geos import Point
 from httpx import HTTPError
 
-from project.npda.general_functions.csv import csv_upload, csv_parse
+from project.npda.general_functions.csv import (
+    csv_upload,
+    csv_parse,
+    create_csv_submission,
+    tidy_up_old_submissions
+)
 from project.constants import csv_definition_for, ALL_DATES
-from project.npda.models import NPDAUser, Patient, Visit
+from project.npda.models import (
+    NPDAUser,
+    Patient,
+    Visit,
+    PaediatricDiabetesUnit
+)
 from project.npda.tests.factories.patient_factory import (
     INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
     TODAY,
@@ -80,13 +90,13 @@ ALDER_HEY_PZ_CODE = "PZ074"
 
 @pytest.fixture
 def valid_df(dummy_sheets_folder):
-    file = dummy_sheets_folder / "dummy_sheet.csv"
+    file = dummy_sheets_folder / "dummy_sheet_test.csv"
     return csv_parse(file).df
 
 
 @pytest.fixture
 def single_row_valid_df(dummy_sheets_folder):
-    file = dummy_sheets_folder / "dummy_sheet.csv"
+    file = dummy_sheets_folder / "dummy_sheet_test.csv"
     df = csv_parse(file).df
     df = df.head(1)
 
@@ -95,7 +105,7 @@ def single_row_valid_df(dummy_sheets_folder):
 
 @pytest.fixture
 def one_patient_two_visits(dummy_sheets_folder):
-    file = dummy_sheets_folder / "dummy_sheet.csv"
+    file = dummy_sheets_folder / "dummy_sheet_test.csv"
     df = csv_parse(file).df
 
     df = df.head(2)
@@ -106,7 +116,7 @@ def one_patient_two_visits(dummy_sheets_folder):
 
 @pytest.fixture
 def two_patients_first_with_two_visits_second_with_one(dummy_sheets_folder):
-    file = dummy_sheets_folder / "dummy_sheet.csv"
+    file = dummy_sheets_folder / "dummy_sheet_test.csv"
     df = csv_parse(file).df
 
     df = df.head(3)
@@ -119,7 +129,7 @@ def two_patients_first_with_two_visits_second_with_one(dummy_sheets_folder):
 
 @pytest.fixture
 def two_patients_with_one_visit_each(dummy_sheets_folder):
-    file = dummy_sheets_folder / "dummy_sheet.csv"
+    file = dummy_sheets_folder / "dummy_sheet_test.csv"
     df = csv_parse(file).df
 
     df = df.drop([0]).head(2).reset_index(drop=True)
@@ -141,10 +151,21 @@ def test_user(seed_groups_fixture, seed_users_fixture):
 # https://github.com/pytest-dev/pytest-asyncio/issues/226
 @async_to_sync
 async def csv_upload_sync(
-    user, dataframe, pdu_pz_code=ALDER_HEY_PZ_CODE, errors_to_return=None
+    user, dataframe, pdu=None, errors_to_return=None
 ):
+    if not pdu:
+        pdu = await PaediatricDiabetesUnit.objects.aget(pz_code=ALDER_HEY_PZ_CODE)
+
+    new_submission = await create_csv_submission(
+        pdu=pdu,
+        audit_year=2024,
+        csv_file_bytes=None,
+        csv_file_name=None,
+        user=user,
+        ip_address=None
+    )
+
     return await csv_upload(
-        user,
         dataframe,
         errors_to_return=(
             collections.defaultdict(lambda: collections.defaultdict(list))
@@ -152,9 +173,7 @@ async def csv_upload_sync(
             else errors_to_return
         ),
         csv_file_name=None,
-        csv_file_bytes=None,
-        pdu_pz_code=pdu_pz_code,
-        audit_year=2024,
+        submission=new_submission
     )
 
 
@@ -331,7 +350,8 @@ def test_missing_unique_reference_number(
         Patient.objects.count() == 0
     ), "There should be no patients in the database before the test"
 
-    errors = csv_upload_sync(test_user, df, "PZ248")
+    jersey = PaediatricDiabetesUnit.objects.get(pz_code="PZ248")
+    errors = csv_upload_sync(test_user, df, pdu=jersey)
 
     assert "unique_reference_number" in errors[0]
 
@@ -3166,6 +3186,8 @@ def test_bad_data_for_positive_small_integer_fields(
     column = headings["heading"]
     model = apps.get_model("npda", headings["model"])
 
+    pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
+
     for [value, expected, assertion_message] in [
         [94, None, f"Failed to handle {model_field} with incorrect choice (94)"],
         [-1, None, f"Failed to handle {model_field} with -1 (negative number)"],
@@ -3181,6 +3203,9 @@ def test_bad_data_for_positive_small_integer_fields(
         ],
         ["STRING", None, f"Failed to handle unexpected string for {model_field}"],
     ]:
+        # Clear out patients created by previous iterations of the loop
+        Patient.objects.all().delete()
+
         one_row_csv = modify_raw_csv(
             dummy_sheet_csv,
             end=2,  # exclusive
@@ -3189,7 +3214,7 @@ def test_bad_data_for_positive_small_integer_fields(
 
         df = read_csv_from_str(one_row_csv).df
 
-        errors = csv_upload_sync(test_user, df)
+        errors = csv_upload_sync(test_user, df, pdu=pdu)
 
         assert len(errors) > 0, assertion_message
         assert model.objects.count() == 1, assertion_message
@@ -3201,6 +3226,7 @@ def test_bad_data_for_positive_small_integer_fields(
         # No errors field in Transfer
         if hasattr(instance, "errors"):
             assert model_field in instance.errors
+
 
 
 @pytest.mark.parametrize(

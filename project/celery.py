@@ -1,10 +1,11 @@
-import logging
 import os
+import logging
+from logging.config import dictConfig
 
-from celery import Celery
-from celery import Task
-from django.conf import settings
 import django
+from django.conf import settings
+from celery import Celery, Task
+from celery.signals import setup_logging
 
 # Logging setup
 logger = logging.getLogger(__name__)
@@ -29,6 +30,10 @@ app.conf.update(
 )
 
 app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
+
+@setup_logging.connect
+def setup_celery_logging(*args, **kwargs):
+    dictConfig(settings.LOGGING)
 
 class NPDATask(Task):
     def on_failure(self, exc, task_id, args, kwargs, einfo):

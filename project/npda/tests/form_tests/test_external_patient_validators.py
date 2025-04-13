@@ -59,6 +59,32 @@ async def test_invalid_postcode():
         assert(type(result.postcode) is ValidationError)
 
 
+@pytest.mark.parametrize(
+    "postcode",
+    [
+        pytest.param("ZZ993CZ"),
+        pytest.param("ZZ99 3GZ"),
+        pytest.param("ZZ993GZ"),
+        pytest.param("ZZ99 3GZ"),
+        pytest.param("ZZ993WZ"),
+        pytest.param("ZZ99 3WZ"),
+        pytest.param("ZZ993VZ"),
+        pytest.param("ZZ99 3VZ"),
+    ],
+)
+async def test_special_nhs_postcodes(postcode):
+    with patch("project.npda.forms.external_patient_validators.validate_postcode") as mock:
+        result = await validate_patient_async(
+            postcode=postcode,
+            gp_practice_ods_code=None,
+            gp_practice_postcode=None,
+            async_client=async_client
+        )
+
+        assert(result.postcode == postcode)
+        assert not mock.called
+
+
 async def test_http_error_validating_postcode():
     with patch("project.npda.forms.external_patient_validators.validate_postcode", AsyncMock(side_effect=HTTPError("oopsie!"))):
         result = await validate_patient_async(
@@ -193,7 +219,7 @@ async def test_normalised_postcode_used_for_call_to_nhs_spine():
             assert(result.gp_practice_postcode == GP_POSTCODE_WITH_SPACES)
 
 
-async def test_invalid_gp_practice_postcode():
+async def test_gp_practice_postcode_does_not_return_result_from_spine():
     with patch("project.npda.forms.external_patient_validators.gp_ods_code_for_postcode", AsyncMock(return_value=None)):
         result = await validate_patient_async(
             postcode=None,
@@ -203,6 +229,23 @@ async def test_invalid_gp_practice_postcode():
         )
 
         assert(type(result.gp_practice_postcode) is ValidationError)
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/931
+async def test_invalid_gp_practice_postcode():
+    with patch("project.npda.forms.external_patient_validators.validate_postcode", AsyncMock(return_value=None)):    
+        with patch("project.npda.forms.external_patient_validators.gp_ods_code_for_postcode") as mock:
+            result = await validate_patient_async(
+                postcode=None,
+                gp_practice_ods_code=None,
+                gp_practice_postcode="INVALID",
+                async_client=async_client
+            )
+
+            # Passing None to the API call returned a 406 Not Acceptable so we want to check we don't call
+            # the spine at all
+            assert not mock.called
+            assert(type(result.gp_practice_postcode) is ValidationError)
 
 
 async def test_http_error_validating_gp_practice_postcode():

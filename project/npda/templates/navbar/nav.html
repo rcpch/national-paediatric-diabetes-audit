@@ -36,11 +36,6 @@
           <br>
           Diabetes Audit
         </p>
-        {% if instance_label %}
-          <p class="badge badge-lg badge-warning">
-            {{instance_label}}
-          </p>
-        {% endif %}
       </span>
       {% comment %} MOBILE {% endcomment %}
       <span class="lg:hidden">
@@ -53,6 +48,11 @@
     <ul class="menu menu-horizontal px-1">
       {% include 'navbar/components/nav_links.html' %}
     </ul>
+    {% if instance_label %}
+          <p class="badge badge-md badge-warning">
+            {{instance_label}}
+          </p>
+        {% endif %}
   </div>
   {% comment %} RIGHT {% endcomment %}
   <div class="navbar-end h-full">

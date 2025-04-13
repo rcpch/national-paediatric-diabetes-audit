@@ -3,7 +3,7 @@
       style="display: inline-flex;
              align-items: center">
   <a href="{% url 'patient_visits' patient_pk %}"
-     class="block w-full h-full flex flex-row items-center">
+     class="w-full h-full flex flex-row items-center">
     {{ patient_identifier }}
     <i class="fa-solid fa-arrow-up-right-from-square text-rcpch_strong_blue ml-1"></i>
   </a>
@@ -14,5 +14,10 @@
                  align-items: center">
       <i class="fa-solid fa-calendar-days text-rcpch_orange"></i>
     </span>
+  {% endif %}
+  {% if pz_code == 'PZ248' %}
+    {% include 'partials/page_elements/copy_button.html' with value=patient.unique_reference_number tooltip="Copy Unique Reference Number" button_class="ml-1" %}
+  {% else %}
+    {% include 'partials/page_elements/copy_button.html' with value=patient.nhs_number tooltip="Copy NHS Number" button_class="ml-1" %}
   {% endif %}
 </span>

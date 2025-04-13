@@ -11,7 +11,7 @@ from project.npda.forms.external_visit_validators import validate_visit_async, V
 async_client = AsyncMock()
 
 VALID_FIELDS = {
-    "birth_date": date(2000, 1, 1),
+    "birth_date": date(2018, 1, 1),
     "observation_date": date(2021, 1, 1),
     "sex": 1,
     "height": 123,
@@ -164,6 +164,29 @@ async def test_negative_weight():
         assert(result.bmi_result is None)
 
         assert(mock.call_count == 1)
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/577
+async def test_over_20_yo():
+    with patch("project.npda.forms.external_visit_validators.calculate_centiles_z_scores", AsyncMock(return_value=(1,2))) as mock:
+        result = await validate_visit_async(
+            **(VALID_FIELDS | {
+                "birth_date": date(2000, 1, 1),
+                "observation_date": date(2021, 1, 1),
+            })
+        )
+
+        assert(result.height_result.centile == 1)
+        assert(result.height_result.sds == 2)
+        
+        assert(result.weight_result.centile == 1)    
+        assert(result.weight_result.sds == 2)
+
+        for call in mock.mock_calls:
+            call_date = call.kwargs["observation_date"]
+
+            # Can't do growth charts > 20 year olds so clamp to day before their 20th birthday
+            assert(call_date == date(2019, 12, 31))
 
 
 async def test_invalid_bmi():
