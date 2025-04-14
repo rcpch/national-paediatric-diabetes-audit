@@ -130,6 +130,22 @@ class Command(BaseCommand):
             )
 
             submissions_by_pz_code[pz_code] = submission
+        
+        for pz_code, submission in submissions_by_pz_code.items():
+            df = parsed_csv.df
+            df = df[df["PDU Number"] == pz_code]
+
+            errors = async_to_sync(csv_upload)(
+                dataframe=df,
+                errors_to_return=parsed_csv.errors_to_return,
+                # Just used for logging
+                csv_file_name="MANUAL IMPORT",
+                submission=submission
+            )
+
+            if errors:
+                print(f"Errors found during import for {pz_code}:")
+                print(json.dumps(errors))
 
 
     def handle(self, *args, **options):
