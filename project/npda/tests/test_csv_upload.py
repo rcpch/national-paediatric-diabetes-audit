@@ -325,7 +325,7 @@ def test_missing_nhs_number(
 
     assert "nhs_number" in errors[0]
 
-    # We shouldn't save this patient (invariant enforced in Patient.save not in the database)
+    # We shouldn't save this patient (invariant enforced in Patient.clean not in the database)
     assert Patient.objects.count() == 0
 
 
@@ -355,7 +355,7 @@ def test_missing_unique_reference_number(
 
     assert "unique_reference_number" in errors[0]
 
-    # We shouldn't save this patient (invariant enforced in Patient.save not in the database)
+    # We shouldn't save this patient (invariant enforced in Patient.clean not in the database)
     assert Patient.objects.count() == 0
 
 
