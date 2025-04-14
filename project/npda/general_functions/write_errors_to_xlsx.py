@@ -54,7 +54,6 @@ def write_errors_to_xlsx(
         errors=errors,
         original_data=df,
         identifier_field="Unique Reference Number" if is_jersey else "NHS Number",
-        csv_headings=(UNIQUE_IDENTIFIER_JERSEY if is_jersey else UNIQUE_IDENTIFIER_ENGLAND) + CSV_HEADING_OBJECTS
     )
 
     # Add sheet that lists the errors.
@@ -125,8 +124,7 @@ def flatten_errors(
     #  {row_number: {field_name: [error_messages]}}
     errors: dict[int, dict[str, list[str]]],
     original_data: pd.DataFrame,
-    identifier_field: str,
-    csv_headings: List[Dict[str, str]],
+    identifier_field: str
 ) -> pd.DataFrame:
     identifier_column = csv_definition_for(identifier_field)["heading"]
 
@@ -134,11 +132,15 @@ def flatten_errors(
 
     for row_ix, row_errors in errors.items():
         for field, errors in row_errors.items():
+            # __all__ errors should be attached to the first column
+            csv_definition = csv_definition_for(field)
+            column = csv_definition["heading"] if csv_definition else identifier_column
+
             rows.append({
                 # 0 based indexing and the column header. So + 2
                 "Original CSV Row": int(row_ix) + 2,
                 identifier_field: original_data.loc[int(row_ix), identifier_column],
-                "Column": csv_definition_for(field)["heading"],
+                "Column": column,
                 "Errors": "; ".join(errors),
             })
 
