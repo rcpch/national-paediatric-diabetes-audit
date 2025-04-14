@@ -63,7 +63,17 @@ class Command(BaseCommand):
                     Designed for bulk import patient data from the old platform."""
         )
 
-    def upload_csv_to_single_pdu(self, audit_year, pdu_pz_code, user, parsed_csv, csv_file_bytes, csv_file_name):
+        parser.add_argument(
+            "--merge-existing-questionnaire-submissions",
+            action="store_true",
+            help="""Requires --import-as-questionnaire-entries.
+                    Adds patients to the existing questionnaire submission for each PDU.
+                    If the submission does not already exist, one is created.
+                    For each row we look up the patient by NHS number (unique reference number in Jersey)
+                    and will only add data for patients that do not already exist"""
+        )
+
+    def upload_csv_to_single_pdu(self,audit_year, pdu_pz_code, user, parsed_csv, csv_file_bytes, csv_file_name):
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=pdu_pz_code)
 
         submission = async_to_sync(create_csv_submission)(
@@ -88,11 +98,13 @@ class Command(BaseCommand):
 
         return errors
     
-    def upload_as_questionnaire_entries(self, audit_year, pdu_pz_code, user, parsed_csv):
+    def upload_as_questionnaire_entries(self, audit_year, pdu_pz_code, user, parsed_csv, merge_existing_questionnaire_submissions=False):
         df = parsed_csv.df
 
         pz_codes_that_need_submissions = set()
         pz_codes_that_already_have_submissions = set()
+
+        submissions_by_pz_code = {}
 
         for pz_code in df["PDU Number"].unique():
             try:
@@ -100,23 +112,27 @@ class Command(BaseCommand):
             except PaediatricDiabetesUnit.DoesNotExist:
                 raise ValueError(f"Invalid PDU Number: {pz_code}")
             
-            has_existing_submission = Submission.objects.filter(
-                paediatric_diabetes_unit=pdu,
-                audit_year=audit_year,
-                submission_active=True
-            ).exists()
+            try:
+                submission = Submission.objects.get(
+                    paediatric_diabetes_unit=pdu,
+                    audit_year=audit_year,
+                    submission_active=True
+                )
+            except Submission.DoesNotExist:
+                submission = None
 
-            if(has_existing_submission):
-                pz_codes_that_already_have_submissions.add(pz_code)
+            if(submission):
+                if merge_existing_questionnaire_submissions:
+                    submissions_by_pz_code[pz_code] = submission
+                else:
+                    pz_codes_that_already_have_submissions.add(pz_code)
             else:
                 pz_codes_that_need_submissions.add(pz_code)
         
-        if len(pz_codes_that_already_have_submissions) > 0:
+        if not merge_existing_questionnaire_submissions and len(pz_codes_that_already_have_submissions) > 0:
             raise ValueError(
                 f"Submissions already exist for the following PDUs: {pz_codes_that_already_have_submissions}"
             )
-        
-        submissions_by_pz_code = {}
 
         for pz_code in pz_codes_that_need_submissions:
             pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
@@ -189,7 +205,7 @@ class Command(BaseCommand):
             )
         else:
             errors = self.upload_as_questionnaire_entries(
-                audit_year, pdu_pz_code, user, parsed_csv
+                audit_year, pdu_pz_code, user, parsed_csv, options["merge_existing_questionnaire_submissions"]
             )
 
         if errors:
