@@ -297,6 +297,10 @@ async def csv_upload(
 
             visit_forms = []
             for _, row in rows.iterrows():
+                if pd.isnull(row["Visit/Appointment Date"]):
+                    logger.warning(f"Missing visit date for {pdu.pz_code} from {csv_file_name}[{row["row_index"]}]. Skipping creating visit.")
+                    continue
+
                 visit_form = await validate_visit_using_form(
                     patient_form, row, async_client
                 )
