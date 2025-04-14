@@ -3,10 +3,12 @@ import json
 from asgiref.sync import async_to_sync
 
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 
 from project.npda.models import (
     NPDAUser,
     PaediatricDiabetesUnit,
+    Submission
 )
 from project.npda.general_functions import get_current_audit_year
 from project.npda.general_functions.csv import (
@@ -54,7 +56,11 @@ class Command(BaseCommand):
         parser.add_argument(
             "--import-as-questionnaire-entries",
             action="store_true",
-            help="Import data from the file as if it were submitted using the questionnaire. Assign each row to a PDU using the 'PDU Number' column",
+            help="""Import data from the file as if it were submitted using the questionnaire.
+                    Assign each row to a PDU using the 'PDU Number' column".
+                    Will create a questionnaire submission for each PDU in the file.
+                    If any submissions already exist no data will be imported.
+                    Designed for bulk import patient data from the old platform."""
         )
 
     def upload_csv_to_single_pdu(self, audit_year, pdu_pz_code, user, parsed_csv, csv_file_bytes, csv_file_name):
@@ -80,7 +86,50 @@ class Command(BaseCommand):
             new_submission=submission
         )
 
-        return errors   
+        return errors
+    
+    def upload_as_questionnaire_entries(self, audit_year, pdu_pz_code, user, parsed_csv):
+        df = parsed_csv.df
+
+        pz_codes_that_need_submissions = set()
+        pz_codes_that_already_have_submissions = set()
+
+        for pz_code in df["PDU Number"].unique():
+            try:
+                pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+            except PaediatricDiabetesUnit.DoesNotExist:
+                raise ValueError(f"Invalid PDU Number: {pz_code}")
+            
+            has_existing_submission = Submission.objects.filter(
+                paediatric_diabetes_unit=pdu,
+                audit_year=audit_year,
+                submission_active=True
+            ).exists()
+
+            if(has_existing_submission):
+                pz_codes_that_already_have_submissions.add(pz_code)
+            else:
+                pz_codes_that_need_submissions.add(pz_code)
+        
+        if len(pz_codes_that_already_have_submissions) > 0:
+            raise ValueError(
+                f"Submissions already exist for the following PDUs: {pz_codes_that_already_have_submissions}"
+            )
+        
+        submissions_by_pz_code = {}
+
+        for pz_code in pz_codes_that_need_submissions:
+            pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+
+            submission = Submission.objects.create(
+                audit_year=audit_year,
+                paediatric_diabetes_unit=pdu,
+                submission_active=True,
+                submission_by=user,
+                submission_date=timezone.now()
+            )
+
+            submissions_by_pz_code[pz_code] = submission
 
 
     def handle(self, *args, **options):
@@ -117,7 +166,9 @@ class Command(BaseCommand):
                 audit_year, pdu_pz_code, user, parsed_csv, csv_file_bytes, csv_file_name
             )
         else:
-            errors = None
+            errors = self.upload_as_questionnaire_entries(
+                audit_year, pdu_pz_code, user, parsed_csv
+            )
 
         if errors:
             print(json.dumps(errors))
