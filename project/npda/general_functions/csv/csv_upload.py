@@ -40,7 +40,7 @@ from project.npda.models import (
     VisitActivity
 )
 
-async def create_csv_submission(pdu, audit_year, csv_file_bytes, csv_file_name, user, ip_address):
+async def create_csv_submission(pdu, audit_year, csv_file_bytes, csv_file_name, user=None, ip_address=None):
     old_submission = await Submission.objects.filter(
         paediatric_diabetes_unit=pdu,
         audit_year=audit_year,
@@ -61,11 +61,12 @@ async def create_csv_submission(pdu, audit_year, csv_file_bytes, csv_file_name, 
         submission_active=True
     )
     
-    await VisitActivity.objects.acreate(
-        activity=8,
-        ip_address=ip_address,
-        npdauser=user,
-    )  # uploaded csv - activity 8
+    if user:
+        await VisitActivity.objects.acreate(
+            activity=8,
+            ip_address=ip_address,
+            npdauser=user,
+        )  # uploaded csv - activity 8
 
     return submission
 
@@ -85,7 +86,12 @@ async def tidy_up_old_submissions(pdu, new_submission):
 
 
 async def csv_upload(
-    dataframe, errors_to_return, csv_file_name, submission
+    dataframe,
+    errors_to_return,
+    csv_file_name,
+    submission,
+    allow_empty_visits=False,
+    save_errors_on_submission=True
 ):
     """
     Processes standardised NPDA csv file and persists results in NPDA tables
@@ -292,6 +298,10 @@ async def csv_upload(
 
             visit_forms = []
             for _, row in rows.iterrows():
+                if allow_empty_visits and pd.isnull(row["Visit/Appointment Date"]):
+                    logger.info(f"Missing visit date for {pdu.pz_code} from {csv_file_name}[{row["row_index"]}]. Skipping creating visit.")
+                    continue
+
                 visit_form = await validate_visit_using_form(
                     patient_form, row, async_client
                 )
@@ -344,7 +354,7 @@ async def csv_upload(
                 tg.create_task(task(rows))
 
     # Store the errors to report back to the user in the Data Quality Report
-    if errors_to_return:
+    if errors_to_return and save_errors_on_submission:
         submission.errors = json.dumps(errors_to_return)
         await submission.asave()
 
