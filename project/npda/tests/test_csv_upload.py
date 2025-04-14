@@ -507,6 +507,9 @@ def test_invalid_nhs_number(test_user, single_row_valid_df):
     errors = csv_upload_sync(test_user, single_row_valid_df)
     assert "nhs_number" in errors[0]
 
+    patient = Patient.objects.first()
+    assert patient.nhs_number == "123456789"
+
 
 @pytest.mark.django_db
 def test_future_date_of_birth(test_user, single_row_valid_df):
