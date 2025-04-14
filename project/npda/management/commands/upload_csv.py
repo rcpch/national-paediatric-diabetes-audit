@@ -13,7 +13,8 @@ from project.npda.general_functions.csv import (
     csv_upload,
     csv_parse,
     csv_header,
-    create_csv_submission
+    create_csv_submission,
+    tidy_up_old_submissions
 )
 
 
@@ -51,9 +52,9 @@ class Command(BaseCommand):
         )
 
         parser.add_argument(
-            "--use-pz-codes-from-file",
+            "--import-as-questionnaire-entries",
             action="store_true",
-            help="Use the PZ number column from the file. Allows importing data for multiple PDUs at once",
+            help="Import data from the file as if it were submitted using the questionnaire. Assign each row to a PDU using the 'PDU Number' column",
         )
 
     def upload_csv_to_single_pdu(self, audit_year, pdu_pz_code, user, parsed_csv, csv_file_bytes, csv_file_name):
@@ -74,6 +75,11 @@ class Command(BaseCommand):
             submission=submission
         )
 
+        async_to_sync(tidy_up_old_submissions)(
+            pdu=pdu,
+            new_submission=submission
+        )
+
         return errors   
 
 
@@ -87,13 +93,13 @@ class Command(BaseCommand):
             # TODO MRB: replace this with AuditPeriod before merging https://github.com/rcpch/national-paediatric-diabetes-audit/pull/865
             audit_year = get_current_audit_year()
 
-        if options["use_pz_codes_from_file"] and options["pz_code"]:
+        if options["import_as_questionnaire_entries"] and options["pz_code"]:
             raise ValueError("Cannot specify both --pz-code and --use-pz-codes-from-file")
 
-        if not options["use_pz_codes_from_file"] and not options["pz_code"]:
+        if not options["import_as_questionnaire_entries"] and not options["pz_code"]:
             raise ValueError("Must specify either --pz-code or --use-pz-codes-from-file")
 
-        if options["use_pz_codes_from_file"]:
+        if options["import_as_questionnaire_entries"]:
             pdu_pz_code = None
         else:
             pdu_pz_code = options["pz_code"]
