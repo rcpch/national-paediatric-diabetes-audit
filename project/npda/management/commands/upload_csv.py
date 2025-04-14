@@ -147,7 +147,11 @@ class Command(BaseCommand):
 
             if errors:
                 print(f"Errors found during import for {pz_code}:")
-                print(json.dumps(errors))
+                
+                for row, errors_by_field in errors.items():
+                    print(f"\tRow {row}:")
+                    for field, error in errors_by_field.items():
+                        print(f"\t\t{field}: {error}")
 
 
     def handle(self, *args, **options):
