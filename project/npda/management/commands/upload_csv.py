@@ -23,15 +23,26 @@ class Command(BaseCommand):
         parser.add_argument(
             "--pz-code",
             type=str,
-            default="PZ999",
             help="PZ code of the PDU for the upload",
+        )
+
+        parser.add_argument(
+            "--use-pz-code-from-file",
+            action="store_true",
+            help="Use the PZ number column from the file. Allows importing data for multiple PDUs at once",
         )
 
     def handle(self, *args, **options):
         user_pk = options["user"]
         user = NPDAUser.objects.get(pk=user_pk)
 
-        pdu_pz_code = options["pz_code"]
+        if options["use_pz_code_from_file"] and options["pz_code"]:
+            raise ValueError("Cannot specify both --pz-code and --use-pz-code-from-file")
+
+        if options["use_pz_code_from_file"]:
+            pdu_pz_code = None
+        else:
+            pdu_pz_code = options["pz_code"]
 
         is_jersey = pdu_pz_code == "PZ248"
 
