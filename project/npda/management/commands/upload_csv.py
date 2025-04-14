@@ -140,7 +140,9 @@ class Command(BaseCommand):
                 errors_to_return=parsed_csv.errors_to_return,
                 # Just used for logging
                 csv_file_name="MANUAL IMPORT",
-                submission=submission
+                submission=submission,
+                allow_empty_visits=True,
+                save_errors_on_submission=False
             )
 
             if errors:

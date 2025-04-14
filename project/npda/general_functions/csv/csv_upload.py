@@ -86,7 +86,12 @@ async def tidy_up_old_submissions(pdu, new_submission):
 
 
 async def csv_upload(
-    dataframe, errors_to_return, csv_file_name, submission
+    dataframe,
+    errors_to_return,
+    csv_file_name,
+    submission,
+    allow_empty_visits=False,
+    save_errors_on_submission=True
 ):
     """
     Processes standardised NPDA csv file and persists results in NPDA tables
@@ -293,8 +298,8 @@ async def csv_upload(
 
             visit_forms = []
             for _, row in rows.iterrows():
-                if pd.isnull(row["Visit/Appointment Date"]):
-                    logger.warning(f"Missing visit date for {pdu.pz_code} from {csv_file_name}[{row["row_index"]}]. Skipping creating visit.")
+                if allow_empty_visits and pd.isnull(row["Visit/Appointment Date"]):
+                    logger.info(f"Missing visit date for {pdu.pz_code} from {csv_file_name}[{row["row_index"]}]. Skipping creating visit.")
                     continue
 
                 visit_form = await validate_visit_using_form(
@@ -349,7 +354,7 @@ async def csv_upload(
                 tg.create_task(task(rows))
 
     # Store the errors to report back to the user in the Data Quality Report
-    if errors_to_return:
+    if errors_to_return and save_errors_on_submission:
         submission.errors = json.dumps(errors_to_return)
         await submission.asave()
 
