@@ -241,16 +241,7 @@ async def csv_upload(
     ):
         try:
             save_errors_and_retain_valid_fields(patient_row_index, patient_form)
-
-            nhs_number = patient_form.cleaned_data.get("nhs_number")
-            unique_reference_number = patient_form.cleaned_data.get(
-                "unique_reference_number"
-            )
-
-            patient = None
-
-            if nhs_number or unique_reference_number:
-                patient = await sync_to_async(lambda: patient_form.save())()
+            patient = await sync_to_async(lambda: patient_form.save())()
 
             if patient:
                 # add the patient to a new Transfer instance
