@@ -170,9 +170,6 @@ class Command(BaseCommand):
             identifier_field = "unique_reference_number" if pz_code == "PZ248" else "nhs_number"
             identifier_column = csv_definition_for(identifier_field)["heading"]
 
-            # NHS Number inferred as int64 and I'm too scared to do this in the main csv_parse function
-            df[identifier_column] = df[identifier_column].astype(str)
-
             existing_patient_identifiers = submission.patients.values_list(identifier_field, flat=True)
 
             if existing_patient_identifiers:
