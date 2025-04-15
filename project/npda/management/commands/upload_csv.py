@@ -2,6 +2,7 @@ import json
 import collections
 
 from asgiref.sync import async_to_sync
+import numpy as np
 
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -77,7 +78,8 @@ class Command(BaseCommand):
 
     def print_errors(self, errors):
         for row, errors_by_field in errors.items():
-            print(f"\tRow {row}:")
+            # Zero based indexing and +1 for the header
+            print(f"\tRow {row + 2}:")
             for field, error in errors_by_field.items():
                 print(f"\t\t{field}: {error}")
 
@@ -109,12 +111,15 @@ class Command(BaseCommand):
             print(f"Errors during upload:")
             self.print_errors(errors)
     
-    def upload_as_questionnaire_entries(self, audit_year, pdu_pz_code, user, parsed_csv, merge_into_existing_questionnaire_submissions=False):
+    def upload_as_questionnaire_entries(self, audit_year, pdu_pz_code, user, parsed_csv, csv_file_name, merge_into_existing_questionnaire_submissions=False):
         df = parsed_csv.df
 
         if parsed_csv.errors_to_return:
             print(f"Errors during parsing:")
             self.print_errors(parsed_csv.errors_to_return)
+
+        # Remember the row from the original CSV file, even though we are about to slice it by PDU
+        df = df.assign(row_index=np.arange(df.shape[0]))
 
         pz_codes_that_need_submissions = set()
         pz_codes_that_already_have_submissions = set()
@@ -163,9 +168,7 @@ class Command(BaseCommand):
             submissions_by_pz_code[pz_code] = submission
         
         for pz_code, submission in submissions_by_pz_code.items():
-            df = parsed_csv.df.copy()
-            
-            df = df[df["PDU Number"] == pz_code]
+            pdu_df = df[df["PDU Number"] == pz_code]
 
             identifier_field = "unique_reference_number" if pz_code == "PZ248" else "nhs_number"
             identifier_column = csv_definition_for(identifier_field)["heading"]
@@ -176,16 +179,15 @@ class Command(BaseCommand):
                 print(f"Skipping the following patients as they are already in the submission:")
                 for identifier in existing_patient_identifiers:
                     print(f"\t{identifier}")
-                    df = df[df[identifier_column] != identifier]
+                    pdu_df = pdu_df[pdu_df[identifier_column] != identifier]
 
             # HACK: eagerly load paediatric_diabetes_unit to avoid crash doing it later from the async context in csv_upload
             submission.paediatric_diabetes_unit
 
             errors = async_to_sync(csv_upload)(
-                dataframe=df,
+                dataframe=pdu_df,
                 errors_to_return=collections.defaultdict(lambda: collections.defaultdict(list)),
-                # Just used for logging
-                csv_file_name="MANUAL IMPORT",
+                csv_file_name=csv_file_name,
                 submission=submission,
                 allow_empty_visits=True,
                 save_errors_on_submission=False
@@ -230,5 +232,5 @@ class Command(BaseCommand):
             )
         else:
             self.upload_as_questionnaire_entries(
-                audit_year, pdu_pz_code, user, parsed_csv, options["merge_into_existing_questionnaire_submissions"]
+                audit_year, pdu_pz_code, user, parsed_csv, csv_file_name, options["merge_into_existing_questionnaire_submissions"]
             )
