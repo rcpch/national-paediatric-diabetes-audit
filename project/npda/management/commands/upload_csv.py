@@ -218,13 +218,11 @@ class Command(BaseCommand):
         else:
             pdu_pz_code = options["pz_code"]
 
-        is_jersey = pdu_pz_code == "PZ248"
-
         with open(options["file"], "rb") as f:
             csv_file_name = f.name
             csv_file_bytes = f.read()
 
-        parsed_csv = csv_parse(options["file"], is_jersey=is_jersey)
+        parsed_csv = csv_parse(options["file"])
 
         if pdu_pz_code:
             self.upload_csv_to_single_pdu(

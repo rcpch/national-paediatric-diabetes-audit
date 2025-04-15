@@ -36,9 +36,7 @@ def download_xlsx(request, submission_id):
     if submission.errors:
         errors = json.loads(submission.errors)
 
-    is_jersey = submission.paediatric_diabetes_unit.pz_code == "PZ248"
-
-    xlsx_file = write_errors_to_xlsx(errors or {}, submission.csv_file, is_jersey)
+    xlsx_file = write_errors_to_xlsx(errors or {}, submission.csv_file)
 
     response = HttpResponse(xlsx_file, content_type="text/csv")
     response["Content-Disposition"] = f'attachment; filename="{xlsx_file_name}"'

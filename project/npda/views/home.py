@@ -77,7 +77,7 @@ async def home(request):
         if request.session.get("can_upload_csv") is True:
             # check to see if the CSV is valid - cannot accept CSVs with no header. All other header errors are non-lethal but are reported back to the user
             try:
-                parsed_csv = csv_parse(io.BytesIO(user_csv_bytes), is_jersey=is_jersey)
+                parsed_csv = csv_parse(io.BytesIO(user_csv_bytes))
             except ValueError as e:
                 messages.error(
                     request=request,
@@ -85,15 +85,19 @@ async def home(request):
                 )
                 return redirect("home")
 
+            missing_columns = parsed_csv.missing_columns
+            if not parsed_csv.identifier_column:
+                missing_columns.append("Unique Reference Number" if is_jersey else "NHS Number")
+
             if (
-                parsed_csv.missing_columns
+                missing_columns
                 or parsed_csv.additional_columns
                 or parsed_csv.duplicate_columns
             ):
                 message = "Invalid CSV format."
-                if parsed_csv.missing_columns:
+                if missing_columns:
                     message += (
-                        f" Missing columns: [{", ".join(parsed_csv.missing_columns)}]"
+                        f" Missing columns: [{", ".join(missing_columns)}]"
                     )
                 if parsed_csv.additional_columns:
                     message += f" Unexpected columns: [{", ".join(parsed_csv.additional_columns)}]"
@@ -102,6 +106,13 @@ async def home(request):
                 messages.error(
                     request=request,
                     message=message,
+                )
+                return redirect("home")
+            
+            if parsed_csv.identifier_column == "Unique Reference Number" and not is_jersey:
+                messages.error(
+                    request=request,
+                    message="CSV file must use NHS number as the identifier column unless uploading for Jersey"
                 )
                 return redirect("home")
 
