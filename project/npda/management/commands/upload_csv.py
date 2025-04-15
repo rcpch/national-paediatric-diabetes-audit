@@ -1,4 +1,5 @@
 import json
+import collections
 
 from asgiref.sync import async_to_sync
 
@@ -74,6 +75,13 @@ class Command(BaseCommand):
                     and will only add data for patients that do not already exist"""
         )
 
+    def print_errors(self, errors):
+        for row, errors_by_field in errors.items():
+            print(f"\tRow {row}:")
+            for field, error in errors_by_field.items():
+                print(f"\t\t{field}: {error}")
+
+
     def upload_csv_to_single_pdu(self,audit_year, pdu_pz_code, user, parsed_csv, csv_file_bytes, csv_file_name):
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=pdu_pz_code)
 
@@ -97,10 +105,16 @@ class Command(BaseCommand):
             new_submission=submission
         )
 
-        return errors
+        if errors:
+            print(f"Errors during upload:")
+            self.print_errors(errors)
     
     def upload_as_questionnaire_entries(self, audit_year, pdu_pz_code, user, parsed_csv, merge_into_existing_questionnaire_submissions=False):
         df = parsed_csv.df
+
+        if parsed_csv.errors_to_return:
+            print(f"Errors during parsing:")
+            self.print_errors(parsed_csv.errors_to_return)
 
         pz_codes_that_need_submissions = set()
         pz_codes_that_already_have_submissions = set()
@@ -172,7 +186,7 @@ class Command(BaseCommand):
 
             errors = async_to_sync(csv_upload)(
                 dataframe=df,
-                errors_to_return=parsed_csv.errors_to_return,
+                errors_to_return=collections.defaultdict(lambda: collections.defaultdict(list)),
                 # Just used for logging
                 csv_file_name="MANUAL IMPORT",
                 submission=submission,
@@ -182,12 +196,7 @@ class Command(BaseCommand):
 
             if errors:
                 print(f"Errors found during import for {pz_code}:")
-                
-                for row, errors_by_field in errors.items():
-                    print(f"\tRow {row}:")
-                    for field, error in errors_by_field.items():
-                        print(f"\t\t{field}: {error}")
-
+                self.print_errors(errors)
 
     def handle(self, *args, **options):
         user_pk = options["user"]
@@ -219,13 +228,10 @@ class Command(BaseCommand):
         parsed_csv = csv_parse(options["file"], is_jersey=is_jersey)
 
         if pdu_pz_code:
-            errors = self.upload_csv_to_single_pdu(
+            self.upload_csv_to_single_pdu(
                 audit_year, pdu_pz_code, user, parsed_csv, csv_file_bytes, csv_file_name
             )
         else:
-            errors = self.upload_as_questionnaire_entries(
+            self.upload_as_questionnaire_entries(
                 audit_year, pdu_pz_code, user, parsed_csv, options["merge_into_existing_questionnaire_submissions"]
             )
-
-        if errors:
-            print(json.dumps(errors))
