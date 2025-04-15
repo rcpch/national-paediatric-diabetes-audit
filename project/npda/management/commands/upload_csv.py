@@ -64,7 +64,7 @@ class Command(BaseCommand):
         )
 
         parser.add_argument(
-            "--merge-existing-questionnaire-submissions",
+            "--merge-into-existing-questionnaire-submissions",
             action="store_true",
             help="""Requires --import-as-questionnaire-entries.
                     Adds patients to the existing questionnaire submission for each PDU.
@@ -98,7 +98,7 @@ class Command(BaseCommand):
 
         return errors
     
-    def upload_as_questionnaire_entries(self, audit_year, pdu_pz_code, user, parsed_csv, merge_existing_questionnaire_submissions=False):
+    def upload_as_questionnaire_entries(self, audit_year, pdu_pz_code, user, parsed_csv, merge_into_existing_questionnaire_submissions=False):
         df = parsed_csv.df
 
         pz_codes_that_need_submissions = set()
@@ -121,15 +121,18 @@ class Command(BaseCommand):
             except Submission.DoesNotExist:
                 submission = None
 
+            # HACK: eagerly load paediatric_diabetes_unit to avoid crash doing it later from the async context in csv_upload
+            submission.paediatric_diabetes_unit
+
             if(submission):
-                if merge_existing_questionnaire_submissions:
+                if merge_into_existing_questionnaire_submissions:
                     submissions_by_pz_code[pz_code] = submission
                 else:
                     pz_codes_that_already_have_submissions.add(pz_code)
             else:
                 pz_codes_that_need_submissions.add(pz_code)
         
-        if not merge_existing_questionnaire_submissions and len(pz_codes_that_already_have_submissions) > 0:
+        if not merge_into_existing_questionnaire_submissions and len(pz_codes_that_already_have_submissions) > 0:
             raise ValueError(
                 f"Submissions already exist for the following PDUs: {pz_codes_that_already_have_submissions}"
             )
@@ -205,7 +208,7 @@ class Command(BaseCommand):
             )
         else:
             errors = self.upload_as_questionnaire_entries(
-                audit_year, pdu_pz_code, user, parsed_csv, options["merge_existing_questionnaire_submissions"]
+                audit_year, pdu_pz_code, user, parsed_csv, options["merge_into_existing_questionnaire_submissions"]
             )
 
         if errors:
