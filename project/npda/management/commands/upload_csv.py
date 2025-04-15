@@ -5,6 +5,7 @@ from asgiref.sync import async_to_sync
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
+from project.constants.csv_headings import csv_definition_for
 from project.npda.models import (
     NPDAUser,
     PaediatricDiabetesUnit,
@@ -121,9 +122,6 @@ class Command(BaseCommand):
             except Submission.DoesNotExist:
                 submission = None
 
-            # HACK: eagerly load paediatric_diabetes_unit to avoid crash doing it later from the async context in csv_upload
-            submission.paediatric_diabetes_unit
-
             if(submission):
                 if merge_into_existing_questionnaire_submissions:
                     submissions_by_pz_code[pz_code] = submission
@@ -151,8 +149,26 @@ class Command(BaseCommand):
             submissions_by_pz_code[pz_code] = submission
         
         for pz_code, submission in submissions_by_pz_code.items():
-            df = parsed_csv.df
+            df = parsed_csv.df.copy()
+            
             df = df[df["PDU Number"] == pz_code]
+
+            identifier_field = "unique_reference_number" if pz_code == "PZ248" else "nhs_number"
+            identifier_column = csv_definition_for(identifier_field)["heading"]
+
+            # NHS Number inferred as int64 and I'm too scared to do this in the main csv_parse function
+            df[identifier_column] = df[identifier_column].astype(str)
+
+            existing_patient_identifiers = submission.patients.values_list(identifier_field, flat=True)
+
+            if existing_patient_identifiers:
+                print(f"Skipping the following patients as they are already in the submission:")
+                for identifier in existing_patient_identifiers:
+                    print(f"\t{identifier}")
+                    df = df[df[identifier_column] != identifier]
+
+            # HACK: eagerly load paediatric_diabetes_unit to avoid crash doing it later from the async context in csv_upload
+            submission.paediatric_diabetes_unit
 
             errors = async_to_sync(csv_upload)(
                 dataframe=df,
