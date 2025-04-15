@@ -18,7 +18,9 @@ from project.constants import (
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
     CSV_HEADING_OBJECTS,
-    csv_definition_for
+    csv_definition_for,
+    JERSEY_CSV_DATA_TYPES,
+    ENGLAND_CSV_DATA_TYPES
 )
 
 # Logging setup
@@ -140,8 +142,13 @@ def csv_parse(csv_file, is_jersey=False):
             
             df[column] = column_after
 
+    if is_jersey:
+        datatypes = JERSEY_CSV_DATA_TYPES | CSV_DATA_TYPES_MINUS_DATES
+    else:
+        datatypes = ENGLAND_CSV_DATA_TYPES | CSV_DATA_TYPES_MINUS_DATES
+
     # Apply the dtype to non-date columns
-    for column, dtype in CSV_DATA_TYPES_MINUS_DATES.items():
+    for column, dtype in datatypes.items():
         try:
             if column in df.columns:
                 df[column] = df[column].astype(dtype)

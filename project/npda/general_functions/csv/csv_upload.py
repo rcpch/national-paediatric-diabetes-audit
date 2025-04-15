@@ -232,7 +232,9 @@ async def csv_upload(
     dataframe = csv_clean(dataframe)
 
     # Remember the original row number to help users find where the problem was in the CSV
-    dataframe = dataframe.assign(row_index=np.arange(dataframe.shape[0]))
+    # It may already be set if doing a bulk upload across multiple PDUs using the upload_csv command
+    if not "row_index" in dataframe.columns:
+        dataframe = dataframe.assign(row_index=np.arange(dataframe.shape[0]))
 
     # We only one to create one patient per NHS number (or URN if in Jersey) and we can't create their visits if we fail to save the patient model
     if is_jersey:

@@ -1,10 +1,13 @@
 import json
+import collections
 
 from asgiref.sync import async_to_sync
+import numpy as np
 
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
+from project.constants.csv_headings import csv_definition_for
 from project.npda.models import (
     NPDAUser,
     PaediatricDiabetesUnit,
@@ -63,7 +66,25 @@ class Command(BaseCommand):
                     Designed for bulk import patient data from the old platform."""
         )
 
-    def upload_csv_to_single_pdu(self, audit_year, pdu_pz_code, user, parsed_csv, csv_file_bytes, csv_file_name):
+        parser.add_argument(
+            "--merge-into-existing-questionnaire-submissions",
+            action="store_true",
+            help="""Requires --import-as-questionnaire-entries.
+                    Adds patients to the existing questionnaire submission for each PDU.
+                    If the submission does not already exist, one is created.
+                    For each row we look up the patient by NHS number (unique reference number in Jersey)
+                    and will only add data for patients that do not already exist"""
+        )
+
+    def print_errors(self, errors):
+        for row, errors_by_field in errors.items():
+            # Zero based indexing and +1 for the header
+            print(f"\tRow {row + 2}:")
+            for field, error in errors_by_field.items():
+                print(f"\t\t{field}: {error}")
+
+
+    def upload_csv_to_single_pdu(self,audit_year, pdu_pz_code, user, parsed_csv, csv_file_bytes, csv_file_name):
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=pdu_pz_code)
 
         submission = async_to_sync(create_csv_submission)(
@@ -86,13 +107,24 @@ class Command(BaseCommand):
             new_submission=submission
         )
 
-        return errors
+        if errors:
+            print(f"Errors during upload:")
+            self.print_errors(errors)
     
-    def upload_as_questionnaire_entries(self, audit_year, pdu_pz_code, user, parsed_csv):
+    def upload_as_questionnaire_entries(self, audit_year, pdu_pz_code, user, parsed_csv, csv_file_name, merge_into_existing_questionnaire_submissions=False):
         df = parsed_csv.df
+
+        if parsed_csv.errors_to_return:
+            print(f"Errors during parsing:")
+            self.print_errors(parsed_csv.errors_to_return)
+
+        # Remember the row from the original CSV file, even though we are about to slice it by PDU
+        df = df.assign(row_index=np.arange(df.shape[0]))
 
         pz_codes_that_need_submissions = set()
         pz_codes_that_already_have_submissions = set()
+
+        submissions_by_pz_code = {}
 
         for pz_code in df["PDU Number"].unique():
             try:
@@ -100,23 +132,27 @@ class Command(BaseCommand):
             except PaediatricDiabetesUnit.DoesNotExist:
                 raise ValueError(f"Invalid PDU Number: {pz_code}")
             
-            has_existing_submission = Submission.objects.filter(
-                paediatric_diabetes_unit=pdu,
-                audit_year=audit_year,
-                submission_active=True
-            ).exists()
+            try:
+                submission = Submission.objects.get(
+                    paediatric_diabetes_unit=pdu,
+                    audit_year=audit_year,
+                    submission_active=True
+                )
+            except Submission.DoesNotExist:
+                submission = None
 
-            if(has_existing_submission):
-                pz_codes_that_already_have_submissions.add(pz_code)
+            if(submission):
+                if merge_into_existing_questionnaire_submissions:
+                    submissions_by_pz_code[pz_code] = submission
+                else:
+                    pz_codes_that_already_have_submissions.add(pz_code)
             else:
                 pz_codes_that_need_submissions.add(pz_code)
         
-        if len(pz_codes_that_already_have_submissions) > 0:
+        if not merge_into_existing_questionnaire_submissions and len(pz_codes_that_already_have_submissions) > 0:
             raise ValueError(
                 f"Submissions already exist for the following PDUs: {pz_codes_that_already_have_submissions}"
             )
-        
-        submissions_by_pz_code = {}
 
         for pz_code in pz_codes_that_need_submissions:
             pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
@@ -132,14 +168,26 @@ class Command(BaseCommand):
             submissions_by_pz_code[pz_code] = submission
         
         for pz_code, submission in submissions_by_pz_code.items():
-            df = parsed_csv.df
-            df = df[df["PDU Number"] == pz_code]
+            pdu_df = df[df["PDU Number"] == pz_code]
+
+            identifier_field = "unique_reference_number" if pz_code == "PZ248" else "nhs_number"
+            identifier_column = csv_definition_for(identifier_field)["heading"]
+
+            existing_patient_identifiers = submission.patients.values_list(identifier_field, flat=True)
+
+            if existing_patient_identifiers:
+                print(f"Skipping the following patients as they are already in the submission:")
+                for identifier in existing_patient_identifiers:
+                    print(f"\t{identifier}")
+                    pdu_df = pdu_df[pdu_df[identifier_column] != identifier]
+
+            # HACK: eagerly load paediatric_diabetes_unit to avoid crash doing it later from the async context in csv_upload
+            submission.paediatric_diabetes_unit
 
             errors = async_to_sync(csv_upload)(
-                dataframe=df,
-                errors_to_return=parsed_csv.errors_to_return,
-                # Just used for logging
-                csv_file_name="MANUAL IMPORT",
+                dataframe=pdu_df,
+                errors_to_return=collections.defaultdict(lambda: collections.defaultdict(list)),
+                csv_file_name=csv_file_name,
                 submission=submission,
                 allow_empty_visits=True,
                 save_errors_on_submission=False
@@ -147,12 +195,7 @@ class Command(BaseCommand):
 
             if errors:
                 print(f"Errors found during import for {pz_code}:")
-                
-                for row, errors_by_field in errors.items():
-                    print(f"\tRow {row}:")
-                    for field, error in errors_by_field.items():
-                        print(f"\t\t{field}: {error}")
-
+                self.print_errors(errors)
 
     def handle(self, *args, **options):
         user_pk = options["user"]
@@ -184,13 +227,10 @@ class Command(BaseCommand):
         parsed_csv = csv_parse(options["file"], is_jersey=is_jersey)
 
         if pdu_pz_code:
-            errors = self.upload_csv_to_single_pdu(
+            self.upload_csv_to_single_pdu(
                 audit_year, pdu_pz_code, user, parsed_csv, csv_file_bytes, csv_file_name
             )
         else:
-            errors = self.upload_as_questionnaire_entries(
-                audit_year, pdu_pz_code, user, parsed_csv
+            self.upload_as_questionnaire_entries(
+                audit_year, pdu_pz_code, user, parsed_csv, csv_file_name, options["merge_into_existing_questionnaire_submissions"]
             )
-
-        if errors:
-            print(json.dumps(errors))
