@@ -143,6 +143,17 @@ async def test_http_error_calculating_index_of_multiple_deprivation():
             )
 
 
+async def test_we_dont_calculate_index_of_multiple_deprivation_for_jersey():
+    with patch("project.npda.forms.external_patient_validators.imd_for_postcode") as mock:
+        await validate_patient_async(
+                postcode="JE2 3NG",
+                gp_practice_ods_code=None,
+                gp_practice_postcode=None,
+                async_client=async_client
+            )
+            
+        assert not mock.called
+
 async def test_validate_patient_with_gp_practice_ods_code():
     result = await validate_patient_async(
         postcode=None,
