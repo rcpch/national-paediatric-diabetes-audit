@@ -11,6 +11,7 @@ from asgiref.sync import async_to_sync
 
 import nhs_number
 import pandas as pd
+import numpy as np
 import pytest
 from dateutil.relativedelta import relativedelta
 from django.apps import apps
@@ -324,36 +325,6 @@ def test_missing_nhs_number(
     errors = csv_upload_sync(test_user, single_row_valid_df)
 
     assert "nhs_number" in errors[0]
-
-    # We shouldn't save this patient (invariant enforced in Patient.clean not in the database)
-    assert Patient.objects.count() == 0
-
-
-@pytest.mark.django_db
-def test_missing_unique_reference_number(
-    seed_groups_per_function_fixture,
-    seed_users_per_function_fixture,
-    single_row_valid_df,
-):
-    # As these tests need full transaction support we can't use our session fixtures
-    test_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
-    ).first()
-
-    # Delete all patients to ensure we're starting from a clean slate
-    Patient.objects.all().delete()
-
-    df = single_row_valid_df.rename(columns={"NHS Number": "Unique Reference Number"})
-    df.loc[0, "Unique Reference Number"] = None
-
-    assert (
-        Patient.objects.count() == 0
-    ), "There should be no patients in the database before the test"
-
-    jersey = PaediatricDiabetesUnit.objects.get(pz_code="PZ248")
-    errors = csv_upload_sync(test_user, df, pdu=jersey)
-
-    assert "unique_reference_number" in errors[0]
 
     # We shouldn't save this patient (invariant enforced in Patient.clean not in the database)
     assert Patient.objects.count() == 0
@@ -933,7 +904,8 @@ def test_invalid_nhs_number_column_name(test_user, dummy_sheet_csv):
     csv = dummy_sheet_csv.replace("NHS Number", "NHSNumberXYZWoo")
     results = read_csv_from_str(csv)
 
-    assert results.missing_columns == ["NHS Number"]
+    # Added to missing_columns in the route as there we know if it was supposed to be a Jersey upload or England
+    assert results.identifier_column is None
     assert results.additional_columns == ["NHSNumberXYZWoo"]
 
 
@@ -1023,6 +995,39 @@ def test_upload_without_headers(test_user, one_patient_two_visits):
     # No patients or associated visits should be saved
     assert Patient.objects.count() == 0
     assert Visit.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_jersey_csv(test_user, one_patient_two_visits):
+    df = one_patient_two_visits.rename(columns={"NHS Number": "Unique Reference Number"})
+    csv = df.to_csv(index=False, date_format="%d/%m/%Y")
+
+    parsed_csv = read_csv_from_str(csv)
+    assert parsed_csv.identifier_column == "Unique Reference Number"
+
+
+@pytest.mark.django_db
+def test_missing_identifier_columns(test_user, one_patient_two_visits):
+    df = one_patient_two_visits.drop(["NHS Number"], axis=1)
+    csv = df.to_csv(index=False, date_format="%d/%m/%Y")
+
+    parsed_csv = read_csv_from_str(csv)
+    # Added to missing columns in the route as there we know if it was supposed to be a Jersey upload or England
+    assert parsed_csv.identifier_column is None
+
+
+@pytest.mark.django_db
+def test_both_identifier_columns_causes_an_error(test_user, one_patient_two_visits):
+    df = one_patient_two_visits
+    df = df.assign(**{"Unique Reference Number": np.arange(df.shape[0])})
+    
+    assert "NHS Number" in df.columns
+    assert "Unique Reference Number" in df.columns
+
+    csv = df.to_csv(index=False, date_format="%d/%m/%Y")
+
+    with pytest.raises(ValueError):
+        read_csv_from_str(csv)
 
 
 @pytest.mark.django_db

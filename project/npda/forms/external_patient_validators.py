@@ -54,7 +54,7 @@ async def _validate_postcode(
 async def _imd_for_postcode(
     postcode: str | None, async_client: AsyncClient
 ) -> str | None:
-    if postcode:
+    if postcode and not postcode.lower().startswith("je"):
         try:
             imd = await imd_for_postcode(postcode, async_client)
 

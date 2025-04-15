@@ -30,8 +30,7 @@ def upload_csv_task(submission_id):
 
     # CSV parsing errors are done inline in the route that handles the file upload
     parsed_csv = csv_parse(
-        io.BytesIO(submission.csv_file),
-        is_jersey=submission.paediatric_diabetes_unit.pz_code == "PZ248",
+        io.BytesIO(submission.csv_file)
     )
 
     csv_upload_sync = async_to_sync(csv_upload)

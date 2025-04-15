@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ParsedCSVFile:
     df: pd.DataFrame
+    identifier_column: str | None
     missing_columns: list[str]
     additional_columns: list[str]
     duplicate_columns: list[str]
@@ -41,7 +42,7 @@ class ParsedCSVFile:
     errors_to_return: collections.defaultdict[int, collections.defaultdict[str, list[str]]]
 
 
-def csv_parse(csv_file, is_jersey=False):
+def csv_parse(csv_file):
     """
     Read the csv file and return a pandas dataframe
     Assigns the correct data types to the columns
@@ -56,13 +57,7 @@ def csv_parse(csv_file, is_jersey=False):
 
     errors_to_return = collections.defaultdict(lambda: collections.defaultdict(list))
 
-    # Define the column names to be used in the csv file: the unique identifier in Jersy is different from the one in England
-    if is_jersey:
-        HEADINGS_LIST = UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
-    else:
-        HEADINGS_LIST = UNIQUE_IDENTIFIER_ENGLAND + CSV_HEADING_OBJECTS
-
-    HEADINGS_LIST = [item["heading"] for item in HEADINGS_LIST]
+    HEADINGS_LIST = [obj["heading"] for obj in (UNIQUE_IDENTIFIER_ENGLAND + UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS)]
 
     # Convert the predefined column names to lowercase
     lowercase_headings_list = [heading.lower() for heading in HEADINGS_LIST]
@@ -85,15 +80,6 @@ def csv_parse(csv_file, is_jersey=False):
     # The template published on the RCPCH website has trailing spaces on 'Observation Date: Thyroid Function '
     df.columns = df.columns.str.strip()
 
-    if df.columns[0].lower() not in lowercase_headings_list:
-        # No header in the source - pass them from our definitions
-        logger.warning(
-            f"CSV file uploaded without column names, using predefined column names"
-        )
-
-        # Have to reset back otherwise we get an empty dataframe
-        csv_file.seek(0)
-
     # Pandas has strange behaviour for the first line in a CSV - additional cells become row labels
     # https://github.com/pandas-dev/pandas/issues/47490
     #
@@ -111,8 +97,25 @@ def csv_parse(csv_file, is_jersey=False):
                 c for c in HEADINGS_LIST if c.lower() == column.lower()
             )
             df = df.rename(columns={column: normalised_column})
+    
+    identifier_england = UNIQUE_IDENTIFIER_ENGLAND[0]["heading"]
+    identifier_jersey = UNIQUE_IDENTIFIER_JERSEY[0]["heading"]
 
-    missing_columns = [column for column in HEADINGS_LIST if not column in df.columns]
+    if identifier_england in df.columns and identifier_jersey in df.columns:
+        raise ValueError(
+            "Both Unique Reference Number and NHS Number columns are present. Please ensure only one of these is present in the file."
+        )
+
+    if identifier_jersey in df.columns:
+        identifier_column = identifier_jersey
+    elif identifier_england in df.columns:
+        identifier_column = identifier_england
+    else:
+        identifier_column = None
+
+    missing_columns = [
+        column for column in HEADINGS_LIST if not column in df.columns and column != identifier_england and column != identifier_jersey
+    ]
 
     additional_columns = [
         column for column in df.columns if not column in HEADINGS_LIST
@@ -142,7 +145,7 @@ def csv_parse(csv_file, is_jersey=False):
             
             df[column] = column_after
 
-    if is_jersey:
+    if identifier_column == identifier_jersey:
         datatypes = JERSEY_CSV_DATA_TYPES | CSV_DATA_TYPES_MINUS_DATES
     else:
         datatypes = ENGLAND_CSV_DATA_TYPES | CSV_DATA_TYPES_MINUS_DATES
@@ -178,34 +181,26 @@ def csv_parse(csv_file, is_jersey=False):
     total_row_count = df.shape[0]
     discrepancy = 0
 
-    if is_jersey:
-        unique_reference_number_nonnull_row_count = df[
-            "Unique Reference Number"
-        ].count()
-        if unique_reference_number_nonnull_row_count == 0:
+    if identifier_column in df:
+        identifier_nonnull_row_count = df[identifier_column].count()
+        if identifier_nonnull_row_count == 0:
             raise ValueError(
-                "No Unique Reference Numbers found in the file. Please ensure all rows have a unique identifier and upload the file again."
+                f"No {identifier_column}s found in the file. Please ensure all rows have a unique identifier and upload the file again."
             )
-        discrepancy = total_row_count - unique_reference_number_nonnull_row_count
-    elif "NHS Number" in df.columns:
-        nhs_number_nonnull_row_count = df["NHS Number"].count()
-        if nhs_number_nonnull_row_count == 0:
+            discrepancy = total_row_count - identifier_nonnull_row_count
+        
+        if discrepancy > 0:
+            if discrepancy == 1:
+                raise ValueError(
+                    f"{discrepancy} row has no unique identifier. Please ensure all rows have a unique identifier and upload the file again."
+                )
             raise ValueError(
-                "No NHS Numbers found in the file. Please ensure all rows have a unique identifier and upload the file again."
+                f"{discrepancy} rows have no unique identifier. Please ensure all rows have a unique identifier and upload the file again."
             )
-        discrepancy = total_row_count - nhs_number_nonnull_row_count
-    
-    if discrepancy > 0:
-        if discrepancy == 1:
-            raise ValueError(
-                f"{discrepancy} row has no unique identifier. Please ensure all rows have a unique identifier and upload the file again."
-            )
-        raise ValueError(
-            f"{discrepancy} rows have no unique identifier. Please ensure all rows have a unique identifier and upload the file again."
-        )
 
     return ParsedCSVFile(
         df,
+        identifier_column,
         missing_columns,
         additional_columns,
         duplicate_columns,
