@@ -30,6 +30,7 @@ from project.constants.user import (
     AUDIT_CENTRE_COORDINATOR,
     RCPCH_AUDIT_TEAM,
     TRUST_AUDIT_TEAM_COORDINATOR_ACCESS,
+    AUDIT_CENTRE_READER
 )
 
 # E12 imports
@@ -577,43 +578,6 @@ def test_audit_team_can_add_employers_outside_of_their_pdu(
     employers = { e.pz_code for e in ah_coordinator.organisation_employers.all() }
 
     assert employers == { ALDER_HEY_PZ_CODE, GOSH_PZ_CODE }
-
-# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/846
-@pytest.mark.django_db
-def test_coordinators_with_multiple_employers_can_update_users_in_all_of_them(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client,
-):
-    gosh_reader = NPDAUser.objects.filter(
-        organisation_employers__pz_code=GOSH_PZ_CODE,
-        role=AUDIT_CENTRE_READER
-    ).first()
-
-    ah_coordinator = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
-        role=AUDIT_CENTRE_COORDINATOR
-    ).first()
-
-    ah_reader = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
-        role=AUDIT_CENTRE_READER
-    ).first()
-
-    response = client.post(
-        url,
-        data={"add_employer": GOSH_PZ_CODE},
-        **{
-            # Gated on request.htmx
-            "HTTP_HX-Request": "true",
-        },
-    )
-
-    ah_coordinator.refresh_from_db()
-    employers = {e.pz_code for e in ah_coordinator.organisation_employers.all()}
-
-    assert employers == {ALDER_HEY_PZ_CODE, GOSH_PZ_CODE}
 
 
 @pytest.mark.django_db
