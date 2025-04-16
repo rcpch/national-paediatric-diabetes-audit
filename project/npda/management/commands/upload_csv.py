@@ -201,11 +201,7 @@ class Command(BaseCommand):
         user_pk = options["user"]
         user = NPDAUser.objects.get(pk=user_pk)
 
-        if options["audit_year"]:
-            audit_year = int(options["audit_year"])
-        else:
-            # TODO MRB: replace this with AuditPeriod before merging https://github.com/rcpch/national-paediatric-diabetes-audit/pull/865
-            audit_year = get_current_audit_year()
+        audit_year = int(options["audit_year"])
 
         if options["import_as_questionnaire_entries"] and options["pz_code"]:
             raise ValueError("Cannot specify both --pz-code and --use-pz-codes-from-file")
