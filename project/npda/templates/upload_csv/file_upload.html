@@ -27,7 +27,7 @@
             </button>
           </div>
         </div>
-        <a href="{% url 'download_template' 'england_wales' %}"
+        <a href="{% url 'download_template' %}"
            download="npda_base.csv"
            class="bg-rcpch_light_blue border-rcpch_light_blue btn w-full text-lg text-white focus:bg-rcpch_pink hover:bg-rcpch_dark_blue"><i class="fa-file-arrow-down fa-solid"></i> Download NPDA CSV template</a>
         {% comment %} PZ code and employer alert {% endcomment %}
@@ -58,6 +58,14 @@
           <span id="file-name-display" class="font-montserrat text-white">No file chosen</span>
         </div>
         {% csrf_token %}
+        {% if user.is_superuser %}
+          <label>
+            Upload using Celery 🥬🚀🎆
+            <input type="checkbox"
+                  name="use_celery"
+                  class="toggle toggle-primary" />
+          </label>
+        {% endif %}
         <div class="relative">
           <button id="submit-button"
                   class="font-montserrat tooltip-trigger w-full px-4 py-2 text-white bg-gray-400"

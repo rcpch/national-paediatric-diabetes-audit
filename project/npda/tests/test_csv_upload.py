@@ -11,6 +11,7 @@ from asgiref.sync import async_to_sync
 
 import nhs_number
 import pandas as pd
+import numpy as np
 import pytest
 from dateutil.relativedelta import relativedelta
 from django.apps import apps
@@ -18,9 +19,20 @@ from django.core.exceptions import ValidationError
 from django.contrib.gis.geos import Point
 from httpx import HTTPError
 
-from project.npda.general_functions.csv import csv_upload, csv_parse
+from project.npda.general_functions.csv import (
+    csv_upload,
+    csv_parse,
+    create_csv_submission,
+    tidy_up_old_submissions
+)
 from project.constants import csv_definition_for, ALL_DATES
-from project.npda.models import NPDAUser, Patient, Visit, AuditPeriod
+from project.npda.models import (
+    NPDAUser,
+    Patient,
+    Visit,
+    PaediatricDiabetesUnit,
+    AuditPeriod
+)
 from project.npda.tests.factories.patient_factory import (
     INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
     TODAY,
@@ -141,12 +153,23 @@ def test_user(seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixtur
 # https://github.com/pytest-dev/pytest-asyncio/issues/226
 @async_to_sync
 async def csv_upload_sync(
-    user, dataframe, pdu_pz_code=ALDER_HEY_PZ_CODE, errors_to_return=None
+    user, dataframe, pdu=None, errors_to_return=None
 ):
     audit_period = await AuditPeriod.objects.afirst()
 
+    if not pdu:
+        pdu = await PaediatricDiabetesUnit.objects.aget(pz_code=ALDER_HEY_PZ_CODE)
+
+    new_submission = await create_csv_submission(
+        pdu=pdu,
+        audit_year=audit_period.audit_year(),
+        csv_file_bytes=None,
+        csv_file_name=None,
+        user=user,
+        ip_address=None
+    )
+
     return await csv_upload(
-        user,
         dataframe,
         errors_to_return=(
             collections.defaultdict(lambda: collections.defaultdict(list))
@@ -154,9 +177,7 @@ async def csv_upload_sync(
             else errors_to_return
         ),
         csv_file_name=None,
-        csv_file_bytes=None,
-        pdu_pz_code=pdu_pz_code,
-        audit_period=audit_period,
+        submission=new_submission
     )
 
 
@@ -310,37 +331,7 @@ def test_missing_nhs_number(
 
     assert "nhs_number" in errors[0]
 
-    # We shouldn't save this patient (invariant enforced in Patient.save not in the database)
-    assert Patient.objects.count() == 0
-
-
-@pytest.mark.django_db
-def test_missing_unique_reference_number(
-    seed_groups_per_function_fixture,
-    seed_users_per_function_fixture,
-    seed_audit_periods_per_function_fixture,
-    single_row_valid_df,
-):
-    # As these tests need full transaction support we can't use our session fixtures
-    test_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
-    ).first()
-
-    # Delete all patients to ensure we're starting from a clean slate
-    Patient.objects.all().delete()
-
-    df = single_row_valid_df.rename(columns={"NHS Number": "Unique Reference Number"})
-    df.loc[0, "Unique Reference Number"] = None
-
-    assert (
-        Patient.objects.count() == 0
-    ), "There should be no patients in the database before the test"
-
-    errors = csv_upload_sync(test_user, df, "PZ248")
-
-    assert "unique_reference_number" in errors[0]
-
-    # We shouldn't save this patient (invariant enforced in Patient.save not in the database)
+    # We shouldn't save this patient (invariant enforced in Patient.clean not in the database)
     assert Patient.objects.count() == 0
 
 
@@ -491,6 +482,9 @@ def test_invalid_nhs_number(test_user, single_row_valid_df):
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
     assert "nhs_number" in errors[0]
+
+    patient = Patient.objects.first()
+    assert patient.nhs_number == "123456789"
 
 
 @pytest.mark.django_db
@@ -915,7 +909,8 @@ def test_invalid_nhs_number_column_name(test_user, dummy_sheet_csv):
     csv = dummy_sheet_csv.replace("NHS Number", "NHSNumberXYZWoo")
     results = read_csv_from_str(csv)
 
-    assert results.missing_columns == ["NHS Number"]
+    # Added to missing_columns in the route as there we know if it was supposed to be a Jersey upload or England
+    assert results.identifier_column is None
     assert results.additional_columns == ["NHSNumberXYZWoo"]
 
 
@@ -1005,6 +1000,39 @@ def test_upload_without_headers(test_user, one_patient_two_visits):
     # No patients or associated visits should be saved
     assert Patient.objects.count() == 0
     assert Visit.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_jersey_csv(test_user, one_patient_two_visits):
+    df = one_patient_two_visits.rename(columns={"NHS Number": "Unique Reference Number"})
+    csv = df.to_csv(index=False, date_format="%d/%m/%Y")
+
+    parsed_csv = read_csv_from_str(csv)
+    assert parsed_csv.identifier_column == "Unique Reference Number"
+
+
+@pytest.mark.django_db
+def test_missing_identifier_columns(test_user, one_patient_two_visits):
+    df = one_patient_two_visits.drop(["NHS Number"], axis=1)
+    csv = df.to_csv(index=False, date_format="%d/%m/%Y")
+
+    parsed_csv = read_csv_from_str(csv)
+    # Added to missing columns in the route as there we know if it was supposed to be a Jersey upload or England
+    assert parsed_csv.identifier_column is None
+
+
+@pytest.mark.django_db
+def test_both_identifier_columns_causes_an_error(test_user, one_patient_two_visits):
+    df = one_patient_two_visits
+    df = df.assign(**{"Unique Reference Number": np.arange(df.shape[0])})
+    
+    assert "NHS Number" in df.columns
+    assert "Unique Reference Number" in df.columns
+
+    csv = df.to_csv(index=False, date_format="%d/%m/%Y")
+
+    with pytest.raises(ValueError):
+        read_csv_from_str(csv)
 
 
 @pytest.mark.django_db
@@ -3172,6 +3200,8 @@ def test_bad_data_for_positive_small_integer_fields(
     column = headings["heading"]
     model = apps.get_model("npda", headings["model"])
 
+    pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
+
     for [value, expected, assertion_message] in [
         [94, None, f"Failed to handle {model_field} with incorrect choice (94)"],
         [-1, None, f"Failed to handle {model_field} with -1 (negative number)"],
@@ -3187,6 +3217,9 @@ def test_bad_data_for_positive_small_integer_fields(
         ],
         ["STRING", None, f"Failed to handle unexpected string for {model_field}"],
     ]:
+        # Clear out patients created by previous iterations of the loop
+        Patient.objects.all().delete()
+
         one_row_csv = modify_raw_csv(
             dummy_sheet_csv,
             end=2,  # exclusive
@@ -3195,7 +3228,7 @@ def test_bad_data_for_positive_small_integer_fields(
 
         df = read_csv_from_str(one_row_csv).df
 
-        errors = csv_upload_sync(test_user, df)
+        errors = csv_upload_sync(test_user, df, pdu=pdu)
 
         assert len(errors) > 0, assertion_message
         assert model.objects.count() == 1, assertion_message
@@ -3207,6 +3240,7 @@ def test_bad_data_for_positive_small_integer_fields(
         # No errors field in Transfer
         if hasattr(instance, "errors"):
             assert model_field in instance.errors
+
 
 
 @pytest.mark.parametrize(

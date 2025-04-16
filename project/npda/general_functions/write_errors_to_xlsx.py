@@ -19,18 +19,12 @@ from openpyxl.styles import PatternFill, Font
 from openpyxl.comments import Comment
 
 # import csv mappings
-from ...constants.csv_headings import (
-    CSV_HEADING_OBJECTS,
-    UNIQUE_IDENTIFIER_ENGLAND,
-    UNIQUE_IDENTIFIER_JERSEY,
-    csv_definition_for
-)
+from ...constants.csv_headings import csv_definition_for
 
 
 def write_errors_to_xlsx(
     errors: dict[str, dict[str, list[str]]],
-    original_csv_file_bytes: bytes,
-    is_jersey: bool,
+    original_csv_file_bytes: bytes
 ) -> bytes:
     """
     Write errors to an Excel file. Highlight invalid cells in the source CSV.
@@ -43,9 +37,12 @@ def write_errors_to_xlsx(
     xlsx_file = io.BytesIO()
 
     # Get original data
-    df = csv_parse(
-        io.BytesIO(initial_bytes=original_csv_file_bytes), is_jersey=is_jersey
-    ).df
+    parsed_csv = csv_parse(
+        io.BytesIO(initial_bytes=original_csv_file_bytes)
+    )
+
+    df = parsed_csv.df
+
     # Write an xlsx of the original data.
     df.to_excel(xlsx_file, sheet_name="Uploaded data (raw)", index=False)
 
@@ -53,8 +50,7 @@ def write_errors_to_xlsx(
     df_errors = flatten_errors(
         errors=errors,
         original_data=df,
-        identifier_field="Unique Reference Number" if is_jersey else "NHS Number",
-        csv_headings=(UNIQUE_IDENTIFIER_JERSEY if is_jersey else UNIQUE_IDENTIFIER_ENGLAND) + CSV_HEADING_OBJECTS
+        identifier_column=parsed_csv.identifier_column,
     )
 
     # Add sheet that lists the errors.
@@ -125,20 +121,21 @@ def flatten_errors(
     #  {row_number: {field_name: [error_messages]}}
     errors: dict[int, dict[str, list[str]]],
     original_data: pd.DataFrame,
-    identifier_field: str,
-    csv_headings: List[Dict[str, str]],
+    identifier_column: str
 ) -> pd.DataFrame:
-    identifier_column = csv_definition_for(identifier_field)["heading"]
-
     rows = []
 
     for row_ix, row_errors in errors.items():
         for field, errors in row_errors.items():
+            # __all__ errors should be attached to the first column
+            csv_definition = csv_definition_for(field)
+            column = csv_definition["heading"] if csv_definition else identifier_column
+
             rows.append({
                 # 0 based indexing and the column header. So + 2
                 "Original CSV Row": int(row_ix) + 2,
-                identifier_field: original_data.loc[int(row_ix), identifier_column],
-                "Column": csv_definition_for(field)["heading"],
+                identifier_column: original_data.loc[int(row_ix), identifier_column],
+                "Column": column,
                 "Errors": "; ".join(errors),
             })
 

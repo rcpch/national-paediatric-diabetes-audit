@@ -32,24 +32,75 @@ from project.npda.forms.visit_form import VisitForm
 from project.npda.forms.external_patient_validators import validate_patient_async
 from project.npda.forms.external_visit_validators import validate_visit_async
 from project.npda.general_functions.csv.csv_clean import csv_clean
+from project.npda.models import (
+    Patient, 
+    Transfer,
+    Visit,
+    Submission,
+    VisitActivity
+)
+
+async def create_csv_submission(pdu, audit_year, csv_file_bytes, csv_file_name, user=None, ip_address=None):
+    old_submission = await Submission.objects.filter(
+        paediatric_diabetes_unit=pdu,
+        audit_year=audit_year,
+        submission_active=True,
+    ).afirst()
+
+    if old_submission:
+        old_submission.submission_active = False
+        await old_submission.asave()
+    
+    submission = await Submission.objects.acreate(
+        submission_date=timezone.now(),
+        submission_by=user,
+        paediatric_diabetes_unit=pdu,
+        audit_year=audit_year,
+        csv_file=csv_file_bytes,
+        csv_file_name=csv_file_name,
+        submission_active=True
+    )
+    
+    if user:
+        await VisitActivity.objects.acreate(
+            activity=8,
+            ip_address=ip_address,
+            npdauser=user,
+        )  # uploaded csv - activity 8
+
+    return submission
+
+
+async def tidy_up_old_submissions(pdu, new_submission):
+    all_submissions = Submission.objects.filter(
+        paediatric_diabetes_unit=pdu,
+        audit_year=new_submission.audit_year,
+    )
+
+    async for submission in all_submissions:
+        if submission.id != new_submission.id:
+            await Patient.objects.filter(submissions=submission).adelete()
+
+            submission.submission_active = False
+            await submission.asave()
 
 
 async def csv_upload(
-    user, dataframe, errors_to_return, csv_file_name, csv_file_bytes, pdu_pz_code, audit_period
+    dataframe,
+    errors_to_return,
+    csv_file_name,
+    submission,
+    allow_empty_visits=False,
+    save_errors_on_submission=True
 ):
     """
     Processes standardised NPDA csv file and persists results in NPDA tables
     Returns the empty dict if successful, otherwise ValidationErrors indexed by the row they occurred at
     """
+    pdu = submission.paediatric_diabetes_unit
+    is_jersey = pdu.pz_code == "PZ248"
 
-    # Get the models
-    Patient = apps.get_model("npda", "Patient")
-    Transfer = apps.get_model("npda", "Transfer")
-    Visit = apps.get_model("npda", "Visit")
-    Submission = apps.get_model("npda", "Submission")
-    PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-
-    if pdu_pz_code == "PZ248":
+    if is_jersey:
         CSV_HEADINGS = UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
     else:
         CSV_HEADINGS = UNIQUE_IDENTIFIER_ENGLAND + CSV_HEADING_OBJECTS
@@ -90,7 +141,7 @@ async def csv_upload(
         form = PatientForm(
             fields,
             paediatric_diabetes_unit=pdu,
-            audit_year=audit_period.audit_year(),
+            audit_year=submission.audit_year,
         )
         form.async_validation_results = await validate_patient_async(
             postcode=fields["postcode"],
@@ -175,92 +226,18 @@ async def csv_upload(
 
         return transfer_fields
 
-    """"
-    Create the submission and save the csv file
-    """
-
-    # get the PDU object
-    # TODO #249 MRB: handle case where PDU does not exist
-    pdu = await PaediatricDiabetesUnit.objects.aget(pz_code=pdu_pz_code, active=True)
-
-    # Set previous submission to inactive
-    if await Submission.objects.filter(
-        paediatric_diabetes_unit__pz_code=pdu.pz_code,
-        paediatric_diabetes_unit__active=True,
-        audit_year=audit_period.audit_year(),
-        submission_active=True,
-    ).aexists():
-        original_submission = await Submission.objects.filter(
-            submission_active=True,
-            paediatric_diabetes_unit__pz_code=pdu.pz_code,
-            paediatric_diabetes_unit__active=True,
-            audit_year=audit_period.audit_year(),
-        ).aget()  # there can be only one of these - store it in a variable in case we need to revert
-    else:
-        original_submission = None
-
-    # Create new submission for the audit year
-    # It is not possble to create submissions in years other than the current year
-    try:
-        new_submission = await Submission.objects.acreate(
-            paediatric_diabetes_unit=pdu,
-            audit_year=audit_period.audit_year(),
-            audit_period=audit_period,
-            submission_date=timezone.now(),
-            submission_by=user,  # user is the user who is logged in. Passed in as a parameter
-            submission_active=True,
-            csv_file=csv_file_bytes,
-            csv_file_name=csv_file_name,
-        )
-
-        await new_submission.asave()
-
-    except Exception as e:
-        logger.error(f"Error creating new submission: {e}")
-        # the new submission was not created  - no action required as the previous submission is still active
-        raise ValidationError(
-            {
-                "csv_upload": "Error creating new submission. The old submission has been restored."
-            }
-        )
-
-    # now can delete all patients and visits from the previous active submission
-    if original_submission:
-        try:
-            original_submission_patient_count = await Patient.objects.filter(
-                submissions=original_submission
-            ).acount()
-            logger.debug(
-                f"Deleting patients from previous submission: {original_submission_patient_count}"
-            )
-            await Patient.objects.filter(submissions=original_submission).adelete()
-        except Exception as e:
-            raise ValidationError(
-                {"csv_upload": "Error deleting patients from previous submission"}
-            )
-
-    # now can delete the any previous active submission's csv file (if it exists)
-    # and remove the path from the field by setting it to None
-    # the rest of the submission will be retained
-    if original_submission:
-        original_submission.submission_active = False
-        try:
-            await original_submission.asave()  # this action will delete the csv file also as per the save method in the model
-        except Exception as e:
-            raise ValidationError(
-                {"csv_upload": "Error deactivating previous submission"}
-            )
-
     """
     Process the csv file and validate and save the data in the tables, parsing any errors
     """
     dataframe = csv_clean(dataframe)
 
     # Remember the original row number to help users find where the problem was in the CSV
-    dataframe = dataframe.assign(row_index=np.arange(dataframe.shape[0]))
+    # It may already be set if doing a bulk upload across multiple PDUs using the upload_csv command
+    if not "row_index" in dataframe.columns:
+        dataframe = dataframe.assign(row_index=np.arange(dataframe.shape[0]))
 
     # We only one to create one patient per NHS number (or URN if in Jersey) and we can't create their visits if we fail to save the patient model
-    if new_submission.paediatric_diabetes_unit.pz_code == "PZ248":
+    if is_jersey:
         visits_by_patient = dataframe.groupby(
             "Unique Reference Number", sort=False, dropna=False
         )
@@ -273,15 +250,11 @@ async def csv_upload(
         try:
             save_errors_and_retain_valid_fields(patient_row_index, patient_form)
 
-            nhs_number = patient_form.cleaned_data.get("nhs_number")
-            unique_reference_number = patient_form.cleaned_data.get(
-                "unique_reference_number"
-            )
-
-            patient = None
-
-            if nhs_number or unique_reference_number:
-                patient = await sync_to_async(lambda: patient_form.save())()
+            patient = await sync_to_async(lambda: patient_form.save(commit=False))()
+            
+            # Throw database level issues not covered by the form (eg missing both nhs_number and urn)
+            patient.clean()
+            await patient.asave()
 
             if patient:
                 # add the patient to a new Transfer instance
@@ -289,12 +262,12 @@ async def csv_upload(
                 transfer_fields["patient"] = patient
                 await Transfer.objects.acreate(**transfer_fields)
 
-                await new_submission.patients.aadd(patient)
+                await submission.patients.aadd(patient)
 
             return patient
         except Exception as error:
             logger.exception(
-                f"Error saving patient for {pdu_pz_code} from {csv_file_name}[{patient_row_index}]: {error}"
+                f"Error saving patient for {pdu.pz_code} from {csv_file_name}[{patient_row_index}]: {error}"
             )
 
             # We don't know what field caused the error so add to __all__
@@ -309,7 +282,7 @@ async def csv_upload(
                 await sync_to_async(lambda: visit_form.save())()
             except Exception as error:
                 logger.exception(
-                    f"Error saving visit for {pdu_pz_code} from {csv_file_name}[{visit_row_index}]: {error}"
+                    f"Error saving visit for {pdu.pz_code} from {csv_file_name}[{visit_row_index}]: {error}"
                 )
                 errors_to_return[visit_row_index]["__all__"].append(str(error))
 
@@ -327,6 +300,10 @@ async def csv_upload(
 
             visit_forms = []
             for _, row in rows.iterrows():
+                if allow_empty_visits and pd.isnull(row["Visit/Appointment Date"]):
+                    logger.info(f"Missing visit date for {pdu.pz_code} from {csv_file_name}[{row["row_index"]}]. Skipping creating visit.")
+                    continue
+
                 visit_form = await validate_visit_using_form(
                     patient_form, row, async_client
                 )
@@ -379,8 +356,8 @@ async def csv_upload(
                 tg.create_task(task(rows))
 
     # Store the errors to report back to the user in the Data Quality Report
-    if errors_to_return:
-        new_submission.errors = json.dumps(errors_to_return)
-        await new_submission.asave()
+    if errors_to_return and save_errors_on_submission:
+        submission.errors = json.dumps(errors_to_return)
+        await submission.asave()
 
     return errors_to_return

@@ -17,6 +17,7 @@ from ..general_functions import (
     location_for_postcode,
 )
 
+from ...constants.postcodes import UNKNOWN_POSTCODES_NO_SPACES
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,9 @@ async def _validate_postcode(
     postcode: str | None, async_client: AsyncClient
 ) -> str | None:
     if postcode:
+        if postcode.replace(" ", "").upper() in UNKNOWN_POSTCODES_NO_SPACES:
+            return postcode
+
         try:
             normalised_postcode = await validate_postcode(postcode, async_client)
 
@@ -50,7 +54,7 @@ async def _validate_postcode(
 async def _imd_for_postcode(
     postcode: str | None, async_client: AsyncClient
 ) -> str | None:
-    if postcode:
+    if postcode and not postcode.lower().startswith("je"):
         try:
             imd = await imd_for_postcode(postcode, async_client)
 
@@ -98,6 +102,13 @@ async def _gp_details_from_postcode(
         normalised_postcode = await validate_postcode(
             gp_practice_postcode, async_client
         )
+
+        if not normalised_postcode:
+            raise ValidationError(
+                "Invalid GP practice with postcode %(postcode)s",
+                params={"postcode": gp_practice_postcode},
+            )
+
         ods_code = await gp_ods_code_for_postcode(normalised_postcode, async_client)
 
         if not ods_code:
