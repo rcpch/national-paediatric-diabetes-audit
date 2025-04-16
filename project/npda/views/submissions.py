@@ -308,8 +308,7 @@ def upload_csv_in_progress(request):
         audit_year=audit_period.audit_year(),
     ).order_by("-submission_date").first()
 
-    # if last_submission and not last_submission.submission_active:
-    if last_submission:
+    if last_submission and not last_submission.submission_active:
         patients_so_far = PatientSubmission.objects.filter(submission=last_submission).count()
 
         context = {
