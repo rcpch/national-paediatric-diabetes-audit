@@ -30,10 +30,11 @@ from project.constants.user import (
     AUDIT_CENTRE_COORDINATOR,
     RCPCH_AUDIT_TEAM,
     TRUST_AUDIT_TEAM_COORDINATOR_ACCESS,
+    AUDIT_CENTRE_READER
 )
 
 # E12 imports
-from project.npda.general_functions.audit_period import get_current_audit_year
+from project.npda.general_functions.audit_period import get_audit_period_for_date
 from project.npda.general_functions.csv import csv_parse
 from project.npda.models import NPDAUser, Submission
 from project.npda.models.visitactivity import VisitActivity
@@ -74,6 +75,7 @@ def check_all_users_in_pdu(user, users, pz_code):
 def test_npda_user_list_view_users_can_only_see_users_from_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     """Except for RCPCH_AUDIT_TEAM, users should only see users from their own PDU."""
@@ -104,6 +106,7 @@ def test_npda_user_list_view_users_can_only_see_users_from_their_pdu(
 def test_npda_user_list_view_rcpch_audit_team_can_view_all_users(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     """RCPCH_AUDIT_TEAM users can view all users."""
@@ -145,6 +148,7 @@ def test_npda_user_list_view_rcpch_audit_team_can_view_all_users(
 def test_npda_user_list_view_users_cannot_switch_outside_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     ah_user = NPDAUser.objects.filter(
@@ -172,6 +176,7 @@ def test_npda_user_list_view_users_cannot_switch_outside_their_pdu(
 def test_npda_user_list_view_normal_users_cannot_set_their_view_preference_to_national(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     ah_user = NPDAUser.objects.filter(
@@ -199,6 +204,7 @@ def test_npda_user_list_view_normal_users_cannot_set_their_view_preference_to_na
 def test_npda_user_list_view_users_cannot_set_their_view_preference_to_organisation(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     ah_user = NPDAUser.objects.filter(
@@ -228,7 +234,11 @@ def test_npda_user_list_view_users_cannot_set_their_view_preference_to_organisat
 
 @pytest.mark.django_db
 def test_editor_can_upload_csv(
-    seed_groups_fixture, seed_users_fixture, client, dummy_sheets_folder
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    dummy_sheets_folder
 ):
     # create a test user with the editor role
     editor_user = NPDAUser.objects.filter(
@@ -256,7 +266,11 @@ def test_editor_can_upload_csv(
 
 @pytest.mark.django_db
 def test_reader_cannot_upload_csv(
-    seed_groups_fixture, seed_users_fixture, client, dummy_sheets_folder
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    dummy_sheets_folder
 ):
     # create a test user with the editor role
     reader_user = NPDAUser.objects.filter(
@@ -285,6 +299,7 @@ def test_reader_cannot_upload_csv(
 def test_coordinators_cannot_change_their_role(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     user = NPDAUser.objects.filter(role=AUDIT_CENTRE_COORDINATOR).first()
@@ -313,6 +328,7 @@ def test_coordinators_cannot_change_their_role(
 def test_coordinators_cannot_change_their_employer_htmx(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     user = NPDAUser.objects.filter(
@@ -348,6 +364,7 @@ def test_coordinators_cannot_change_their_employer_htmx(
 def test_coordinators_cannot_change_their_employer_post(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     user = NPDAUser.objects.filter(
@@ -370,6 +387,7 @@ def test_coordinators_cannot_change_their_employer_post(
 def test_coordinators_cannot_create_users_outside_of_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     user_count_before = NPDAUser.objects.count()
@@ -402,6 +420,7 @@ def test_coordinators_cannot_create_users_outside_of_their_pdu(
 def test_audit_team_can_create_users_outside_of_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     user_count_before = NPDAUser.objects.count()
@@ -438,6 +457,7 @@ def test_audit_team_can_create_users_outside_of_their_pdu(
 def test_coordinators_cannot_create_audit_team_members(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     user_count_before = NPDAUser.objects.count()
@@ -470,6 +490,7 @@ def test_coordinators_cannot_create_audit_team_members(
 def test_coordinators_cannot_delete_users_outside_of_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     user_count_before = NPDAUser.objects.count()
@@ -496,6 +517,7 @@ def test_coordinators_cannot_delete_users_outside_of_their_pdu(
 def test_coordinators_cannot_add_employers_outside_of_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     ah_coordinator = NPDAUser.objects.filter(
@@ -530,6 +552,7 @@ def test_coordinators_cannot_add_employers_outside_of_their_pdu(
 def test_audit_team_can_add_employers_outside_of_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     audit_team_user = NPDAUser.objects.filter(
@@ -544,19 +567,17 @@ def test_audit_team_can_add_employers_outside_of_their_pdu(
 
     url = reverse("npdauser-update", kwargs={"pk": ah_coordinator.pk})
 
-    response = client.post(
-        url,
-        data={"add_employer": GOSH_PZ_CODE},
-        **{
-            # Gated on request.htmx
-            "HTTP_HX-Request": "true",
-        },
-    )
+    response = client.post(url, data={
+        "add_employer": GOSH_PZ_CODE
+    }, **{
+        # Gated on request.htmx
+        "HTTP_HX-Request": "true",
+    })
 
     ah_coordinator.refresh_from_db()
-    employers = {e.pz_code for e in ah_coordinator.organisation_employers.all()}
+    employers = { e.pz_code for e in ah_coordinator.organisation_employers.all() }
 
-    assert employers == {ALDER_HEY_PZ_CODE, GOSH_PZ_CODE}
+    assert employers == { ALDER_HEY_PZ_CODE, GOSH_PZ_CODE }
 
 
 @pytest.mark.django_db
@@ -572,6 +593,7 @@ def test_users_can_download_csv(
     client,
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     user_data,
 ):
     """Test that editor, coordinator, and RCPCH audit team users can download CSV files."""
@@ -584,9 +606,11 @@ def test_users_can_download_csv(
 
     client = login_and_verify_user(client, test_user)
 
+    (audit_start_date, _) = get_audit_period_for_date(timezone.now())
+
     # Create a test submission
     submission = Submission.objects.create(
-        audit_year=get_current_audit_year(),
+        audit_year=audit_start_date.year,
         submission_date=timezone.now(),
         submission_active=True,
         submission_by=test_user,
@@ -626,6 +650,7 @@ def test_reader_cannot_download_csv(
     client,
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
 ):
     """Test that the reader cannot download CSV files."""
 
@@ -637,9 +662,11 @@ def test_reader_cannot_download_csv(
 
     client = login_and_verify_user(client, editor_user)
 
+    (audit_start_date, _) = get_audit_period_for_date(timezone.now())
+
     # Create a test submission
     submission = Submission.objects.create(
-        audit_year=get_current_audit_year(),
+        audit_year=audit_start_date.year,
         submission_date=timezone.now(),
         submission_active=True,
         submission_by=editor_user,
@@ -683,6 +710,7 @@ def test_users_can_download_report(
     client,
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     user_data,
     valid_df,
     dummy_sheet_csv,
@@ -697,9 +725,11 @@ def test_users_can_download_report(
 
     client = login_and_verify_user(client, test_user)
 
+    (audit_start_date, _) = get_audit_period_for_date(timezone.now())
+
     # Create a test submission
     submission = Submission.objects.create(
-        audit_year=get_current_audit_year(),
+        audit_year=audit_start_date.year,
         submission_date=timezone.now(),
         submission_active=True,
         submission_by=test_user,
@@ -739,6 +769,7 @@ def test_rcpch_audit_team_can_delete_submission(
     client,
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     valid_df,
 ):
     """Test that RCPCH audit team members can delete submissions."""
@@ -751,9 +782,11 @@ def test_rcpch_audit_team_can_delete_submission(
 
     client = login_and_verify_user(client, audit_team_user)
 
+    (audit_start_date, _) = get_audit_period_for_date(timezone.now())
+
     # Create a test submission
     submission = Submission.objects.create(
-        audit_year=get_current_audit_year(),
+        audit_year=audit_start_date.year,
         submission_date=timezone.now(),
         submission_active=False,  # cannot delete active submissions without first creating a new one
         submission_by=audit_team_user,
@@ -797,6 +830,7 @@ def test_non_rcpch_audit_team_cannot_delete_submission(
     client,
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     user_data,
     valid_df,
 ):
@@ -810,9 +844,11 @@ def test_non_rcpch_audit_team_cannot_delete_submission(
 
     client = login_and_verify_user(client, non_deleting_user)
 
+    (audit_start_date, _) = get_audit_period_for_date(timezone.now())
+
     # Create a test submission
     submission = Submission.objects.create(
-        audit_year=get_current_audit_year(),
+        audit_year=audit_start_date.year,
         submission_date=timezone.now(),
         submission_active=True,
         submission_by=non_deleting_user,

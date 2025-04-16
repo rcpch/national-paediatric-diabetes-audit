@@ -148,18 +148,6 @@ def patient_valid(patient):
         return True
 
 
-@register.simple_tag
-def text_for_data_submission(can_upload_csv, can_complete_questionnaire):
-    if can_upload_csv and can_complete_questionnaire:
-        return "You can submit data by uploading a CSV or completing the questionnaire. Note that once you upload a CSV, you will not be able to complete the questionnaire. Once you complete the questionnaire, you will not be able to upload a CSV."
-    elif can_upload_csv:
-        return "You can only submit data by uploading a CSV. If you want to submit data via questionnaire, please contact the NPDA team."
-    elif can_complete_questionnaire:
-        return "You can only submit data by completing the questionnaire. If you want to submit data via CSV, please contact the NPDA team."
-    else:
-        return "You cannot upload a CSV or complete a questionnaire."
-
-
 # Used to keep text highlighted in navbar for the tab that has been selected
 @register.simple_tag
 def active_navbar_tab(request, url_name):

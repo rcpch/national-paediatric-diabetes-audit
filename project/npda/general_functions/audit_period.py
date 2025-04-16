@@ -1,16 +1,8 @@
 from datetime import date
 from dateutil.relativedelta import relativedelta
 
-
-# TODO MRB: How will we add new audit years (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/481)
-SUPPORTED_AUDIT_YEARS = [
-    # submitted on the old platform, re-uploaded to test this one
-    2023,
-    2024,
-    # first year submitted on this platform
-    2025,
-    2026,
-]
+# IMPORTANT NOTE!
+# Where possible use start_date and end_date from the AuditPeriod model instead of these helpers
 
 
 def get_audit_period_for_date(input_date: date) -> tuple[date, date]:
@@ -29,13 +21,6 @@ def get_audit_period_for_date(input_date: date) -> tuple[date, date]:
           a ValueError as undefined.
     """
 
-    if input_date < date(SUPPORTED_AUDIT_YEARS[0], 4, 1) or input_date > date(
-        SUPPORTED_AUDIT_YEARS[-1], 3, 31
-    ):
-        raise ValueError(
-            f"Audit period is only available for the years 2024 to 2027. Provided date: {input_date}"
-        )
-
     # Audit year is the year of the input date if the month is April or later, otherwise it is the previous year
     audit_year = input_date.year if input_date.month >= 4 else input_date.year - 1
 
@@ -46,11 +31,6 @@ def get_audit_period_for_date(input_date: date) -> tuple[date, date]:
     audit_end_date = date(audit_year + 1, 3, 31)
 
     return audit_start_date, audit_end_date
-
-
-def get_current_audit_year() -> int:
-    (start_date, _) = get_audit_period_for_date(date.today())
-    return start_date.year
 
 
 def get_quarters_for_audit_period(
@@ -104,11 +84,6 @@ def get_quarter_for_visit(
 
 def audit_period_for_audit_year(audit_year: int) -> tuple[date, date]:
     """Get the start and end date of the audit period for the given audit year."""
-    if audit_year not in SUPPORTED_AUDIT_YEARS:
-        raise ValueError(
-            f"Audit period is only available for the years {', '.join(map(str, SUPPORTED_AUDIT_YEARS))}. Provided audit year: {audit_year}"
-        )
-
     audit_start_date = date(audit_year, 4, 1)
     audit_end_date = date(audit_year + 1, 3, 31)
 

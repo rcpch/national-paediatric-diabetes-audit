@@ -16,6 +16,7 @@ from project.npda.models.paediatric_diabetes_unit import (
     PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
 )
 from project.npda.models.patient import Patient
+from project.npda.models.audit_period import AuditPeriod
 from project.npda.views.decorators import login_and_otp_required
 
 # LOGGING
@@ -86,15 +87,23 @@ def dashboard(request):
         )
         return render(request, "dashboard.html")
 
-    selected_audit_year = int(request.session.get("selected_audit_year"))
+    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
+    
+    current_date = date.today()
+    calculation_date = audit_period.kpi_calculation_date()
 
-    # This function might get called on historical cohorts, so we need to check if today's date is within the audit period
-    audit_start, audit_end = audit_period_for_audit_year(selected_audit_year)
-    if audit_start <= date.today() <= audit_end:
-        calculation_date = date.today()
+    if audit_period.start_date > current_date:
+        # Future audit period - likely no data yet but you can still select it
+        current_quarter = None
+        days_remaining_until_audit_end_date = (audit_period.end_date - current_date).days
+    elif current_date > audit_period.end_date:
+        # Past audit period
+        current_quarter = None
+        days_remaining_until_audit_end_date = None
     else:
-        calculation_date = audit_start
-
+        # Current audit period
+        current_quarter = retrieve_quarter_for_date(current_date)
+        days_remaining_until_audit_end_date = (audit_period.end_date - current_date).days
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -108,13 +117,6 @@ def dashboard(request):
     new_diagnosis_per_quarter_value_counts_pct = (
         calculate_kpis.calculate_kpi_2_total_new_diagnoses_stratified_by_quarter()
     )
-
-    # Gather other context vars
-    
-    days_remaining_until_audit_end_date = (
-        kpi_calculations_object["audit_end_date"] - calculation_date
-    ).days
-    current_quarter = retrieve_quarter_for_date(calculation_date)
 
     context = {
         "scatter_plot_select_list": _scatter_plot_select_list("new_diagnoses"),
@@ -135,7 +137,7 @@ def dashboard(request):
             "map": json.dumps(
                 dict(
                     pdu_pk=pdu.pk,
-                    selected_audit_year=selected_audit_year,
+                    selected_audit_year=audit_period.audit_year(),
                 )
             ),
         },

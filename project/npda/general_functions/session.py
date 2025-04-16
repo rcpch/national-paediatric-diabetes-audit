@@ -8,8 +8,6 @@ from django.apps import apps
 from project.npda.general_functions import (
     organisations_adapter,
     get_audit_period_for_date,
-    get_current_audit_year,
-    SUPPORTED_AUDIT_YEARS,
 )
 
 logger = logging.getLogger(__name__)
@@ -41,12 +39,29 @@ def get_submission_actions(pz_code, audit_year):
     }
 
 
+def get_audit_period_session_data(audit_period, user):
+    AuditPeriod = apps.get_model("npda", "AuditPeriod")
+    audit_years = []
+
+    for audit_period in AuditPeriod.objects.order_by("start_date").all():
+        if audit_period.is_visible or user.is_rcpch_audit_team_member or user.is_superuser:
+            audit_years.append(
+                {
+                    "year": audit_period.audit_year()
+                }
+            )
+    
+    return {
+        "audit_years": audit_years
+    }
+
+
 def create_session_object(user):
     """
     Create a session object for the user, based on their permissions.
     This is called on login, and is used to filter the data the user can see.
     """
-
+    AuditPeriod = apps.get_model("npda", "AuditPeriod")
     OrganisationEmployer = apps.get_model("npda", "OrganisationEmployer")
     
     primary_organisation = OrganisationEmployer.objects.filter(
@@ -59,27 +74,18 @@ def create_session_object(user):
         )
     )
 
-    audit_year = (
-        get_current_audit_year()
-    )  # this is the year that that audit period starts in
-    submission_actions = get_submission_actions(pz_code, audit_year)
+    # This is the year that that audit period starts in
+    audit_period = AuditPeriod.objects.get_default_audit_period()
 
-    supported_audit_years = [
-        (
-            {"year": year, "disabled": False}
-            if year <= get_current_audit_year()
-            else {"year": year, "disabled": True}
-        )
-        for year in SUPPORTED_AUDIT_YEARS
-    ]
+    submission_actions = get_submission_actions(pz_code, audit_period.audit_year())
+    audit_period_data = get_audit_period_session_data(audit_period, user)
 
     session = {
         "pz_code": pz_code,
         "lead_organisation": primary_organisation.paediatric_diabetes_unit.lead_organisation_name,
         "pdu_choices": list(pdu_choices),
-        "selected_audit_year": audit_year,
-        "audit_years": supported_audit_years,
-    } | submission_actions
+        "selected_audit_year": audit_period.audit_year(),
+    } | submission_actions | audit_period_data
 
     return session
 
@@ -89,23 +95,19 @@ def refresh_session_filters(request, pz_code=None, audit_year=None):
 
     Submission = apps.get_model("npda", "Submission")
     PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+    AuditPeriod = apps.get_model("npda", "AuditPeriod")
 
     can_upload_csv = True
     can_complete_questionnaire = True
 
     pz_code = pz_code or request.session.get("pz_code")
 
-    supported_audit_years = [
-        (
-            {"year": year, "disabled": False}
-            if year <= get_current_audit_year()
-            else {"year": year, "disabled": True}
-        )
-        for year in SUPPORTED_AUDIT_YEARS
-    ]
     audit_year = audit_year or request.session.get("selected_audit_year")
 
-    session["audit_years"] = supported_audit_years
+    audit_period = AuditPeriod.objects.get(
+        start_date__year=audit_year
+    )
+
     session["selected_audit_year"] = audit_year
 
     if pz_code:
@@ -134,6 +136,7 @@ def refresh_session_filters(request, pz_code=None, audit_year=None):
         )
 
     session |= get_submission_actions(pz_code, audit_year)
+    session |= get_audit_period_session_data(audit_period, request.user)
 
     request.session.update(session)
     request.session.modified = True

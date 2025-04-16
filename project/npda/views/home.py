@@ -22,6 +22,7 @@ from django.utils import timezone
 # HTMX imports
 from django_htmx.http import trigger_client_event
 
+from project.npda.general_functions.csv import csv_upload, csv_parse, csv_header
 from project.npda.general_functions.csv import (
     csv_upload,
     csv_parse,
@@ -32,7 +33,7 @@ from project.npda.general_functions.csv import (
 from ..forms.upload import UploadFileForm
 from ..general_functions.session import refresh_session_filters
 from ..general_functions.view_preference import get_or_update_view_preference
-from ..models import PaediatricDiabetesUnit
+from ..models import PaediatricDiabetesUnit, AuditPeriod
 from ..tasks import upload_csv_task
 
 # RCPCH imports
@@ -116,11 +117,13 @@ async def home(request):
                 )
                 return redirect("home")
 
-            audit_year = request.session.get("selected_audit_year")
+            audit_period = await sync_to_async(AuditPeriod.objects.get_audit_period_for_request)(request)
+            if not audit_period.is_open and not (request.user.is_superuser or request.user.is_rcpch_audit_team_member):
+                raise PermissionDenied(f"Upload is closed for {audit_period.audit_year()}.")
 
             new_submission = await create_csv_submission(
                 pdu=pdu,
-                audit_year=audit_year,
+                audit_year=audit_period.audit_year(),
                 csv_file_bytes=user_csv_bytes,
                 csv_file_name=user_csv_filename,
                 user=request.user,

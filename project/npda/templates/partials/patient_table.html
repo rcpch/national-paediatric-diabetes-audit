@@ -246,7 +246,7 @@
   <div class="hero-content text-center">
     <div class="max-w-md">
       <h1 class="text-5xl font-bold font-montserrat text-rcpch_light_blue">
-        {% if can_complete_questionnaire %}
+        {% if request.session.can_complete_questionnaire %}
           Start your {{ selected_audit_year }} submission by adding a patient...
         {% else %}
           You have no patients in your submission for {{ selected_audit_year }}...

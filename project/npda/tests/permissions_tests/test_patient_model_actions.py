@@ -3,13 +3,14 @@ import pytest
 # Django imports
 from django.apps import apps
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.timezone import make_aware
 from http import HTTPStatus
 
 # RCPCH imports
 from project.constants.user import RCPCH_AUDIT_TEAM
-from project.npda.models import Patient, Submission, NPDAUser
-from project.npda.general_functions import get_current_audit_year
+from project.npda.models import Patient, Submission, NPDAUser, AuditPeriod
+from project.npda.general_functions import get_audit_period_for_date
 from project.npda.tests.utils import login_and_verify_user
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
@@ -20,9 +21,11 @@ ALDER_HEY_PZ_CODE = "PZ074"
 
 
 def create_submission_with_patient(user):
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+
     submission = Submission.objects.create(
-        audit_year=get_current_audit_year(),
-        submission_date=f"{get_current_audit_year()}-04-01T00:00:00Z",
+        audit_year=audit_period.audit_year(),
+        submission_date=f"{audit_period.audit_year()}-04-01T00:00:00Z",
         submission_active=True,
         submission_by=user,
         paediatric_diabetes_unit=user.organisation_employers.first(),
@@ -59,6 +62,7 @@ def set_view_preference(client, view_preference, pz_code):
 def test_users_can_only_see_patients_from_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     """Except for RCPCH_AUDIT_TEAM, users should only see patients from their own PDU."""
@@ -85,6 +89,7 @@ def test_users_can_only_see_patients_from_their_pdu(
 def test_rcpch_audit_team_can_see_patients_from_all_pdus(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     gosh_user = NPDAUser.objects.filter(
@@ -121,6 +126,7 @@ def test_rcpch_audit_team_can_see_patients_from_all_pdus(
 def test_user_with_unexpected_view_preference(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     gosh_user = NPDAUser.objects.filter(
@@ -155,6 +161,7 @@ def test_user_with_unexpected_view_preference(
 def test_rcpch_audit_team_can_see_all_patients(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     gosh_user = NPDAUser.objects.filter(
@@ -186,6 +193,7 @@ def test_rcpch_audit_team_can_see_all_patients(
 def test_users_can_only_edit_patients_from_their_own_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     gosh_user = NPDAUser.objects.filter(
@@ -210,6 +218,7 @@ def test_users_can_only_edit_patients_from_their_own_pdu(
 def test_rcpch_audit_team_can_edit_patients_from_any_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     gosh_user = NPDAUser.objects.filter(
@@ -238,6 +247,7 @@ def test_rcpch_audit_team_can_edit_patients_from_any_pdu(
 def test_users_can_only_see_patient_visits_from_their_own_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     gosh_user = NPDAUser.objects.filter(
@@ -262,6 +272,7 @@ def test_users_can_only_see_patient_visits_from_their_own_pdu(
 def test_rcpch_audit_team_can_see_visits_from_all_pdus(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     gosh_user = NPDAUser.objects.filter(
@@ -290,6 +301,7 @@ def test_rcpch_audit_team_can_see_visits_from_all_pdus(
 def test_users_can_only_edit_patient_visits_from_their_own_pdu(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     gosh_user = NPDAUser.objects.filter(
@@ -315,6 +327,7 @@ def test_users_can_only_edit_patient_visits_from_their_own_pdu(
 def test_rcpch_audit_team_can_edit_visits_from_all_pdus(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     gosh_user = NPDAUser.objects.filter(
