@@ -165,6 +165,7 @@ async def csv_upload_sync(
         audit_year=audit_period.audit_year(),
         csv_file_bytes=None,
         csv_file_name=None,
+        submission_active=True,
         user=user,
         ip_address=None
     )

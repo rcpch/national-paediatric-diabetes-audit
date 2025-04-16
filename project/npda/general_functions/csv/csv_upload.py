@@ -40,7 +40,7 @@ from project.npda.models import (
     VisitActivity
 )
 
-async def create_csv_submission(pdu, audit_year, csv_file_bytes, csv_file_name, user=None, ip_address=None):
+async def create_csv_submission(pdu, audit_year, csv_file_bytes, csv_file_name, submission_active, user=None, ip_address=None):
     old_submission = await Submission.objects.filter(
         paediatric_diabetes_unit=pdu,
         audit_year=audit_year,
@@ -58,7 +58,7 @@ async def create_csv_submission(pdu, audit_year, csv_file_bytes, csv_file_name, 
         audit_year=audit_year,
         csv_file=csv_file_bytes,
         csv_file_name=csv_file_name,
-        submission_active=True
+        submission_active=submission_active
     )
     
     if user:

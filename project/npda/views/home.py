@@ -126,6 +126,8 @@ async def home(request):
                 audit_year=audit_period.audit_year(),
                 csv_file_bytes=user_csv_bytes,
                 csv_file_name=user_csv_filename,
+                # If uploading in the background the celery task will flip it to active once complete
+                submission_active=not use_celery,
                 user=request.user,
                 ip_address=request.META.get("REMOTE_ADDR"),
             )

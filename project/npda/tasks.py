@@ -43,6 +43,10 @@ def upload_csv_task(submission_id):
         submission=submission,
     )
 
+    logger.info(f"Processed submission {submission.id}. Activating it now")
+    submission.submission_active = True
+    submission.save()
+
     tidy_up_old_submissions_sync(
         pdu=submission.paediatric_diabetes_unit,
         new_submission=submission,
