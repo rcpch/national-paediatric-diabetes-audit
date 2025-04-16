@@ -33,6 +33,7 @@ urlpatterns = [
     path("view_preference", view=view_preference, name="view_preference"),
     path("audit-year", view=audit_year, name="audit-year"),
     path("upload_csv", view=upload_csv, name="upload_csv"),
+    path("upload_csv_in_progress", view=upload_csv_in_progress, name="upload-csv-in-progress"),
     path(
         "switch_paediatric_diabetes_unit",
         view=switch_paediatric_diabetes_unit,

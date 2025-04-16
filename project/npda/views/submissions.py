@@ -10,7 +10,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Case, When, F, Value, IntegerField, OuterRef, Subquery
 from django.db.models.functions import Concat, ExtractMonth, ExtractYear
 from django.http import HttpResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.views.generic import ListView
 
 # Third party imports
@@ -31,7 +31,8 @@ from ..models import (
     Submission,
     OrganisationEmployer,
     PaediatricDiabetesUnit,
-    AuditPeriod
+    AuditPeriod,
+    PatientSubmission
 )
 
 
@@ -294,22 +295,31 @@ class SubmissionsListView(
 
 @login_and_otp_required()
 def upload_csv(request):
-    pz_code = request.session.get("pz_code")
-    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
-
-    in_progress_submission = Submission.objects.filter(
-        paediatric_diabetes_unit__pz_code=pz_code,
-        audit_year=audit_period.audit_year(),
-        submission_active=False,
-    ).first()
-
-    if in_progress_submission:
-        context = {"csv_file_name": in_progress_submission.csv_file_name}
-        return render(request, "upload_csv/upload_in_progress.html", context=context)
-
     context = {"employers": OrganisationEmployer.objects.filter(npda_user=request.user)}
     return render(request, "upload_csv/file_upload.html", context=context)
 
+@login_and_otp_required()
+def upload_csv_in_progress(request):
+    pz_code = request.session.get("pz_code")
+    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
+
+    last_submission = Submission.objects.filter(
+        paediatric_diabetes_unit__pz_code=pz_code,
+        audit_year=audit_period.audit_year(),
+    ).order_by("-submission_date").first()
+
+    # if last_submission and not last_submission.submission_active:
+    if last_submission:
+        patients_so_far = PatientSubmission.objects.filter(submission=last_submission).count()
+
+        context = {
+            "csv_file_name": last_submission.csv_file_name,
+            "patients_so_far": patients_so_far
+        }
+
+        return render(request, "upload_csv/upload_in_progress.html", context=context)
+    
+    return redirect("patients") 
 
 @login_and_otp_required()
 def switch_paediatric_diabetes_unit(request):

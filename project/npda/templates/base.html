@@ -33,6 +33,7 @@
     <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
     <link href="{% static 'tailwind.css' %}" rel="stylesheet" />
     <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+    {% block head %}{% endblock %}
   </head>
   <body id="root">
     {% csrf_token %}

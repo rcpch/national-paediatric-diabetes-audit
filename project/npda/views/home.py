@@ -137,13 +137,8 @@ async def home(request):
 
                 # update the session fields - this stores that the user has uploaded a csv and disables the ability to use the questionnaire
                 await sync_to_async(refresh_session_filters)(request)
-
-                messages.success(
-                    request=request,
-                    message="CSV has been uploaded. The data is being processed in the background.",
-                )
-
-                return redirect("upload_csv")
+                
+                return redirect("upload-csv-in-progress")
         
             # CSV is valid, parse any errors and store the data in the tables.
             errors_by_row_index = await csv_upload(
