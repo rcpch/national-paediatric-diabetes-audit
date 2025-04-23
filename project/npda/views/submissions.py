@@ -1,7 +1,8 @@
 # Python imports
-from datetime import date
+from datetime import date, datetime, timezone
 import json
 from typing import Any, Iterable
+import logging
 
 # Django imports
 from django.apps import apps
@@ -34,6 +35,8 @@ from ..models import (
     AuditPeriod,
     Patient
 )
+
+logger = logging.getLogger(__name__)
 
 
 class SubmissionsListView(
@@ -308,7 +311,19 @@ def upload_csv_in_progress(request):
         audit_year=audit_period.audit_year(),
     ).order_by("-submission_date").first()
 
-    if last_submission and not last_submission.submission_active:
+    seconds_since_submission = (datetime.now(timezone.utc) - last_submission.submission_date).seconds
+    minutes_since_submission = seconds_since_submission / 60
+
+    timeout = minutes_since_submission > 10
+    if timeout:
+        # Error to trigger admin email
+        logger.error(f"Submission timed out. Submission ID: {last_submission.pk}. PZ Code: {pz_code}")
+        messages.error(
+            request,
+            f"{last_submission.csv_file_name} took too long to process. Please contact the NPDA team for assistance.",
+        )
+
+    if last_submission and not last_submission.submission_active and not timeout:
         patients_so_far = Patient.objects.filter(submissions=last_submission).count()
         visits_so_far = Patient.objects.filter(submissions=last_submission).aggregate(Count("visit"))["visit__count"]
 
