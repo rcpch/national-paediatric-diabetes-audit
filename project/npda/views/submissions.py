@@ -10,7 +10,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Case, When, F, Value, IntegerField, OuterRef, Subquery
 from django.db.models.functions import Concat, ExtractMonth, ExtractYear
 from django.http import HttpResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.views.generic import ListView
 
 # Third party imports
@@ -27,7 +27,13 @@ from ..general_functions.csv import (
     download_xlsx,
 )
 from .mixins import LoginAndOTPRequiredMixin
-from ..models import Submission, OrganisationEmployer, PaediatricDiabetesUnit
+from ..models import (
+    Submission,
+    OrganisationEmployer,
+    PaediatricDiabetesUnit,
+    AuditPeriod,
+    Patient
+)
 
 
 class SubmissionsListView(
@@ -292,6 +298,29 @@ def upload_csv(request):
     context = {"employers": OrganisationEmployer.objects.filter(npda_user=request.user)}
     return render(request, "upload_csv/file_upload.html", context=context)
 
+@login_and_otp_required()
+def upload_csv_in_progress(request):
+    pz_code = request.session.get("pz_code")
+    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
+
+    last_submission = Submission.objects.filter(
+        paediatric_diabetes_unit__pz_code=pz_code,
+        audit_year=audit_period.audit_year(),
+    ).order_by("-submission_date").first()
+
+    if last_submission and not last_submission.submission_active:
+        patients_so_far = Patient.objects.filter(submissions=last_submission).count()
+        visits_so_far = Patient.objects.filter(submissions=last_submission).aggregate(Count("visit"))["visit__count"]
+
+        context = {
+            "csv_file_name": last_submission.csv_file_name,
+            "patients_so_far": patients_so_far,
+            "visits_so_far": visits_so_far
+        }
+
+        return render(request, "upload_csv/upload_in_progress.html", context=context)
+    
+    return redirect("patients") 
 
 @login_and_otp_required()
 def switch_paediatric_diabetes_unit(request):
@@ -316,7 +345,7 @@ def switch_paediatric_diabetes_unit(request):
         "error_message": error_message,
     }
     # update the session with the new PDU
-    refresh_session_filters(request, selected_pz_code)
+    refresh_session_filters(request, pz_code=selected_pz_code)
 
     return render(request, template, context=context)
 

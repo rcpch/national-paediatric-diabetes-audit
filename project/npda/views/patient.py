@@ -410,7 +410,7 @@ class PatientCreateView(
             submission.patients.add(patient)
             submission.save()
             # update the session - this stores that the user has used the questionnaire and disables csv upload
-            refresh_session_filters(self.request)
+            refresh_session_filters(self.request, questionnaire=True)
 
         else:
             logger.error(

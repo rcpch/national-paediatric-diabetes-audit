@@ -84,9 +84,3 @@ class Submission(models.Model):
             raise ValidationError("Cannot delete an active submission.")
         super().delete(*args, **kwargs)
 
-    def save(self, *args, **kwargs):
-        if self.submission_active == False:
-            self.csv_file = None
-            # keep filename for our records
-
-        super().save(*args, **kwargs)

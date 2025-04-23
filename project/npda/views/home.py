@@ -126,6 +126,8 @@ async def home(request):
                 audit_year=audit_period.audit_year(),
                 csv_file_bytes=user_csv_bytes,
                 csv_file_name=user_csv_filename,
+                # If uploading in the background the celery task will flip it to active once complete
+                submission_active=not use_celery,
                 user=request.user,
                 ip_address=request.META.get("REMOTE_ADDR"),
             )
@@ -134,14 +136,9 @@ async def home(request):
                 upload_csv_task.delay(new_submission.id)
 
                 # update the session fields - this stores that the user has uploaded a csv and disables the ability to use the questionnaire
-                await sync_to_async(refresh_session_filters)(request)
-
-                messages.success(
-                    request=request,
-                    message="CSV has been uploaded. The data is being processed in the background.",
-                )
-
-                return redirect("upload_csv")
+                await sync_to_async(refresh_session_filters)(request, csv_upload=True)
+                
+                return redirect("upload-csv-in-progress")
         
             # CSV is valid, parse any errors and store the data in the tables.
             errors_by_row_index = await csv_upload(
@@ -154,7 +151,7 @@ async def home(request):
             await tidy_up_old_submissions(pdu, new_submission)
 
             # update the session fields - this stores that the user has uploaded a csv and disables the ability to use the questionnaire
-            await sync_to_async(refresh_session_filters)(request)
+            await sync_to_async(refresh_session_filters)(request, csv_upload=True)
 
             if errors_by_row_index:
                 messages.error(

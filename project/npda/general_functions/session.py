@@ -90,7 +90,7 @@ def create_session_object(user):
     return session
 
 
-def refresh_session_filters(request, pz_code=None, audit_year=None):
+def refresh_session_filters(request, pz_code=None, audit_year=None, csv_upload=None, questionnaire=None):
     session = {}
 
     Submission = apps.get_model("npda", "Submission")
@@ -135,7 +135,19 @@ def refresh_session_filters(request, pz_code=None, audit_year=None):
             )
         )
 
-    session |= get_submission_actions(pz_code, audit_year)
+    if csv_upload:
+        session |= {
+            "can_upload_csv": True,
+            "can_complete_questionnaire": False,
+        }
+    elif questionnaire:
+        session |= {
+            "can_upload_csv": False,
+            "can_complete_questionnaire": True,
+        }
+    else:
+        session |= get_submission_actions(pz_code, audit_year)
+    
     session |= get_audit_period_session_data(audit_period, request.user)
 
     request.session.update(session)
