@@ -136,7 +136,7 @@ async def home(request):
                 upload_csv_task.delay(new_submission.id)
 
                 # update the session fields - this stores that the user has uploaded a csv and disables the ability to use the questionnaire
-                await sync_to_async(refresh_session_filters)(request)
+                await sync_to_async(refresh_session_filters)(request, csv_upload=True)
                 
                 return redirect("upload-csv-in-progress")
         
@@ -151,7 +151,7 @@ async def home(request):
             await tidy_up_old_submissions(pdu, new_submission)
 
             # update the session fields - this stores that the user has uploaded a csv and disables the ability to use the questionnaire
-            await sync_to_async(refresh_session_filters)(request)
+            await sync_to_async(refresh_session_filters)(request, csv_upload=True)
 
             if errors_by_row_index:
                 messages.error(

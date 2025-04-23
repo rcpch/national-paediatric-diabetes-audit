@@ -345,7 +345,7 @@ def switch_paediatric_diabetes_unit(request):
         "error_message": error_message,
     }
     # update the session with the new PDU
-    refresh_session_filters(request, selected_pz_code)
+    refresh_session_filters(request, pz_code=selected_pz_code)
 
     return render(request, template, context=context)
 
