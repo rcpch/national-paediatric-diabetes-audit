@@ -1,19 +1,16 @@
 {% extends 'base.html' %}
-{% block head %}
-    <meta http-equiv="refresh" content="3">
-{% endblock head %}
 {% block content %}
     <div class="w-full flex flex-col justify-center items-center min-h-fit">
         <div class="container flex flex-col justify-center items-center my-20">
-            <h2 class="mb-10">Uploading {{csv_file_name}}. Please wait, this page will reload automatically...</h2>
+            <h2 class="mb-10 text-xl">Processing {{csv_file_name}}. Please wait, this page will reload automatically...</h2>
             <div class="stats shadow">
                 <div class="stat">
-                  <div class="stat-title">Patients</div>
-                  <div class="stat-value">{{patients_so_far}}</div>
+                  <div class="stat-title">Patients processed so far</div>
+                  <div class="stat-value text-center">{{patients_so_far}}</div>
                 </div>
                 <div class="stat">
-                  <div class="stat-title">Visits</div>
-                  <div class="stat-value">{{visits_so_far}}</div>
+                  <div class="stat-title">Visits processed so far</div>
+                  <div class="stat-value text-center">{{visits_so_far}}</div>
                 </div>
               </div>
         </div>

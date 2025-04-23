@@ -32,7 +32,7 @@ from ..models import (
     OrganisationEmployer,
     PaediatricDiabetesUnit,
     AuditPeriod,
-    PatientSubmission
+    Patient
 )
 
 
@@ -309,11 +309,13 @@ def upload_csv_in_progress(request):
     ).order_by("-submission_date").first()
 
     if last_submission and not last_submission.submission_active:
-        patients_so_far = PatientSubmission.objects.filter(submission=last_submission).count()
+        patients_so_far = Patient.objects.filter(submissions=last_submission).count()
+        visits_so_far = Patient.objects.filter(submissions=last_submission).aggregate(Count("visit"))["visit__count"]
 
         context = {
             "csv_file_name": last_submission.csv_file_name,
-            "patients_so_far": patients_so_far
+            "patients_so_far": patients_so_far,
+            "visits_so_far": visits_so_far
         }
 
         return render(request, "upload_csv/upload_in_progress.html", context=context)
