@@ -13,7 +13,6 @@ from project.npda.models import (
     PaediatricDiabetesUnit,
     Submission
 )
-from project.npda.general_functions import get_current_audit_year
 from project.npda.general_functions.csv import (
     csv_upload,
     csv_parse,
