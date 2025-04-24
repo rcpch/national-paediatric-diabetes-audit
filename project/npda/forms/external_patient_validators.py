@@ -17,7 +17,7 @@ from ..general_functions import (
     location_for_postcode,
 )
 
-from ...constants.postcodes import UNKNOWN_POSTCODES_NO_SPACES
+from ...constants.postcodes import skip_api_validation_for_postcode
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ async def _validate_postcode(
     postcode: str | None, async_client: AsyncClient
 ) -> str | None:
     if postcode:
-        if postcode.replace(" ", "").upper() in UNKNOWN_POSTCODES_NO_SPACES:
+        if skip_api_validation_for_postcode(postcode):
             return postcode
 
         try:
@@ -54,7 +54,7 @@ async def _validate_postcode(
 async def _imd_for_postcode(
     postcode: str | None, async_client: AsyncClient
 ) -> str | None:
-    if postcode and not postcode.lower().startswith("je"):
+    if postcode and not postcode.lower().startswith("je") and not skip_api_validation_for_postcode(postcode):
         try:
             imd = await imd_for_postcode(postcode, async_client)
 
@@ -66,7 +66,7 @@ async def _imd_for_postcode(
 async def _location_for_postcode(
     postcode: str | None, async_client: AsyncClient
 ) -> tuple[float, float] | None:
-    if postcode:
+    if postcode and not skip_api_validation_for_postcode(postcode):
         try:
             lon, lat, location_wgs84, location_bng = await location_for_postcode(
                 postcode, async_client
@@ -191,7 +191,7 @@ async def validate_patient_async(
 
         if isinstance(location, Exception) and not type(location) is ValidationError:
             raise location
-        else:
+        elif location:
             ret.location_bng = location[0]
             ret.location_wgs84 = location[1]
 
