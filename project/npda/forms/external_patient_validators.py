@@ -15,6 +15,7 @@ from ..general_functions import (
     imd_for_postcode,
     calculate_centiles_z_scores,
     ValidatedPostcode,
+    lookup_terminated_postcode,
 )
 
 from ...constants.postcodes import (

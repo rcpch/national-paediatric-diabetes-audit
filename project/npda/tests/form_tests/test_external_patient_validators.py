@@ -323,3 +323,31 @@ async def test_jersey_patient():
                 assert(result.index_of_multiple_deprivation_quintile is None)
 
                 assert not mock_imd_for_postcode.called
+
+
+async def test_terminated_postcode_endpoint_not_called_for_live_postcode():
+    with patch("project.npda.forms.external_patient_validators.lookup_postcode", AsyncMock(return_value=VALID_PATIENT_POSTCODE)) as mock_lookup_postcode:
+        with patch("project.npda.forms.external_patient_validators.lookup_terminated_postcode") as mock_lookup_terminated_postcode:
+            result = await validate_patient_async(
+                postcode=PATIENT_POSTCODE_NO_SPACES,
+                gp_practice_ods_code=None,
+                gp_practice_postcode=None,
+                async_client=async_client
+            )
+
+            assert(result.postcode == VALID_PATIENT_POSTCODE.normalised_postcode)
+            assert(not mock_lookup_postcode.called)
+
+
+async def test_terminated_postcode():
+    with patch("project.npda.forms.external_patient_validators.lookup_postcode", AsyncMock(return_value=None)) as mock_lookup_postcode:
+        with patch("project.npda.forms.external_patient_validators.lookup_terminated_postcode", AsyncMock(return_value=VALID_PATIENT_POSTCODE)) as mock_lookup_terminated_postcode:
+            result = await validate_patient_async(
+                postcode=PATIENT_POSTCODE_NO_SPACES,
+                gp_practice_ods_code=None,
+                gp_practice_postcode=None,
+                async_client=async_client
+            )
+
+            assert(result.postcode == VALID_PATIENT_POSTCODE.normalised_postcode)
+            assert(mock_lookup_postcode.called)
