@@ -18,7 +18,7 @@ from project.npda.general_functions.audit_period import get_audit_period_for_dat
 from project.npda.general_functions.random_date import get_random_date
 from project.npda.models import Patient
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.general_functions.validate_postcode import ValidatedPostcode, transform_lon_lat
+from project.npda.general_functions.validate_postcode import ValidatedPostcode
 from .transfer_factory import TransferFactory
 from project.constants import (
     ETHNICITIES,
@@ -36,85 +36,55 @@ DATE_OF_BIRTH = TODAY - relativedelta(years=10)
 GP_POSTCODE_NO_SPACES = "SE135PJ"
 GP_POSTCODE_WITH_SPACES = "SE13 5PJ"
 
-GP_LONGTITUDE = 0.004522
-GP_LATITUDE = 51.458513
-GP_LOCATION_BNG, GP_LOCATION_WGS84 = transform_lon_lat(GP_LONGTITUDE, GP_LATITUDE)
-
 VALID_GP_POSTCODE = ValidatedPostcode(
     normalised_postcode=GP_POSTCODE_WITH_SPACES,
-    lon=GP_LONGTITUDE,
-    lat=GP_LATITUDE,
-    location_bng=GP_LOCATION_BNG,
-    location_wgs84=GP_LOCATION_WGS84,
+    lon=0.004522,
+    lat=51.458513
 )
 
 JERSEY_GP_POSTCODE_NO_SPACES = "JE27LA"
 JERSEY_GP_POSTCODE_WITH_SPACES = "JE2 7LA"
 
-JERSEY_GP_LONGTITUDE = -2.0968
-JERSEY_GP_LATITUDE = 49.1909
-JERSEY_GP_LOCATION_BNG, JERSEY_GP_LOCATION_WGS84 = transform_lon_lat(
-    JERSEY_GP_LONGTITUDE, JERSEY_GP_LATITUDE
-)
-
 VALID_JERSEY_GP_POSTCODE = ValidatedPostcode(
     normalised_postcode=JERSEY_GP_POSTCODE_WITH_SPACES,
-    lon=JERSEY_GP_LONGTITUDE,
-    lat=JERSEY_GP_LATITUDE,
-    location_bng=JERSEY_GP_LOCATION_BNG,
-    location_wgs84=JERSEY_GP_LOCATION_WGS84,
+    lon=-2.0968,
+    lat=49.1909
 )
 
 PATIENT_POSTCODE_WITH_SPACES = "NW1 2DB"
 PATIENT_POSTCODE_NO_SPACES = "NW12DB"
 
-PATIENT_LONGTITUDE = -0.127014
-PATIENT_LATITUDE = 51.529985
-PATIENT_LOCATION_BNG, PATIENT_LOCATION_WGS84 = transform_lon_lat(
-    PATIENT_LONGTITUDE, PATIENT_LATITUDE
-)
-
 VALID_PATIENT_POSTCODE = ValidatedPostcode(
     normalised_postcode=PATIENT_POSTCODE_WITH_SPACES,
-    lon=PATIENT_LONGTITUDE,
-    lat=PATIENT_LATITUDE,
-    location_bng=PATIENT_LOCATION_BNG,
-    location_wgs84=PATIENT_LOCATION_WGS84,
+    lon=-0.127014,
+    lat=51.529985,
 )
 
 JERSEY_PATIENT_POSTCODE_NO_SPACES = "JE17XP"
 JERSEY_PATIENT_POSTCODE_WITH_SPACES = "JE1 7XP"
 
-JERSEY_PATIENT_LONGTITUDE = -2.0955
-JERSEY_PATIENT_LATITUDE = 49.1908
-JERSEY_PATIENT_LOCATION_BNG, JERSEY_PATIENT_LOCATION_WGS84 = transform_lon_lat(
-    JERSEY_PATIENT_LONGTITUDE, JERSEY_PATIENT_LATITUDE
-)
-
 VALID_JERSEY_PATIENT_POSTCODE = ValidatedPostcode(
     normalised_postcode=JERSEY_PATIENT_POSTCODE_WITH_SPACES,
-    lon=JERSEY_PATIENT_LONGTITUDE,
-    lat=JERSEY_PATIENT_LATITUDE,
-    location_bng=JERSEY_PATIENT_LOCATION_BNG,
-    location_wgs84=JERSEY_PATIENT_LOCATION_WGS84,
+    lon=-2.0955,
+    lat=49.1908
 )
 
 VALID_FIELDS = {
     "nhs_number": "6239431915",
     "sex": SEX_TYPE[0][0],
     "date_of_birth": TODAY - relativedelta(years=10),
-    "postcode": PATIENT_POSTCODE_WITH_SPACES,
+    "postcode": VALID_PATIENT_POSTCODE.normalised_postcode,
     "ethnicity": ETHNICITIES[0][0],
     "diabetes_type": DIABETES_TYPES[0][0],
     "diagnosis_date": DATE_OF_BIRTH + relativedelta(years=8),
     "gp_practice_ods_code": "G85023",
-    "location_bng": PATIENT_LOCATION_BNG,
-    "location_wgs84": PATIENT_LOCATION_WGS84,
+    "location_bng": VALID_PATIENT_POSTCODE.location_bng,
+    "location_wgs84": VALID_PATIENT_POSTCODE.location_wgs84,
 }
 
 VALID_FIELDS_WITH_GP_POSTCODE = VALID_FIELDS | {
     "gp_practice_ods_code": None,
-    "gp_practice_postcode": GP_POSTCODE_WITH_SPACES,
+    "gp_practice_postcode": VALID_GP_POSTCODE.normalised_postcode,
 }
 
 INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE = 4

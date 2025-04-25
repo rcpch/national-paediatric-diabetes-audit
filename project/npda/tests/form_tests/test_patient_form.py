@@ -21,8 +21,6 @@ from project.npda.tests.factories.patient_factory import (
     VALID_FIELDS,
     VALID_FIELDS_WITH_GP_POSTCODE,
     INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
-    PATIENT_LOCATION_BNG,
-    PATIENT_LOCATION_WGS84
 )
 from project.npda.tests.factories import PaediatricsDiabetesUnitFactory
 
@@ -35,8 +33,8 @@ MOCK_EXTERNAL_VALIDATION_RESULT = PatientExternalValidationResult(
     gp_practice_ods_code=VALID_FIELDS["gp_practice_ods_code"],
     gp_practice_postcode=VALID_FIELDS_WITH_GP_POSTCODE["gp_practice_postcode"],
     index_of_multiple_deprivation_quintile=INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
-    location_bng=PATIENT_LOCATION_BNG,
-    location_wgs84=PATIENT_LOCATION_WGS84,
+    location_bng=VALID_FIELDS["location_bng"],
+    location_wgs84=VALID_FIELDS["location_wgs84"],
 )
 
 ALDER_HEY_PZ_CODE = "PZ074"
@@ -475,8 +473,8 @@ def test_lookup_location(mocked_pdu, mocked_audit_year):
     assert len(form.errors.as_data()) == 0
 
     patient = form.save()
-    assert patient.location_wgs84 == PATIENT_LOCATION_WGS84
-    assert patient.location_bng == PATIENT_LOCATION_BNG
+    assert patient.location_wgs84 == VALID_FIELDS["location_wgs84"]
+    assert patient.location_bng == VALID_FIELDS["location_bng"]
 
 
 @pytest.mark.django_db
