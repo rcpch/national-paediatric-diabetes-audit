@@ -32,13 +32,15 @@ class PatientExternalValidationResult:
     index_of_multiple_deprivation_quintile: str | None
 
 
+def future_resolve(value):
+    future = asyncio.Future()
+    future.set_result(value)
+    return future
+
 async def _validate_postcode(
     postcode: str | None, async_client: AsyncClient
 ) -> ValidatedPostcode | None:
     if postcode:
-        if skip_api_validation_for_postcode(postcode):
-            return postcode
-
         try:
             normalised_postcode = await validate_postcode(postcode, async_client)
 
@@ -46,6 +48,7 @@ async def _validate_postcode(
                 raise ValidationError(
                     "Invalid postcode %(postcode)s", params={"postcode": postcode}
                 )
+            
             return normalised_postcode
         except HTTPError as err:
             logger.warning(f"Error validating postcode {postcode} {err}", exc_info=True)
@@ -85,7 +88,7 @@ async def _gp_details_from_postcode(
     gp_practice_postcode: str, async_client: AsyncClient
 ) -> tuple[str, str] | None:
     try:
-        result = await validate_postcode(
+        result = await _validate_postcode(
             gp_practice_postcode, async_client
         )
 
@@ -110,17 +113,20 @@ async def _gp_details_from_postcode(
         logger.warning(f"Error looking up GP practice by postcode {normalised_postcode} {err}", exc_info=True)
 
 
-# Run lookups to external APIs asynchronously to speed up CSV upload by processing patients in parallel
+# Parallelise lookups to external APIs to speed up processing patients in a CSV upload
 async def validate_patient_async(
-    postcode: str,
+    postcode: str | None,
     gp_practice_ods_code: str | None,
     gp_practice_postcode: str | None,
     async_client: AsyncClient,
 ) -> PatientExternalValidationResult:
     ret = PatientExternalValidationResult(None, None, None, None, None, None)
 
-    # Set up all the promises
-    validate_postcode_task = _validate_postcode(postcode, async_client)
+    # Call postcodes.io to validate and return the normalised postcode with location data
+    if skip_api_validation_for_postcode(postcode):
+        validate_postcode_task = future_resolve(None)
+    else:
+        validate_postcode_task = _validate_postcode(postcode, async_client)
 
     # If we already have the GP practice ODS code, we can skip the postcode lookup
     if gp_practice_ods_code:
@@ -128,14 +134,13 @@ async def validate_patient_async(
     elif gp_practice_postcode:
         gp_details_task = _gp_details_from_postcode(gp_practice_postcode, async_client)
     else:
-        gp_details_task = asyncio.Future()
-        gp_details_task.set_result(None)
+        gp_details_task = future_resolve(None)
 
     # This is the Python equivalent of Promise.allSettled
     # Run all the postcode validation task first, then check for errors
     # If there are no errors, run the the rest of the postcode validation tasks
     [
-        postcode,
+        validated_postcode,
         gp_details,
     ] = await asyncio.gather(
         validate_postcode_task,
@@ -143,32 +148,41 @@ async def validate_patient_async(
         return_exceptions=True,
     )
 
-    if isinstance(postcode, Exception) and not type(postcode) is ValidationError:
-        raise postcode  # postcode has an error that is not to do with validation
-    else:
-        if type(postcode) is ValidationError or postcode is None:
+    if type(validated_postcode) is ValidationError:
+        # assign error to original field
+        ret.postcode = validated_postcode
+
+        # The postcode is invalid. There's no point calling the IMD API
+        imd_task = future_resolve(None)
+    elif isinstance(validated_postcode, Exception):
+        raise validated_postcode
+    elif validated_postcode is None:
+        # We may have skipped validation entirely (see above)
+        if skip_api_validation_for_postcode(postcode):
             ret.postcode = postcode
-            
-            # the postcode is invalid. There is no point in running the IMD task
-            index_of_multiple_deprivation_quintile = None
-        else:
-            ret.postcode = postcode.normalised_postcode
-            ret.location_bng = postcode.location_bng
-            ret.location_wgs84 = postcode.location_wgs84
+            # No location data available
+        
+        # The postcode does not exist or we skipped it. There's no point calling the IMD API
+        imd_task = future_resolve(None)
+    else:
+        ret.postcode = validated_postcode.normalised_postcode
+        ret.location_bng = validated_postcode.location_bng
+        ret.location_wgs84 = validated_postcode.location_wgs84
 
-            index_of_multiple_deprivation_quintile = await _imd_for_postcode(postcode.normalised_postcode, async_client)
+        imd_task = _imd_for_postcode(validated_postcode.normalised_postcode, async_client)
 
-        if (
-            isinstance(index_of_multiple_deprivation_quintile, Exception)
-            and not type(index_of_multiple_deprivation_quintile) is ValidationError
-        ):
-            raise index_of_multiple_deprivation_quintile
-        else:
-            ret.index_of_multiple_deprivation_quintile = (
-                index_of_multiple_deprivation_quintile
-            )
+    index_of_multiple_deprivation_quintile = await imd_task       
 
-    # run the GP details task
+    if (
+        isinstance(index_of_multiple_deprivation_quintile, Exception)
+        and not type(index_of_multiple_deprivation_quintile) is ValidationError
+    ):
+        raise index_of_multiple_deprivation_quintile
+    else:
+        ret.index_of_multiple_deprivation_quintile = (
+            index_of_multiple_deprivation_quintile
+        )
+
     if type(gp_details) is ValidationError:
         if gp_practice_ods_code:
             # Assign error to original field

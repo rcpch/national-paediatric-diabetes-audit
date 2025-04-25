@@ -84,7 +84,10 @@ RECIPROCAL_POSTCODES_NO_SPACES = [
     "ZZ997ZZ",  # Uzbekistan
 ]
 
-def skip_api_validation_for_postcode(postcode):
+def skip_api_validation_for_postcode(postcode: str | None):
+    if postcode is None:
+        return True
+
     to_check = postcode.replace(" ", "").upper()
     is_jersey = postcode.startswith("JE")
 

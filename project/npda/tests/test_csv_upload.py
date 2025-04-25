@@ -37,7 +37,6 @@ from project.npda.tests.factories.patient_factory import (
     INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
     TODAY,
     VALID_FIELDS,
-    LOCATION,
 )
 from project.npda.forms.external_patient_validators import (
     PatientExternalValidationResult,
