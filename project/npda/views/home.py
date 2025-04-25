@@ -62,8 +62,6 @@ async def home(request):
         
         form = UploadFileForm(request.POST, request.FILES)
 
-        use_celery = request.POST.get("use_celery", False)
-
         user_csv = request.FILES["csv_upload"]
         user_csv_filename = user_csv.name
         # We are eventually storing the CSV file as a BinaryField so have to hold it in memory
@@ -126,44 +124,18 @@ async def home(request):
                 audit_year=audit_period.audit_year(),
                 csv_file_bytes=user_csv_bytes,
                 csv_file_name=user_csv_filename,
-                # If uploading in the background the celery task will flip it to active once complete
-                submission_active=not use_celery,
+                # The celery task will flip it to active once complete
+                submission_active=False,
                 user=request.user,
                 ip_address=request.META.get("REMOTE_ADDR"),
             )
 
-            if use_celery:
-                upload_csv_task.delay(new_submission.id)
-
-                # update the session fields - this stores that the user has uploaded a csv and disables the ability to use the questionnaire
-                await sync_to_async(refresh_session_filters)(request, csv_upload=True)
-                
-                return redirect("upload-csv-in-progress")
-        
-            # CSV is valid, parse any errors and store the data in the tables.
-            errors_by_row_index = await csv_upload(
-                dataframe=parsed_csv.df,
-                errors_to_return=parsed_csv.errors_to_return,
-                csv_file_name=user_csv_filename,
-                submission=new_submission,
-            )
-
-            await tidy_up_old_submissions(pdu, new_submission)
+            upload_csv_task.delay(new_submission.id)
 
             # update the session fields - this stores that the user has uploaded a csv and disables the ability to use the questionnaire
             await sync_to_async(refresh_session_filters)(request, csv_upload=True)
-
-            if errors_by_row_index:
-                messages.error(
-                    request=request,
-                    message=f"CSV has been uploaded, but errors were found in {len(errors_by_row_index.items())} rows. Please check the data quality report for details.",
-                )
-            else:
-                messages.success(
-                    request=request,
-                    message="Submission completed. There were no errors.",
-                )
-            return redirect("patients")
+            
+            return redirect("upload-csv-in-progress")
         else:
             # If the user does not have permission to upload csvs, redirect them to the dashboard page
             messages.error(
