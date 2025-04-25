@@ -18,6 +18,7 @@ from project.npda.general_functions.audit_period import get_audit_period_for_dat
 from project.npda.general_functions.random_date import get_random_date
 from project.npda.models import Patient
 from project.npda.tests.factories.visit_factory import VisitFactory
+from project.npda.general_functions.validate_postcode import ValidatedPostcode
 from .transfer_factory import TransferFactory
 from project.constants import (
     ETHNICITIES,
@@ -35,28 +36,55 @@ DATE_OF_BIRTH = TODAY - relativedelta(years=10)
 GP_POSTCODE_NO_SPACES = "SE135PJ"
 GP_POSTCODE_WITH_SPACES = "SE13 5PJ"
 
-# Mocked values
-location_bng = Point(x=531000, y=180000)
-location_wgs84 = Point(x=51.5074, y=0.1278)
+VALID_GP_POSTCODE = ValidatedPostcode(
+    normalised_postcode=GP_POSTCODE_WITH_SPACES,
+    lon=0.004522,
+    lat=51.458513
+)
 
-LOCATION = location_wgs84, location_bng
+JERSEY_GP_POSTCODE_NO_SPACES = "JE27LA"
+JERSEY_GP_POSTCODE_WITH_SPACES = "JE2 7LA"
+
+VALID_JERSEY_GP_POSTCODE = ValidatedPostcode(
+    normalised_postcode=JERSEY_GP_POSTCODE_WITH_SPACES,
+    lon=-2.0968,
+    lat=49.1909
+)
+
+PATIENT_POSTCODE_WITH_SPACES = "NW1 2DB"
+PATIENT_POSTCODE_NO_SPACES = "NW12DB"
+
+VALID_PATIENT_POSTCODE = ValidatedPostcode(
+    normalised_postcode=PATIENT_POSTCODE_WITH_SPACES,
+    lon=-0.127014,
+    lat=51.529985,
+)
+
+JERSEY_PATIENT_POSTCODE_NO_SPACES = "JE17XP"
+JERSEY_PATIENT_POSTCODE_WITH_SPACES = "JE1 7XP"
+
+VALID_JERSEY_PATIENT_POSTCODE = ValidatedPostcode(
+    normalised_postcode=JERSEY_PATIENT_POSTCODE_WITH_SPACES,
+    lon=-2.0955,
+    lat=49.1908
+)
 
 VALID_FIELDS = {
     "nhs_number": "6239431915",
     "sex": SEX_TYPE[0][0],
     "date_of_birth": TODAY - relativedelta(years=10),
-    "postcode": "NW1 2DB",
+    "postcode": VALID_PATIENT_POSTCODE.normalised_postcode,
     "ethnicity": ETHNICITIES[0][0],
     "diabetes_type": DIABETES_TYPES[0][0],
     "diagnosis_date": DATE_OF_BIRTH + relativedelta(years=8),
     "gp_practice_ods_code": "G85023",
-    "location_bng": location_bng,
-    "location_wgs84": location_wgs84,
+    "location_bng": VALID_PATIENT_POSTCODE.location_bng,
+    "location_wgs84": VALID_PATIENT_POSTCODE.location_wgs84,
 }
 
 VALID_FIELDS_WITH_GP_POSTCODE = VALID_FIELDS | {
     "gp_practice_ods_code": None,
-    "gp_practice_postcode": GP_POSTCODE_WITH_SPACES,
+    "gp_practice_postcode": VALID_GP_POSTCODE.normalised_postcode,
 }
 
 INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE = 4
