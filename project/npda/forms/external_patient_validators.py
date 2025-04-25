@@ -14,7 +14,7 @@ from ..general_functions import (
     validate_postcode,
     imd_for_postcode,
     calculate_centiles_z_scores,
-    location_for_postcode,
+    ValidatedPostcode,
 )
 
 from ...constants.postcodes import skip_api_validation_for_postcode
@@ -25,8 +25,8 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PatientExternalValidationResult:
     postcode: str | ValidationError | None
-    location_bng: str | ValidationError | None
-    location_wgs84: str | ValidationError | None
+    location_bng: str | None
+    location_wgs84: str | None
     gp_practice_ods_code: str | ValidationError | None
     gp_practice_postcode: str | ValidationError | None
     index_of_multiple_deprivation_quintile: str | None
@@ -34,7 +34,7 @@ class PatientExternalValidationResult:
 
 async def _validate_postcode(
     postcode: str | None, async_client: AsyncClient
-) -> str | None:
+) -> ValidatedPostcode | None:
     if postcode:
         if skip_api_validation_for_postcode(postcode):
             return postcode
@@ -54,27 +54,13 @@ async def _validate_postcode(
 async def _imd_for_postcode(
     postcode: str | None, async_client: AsyncClient
 ) -> str | None:
-    if postcode and not postcode.lower().startswith("je") and not skip_api_validation_for_postcode(postcode):
+    if postcode and not skip_api_validation_for_postcode(postcode):
         try:
             imd = await imd_for_postcode(postcode, async_client)
 
             return imd
         except HTTPError as err:
             logger.warning(f"Cannot calculate deprivation score for {postcode} {err}", exc_info=True)
-
-
-async def _location_for_postcode(
-    postcode: str | None, async_client: AsyncClient
-) -> tuple[float, float] | None:
-    if postcode and not skip_api_validation_for_postcode(postcode):
-        try:
-            lon, lat, location_wgs84, location_bng = await location_for_postcode(
-                postcode, async_client
-            )
-
-            return location_wgs84, location_bng
-        except HTTPError as err:
-            logger.warning(f"Cannot calculate location for {postcode} {err}", exc_info=True)
 
 
 async def _gp_details_from_ods_code(
@@ -99,15 +85,17 @@ async def _gp_details_from_postcode(
     gp_practice_postcode: str, async_client: AsyncClient
 ) -> tuple[str, str] | None:
     try:
-        normalised_postcode = await validate_postcode(
+        result = await validate_postcode(
             gp_practice_postcode, async_client
         )
 
-        if not normalised_postcode:
+        if not result:
             raise ValidationError(
                 "Invalid GP practice with postcode %(postcode)s",
                 params={"postcode": gp_practice_postcode},
             )
+        
+        normalised_postcode = result.normalised_postcode
 
         ods_code = await gp_ods_code_for_postcode(normalised_postcode, async_client)
 
@@ -133,8 +121,6 @@ async def validate_patient_async(
 
     # Set up all the promises
     validate_postcode_task = _validate_postcode(postcode, async_client)
-    imd_for_postcode_task = _imd_for_postcode(postcode, async_client)
-    location_for_postcode_task = _location_for_postcode(postcode, async_client)
 
     # If we already have the GP practice ODS code, we can skip the postcode lookup
     if gp_practice_ods_code:
@@ -160,24 +146,17 @@ async def validate_patient_async(
     if isinstance(postcode, Exception) and not type(postcode) is ValidationError:
         raise postcode  # postcode has an error that is not to do with validation
     else:
-        ret.postcode = postcode
         if type(postcode) is ValidationError or postcode is None:
-            # the postcode is invalid. There is no point in running the IMD and location tasks
-            # Await the tasks, even though their results won't be used
-            await asyncio.gather(
-                imd_for_postcode_task,
-                location_for_postcode_task,
-                return_exceptions=True,
-            )
+            ret.postcode = postcode
+            
+            # the postcode is invalid. There is no point in running the IMD task
             index_of_multiple_deprivation_quintile = None
-            location = None, None
         else:
-            # the postcode is valid, so we can run the rest of the postcode validation tasks
-            [index_of_multiple_deprivation_quintile, location] = await asyncio.gather(
-                imd_for_postcode_task,
-                location_for_postcode_task,
-                return_exceptions=True,
-            )
+            ret.postcode = postcode.normalised_postcode
+            ret.location_bng = postcode.location_bng
+            ret.location_wgs84 = postcode.location_wgs84
+
+            index_of_multiple_deprivation_quintile = await _imd_for_postcode(postcode.normalised_postcode, async_client)
 
         if (
             isinstance(index_of_multiple_deprivation_quintile, Exception)
@@ -188,12 +167,6 @@ async def validate_patient_async(
             ret.index_of_multiple_deprivation_quintile = (
                 index_of_multiple_deprivation_quintile
             )
-
-        if isinstance(location, Exception) and not type(location) is ValidationError:
-            raise location
-        elif location:
-            ret.location_bng = location[0]
-            ret.location_wgs84 = location[1]
 
     # run the GP details task
     if type(gp_details) is ValidationError:

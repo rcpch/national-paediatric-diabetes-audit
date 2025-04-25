@@ -86,4 +86,6 @@ RECIPROCAL_POSTCODES_NO_SPACES = [
 
 def skip_api_validation_for_postcode(postcode):
     to_check = postcode.replace(" ", "").upper()
-    return to_check in UNKNOWN_POSTCODES_NO_SPACES or to_check in RECIPROCAL_POSTCODES_NO_SPACES
+    is_jersey = postcode.startswith("JE")
+
+    return is_jersey or to_check in UNKNOWN_POSTCODES_NO_SPACES or to_check in RECIPROCAL_POSTCODES_NO_SPACES
