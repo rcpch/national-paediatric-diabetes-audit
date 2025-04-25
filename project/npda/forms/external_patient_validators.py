@@ -17,7 +17,10 @@ from ..general_functions import (
     ValidatedPostcode,
 )
 
-from ...constants.postcodes import skip_api_validation_for_postcode
+from ...constants.postcodes import (
+    skip_api_validation_for_postcode,
+    is_jersey_postcode
+)
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +60,7 @@ async def _validate_postcode(
 async def _imd_for_postcode(
     postcode: str | None, async_client: AsyncClient
 ) -> str | None:
-    if postcode and not skip_api_validation_for_postcode(postcode):
+    if postcode and not skip_api_validation_for_postcode(postcode) and not is_jersey_postcode(postcode):
         try:
             imd = await imd_for_postcode(postcode, async_client)
 

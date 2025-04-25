@@ -17,7 +17,13 @@ from project.npda.tests.factories.patient_factory import (
     PATIENT_LOCATION_BNG,
     PATIENT_LOCATION_WGS84,
     VALID_PATIENT_POSTCODE,
-    VALID_GP_POSTCODE
+    VALID_GP_POSTCODE,
+    JERSEY_PATIENT_POSTCODE_NO_SPACES,
+    JERSEY_PATIENT_POSTCODE_WITH_SPACES,
+    JERSEY_GP_POSTCODE_NO_SPACES,
+    JERSEY_GP_POSTCODE_WITH_SPACES,
+    VALID_JERSEY_PATIENT_POSTCODE,
+    VALID_JERSEY_GP_POSTCODE
 )
 
 from project.npda.forms.external_patient_validators import validate_patient_async
@@ -169,17 +175,6 @@ async def test_http_error_calculating_index_of_multiple_deprivation():
             )
 
 
-async def test_we_dont_calculate_index_of_multiple_deprivation_for_jersey():
-    with patch("project.npda.forms.external_patient_validators.imd_for_postcode") as mock:
-        await validate_patient_async(
-                postcode="JE2 3NG",
-                gp_practice_ods_code=None,
-                gp_practice_postcode=None,
-                async_client=async_client
-            )
-            
-        assert not mock.called
-
 async def test_validate_patient_with_gp_practice_ods_code():
     result = await validate_patient_async(
         postcode=None,
@@ -306,3 +301,29 @@ async def test_unexpected_error_validating_gp_practice_postcode():
                 gp_practice_postcode=VALID_FIELDS_WITH_GP_POSTCODE["gp_practice_postcode"],
                 async_client=async_client
             )
+
+
+async def test_jersey_patient():
+    validate_postcode_return_values = [
+        VALID_JERSEY_PATIENT_POSTCODE,
+        VALID_JERSEY_GP_POSTCODE
+    ]
+
+    with patch("project.npda.forms.external_patient_validators.validate_postcode", AsyncMock(side_effect=validate_postcode_return_values)):
+        with patch("project.npda.forms.external_patient_validators.gp_ods_code_for_postcode", AsyncMock(return_value="JER012")):
+            with patch("project.npda.forms.external_patient_validators.imd_for_postcode") as mock_imd_for_postcode:
+                result = await validate_patient_async(
+                    postcode=JERSEY_PATIENT_POSTCODE_NO_SPACES,
+                    gp_practice_ods_code=None,
+                    gp_practice_postcode=JERSEY_GP_POSTCODE_NO_SPACES,
+                    async_client=async_client
+                )
+
+                assert(result.postcode == JERSEY_PATIENT_POSTCODE_WITH_SPACES)
+                assert(result.location_bng == VALID_JERSEY_PATIENT_POSTCODE.location_bng)
+                assert(result.location_wgs84 == VALID_JERSEY_PATIENT_POSTCODE.location_wgs84)
+                assert(result.gp_practice_ods_code == "JER012")
+                assert(result.gp_practice_postcode == VALID_JERSEY_GP_POSTCODE.normalised_postcode)
+                assert(result.index_of_multiple_deprivation_quintile is None)
+
+                assert not mock_imd_for_postcode.called
