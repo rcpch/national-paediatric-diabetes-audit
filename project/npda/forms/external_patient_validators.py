@@ -49,9 +49,12 @@ async def _lookup_postcode(
             normalised_postcode = await lookup_postcode(postcode, async_client)
 
             if not normalised_postcode:
-                raise ValidationError(
-                    "Invalid postcode %(postcode)s", params={"postcode": postcode}
-                )
+                normalised_postcode = await lookup_terminated_postcode(postcode, async_client)
+            
+                if not normalised_postcode:
+                    raise ValidationError(
+                        "Invalid postcode %(postcode)s", params={"postcode": postcode}
+                    )
             
             return normalised_postcode
         except HTTPError as err:

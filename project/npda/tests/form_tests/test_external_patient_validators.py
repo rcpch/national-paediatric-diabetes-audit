@@ -73,14 +73,15 @@ async def test_normalised_postcode_saved():
 
 async def test_invalid_postcode():
     with patch("project.npda.forms.external_patient_validators.lookup_postcode", AsyncMock(return_value=None)):
-        result = await validate_patient_async(
-            postcode="INVALID",
-            gp_practice_ods_code=None,
-            gp_practice_postcode=None,
-            async_client=async_client
-        )
+        with patch("project.npda.forms.external_patient_validators.lookup_terminated_postcode", AsyncMock(return_value=None)):
+            result = await validate_patient_async(
+                postcode="INVALID",
+                gp_practice_ods_code=None,
+                gp_practice_postcode=None,
+                async_client=async_client
+            )
 
-        assert(type(result.postcode) is ValidationError)
+            assert(type(result.postcode) is ValidationError)
 
 
 @pytest.mark.parametrize(
@@ -261,19 +262,20 @@ async def test_gp_practice_postcode_does_not_return_result_from_spine():
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/931
 async def test_invalid_gp_practice_postcode():
-    with patch("project.npda.forms.external_patient_validators.lookup_postcode", AsyncMock(return_value=None)):    
-        with patch("project.npda.forms.external_patient_validators.gp_ods_code_for_postcode") as mock:
-            result = await validate_patient_async(
-                postcode=None,
-                gp_practice_ods_code=None,
-                gp_practice_postcode="INVALID",
-                async_client=async_client
-            )
+    with patch("project.npda.forms.external_patient_validators.lookup_postcode", AsyncMock(return_value=None)):
+        with patch("project.npda.forms.external_patient_validators.lookup_terminated_postcode", AsyncMock(return_value=None)):
+            with patch("project.npda.forms.external_patient_validators.gp_ods_code_for_postcode") as mock:
+                result = await validate_patient_async(
+                    postcode=None,
+                    gp_practice_ods_code=None,
+                    gp_practice_postcode="INVALID",
+                    async_client=async_client
+                )
 
-            # Passing None to the API call returned a 406 Not Acceptable so we want to check we don't call
-            # the spine at all
-            assert not mock.called
-            assert(type(result.gp_practice_postcode) is ValidationError)
+                # Passing None to the API call returned a 406 Not Acceptable so we want to check we don't call
+                # the spine at all
+                assert not mock.called
+                assert(type(result.gp_practice_postcode) is ValidationError)
 
 
 async def test_http_error_validating_gp_practice_postcode():
@@ -330,13 +332,13 @@ async def test_terminated_postcode_endpoint_not_called_for_live_postcode():
         with patch("project.npda.forms.external_patient_validators.lookup_terminated_postcode") as mock_lookup_terminated_postcode:
             result = await validate_patient_async(
                 postcode=PATIENT_POSTCODE_NO_SPACES,
-                gp_practice_ods_code=None,
+                gp_practice_ods_code=VALID_FIELDS["gp_practice_ods_code"],
                 gp_practice_postcode=None,
                 async_client=async_client
             )
 
             assert(result.postcode == VALID_PATIENT_POSTCODE.normalised_postcode)
-            assert(not mock_lookup_postcode.called)
+            assert(not mock_lookup_terminated_postcode.called)
 
 
 async def test_terminated_postcode():
@@ -344,7 +346,7 @@ async def test_terminated_postcode():
         with patch("project.npda.forms.external_patient_validators.lookup_terminated_postcode", AsyncMock(return_value=VALID_PATIENT_POSTCODE)) as mock_lookup_terminated_postcode:
             result = await validate_patient_async(
                 postcode=PATIENT_POSTCODE_NO_SPACES,
-                gp_practice_ods_code=None,
+                gp_practice_ods_code=VALID_FIELDS["gp_practice_ods_code"],
                 gp_practice_postcode=None,
                 async_client=async_client
             )

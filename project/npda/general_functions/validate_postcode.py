@@ -36,14 +36,14 @@ class ValidatedPostcode:
 
 
 async def lookup_postcode(postcode: str, async_client: httpx.AsyncClient) -> ValidatedPostcode | None:
-    return call_postcode_api("postcodes", postcode, async_client)
+    return await call_postcode_api("postcodes", postcode, async_client)
 
 async def lookup_terminated_postcode(postcode: str, async_client: httpx.AsyncClient) -> ValidatedPostcode | None:
-    return call_postcode_api("terminated_postcodes", postcode, async_client)
+    return await call_postcode_api("terminated_postcodes", postcode, async_client)
 
 async def call_postcode_api(endpoint: str, postcode: str, async_client: httpx.AsyncClient) -> ValidatedPostcode | None:
     response = await async_client.get(
-        url=f"{settings.POSTCODES_IO_API_URL}/postcodes/{postcode}",
+        url=f"{settings.POSTCODES_IO_API_URL}/{endpoint}/{postcode}",
         headers={"Ocp-Apim-Subscription-Key": settings.POSTCODES_IO_API_KEY},
         timeout=10,  # times out after 10 seconds
     )
