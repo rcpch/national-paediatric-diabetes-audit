@@ -11,7 +11,7 @@ from httpx import HTTPError, AsyncClient
 from ..general_functions import (
     gp_details_for_ods_code,
     gp_ods_code_for_postcode,
-    validate_postcode,
+    lookup_postcode,
     imd_for_postcode,
     calculate_centiles_z_scores,
     ValidatedPostcode,
@@ -40,12 +40,12 @@ def future_resolve(value):
     future.set_result(value)
     return future
 
-async def _validate_postcode(
+async def _lookup_postcode(
     postcode: str | None, async_client: AsyncClient
 ) -> ValidatedPostcode | None:
     if postcode:
         try:
-            normalised_postcode = await validate_postcode(postcode, async_client)
+            normalised_postcode = await lookup_postcode(postcode, async_client)
 
             if not normalised_postcode:
                 raise ValidationError(
@@ -91,7 +91,7 @@ async def _gp_details_from_postcode(
     gp_practice_postcode: str, async_client: AsyncClient
 ) -> tuple[str, str] | None:
     try:
-        result = await _validate_postcode(
+        result = await _lookup_postcode(
             gp_practice_postcode, async_client
         )
 
@@ -127,9 +127,9 @@ async def validate_patient_async(
 
     # Call postcodes.io to validate and return the normalised postcode with location data
     if skip_api_validation_for_postcode(postcode):
-        validate_postcode_task = future_resolve(None)
+        lookup_postcode_task = future_resolve(None)
     else:
-        validate_postcode_task = _validate_postcode(postcode, async_client)
+        lookup_postcode_task = _lookup_postcode(postcode, async_client)
 
     # If we already have the GP practice ODS code, we can skip the postcode lookup
     if gp_practice_ods_code:
@@ -146,7 +146,7 @@ async def validate_patient_async(
         validated_postcode,
         gp_details,
     ] = await asyncio.gather(
-        validate_postcode_task,
+        lookup_postcode_task,
         gp_details_task,
         return_exceptions=True,
     )

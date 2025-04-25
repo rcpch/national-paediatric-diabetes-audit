@@ -37,7 +37,7 @@ MOCK_GP_DETAILS_FOR_ODS_CODE = {
 # We don't want to call remote services in unit tests
 @pytest.fixture(autouse=True)
 def mock_remote_calls():
-    with patch("project.npda.forms.external_patient_validators.validate_postcode", AsyncMock(return_value=VALID_PATIENT_POSTCODE)):
+    with patch("project.npda.forms.external_patient_validators.lookup_postcode", AsyncMock(return_value=VALID_PATIENT_POSTCODE)):
         with patch("project.npda.forms.external_patient_validators.gp_details_for_ods_code", AsyncMock(return_value=MOCK_GP_DETAILS_FOR_ODS_CODE)):
             with patch("project.npda.forms.external_patient_validators.gp_ods_code_for_postcode", AsyncMock(return_value=VALID_FIELDS["gp_practice_ods_code"])):
                 with patch("project.npda.forms.external_patient_validators.imd_for_postcode", AsyncMock(return_value=INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE)):
@@ -72,7 +72,7 @@ async def test_normalised_postcode_saved():
 
 
 async def test_invalid_postcode():
-    with patch("project.npda.forms.external_patient_validators.validate_postcode", AsyncMock(return_value=None)):
+    with patch("project.npda.forms.external_patient_validators.lookup_postcode", AsyncMock(return_value=None)):
         result = await validate_patient_async(
             postcode="INVALID",
             gp_practice_ods_code=None,
@@ -98,7 +98,7 @@ async def test_invalid_postcode():
     ],
 )
 async def test_special_nhs_postcodes(postcode):
-    with patch("project.npda.forms.external_patient_validators.validate_postcode") as mock_validate_postcode:
+    with patch("project.npda.forms.external_patient_validators.lookup_postcode") as mock_lookup_postcode:
         with patch("project.npda.forms.external_patient_validators.imd_for_postcode") as mock_imd_for_postcode:
                 result = await validate_patient_async(
                     postcode=postcode,
@@ -109,12 +109,12 @@ async def test_special_nhs_postcodes(postcode):
 
                 assert(result.postcode == postcode)
                 
-                assert not mock_validate_postcode.called
+                assert not mock_lookup_postcode.called
                 assert not mock_imd_for_postcode.called
 
 
 async def test_http_error_validating_postcode():
-    with patch("project.npda.forms.external_patient_validators.validate_postcode", AsyncMock(side_effect=HTTPError("oopsie!"))):
+    with patch("project.npda.forms.external_patient_validators.lookup_postcode", AsyncMock(side_effect=HTTPError("oopsie!"))):
         result = await validate_patient_async(
             postcode="INVALID",
             gp_practice_ods_code=None,
@@ -126,7 +126,7 @@ async def test_http_error_validating_postcode():
 
 
 async def test_unexpected_error_validating_postcode():
-    with patch("project.npda.forms.external_patient_validators.validate_postcode", AsyncMock(side_effect=RuntimeError("oopsie!"))):
+    with patch("project.npda.forms.external_patient_validators.lookup_postcode", AsyncMock(side_effect=RuntimeError("oopsie!"))):
         with pytest.raises(RuntimeError):
             await validate_patient_async(
                 postcode=VALID_FIELDS["postcode"],
@@ -218,7 +218,7 @@ async def test_unexpected_error_validating_gp_practice_ods_code():
             )
 
 
-@patch("project.npda.forms.external_patient_validators.validate_postcode", AsyncMock(return_value=VALID_GP_POSTCODE))
+@patch("project.npda.forms.external_patient_validators.lookup_postcode", AsyncMock(return_value=VALID_GP_POSTCODE))
 async def test_validate_patient_with_gp_practice_postcode():
     result = await validate_patient_async(
         postcode=None,
@@ -233,7 +233,7 @@ async def test_validate_patient_with_gp_practice_postcode():
 
 async def test_normalised_postcode_used_for_call_to_nhs_spine():
     # The NHS API only returns results if you have a space between the parts of the postcode
-    with patch("project.npda.forms.external_patient_validators.validate_postcode", AsyncMock(return_value=VALID_GP_POSTCODE)):
+    with patch("project.npda.forms.external_patient_validators.lookup_postcode", AsyncMock(return_value=VALID_GP_POSTCODE)):
         with patch("project.npda.forms.external_patient_validators.gp_ods_code_for_postcode") as mock_gp_ods_code_for_postcode:
             result = await validate_patient_async(
                 postcode=None,
@@ -261,7 +261,7 @@ async def test_gp_practice_postcode_does_not_return_result_from_spine():
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/931
 async def test_invalid_gp_practice_postcode():
-    with patch("project.npda.forms.external_patient_validators.validate_postcode", AsyncMock(return_value=None)):    
+    with patch("project.npda.forms.external_patient_validators.lookup_postcode", AsyncMock(return_value=None)):    
         with patch("project.npda.forms.external_patient_validators.gp_ods_code_for_postcode") as mock:
             result = await validate_patient_async(
                 postcode=None,
@@ -300,12 +300,12 @@ async def test_unexpected_error_validating_gp_practice_postcode():
 
 
 async def test_jersey_patient():
-    validate_postcode_return_values = [
+    lookup_postcode_return_values = [
         VALID_JERSEY_PATIENT_POSTCODE,
         VALID_JERSEY_GP_POSTCODE
     ]
 
-    with patch("project.npda.forms.external_patient_validators.validate_postcode", AsyncMock(side_effect=validate_postcode_return_values)):
+    with patch("project.npda.forms.external_patient_validators.lookup_postcode", AsyncMock(side_effect=lookup_postcode_return_values)):
         with patch("project.npda.forms.external_patient_validators.gp_ods_code_for_postcode", AsyncMock(return_value="JER012")):
             with patch("project.npda.forms.external_patient_validators.imd_for_postcode") as mock_imd_for_postcode:
                 result = await validate_patient_async(

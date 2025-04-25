@@ -35,7 +35,7 @@ class ValidatedPostcode:
         return self.location_wgs84.transform(27700, clone=True)
 
 
-async def validate_postcode(postcode: str, async_client: httpx.AsyncClient) -> ValidatedPostcode | None:
+async def lookup_postcode(postcode: str, async_client: httpx.AsyncClient) -> ValidatedPostcode | None:
     response = await async_client.get(
         url=f"{settings.POSTCODES_IO_API_URL}/postcodes/{postcode}",
         headers={"Ocp-Apim-Subscription-Key": settings.POSTCODES_IO_API_KEY},
