@@ -22,6 +22,7 @@ class NPDAUserFilterSet(FilterSet):
     def filter_search(self, queryset, name, value):
         if value:
             queryset = queryset.filter(
+                Q(pk__icontains=value) |
                 Q(email__icontains=value) |
                 Q(first_name__icontains=value) |
                 Q(surname__icontains=value)
