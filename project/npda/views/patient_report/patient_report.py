@@ -71,7 +71,7 @@ class PatientReportView(
 
     # Context
     model = Patient
-    template_name = "patient_report/new_patient_report.html"
+    template_name = "patient_report/patient_report.html"
     context_object_name = "patients"
     paginate_by = 50
 
@@ -707,7 +707,12 @@ class PatientReportView(
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
+        # if self.request.GET.get("category"):
+        #     # Get the selected category from the request if navigating from dashboard
+        #     self.selected_category = self.request.GET.get("category")
+        # else:
+        #     self.selected_category = TableCategories.HEALTH_CHECKS.value
+        #     context["selected_category"] = self.selected_category
         # Jersey
         if self.request.session.get("pz_code") == "PZ248":
             context["is_jersey"] = True
@@ -753,21 +758,21 @@ class PatientReportView(
         
         # Get the totals of each item of the health check data as well as the total
         # of those eligible for the health check
+        total_passed_bmi = 0
+        total_eligible_bmi = 0
+        total_passed_hba1c = 0
+        total_eligible_hba1c = 0
+        total_passed_thyroid_screen = 0
+        total_eligible_thyroid_screen = 0
+        total_passed_blood_pressure = 0
+        total_eligible_blood_pressure = 0
+        total_passed_urinary_albumin = 0
+        total_eligible_urinary_albumin = 0
+        total_passed_retinal_screening = 0
+        total_eligible_retinal_screening = 0
+        total_passed_foot_exam = 0
+        total_eligible_foot_exam = 0
         if self.selected_category == TableCategories.HEALTH_CHECKS.value:
-            total_passed_bmi = 0
-            total_eligible_bmi = 0
-            total_passed_hba1c = 0
-            total_eligible_hba1c = 0
-            total_passed_thyroid_screen = 0
-            total_eligible_thyroid_screen = 0
-            total_passed_blood_pressure = 0
-            total_eligible_blood_pressure = 0
-            total_passed_urinary_albumin = 0
-            total_eligible_urinary_albumin = 0
-            total_passed_retinal_screening = 0
-            total_eligible_retinal_screening = 0
-            total_passed_foot_exam = 0
-            total_eligible_foot_exam = 0
             for patient in context["patients"]:
                if patient["is_complete_year_of_care"]:
                     total_passed_bmi += patient["passed_bmi"]
@@ -821,3 +826,4 @@ class PatientReportView(
                 return ["patient_report/health_checks_table_partial.html"]
 
         return ["patient_report/patient_report.html"]
+    
