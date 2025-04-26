@@ -472,3 +472,14 @@ def disable_fields(field, form):
         return True
 
     return False
+
+@register.filter
+def percentage(measure, total):
+    """
+    Returns the percentage of a measure against a total
+    """
+    if measure is None or total is None or measure == "" or total == "":
+        return "-"
+    if total == 0:
+        return "0%"
+    return f"{round(int(measure) / int(total) * 100)}%"

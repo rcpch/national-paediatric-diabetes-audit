@@ -314,6 +314,7 @@ class PatientReportView(
             ).values(
                 "pk",
                 "patient_identifier",
+                "is_gte_12yo",
                 "is_complete_year_of_care",
                 "passed_hba1c",
                 "passed_bmi",
@@ -735,6 +736,7 @@ class PatientReportView(
                 "smoking_cessation_referral": "Not required as less than 12 years old",
             }
 
+        # Set the first complete year of care flag
         first_complete_year_of_care = False
         if context["sort_field"] == "":
             patients = context["patients"]
@@ -748,7 +750,55 @@ class PatientReportView(
                 else:
                     patient["is_first_complete_year_of_care"] = False
             context["patients"] = patients
-
+        
+        # Get the totals of each item of the health check data as well as the total
+        # of those eligible for the health check
+        if self.selected_category == TableCategories.HEALTH_CHECKS.value:
+            total_passed_bmi = 0
+            total_eligible_bmi = 0
+            total_passed_hba1c = 0
+            total_eligible_hba1c = 0
+            total_passed_thyroid_screen = 0
+            total_eligible_thyroid_screen = 0
+            total_passed_blood_pressure = 0
+            total_eligible_blood_pressure = 0
+            total_passed_urinary_albumin = 0
+            total_eligible_urinary_albumin = 0
+            total_passed_retinal_screening = 0
+            total_eligible_retinal_screening = 0
+            total_passed_foot_exam = 0
+            total_eligible_foot_exam = 0
+            for patient in context["patients"]:
+               if patient["is_complete_year_of_care"]:
+                    total_passed_bmi += patient["passed_bmi"]
+                    total_eligible_bmi += 1
+                    total_passed_hba1c += patient["passed_hba1c"]
+                    total_eligible_hba1c += 1
+                    total_passed_thyroid_screen += patient["passed_thyroid_screen"]
+                    total_eligible_thyroid_screen += 1
+                    if patient["is_gte_12yo"]:
+                        # total_passed_retinal_screening += (
+                        #     patient["passed_retinal_screening"]
+                        # )
+                        # total_eligible_retinal_screening += 1
+                        total_passed_blood_pressure += patient["passed_blood_pressure"]
+                        total_eligible_blood_pressure += 1
+                        total_passed_urinary_albumin += patient["passed_urinary_albumin"]
+                        total_eligible_urinary_albumin += 1
+                        total_passed_foot_exam += patient["passed_foot_exam"]
+                        total_eligible_foot_exam += 1
+            context["total_passed_bmi"] = total_passed_bmi
+            context["total_eligible_bmi"] = total_eligible_bmi
+            context["total_passed_hba1c"] = total_passed_hba1c
+            context["total_eligible_hba1c"] = total_eligible_hba1c
+            context["total_passed_thyroid_screen"] = total_passed_thyroid_screen
+            context["total_eligible_thyroid_screen"] = total_eligible_thyroid_screen
+            context["total_passed_blood_pressure"] = total_passed_blood_pressure
+            context["total_eligible_blood_pressure"] = total_eligible_blood_pressure
+            context["total_passed_urinary_albumin"] = total_passed_urinary_albumin
+            context["total_eligible_urinary_albumin"] = total_eligible_urinary_albumin
+            context["total_passed_foot_exam"] = total_passed_foot_exam
+            context["total_eligible_foot_exam"] = total_eligible_foot_exam
         return context
 
     def get_template_names(self) -> list[str]:
