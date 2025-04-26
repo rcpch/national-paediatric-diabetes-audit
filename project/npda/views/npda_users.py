@@ -22,8 +22,10 @@ from django.views.generic import ListView
 
 # third party imports
 from two_factor.views import LoginView as TwoFactorLoginView
+from django_filters.views import FilterView
 
 from project.constants.user import AUDIT_CENTRE_COORDINATOR
+from project.npda.filtersets.npdauser_filterset import NPDAUserFilterSet
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 
 # RCPCH imports
@@ -66,11 +68,14 @@ NPDAUser list and NPDAUser creation, deletion and update
 
 
 class NPDAUserListView(
-    LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, ListView
+    LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, FilterView
 ):
     permission_required = "npda.view_npdauser"
     permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
     template_name = "npda_users.html"
+    model = NPDAUser
+    filterset_class = NPDAUserFilterSet
+    context_object_name = "npdauser_list"
 
     def get_queryset(self):
         # scope the queryset to filter only those users in organisations in the same PDU. This is to prevent users from seeing all users in the system
@@ -109,9 +114,6 @@ class NPDAUserListView(
             # filter the npdausers to only those in the same organisation as the user
             # trigger a GET request from the patient table to update the list of npdausers
             # by calling the get_queryset method again with the new ods_code/pz_code stored in session
-            queryset = self.get_queryset()
-            context = self.get_context_data()
-            context["npdauser_list"] = queryset
 
             return render(
                 request,
