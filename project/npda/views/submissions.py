@@ -126,7 +126,7 @@ class SubmissionsListView(
             )
         
         if self.request.user.viewing_data_nationally():
-            selected_audit_year = self.request.session.get("selected_audit_year")
+            selected_audit_year = AuditPeriod.objects.get_audit_period_for_request(self.request).audit_year()
 
             latest_active_submission = Submission.objects.filter(
                 paediatric_diabetes_unit=OuterRef("pk"),
