@@ -1,21 +1,23 @@
 <dialog id="original_data_modal" class="modal text-black">
   <div class="modal-box">
-      <h3 class="text-lg font-bold">Good Data Protection Practice</h3>
-      <p class="py-4">
-        This download contains your entire original data file. It contains personal information and must be stored securely and deleted after use.
-      </p>
-      <div class="modal-action">
-        <form method="post" action="{% url 'submissions' %}">
-          {% csrf_token %}
-          <input type="hidden" name="audit_id" value="{{ submission.pk }}">
-          <button class="btn"
-            name="submit-data"
-            value="download-data"
-            type="submit"
-            onclick="original_data_modal.close()">
-              Download
-          </button>
+    <h3 class="text-lg font-bold">Good Data Protection Practice</h3>
+    <p class="py-4">
+      This download contains your entire original data file. It contains personal information and must be stored securely and deleted after use.
+    </p>
+    <div class="modal-action">
+      <form method="post" action="{% url 'submissions' %}">
+        {% csrf_token %}
+        <input type="hidden" name="audit_id" value="{{ submission.pk }}">
+        <button class="btn btn-primary bg-rcpch_light_blue text-white hover:bg-rcpch_dark_blue"
+                name="submit-data"
+                value="download-data"
+                type="submit"
+                onclick="original_data_modal.close()">Download</button>
+        <button class="btn btn-outline"
+                type="button"
+                onclick="original_data_modal.close()">
+          Cancel
         </form>
       </div>
-  </div>
-</dialog>
+    </div>
+  </dialog>
