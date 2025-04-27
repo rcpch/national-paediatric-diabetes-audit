@@ -8,7 +8,12 @@
       <h1 class="text-2xl font-bold mb-4">Patient Report</h1>
       <div id="table-area" hx-swap="innerHTML">
         {% comment %} Just the default table, htmx views swap this out {% endcomment %}
-        {% include "patient_report/health_checks_table_partial.html" with sort_field=sort_field sort_order=sort_order %}
+        {% if selected_category == "treatment" %}
+          <!-- slight hack: this is designed for htmx but now we navigate here from the dashboard just for treatment also -->
+          {% include "patient_report/treatment_table_partial.html" with sort_field="treatment" sort_order=sort_order %}
+        {% else %}
+          {% include "patient_report/health_checks_table_partial.html" with sort_field=sort_field sort_order=sort_order %}
+        {% endif %}
       </div>
     </div>
   </div>
