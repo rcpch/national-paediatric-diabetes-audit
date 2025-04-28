@@ -6,6 +6,7 @@ import asyncio
 from asgiref.sync import async_to_sync
 
 from django.core.exceptions import ValidationError
+from django.conf import settings
 from httpx import HTTPError, AsyncClient
 
 from ..general_functions import (
@@ -19,9 +20,10 @@ from ..general_functions import (
 )
 
 from ...constants.postcodes import (
-    skip_api_validation_for_postcode,
-    is_jersey_postcode
+    UNKNOWN_POSTCODES_NO_SPACES,
+    RECIPROCAL_POSTCODES_NO_SPACES,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +42,40 @@ def future_resolve(value):
     future = asyncio.Future()
     future.set_result(value)
     return future
+
+def skip_api_validation_for_postcode(postcode: str | None):
+    if not postcode:
+        return True
+
+    to_check = postcode.replace(" ", "").upper()
+
+    return to_check in UNKNOWN_POSTCODES_NO_SPACES or to_check in RECIPROCAL_POSTCODES_NO_SPACES
+
+def is_jersey_postcode(postcode: str | None):
+    if not postcode:
+        return False
+    
+    to_check = postcode.replace(" ", "").upper()
+    
+    return to_check.startswith("JE")
+
+def check_postcode_not_yet_available_in_api(postcode: str | None) -> str | None:
+    if not postcode:
+        return None
+
+    if not settings.POSTCODES_NOT_YET_AVAILABLE_IN_API:
+        return None
+    
+    postcodes_not_yet_available_in_api = [p.strip() for p in settings.POSTCODES_NOT_YET_AVAILABLE_IN_API.split(",")]
+
+    to_check = postcode.replace(" ", "").upper()
+
+    for ix, not_yet_available_postcode in enumerate(postcodes_not_yet_available_in_api):
+        not_yet_available_postcode_to_check = not_yet_available_postcode.replace(" ", "").upper()
+
+        print(f"!!! {to_check} == {not_yet_available_postcode_to_check} !!")
+        if to_check == not_yet_available_postcode_to_check:
+            return not_yet_available_postcode
 
 async def _lookup_postcode(
     postcode: str | None, async_client: AsyncClient
@@ -155,11 +191,18 @@ async def validate_patient_async(
         return_exceptions=True,
     )
 
-    if type(validated_postcode) is ValidationError:
-        # assign error to original field
-        ret.postcode = validated_postcode
+    print(f"!! validated_postcode: {validated_postcode} !!")
 
-        # The postcode is invalid. There's no point calling the IMD API
+    if type(validated_postcode) is ValidationError:
+        # The postcode might not yet be available in the API
+        if (normalised_postcode := check_postcode_not_yet_available_in_api(postcode)):
+            ret.postcode = normalised_postcode
+            # No location data available
+        else:
+            # assign error to original field
+            ret.postcode = validated_postcode
+
+        # There's no point calling the IMD API
         imd_task = future_resolve(None)
     elif isinstance(validated_postcode, Exception):
         raise validated_postcode
@@ -169,7 +212,7 @@ async def validate_patient_async(
             ret.postcode = postcode
             # No location data available
         
-        # The postcode does not exist or we skipped it. There's no point calling the IMD API
+        # There's no point calling the IMD API
         imd_task = future_resolve(None)
     else:
         ret.postcode = validated_postcode.normalised_postcode
