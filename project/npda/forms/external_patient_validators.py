@@ -72,8 +72,7 @@ def check_postcode_not_yet_available_in_api(postcode: str | None) -> str | None:
 
     for ix, not_yet_available_postcode in enumerate(postcodes_not_yet_available_in_api):
         not_yet_available_postcode_to_check = not_yet_available_postcode.replace(" ", "").upper()
-
-        print(f"!!! {to_check} == {not_yet_available_postcode_to_check} !!")
+        
         if to_check == not_yet_available_postcode_to_check:
             return not_yet_available_postcode
 
@@ -190,8 +189,6 @@ async def validate_patient_async(
         gp_details_task,
         return_exceptions=True,
     )
-
-    print(f"!! validated_postcode: {validated_postcode} !!")
 
     if type(validated_postcode) is ValidationError:
         # The postcode might not yet be available in the API
