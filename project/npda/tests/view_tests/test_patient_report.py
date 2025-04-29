@@ -2,32 +2,24 @@
 
 import logging
 from http import HTTPStatus
-from datetime import date
 
 # Python imports
 import pytest
-
+from django.db.models import Count
 # 3rd party imports
 from django.urls import reverse
-from django.db.models import Count
-from project.constants.user import RCPCH_AUDIT_TEAM
-from project.npda.general_functions.data_generator_extended import (
-    FakePatientCreator,
-    VisitType,
-    HbA1cTargetRange,
-    AgeRange,
-)
 
+from project.npda.general_functions.data_generator_extended import (
+    AgeRange, FakePatientCreator, HbA1cTargetRange, VisitType)
 # E12 imports
 from project.npda.models import NPDAUser
 from project.npda.models.audit_period import AuditPeriod
 from project.npda.models.patient import Patient
 from project.npda.models.submission import Submission
 from project.npda.tests.constants_for_tests import ALDER_HEY_PZ_CODE
+from project.npda.tests.factories import test_user_rcpch_audit_team_data
 from project.npda.tests.utils import login_and_verify_user
 from project.npda.urls import patient_report_urlpatterns
-from project.npda.tests.factories import test_user_rcpch_audit_team_data
-from project.npda.tests.test_csv_upload import mock_remote_calls
 
 logger = logging.getLogger(__name__)
 

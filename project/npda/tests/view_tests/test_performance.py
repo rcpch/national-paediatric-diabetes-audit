@@ -1,26 +1,19 @@
 """Performance testing views"""
 
-from datetime import date
 import json
+import logging
 import re
 import time
-from typing import Literal
 
-from bs4 import BeautifulSoup
 import pytest
-from project.npda.general_functions.data_generator_extended import (
-    AgeRange,
-    FakePatientCreator,
-    HbA1cTargetRange,
-    VisitType,
-)
-from freezegun import freeze_time
+from bs4 import BeautifulSoup
 
+from project.npda.general_functions.data_generator_extended import (
+    AgeRange, FakePatientCreator, HbA1cTargetRange, VisitType)
 from project.npda.models.npda_user import NPDAUser
 from project.npda.models.submission import Submission
 from project.npda.tests.test_csv_upload import ALDER_HEY_PZ_CODE
 from project.npda.tests.utils import login_and_verify_user
-import logging
 
 # Logging
 logger = logging.getLogger(__name__)
