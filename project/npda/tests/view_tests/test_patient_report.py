@@ -105,4 +105,3 @@ def test_no_duplicate_patients_in_report(
         .filter(count__gt=1)
     )
     assert duplicates.count() == 0
-    breakpoint()
