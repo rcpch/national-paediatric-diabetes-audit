@@ -39,6 +39,7 @@ from project.npda.models import (
     NPDAUser,
     Patient,
     Submission,
+    AuditPeriod
 )
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 
@@ -393,20 +394,23 @@ class PatientCreateView(
             # the form is initialised with the current audit year
 
             Submission = apps.get_model("npda", "Submission")
+            audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
+
             submission, created = Submission.objects.update_or_create(
-                audit_year=self.request.session["selected_audit_year"],
+                audit_year=audit_period.audit_year(),
                 paediatric_diabetes_unit=paediatric_diabetes_unit,
                 submission_active=True,
                 defaults={
                     "submission_by": NPDAUser.objects.get(pk=self.request.user.pk),
                     "submission_by": NPDAUser.objects.get(pk=self.request.user.pk),
                     "submission_date": timezone.now(),
+                    "audit_period": audit_period
                 },
             )
             submission.patients.add(patient)
             submission.save()
             # update the session - this stores that the user has used the questionnaire and disables csv upload
-            refresh_session_filters(self.request)
+            refresh_session_filters(self.request, questionnaire=True)
 
         else:
             logger.error(

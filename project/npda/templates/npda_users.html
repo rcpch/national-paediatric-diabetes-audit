@@ -5,14 +5,41 @@
        hx-get="/npda_users"
        hx-trigger="npda_users from:body"
        hx-target="#npda_user_table">
-       <div class="flex justify-between">
-        {% if perms.npda.add_npdauser %}
+    <div class="flex justify-between">
+      {% if perms.npda.add_npdauser %}
         <a href="{% url 'home' %}"
-          class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue">Home</a>
-            <a href="{% url 'npdauser-create' %}"
-              class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue">Add NPDA User</a>
-        {% endif %}
+           class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue">Home</a>
+        <a href="{% url 'npdauser-create' %}"
+           class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 border border-rcpch_light_blue hover:bg-rcpch_strong_blue">Add NPDA User</a>
+      {% endif %}
+    </div>
+    <form action="" method="get">
+      <div class="flex flex-wrap mt-2 mb-2">
+        <label class="form-control flex items-center gap-2 grow">
+          <label class="bg-rcpch_strong_blue mx-6 text-white input flex items-center gap-2 w-full h-auto">
+            <span>
+              <div class="hidden lg:block  text-nowrap">
+                <i class="fa-solid fa-hospital-user text-white mr-2"></i>
+                {{ filter.form.search.label }}
+                <i class="fa-solid fa-question-circle text-white ml-2"></i>
+              </div>
+            </span>
+            <div class="divider divider-horizontal after:bg-rcpch_strong_blue_light_tint1 before:bg-rcpch_strong_blue_light_tint3 hidden lg:flex">
+            </div>
+            {{ filter.form.search }}
+            <div id="search_npdausers_spinner"
+                 class="htmx-indicator flex items-center px-4 text-white absolute right-14 loading loading-bars loading-sm">
+            </div>
+            <button class="btn btn-info h-auto w-full md:w-auto"
+                    hx-indicator="#search_npdausers_spinner"
+                    hx-disabled-elt="this">
+              <span class="md:hidden text-white">Search patients</span>
+              <i class="fa-solid fa-magnifying-glass text-white"></i>
+            </button>
+          </label>
+        </label>
       </div>
+    </form>
     <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
       <div class="inline-block min-w-full py-2 sm:px-6 lg:px-8">
         <div class="relative overflow-x-auto" id="npda_user_table">

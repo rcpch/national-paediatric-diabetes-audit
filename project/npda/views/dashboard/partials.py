@@ -28,6 +28,7 @@ from project.npda.models.paediatric_diabetes_unit import (
     PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
 )
 from project.npda.models.submission import Submission
+from project.npda.models.audit_period import AuditPeriod
 from project.npda.views.decorators import login_and_otp_required
 
 logger = logging.getLogger(__name__)
@@ -508,27 +509,22 @@ def submission_and_calculation_date(request):
         )
         return render(request, "dashboard.html")
 
-    selected_audit_year = int(request.session.get("selected_audit_year"))
+    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
 
     if Submission.objects.filter(
         paediatric_diabetes_unit=pdu,
-        audit_year=selected_audit_year,
+        audit_year=audit_period.audit_year(),
         submission_active=True,
     ).exists():
         submission = Submission.objects.get(
             paediatric_diabetes_unit=pdu,
-            audit_year=selected_audit_year,
+            audit_year=audit_period.audit_year(),
             submission_active=True,
         )
         
     else:
         submission = None
-
-    # This function might get called on historical cohorts, so we need to check if today's date is within the audit period
-    audit_start, audit_end = audit_period_for_audit_year(selected_audit_year)
-    if audit_start <= date.today() <= audit_end:
-        calculation_date = date.today()
-    else:
-        calculation_date = audit_start
+    
+    calculation_date = audit_period.kpi_calculation_date()
 
     return submission, calculation_date

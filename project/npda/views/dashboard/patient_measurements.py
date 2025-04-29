@@ -1,10 +1,9 @@
-from datetime import date
 from django.shortcuts import render
 from project.npda.general_functions.audit_period import audit_period_for_audit_year
 from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.views.dashboard import helpers as hp
 from project.npda.views.decorators import login_and_otp_required
-from project.npda.models import Visit, Submission
+from project.npda.models import Visit, Submission, AuditPeriod
 
 
 @login_and_otp_required()
@@ -13,14 +12,9 @@ def patient_measurements(request):
     # First need to get the relevant calculations
     pz_code = request.session.get("pz_code")
 
-    selected_audit_year = int(request.session.get("selected_audit_year"))
-    # This function might get called on historical cohorts, so we need to check if today's date is within the audit period
-    audit_start, audit_end = audit_period_for_audit_year(selected_audit_year)
-    if audit_start <= date.today() <= audit_end:
-        calculation_date = date.today()
-    else:
-        calculation_date = audit_start
-
+    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
+    calculation_date = audit_period.kpi_calculation_date()
+    
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
     )
@@ -58,13 +52,13 @@ def patient_measurements(request):
     )
 
     if Submission.objects.filter(
-        audit_year=selected_audit_year,
+        audit_year=audit_period.audit_year(),
         paediatric_diabetes_unit__pz_code=pz_code,
         paediatric_diabetes_unit__active=True,
         submission_active=True,
     ).exists():
         current_submission = Submission.objects.get(
-            audit_year=selected_audit_year,
+            audit_year=audit_period.audit_year(),
             paediatric_diabetes_unit__pz_code=pz_code,
             paediatric_diabetes_unit__active=True,
             submission_active=True,
@@ -87,7 +81,7 @@ def patient_measurements(request):
         request,
         template_name=template,
         context={
-            "selected_audit_year": selected_audit_year,
+            "selected_audit_year": audit_period.audit_year(),
             "pz_code": pz_code,
             "hba1c_value_counts_stratified_by_diabetes_type": hba1c_value_counts_stratified_by_diabetes_type,
             "submission_visit_error_count": submission_visit_error_count,

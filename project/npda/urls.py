@@ -26,13 +26,14 @@ urlpatterns = [
     path("", view=home, name="home"),
     path("home", view=home, name="home"),
     path(
-        "home/download_template/<str:region>",
+        "home/download_template",
         view=download_template,
         name="download_template",
     ),
     path("view_preference", view=view_preference, name="view_preference"),
     path("audit-year", view=audit_year, name="audit-year"),
     path("upload_csv", view=upload_csv, name="upload_csv"),
+    path("upload_csv_in_progress", view=upload_csv_in_progress, name="upload-csv-in-progress"),
     path(
         "switch_paediatric_diabetes_unit",
         view=switch_paediatric_diabetes_unit,

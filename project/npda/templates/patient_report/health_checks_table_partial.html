@@ -1,4 +1,5 @@
 {% extends "patient_report/base_table.html" %}
+{% load npda_tags %}
 {% block description_box %}
   {% include "patient_report/description_box.html" with description="HbA1c, BMI, and thyroid screen must be completed annually for all children and young people <i><b>with T1DM</i></b>. Urinary albumin, blood pressure, and foot exam are mandatory for young people aged 12 and above. Eye screening is mandatory every 2 years for young people aged 12 and above, unless retinopathy was observed at a previous screen." proportion="with T1DM" %}
 {% endblock %}
@@ -7,7 +8,7 @@
     {% if is_jersey %}
       Unique Reference Number
     {% else %}
-      NHS Number {{ sort_field }}
+      NHS Number
     {% endif %}
     <div class="block">
       <span hx-get="?category=health_checks&sort=nhs_number&order=asc"
@@ -26,7 +27,7 @@
   </div>
 </th>
 <th class="whitespace-normal break-words">
-  HBA1c
+  HBA1c ({{ total_passed_hba1c|percentage:total_eligible_hba1c }} complete)
   <div class="block">
     <span hx-get="?category=health_checks&sort=passed_hba1c&order=desc"
           hx-target="#table-area"
@@ -43,7 +44,7 @@
   </div>
 </th>
 <th class="whitespace-normal break-words">
-  BMI
+  BMI ({{ total_passed_bmi|percentage:total_eligible_bmi }} complete)
   <div class="block">
     <span hx-get="?category=health_checks&sort=passed_bmi&order=desc"
           hx-target="#table-area"
@@ -60,7 +61,7 @@
   </div>
 </th>
 <th class="whitespace-normal break-words">
-  Thyroid Screen
+  Thyroid Screen ({{ total_passed_thyroid_screen|percentage:total_eligible_thyroid_screen }} complete)
   <div class="block">
     <span hx-get="?category=health_checks&sort=passed_thyroid_screen&order=desc"
           hx-target="#table-area"
@@ -77,7 +78,7 @@
   </div>
 </th>
 <th class="whitespace-normal break-words">
-  Blood Pressure
+  Blood Pressure ({{ total_passed_blood_pressure|percentage:total_eligible_blood_pressure }} complete)
   <div class="block">
     <span hx-get="?category=health_checks&sort=passed_blood_pressure&order=desc"
           hx-target="#table-area"
@@ -94,7 +95,7 @@
   </div>
 </th>
 <th class="whitespace-normal break-words">
-  Urinary Albumin
+  Urinary Albumin ({{ total_passed_urinary_albumin|percentage:total_eligible_urinary_albumin }} complete)
   <div class="block">
     <span hx-get="?category=health_checks&sort=passed_urinary_albumin&order=desc"
           hx-target="#table-area"
@@ -111,7 +112,7 @@
   </div>
 </th>
 <th class="whitespace-normal break-words">
-  Foot Exam
+  Foot Exam ({{ total_passed_foot_exam|percentage:total_eligible_foot_exam }} complete)
   <div class="block">
     <span hx-get="?category=health_checks&sort=passed_foot_exam&order=desc"
           hx-target="#table-area"
@@ -138,38 +139,38 @@
 {% endblock %}
 {% block table_body %}
   {% for patient in patients %}
-    {% if  patient.is_first_complete_year_of_care %}
+    {% if  patients.0.is_first_complete_year_of_care %}
       <thead class="bg-rcpch_strong_blue text-xs text-white text-gray-700 uppercase bg-gray-50">
         <tr>
           <th colspan="9">These patients are completing their first year of care.</th>
         </tr>
       </thead>
     {% endif %}
-    <tr class="{% if not patient.is_complete_year_of_care %}bg-rcpch_orange_light_tint3{% endif %}">
+    <tr class="{% if not patients.0.is_complete_year_of_care %}bg-rcpch_orange_light_tint3{% endif %}">
       <td>
-        {% include "patient_report/components/pt_identifier_value.html" with patient_pk=patient.pk is_complete_year_of_care=patient.is_complete_year_of_care patient_identifier=patient.patient_identifier %}
+        {% include "patient_report/components/pt_identifier_value.html" with patient_pk=patients.0.pk is_complete_year_of_care=patients.0.is_complete_year_of_care patient_identifier=patients.0.patient_identifier %}
       </td>
       <td>
-        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_hba1c %}
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patients.0.passed_hba1c %}
       </td>
       <td>
-        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_bmi %}
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patients.0.passed_bmi %}
       </td>
       <td>
-        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_thyroid_screen %}
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patients.0.passed_thyroid_screen %}
       </td>
       <td>
-        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_blood_pressure ineligible_reason=ineligible_reasons.blood_pressure %}
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patients.0.passed_blood_pressure ineligible_reason=ineligible_reasons.blood_pressure %}
       </td>
       <td>
-        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_urinary_albumin ineligible_reason=ineligible_reasons.urinary_albumin %}
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patients.0.passed_urinary_albumin ineligible_reason=ineligible_reasons.urinary_albumin %}
       </td>
       <td>
-        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_foot_exam ineligible_reason=ineligible_reasons.foot_exam %}
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patients.0.passed_foot_exam ineligible_reason=ineligible_reasons.foot_exam %}
       </td>
-      <td>{{ patient.num_passed }} / {{ patient.num_total }}</td>
+      <td>{{ patients.0.num_passed }} / {{ patients.0.num_total }}</td>
       <td>
-        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_retinal_screening ineligible_reason=ineligible_reasons.retinal_screening %}
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patients.0.passed_retinal_screening ineligible_reason=ineligible_reasons.retinal_screening %}
       </td>
     </tr>
   {% empty %}

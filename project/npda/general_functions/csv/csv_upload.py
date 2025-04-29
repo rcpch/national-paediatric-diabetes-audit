@@ -40,7 +40,7 @@ from project.npda.models import (
     VisitActivity
 )
 
-async def create_csv_submission(pdu, audit_year, csv_file_bytes, csv_file_name, user, ip_address):
+async def create_csv_submission(pdu, audit_year, csv_file_bytes, csv_file_name, submission_active, user=None, ip_address=None):
     old_submission = await Submission.objects.filter(
         paediatric_diabetes_unit=pdu,
         audit_year=audit_year,
@@ -58,14 +58,15 @@ async def create_csv_submission(pdu, audit_year, csv_file_bytes, csv_file_name, 
         audit_year=audit_year,
         csv_file=csv_file_bytes,
         csv_file_name=csv_file_name,
-        submission_active=True
+        submission_active=submission_active
     )
     
-    await VisitActivity.objects.acreate(
-        activity=8,
-        ip_address=ip_address,
-        npdauser=user,
-    )  # uploaded csv - activity 8
+    if user:
+        await VisitActivity.objects.acreate(
+            activity=8,
+            ip_address=ip_address,
+            npdauser=user,
+        )  # uploaded csv - activity 8
 
     return submission
 
@@ -85,7 +86,12 @@ async def tidy_up_old_submissions(pdu, new_submission):
 
 
 async def csv_upload(
-    dataframe, errors_to_return, csv_file_name, submission
+    dataframe,
+    errors_to_return,
+    csv_file_name,
+    submission,
+    allow_empty_visits=False,
+    save_errors_on_submission=True
 ):
     """
     Processes standardised NPDA csv file and persists results in NPDA tables
@@ -226,7 +232,9 @@ async def csv_upload(
     dataframe = csv_clean(dataframe)
 
     # Remember the original row number to help users find where the problem was in the CSV
-    dataframe = dataframe.assign(row_index=np.arange(dataframe.shape[0]))
+    # It may already be set if doing a bulk upload across multiple PDUs using the upload_csv command
+    if not "row_index" in dataframe.columns:
+        dataframe = dataframe.assign(row_index=np.arange(dataframe.shape[0]))
 
     # We only one to create one patient per NHS number (or URN if in Jersey) and we can't create their visits if we fail to save the patient model
     if is_jersey:
@@ -242,15 +250,11 @@ async def csv_upload(
         try:
             save_errors_and_retain_valid_fields(patient_row_index, patient_form)
 
-            nhs_number = patient_form.cleaned_data.get("nhs_number")
-            unique_reference_number = patient_form.cleaned_data.get(
-                "unique_reference_number"
-            )
-
-            patient = None
-
-            if nhs_number or unique_reference_number:
-                patient = await sync_to_async(lambda: patient_form.save())()
+            patient = await sync_to_async(lambda: patient_form.save(commit=False))()
+            
+            # Throw database level issues not covered by the form (eg missing both nhs_number and urn)
+            patient.clean()
+            await patient.asave()
 
             if patient:
                 # add the patient to a new Transfer instance
@@ -296,6 +300,10 @@ async def csv_upload(
 
             visit_forms = []
             for _, row in rows.iterrows():
+                if allow_empty_visits and pd.isnull(row["Visit/Appointment Date"]):
+                    logger.info(f"Missing visit date for {pdu.pz_code} from {csv_file_name}[{row["row_index"]}]. Skipping creating visit.")
+                    continue
+
                 visit_form = await validate_visit_using_form(
                     patient_form, row, async_client
                 )
@@ -348,7 +356,7 @@ async def csv_upload(
                 tg.create_task(task(rows))
 
     # Store the errors to report back to the user in the Data Quality Report
-    if errors_to_return:
+    if errors_to_return and save_errors_on_submission:
         submission.errors = json.dumps(errors_to_return)
         await submission.asave()
 

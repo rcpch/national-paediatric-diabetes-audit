@@ -129,6 +129,8 @@ nav:
     - 'home/citation.md'
   - User Guide:
     - 'user-guide/user-guide.md'
+  - Admin Guide:
+    - 'admin-guide/admin-guide.md'
   - Contact:
     - 'contact/contact-rcpch.md'
   - Legal:

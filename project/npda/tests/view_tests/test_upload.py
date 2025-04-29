@@ -7,6 +7,7 @@ from django.core.management import call_command
 
 
 from project.npda.models.npda_user import NPDAUser
+from project.npda.models.audit_period import AuditPeriod
 from project.npda.tests.model_tests.test_submissions import ALDER_HEY_PZ_CODE
 from project.npda.tests.utils import login_and_verify_user
 from project.npda.tests.test_csv_upload import mock_remote_calls
@@ -17,6 +18,7 @@ from project.npda.tests.UserDataClasses import test_user_audit_centre_coordinato
 def test_generate_csv_upload_to_view(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
     mock_remote_calls,
     tmpdir,
@@ -93,3 +95,36 @@ def test_generate_csv_upload_to_view(
 
     # Assert the response to ensure no error
     assert response.status_code == 302
+
+
+@pytest.mark.django_db
+def test_coordinator_cannot_upload_csv_to_closed_audit_year(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    mock_remote_calls,
+    dummy_sheet_csv
+):
+    ah_coordinator_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_coordinator_data.role,
+    ).first()
+    client = login_and_verify_user(client, ah_coordinator_user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = False
+    audit_period.save()
+
+    csv_file = SimpleUploadedFile(
+        "test_coordinator_cannot_upload_csv_to_closed_audit_year.csv",
+        dummy_sheet_csv.encode(),
+        content_type="text/csv"
+    )
+
+    # Send POST request with CSV file
+    url = reverse("home")
+    response = client.post(url, {"csv_upload": csv_file})
+
+    # Assert the response to ensure no error
+    assert response.status_code == 403

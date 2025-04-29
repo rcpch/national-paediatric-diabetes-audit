@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 def test_auto_logout_django_auto_logout(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     # Get any user

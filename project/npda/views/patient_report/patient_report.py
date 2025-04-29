@@ -26,11 +26,9 @@ from django.contrib.auth.mixins import PermissionRequiredMixin
 from project.constants.hba1c_format import HBA1C_FORMATS
 from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
 from project.npda.kpi_class.kpis import CalculateKPIS
-from project.npda.models import Patient
+from project.npda.models import Patient, AuditPeriod
 from project.npda.models.db_functions import Round
 from project.npda.views.mixins import CheckPDUListMixin, LoginAndOTPRequiredMixin
-
-# Django imports
 
 
 logger = logging.getLogger(__name__)
@@ -73,16 +71,13 @@ class PatientReportView(
 
     # Context
     model = Patient
-    template_name = "patient_report/new_patient_report.html"
+    template_name = "patient_report/patient_report.html"
     context_object_name = "patients"
     paginate_by = 50
 
-    def _calculate_hba1c_values(self, pt_qs):
+    def _calculate_hba1c_values(self, pt_qs, calculation_date):
         """Helper function to calculate HbA1c values for a queryset."""
         patient_ids = set(pt_qs.values_list("pk", flat=True))
-        selected_audit_year = int(self.request.session.get("selected_audit_year"))
-        selected_audit_year = max(selected_audit_year, 2024)
-        calculation_date = date(year=selected_audit_year, month=5, day=1)
         calculate_kpis = CalculateKPIS(
             calculation_date=calculation_date, return_pt_querysets=True
         )
@@ -150,8 +145,7 @@ class PatientReportView(
             raise ValueError(f"Invalid category: {category}")
         self.selected_category = category
         pz_code = request.session.get("pz_code")
-        selected_audit_year = max(int(request.session.get("selected_audit_year")), 2024)
-        calculation_date = date(year=selected_audit_year, month=5, day=1)
+        calculation_date = AuditPeriod.objects.get_audit_period_for_request(self.request).kpi_calculation_date()
         calculate_kpis = CalculateKPIS(
             calculation_date=calculation_date, return_pt_querysets=True
         )
@@ -320,6 +314,7 @@ class PatientReportView(
             ).values(
                 "pk",
                 "patient_identifier",
+                "is_gte_12yo",
                 "is_complete_year_of_care",
                 "passed_hba1c",
                 "passed_bmi",
@@ -567,7 +562,7 @@ class PatientReportView(
                     "number_of_dka_admissions",
                 )
             )
-            pt_qs = self._calculate_hba1c_values(pt_qs)
+            pt_qs = self._calculate_hba1c_values(pt_qs, calculation_date)
         elif self.selected_category == "treatment":
             pt_qs = pt_qs.annotate(
                 treatment_regimen=Case(
@@ -702,17 +697,22 @@ class PatientReportView(
                 )
             else:
                 pt_qs = pt_qs.order_by(sort_field)
-                pt_qs = self._calculate_hba1c_values(pt_qs)
+                pt_qs = self._calculate_hba1c_values(pt_qs, calculation_date)
         else:
             # Default ordering
             pt_qs = pt_qs.order_by("-is_complete_year_of_care", "nhs_number")
-            pt_qs = self._calculate_hba1c_values(pt_qs)
+            pt_qs = self._calculate_hba1c_values(pt_qs, calculation_date)
 
         return pt_qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
+        # if self.request.GET.get("category"):
+        #     # Get the selected category from the request if navigating from dashboard
+        #     self.selected_category = self.request.GET.get("category")
+        # else:
+        #     self.selected_category = TableCategories.HEALTH_CHECKS.value
+        #     context["selected_category"] = self.selected_category
         # Jersey
         if self.request.session.get("pz_code") == "PZ248":
             context["is_jersey"] = True
@@ -741,6 +741,7 @@ class PatientReportView(
                 "smoking_cessation_referral": "Not required as less than 12 years old",
             }
 
+        # Set the first complete year of care flag
         first_complete_year_of_care = False
         if context["sort_field"] == "":
             patients = context["patients"]
@@ -754,7 +755,55 @@ class PatientReportView(
                 else:
                     patient["is_first_complete_year_of_care"] = False
             context["patients"] = patients
-
+        
+        # Get the totals of each item of the health check data as well as the total
+        # of those eligible for the health check
+        total_passed_bmi = 0
+        total_eligible_bmi = 0
+        total_passed_hba1c = 0
+        total_eligible_hba1c = 0
+        total_passed_thyroid_screen = 0
+        total_eligible_thyroid_screen = 0
+        total_passed_blood_pressure = 0
+        total_eligible_blood_pressure = 0
+        total_passed_urinary_albumin = 0
+        total_eligible_urinary_albumin = 0
+        total_passed_retinal_screening = 0
+        total_eligible_retinal_screening = 0
+        total_passed_foot_exam = 0
+        total_eligible_foot_exam = 0
+        if self.selected_category == TableCategories.HEALTH_CHECKS.value:
+            for patient in context["patients"]:
+               if patient["is_complete_year_of_care"]:
+                    total_passed_bmi += patient["passed_bmi"]
+                    total_eligible_bmi += 1
+                    total_passed_hba1c += patient["passed_hba1c"]
+                    total_eligible_hba1c += 1
+                    total_passed_thyroid_screen += patient["passed_thyroid_screen"]
+                    total_eligible_thyroid_screen += 1
+                    if patient["is_gte_12yo"]:
+                        # total_passed_retinal_screening += (
+                        #     patient["passed_retinal_screening"]
+                        # )
+                        # total_eligible_retinal_screening += 1
+                        total_passed_blood_pressure += patient["passed_blood_pressure"]
+                        total_eligible_blood_pressure += 1
+                        total_passed_urinary_albumin += patient["passed_urinary_albumin"]
+                        total_eligible_urinary_albumin += 1
+                        total_passed_foot_exam += patient["passed_foot_exam"]
+                        total_eligible_foot_exam += 1
+            context["total_passed_bmi"] = total_passed_bmi
+            context["total_eligible_bmi"] = total_eligible_bmi
+            context["total_passed_hba1c"] = total_passed_hba1c
+            context["total_eligible_hba1c"] = total_eligible_hba1c
+            context["total_passed_thyroid_screen"] = total_passed_thyroid_screen
+            context["total_eligible_thyroid_screen"] = total_eligible_thyroid_screen
+            context["total_passed_blood_pressure"] = total_passed_blood_pressure
+            context["total_eligible_blood_pressure"] = total_eligible_blood_pressure
+            context["total_passed_urinary_albumin"] = total_passed_urinary_albumin
+            context["total_eligible_urinary_albumin"] = total_eligible_urinary_albumin
+            context["total_passed_foot_exam"] = total_passed_foot_exam
+            context["total_eligible_foot_exam"] = total_eligible_foot_exam
         return context
 
     def get_template_names(self) -> list[str]:
@@ -777,3 +826,4 @@ class PatientReportView(
                 return ["patient_report/health_checks_table_partial.html"]
 
         return ["patient_report/patient_report.html"]
+    

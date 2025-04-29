@@ -51,6 +51,7 @@ audit_dates = audit_period.get_audit_period_for_date(date.today())
 def test_npda_user_can_create_submission(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     """Test NPDAUser can create a submission for their PDU code."""
@@ -94,6 +95,7 @@ def test_npda_user_can_create_submission(
 def test_npda_user_cannot_submit_same_patient_twice_within_the_same_submission(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     """Test NPDAUser cannot submit the same patient twice in the same submission in the same PDU."""
@@ -156,6 +158,7 @@ def test_npda_user_cannot_submit_same_patient_twice_within_the_same_submission(
 def test_npda_user_can_submit_same_patient_twice_within_the_same_submission_in_different_pdus(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     """Test NPDAUser cannot submit the same patient twice in the same submission in different PDUs."""

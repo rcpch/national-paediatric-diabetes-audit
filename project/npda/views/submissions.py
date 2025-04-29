@@ -1,7 +1,8 @@
 # Python imports
-from datetime import date
+from datetime import date, datetime, timezone
 import json
 from typing import Any, Iterable
+import logging
 
 # Django imports
 from django.apps import apps
@@ -10,7 +11,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Case, When, F, Value, IntegerField, OuterRef, Subquery
 from django.db.models.functions import Concat, ExtractMonth, ExtractYear
 from django.http import HttpResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.views.generic import ListView
 
 # Third party imports
@@ -26,12 +27,20 @@ from ..general_functions.csv import (
     download_csv,
     download_xlsx,
 )
-from .mixins import CheckCurrentAuditYearMixin, LoginAndOTPRequiredMixin
-from ..models import Submission, OrganisationEmployer, PaediatricDiabetesUnit
+from .mixins import LoginAndOTPRequiredMixin
+from ..models import (
+    Submission,
+    OrganisationEmployer,
+    PaediatricDiabetesUnit,
+    AuditPeriod,
+    Patient
+)
+
+logger = logging.getLogger(__name__)
 
 
 class SubmissionsListView(
-    LoginAndOTPRequiredMixin, CheckCurrentAuditYearMixin, ListView
+    LoginAndOTPRequiredMixin, ListView
 ):
     """
     The SubmissionsListView class.
@@ -117,7 +126,7 @@ class SubmissionsListView(
             )
         
         if self.request.user.viewing_data_nationally():
-            selected_audit_year = self.request.session.get("selected_audit_year")
+            selected_audit_year = AuditPeriod.objects.get_audit_period_for_request(self.request).audit_year()
 
             latest_active_submission = Submission.objects.filter(
                 paediatric_diabetes_unit=OuterRef("pk"),
@@ -292,6 +301,41 @@ def upload_csv(request):
     context = {"employers": OrganisationEmployer.objects.filter(npda_user=request.user)}
     return render(request, "upload_csv/file_upload.html", context=context)
 
+@login_and_otp_required()
+def upload_csv_in_progress(request):
+    pz_code = request.session.get("pz_code")
+    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
+
+    last_submission = Submission.objects.filter(
+        paediatric_diabetes_unit__pz_code=pz_code,
+        audit_year=audit_period.audit_year(),
+    ).order_by("-submission_date").first()
+
+    seconds_since_submission = (datetime.now(timezone.utc) - last_submission.submission_date).seconds
+    minutes_since_submission = seconds_since_submission / 60
+
+    timeout = minutes_since_submission > 10
+    if timeout:
+        # Error to trigger admin email
+        logger.error(f"Submission timed out. Submission ID: {last_submission.pk}. PZ Code: {pz_code}")
+        messages.error(
+            request,
+            f"{last_submission.csv_file_name} took too long to process. Please contact the NPDA team for assistance.",
+        )
+
+    if last_submission and not last_submission.submission_active and not timeout:
+        patients_so_far = Patient.objects.filter(submissions=last_submission).count()
+        visits_so_far = Patient.objects.filter(submissions=last_submission).aggregate(Count("visit"))["visit__count"]
+
+        context = {
+            "csv_file_name": last_submission.csv_file_name,
+            "patients_so_far": patients_so_far,
+            "visits_so_far": visits_so_far
+        }
+
+        return render(request, "upload_csv/upload_in_progress.html", context=context)
+    
+    return redirect("patients") 
 
 @login_and_otp_required()
 def switch_paediatric_diabetes_unit(request):
@@ -316,7 +360,7 @@ def switch_paediatric_diabetes_unit(request):
         "error_message": error_message,
     }
     # update the session with the new PDU
-    refresh_session_filters(request, selected_pz_code)
+    refresh_session_filters(request, pz_code=selected_pz_code)
 
     return render(request, template, context=context)
 

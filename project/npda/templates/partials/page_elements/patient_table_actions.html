@@ -41,7 +41,7 @@
         </label>
     </label>
     {% if user.view_preference != 2 %}
-        {% if can_complete_questionnaire %}
+        {% if request.session.can_complete_questionnaire %}
             <a href="{% url 'patient-add' %}"
                class="btn btn-info h-auto w-full md:w-auto {% if not perms.npda.add_patient %}btn-disabled{% endif %}">
                 <i class="fa-solid fa-person-circle-plus"></i>
@@ -72,12 +72,16 @@
                     {% include 'partials/page_elements/quality_report_popup.html' %}
                     <!-- Pop up which shows data protection guidance for original data download -->
                     {% include 'partials/page_elements/original_data_popup.html' %}
-                    <li tabindex="0"
-                        role="button"
-                        class="btn btn-info text-white dropdown dropdown-bottom dropdown-end w-12 p-0 flex">
-                        <i class="fa-solid fa-chevron-down"></i>
+                    <div class="dropdown dropdown-bottom dropdown-end">
+                        <div tabindex="0"
+                             role="button"
+                             class="btn btn-info text-white w-12 p-0 flex">
+                            {# Trigger Element #}
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </div>
                         <ul tabindex="0"
-                            class="dropdown-content menu bg-base-100 text-black font-normal rounded-box z-[1] w-52 p-2 shadow">
+                            class="dropdown-content menu bg-base-100 text-black font-normal rounded-box z-[1] w-52 p-2 shadow mt-1">
+                            {# Content as Sibling #}
                             {% if perms.npda.can_download_csv %}
                                 <li>
                                     <button type="button"
@@ -85,7 +89,8 @@
                                             class="{% if not perms.npda.can_download_csv %}btn-disabled{% endif %}">
                                         <i class="fa-solid fa-download"></i>
                                         Download original file
-                                    </a>
+                                    </button>
+                                    {# Note: Was an <a> tag before, ensure consistency #}
                                 </li>
                             {% endif %}
                             <li>
@@ -103,7 +108,7 @@
                                 </li>
                             {% endif %}
                         </ul>
-                    </li>
+                    </div>
                 </ul>
             </div>
         {% endif %}
