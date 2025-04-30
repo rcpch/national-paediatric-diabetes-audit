@@ -6,11 +6,17 @@ from http import HTTPStatus
 # Python imports
 import pytest
 from django.db.models import Count
+
 # 3rd party imports
 from django.urls import reverse
 
 from project.npda.general_functions.data_generator_extended import (
-    AgeRange, FakePatientCreator, HbA1cTargetRange, VisitType)
+    AgeRange,
+    FakePatientCreator,
+    HbA1cTargetRange,
+    VisitType,
+)
+
 # E12 imports
 from project.npda.models import NPDAUser
 from project.npda.models.audit_period import AuditPeriod
@@ -87,12 +93,11 @@ def test_no_duplicate_patients_in_report(
     response = client.get(reverse("patient_report"))
     assert response.status_code == HTTPStatus.OK
 
-    assert response.context["patients"].count() == N_PATIENTS
+    assert isinstance(response.context["patients"], list)
+    assert len(response.context["patients"]) == N_PATIENTS
 
     # Check that there are no duplicate patients
-    duplicates = (
-        Patient.objects.values("nhs_number")
-        .annotate(count=Count("nhs_number"))
-        .filter(count__gt=1)
+    duplicates = set(
+        patient["patient_identifier"] for patient in response.context["patients"]
     )
-    assert duplicates.count() == 0
+    assert len(duplicates) == N_PATIENTS
