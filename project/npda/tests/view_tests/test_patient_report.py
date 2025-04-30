@@ -41,7 +41,6 @@ def test_no_duplicate_patients_in_report(
     seed_users_fixture,
     seed_audit_periods_fixture,
     client,
-    mock_remote_calls,
 ):
     """Seeds a bunch of patients and checks that there are no duplicates."""
 
