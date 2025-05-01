@@ -11,21 +11,12 @@
 {% endcomment %}
 <button class="btn btn-circle btn-{{ size|default:'sm' }} btn-info tooltip tooltip-right {% if button_class %}{{ button_class }}{% endif %}"
         data-tip="{{ tooltip|default:'Copy to clipboard' }}"
-        onclick="copyToClipboard('{{ value }}', this)"
+        _="on click
+           writeText(my previousElementSibling's innerText) on navigator.clipboard
+           add .btn-success
+           wait 1.5s
+           remove .btn-success"
         aria-label="Copy {{ value }} to clipboard">
   <i class="fa-solid fa-clipboard {% if icon_class %}{{ icon_class }}{% endif %}"
      id="icon-{{ value|slugify }}"></i>
 </button>
-<script>
-  function copyToClipboard(text, button) {
-    // Copy text to clipboard
-    navigator.clipboard.writeText(text).then(() => {
-      // Change to check icon
-      button.classList.add('btn-success');
-      // Reset icon after 1.5 seconds
-      setTimeout(() => {
-        button.classList.remove('btn-success');
-      }, 1500);
-    });
-  }
-</script>

@@ -1,17 +1,15 @@
-import pytest
-from decimal import Decimal
-from datetime import date, timedelta
-from django.utils import timezone
 import random
+from datetime import timedelta
+from decimal import Decimal
 
-from project.npda.models import Patient, Visit
+import pytest
+
 from project.constants import DIABETES_TYPES, HBA1C_FORMATS
-from project.npda.views.dashboard.patient_characteristics import (
-    get_median_hba1c_by_patient,
-    audit_period_for_audit_year,
-)
+from project.npda.models import Visit
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
+from project.npda.views.dashboard.patient_characteristics import (
+    audit_period_for_audit_year, get_median_hba1c_by_patient)
 
 
 @pytest.mark.django_db

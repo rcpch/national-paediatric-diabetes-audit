@@ -5,29 +5,18 @@ from http import HTTPStatus
 
 # Python imports
 import pytest
-
 # 3rd party imports
 from django.urls import reverse
 
-from project.constants.csv_headings import (
-    UNIQUE_IDENTIFIER_ENGLAND,
-    UNIQUE_IDENTIFIER_JERSEY,
-)
-from project.constants.user import RCPCH_AUDIT_TEAM, VIEW_PREFERENCES
-
+from project.constants.csv_headings import (UNIQUE_IDENTIFIER_ENGLAND,
+                                            UNIQUE_IDENTIFIER_JERSEY)
+from project.constants.user import VIEW_PREFERENCES
 # E12 imports
-from project.npda.general_functions.csv import csv_header
 from project.npda.models import NPDAUser
 from project.npda.tests.constants_for_tests import ALDER_HEY_PZ_CODE
 from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
+from project.npda.tests.UserDataClasses import test_user_rcpch_audit_team_data
 from project.npda.tests.utils import login_and_verify_user
-from project.npda.urls import patient_report_urlpatterns
-from project.npda.tests.UserDataClasses import (
-    test_user_audit_centre_coordinator_data,
-    test_user_audit_centre_editor_data,
-    test_user_audit_centre_reader_data,
-    test_user_rcpch_audit_team_data,
-)
 
 logger = logging.getLogger(__name__)
 

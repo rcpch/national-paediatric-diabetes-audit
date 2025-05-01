@@ -1,13 +1,12 @@
 """Tests that ensure that views load under normal conditions"""
 
-from django.urls import reverse
 import pytest
-
 from django.test import Client
+from django.urls import reverse
 
 from project.npda.models.npda_user import NPDAUser
-from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
-from project.npda.tests.permissions_tests.test_npda_user_model_actions import ALDER_HEY_PZ_CODE
+from project.npda.tests.permissions_tests.test_npda_user_model_actions import \
+    ALDER_HEY_PZ_CODE
 from project.npda.tests.utils import login_and_verify_user
 
 

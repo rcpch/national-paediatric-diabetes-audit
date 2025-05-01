@@ -22,7 +22,6 @@ from django.db.models import (
 
 # Django imports
 from django.views.generic import ListView
-from django.contrib.auth.mixins import PermissionRequiredMixin
 from project.constants.hba1c_format import HBA1C_FORMATS
 from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
 from project.npda.kpi_class.kpis import CalculateKPIS
@@ -326,7 +325,6 @@ class PatientReportView(
                 "num_total",
                 "passed_retinal_screening",
             )
-            pass
         elif self.selected_category == "additional_care_processes":
             pt_qs = pt_qs.annotate(
                 hba1c_4plus=Case(
@@ -449,7 +447,6 @@ class PatientReportView(
                 "influenza_immunisation_recommended",
                 "sick_day_rules_advice",
             )
-            pass
         elif self.selected_category == "care_at_diagnosis":
             today = date.today()
             all_t1dm_pts = all_t1dm_pts.filter(
@@ -510,7 +507,6 @@ class PatientReportView(
                     "carbohydrate_counting_education",
                 )
             )
-            pass
         elif self.selected_category == "admissions":
             pt_qs = (
                 pt_qs.annotate(
@@ -673,7 +669,6 @@ class PatientReportView(
                 "glucose_monitoring",
                 "hcl",
             )
-            pass
 
         # Sort the queryset based on the selected sort field and order
         if sort_field:
