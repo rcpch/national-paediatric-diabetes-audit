@@ -490,7 +490,10 @@ class NPDAUserLogsListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Li
                 )
                 return False
 
-            if requested_pdu != npda_user.organisation_employers.first():
+            # if requested_pdu != npda_user.organisation_employers.first():
+            if not npda_user.organisation_employers.filter(
+                pz_code=requested_pdu.pz_code
+            ).exists():
                 logger.warning(
                     f"Coordinator user {logged_in_user.email} tried to view logs for another user {npda_user.email} in a different PDU {requested_pdu.pz_code}"
                 )
