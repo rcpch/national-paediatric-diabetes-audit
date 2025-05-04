@@ -130,12 +130,19 @@ class CheckPDUInstanceMixin(AccessMixin):
         # get PDUs assigned to user who is trying to access a view
         user_pdus = [org.pz_code for org in request.user.organisation_employers.all()]
 
-        # get pdu that user is requesting access of
-        requested_pdu = ""
-
         if model == "NPDAUser":
             requested_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
-            requested_pdu = requested_user.organisation_employers.first().pz_code
+            if requested_user.organisation_employers.filter(pz_code=request.session.get('pz_code')).exists():
+                if requested_user.number_of_pdu_memberships() == 1:
+                    # if the user is a member of the requested pdu and there is only one, then we can use that
+                    requested_pdu = requested_user.organisation_employers.all().filter(pz_code=request.session.get('pz_code')).first().pz_code
+                else:
+                    # if the user is a member of multiple PDUs, then we need to check which one they are trying to access
+                    requested_pdu = requested_user.organisation_employers.all().filter(pz_code=request.session.get('pz_code')).first().pz_code
+            else:
+                # the user is not a member of the requested pdu so we just return the pz code of the users primary pdu
+                requested_pdu = requested_user.paediatric_diabetes_units.filter(is_primary_employer=True).first().paediatric_diabetes_unit.pz_code
+
 
         elif model == "Patient":
             requested_patient = Patient.objects.get(pk=self.kwargs["pk"])

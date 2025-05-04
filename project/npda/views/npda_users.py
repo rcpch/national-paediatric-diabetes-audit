@@ -78,21 +78,20 @@ class NPDAUserListView(
     context_object_name = "npdauser_list"
 
     def get_queryset(self):
-        # scope the queryset to filter only those users in organisations in the same PDU. This is to prevent users from seeing all users in the system
+        """
+        Apply ordering
+        """
+        queryset = super().get_queryset()
         pz_code = self.request.session.get("pz_code")
-        flag_field = Count("organisation_employers")
 
         if self.request.user.viewing_data_nationally():
             return (
-                NPDAUser.objects.all()
-                .annotate(number_of_pdu_memberships=flag_field)
-                .order_by("surname")
+                queryset.order_by("surname")
             )
 
         return (
-            NPDAUser.objects.filter(organisation_employers__pz_code=pz_code)
-            .annotate(number_of_pdu_memberships=flag_field)
-            .order_by("surname", "organisation_employers__pz_code")
+            queryset.filter(organisation_employers__pz_code=pz_code)
+            .order_by("surname")
         )
 
     def get_context_data(self, **kwargs):
@@ -377,8 +376,6 @@ class NPDAUserUpdateView(
                 requesting_user=self.request.user, user_instance=user_instance
             )
 
-            print('choices ',organisation_choices)
-
             return render(
                 request=request,
                 template_name="partials/employers.html",
@@ -392,27 +389,28 @@ class NPDAUserUpdateView(
                     "employer_choices": organisation_choices,
                 },
             )
-        if "resend_email" in request.POST:
-            npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
-            subject = "Password Reset Requested"
-            email = construct_confirm_email(request=request, user=npda_user)
-
-            send_email_to_recipients(
-                recipients=[npda_user.email],
-                subject=subject,
-                message=email,
-            )
-
-            messages.success(
-                request,
-                f"Confirmation and password reset request resent to {npda_user.email}.",
-            )
-            redirect_url = reverse(
-                "npda_users",
-            )
-            return redirect(redirect_url)
         else:
-            return super().post(request, *args, **kwargs)
+            if "resend_email" in request.POST:
+                npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
+                subject = "Password Reset Requested"
+                email = construct_confirm_email(request=request, user=npda_user)
+
+                send_email_to_recipients(
+                    recipients=[npda_user.email],
+                    subject=subject,
+                    message=email,
+                )
+
+                messages.success(
+                    request,
+                    f"Confirmation and password reset request resent to {npda_user.email}.",
+                )
+                redirect_url = reverse(
+                    "npda_users",
+                )
+                return redirect(redirect_url)
+            else:
+                return super().post(request, *args, **kwargs)
 
         
 
@@ -434,6 +432,26 @@ class NPDAUserDeleteView(
     model = NPDAUser
     success_message = "NPDA User removed from database"
     success_url = reverse_lazy("npda_users")
+
+    def post(self, request, *args, **kwargs):
+        """
+        Coordinators and RCPCH Audit Team can delete users, but only RCPCH Audit Team can delete those with multiple employers
+        Coordinators should not be able to delete themselves
+        """
+        requested_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
+        if requested_user.number_of_pdu_memberships() > 1:
+            if not (
+                self.request.user.is_superuser
+                or self.request.user.is_rcpch_audit_team_member
+            ):
+                raise PermissionDenied(
+                    "You do not have permission to delete this user as they are members of more than one PDU. Contact the NPDA for assistance."
+                )
+        if requested_user.pk == self.request.user.pk:
+            raise PermissionDenied(
+                "You cannot delete your own account. Contact the NPDA for assistance."
+            )
+        return super().post(request, *args, **kwargs)
 
 
 class NPDAUserLogsListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, ListView):
@@ -490,7 +508,10 @@ class NPDAUserLogsListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Li
                 )
                 return False
 
-            if requested_pdu != npda_user.organisation_employers.first():
+            # if requested_pdu != npda_user.organisation_employers.first():
+            if not npda_user.organisation_employers.filter(
+                pz_code=requested_pdu.pz_code
+            ).exists():
                 logger.warning(
                     f"Coordinator user {logged_in_user.email} tried to view logs for another user {npda_user.email} in a different PDU {requested_pdu.pz_code}"
                 )
