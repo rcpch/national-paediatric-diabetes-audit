@@ -221,6 +221,9 @@ class NPDAUser(AbstractUser, PermissionsMixin):
 
     def get_short_name(self):
         return self.first_name
+    
+    def number_of_pdu_memberships(self):
+        return self.organisation_employers.count()
 
     def get_all_employer_organisations(self):
         return self.organisation_employers.all()

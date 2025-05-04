@@ -78,22 +78,11 @@ class NPDAUserListView(
     context_object_name = "npdauser_list"
 
     def get_queryset(self):
-        # scope the queryset to filter only those users in organisations in the same PDU. This is to prevent users from seeing all users in the system
-        pz_code = self.request.session.get("pz_code")
-        flag_field = Count("organisation_employers")
-
-        if self.request.user.viewing_data_nationally():
-            return (
-                NPDAUser.objects.all()
-                .annotate(number_of_pdu_memberships=flag_field)
-                .order_by("surname")
-            )
-
-        return (
-            NPDAUser.objects.filter(organisation_employers__pz_code=pz_code)
-            .annotate(number_of_pdu_memberships=flag_field)
-            .order_by("surname", "organisation_employers__pz_code")
-        )
+        """
+        Apply ordering
+        """
+        queryset = super().get_queryset()
+        return queryset.order_by("surname")
 
     def get_context_data(self, **kwargs):
         context = super(NPDAUserListView, self).get_context_data(**kwargs)
@@ -376,8 +365,6 @@ class NPDAUserUpdateView(
             organisation_choices = organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
                 requesting_user=self.request.user, user_instance=user_instance
             )
-
-            print('choices ',organisation_choices)
 
             return render(
                 request=request,

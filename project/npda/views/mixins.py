@@ -129,13 +129,13 @@ class CheckPDUInstanceMixin(AccessMixin):
 
         # get PDUs assigned to user who is trying to access a view
         user_pdus = [org.pz_code for org in request.user.organisation_employers.all()]
+        print(f"User PDUs: {user_pdus}")
 
         # get pdu that user is requesting access of
         requested_pdu = ""
 
         if model == "NPDAUser":
-            requested_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
-            requested_pdu = requested_user.organisation_employers.first().pz_code
+            requested_pdu = request.session.get("pz_code") # get the pdu from the session. This will not cover national view users, but they can access all PDUs anyway
 
         elif model == "Patient":
             requested_patient = Patient.objects.get(pk=self.kwargs["pk"])
