@@ -1103,7 +1103,7 @@ def test_coordinators_cannot_delete_users_with_multiple_employers_even_if_in_sam
     seed_groups_fixture,
     seed_users_fixture,
 ):
-    """Test that coordinators can see users with multiple employers if they are in the same PDU."""
+    """Test that coordinators cannot delete users with multiple employers even if they are in the same PDU."""
 
     # Create a test user
     test_coordinator = NPDAUser.objects.filter(
@@ -1158,3 +1158,41 @@ def test_coordinators_cannot_delete_themselves(
 
     # Check that the response is successful
     assert response.status_code == HTTPStatus.FORBIDDEN
+
+@pytest.mark.django_db
+def test_coordinators_can_view_user_logs_with_multiple_employers_if_in_the_same_pdu(
+    client: Client,
+    seed_groups_fixture,
+    seed_users_fixture,
+):
+    """Test that coordinators can see user logs with multiple employers if they are in the same PDU."""
+
+    # Create a test user
+    test_coordinator = NPDAUser.objects.filter(
+        role=test_user_audit_centre_coordinator_data.role,
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+    ).first()
+
+    # Create a test user with multiple employers in the same PDU
+    test_user_multiple_employers = NPDAUser.objects.filter(
+        role=test_user_audit_centre_editor_data.role,
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+    ).first()
+
+    GOSH = PaediatricDiabetesUnit.objects.get(pz_code=GOSH_PZ_CODE)
+    # Add multiple employers to the test user
+    OrganisationEmployer.objects.create(
+        npda_user=test_user_multiple_employers,
+        paediatric_diabetes_unit=GOSH,
+        is_primary_employer=False,
+    )
+
+    # Login user
+    client = login_and_verify_user(client, test_coordinator)
+
+    # Make a GET request to the user logs page
+    url = reverse("npdauser-logs", kwargs={"npdauser_id": test_user_multiple_employers.pk})
+    response = client.get(url)
+
+    # Check that the response is successful
+    assert response.status_code == HTTPStatus.OK
