@@ -82,7 +82,17 @@ class NPDAUserListView(
         Apply ordering
         """
         queryset = super().get_queryset()
-        return queryset.order_by("surname")
+        pz_code = self.request.session.get("pz_code")
+
+        if self.request.user.viewing_data_nationally():
+            return (
+                queryset.order_by("surname")
+            )
+
+        return (
+            queryset.filter(organisation_employers__pz_code=pz_code)
+            .order_by("surname")
+        )
 
     def get_context_data(self, **kwargs):
         context = super(NPDAUserListView, self).get_context_data(**kwargs)
