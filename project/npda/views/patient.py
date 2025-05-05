@@ -358,8 +358,32 @@ class PatientCreateView(
     
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs["override_postcode"] = self.get_context_data().get("override_postcode", False)
+        # Get override_postcode from POST data if available
+        if self.request.method in ('POST', 'PUT'):
+            kwargs['override_postcode'] = self.request.POST.get('override_postcode', 'false') == 'true'
         return kwargs
+    
+    def form_invalid(self, form):
+        context = self.get_context_data()
+        if "postcode" in form.errors:
+            # if the postcode is invalid, we want to allow the user to save the record anyway
+            if form.override_postcode:
+                form.cleaned_data["override_postcode"] = True
+                messages.warning(
+                    self.request,
+                    "The postcode you have entered is invalid. The record will be saved but please check the postcode and update it if necessary.",
+                )
+                form.postcode = form.cleaned_data["postcode"]
+            else:
+                context['button_title'] = "Save Changes with Invalid Postcode Anyway"
+                context['override_postcode'] = True
+                messages.error(
+                    self.request,
+                    "The postcode you have entered is invalid. Please check the postcode and try again.",
+                )
+                form.override_postcode = True
+            return self.render_to_response(context)
+        return super().form_invalid(form)
 
     def form_valid(self, form: BaseForm) -> HttpResponse:
         if self.request.session.get("can_complete_questionnaire"):
