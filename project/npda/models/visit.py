@@ -233,7 +233,7 @@ class Visit(models.Model, HelpTextMixin):
     closed_loop_system = CategorisedPositiveSmallIntegerField(
         verbose_name="If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
         help_text={
-            "label": "Leave blank if insulin pump not used at time of HbA1c measurement. Licenced closed loop systems currently available in the UK are: • Medtronic 670g & 780g • T:slim Control IQ • CamAPS FX Any others e.g. Omnipod and Dexcom would be DIY, unlicenced.",
+            "label": "Leave blank if insulin pump not used at time of HbA1c measurement.",
             "reference": "Collected for national monitoring of diabetes related technology usage and associated outcomes.",
         },
         choices=CLOSED_LOOP_TYPES,
