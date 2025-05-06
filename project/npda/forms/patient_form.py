@@ -113,6 +113,8 @@ class PatientForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.audit_year = kwargs.pop("audit_year", None)
         self.paediatric_diabetes_unit = kwargs.pop("paediatric_diabetes_unit", None)
+        self.override_postcode = kwargs.pop("override_postcode", False)
+    
         super().__init__(*args, **kwargs)
         if self.instance.pk:
             try:
@@ -171,11 +173,16 @@ class PatientForm(forms.ModelForm):
 
     def handle_async_validation_result(self, key):
         value = getattr(self.async_validation_results, key)
-
-        if type(value) is ValidationError:
-            self.add_error(key, value)
-        elif value:
-            self.cleaned_data[key] = value
+        # override the invalid postcode error if the user has sanctioned the postcode
+        if key == "postcode" and type(value) is ValidationError and self.override_postcode:
+            postcode = self.cleaned_data["postcode"]
+            if postcode:
+                self.cleaned_data[key] = postcode
+        else:
+            if type(value) is ValidationError:
+                self.add_error(key, value)
+            elif value:
+                self.cleaned_data[key] = value
 
     def clean(self):
         cleaned_data = self.cleaned_data
