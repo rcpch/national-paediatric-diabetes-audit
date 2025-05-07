@@ -152,15 +152,22 @@ def csv_parse(csv_file):
 
     # Apply the dtype to non-date columns
     for column, dtype in datatypes.items():
+        
         try:
             if column in df.columns:
                 df[column] = df[column].astype(dtype)
         except ValueError as e:
             parse_type_error_columns.append(column)
             continue
-        # Convert NaN to None for nullable fields
+
+        # Convert NaN to None-y for nullable fields
         if column in df.columns:
-            df[column] = df[column].where(pd.notnull(df[column]), None)
+            # For string dtypes, use pd.NA
+            if dtype == "string":
+                df[column] = df[column].fillna(pd.NA)
+            # For other dtypes, convert nulls to None after dtype conversion
+            else:
+                df[column] = df[column].where(pd.notnull(df[column]), None)
         # round height and weight if provided to 1 decimal place
         if (
             column
@@ -188,7 +195,6 @@ def csv_parse(csv_file):
                 f"No {identifier_column}s found in the file. Please ensure all rows have a unique identifier and upload the file again."
             )
             discrepancy = total_row_count - identifier_nonnull_row_count
-        
         if discrepancy > 0:
             if discrepancy == 1:
                 raise ValueError(
