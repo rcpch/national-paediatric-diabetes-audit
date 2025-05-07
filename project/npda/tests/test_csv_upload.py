@@ -334,6 +334,27 @@ def test_missing_nhs_number(
     # We shouldn't save this patient (invariant enforced in Patient.clean not in the database)
     assert Patient.objects.count() == 0
 
+# Closely related unittest for missing pt identifier vals
+def test_missing_patient_identifier_column_correctly_formatted_with_missing_values(
+    dummy_sheets_folder,
+    tmp_path,
+):
+    # Read in smol subset of dummy sheet test file
+    df = pd.read_csv(dummy_sheets_folder / "dummy_sheet_test.csv").iloc[:3, :]
+    # Set missing first value for "NHS Number"
+    df.loc[0, "NHS Number"] = None
+
+    #  write back into temp
+    df.to_csv(tmp_path / "dummy_sheet_test.csv", index=False)
+
+    breakpoint()
+    parsed_csv = csv_parse(tmp_path / "dummy_sheet_test.csv")
+    breakpoint()
+    
+    assert parsed_csv.df['NHS Number'].dtype == "string"
+    assert pd.isna(parsed_csv.df['NHS Number'][0])
+    assert parsed_csv.df['NHS Number'].iloc[1:] == df['NHS Number'].iloc[1:]
+
 
 @pytest.mark.django_db
 def test_missing_date_of_diagnosis(test_user, single_row_valid_df):
