@@ -1037,7 +1037,6 @@ class VisitForm(forms.ModelForm):
         if any(
             [
                 hospital_admission_date,
-                hospital_discharge_date,
                 hospital_admission_reason,
                 dka_additional_therapies,
                 hospital_admission_other,
@@ -1048,7 +1047,6 @@ class VisitForm(forms.ModelForm):
                     all_items_must_be_filled_in(
                         [
                             {"hospital_admission_date": hospital_admission_date},
-                            {"hospital_discharge_date": hospital_discharge_date},
                             {"hospital_admission_reason": hospital_admission_reason},
                             {"dka_additional_therapies": dka_additional_therapies},
                         ]
@@ -1057,7 +1055,6 @@ class VisitForm(forms.ModelForm):
                     all_items_must_be_filled_in(
                         [
                             {"hospital_admission_date": hospital_admission_date},
-                            {"hospital_discharge_date": hospital_discharge_date},
                             {"hospital_admission_reason": hospital_admission_reason},
                             {"hospital_admission_other": hospital_admission_other},
                         ]
@@ -1066,7 +1063,6 @@ class VisitForm(forms.ModelForm):
                     all_items_must_be_filled_in(
                         [
                             {"hospital_admission_date": hospital_admission_date},
-                            {"hospital_discharge_date": hospital_discharge_date},
                             {"hospital_admission_reason": hospital_admission_reason},
                         ]
                     )
@@ -1091,7 +1087,6 @@ class VisitForm(forms.ModelForm):
                 all_items_must_be_filled_in(
                     [
                         {"hospital_admission_date": hospital_admission_date},
-                        {"hospital_discharge_date": hospital_discharge_date},
                         {"hospital_admission_reason": hospital_admission_reason},
                     ]
                 )

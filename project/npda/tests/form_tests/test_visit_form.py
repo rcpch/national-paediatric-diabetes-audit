@@ -1925,8 +1925,8 @@ def test_inpatient_admission_without_discharge_date():
     )
 
     # Trigger the cleaners
-    assert form.errors is None
-    assert form.is_valid() == True
+    assert len(form.errors) == 0, f"Form should be valid but got {form.errors}"
+    assert form.is_valid()
 
 
 """
