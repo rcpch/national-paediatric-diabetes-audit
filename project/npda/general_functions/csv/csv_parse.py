@@ -132,7 +132,7 @@ def csv_parse(csv_file):
         if len(na_row_numbers) == 1:
             user_error_message = f"Row {na_row_numbers[0]} has no {identifier_column}. Please ensure all rows have a unique identifier and upload the file again."
         else:
-            user_error_message = f"{len(na_row_numbers)} rows {'has' if len(na_row_numbers) == 1 else 'have'} no {identifier_column}. Please ensure all rows have a unique identifier and upload the file again. The row{'s'} with no {identifier_column} are: {','.join(map(str, na_row_numbers))}"
+            user_error_message = f"{len(na_row_numbers)} rows have no {identifier_column}. Please ensure all rows have a unique identifier and upload the file again. The rows with no {identifier_column} are: {','.join(map(str, na_row_numbers))}"
 
         raise ValueError(user_error_message)
 
