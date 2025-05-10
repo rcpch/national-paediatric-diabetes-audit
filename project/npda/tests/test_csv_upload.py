@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+import re
 import tempfile
 import csv
 import collections
@@ -18,7 +19,11 @@ from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.contrib.gis.geos import Point
 from httpx import HTTPError
+from django.contrib.messages import get_messages
+from django.test import Client
+from django.urls import reverse
 
+from project.constants.user import RCPCH_AUDIT_TEAM
 from project.npda.general_functions.csv import (
     csv_upload,
     csv_parse,
@@ -45,6 +50,7 @@ from project.npda.forms.external_visit_validators import (
     VisitExternalValidationResult,
     CentileAndSDS,
 )
+from project.npda.tests.utils import login_and_verify_user
 
 
 MOCK_PATIENT_EXTERNAL_VALIDATION_RESULT = PatientExternalValidationResult(
@@ -147,6 +153,12 @@ def test_user(seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixtur
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE
     ).first()
 
+@pytest.fixture
+def test_rcpch_user(seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture):
+    return NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=RCPCH_AUDIT_TEAM
+    ).first()
 
 # The database is not rolled back if we used the built in async support for pytest
 # https://github.com/pytest-dev/pytest-asyncio/issues/226
@@ -347,9 +359,7 @@ def test_missing_patient_identifier_column_correctly_formatted_with_missing_valu
     #  write back into temp
     df.to_csv(tmp_path / "dummy_sheet_test.csv", index=False)
 
-    breakpoint()
     parsed_csv = csv_parse(tmp_path / "dummy_sheet_test.csv")
-    breakpoint()
     
     assert parsed_csv.df['NHS Number'].dtype == "string"
     assert pd.isna(parsed_csv.df['NHS Number'][0])
@@ -860,31 +870,101 @@ def test_different_column_order(test_user, single_row_valid_df):
     assert Patient.objects.count() == 1
 
 
-# TODO MRB: these should probably be calling the route directly? https://github.com/rcpch/national-paediatric-diabetes-audit/issues/353
 @pytest.mark.django_db
-def test_additional_columns_causes_error(test_user, single_row_valid_df):
-    single_row_valid_df["extra_one"] = "woo"
-    single_row_valid_df["extra_two"] = "bloo"
+def test_additional_columns_causes_error(
+    single_row_valid_df, tmp_path, client, test_rcpch_user
+):
+    # Add additional columns
+    single_row_valid_df["extra_one"] = "ada"
+    single_row_valid_df["extra_two"] = "lovelace"
 
-    csv = single_row_valid_df.to_csv(index=False, date_format="%d/%m/%Y")
+    # write back into temp
+    tmp_csv_path = tmp_path / "dummy_sheet_test.csv"
+    single_row_valid_df.to_csv(tmp_csv_path, index=False)
 
-    additional_columns = read_csv_from_str(csv).additional_columns
-    assert additional_columns == ["extra_one", "extra_two"]
+    # Log in user
+    client = login_and_verify_user(client, test_rcpch_user)
+    session = client.session
+    session['can_upload_csv'] = True
+    session.save()
+
+    # Feed file to view
+    with open(tmp_csv_path, "rb") as csv_file:
+        response = client.post(
+            reverse('home'),
+            {
+                'csv_upload': csv_file
+            },
+            format='multipart'
+        )
+
+    assert response.status_code == 302
+    assert response.url == reverse("upload_csv")
+    
+    error_messages = list(get_messages(response.wsgi_request))
+    assert len(error_messages) == 1
+    assert error_messages[0].tags == "error"
+
+    # Extract columns from error message and compare as sets because for whatever reason
+    # the order is not guaranteed
+    additional_columns = set(
+        error_messages[0]
+        .message.split("Unexpected columns: [")[1]
+        .rstrip("]")
+        .split(", ")
+    )
+    assert additional_columns == {"extra_one", "extra_two"}
+
 
 
 @pytest.mark.django_db
-def test_duplicate_columns_causes_error(test_user, single_row_valid_df):
+def test_duplicate_columns_causes_error(single_row_valid_df, client, test_rcpch_user, tmp_path):
     single_row_valid_df["NHS Number_2"] = single_row_valid_df["NHS Number"]
     single_row_valid_df["NHS Number_3"] = single_row_valid_df["NHS Number"]
     single_row_valid_df["Date of Birth_2"] = single_row_valid_df["Date of Birth"]
 
-    csv = single_row_valid_df.to_csv(index=False, date_format="%d/%m/%Y")
-    csv = csv.replace("NHS Number_2", "NHS Number")
-    csv = csv.replace("NHS Number_3", "NHS Number")
-    csv = csv.replace("Date of Birth_2", "Date of Birth")
+    tmp_csv_path = tmp_path / "dummy_sheet_test.csv"
+    single_row_valid_df.to_csv(tmp_csv_path, index=False)
 
-    duplicate_columns = read_csv_from_str(csv).duplicate_columns
-    assert duplicate_columns == ["NHS Number", "Date of Birth"]
+    # Log in user
+    client = login_and_verify_user(client, test_rcpch_user)
+    session = client.session
+    session['can_upload_csv'] = True
+    session.save()
+
+    # Feed file and re-duplicate columns to the CSV
+    with open(tmp_csv_path, "r") as csv_file:
+        csv = csv_file.read()
+        csv = csv.replace("NHS Number_2", "NHS Number")
+        csv = csv.replace("NHS Number_3", "NHS Number")
+        csv = csv.replace("Date of Birth_2", "Date of Birth")
+        # Reset the file pointer to the beginning of the file
+        csv_file.seek(0)
+
+        response = client.post(
+            reverse('home'),
+            {
+                'csv_upload': csv_file
+            },
+            format='multipart'
+        )
+
+    assert response.status_code == 302
+    assert response.url == reverse("upload_csv")
+    
+    error_messages = list(get_messages(response.wsgi_request))
+    assert len(error_messages) == 1
+    assert error_messages[0].tags == "error"
+
+    # Extract columns from error message and compare as sets because for whatever reason
+    # the order is not guaranteed
+    columns_patt = r'\[(.+)\]'
+    match = re.search(columns_patt, error_messages[0].message)
+    assert match is not None
+    additional_columns = match.group(1).replace(', ', ',').split(",")
+    assert set(additional_columns) == {"NHS Number_2", "NHS Number_3", "Date of Birth_2"}
+    
+    
 
 
 @pytest.mark.django_db
