@@ -124,6 +124,21 @@
           </button>
         {% endif %}
       </div>
+      <input type="hidden"
+             name="override_postcode"
+             value="{{ override_postcode|yesno:'true,false' }}">
+      <!-- hidden field to store the state of the override_postcode flag -->
+      {% if override_postcode %}
+        <div role="alert" class="alert alert-info mt-3">
+          <i class="fa-solid fa-circle-info"></i>
+          <div>
+            <h3 class="font-bold">Invalid Postcode - What does it mean?</h3>
+            <div class="text-xs">
+              You cannot submit this form because the postcode (<b>{{ form.postcode.value }}</b>) you have supplied is invalid. If you are sure this is the correct postcode (sometimes the ordnance survey postcode list cannot not keep up with new postcodes), submit the form and it will save the patient with the invalid postcode. You can always change it later. Note that the index of multiple deprivation cannot be calculated without it, so will be skipped on this occasion. If there is an error in the postcode and you correct it, the error will disappear and the IMD will be calculated and saved.
+            </div>
+          </div>
+        </div>
+      {% endif %}
     </form>
     <div role="alert" class="alert mt-4">
       <i class="fa-solid fa-lightbulb text-rcpch_pink fa-3x"></i>

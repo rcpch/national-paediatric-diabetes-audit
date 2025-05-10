@@ -1906,6 +1906,29 @@ def test_inpatient_admission_other_missing_fails_validation():
     ), "hospital_admission_other should be in errors as hospital admission for other reason"
 
 
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/991
+@pytest.mark.django_db
+def test_inpatient_admission_without_discharge_date():
+    """
+    Questionnaire users may prefer to enter the admission as they go to avoid having to remember to do it on discharge
+    """
+    patient = PatientFactory()
+
+    form = VisitForm(
+        data={
+            "visit_date": "2026-01-01",  # Required for validation
+            "hospital_admission_date": "2026-01-01",
+            "hospital_discharge_date": None,
+            "hospital_admission_reason": 1,  # patient stabilisation
+        },
+        initial={"patient": patient},
+    )
+
+    # Trigger the cleaners
+    assert len(form.errors) == 0, f"Form should be valid but got {form.errors}"
+    assert form.is_valid()
+
+
 """
 Visit date tests
 """
