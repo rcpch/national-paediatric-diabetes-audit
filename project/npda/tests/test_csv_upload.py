@@ -1178,17 +1178,41 @@ def test_missing_identifier_columns(test_rcpch_user, one_patient_two_visits, cli
 
 
 @pytest.mark.django_db
-def test_both_identifier_columns_causes_an_error(test_user, one_patient_two_visits):
+def test_both_identifier_columns_causes_an_error(test_rcpch_user, one_patient_two_visits, client, tmp_path):
     df = one_patient_two_visits
     df = df.assign(**{"Unique Reference Number": np.arange(df.shape[0])})
     
-    assert "NHS Number" in df.columns
-    assert "Unique Reference Number" in df.columns
+    tmp_csv_path = tmp_path / "dummy_sheet_test.csv"
+    df.to_csv(tmp_csv_path, index=False)
 
-    csv = df.to_csv(index=False, date_format="%d/%m/%Y")
+    # Log in user
+    client = login_and_verify_user(client, test_rcpch_user)
+    session = client.session
+    session['can_upload_csv'] = True
+    session.save()
 
-    with pytest.raises(ValueError):
-        read_csv_from_str(csv)
+    # Feed file into view
+    with open(tmp_csv_path, "rb") as csv_file:
+
+        response = client.post(
+            reverse('home'),
+            {
+                'csv_upload': csv_file
+            },
+            format='multipart'
+        )
+
+    assert response.status_code == 302
+    assert response.url == reverse("upload_csv")
+    
+    error_messages = list(get_messages(response.wsgi_request))
+    assert len(error_messages) == 1
+    assert error_messages[0].tags == "error"
+
+    assert (
+        error_messages[0].message
+        == "Invalid CSV format: Both Unique Reference Number and NHS Number columns are present. Please ensure only one of these is present in the file."
+    )
 
 
 @pytest.mark.django_db

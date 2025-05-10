@@ -108,7 +108,7 @@ def csv_parse(csv_file):
     identifier_england = UNIQUE_IDENTIFIER_ENGLAND[0]["heading"]
     identifier_jersey = UNIQUE_IDENTIFIER_JERSEY[0]["heading"]
 
-    # Ensure only one identifier column is present
+    # Ensure exactly one identifier column is present
     if not ((identifier_england in df.columns) ^ (identifier_jersey in df.columns)):
         # If both are present
         if identifier_england in df.columns and identifier_jersey in df.columns:
