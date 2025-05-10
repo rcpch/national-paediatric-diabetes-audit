@@ -129,10 +129,12 @@ def csv_parse(csv_file):
     if df[identifier_column].isna().any():
         # Get the row numbers of the rows with no identifier
         na_row_numbers = df[df[identifier_column].isna()].index.tolist()
-        plural = "s" if len(na_row_numbers) > 1 else ""
-        raise ValueError(
-            f"{len(na_row_numbers)} row{plural} have no {identifier_column}. Please ensure all rows have a unique identifier and upload the file again. The rows with no {identifier_column} are: {','.join(map(str, na_row_numbers))}"
-        )
+        if len(na_row_numbers) == 1:
+            user_error_message = f"Row {na_row_numbers[0]} has no {identifier_column}. Please ensure all rows have a unique identifier and upload the file again."
+        else:
+            user_error_message = f"{len(na_row_numbers)} rows {'has' if len(na_row_numbers) == 1 else 'have'} no {identifier_column}. Please ensure all rows have a unique identifier and upload the file again. The row{'s'} with no {identifier_column} are: {','.join(map(str, na_row_numbers))}"
+
+        raise ValueError(user_error_message)
 
     missing_columns = list(set(HEADINGS_LIST) - set(df.columns))
 
