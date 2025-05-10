@@ -82,7 +82,7 @@ async def home(request):
                     request=request,
                     message=f"Invalid CSV format: {e}",
                 )
-                return redirect("home")
+                return redirect("upload_csv")
 
             missing_columns = parsed_csv.missing_columns
             if not parsed_csv.identifier_column:
