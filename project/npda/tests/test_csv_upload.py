@@ -982,7 +982,7 @@ def test_missing_columns_causes_error(test_rcpch_user, single_row_valid_df, clie
     session['can_upload_csv'] = True
     session.save()
 
-    # Feed file and re-duplicate columns to the CSV
+    # Feed file into view
     with open(tmp_csv_path, "rb") as csv_file:
         response = client.post(
             reverse('home'),
@@ -1141,13 +1141,40 @@ def test_jersey_csv(test_user, one_patient_two_visits):
 
 
 @pytest.mark.django_db
-def test_missing_identifier_columns(test_user, one_patient_two_visits):
+def test_missing_identifier_columns(test_rcpch_user, one_patient_two_visits, client, tmp_path):
     df = one_patient_two_visits.drop(["NHS Number"], axis=1)
-    csv = df.to_csv(index=False, date_format="%d/%m/%Y")
 
-    parsed_csv = read_csv_from_str(csv)
-    # Added to missing columns in the route as there we know if it was supposed to be a Jersey upload or England
-    assert parsed_csv.identifier_column is None
+    tmp_csv_path = tmp_path / "dummy_sheet_test.csv"
+    df.to_csv(tmp_csv_path, index=False)
+
+    # Log in user
+    client = login_and_verify_user(client, test_rcpch_user)
+    session = client.session
+    session['can_upload_csv'] = True
+    session.save()
+
+    # Feed file into view
+    with open(tmp_csv_path, "rb") as csv_file:
+
+        response = client.post(
+            reverse('home'),
+            {
+                'csv_upload': csv_file
+            },
+            format='multipart'
+        )
+
+    assert response.status_code == 302
+    assert response.url == reverse("upload_csv")
+    
+    error_messages = list(get_messages(response.wsgi_request))
+    assert len(error_messages) == 1
+    assert error_messages[0].tags == "error"
+
+    assert (
+        error_messages[0].message
+        == "Invalid CSV format: No unique identifier column is present. Please ensure one of Unique Reference Number or NHS Number is present in the file."
+    )
 
 
 @pytest.mark.django_db
