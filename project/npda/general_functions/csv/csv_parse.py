@@ -121,8 +121,18 @@ def csv_parse(csv_file):
     # Set the identifier column
     if identifier_jersey in df.columns:
         identifier_column = identifier_jersey
+        _headings_list = [heading for heading in HEADINGS_LIST if heading != identifier_england]
+
+        # Gather missing / additional columns
+        missing_columns = list(set(_headings_list) - set(df.columns))
+        additional_columns = list(set(df.columns) - set(_headings_list))
     else:
         identifier_column = identifier_england
+        _headings_list = [heading for heading in HEADINGS_LIST if heading != identifier_jersey]
+
+        # Gather missing / additional columns
+        missing_columns = list(set(_headings_list) - set(df.columns))
+        additional_columns = list(set(df.columns) - set(_headings_list))
 
     # Check every row has a unique identifier
     # If not, do not progress and raise error to the user with the row number(s)
@@ -135,10 +145,6 @@ def csv_parse(csv_file):
             user_error_message = f"{len(na_row_numbers)} rows have no {identifier_column}. Please ensure all rows have a unique identifier and upload the file again. The rows with no {identifier_column} are: {','.join(map(str, na_row_numbers))}"
 
         raise ValueError(user_error_message)
-
-    missing_columns = list(set(HEADINGS_LIST) - set(df.columns))
-
-    additional_columns = list(set(df.columns) - set(HEADINGS_LIST))
 
     # Duplicate columns appear in the dataframe as XYZ.1, XYZ.2 etc
     duplicate_columns = []
