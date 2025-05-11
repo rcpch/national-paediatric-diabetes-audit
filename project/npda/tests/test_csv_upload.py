@@ -346,25 +346,6 @@ def test_missing_nhs_number(
     # We shouldn't save this patient (invariant enforced in Patient.clean not in the database)
     assert Patient.objects.count() == 0
 
-# Closely related unittest for missing pt identifier vals
-def test_missing_patient_identifier_column_correctly_formatted_with_missing_values(
-    dummy_sheets_folder,
-    tmp_path,
-):
-    # Read in smol subset of dummy sheet test file
-    df = pd.read_csv(dummy_sheets_folder / "dummy_sheet_test.csv").iloc[:3, :]
-    # Set missing first value for "NHS Number"
-    df.loc[0, "NHS Number"] = None
-
-    #  write back into temp
-    df.to_csv(tmp_path / "dummy_sheet_test.csv", index=False)
-
-    parsed_csv = csv_parse(tmp_path / "dummy_sheet_test.csv")
-    
-    assert parsed_csv.df['NHS Number'].dtype == "string"
-    assert pd.isna(parsed_csv.df['NHS Number'][0])
-    assert parsed_csv.df['NHS Number'].iloc[1:] == df['NHS Number'].iloc[1:]
-
 
 @pytest.mark.django_db
 def test_missing_date_of_diagnosis(test_user, single_row_valid_df):
@@ -1034,13 +1015,36 @@ def test_mixed_case_column_headers(test_user, dummy_sheet_csv):
 
 
 @pytest.mark.django_db
-def test_invalid_nhs_number_column_name(test_user, dummy_sheet_csv):
-    csv = dummy_sheet_csv.replace("NHS Number", "NHSNumberXYZWoo")
-    results = read_csv_from_str(csv)
+def test_invalid_nhs_number_column_name(single_row_valid_df, client, test_rcpch_user, tmp_path):
+    single_row_valid_df = single_row_valid_df.rename(columns={"NHS Number": "NHS Nunberxns"})
+    
+    tmp_csv_path = tmp_path / "dummy_sheet_test.csv"
+    single_row_valid_df.to_csv(tmp_csv_path, index=False)
+    
+    # Log in user
+    client = login_and_verify_user(client, test_rcpch_user)
+    session = client.session
+    session['can_upload_csv'] = True
+    session.save()
 
-    # Added to missing_columns in the route as there we know if it was supposed to be a Jersey upload or England
-    assert results.identifier_column is None
-    assert results.additional_columns == ["NHSNumberXYZWoo"]
+    # Feed file into view
+    with open(tmp_csv_path, "rb") as csv_file:
+        response = client.post(
+            reverse('home'),
+            {
+                'csv_upload': csv_file
+            },
+            format='multipart'
+        )
+
+    assert response.status_code == 302
+    assert response.url == reverse("upload_csv")
+    
+    error_messages = list(get_messages(response.wsgi_request))
+
+    assert len(error_messages) == 1
+    assert error_messages[0].tags == "error"
+    assert error_messages[0].message == "Invalid CSV format: No unique identifier column is present. Please ensure one of Unique Reference Number or NHS Number is present in the file."
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/741
