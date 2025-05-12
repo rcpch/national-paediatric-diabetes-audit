@@ -54,10 +54,11 @@ def csv_parse(csv_file):
     # If it does not, we will use the predefined column names
     # If it does, we will use the column names in the csv file
     # The exception is if the first row of the csv file does not match any of the predefined column names, in which case we will reject the csv
-    
+
     errors_to_return = collections.defaultdict(lambda: collections.defaultdict(list))
 
-    HEADINGS_LIST = [obj["heading"] for obj in (UNIQUE_IDENTIFIER_ENGLAND + UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS)]
+    HEADINGS_OBJECTS = UNIQUE_IDENTIFIER_ENGLAND + UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
+    HEADINGS_LIST = [obj["heading"] for obj in HEADINGS_OBJECTS]
 
     # Convert the predefined column names to lowercase
     lowercase_headings_list = [heading.lower() for heading in HEADINGS_LIST]
