@@ -490,14 +490,15 @@ class NPDAUserLogsListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Li
                 f"Reader or Editor user {logged_in_user.email} tried to view logs for another user {npda_user.email}"
             )
             return False
+        
 
         # Coordinators can view logs for any user in their PDU
         if logged_in_user.role == AUDIT_CENTRE_COORDINATOR:
             try:
-                requested_pdu = npda_user.organisation_employers.get(
+                npda_users_pdu_list = npda_user.organisation_employers.filter(
                     pz_code__in=logged_in_user.organisation_employers.all().values_list(
                         "pz_code", flat=True
-                    ),
+                    ), 
                 )
             except PaediatricDiabetesUnit.DoesNotExist:
                 logger.warning(f"Requested PDU for user {npda_user.email} not found")
@@ -508,12 +509,10 @@ class NPDAUserLogsListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Li
                 )
                 return False
 
-            # if requested_pdu != npda_user.organisation_employers.first():
-            if not npda_user.organisation_employers.filter(
-                pz_code=requested_pdu.pz_code
-            ).exists():
+            if not set(npda_user.organisation_employers.all()) & set(npda_users_pdu_list):
+                # if any of the user's employers are not in the logged in user's PDU list, deny access
                 logger.warning(
-                    f"Coordinator user {logged_in_user.email} tried to view logs for another user {npda_user.email} in a different PDU {requested_pdu.pz_code}"
+                    f"Coordinator user {logged_in_user.email} tried to view logs for another user {npda_user.email} in a different PDU {npda_users_pdu_list}"
                 )
                 return False
 

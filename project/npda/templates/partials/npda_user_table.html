@@ -135,24 +135,27 @@
           {% endif %}
           <td class="px-6 text-left">{{ npda_user.get_role_display }}</td>
           <td class="w-80 px-2 text-right">
-            <div class="tooltip tooltip-left"
-                 data-tip="View user logs for {{ npda_user }}">
-              <a href="{% url 'npdauser-logs' npda_user.pk %}"
-                 class="text-rcpch_pink flex justify-center items-center px-2">
-                <svg class="text-rcpch_pink w-8 h-8"
-                     width="24"
-                     height="24"
-                     viewBox="0 0 24 24"
-                     stroke-width="2"
-                     stroke="currentColor"
-                     fill="none"
-                     stroke-linecap="round"
-                     stroke-linejoin="round">
-                  <path stroke="none" d="M0 0h24v24H0z" />
-                  <polyline points="9 6 15 12 9 18" />
-                </svg>
-              </a>
-            </div>
+            {% if request.user.role != 3 and request.user.role != 2 %}
+              <!--readers/editors cannot view logs-->
+              <div class="tooltip tooltip-left"
+                   data-tip="View user logs for {{ npda_user }}">
+                <a href="{% url 'npdauser-logs' npda_user.pk %}"
+                   class="text-rcpch_pink flex justify-center items-center px-2">
+                  <svg class="text-rcpch_pink w-8 h-8"
+                       width="24"
+                       height="24"
+                       viewBox="0 0 24 24"
+                       stroke-width="2"
+                       stroke="currentColor"
+                       fill="none"
+                       stroke-linecap="round"
+                       stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" />
+                    <polyline points="9 6 15 12 9 18" />
+                  </svg>
+                </a>
+              </div>
+            {% endif %}
           </td>
         </tr>
       {% endfor %}
