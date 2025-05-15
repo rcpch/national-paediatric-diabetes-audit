@@ -41,6 +41,7 @@ from project.npda.models.organisation_employer import OrganisationEmployer
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
+from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
 from project.npda.tests.UserDataClasses import (
     test_user_audit_centre_coordinator_data,
     test_user_audit_centre_editor_data,
@@ -1180,6 +1181,7 @@ def test_coordinators_can_view_user_logs_with_multiple_employers_if_in_the_same_
     ).first()
 
     GOSH = PaediatricDiabetesUnit.objects.get(pz_code=GOSH_PZ_CODE)
+    
     # Add multiple employers to the test user
     OrganisationEmployer.objects.create(
         npda_user=test_user_multiple_employers,
@@ -1240,3 +1242,48 @@ def test_coordinators_with_multiple_employers_can_view_user_logs_with_multiple_e
 
     # Check that the response is successful
     assert response.status_code == HTTPStatus.OK
+
+@pytest.mark.django_db
+def test_coordinators_with_multiple_employers_cannot_view_user_logs_with_multiple_employers_if_no_common_pdu(
+    client: Client,
+    seed_groups_fixture,
+    seed_users_fixture,
+):
+    """Test that coordinators with multiple employers cannot see user logs with multiple employers if they are in different PDUs."""
+
+    KINGS_COLLEGE = "PZ215"
+    BCH_PZ_CODE = "PZ108"
+
+    # Create a test coordinator with multiple employers in different PDUs from the user
+    test_coordinator = NPDAUserFactory(
+        role=test_user_audit_centre_coordinator_data.role,
+        organisation_employers=[KINGS_COLLEGE, BCH_PZ_CODE],
+    )
+    OrganisationEmployer.objects.filter(
+        npda_user=test_coordinator,
+        paediatric_diabetes_unit__pz_code=KINGS_COLLEGE,
+    ).update(is_primary_employer=False) # can't have 2 primary employers
+
+    # Create a test user with multiple employers
+    test_user_multiple_employers = NPDAUser.objects.filter(
+        role=test_user_audit_centre_editor_data.role,
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+    ).first()
+
+    GOSH = PaediatricDiabetesUnit.objects.get(pz_code=GOSH_PZ_CODE)
+    # Add multiple employers to the test user
+    OrganisationEmployer.objects.create(
+        npda_user=test_user_multiple_employers,
+        paediatric_diabetes_unit=GOSH,
+        is_primary_employer=False,
+    )
+
+    # Login user
+    client = login_and_verify_user(client, test_coordinator)
+
+    # Make a GET request to the user logs page
+    url = reverse("npdauser-logs", kwargs={"npdauser_id": test_user_multiple_employers.pk})
+    response = client.get(url)
+
+    # Check that the response is successful
+    assert response.status_code == HTTPStatus.FORBIDDEN
