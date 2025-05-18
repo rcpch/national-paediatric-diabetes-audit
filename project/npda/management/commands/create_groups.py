@@ -57,7 +57,8 @@ def groups_seeder(
         {"codename": "change_npdauser", "content_type": npdauserContentType},
         {"codename": "add_npdauser", "content_type": npdauserContentType},
         {"codename": "delete_npdauser", "content_type": npdauserContentType},
-        
+        # submission
+        {"codename": "view_submission", "content_type": submissionContentType},
         
     ]
 
@@ -70,6 +71,8 @@ def groups_seeder(
         {"codename": "view_transfer", "content_type": transferContentType},
         # NPDA-user related permissions
         {"codename": "view_npdauser", "content_type": npdauserContentType},
+        # submission
+        {"codename": "view_submission", "content_type": submissionContentType},
     ]
 
     EDITOR_PERMISSIONS = [
@@ -84,6 +87,8 @@ def groups_seeder(
         # transfer-related permissions = None
         # user-related permissions
         {"codename": "view_npdauser", "content_type": npdauserContentType},
+        # submission
+        {"codename": "view_submission", "content_type": submissionContentType},
     ]
 
     RCPCH_AUDIT_TEAM_PERMISSIONS = [

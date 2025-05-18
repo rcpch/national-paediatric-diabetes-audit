@@ -7,12 +7,14 @@ import logging
 # Django imports
 from django.apps import apps
 from django.contrib import messages
+from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Case, When, F, Value, IntegerField, OuterRef, Subquery
 from django.db.models.functions import Concat, ExtractMonth, ExtractYear
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.views.generic import ListView
+
 
 # Third party imports
 import pandas as pd
@@ -40,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 
 class SubmissionsListView(
-    LoginAndOTPRequiredMixin, ListView
+    LoginAndOTPRequiredMixin, ListView, PermissionRequiredMixin
 ):
     """
     The SubmissionsListView class.
@@ -55,6 +57,8 @@ class SubmissionsListView(
     model = apps.get_model(app_label="npda", model_name="Submission")
     template_name = "submissions_list.html"
     context_object_name = "submissions"
+    permission_required = "npda.view_submission"
+    permission_denied_message = "You do not have permission to view submissions."
 
     def get_queryset(self) -> Iterable[Any]:
         """
@@ -405,12 +409,15 @@ def submission_stats(selected_audit_year):
     # Retrieve the latest submission data for the selected audit year
     latest_submission_data = Submission.objects.filter(
         audit_year=selected_audit_year,
-        submission_date__gte=date.today(),
         paediatric_diabetes_unit__active=True,
         submission_active=True
     ).order_by(
         '-submission_date'
-    ).first()
+    )
+    if latest_submission_data.exists():
+        latest_submission_data = latest_submission_data.first()
+    else:
+        latest_submission_data = None
 
     fewest_errors = Submission.objects.filter(
         audit_year = selected_audit_year,
@@ -420,7 +427,11 @@ def submission_stats(selected_audit_year):
         error_count=Count('errors')
     ).order_by(
         'error_count'
-    ).first()
+    )
+    if fewest_errors.exists():
+        fewest_errors = fewest_errors.first()
+    else:
+        fewest_errors = None
 
     most_patients = Submission.objects.filter(
         audit_year = selected_audit_year,
@@ -430,7 +441,11 @@ def submission_stats(selected_audit_year):
         patient_count=Count('patients')
     ).order_by(
         '-patient_count'
-    ).first()
+    )
+    if most_patients.exists():
+        most_patients = most_patients.first()
+    else:
+        most_patients = None
 
     most_visits = Submission.objects.filter(
         audit_year = selected_audit_year,
@@ -441,7 +456,8 @@ def submission_stats(selected_audit_year):
         visits_per_patient=Count('patients')/Count('patients__visit')
     ).order_by(
         '-visits_per_patient'
-    ).first()
+    )
+
 
     latest_submission_paediatric_diabetes_unit, submission_date = getattr(latest_submission_data, "paediatric_diabetes_unit", None), getattr(latest_submission_data,"submission_date", None)
     fewest_errors_paediatric_diabetes_unit, error_number = getattr(fewest_errors, "paediatric_diabetes_unit", None), getattr(fewest_errors,"error_count", None)
