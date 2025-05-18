@@ -70,7 +70,7 @@
                     </a>
                 </li>
                 <li>
-                    <button class="btn {% if submission_error_count > 0 %} btn-warning {% else %} btn-success {% endif %} text-white {% if not perms.npda.can_download_csv %}btn-disabled{% endif %}"
+                    <button class="btn {% if submission_error_count > 0 %} btn-warning {% else %} btn-success {% endif %} text-white {% if not perms.npda.view_submission %}btn-disabled{% endif %}"
                             type="button"
                             onclick="quality_report_modal.showModal()">
                         <i class="fa-solid fa-file-excel"></i>

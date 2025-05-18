@@ -7,12 +7,14 @@ import logging
 # Django imports
 from django.apps import apps
 from django.contrib import messages
+from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Case, When, F, Value, IntegerField, OuterRef, Subquery
 from django.db.models.functions import Concat, ExtractMonth, ExtractYear
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.views.generic import ListView
+
 
 # Third party imports
 import pandas as pd
@@ -40,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 
 class SubmissionsListView(
-    LoginAndOTPRequiredMixin, ListView
+    LoginAndOTPRequiredMixin, ListView, PermissionRequiredMixin
 ):
     """
     The SubmissionsListView class.
@@ -55,6 +57,8 @@ class SubmissionsListView(
     model = apps.get_model(app_label="npda", model_name="Submission")
     template_name = "submissions_list.html"
     context_object_name = "submissions"
+    permission_required = "npda.view_submission"
+    permission_denied_message = "You do not have permission to view submissions."
 
     def get_queryset(self) -> Iterable[Any]:
         """
