@@ -20,7 +20,7 @@ from project.constants import (
     CSV_HEADING_OBJECTS,
     csv_definition_for,
     JERSEY_CSV_DATA_TYPES,
-    ENGLAND_CSV_DATA_TYPES
+    ENGLAND_CSV_DATA_TYPES,
 )
 
 # Logging setup
@@ -39,7 +39,9 @@ class ParsedCSVFile:
     # csv_upload also has one of these and they are merged before saving
     # NB: the nested dict is keyed by model field name, not CSV heading
     # dict[number, dict[str, list[str]]]
-    errors_to_return: collections.defaultdict[int, collections.defaultdict[str, list[str]]]
+    errors_to_return: collections.defaultdict[
+        int, collections.defaultdict[str, list[str]]
+    ]
 
 
 def csv_parse(csv_file):
@@ -109,29 +111,47 @@ def csv_parse(csv_file):
                 c for c in HEADINGS_LIST if c.lower() == column.lower()
             )
             df = df.rename(columns={column: normalised_column})
-    
+
     identifier_england = UNIQUE_IDENTIFIER_ENGLAND[0]["heading"]
     identifier_jersey = UNIQUE_IDENTIFIER_JERSEY[0]["heading"]
 
-    if identifier_england in df.columns and identifier_jersey in df.columns:
-        raise ValueError(
-            "Both Unique Reference Number and NHS Number columns are present. Please ensure only one of these is present in the file."
-        )
+    # Ensure exactly one identifier column is present
+    if not ((identifier_england in df.columns) ^ (identifier_jersey in df.columns)):
+        # If both are present
+        if identifier_england in df.columns and identifier_jersey in df.columns:
+            user_error_message = "Both Unique Reference Number and NHS Number columns are present. Please ensure only one of these is present in the file."
+        # Neither present
+        else:
+            user_error_message = "No unique identifier column is present. Please ensure one of Unique Reference Number or NHS Number is present in the file."
+        raise ValueError(user_error_message)
 
+    # Set the identifier column
     if identifier_jersey in df.columns:
         identifier_column = identifier_jersey
-    elif identifier_england in df.columns:
-        identifier_column = identifier_england
+        _headings_list = [heading for heading in HEADINGS_LIST if heading != identifier_england]
+
+        # Gather missing / additional columns
+        missing_columns = list(set(_headings_list) - set(df.columns))
+        additional_columns = list(set(df.columns) - set(_headings_list))
     else:
-        identifier_column = None
+        identifier_column = identifier_england
+        _headings_list = [heading for heading in HEADINGS_LIST if heading != identifier_jersey]
 
-    missing_columns = [
-        column for column in HEADINGS_LIST if not column in df.columns and column != identifier_england and column != identifier_jersey
-    ]
+        # Gather missing / additional columns
+        missing_columns = list(set(_headings_list) - set(df.columns))
+        additional_columns = list(set(df.columns) - set(_headings_list))
 
-    additional_columns = [
-        column for column in df.columns if not column in HEADINGS_LIST
-    ]
+    # Check every row has a unique identifier
+    # If not, do not progress and raise error to the user with the row number(s)
+    if df[identifier_column].isna().any():
+        # Get the row numbers of the rows with no identifier
+        na_row_numbers = df[df[identifier_column].isna()].index.tolist()
+        if len(na_row_numbers) == 1:
+            user_error_message = f"Row {na_row_numbers[0]} has no {identifier_column}. Please ensure all rows have a unique identifier and upload the file again."
+        else:
+            user_error_message = f"{len(na_row_numbers)} rows have no {identifier_column}. Please ensure all rows have a unique identifier and upload the file again. The rows with no {identifier_column} are: {','.join(map(str, na_row_numbers))}"
+
+        raise ValueError(user_error_message)
 
     # Duplicate columns appear in the dataframe as XYZ.1, XYZ.2 etc
     duplicate_columns = []
@@ -148,13 +168,19 @@ def csv_parse(csv_file):
         if column in df.columns:
             column_before = df[column].copy()
             # Support DD/MM/YYYY and DD/MM/YY
-            column_after = pd.to_datetime(df[column], format="mixed", dayfirst=True, errors="coerce")
+            column_after = pd.to_datetime(
+                df[column], format="mixed", dayfirst=True, errors="coerce"
+            )
 
-            for (row_index, (value_before, value_after)) in enumerate(zip(column_before, column_after)):
+            for row_index, (value_before, value_after) in enumerate(
+                zip(column_before, column_after)
+            ):
                 if not pd.isna(value_before) and pd.isna(value_after):
                     model_field = csv_definition_for(column)["model_field"]
-                    errors_to_return[row_index][model_field].append("Date format is incorrect (expected DD/MM/YYYY)")
-            
+                    errors_to_return[row_index][model_field].append(
+                        "Date format is incorrect (expected DD/MM/YYYY)"
+                    )
+
             df[column] = column_after
 
     if identifier_column == identifier_jersey:
@@ -170,9 +196,15 @@ def csv_parse(csv_file):
         except ValueError as e:
             parse_type_error_columns.append(column)
             continue
-        # Convert NaN to None for nullable fields
+
+        # Convert NaN to None-y for nullable fields
         if column in df.columns:
-            df[column] = df[column].where(pd.notnull(df[column]), None)
+            # For string dtypes, use pd.NA
+            if dtype == "string":
+                df[column] = df[column].fillna(pd.NA)
+            # For other dtypes, convert nulls to None after dtype conversion
+            else:
+                df[column] = df[column].where(pd.notnull(df[column]), None)
         # round height and weight if provided to 1 decimal place
         if (
             column
@@ -180,7 +212,7 @@ def csv_parse(csv_file):
                 "Patient Height (cm)",
                 "Patient Weight (kg)",
                 "Total Cholesterol Level (mmol/l)",
-                "Urinary Albumin Level (ACR)"
+                "Urinary Albumin Level (ACR)",
             ]
             and column in df.columns
         ):
@@ -189,27 +221,6 @@ def csv_parse(csv_file):
             else:
                 parse_type_error_columns.append(column)
 
-    # Rows where the unique identifier is missing will be removed - count the number of rows before and after: placed here to ensure all columns have been processed
-    total_row_count = df.shape[0]
-    discrepancy = 0
-
-    if identifier_column in df:
-        identifier_nonnull_row_count = df[identifier_column].count()
-        if identifier_nonnull_row_count == 0:
-            raise ValueError(
-                f"No {identifier_column}s found in the file. Please ensure all rows have a unique identifier and upload the file again."
-            )
-            discrepancy = total_row_count - identifier_nonnull_row_count
-        
-        if discrepancy > 0:
-            if discrepancy == 1:
-                raise ValueError(
-                    f"{discrepancy} row has no unique identifier. Please ensure all rows have a unique identifier and upload the file again."
-                )
-            raise ValueError(
-                f"{discrepancy} rows have no unique identifier. Please ensure all rows have a unique identifier and upload the file again."
-            )
-
     return ParsedCSVFile(
         df,
         identifier_column,
@@ -217,5 +228,5 @@ def csv_parse(csv_file):
         additional_columns,
         duplicate_columns,
         parse_type_error_columns,
-        errors_to_return
+        errors_to_return,
     )
