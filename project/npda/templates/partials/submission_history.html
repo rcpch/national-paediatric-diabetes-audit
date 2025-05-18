@@ -3,12 +3,28 @@
 {% load humanize %}
 <div>
   {% if request.user.view_preference == 1 %}
-    <!-- national view -->
-    <h1 class="font-montserrat text-md text-rcpch_dark_blue font-semibold">
-      All Submissions for {{ lead_organisation }} ({{ pz_code }})
-    </h1>
+    <!-- PDU/tTrust/LHB view -->
+    {% if request.user.is_rcpch_audit_team_member or request.user.is_superuser or request.user.is_rcpch_staff %}
+      <div class="alert alert-info mb-2">
+        <i class="fa-solid fa-circle-info"></i>
+        <span class="text-sm text-rcpch_dark_blue font-semibold">
+          You are currently viewing the submissions for {{ lead_organisation }} ({{ pz_code }}) only. If you want a national view of all submissions please remove the PDU filter in the Filters in the menu bar.
+        </span>
+      </div>
+    {% endif %}
+    <div class="flex flex-row items-center">
+      <h1 class="font-montserrat text-md text-rcpch_dark_blue font-semibold">
+        All Submissions for {{ lead_organisation }} ({{ pz_code }})
+      </h1>
+    </div>
   {% elif request.user.view_preference == 2 %}
-    <!-- PDU view   -->
+    <!-- National view   -->
+    <div class="alert alert-info mb-2">
+      <i class="fa-solid fa-circle-info"></i>
+      <span class="text-sm text-rcpch_dark_blue font-semibold">
+        You are currently viewing all submissions Nationally. If you want to view submissions only for {{ lead_organisation }} ({{ pz_code }}) (or any PDU) please apply the PDU filter in the Filters in the menu bar.
+      </span>
+    </div>
     <h1 class="font-montserrat text-md text-rcpch_dark_blue font-semibold">
       All Submissions Nationally
     </h1>
