@@ -43,7 +43,6 @@ jobs:
           # Pin az cli for now https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1003
           azcliversion: 2.71.0
           inlineScript: |
-            pip install pyyaml && \
             s/deploy-revision.py \
               --name {{ secrets.AZURE_STAGING_APP_NAME }} \
               --resource-group {{ secrets.AZURE_RESOURCE_GROUP }} \
