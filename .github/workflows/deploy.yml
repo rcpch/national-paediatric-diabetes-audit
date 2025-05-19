@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - live
+      - mbarton/fix-az-cli-snafu
 
 permissions:
   id-token: write
@@ -25,6 +26,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: 'Run CI script'
+        uses: azure/cli@v2
         env:
           AZURE_REGISTRY_NAME: ${{ secrets.AZURE_REGISTRY_NAME }}
           AZURE_CONFIG_STORAGE_ACCOUNT: ${{ secrets.AZURE_CONFIG_STORAGE_ACCOUNT }}
@@ -32,7 +34,10 @@ jobs:
           AZURE_STAGING_APP_NAME: ${{ secrets.AZURE_STAGING_APP_NAME }}
           AZURE_LIVE_APP_NAME: ${{ secrets.AZURE_LIVE_APP_NAME }}
           AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
-        run: s/ci
+        with:
+          # Pin az cli for now https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1003
+          azcliversion: 2.71.0
+          inlineScript: s/ci
       
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
