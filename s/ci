@@ -26,8 +26,15 @@ azure_tag="${AZURE_REGISTRY_NAME}.azurecr.io/npda-django:${GITHUB_SHA}"
 docker tag npda-django:built ${azure_tag}
 docker push ${azure_tag}
 
-# Deploy temporarily moved up to GitHub workflow as a workound for
-# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1003
-# TODO MRB: put it back in here once https://github.com/Azure/azure-cli/pull/31508 is released
+# Deploy to Azure Container Apps
+s/deploy-revision.py \
+    --name ${AZURE_STAGING_APP_NAME} \
+    --resource-group ${AZURE_RESOURCE_GROUP} \
+    --git-hash ${GITHUB_SHA}
+
+# s/deploy-revision.py \
+#     --name ${AZURE_LIVE_APP_NAME} \
+#     --resource-group ${AZURE_RESOURCE_GROUP} \
+#     --git-hash ${GITHUB_SHA}
 
 # Deploy to the docs is handled in the GitHub workflow itself
