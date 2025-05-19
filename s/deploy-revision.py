@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
-import yaml
+import re
 import tempfile
 import subprocess
 
@@ -21,14 +21,11 @@ template_str = subprocess.check_output(
     shell=True
 ).decode("utf-8")
 
-template_yaml = yaml.safe_load(template_str)
-
-for container in template_yaml["properties"]["template"]["containers"]:
-    [image_name, _] = container["image"].split(":")
-    container["image"] = f"{image_name}:{args.git_hash}"
+regex = re.compile(r"rcpch.azurecr.io/npda-django:\w+")
+template_str = regex.sub(f"rcpch.azurecr.io/npda-django:{args.git_hash}", template_str)
 
 with tempfile.NamedTemporaryFile() as fp:
-    fp.write(yaml.dump(template_yaml).encode("utf-8"))
+    fp.write(template_str.encode("utf-8"))
 
     subprocess.run(
         f"az containerapp update --name {args.name} --resource-group {args.resource_group} --yaml {fp.name} --query 'properties.provisioningState'",
