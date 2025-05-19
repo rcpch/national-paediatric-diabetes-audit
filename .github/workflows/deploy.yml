@@ -42,6 +42,7 @@ jobs:
         env:
           AZURE_STAGING_APP_NAME: ${{ secrets.AZURE_STAGING_APP_NAME }}
           AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          AZURE_CORE_USE_MSAL_HTTP_CACHE: false
         with:
           azcliversion: 2.71.0
           inlineScript: |
