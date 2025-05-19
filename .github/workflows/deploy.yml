@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - live
+      - mbarton/fix-az-cli-snafu
 
 permissions:
   id-token: write
