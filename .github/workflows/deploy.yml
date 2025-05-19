@@ -35,6 +35,21 @@ jobs:
           AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
         run: s/ci
       
+      # Workaround https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1003
+      # TODO MRB: remove the Docker wrapper once https://github.com/Azure/azure-cli/pull/31508 is released
+      - name: Azure CLI script
+        uses: azure/cli@v2
+        env:
+          AZURE_STAGING_APP_NAME: ${{ secrets.AZURE_STAGING_APP_NAME }}
+          AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+        with:
+          azcliversion: 2.71.0
+          inlineScript: |
+            s/deploy-revision.py \
+              --name ${AZURE_STAGING_APP_NAME} \
+              --resource-group ${AZURE_RESOURCE_GROUP} \
+              --git-hash ${GITHUB_SHA}
+
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
       
