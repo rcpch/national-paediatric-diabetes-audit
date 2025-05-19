@@ -32,7 +32,7 @@ docker push ${azure_tag}
 docker run \
     --volume .:/opt/npda \
     mcr.microsoft.com/azure-cli:2.72.0 \
-        s/deploy-revision.py \
+        /opt/npda/s/deploy-revision.py \
             --name ${AZURE_STAGING_APP_NAME} \
             --resource-group ${AZURE_RESOURCE_GROUP} \
             --git-hash ${GITHUB_SHA}
