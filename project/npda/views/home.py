@@ -78,6 +78,7 @@ async def home(request):
             try:
                 parsed_csv = csv_parse(io.BytesIO(user_csv_bytes))
             except ValueError as e:
+                print(f"!! {dir(e)}")
                 messages.error(
                     request=request,
                     message=f"Invalid CSV format: {e}",

@@ -66,7 +66,14 @@ def csv_parse(csv_file):
     lowercase_headings_list = [heading.lower() for heading in HEADINGS_LIST]
 
     # Read the first row of the csv file
-    df = pd.read_csv(csv_file)
+    try:
+        df = pd.read_csv(csv_file, encoding="utf-8")
+    except UnicodeDecodeError:
+        # This is the default you get from Excel when saving on a UK English machine
+        # Other encodings are unlikely. Our dataset doesn't expect non-ASCII characters
+        # but we have seen non-breaking spaces sneak in (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/999)
+        csv_file.seek(0)
+        df = pd.read_csv(csv_file, encoding="ISO-8859-1")
 
     if any(col.lower() in lowercase_headings_list for col in df.columns):
         # The first row of the csv file matches at least some of the predefined column names
