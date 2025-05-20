@@ -193,9 +193,9 @@ async def csv_upload_sync(
     )
 
 
-def read_csv_from_str(contents):
+def read_csv_from_str(contents, encoding="utf-8"):
     with tempfile.NamedTemporaryFile() as f:
-        f.write(contents.encode())
+        f.write(contents.encode(encoding))
         f.seek(0)
 
         return csv_parse(f)
@@ -3566,3 +3566,21 @@ def test_bad_data_for_decimal_fields(test_user, dummy_sheet_csv, model_field):
 
     assert getattr(instance, model_field) == None
     assert model_field in instance.errors
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/999
+@pytest.mark.django_db
+def test_non_breaking_space_in_iso_8859_1_csv(test_user, dummy_sheet_csv):
+    """
+    Test that a non-breaking space in an ISO-8859-1 CSV is handled correctly
+    """
+    one_row_csv = modify_raw_csv(
+        dummy_sheet_csv,
+        end=2,  # exclusive
+        replacements=[{"row": 1, "column": "NHS Number", "value": "4773730404\xa0"}],
+    )
+
+    df = read_csv_from_str(one_row_csv, encoding="iso-8859-1").df
+
+    errors = csv_upload_sync(test_user, df)
+
+    assert len(errors) == 0
