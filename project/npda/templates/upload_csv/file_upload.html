@@ -75,6 +75,41 @@
         </div>
       </form>
     </div>
+    {% if missing_columns or additional_columns or duplicate_columns %}
+      <div class="w-6/12 m-6">
+        <div role="alert" class="alert alert-warning">
+          <span class="fa-stack">
+            <i class="fa-circle fa-stack-1x fas"></i>
+            <i class="fa-exclamation fa-stack-1x fa-inverse fas"></i>
+          </span>
+          <span>Warning: Column errors detected!</span>
+        </div>
+        <table class="table">
+          <thead>
+            <td>Template</td>
+            <td>Your CSV file</td>
+          </thead>
+          <tbody>
+            {% for template_column, csv_column in csv_and_template_columns %}
+              <tr>
+                <td>
+                  {{template_column}}
+                </td>
+                {% if template_column in missing_columns or template_column in additional_columns or template_column in duplicate_columns %}
+                  <td class="bg-rcpch_red text-white">
+                    {{ csv_column }}
+                  </td>
+                {% else %}
+                  <td>
+                    {{ csv_column }}
+                  </td>
+                {% endif %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
   </div>
   <script>
   function updateFilename(input) {
