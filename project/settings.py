@@ -127,6 +127,7 @@ INSTALLED_APPS = [
     "django_otp.plugins.otp_static",
     "django_otp.plugins.otp_totp",
     "django_otp.plugins.otp_email",
+    "rest_framework",
     "two_factor.plugins.email",
     "two_factor",
     "two_factor.plugins.phonenumber",  # we don't use phones currently but required for app to work
