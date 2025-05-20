@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 class ParsedCSVFile:
     df: pd.DataFrame
     identifier_column: str | None
+    template_columns: list[str]
     missing_columns: list[str]
     additional_columns: list[str]
     duplicate_columns: list[str]
@@ -228,9 +229,12 @@ def csv_parse(csv_file):
             else:
                 parse_type_error_columns.append(column)
 
+    template_columns = [identifier_column] + [obj["heading"] for obj in CSV_HEADING_OBJECTS]
+
     return ParsedCSVFile(
         df,
         identifier_column,
+        template_columns,
         missing_columns,
         additional_columns,
         duplicate_columns,
