@@ -285,7 +285,7 @@ def test_reader_cannot_upload_csv(
     file = dummy_sheets_folder / "dummy_sheet_test.csv"
 
     # upload the CSV file by posting to  'home' view
-    url = reverse("home")
+    url = reverse("upload_csv")
     with open(file, "rb") as f:
         response = client.post(
             url,

@@ -872,7 +872,7 @@ def test_additional_columns_causes_error(
     # Feed file to view
     with open(tmp_csv_path, "rb") as csv_file:
         response = client.post(
-            reverse('home'),
+            reverse('upload_csv'),
             {
                 'csv_upload': csv_file
             },
@@ -923,7 +923,7 @@ def test_duplicate_columns_causes_error(single_row_valid_df, client, test_rcpch_
         csv_file.seek(0)
 
         response = client.post(
-            reverse('home'),
+            reverse('upload_csv'),
             {
                 'csv_upload': csv_file
             },
@@ -966,7 +966,7 @@ def test_missing_columns_causes_error(test_rcpch_user, single_row_valid_df, clie
     # Feed file into view
     with open(tmp_csv_path, "rb") as csv_file:
         response = client.post(
-            reverse('home'),
+            reverse('upload_csv'),
             {
                 'csv_upload': csv_file
             },
@@ -1030,7 +1030,7 @@ def test_invalid_nhs_number_column_name(single_row_valid_df, client, test_rcpch_
     # Feed file into view
     with open(tmp_csv_path, "rb") as csv_file:
         response = client.post(
-            reverse('home'),
+            reverse('upload_csv'),
             {
                 'csv_upload': csv_file
             },
@@ -1176,7 +1176,7 @@ def test_missing_identifier_columns(test_rcpch_user, one_patient_two_visits, cli
     with open(tmp_csv_path, "rb") as csv_file:
 
         response = client.post(
-            reverse('home'),
+            reverse('upload_csv'),
             {
                 'csv_upload': csv_file
             },
@@ -1214,7 +1214,7 @@ def test_both_identifier_columns_causes_an_error(test_rcpch_user, one_patient_tw
     with open(tmp_csv_path, "rb") as csv_file:
 
         response = client.post(
-            reverse('home'),
+            reverse('upload_csv'),
             {
                 'csv_upload': csv_file
             },
