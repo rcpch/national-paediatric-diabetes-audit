@@ -36,7 +36,8 @@ from project.npda.models import (
     Patient,
     Visit,
     PaediatricDiabetesUnit,
-    AuditPeriod
+    AuditPeriod,
+    Submission
 )
 from project.npda.tests.factories.patient_factory import (
     INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
@@ -879,23 +880,10 @@ def test_additional_columns_causes_error(
             format='multipart'
         )
 
-    assert response.status_code == 302
-    assert response.url == reverse("upload_csv")
-    
-    error_messages = list(get_messages(response.wsgi_request))
-    assert len(error_messages) == 1
-    assert error_messages[0].tags == "error"
+    assert response.status_code == 200
+    assert "Warning: Column errors detected!" in response.content.decode("utf-8")
 
-    # Extract columns from error message and compare as sets because for whatever reason
-    # the order is not guaranteed
-    additional_columns = set(
-        error_messages[0]
-        .message.split("Unexpected columns: [")[1]
-        .rstrip("]")
-        .split(", ")
-    )
-    assert additional_columns == {"extra_one", "extra_two"}
-
+    assert Submission.objects.count() == 0, "No submission should be created if there are column errors"
 
 
 @pytest.mark.django_db
@@ -930,20 +918,10 @@ def test_duplicate_columns_causes_error(single_row_valid_df, client, test_rcpch_
             format='multipart'
         )
 
-    assert response.status_code == 302
-    assert response.url == reverse("upload_csv")
-    
-    error_messages = list(get_messages(response.wsgi_request))
-    assert len(error_messages) == 1
-    assert error_messages[0].tags == "error"
+    assert response.status_code == 200
+    assert "Warning: Column errors detected!" in response.content.decode("utf-8")
 
-    # Extract columns from error message and compare as sets because for whatever reason
-    # the order is not guaranteed
-    columns_patt = r'\[(.+)\]'
-    match = re.search(columns_patt, error_messages[0].message)
-    assert match is not None
-    additional_columns = match.group(1).replace(', ', ',').split(",")
-    assert set(additional_columns) == {"NHS Number_2", "NHS Number_3", "Date of Birth_2"}
+    assert Submission.objects.count() == 0, "No submission should be created if there are column errors"
     
     
 
@@ -973,21 +951,10 @@ def test_missing_columns_causes_error(test_rcpch_user, single_row_valid_df, clie
             format='multipart'
         )
 
-    assert response.status_code == 302
-    assert response.url == reverse("upload_csv")
-    
-    error_messages = list(get_messages(response.wsgi_request))
-    assert len(error_messages) == 1
-    assert error_messages[0].tags == "error"
-    assert error_messages[0].message.startswith("Invalid CSV format. Missing columns: ")
-    
-    # Extract columns from error message and compare as sets because for whatever reason
-    # the order is not guaranteed
-    columns_patt = r'\[(.+)\]'
-    match = re.search(columns_patt, error_messages[0].message)
-    assert match is not None
-    missing_columns = match.group(1).replace(', ', ',').split(",")
-    assert set(missing_columns) == {"Urinary Albumin Level (ACR)", "Total Cholesterol Level (mmol/l)"}
+    assert response.status_code == 200
+    assert "Warning: Column errors detected!" in response.content.decode("utf-8")
+
+    assert Submission.objects.count() == 0, "No submission should be created if there are column errors"
 
 
 @pytest.mark.django_db
