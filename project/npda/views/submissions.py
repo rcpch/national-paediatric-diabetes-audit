@@ -3,6 +3,9 @@ from datetime import date, datetime, timezone
 import json
 from typing import Any, Iterable
 import logging
+import io
+
+from asgiref.sync import sync_to_async
 
 # Django imports
 from django.apps import apps
@@ -28,6 +31,8 @@ from ..general_functions.session import refresh_session_filters
 from ..general_functions.csv import (
     download_csv,
     download_xlsx,
+    csv_parse,
+    create_csv_submission
 )
 from .mixins import LoginAndOTPRequiredMixin
 from ..models import (
@@ -37,6 +42,9 @@ from ..models import (
     AuditPeriod,
     Patient
 )
+from ..forms.upload import UploadFileForm
+from ..tasks import upload_csv_task
+
 
 logger = logging.getLogger(__name__)
 
@@ -301,7 +309,92 @@ class SubmissionsListView(
 
 
 @login_and_otp_required()
-def upload_csv(request):
+async def upload_csv(request):
+    if request.session.get("can_upload_csv") is False:
+        # If the user does not have permission to upload csvs, redirect them to the submissions page
+        return redirect("dashboard")
+
+    if request.method == "POST":
+        has_perm = await sync_to_async(request.user.has_perm)("npda.can_submit_csv")
+        if not has_perm:
+            raise PermissionDenied("You do not have permission to upload CSV files.")
+        
+        form = UploadFileForm(request.POST, request.FILES)
+
+        user_csv = request.FILES["csv_upload"]
+        user_csv_filename = user_csv.name
+        # We are eventually storing the CSV file as a BinaryField so have to hold it in memory
+        user_csv_bytes = user_csv.read()
+
+        pz_code = request.session.get("pz_code")
+        is_jersey = pz_code == "PZ248"
+
+        # TODO MRB: check pdu is active and I'm not a superuser?
+        pdu = await PaediatricDiabetesUnit.objects.aget(pz_code=pz_code)
+    
+        # check to see if the CSV is valid - cannot accept CSVs with no header. All other header errors are non-lethal but are reported back to the user
+        try:
+            parsed_csv = csv_parse(io.BytesIO(user_csv_bytes))
+        except ValueError as e:
+            messages.error(
+                request=request,
+                message=f"Invalid CSV format: {e}",
+            )
+            return redirect("upload_csv")
+
+        missing_columns = parsed_csv.missing_columns
+        if not parsed_csv.identifier_column:
+            missing_columns.append("Unique Reference Number" if is_jersey else "NHS Number")
+
+        if (
+            missing_columns
+            or parsed_csv.additional_columns
+            or parsed_csv.duplicate_columns
+        ):
+            message = "Invalid CSV format."
+            if missing_columns:
+                message += (
+                    f" Missing columns: [{", ".join(missing_columns)}]"
+                )
+            if parsed_csv.additional_columns:
+                message += f" Unexpected columns: [{", ".join(parsed_csv.additional_columns)}]"
+            if parsed_csv.duplicate_columns:
+                message += f" Duplicate columns: [{", ".join(parsed_csv.additional_columns)}]"
+            messages.error(
+                request=request,
+                message=message,
+            )
+            return redirect("upload_csv")
+        
+        if parsed_csv.identifier_column == "Unique Reference Number" and not is_jersey:
+            messages.error(
+                request=request,
+                message="CSV file must use NHS number as the identifier column unless uploading for Jersey"
+            )
+            return redirect("upload_csv")
+
+        audit_period = await sync_to_async(AuditPeriod.objects.get_audit_period_for_request)(request)
+        if not audit_period.is_open and not (request.user.is_superuser or request.user.is_rcpch_audit_team_member):
+            raise PermissionDenied(f"Upload is closed for {audit_period.audit_year()}.")
+
+        new_submission = await create_csv_submission(
+            pdu=pdu,
+            audit_year=audit_period.audit_year(),
+            csv_file_bytes=user_csv_bytes,
+            csv_file_name=user_csv_filename,
+            # The celery task will flip it to active once complete
+            submission_active=False,
+            user=request.user,
+            ip_address=request.META.get("REMOTE_ADDR"),
+        )
+
+        upload_csv_task.delay(new_submission.id)
+
+        # update the session fields - this stores that the user has uploaded a csv and disables the ability to use the questionnaire
+        await sync_to_async(refresh_session_filters)(request, csv_upload=True)
+        
+        return redirect("upload-csv-in-progress")
+
     context = {"employers": OrganisationEmployer.objects.filter(npda_user=request.user)}
     return render(request, "upload_csv/file_upload.html", context=context)
 
