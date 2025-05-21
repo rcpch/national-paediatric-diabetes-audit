@@ -119,7 +119,8 @@ INSTALLED_APPS = [
     "django.contrib.humanize",
     "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
-    # "django.forms",
+    # third party
+    "django_filters",
     # django htmx
     "django_htmx",
     # 2fa
@@ -322,6 +323,10 @@ STORAGES = {
             "location": "media/",
         },
     },
+}
+
+REST_FRAMEWORK = {
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
 }
 
 
