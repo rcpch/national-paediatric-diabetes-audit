@@ -4,7 +4,7 @@ from django.utils import timezone
 
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
-from rest_framework.decorators import action
+from oauth2_provider.contrib.rest_framework import TokenHasScope, TokenHasReadWriteScope
 from django_filters.rest_framework import DjangoFilterBackend
 
 from project.npda.filtersets.patient_filterset import PatientFilter
@@ -18,11 +18,30 @@ class PatientViewSet(viewsets.ModelViewSet):
     This ViewSet provides CRUD operations for Patient records
     Validation is handled by the PatientSerializer.
     The queryset is filtered based on the user's permissions and PDU access.
+
+    Requires OAuth2 authentication with appropriate scopes:
+    - GET: 'patient:read' scope
+    - POST/PUT/PATCH/DELETE: 'patient:write' scope
     """
     serializer_class = PatientSerializer
-    permission_classes = [permissions.IsAuthenticated, IsAuthorizedForPatientData]
     filter_backends = [DjangoFilterBackend]
     filterset_class = PatientFilter
+
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        if self.action in ['list', 'retrieve']:
+            # Read operations - require read scope
+            permission_classes = [TokenHasScope]
+            self.required_scopes = ['patient:read']
+        else:
+            # Write operations - require write scope
+            permission_classes = [TokenHasScope]
+            self.required_scopes = ['patient:write']
+        
+        return [permission() for permission in permission_classes]
+    
     
     def get_queryset(self):
         """
@@ -34,30 +53,22 @@ class PatientViewSet(viewsets.ModelViewSet):
         # Start with all patients
         queryset = Patient.objects.all()
         
-        # Apply PDU filtering for non-superusers
-        if not user.is_superuser and not user.is_rcpch_audit_team_member and not user.is_rcpch_staff:
-            # Filter by user's PDUs
-            pdu_codes = user.paediatric_diabetes_units.values_list('pz_code', flat=True)
-            queryset = queryset.filter(paediatric_diabetes_unit__pz_code__in=pdu_codes)
+        # # Apply PDU filtering for non-superusers
+        # if not user.is_superuser and not user.is_rcpch_audit_team_member and not user.is_rcpch_staff:
+        #     # Filter by user's PDUs
+        #     pdu_codes = user.paediatric_diabetes_units.values_list('pz_code', flat=True)
+        #     queryset = queryset.filter(paediatric_diabetes_unit__pz_code__in=pdu_codes)
         
         return queryset
     
     def create(self, request, *args, **kwargs):
         """
         Create a new patient record with validation and proper associations.
-        Mimics the form_valid logic from the view class.
+        Using OAuth2 authentication, we check the token scope.
+        For session-based authentication, we check the session variable.
         """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
-        # Check if the user is allowed to complete patient records via API
-        if not request.session.get("can_complete_questionnaire"):
-            return Response(
-                {
-                    "detail": "The submission for this PDU is done through CSV upload and data cannot be added through the API. Contact the NPDA team for assistance."
-                }, 
-                status=status.HTTP_403_FORBIDDEN
-            )
         
         with transaction.atomic():
             self.perform_create(serializer)

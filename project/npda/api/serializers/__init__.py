@@ -1,1 +1,1 @@
-from patient_serializer import *
+from .patient_serializer import PatientSerializer

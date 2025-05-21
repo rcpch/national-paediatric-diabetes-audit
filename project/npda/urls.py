@@ -2,6 +2,9 @@ from django.contrib.auth import urls as auth_urls
 from django.contrib.auth.views import PasswordResetConfirmView
 from django.urls import include, path
 
+# DRF imports
+from rest_framework.routers import DefaultRouter
+
 from project.npda.forms.npda_user_form import NPDAUpdatePasswordForm
 from project.npda.views import (
     PatientListView,
@@ -11,7 +14,6 @@ from project.npda.views import (
     VisitDeleteView,
     VisitUpdateView,
 )
-from project.npda.views.dashboard.dashboard import temp_set_eligible_kpi_7
 
 from .views import *
 from .views.dashboard import dashboard, partials
@@ -21,6 +23,7 @@ from .views.dashboard.patient_characteristics import (
     patient_ages,
     all_patient_charts,
 )
+from .api.viewsets.patient_viewset import PatientViewSet
 
 urlpatterns = [
     path("", view=home, name="home"),
@@ -203,6 +206,19 @@ patient_report_urlpatterns = [
     ),
 ]
 
+api_router = DefaultRouter()
+api_router.register(r'patients', PatientViewSet, basename='patient')
+
+# API URL patterns
+api_urlpatterns = [
+    path('api/', include(api_router.urls)),
+    # OAuth2 endpoints
+    path('api/o/', include('oauth2_provider.urls', namespace='oauth2_provider')),
+    # Optional: Include DRF auth URLs for the browsable API
+    path('api/auth/', include('rest_framework.urls', namespace='rest_framework')),
+]
+
 # Collate all URL patterns
 urlpatterns += dashboard_urlpatterns
 urlpatterns += patient_report_urlpatterns
+urlpatterns += api_urlpatterns

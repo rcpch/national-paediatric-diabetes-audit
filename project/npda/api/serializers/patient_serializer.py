@@ -15,7 +15,7 @@ class PatientSerializer(serializers.ModelSerializer):
     errors = serializers.JSONField(read_only=True)
     location_wgs = serializers.SerializerMethodField(read_only=True)
     location_bng = serializers.SerializerMethodField(read_only=True)
-    location_wgs84 = serializers.SerializerMethodField(re
+    location_wgs84 = serializers.SerializerMethodField(read_only=True)
     # Use CharField for these fields to ensure proper validation
     nhs_number = serializers.CharField(
         required=False, 
@@ -109,33 +109,33 @@ class PatientSerializer(serializers.ModelSerializer):
         return None
     
     def validate(self, attrs):
-    """
-    Reuse existing form validation logic and validate postcode using the API
-    """
-     # Check for presence of identifiers - either NHS number or Unique Reference Number
-    # At least one of these must be provided, but not both
-    has_nhs = attrs.get('nhs_number') not in (None, '')
-    has_urn = attrs.get('unique_reference_number') not in (None, '')
-    
-    # Validate identifier requirements
-    if not (has_nhs or has_urn):
-        raise serializers.ValidationError({
-            "identifier": "Either NHS number or Unique Reference Number must be provided."
-        })
-    
-    if has_nhs and has_urn:
-        raise serializers.ValidationError({
-            "identifier": "Cannot provide both NHS number and Unique Reference Number."
-        })
-
-    # Create a copy of attrs to avoid modifying the original
-    data = attrs.copy()
-    # Use existing form validation logic
-    form = PatientForm(data=data)
-    if not form.is_valid():
-        raise serializers.ValidationError(form.errors)
+        """
+        Reuse existing form validation logic and validate postcode using the API
+        """
+        # Check for presence of identifiers - either NHS number or Unique Reference Number
+        # At least one of these must be provided, but not both
+        has_nhs = attrs.get('nhs_number') not in (None, '')
+        has_urn = attrs.get('unique_reference_number') not in (None, '')
         
-    return data  # Return modified data with updated postcode and location fields
+        # Validate identifier requirements
+        if not (has_nhs or has_urn):
+            raise serializers.ValidationError({
+                "identifier": "Either NHS number or Unique Reference Number must be provided."
+            })
+        
+        if has_nhs and has_urn:
+            raise serializers.ValidationError({
+                "identifier": "Cannot provide both NHS number and Unique Reference Number."
+            })
+
+        # Create a copy of attrs to avoid modifying the original
+        data = attrs.copy()
+        # Use existing form validation logic
+        form = PatientForm(data=data)
+        if not form.is_valid():
+            raise serializers.ValidationError(form.errors)
+            
+        return data  # Return modified data with updated postcode and location fields
     
     def _get_srid_for_field(self, field_name):
         """Helper method to get the SRID for a given field"""
