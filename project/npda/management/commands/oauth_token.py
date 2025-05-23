@@ -1,0 +1,107 @@
+from django.core.management.base import BaseCommand
+from django.contrib.auth import get_user_model
+from oauth2_provider.models import Application, AccessToken
+from oauth2_provider import settings as oauth2_settings
+from django.utils import timezone
+from datetime import timedelta
+import secrets
+from project.npda.models.access_tokens import PDUAccessTokenProfile
+from project.npda.models import PaediatricDiabetesUnit
+
+NPDAUser = get_user_model()
+
+class Command(BaseCommand):
+    help = 'Create a PDU-scoped API token for testing'
+
+    def add_arguments(self, parser):
+        parser.add_argument('--user-email', type=str, required=True, help='Email of the user')
+        parser.add_argument('--pz-code', type=str, required=True, help='PZ code of the PDU')
+        parser.add_argument('--create-application', action='store_true', help='Auto-create OAuth application for this PDU')
+        parser.add_argument('--description', type=str, default='API testing token', help='Token description')
+        parser.add_argument('--access-level', type=str, default='readonly', choices=['readonly', 'readwrite', 'admin'], help='Access level')
+        parser.add_argument('--scopes', type=str, default='patient:read', help='Token scopes (space-separated)')
+
+    def handle(self, *args, **options):
+        try:
+            # Get the user
+            npda_user = NPDAUser.objects.get(email=options['user_email'])
+            self.stdout.write(f"✅ Found user: {npda_user.email}")  # Fixed: was 'user.email'
+
+            # Get the PDU
+            pdu = PaediatricDiabetesUnit.objects.get(pz_code=options['pz_code'])
+            self.stdout.write(f"✅ Found PDU: {pdu.lead_organisation_name} ({pdu.pz_code})")
+
+            # Get or create the application
+            if options.get('create_application'):
+                application_name = f"PDU-{pdu.pz_code}-API"
+                application, created = Application.objects.get_or_create(
+                    name=application_name,
+                    defaults={
+                        'client_type': Application.CLIENT_CONFIDENTIAL,
+                        'authorization_grant_type': Application.GRANT_CLIENT_CREDENTIALS,
+                    }
+                )
+                if created:
+                    self.stdout.write(f"✅ Created new application: {application.name}")
+                    self.stdout.write(f"   Client ID: {application.client_id}")
+                    self.stdout.write(f"   Client Secret: {application.client_secret}")
+                    self.stdout.write(self.style.WARNING("   ⚠️  Save these credentials securely!"))
+                else:
+                    self.stdout.write(f"✅ Using existing application: {application.name}")
+            else:
+                # Use existing application
+                if not options.get('application_name'):
+                    raise ValueError("Either provide --application-name or use --create-application")
+                application = Application.objects.get(name=options['application_name'])
+                self.stdout.write(f"✅ Found application: {application.name}")
+
+            # Generate a secure token
+            token_string = secrets.token_urlsafe(32)
+
+            # Create the access token
+            expires = timezone.now() + timedelta(seconds=oauth2_settings.oauth2_settings.ACCESS_TOKEN_EXPIRE_SECONDS)
+            
+            access_token = AccessToken.objects.create(
+                user=npda_user,
+                application=application,
+                token=token_string,
+                expires=expires,
+                scope=options['scopes']
+            )
+
+            # Create the PDU profile
+            pdu_profile = PDUAccessTokenProfile.objects.create(
+                access_token=access_token,
+                paediatric_diabetes_unit=pdu,
+                description=options['description'],
+                access_level=options['access_level'],
+                contact_email=npda_user.email,
+                contact_name=npda_user.get_full_name() or npda_user.username
+            )
+
+            self.stdout.write(self.style.SUCCESS('\n🎉 Token created successfully!'))
+            self.stdout.write(f"Token: {token_string}")
+            self.stdout.write(f"Expires: {expires}")
+            self.stdout.write(f"Scopes: {options['scopes']}")
+            self.stdout.write(f"PDU: {pdu.lead_organisation_name} ({pdu.pz_code})")
+            self.stdout.write(f"Access Level: {options['access_level']}")
+            self.stdout.write(f"Application: {application.name}")
+            
+            self.stdout.write(self.style.WARNING('\n📋 For Postman:'))
+            self.stdout.write(f"Authorization: Bearer {token_string}")
+
+            # Show existing tokens for this PDU
+            existing_tokens = PDUAccessTokenProfile.objects.filter(
+                paediatric_diabetes_unit=pdu,
+                is_active=True
+            ).count()
+            self.stdout.write(f"\n📊 Total active tokens for this PDU: {existing_tokens}")
+
+        except NPDAUser.DoesNotExist:
+            self.stdout.write(self.style.ERROR(f"❌ User with email '{options['user_email']}' not found"))
+        except Application.DoesNotExist:
+            self.stdout.write(self.style.ERROR(f"❌ Application '{options['application_name']}' not found"))
+        except PaediatricDiabetesUnit.DoesNotExist:
+            self.stdout.write(self.style.ERROR(f"❌ PDU with code '{options['pz_code']}' not found"))
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f"❌ Error: {str(e)}"))
