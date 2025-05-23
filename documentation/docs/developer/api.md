@@ -153,3 +153,5 @@ curl -X GET \
   -H "Authorization: Bearer {access_token_from_previous_response}" \
   -H "Content-Type: application/json"
 ```
+
+The tokens last 24 hours and so will need refreshing on the client side.

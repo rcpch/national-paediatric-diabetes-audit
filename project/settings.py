@@ -345,8 +345,10 @@ OAUTH2_PROVIDER = {
         'patient:read': 'Read patient data',
         'patient:write': 'Write patient data',
     },
-    'ACCESS_TOKEN_EXPIRE_SECONDS': 3600,
-    'REFRESH_TOKEN_EXPIRE_SECONDS': 86400,
+    'ACCESS_TOKEN_EXPIRE_SECONDS': 86400,  # 24 hours (much more reasonable for API-to-API)
+    'REFRESH_TOKEN_EXPIRE_SECONDS': 86400 * 7,  # 7 days (not used in client credentials but good to set)
+    'REFRESH_TOKEN_GRACE_PERIOD_SECONDS': 120,  # 2 minutes grace period
+    'ROTATE_REFRESH_TOKEN': True,
 }
 # Global settings for Django OAuth Toolkit (using default models)
 OAUTH2_PROVIDER_ACCESS_TOKEN_MODEL = 'oauth2_provider.AccessToken'
