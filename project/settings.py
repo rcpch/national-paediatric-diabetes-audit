@@ -14,6 +14,7 @@ from datetime import timedelta
 from pathlib import Path
 import os
 import logging
+import sys
 
 from dotenv import load_dotenv
 
@@ -128,7 +129,6 @@ INSTALLED_APPS = [
     "django_otp.plugins.otp_static",
     "django_otp.plugins.otp_totp",
     "django_otp.plugins.otp_email",
-    'oauth2_provider',
     "rest_framework",
     "two_factor.plugins.email",
     "two_factor",
@@ -136,7 +136,9 @@ INSTALLED_APPS = [
     "captcha",
     "citext",
     # application
-    "project.npda",
+    "project.npda.apps.NpdaConfig", # Use the AppConfig path
+    # oauth2 - after npda
+    'oauth2_provider',
 ]
 
 MIDDLEWARE = [
@@ -329,15 +331,13 @@ STORAGES = {
 REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
-        'rest_framework.authentication.SessionAuthentication',  # Optional: keep for browsable API
+        'project.npda.api.authentication_class.PDUScopedOAuth2Authentication',  # Custom authentication class for API
+        'rest_framework.authentication.SessionAuthentication',        # Keep for web app
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+       'rest_framework.permissions.IsAuthenticated',
     ]
 }
-
-# OAuth2 settings
 OAUTH2_PROVIDER = {
     'SCOPES': {
         'read': 'Read scope',
@@ -345,9 +345,15 @@ OAUTH2_PROVIDER = {
         'patient:read': 'Read patient data',
         'patient:write': 'Write patient data',
     },
-    'ACCESS_TOKEN_EXPIRE_SECONDS': 3600,  # 1 hour
-    'REFRESH_TOKEN_EXPIRE_SECONDS': 86400,  # 1 day
+    'ACCESS_TOKEN_EXPIRE_SECONDS': 3600,
+    'REFRESH_TOKEN_EXPIRE_SECONDS': 86400,
 }
+# Global settings for Django OAuth Toolkit (using default models)
+OAUTH2_PROVIDER_ACCESS_TOKEN_MODEL = 'oauth2_provider.AccessToken'
+OAUTH2_PROVIDER_ID_TOKEN_MODEL = 'oauth2_provider.IDToken'
+OAUTH2_PROVIDER_APPLICATION_MODEL = 'oauth2_provider.Application'
+OAUTH2_PROVIDER_REFRESH_TOKEN_MODEL = 'oauth2_provider.RefreshToken'
+
 SECURE_SSL_REDIRECT = True
 
 
