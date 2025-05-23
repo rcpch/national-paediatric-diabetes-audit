@@ -16,6 +16,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--user-email', type=str, required=True, help='Email of the user')
         parser.add_argument('--pz-code', type=str, required=True, help='PZ code of the PDU')
+        parser.add_argument('--application-name', type=str, help='Name of the OAuth application')
         parser.add_argument('--create-application', action='store_true', help='Auto-create OAuth application for this PDU')
         parser.add_argument('--description', type=str, default='API testing token', help='Token description')
         parser.add_argument('--access-level', type=str, default='readonly', choices=['readonly', 'readwrite', 'admin'], help='Access level')
@@ -25,7 +26,7 @@ class Command(BaseCommand):
         try:
             # Get the user
             npda_user = NPDAUser.objects.get(email=options['user_email'])
-            self.stdout.write(f"✅ Found user: {npda_user.email}")  # Fixed: was 'user.email'
+            self.stdout.write(f"✅ Found user: {npda_user.email}")
 
             # Get the PDU
             pdu = PaediatricDiabetesUnit.objects.get(pz_code=options['pz_code'])
@@ -33,6 +34,7 @@ class Command(BaseCommand):
 
             # Get or create the application
             if options.get('create_application'):
+                # Auto-create application - application-name is optional
                 application_name = f"PDU-{pdu.pz_code}-API"
                 application, created = Application.objects.get_or_create(
                     name=application_name,
@@ -49,11 +51,33 @@ class Command(BaseCommand):
                 else:
                     self.stdout.write(f"✅ Using existing application: {application.name}")
             else:
-                # Use existing application
+                # Use existing application - application-name is required
                 if not options.get('application_name'):
-                    raise ValueError("Either provide --application-name or use --create-application")
-                application = Application.objects.get(name=options['application_name'])
-                self.stdout.write(f"✅ Found application: {application.name}")
+                    self.stdout.write(
+                        self.style.ERROR(
+                            "❌ Error: When not using --create-application, you must provide --application-name\n"
+                            "   Either use --create-application to auto-create, or specify --application-name"
+                        )
+                    )
+                    return
+                
+                try:
+                    application = Application.objects.get(name=options['application_name'])
+                    self.stdout.write(f"✅ Found application: {application.name}")
+                except Application.DoesNotExist:
+                    self.stdout.write(
+                        self.style.ERROR(
+                            f"❌ Application '{options['application_name']}' not found\n"
+                            "   Available applications:"
+                        )
+                    )
+                    # Show available applications to help the user
+                    available_apps = Application.objects.all()[:5]
+                    for app in available_apps:
+                        self.stdout.write(f"     - {app.name}")
+                    if Application.objects.count() > 5:
+                        self.stdout.write(f"     ... and {Application.objects.count() - 5} more")
+                    return
 
             # Generate a secure token
             token_string = secrets.token_urlsafe(32)
@@ -99,8 +123,6 @@ class Command(BaseCommand):
 
         except NPDAUser.DoesNotExist:
             self.stdout.write(self.style.ERROR(f"❌ User with email '{options['user_email']}' not found"))
-        except Application.DoesNotExist:
-            self.stdout.write(self.style.ERROR(f"❌ Application '{options['application_name']}' not found"))
         except PaediatricDiabetesUnit.DoesNotExist:
             self.stdout.write(self.style.ERROR(f"❌ PDU with code '{options['pz_code']}' not found"))
         except Exception as e:
