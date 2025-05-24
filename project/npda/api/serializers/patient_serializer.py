@@ -102,9 +102,15 @@ class PatientSerializer(serializers.ModelSerializer):
         Use the existing PatientForm validation logic for consistency.
         This ensures API validation matches web form validation exactly.
         """
-        # Create a form instance with the data and required context
+        # Create a form instance with the data and required context - include the existing instance if available (eg for updates)
+        
+        form_instance = None
+        if self.instance:
+            # This is an update operation
+            form_instance = self.instance
         form = PatientForm(
             data=attrs,
+            instance=form_instance,
             audit_period=self.context.get('audit_period'),
             paediatric_diabetes_unit=self.context.get('paediatric_diabetes_unit'),
             override_postcode=self.context.get('override_postcode', False)
@@ -113,6 +119,7 @@ class PatientSerializer(serializers.ModelSerializer):
         if not form.is_valid():
             # Convert form errors to serializer validation errors
             raise serializers.ValidationError(form.errors)
+        
         
         # Store the form's async validation results for use in create/update
         self._form_instance = form
@@ -151,18 +158,20 @@ class PatientSerializer(serializers.ModelSerializer):
         Update a patient instance using the form's save method.
         """
         if hasattr(self, '_form_instance'):
-            # Update the form's instance with the existing patient
-            self._form_instance.instance = instance
-            
-            # Save using the form to ensure all validation results are applied
+            # The form instance already has the correct instance from validate()
+            # and has been validated with the update context
             updated_instance = self._form_instance.save(commit=False)
             
-            # Apply any additional fields
+            # Apply any additional fields that might not be in the form
             for field, value in validated_data.items():
                 if hasattr(updated_instance, field):
                     setattr(updated_instance, field, value)
             
+            # Mark as valid and save
+            updated_instance.is_valid = True
+            updated_instance.errors = None
             updated_instance.save()
+            
             return updated_instance
         else:
             # Fallback to standard update

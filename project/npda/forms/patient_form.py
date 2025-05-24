@@ -376,7 +376,11 @@ class PatientForm(forms.ModelForm):
 
         @database_sync_to_async
         def get_submissions_count(filter_kwargs):
-            return PatientSubmission.objects.filter(**filter_kwargs).count()
+            # exclude bound instance if it exists - used in the API
+            queryset = PatientSubmission.objects.filter(**filter_kwargs)
+            if self.instance and self.instance.pk:
+                queryset = queryset.exclude(patient=self.instance)
+            return queryset.count()
         
         if self.audit_year:
             filter_kwargs = {
@@ -425,7 +429,15 @@ class PatientForm(forms.ModelForm):
         PatientSubmission = apps.get_model("npda", "PatientSubmission")
 
         def get_submissions_count(filter_kwargs):
-            return PatientSubmission.objects.filter(**filter_kwargs).count()
+            # exclude bound instance if it exists - used in the API
+            queryset = PatientSubmission.objects.filter(**filter_kwargs)
+            if self.instance and self.instance.pk:
+                # Exclude the current instance if it exists
+                queryset = queryset.exclude(patient__pk=self.instance.pk)
+            return queryset.count()
+
+        # Build filter kwargs based on whether audit_year or audit_period is set
+        filter_kwargs = {} # Initialize filter_kwargs though audit_year or audit_period will be used
 
         if self.audit_year:
             filter_kwargs = {

@@ -5,6 +5,7 @@ import logging
 
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
+from django.http import Http404
 from oauth2_provider.contrib.rest_framework import TokenHasScope, TokenHasReadWriteScope
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -277,27 +278,82 @@ class PatientViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
     
     def update(self, request, *args, **kwargs):
         """
-        Update an existing patient record with validation.
-        Ensures the patient belongs to the user's accessible PDUs.
+        Handle PUT requests for full patient record updates.
+        All required fields must be provided.
         """
-        partial = kwargs.pop('partial', False)
+        logger.info(f"🔄 PUT request for patient update by user {request.user.id}")
+        return self._perform_update(request, partial=False, method="PUT", *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        """
+        Handle PATCH requests for partial patient record updates.
+        Only provided fields will be updated.
+        """
+        return self._perform_update(request, partial=True, method="PATCH", *args, **kwargs)
+
+    def _perform_update(self, request, partial=False, method="UPDATE", *args, **kwargs):
+        """
+        Internal method to handle both full and partial updates with comprehensive logging.
+        """
+        print("Being called _perform_update")
         instance = self.get_object()
+        patient_identifier = instance.nhs_number or instance.unique_reference_number or f"ID {instance.id}"
+        
+        logger.info(f"🔄 {method} update attempt for patient {patient_identifier} by {request.user.email if request.user else 'unidentified user'}")
         
         # Verify the patient is in the accessible queryset
         if instance not in self.get_queryset():
-            return Response(
-                {"detail": "You do not have permission to modify this patient record"}, 
-                status=status.HTTP_403_FORBIDDEN
+            logger.warning(f"❌ {method} update denied - patient {patient_identifier} not in user's PDU scope")
+            return self.create_npda_response(
+                data={"detail": "You do not have permission to modify this patient record"},
+                status=status.HTTP_403_FORBIDDEN,
+                advisory_message="Access denied - patient not in your PDU scope",
+                advisory_type='warning'
             )
         
+        # Log the fields being updated (for audit purposes)
+        updated_fields = list(request.data.keys()) if hasattr(request, 'data') else []
+        logger.info(f"🔄 {method} updating fields: {updated_fields} for patient {patient_identifier}")
+        
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            logger.warning(f"❌ {method} validation failed for patient {patient_identifier}: {serializer.errors}")
+            return self.create_npda_response(
+                data=serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST,
+                advisory_message=f"Patient data validation failed for {method.lower()} update",
+                advisory_type='warning'
+            )
         
-        with transaction.atomic():
-            self.perform_update(serializer)
-        
-        return Response(serializer.data)
-    
+        try:
+            with transaction.atomic():
+                self.perform_update(serializer)
+                
+                # Log successful update
+                logger.info(f"✅ {method} update successful for patient {patient_identifier}")
+            
+            # Create advisory message with helpful details
+            field_count = len(updated_fields)
+            advisory_message = f"Patient {patient_identifier} updated via {method}"
+            if field_count > 0:
+                advisory_message += f" ({field_count} field{'s' if field_count != 1 else ''} modified)"
+            
+            return self.create_npda_response(
+                data=serializer.data,
+                status=status.HTTP_200_OK,
+                advisory_message=advisory_message,
+                advisory_type='info'
+            )
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to {method} update patient {patient_identifier}: {str(e)}")
+            return self.create_npda_response(
+                data={"detail": f"Failed to {method.lower()} update patient record"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                advisory_message=f"{method} update operation failed - please try again",
+                advisory_type='warning'
+            )
+
     def destroy(self, request, *args, **kwargs):
         """
         Delete a patient record with PDU scope validation.
@@ -306,14 +362,37 @@ class PatientViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         
         # Verify the patient is in the accessible queryset
         if instance not in self.get_queryset():
-            return Response(
-                {"detail": "You do not have permission to delete this patient record"}, 
-                status=status.HTTP_403_FORBIDDEN
+            return self.create_npda_response(
+                data={"detail": "You do not have permission to delete this patient record"},
+                status=status.HTTP_403_FORBIDDEN,
+                advisory_message="Access denied - patient not in your PDU scope",
+                advisory_type='warning'
             )
         
-        self.perform_destroy(instance)
-        return Response(status=status.HTTP_204_NO_CONTENT)
-    
+        # Store patient identifier before deletion
+        patient_identifier = instance.nhs_number or instance.unique_reference_number or f"ID {instance.id}"
+        
+        try:
+            with transaction.atomic():
+                self.perform_destroy(instance)
+            
+            # Success response for deletion
+            return self.create_npda_response(
+                data={"detail": "Patient record deleted successfully"},
+                status=status.HTTP_204_NO_CONTENT,
+                advisory_message=f"Patient {patient_identifier} permanently removed from system",
+                advisory_type='warning'  # Use warning for deletion as it's irreversible
+            )
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to delete patient {patient_identifier}: {str(e)}")
+            return self.create_npda_response(
+                data={"detail": "Failed to delete patient record"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                advisory_message="Delete operation failed - please try again",
+                advisory_type='warning'
+            )
+
     def get_serializer_context(self):
         """
         Provide context needed for form validation in the serializer.
@@ -325,53 +404,56 @@ class PatientViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         if pdu:
             context['paediatric_diabetes_unit'] = pdu
         
-        # Add audit year context
-        from project.npda.models import AuditPeriod
-        from project.npda.models import AuditPeriod
-        active_audit_dates = get_audit_period_for_date(timezone.now())
-        audit_period = AuditPeriod.objects.filter(
-            start_date__year=active_audit_dates[0].year,
-            end_date__year=active_audit_dates[1].year,
-        ).first()
-        if not audit_period:
-            return Response(
-                {"detail": "No active audit period found for this request"}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        context['audit_period'] = audit_period
+        # Add audit period context
+        try:
+            from project.npda.models import AuditPeriod
+            active_audit_dates = get_audit_period_for_date(timezone.now())
+            audit_period = AuditPeriod.objects.filter(
+                start_date__year=active_audit_dates[0].year,
+                end_date__year=active_audit_dates[1].year,
+            ).first()
+            
+            if audit_period:
+                context['audit_period'] = audit_period
+            else:
+                # Log the issue but don't fail the serializer context creation
+                logger.warning("No active audit period found for serializer context")
+                
+        except Exception as e:
+            logger.error(f"Error getting audit period for serializer context: {str(e)}")
         
         # Add override_postcode flag from request data
-        context['override_postcode'] = self.request.data.get('override_postcode', False)
+        if hasattr(self.request, 'data'):
+            context['override_postcode'] = self.request.data.get('override_postcode', False)
         
         return context
     
-    # @action(detail=True, methods=['get'])
-    # def visits(self, request, pk=None):
-    #     """
-    #     Retrieve the visits associated with a specific patient.
-    #     """
-    #     patient = self.get_object()
+    def get_object(self):
+        """
+        Override to lookup by NHS number or URN instead of primary key.
+        Only searches within the user's accessible patients from active submissions.
+        """
+        queryset = self.get_queryset() # the queryset is already filtered by user's PDUs
+        lookup_value = self.kwargs.get('pk')  # DRF still uses 'pk' in kwargs
         
-    #     # Verify the patient is accessible
-    #     if patient not in self.get_queryset():
-    #         return Response(
-    #             {"detail": "You do not have permission to access this patient's visits"}, 
-    #             status=status.HTTP_403_FORBIDDEN
-    #         )
+        if not lookup_value:
+            raise Http404("No patient identifier provided")
         
-    #     # This would use a visits serializer that you'd need to create
-    #     from project.npda.api.serializers.visit_serializer import VisitSerializer
-    #     visits = patient.visit_set.all()
-    #     serializer = VisitSerializer(visits, many=True)
+        # Try to find patient by NHS number first, then URN
+        try:
+            # URNs are only used in Jersey
+            pdu = self.get_pdu_for_request()
+            if pdu and pdu.pz_code == 'JER':
+                patient = queryset.get(unique_reference_number=lookup_value)
+            else:
+                patient = queryset.get(nhs_number=lookup_value)
+            
+            return patient
+            
+        except Patient.DoesNotExist:
+            logger.warning(f"❌ Patient not found for identifier: {lookup_value}")
+            raise Http404(f"Patient with identifier '{lookup_value}' not found in your accessible patients")
         
-    #     return Response(serializer.data)
-    
-    # @action(detail=False, methods=['get'])
-    # def recent(self, request):
-    #     """
-    #     Get the most recently added patients (scoped to accessible PDUs).
-    #     """
-    #     recent_patients = self.get_queryset().order_by('-id')[:10]
-    #     serializer = self.get_serializer(recent_patients, many=True)
-    #     return Response(serializer.data)
+        except Patient.MultipleObjectsReturned:
+            logger.error(f"❌ Multiple patients found for identifier: {lookup_value}")
+            raise Http404(f"Multiple patients found for identifier '{lookup_value}' - contact NPDA team for assistance")
