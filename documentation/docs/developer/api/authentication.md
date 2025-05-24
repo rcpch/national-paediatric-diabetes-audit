@@ -1,17 +1,13 @@
 ---
-title: API
-authors: Dr Simon Chapman
+title: Authentication
+author: Dr Simon Chapman
 ---
 
-## API
-
-The NPDA API is Django Rest Framework implementation to allow PDUs to submit data n real time direct from their EHR, without having to download and upload CSVs, or enter data manually into the Questionnaire.
-
-### Authentication
+## Authentication
 
 The NPDA API uses Oauth2 authentication. Each Paediatric Diabetes Unit can create a single oauth application. By default this is named `PDU-*pz_code*-API`. Each application is associated with an email address which has an expiry date and a user. An application can only be created and associated with a user who has an existing record in the NPDAUser table.
 
-#### Application and Token Creation
+### Application and Token Creation
 
 Within the django shell:
 
