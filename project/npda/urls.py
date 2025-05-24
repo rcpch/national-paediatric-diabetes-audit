@@ -206,19 +206,6 @@ patient_report_urlpatterns = [
     ),
 ]
 
-api_router = DefaultRouter()
-api_router.register(r'patients', PatientViewSet, basename='patient')
-
-# API URL patterns
-api_urlpatterns = [
-    path('api/', include(api_router.urls)),
-    # OAuth2 endpoints
-    path('api/o/', include('oauth2_provider.urls', namespace='oauth2_provider')),
-    # Optional: Include DRF auth URLs for the browsable API
-    path('api/auth/', include('rest_framework.urls', namespace='rest_framework')),
-]
-
 # Collate all URL patterns
 urlpatterns += dashboard_urlpatterns
 urlpatterns += patient_report_urlpatterns
-urlpatterns += api_urlpatterns
