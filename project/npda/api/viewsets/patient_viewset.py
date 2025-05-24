@@ -63,7 +63,10 @@ class PatientViewSet(viewsets.ModelViewSet):
             # OAuth2 token with PDU profile - scope to the token's PDU
             pdu = self.request.paediatric_diabetes_unit
             if pdu:
-                queryset = queryset.filter(paediatric_diabetes_unit=pdu)
+                queryset = queryset.filter(
+                    submissions__paediatric_diabetes_unit__pz_code=pdu.pz_code,
+                    submissions__paediatric_diabetes_unit__active=True
+                )
                 # Add debug info for development
                 print(f"🔐 OAuth2 PDU scoped query: {pdu.pz_code} ({pdu.lead_organisation_name})")
             else:
