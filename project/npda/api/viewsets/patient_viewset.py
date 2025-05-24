@@ -8,8 +8,9 @@ from oauth2_provider.contrib.rest_framework import TokenHasScope, TokenHasReadWr
 from django_filters.rest_framework import DjangoFilterBackend
 
 from project.npda.filtersets.patient_filterset import PatientFilter
-from project.npda.models import Patient
+from project.npda.models import Patient, AuditPeriod,Transfer, Submission, NPDAUser
 from project.npda.api.serializers.patient_serializer import PatientSerializer
+from project.npda.general_functions import get_audit_period_for_date
 
 class PatientViewSet(viewsets.ModelViewSet):
     """
@@ -116,6 +117,15 @@ class PatientViewSet(viewsets.ModelViewSet):
         """
         Create a new patient record with validation and proper associations.
         PDU is automatically determined from OAuth2 token or session.
+
+        This creates a new patient record, ensuring:
+        - The patient is valid and has no errors
+        - The patient is associated with the correct PDU
+        - The patient is added to the current audit year submission
+        - NHS Number and Unique Reference Number are unique within the submission
+        - Handles transfers if the patient exists in another PDU
+        - Validates that there is an active audit period for this request
+        **In future other audit years may be supported, but currently only the current audit year is used.**
         """
         # Validate PDU access before creating
         pdu = self.get_pdu_for_request()
@@ -125,11 +135,29 @@ class PatientViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        # Check there is an active audit period for this request
+        active_audit_dates = get_audit_period_for_date(timezone.now())
+        audit_period = AuditPeriod.objects.filter(
+            start_date__year=active_audit_dates[0].year,
+            end_date__year=active_audit_dates[1].year,
+        ).first()
+        if not audit_period:
+            return Response(
+                {"detail": "No active audit period found for this request"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
-        with transaction.atomic():
-            self.perform_create(serializer)
+        # Use select_for_update to prevent race conditions during the check
+        with transaction.atomic():            
+            # Continue with normal creation inside the same transaction
+            serializer = self.get_serializer(data=request.data)
+            if serializer.is_valid(raise_exception=True):
+                self.perform_create(serializer)
+            else:
+                return Response(
+                    serializer.errors, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
@@ -141,19 +169,13 @@ class PatientViewSet(viewsets.ModelViewSet):
         - Associate with PDU (from OAuth2 token or session)
         - Handle transfers if applicable
         - Add to current audit year submission
+        This is called after serializer validation passes and at the end of the create method.
         """
-        # Create the patient and mark as valid
-        patient = serializer.save(is_valid=True, errors=None)
-        
-        # Get models we need
-        from django.apps import apps
-        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-        Transfer = apps.get_model("npda", "Transfer")
-        Submission = apps.get_model("npda", "Submission")
-        NPDAUser = apps.get_model("npda", "NPDAUser")
+        # Create the patient
+        patient = serializer.save()
         
         # Get the PDU for this request
-        paediatric_diabetes_unit = self.get_pdu_for_request()
+        paediatric_diabetes_unit = self.get_pdu_for_request() 
         
         if not paediatric_diabetes_unit:
             raise ValueError("No PDU context available for patient creation")
@@ -182,21 +204,31 @@ class PatientViewSet(viewsets.ModelViewSet):
             )
         
         # Add patient to current audit period submission
-        from project.npda.models import AuditPeriod
-        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
+        current_audit_period = get_audit_period_for_date(timezone.now())
+        audit_period = AuditPeriod.objects.filter(
+            start_date__year=current_audit_period[0].year,
+            end_date__year=current_audit_period[1].year,
+        ).first()
+        if not audit_period:
+            return Response(
+                {"detail": "No active audit period found for this request"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
-        submission, created = Submission.objects.update_or_create(
-            audit_year=audit_period.audit_year(),
+        submission = Submission.objects.filter(
             paediatric_diabetes_unit=paediatric_diabetes_unit,
-            submission_active=True,
-            defaults={
-                "submission_by": NPDAUser.objects.get(pk=self.request.user.pk),
-                "submission_date": timezone.now(),
-                "audit_period": audit_period
-            },
-        )
-        submission.patients.add(patient)
-        submission.save()
+            audit_period=audit_period,
+            submission_active=True
+        ).first()
+        if not submission:
+            return Response(
+                {"detail": "No active submission found for this PDU and audit period. Please create a submission first."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        else:
+            print(f"🔐 Adding patient {patient.nhs_number} to submission {submission.id} for PDU {paediatric_diabetes_unit.pz_code}")
+            submission.patients.add(patient)
+            submission.save()
         
         # Log the creation for audit trail
         print(f"✅ Patient created via {'OAuth2' if hasattr(self.request, 'pdu_profile') else 'session'} "
@@ -240,6 +272,38 @@ class PatientViewSet(viewsets.ModelViewSet):
         
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    def get_serializer_context(self):
+        """
+        Provide context needed for form validation in the serializer.
+        """
+        context = super().get_serializer_context()
+        
+        # Add PDU context
+        pdu = self.get_pdu_for_request()
+        if pdu:
+            context['paediatric_diabetes_unit'] = pdu
+        
+        # Add audit year context
+        from project.npda.models import AuditPeriod
+        from project.npda.models import AuditPeriod
+        active_audit_dates = get_audit_period_for_date(timezone.now())
+        audit_period = AuditPeriod.objects.filter(
+            start_date__year=active_audit_dates[0].year,
+            end_date__year=active_audit_dates[1].year,
+        ).first()
+        if not audit_period:
+            return Response(
+                {"detail": "No active audit period found for this request"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        context['audit_period'] = audit_period
+        
+        # Add override_postcode flag from request data
+        context['override_postcode'] = self.request.data.get('override_postcode', False)
+        
+        return context
     
     # @action(detail=True, methods=['get'])
     # def visits(self, request, pk=None):

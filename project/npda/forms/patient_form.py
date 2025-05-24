@@ -5,6 +5,9 @@ from channels.db import database_sync_to_async
 import logging
 from datetime import date
 
+# django imports
+from django.db.models import Q
+
 # project imports
 import nhs_number
 import httpx
@@ -112,6 +115,7 @@ class PatientForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.audit_year = kwargs.pop("audit_year", None)
+        self.audit_period = kwargs.pop("audit_period", None)  # Add audit_period support
         self.paediatric_diabetes_unit = kwargs.pop("paediatric_diabetes_unit", None)
         self.override_postcode = kwargs.pop("override_postcode", False)
     
@@ -373,13 +377,21 @@ class PatientForm(forms.ModelForm):
         @database_sync_to_async
         def get_submissions_count(filter_kwargs):
             return PatientSubmission.objects.filter(**filter_kwargs).count()
-
-        filter_kwargs = {
-            "submission__submission_active": True,
-            "submission__audit_year": self.audit_year,
-            filter_field: value,
-            "submission__paediatric_diabetes_unit": self.paediatric_diabetes_unit,
-        }
+        
+        if self.audit_year:
+            filter_kwargs = {
+                "submission__submission_active": True,
+                "submission__audit_year": self.audit_year,
+                filter_field: value,
+                "submission__paediatric_diabetes_unit": self.paediatric_diabetes_unit,
+            }
+        elif self.audit_period:
+            filter_kwargs = {
+                "submission__submission_active": True,
+                "submission__audit_period": self.audit_period,
+                filter_field: value,
+                "submission__paediatric_diabetes_unit": self.paediatric_diabetes_unit,
+            }
 
         count = await get_submissions_count(filter_kwargs)
 
@@ -415,12 +427,20 @@ class PatientForm(forms.ModelForm):
         def get_submissions_count(filter_kwargs):
             return PatientSubmission.objects.filter(**filter_kwargs).count()
 
-        filter_kwargs = {
-            "submission__submission_active": True,
-            "submission__audit_year": self.audit_year,
-            filter_field: value,
-            "submission__paediatric_diabetes_unit": self.paediatric_diabetes_unit,
-        }
+        if self.audit_year:
+            filter_kwargs = {
+                "submission__submission_active": True,
+                "submission__audit_year": self.audit_year,
+                filter_field: value,
+                "submission__paediatric_diabetes_unit": self.paediatric_diabetes_unit,
+            }
+        elif self.audit_period:
+            filter_kwargs = {
+                "submission__submission_active": True,
+                "submission__audit_period": self.audit_period,
+                filter_field: value,
+                "submission__paediatric_diabetes_unit": self.paediatric_diabetes_unit,
+            }
 
         count = get_submissions_count(filter_kwargs)
 

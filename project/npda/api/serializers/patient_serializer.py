@@ -9,13 +9,6 @@ class PatientSerializer(serializers.ModelSerializer):
     Serializer for the Patient model.
     Includes all fields from the Patient model and reuses form validation.
     """
-    # Define the read-only fields
-    index_of_multiple_deprivation_quintile = serializers.IntegerField(read_only=True)
-    is_valid = serializers.BooleanField(read_only=True)
-    errors = serializers.JSONField(read_only=True)
-    location_wgs = serializers.SerializerMethodField(read_only=True)
-    location_bng = serializers.SerializerMethodField(read_only=True)
-    location_wgs84 = serializers.SerializerMethodField(read_only=True)
     # Use CharField for these fields to ensure proper validation
     nhs_number = serializers.CharField(
         required=False, 
@@ -70,10 +63,6 @@ class PatientSerializer(serializers.ModelSerializer):
             'diagnosis_date', 'death_date', 'gp_practice_ods_code', 
             'gp_practice_postcode', 'is_valid', 'errors'
         ]
-        write_only_fields = ['nhs_number', 'unique_reference_number', 'sex', 'date_of_birth',
-            'postcode','ethnicity','diabetes_type',
-            'diagnosis_date', 'death_date', 'gp_practice_ods_code', 
-            'gp_practice_postcode']  # If needed
         read_only_fields = [
             'index_of_multiple_deprivation_quintile', 
             'is_valid', 
@@ -110,32 +99,74 @@ class PatientSerializer(serializers.ModelSerializer):
     
     def validate(self, attrs):
         """
-        Reuse existing form validation logic and validate postcode using the API
+        Use the existing PatientForm validation logic for consistency.
+        This ensures API validation matches web form validation exactly.
         """
-        # Check for presence of identifiers - either NHS number or Unique Reference Number
-        # At least one of these must be provided, but not both
-        has_nhs = attrs.get('nhs_number') not in (None, '')
-        has_urn = attrs.get('unique_reference_number') not in (None, '')
+        # Create a form instance with the data and required context
+        form = PatientForm(
+            data=attrs,
+            audit_period=self.context.get('audit_period'),
+            paediatric_diabetes_unit=self.context.get('paediatric_diabetes_unit'),
+            override_postcode=self.context.get('override_postcode', False)
+        )
         
-        # Validate identifier requirements
-        if not (has_nhs or has_urn):
-            raise serializers.ValidationError({
-                "identifier": "Either NHS number or Unique Reference Number must be provided."
-            })
-        
-        if has_nhs and has_urn:
-            raise serializers.ValidationError({
-                "identifier": "Cannot provide both NHS number and Unique Reference Number."
-            })
-
-        # Create a copy of attrs to avoid modifying the original
-        data = attrs.copy()
-        # Use existing form validation logic
-        form = PatientForm(data=data)
         if not form.is_valid():
+            # Convert form errors to serializer validation errors
             raise serializers.ValidationError(form.errors)
+        
+        # Store the form's async validation results for use in create/update
+        self._form_instance = form
+        
+        # Return the cleaned data from the form (this includes any modifications
+        # made by the external validators)
+        return form.cleaned_data
+    
+    def create(self, validated_data):
+        """
+        Create a patient instance using the form's save method to ensure
+        all the form's post-save logic is executed.
+        """
+        # Use the form instance we created during validation
+        if hasattr(self, '_form_instance'):
+            # The form already has the validated data and async results
+            instance = self._form_instance.save(commit=False)
             
-        return data  # Return modified data with updated postcode and location fields
+            # Apply any additional fields that might not be in the form
+            for field, value in validated_data.items():
+                if hasattr(instance, field):
+                    setattr(instance, field, value)
+            
+            # Mark as valid and save
+            instance.is_valid = True
+            instance.errors = None
+            instance.save()
+            
+            return instance
+        else:
+            # Fallback to standard creation if form instance not available
+            return super().create(validated_data)
+    
+    def update(self, instance, validated_data):
+        """
+        Update a patient instance using the form's save method.
+        """
+        if hasattr(self, '_form_instance'):
+            # Update the form's instance with the existing patient
+            self._form_instance.instance = instance
+            
+            # Save using the form to ensure all validation results are applied
+            updated_instance = self._form_instance.save(commit=False)
+            
+            # Apply any additional fields
+            for field, value in validated_data.items():
+                if hasattr(updated_instance, field):
+                    setattr(updated_instance, field, value)
+            
+            updated_instance.save()
+            return updated_instance
+        else:
+            # Fallback to standard update
+            return super().update(instance, validated_data)
     
     def _get_srid_for_field(self, field_name):
         """Helper method to get the SRID for a given field"""
