@@ -1,6 +1,7 @@
 from django.apps import apps
 from django.db import transaction
 from django.utils import timezone
+import logging
 
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
@@ -11,8 +12,11 @@ from project.npda.filtersets.patient_filterset import PatientFilter
 from project.npda.models import Patient, AuditPeriod,Transfer, Submission, NPDAUser
 from project.npda.api.serializers.patient_serializer import PatientSerializer
 from project.npda.general_functions import get_audit_period_for_date
+from project.npda.api.response_metadata import NPDAResponseMixin
 
-class PatientViewSet(viewsets.ModelViewSet):
+logger = logging.getLogger(__name__)
+
+class PatientViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
     """
     ViewSet for viewing and editing Patient instances.
     
@@ -158,9 +162,21 @@ class PatientViewSet(viewsets.ModelViewSet):
                     serializer.errors, 
                     status=status.HTTP_400_BAD_REQUEST
                 )
+            # Check if we created a new submission
+            submission_created = getattr(self, '_submission_created', False)
+            submission_id = getattr(self, '_submission_id', None)
+            advisory_message = None
+            if submission_created:
+                advisory_message = f'New submission {submission_id} created for current audit period'
+            else:
+                advisory_message = f'Patient added to existing submission {submission_id} for current audit period'
         
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        return self.create_npda_response(
+            data=serializer.data,
+            status=status.HTTP_201_CREATED,
+            advisory_message=advisory_message if advisory_message is not None else None,
+            advisory_type='info'
+        )
 
     def perform_create(self, serializer):
         """
@@ -169,70 +185,95 @@ class PatientViewSet(viewsets.ModelViewSet):
         - Associate with PDU (from OAuth2 token or session)
         - Handle transfers if applicable
         - Add to current audit year submission
-        This is called after serializer validation passes and at the end of the create method.
-        """
-        # Create the patient
-        patient = serializer.save()
         
-        # Get the PDU for this request
-        paediatric_diabetes_unit = self.get_pdu_for_request() 
+        All operations are wrapped in a transaction to ensure atomicity.
+        If any step fails, the entire operation is rolled back.
+        """
+        # Get the PDU for this request first (before transaction)
+        paediatric_diabetes_unit = self.get_pdu_for_request()
         
         if not paediatric_diabetes_unit:
             raise ValueError("No PDU context available for patient creation")
         
-        # Handle transfers if this patient exists in another PDU
-        if Transfer.objects.filter(patient=patient).exists():
-            # The patient is being transferred from another PDU
-            transfer = Transfer.objects.get(patient=patient)
-            transfer.previous_pz_code = transfer.paediatric_diabetes_unit.pz_code
-            transfer.paediatric_diabetes_unit = paediatric_diabetes_unit
-            
-            # Get transfer-related data if provided
-            date_leaving_service = self.request.data.get("date_leaving_service")
-            reason_leaving_service = self.request.data.get("reason_leaving_service")
-            
-            transfer.date_leaving_service = date_leaving_service
-            transfer.reason_leaving_service = reason_leaving_service
-            transfer.save()
-        else:
-            # Create a new transfer record
-            Transfer.objects.create(
-                paediatric_diabetes_unit=paediatric_diabetes_unit,
-                patient=patient,
-                date_leaving_service=None,
-                reason_leaving_service=None,
-            )
-        
-        # Add patient to current audit period submission
+        # Get audit period before transaction
         current_audit_period = get_audit_period_for_date(timezone.now())
         audit_period = AuditPeriod.objects.filter(
             start_date__year=current_audit_period[0].year,
             end_date__year=current_audit_period[1].year,
         ).first()
+        
         if not audit_period:
-            return Response(
-                {"detail": "No active audit period found for this request"}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            raise ValueError("No active audit period found for this request")
         
-        submission = Submission.objects.filter(
-            paediatric_diabetes_unit=paediatric_diabetes_unit,
-            audit_period=audit_period,
-            submission_active=True
-        ).first()
-        if not submission:
-            return Response(
-                {"detail": "No active submission found for this PDU and audit period. Please create a submission first."}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        else:
-            print(f"🔐 Adding patient {patient.nhs_number} to submission {submission.id} for PDU {paediatric_diabetes_unit.pz_code}")
-            submission.patients.add(patient)
-            submission.save()
-        
-        # Log the creation for audit trail
-        print(f"✅ Patient created via {'OAuth2' if hasattr(self.request, 'pdu_profile') else 'session'} "
-              f"for PDU {paediatric_diabetes_unit.pz_code}")
+        # Wrap all database operations in a transaction - do not want to save a patient without an associated Submission or Transfer
+        with transaction.atomic():
+            try:
+                # Step 1: Create the patient
+                patient = serializer.save()
+                logger.info(f"📝 Patient {patient.nhs_number} created, proceeding with associations...")
+                
+                # Step 2: Handle transfers
+                if Transfer.objects.filter(patient=patient).exists():
+                    # The patient is being transferred from another PDU
+                    transfer = Transfer.objects.get(patient=patient)
+                    transfer.previous_pz_code = transfer.paediatric_diabetes_unit.pz_code
+                    transfer.paediatric_diabetes_unit = paediatric_diabetes_unit
+                    
+                    # Get transfer-related data if provided
+                    date_leaving_service = self.request.data.get("date_leaving_service")
+                    reason_leaving_service = self.request.data.get("reason_leaving_service")
+                    
+                    transfer.date_leaving_service = date_leaving_service
+                    transfer.reason_leaving_service = reason_leaving_service
+                    transfer.save()
+                    logger.info(f"🔄 Transfer updated for patient {patient.nhs_number}")
+                else:
+                    # Create a new transfer record
+                    transfer = Transfer.objects.create(
+                        paediatric_diabetes_unit=paediatric_diabetes_unit,
+                        patient=patient,
+                        date_leaving_service=None,
+                        reason_leaving_service=None,
+                    )
+                    logger.info(f"📋 New transfer created for patient {patient.nhs_number}")
+                
+                # Step 3: Get or create the submission
+                submission, created = Submission.objects.update_or_create(
+                    paediatric_diabetes_unit=paediatric_diabetes_unit,
+                    audit_period=audit_period,
+                    submission_active=True,
+                    defaults={
+                        'submission_date': timezone.now(),
+                        'submission_by': NPDAUser.objects.get(pk=self.request.user.pk),
+                        'audit_year': audit_period.audit_year() if hasattr(audit_period, 'audit_year') else timezone.now().year,
+                    }
+                )
+                logger.info(f"📊 Submission {'created' if created else 'found'}: {submission.id}")
+                
+                # Step 4: Add patient to submission
+                submission.patients.add(patient)
+                logger.info(f"✅ Patient {patient.nhs_number} added to submission {submission.id}")
+                
+                # Step 5: Verify the patient was properly added
+                if not submission.patients.filter(id=patient.id).exists():
+                    raise ValueError(f"Failed to add patient {patient.nhs_number} to submission {submission.id}")
+                
+                # Store for response generation
+                self._submission_created = created
+                self._submission_id = submission.id
+                
+                # Log successful completion
+                logger.info(f"✅ Patient {patient.nhs_number} successfully created with all associations "
+                        f"via {'OAuth2' if hasattr(self.request, 'pdu_profile') else 'session'} "
+                        f"for PDU {paediatric_diabetes_unit.pz_code}")
+                
+            except Exception as e:
+                # Log the error for debugging
+                logger.error(f"❌ Failed to create patient with all associations: {str(e)}")
+                
+                # Re-raise the exception to trigger transaction rollback
+                # The transaction.atomic() will automatically rollback all changes
+                raise ValueError(f"Failed to create patient record with required associations: {str(e)}")
     
     def update(self, request, *args, **kwargs):
         """
