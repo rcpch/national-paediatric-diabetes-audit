@@ -1,6 +1,5 @@
 import dataclasses
 import datetime
-import re
 import tempfile
 import csv
 import collections
@@ -18,9 +17,8 @@ from dateutil.relativedelta import relativedelta
 from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.contrib.gis.geos import Point
-from httpx import HTTPError
 from django.contrib.messages import get_messages
-from django.test import Client
+from django.test import override_settings
 from django.urls import reverse
 
 from project.constants.user import RCPCH_AUDIT_TEAM
@@ -28,7 +26,6 @@ from project.npda.general_functions.csv import (
     csv_upload,
     csv_parse,
     create_csv_submission,
-    tidy_up_old_submissions
 )
 from project.constants import csv_definition_for, ALL_DATES
 from project.npda.models import (
@@ -230,6 +227,7 @@ def modify_raw_csv(csv_str, start=None, end=None, replacements={}):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_create_patient(test_user, single_row_valid_df):
 
     csv_upload_sync(test_user, single_row_valid_df)
@@ -248,6 +246,7 @@ def test_create_patient(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_create_patient_with_death_date(test_user, single_row_valid_df):
     death_date = VALID_FIELDS["diagnosis_date"] + relativedelta(years=1)
     single_row_valid_df.loc[0, "Death Date"] = pd.to_datetime(death_date)
@@ -259,6 +258,7 @@ def test_create_patient_with_death_date(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_multiple_patients(
     test_user, two_patients_first_with_two_visits_second_with_one
 ):
@@ -291,6 +291,7 @@ def test_multiple_patients(
 
 
 @pytest.mark.django_db(transaction=True)
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_missing_date_of_birth(
     seed_groups_per_function_fixture,
     seed_users_per_function_fixture,
@@ -320,6 +321,7 @@ def test_missing_date_of_birth(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_missing_nhs_number(
     seed_groups_per_function_fixture,
     seed_users_per_function_fixture,
@@ -349,6 +351,7 @@ def test_missing_nhs_number(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_missing_date_of_diagnosis(test_user, single_row_valid_df):
     single_row_valid_df.loc[0, "Date of Diabetes Diagnosis"] = None
 
@@ -363,6 +366,7 @@ def test_missing_date_of_diagnosis(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_missing_diabetes_type(test_user, single_row_valid_df):
     single_row_valid_df.loc[0, "Diabetes Type"] = None
 
@@ -377,6 +381,7 @@ def test_missing_diabetes_type(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_error_in_multiple_visits(test_user, one_patient_two_visits):
     df = one_patient_two_visits
     df.loc[0, "Diabetes Treatment at time of Hba1c measurement"] = 45
@@ -409,6 +414,7 @@ def test_error_in_multiple_visits(test_user, one_patient_two_visits):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_multiple_patients_where_one_has_visit_errors_and_the_other_does_not(
     test_user, two_patients_first_with_two_visits_second_with_one
 ):
@@ -453,6 +459,7 @@ def test_multiple_patients_where_one_has_visit_errors_and_the_other_does_not(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_multiple_patients_with_visit_errors(
     test_user, two_patients_with_one_visit_each
 ):
@@ -489,6 +496,7 @@ def test_multiple_patients_with_visit_errors(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_invalid_nhs_number(test_user, single_row_valid_df):
     invalid_nhs_number = "123456789"
     single_row_valid_df["NHS Number"] = invalid_nhs_number
@@ -501,6 +509,7 @@ def test_invalid_nhs_number(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_future_date_of_birth(test_user, single_row_valid_df):
     date_of_birth = TODAY + relativedelta(days=1)
     single_row_valid_df["Date of Birth"] = pd.to_datetime(date_of_birth)
@@ -518,6 +527,7 @@ def test_future_date_of_birth(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_over_25(test_user, single_row_valid_df):
     date_of_birth = TODAY + -relativedelta(years=25, days=1)
     single_row_valid_df["Date of Birth"] = pd.to_datetime(date_of_birth)
@@ -535,6 +545,7 @@ def test_over_25(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_future_diagnosis_date(test_user, single_row_valid_df):
     diagnosis_date = TODAY + relativedelta(days=1)
     single_row_valid_df["Date of Diabetes Diagnosis"] = pd.to_datetime(diagnosis_date)
@@ -552,6 +563,7 @@ def test_future_diagnosis_date(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_diagnosis_date_before_date_of_birth(test_user, single_row_valid_df):
     date_of_birth = (VALID_FIELDS["date_of_birth"],)
     diagnosis_date = VALID_FIELDS["date_of_birth"] - relativedelta(years=1)
@@ -579,6 +591,7 @@ def test_diagnosis_date_before_date_of_birth(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_invalid_sex(test_user, single_row_valid_df):
     single_row_valid_df["Stated gender"] = 45
 
@@ -592,6 +605,7 @@ def test_invalid_sex(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_not_specified_sex(test_user, single_row_valid_df):
     single_row_valid_df["Stated gender"] = 3
 
@@ -605,6 +619,7 @@ def test_not_specified_sex(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_unknown_sex(test_user, single_row_valid_df):
     single_row_valid_df["Stated gender"] = 99
 
@@ -618,6 +633,7 @@ def test_unknown_sex(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_missing_gp_ods_code(test_user, single_row_valid_df):
     single_row_valid_df["GP Practice Code"] = None
 
@@ -642,6 +658,7 @@ def test_missing_gp_ods_code(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_future_death_date(test_user, single_row_valid_df):
     death_date = TODAY + relativedelta(days=1)
 
@@ -660,6 +677,7 @@ def test_future_death_date(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_death_date_before_date_of_birth(test_user, single_row_valid_df):
     date_of_birth = (VALID_FIELDS["date_of_birth"],)
     death_date = VALID_FIELDS["date_of_birth"] - relativedelta(years=1)
@@ -682,6 +700,7 @@ def test_death_date_before_date_of_birth(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 @patch(
     "project.npda.general_functions.csv.csv_upload.validate_patient_async",
     mock_patient_external_validation_result(
@@ -701,6 +720,7 @@ def test_invalid_postcode(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 @patch(
     "project.npda.general_functions.csv.csv_upload.validate_patient_async",
     mock_patient_external_validation_result(postcode=None),
@@ -716,6 +736,7 @@ def test_error_validating_postcode(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 @patch(
     "project.npda.general_functions.csv.csv_upload.validate_patient_async",
     mock_patient_external_validation_result(
@@ -735,6 +756,7 @@ def test_invalid_gp_ods_code(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 @patch(
     "project.npda.general_functions.csv.csv_upload.validate_patient_async",
     mock_patient_external_validation_result(postcode=None),
@@ -750,6 +772,7 @@ def test_error_validating_gp_ods_code(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_lookup_index_of_multiple_deprivation(test_user, single_row_valid_df):
     csv_upload_sync(test_user, single_row_valid_df)
 
@@ -761,6 +784,7 @@ def test_lookup_index_of_multiple_deprivation(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 @patch(
     "project.npda.general_functions.csv.csv_upload.validate_patient_async",
     mock_patient_external_validation_result(
@@ -775,6 +799,7 @@ def test_error_looking_up_index_of_multiple_deprivation(test_user, single_row_va
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_save_location_from_postcode(test_user, single_row_valid_df):
     csv_upload_sync(test_user, single_row_valid_df)
 
@@ -786,6 +811,7 @@ def test_save_location_from_postcode(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 @patch(
     "project.npda.general_functions.csv.csv_upload.validate_patient_async",
     mock_patient_external_validation_result(
@@ -802,6 +828,7 @@ def test_missing_location_from_postcode(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_strip_first_spaces_in_column_name(test_user, dummy_sheet_csv):
     csv = dummy_sheet_csv.replace("NHS Number", "  NHS Number")
     df = read_csv_from_str(csv).df
@@ -815,6 +842,7 @@ def test_strip_first_spaces_in_column_name(test_user, dummy_sheet_csv):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_strip_last_spaces_in_column_name(test_user, dummy_sheet_csv):
     csv = dummy_sheet_csv.replace("NHS Number", "NHS Number  ")
     df = read_csv_from_str(csv).df
@@ -830,6 +858,7 @@ def test_strip_last_spaces_in_column_name(test_user, dummy_sheet_csv):
 # Originally found in https://github.com/rcpch/national-paediatric-diabetes-audit/actions/runs/11627684066/job/32381466250
 # so we have a separate unit test for it
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_spaces_in_date_column_name(test_user, dummy_sheet_csv):
     csv = dummy_sheet_csv.replace("Date of Birth", "  Date of Birth")
     df = read_csv_from_str(csv).df
@@ -841,6 +870,7 @@ def test_spaces_in_date_column_name(test_user, dummy_sheet_csv):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_different_column_order(test_user, single_row_valid_df):
     columns = single_row_valid_df.columns.to_list()
 
@@ -853,6 +883,7 @@ def test_different_column_order(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_additional_columns_causes_error(
     single_row_valid_df, tmp_path, client, test_rcpch_user
 ):
@@ -887,6 +918,7 @@ def test_additional_columns_causes_error(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_duplicate_columns_causes_error(single_row_valid_df, client, test_rcpch_user, tmp_path):
     single_row_valid_df["NHS Number_2"] = single_row_valid_df["NHS Number"]
     single_row_valid_df["NHS Number_3"] = single_row_valid_df["NHS Number"]
@@ -927,6 +959,7 @@ def test_duplicate_columns_causes_error(single_row_valid_df, client, test_rcpch_
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_missing_columns_causes_error(test_rcpch_user, single_row_valid_df, client, tmp_path):
     df = single_row_valid_df.drop(
         columns=["Urinary Albumin Level (ACR)", "Total Cholesterol Level (mmol/l)"]
@@ -958,6 +991,7 @@ def test_missing_columns_causes_error(test_rcpch_user, single_row_valid_df, clie
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_case_insensitive_column_headers(test_user, dummy_sheet_csv):
     csv = dummy_sheet_csv
 
@@ -974,6 +1008,7 @@ def test_case_insensitive_column_headers(test_user, dummy_sheet_csv):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_mixed_case_column_headers(test_user, dummy_sheet_csv):
     csv = dummy_sheet_csv.replace("NHS Number", "NHS number")
     df = read_csv_from_str(csv).df
@@ -982,6 +1017,7 @@ def test_mixed_case_column_headers(test_user, dummy_sheet_csv):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_invalid_nhs_number_column_name(single_row_valid_df, client, test_rcpch_user, tmp_path):
     single_row_valid_df = single_row_valid_df.rename(columns={"NHS Number": "NHS Nunberxns"})
     
@@ -1016,6 +1052,7 @@ def test_invalid_nhs_number_column_name(single_row_valid_df, client, test_rcpch_
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/741
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_invalid_date_of_birth_column_name_with_mixed_case_column_headers(
     test_user, dummy_sheet_csv
 ):
@@ -1030,6 +1067,7 @@ def test_invalid_date_of_birth_column_name_with_mixed_case_column_headers(
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/741
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_old_template_headers(test_user, dummy_sheet_csv_old_headers):
     csv = dummy_sheet_csv_old_headers
     results = read_csv_from_str(csv)
@@ -1044,6 +1082,7 @@ def test_old_template_headers(test_user, dummy_sheet_csv_old_headers):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_first_row_with_extra_cell_at_the_start(test_user, single_row_valid_df):
     csv = single_row_valid_df.to_csv(index=False, date_format="%d/%m/%Y")
 
@@ -1057,6 +1096,7 @@ def test_first_row_with_extra_cell_at_the_start(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_first_row_with_extra_cell_on_the_end(test_user, single_row_valid_df):
     csv = single_row_valid_df.to_csv(index=False, date_format="%d/%m/%Y")
 
@@ -1070,6 +1110,7 @@ def test_first_row_with_extra_cell_on_the_end(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_second_row_with_extra_cell_at_the_start(test_user, one_patient_two_visits):
     csv = one_patient_two_visits.to_csv(index=False, date_format="%d/%m/%Y")
 
@@ -1083,6 +1124,7 @@ def test_second_row_with_extra_cell_at_the_start(test_user, one_patient_two_visi
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_second_row_with_extra_cell_on_the_end(test_user, one_patient_two_visits):
     csv = one_patient_two_visits.to_csv(index=False, date_format="%d/%m/%Y")
 
@@ -1096,6 +1138,7 @@ def test_second_row_with_extra_cell_on_the_end(test_user, one_patient_two_visits
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_upload_without_headers(test_user, one_patient_two_visits):
     csv = one_patient_two_visits.to_csv(index=False, date_format="%d/%m/%Y")
 
@@ -1118,6 +1161,7 @@ def test_upload_without_headers(test_user, one_patient_two_visits):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_jersey_csv(test_user, one_patient_two_visits):
     df = one_patient_two_visits.rename(columns={"NHS Number": "Unique Reference Number"})
     csv = df.to_csv(index=False, date_format="%d/%m/%Y")
@@ -1127,6 +1171,7 @@ def test_jersey_csv(test_user, one_patient_two_visits):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_missing_identifier_columns(test_rcpch_user, one_patient_two_visits, client, tmp_path):
     df = one_patient_two_visits.drop(["NHS Number"], axis=1)
 
@@ -1164,6 +1209,7 @@ def test_missing_identifier_columns(test_rcpch_user, one_patient_two_visits, cli
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_both_identifier_columns_causes_an_error(test_rcpch_user, one_patient_two_visits, client, tmp_path):
     df = one_patient_two_visits
     df = df.assign(**{"Unique Reference Number": np.arange(df.shape[0])})
@@ -1202,6 +1248,7 @@ def test_both_identifier_columns_causes_an_error(test_rcpch_user, one_patient_tw
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_dates_with_short_year(one_patient_two_visits):
     csv = one_patient_two_visits.to_csv(index=False, date_format="%d/%m/%y")
     df = read_csv_from_str(csv).df
@@ -1210,6 +1257,7 @@ def test_dates_with_short_year(one_patient_two_visits):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_urine_albumin_value_is_rounded_to_one_decimal(test_user, single_row_valid_df):
     single_row_valid_df["Urinary Albumin Level (ACR)"] = 0.73
     csv = single_row_valid_df.to_csv(index=False, date_format="%d/%m/%Y")
@@ -1224,6 +1272,7 @@ def test_urine_albumin_value_is_rounded_to_one_decimal(test_user, single_row_val
 
 
 @pytest.mark.django_db(transaction=True)
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_bad_date_format_on_date_of_birth(
     seed_groups_per_function_fixture,
     seed_users_per_function_fixture,
@@ -1261,6 +1310,7 @@ def test_bad_date_format_on_date_of_birth(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_bad_date_format_on_date_of_diagnosis(test_user, single_row_valid_df):
     df = single_row_valid_df
 
@@ -1304,6 +1354,7 @@ def test_bad_date_format_on_date_of_diagnosis(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_bad_date_format_on_optional_column(one_patient_two_visits):
     df = one_patient_two_visits
 
@@ -1319,6 +1370,7 @@ def test_bad_date_format_on_optional_column(one_patient_two_visits):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_height_is_rounded_to_one_decimal(test_user, single_row_valid_df):
     single_row_valid_df["Patient Height (cm)"] = 123.456
     single_row_valid_df["Patient Weight (kg)"] = 7.89
@@ -1336,6 +1388,7 @@ def test_height_is_rounded_to_one_decimal(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 @patch(
     "project.npda.general_functions.csv.csv_upload.validate_patient_async",
     mock_patient_external_validation_result(
@@ -1372,6 +1425,7 @@ def test_cleaned_fields_are_stored_when_other_fields_are_invalid(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_async_visit_fields_are_saved(test_user, single_row_valid_df):
     csv_upload_sync(test_user, single_row_valid_df)
     visit = Visit.objects.first()
@@ -1400,6 +1454,7 @@ HbA1c tests
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_hba1c_value_ifcc_less_than_20(test_user, single_row_valid_df):
     single_row_valid_df.loc[0, "Hba1c Value"] = 18
     single_row_valid_df.loc[0, "HbA1c result format"] = 1  # IFCC (mmol/mol)
@@ -1417,6 +1472,7 @@ def test_hba1c_value_ifcc_less_than_20(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_hba1c_value_ifcc_more_than_195(test_user, single_row_valid_df):
     single_row_valid_df.loc[0, "Hba1c Value"] = 196
     single_row_valid_df.loc[0, "HbA1c result format"] = 1  # IFCC (mmol/mol)
@@ -1434,6 +1490,7 @@ def test_hba1c_value_ifcc_more_than_195(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_hba1c_value_dcct_more_than_20(test_user, single_row_valid_df):
     single_row_valid_df.loc[0, "Hba1c Value"] = 21
     single_row_valid_df.loc[0, "HbA1c result format"] = 2  # DCCT (%)
@@ -1451,6 +1508,7 @@ def test_hba1c_value_dcct_more_than_20(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_hba1c_value_dcct_less_than_3(test_user, single_row_valid_df):
     single_row_valid_df.loc[0, "Hba1c Value"] = 2
     single_row_valid_df.loc[0, "HbA1c result format"] = 2  # DCCT (%)
@@ -1468,6 +1526,7 @@ def test_hba1c_value_dcct_less_than_3(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_hba1c_missing(test_user, single_row_valid_df):
     single_row_valid_df.loc[0, "Hba1c Value"] = None
     single_row_valid_df.loc[0, "HbA1c result format"] = 2  # DCCT (%)
@@ -1490,6 +1549,7 @@ Diabetes treatment tests
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_treatment_closed_loop_passes_validation(test_user, single_row_valid_df):
     """
     Test that both pump and closed loop system are accepted
@@ -1509,6 +1569,7 @@ def test_treatment_closed_loop_passes_validation(test_user, single_row_valid_df)
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_treatment_missing_closed_loop_form_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -1530,6 +1591,7 @@ def test_treatment_missing_closed_loop_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_treatment_mdi_but_closed_loop_selected_form_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -1559,6 +1621,7 @@ Blood pressure tests
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_blood_pressure_values_passes_validation(test_user, single_row_valid_df):
     """
     Test that both systolic and diastolic blood pressure values are accepted
@@ -1578,6 +1641,7 @@ def test_blood_pressure_values_passes_validation(test_user, single_row_valid_df)
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_blood_pressure_missing_values_fails_validation(test_user, single_row_valid_df):
     """
     Test that one missing systolic blood pressure value fails validation
@@ -1599,6 +1663,7 @@ def test_blood_pressure_missing_values_fails_validation(test_user, single_row_va
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_blood_pressure_missing_date_form_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -1630,6 +1695,7 @@ def test_blood_pressure_missing_date_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_systolic_blood_pressure_over_240_form_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -1661,6 +1727,7 @@ def test_systolic_blood_pressure_over_240_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_systolic_blood_pressure_below_80_form_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -1692,6 +1759,7 @@ def test_systolic_blood_pressure_below_80_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_diastolic_blood_pressure_over_120_form_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -1723,6 +1791,7 @@ def test_diastolic_blood_pressure_over_120_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_diastolic_blood_pressure_below_20_form_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -1759,6 +1828,7 @@ Retinal screening tests
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_decs_value_form_passes_validation(test_user, single_row_valid_df):
     """
     Test that DECS value is accepted
@@ -1782,6 +1852,7 @@ def test_decs_value_form_passes_validation(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_decs_value_none_form_fails_validation(test_user, single_row_valid_df):
     """
     Test that a missing DECS value is invalid
@@ -1805,6 +1876,7 @@ def test_decs_value_none_form_fails_validation(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_decs_date_none_form_fails_validation(test_user, single_row_valid_df):
     """
     Test that a missing DECS date is invalid
@@ -1833,6 +1905,7 @@ Urine albumin tests
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_urine_albumin_value_form_passes_validation(test_user, single_row_valid_df):
     """
     Test that urine albumin value is accepted
@@ -1859,6 +1932,7 @@ def test_urine_albumin_value_form_passes_validation(test_user, single_row_valid_
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_urine_albumin_value_below_range_form_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -1889,6 +1963,7 @@ def test_urine_albumin_value_below_range_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_urine_albumin_value_above_range_form_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -1919,6 +1994,7 @@ def test_urine_albumin_value_above_range_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_urine_albumin_value_missing_form_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -1949,6 +2025,7 @@ def test_urine_albumin_value_missing_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_urine_albumin_stage_missing_form_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -1979,6 +2056,7 @@ def test_urine_albumin_stage_missing_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_urine_albumin_date_missing_form_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -2014,6 +2092,7 @@ Total cholesterol tests
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_total_cholesterol_value_form_passes_validation(test_user, single_row_valid_df):
     """
     Test that total cholesterol value is accepted
@@ -2038,6 +2117,7 @@ def test_total_cholesterol_value_form_passes_validation(test_user, single_row_va
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_total_cholesterol_value_above_reference_form_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -2066,6 +2146,7 @@ def test_total_cholesterol_value_above_reference_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_total_cholesterol_value_below_reference_form_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -2094,6 +2175,7 @@ def test_total_cholesterol_value_below_reference_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_total_cholesterol_value_missing_form_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -2122,6 +2204,7 @@ def test_total_cholesterol_value_missing_form_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_total_cholesterol_date_missing_form_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -2153,6 +2236,7 @@ Thyroid treatment tests
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_thyroid_treatment_passes_validation(test_user, single_row_valid_df):
     """
     Test that thyroid treatment is accepted
@@ -2174,6 +2258,7 @@ def test_thyroid_treatment_passes_validation(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_thyroid_treatment_missing_fails_validation(test_user, single_row_valid_df):
     """
     Test that a missing thyroid treatment value is rejected
@@ -2195,6 +2280,7 @@ def test_thyroid_treatment_missing_fails_validation(test_user, single_row_valid_
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_thyroid_treatment_date_missing_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -2223,6 +2309,7 @@ Coeliac screening tests
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_coeliac_screening_passes_validation(test_user, single_row_valid_df):
     """
     Test that coeliac screening is accepted
@@ -2246,6 +2333,7 @@ def test_coeliac_screening_passes_validation(test_user, single_row_valid_df):
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/628
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_coeliac_screening_missing_fails_validation(test_user, single_row_valid_df):
     single_row_valid_df.loc[0, "Observation Date: Coeliac Disease Screening"] = (
         "01/01/2022"
@@ -2266,6 +2354,7 @@ def test_coeliac_screening_missing_fails_validation(test_user, single_row_valid_
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/628
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_coeliac_screening_date_missing_passes_validation(
     test_user, single_row_valid_df
 ):
@@ -2290,6 +2379,7 @@ Psychological support tests
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_psychological_support_passes_validation(test_user, single_row_valid_df):
     """
     Test that psychological support is accepted
@@ -2313,6 +2403,7 @@ def test_psychological_support_passes_validation(test_user, single_row_valid_df)
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_psychological_support_missing_fails_validation(test_user, single_row_valid_df):
     """
     Test that a missing psychological support value is rejected
@@ -2336,6 +2427,7 @@ def test_psychological_support_missing_fails_validation(test_user, single_row_va
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_psychological_support_date_missing_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -2362,6 +2454,7 @@ def test_psychological_support_date_missing_fails_validation(
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/628
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_psychological_support_date_missing_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -2389,6 +2482,7 @@ Smoking status tests
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_smoking_status_passes_validation(test_user, single_row_valid_df):
     """
     Test that smoking status is accepted
@@ -2410,6 +2504,7 @@ def test_smoking_status_passes_validation(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_smoking_status_non_smoker_passes_validation(test_user, single_row_valid_df):
     """
     Test that smoking status is accepted
@@ -2431,6 +2526,7 @@ def test_smoking_status_non_smoker_passes_validation(test_user, single_row_valid
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_smoking_status_non_smoker_referral_date_provided_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -2454,6 +2550,7 @@ def test_smoking_status_non_smoker_referral_date_provided_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_smoking_status_missing_fails_validation(test_user, single_row_valid_df):
     """
     Test that a missing smoking status value is rejected
@@ -2476,6 +2573,7 @@ def test_smoking_status_missing_fails_validation(test_user, single_row_valid_df)
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/791
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_smoking_status_smoker_does_not_require_cessation_referral_date(
     test_user, single_row_valid_df
 ):
@@ -2504,6 +2602,7 @@ Dietitian referral tests
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_dietician_referral_status_additional_offered_form_passes_validation(
     test_user, single_row_valid_df
 ):
@@ -2529,6 +2628,7 @@ def test_dietician_referral_status_additional_offered_form_passes_validation(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_dietician_no_additional_offered_form_passes_validation(
     test_user, single_row_valid_df
 ):
@@ -2552,6 +2652,7 @@ def test_dietician_no_additional_offered_form_passes_validation(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_dietician_no_additional_offered_date_provided_fail_validation(
     test_user, single_row_valid_df
 ):
@@ -2577,6 +2678,7 @@ def test_dietician_no_additional_offered_date_provided_fail_validation(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_dietician_additional_offered_date_missing_passes_validation(
     test_user, single_row_valid_df
 ):
@@ -2601,6 +2703,7 @@ def test_dietician_additional_offered_date_missing_passes_validation(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_dietician_additional_offered_no_but_date_offered_fail_validation(
     test_user, single_row_valid_df
 ):
@@ -2631,6 +2734,7 @@ Inpatient admission tests
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_inpatient_admission_stabilisation_passes_validation(
     test_user, single_row_valid_df
 ):
@@ -2676,6 +2780,7 @@ def test_inpatient_admission_stabilisation_passes_validation(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_inpatient_admission_stabilisation_missing_date_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -2709,6 +2814,7 @@ def test_inpatient_admission_stabilisation_missing_date_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_inpatient_admission_stabilisation_discharge_date_before_admission_date_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -2744,6 +2850,7 @@ def test_inpatient_admission_stabilisation_discharge_date_before_admission_date_
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_inpatient_admission_stabilisation_discharge_date_before_diagnosis_date_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -2793,6 +2900,7 @@ def test_inpatient_admission_stabilisation_discharge_date_before_diagnosis_date_
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_inpatient_admission_stabilisation_discharge_date_after_date_of_death_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -2840,6 +2948,7 @@ def test_inpatient_admission_stabilisation_discharge_date_after_date_of_death_fa
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_inpatient_admission_stabilisation_dka_additional_therapies_provided_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -2885,6 +2994,7 @@ def test_inpatient_admission_stabilisation_dka_additional_therapies_provided_fai
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_inpatient_admission_stabilisation_hospital_admission_other_provided_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -2930,6 +3040,7 @@ def test_inpatient_admission_stabilisation_hospital_admission_other_provided_fai
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_inpatient_admission_dka_passes_validation(test_user, single_row_valid_df):
     """
     Test that inpatient admission for DKA with additional therapies is accepted
@@ -2973,6 +3084,7 @@ def test_inpatient_admission_dka_passes_validation(test_user, single_row_valid_d
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_inpatient_admission_dka_additional_therapies_missing_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -3018,6 +3130,7 @@ def test_inpatient_admission_dka_additional_therapies_missing_fails_validation(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_inpatient_admission_dka_additional_therapies_hospital_admission_also_provided_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -3063,6 +3176,7 @@ def test_inpatient_admission_dka_additional_therapies_hospital_admission_also_pr
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_inpatient_admission_other_passes_validation(test_user, single_row_valid_df):
     """
     Test that inpatient admission for other reason is accepted
@@ -3106,6 +3220,7 @@ def test_inpatient_admission_other_passes_validation(test_user, single_row_valid
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_inpatient_admission_other_missing_fails_validation(
     test_user, single_row_valid_df
 ):
@@ -3157,6 +3272,7 @@ Visit date tests
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_visit_date_provided_passes_validation(test_user, single_row_valid_df):
     """
     Test that a visit date is accepted
@@ -3175,6 +3291,7 @@ def test_visit_date_provided_passes_validation(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_visit_date_missing_fails_validation(test_user, single_row_valid_df):
     """
     Test that a missing Visit/Appointment Date is rejected
@@ -3193,6 +3310,7 @@ def test_visit_date_missing_fails_validation(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_visit_date_not_before_date_of_birth(test_user, single_row_valid_df):
     """
     Test that a Visit/Appointment Date before the date of birth is rejected
@@ -3215,6 +3333,7 @@ def test_visit_date_not_before_date_of_birth(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_visit_date_not_after_date_of_death(test_user, single_row_valid_df):
     """
     Test that a Visit/Appointment Date after the date of death is rejected
@@ -3237,6 +3356,7 @@ def test_visit_date_not_after_date_of_death(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_visit_date_not_before_diagnosis_date(test_user, single_row_valid_df):
     """
     Test that a Visit/Appointment Date before the date of diagnosis is rejected
@@ -3272,6 +3392,7 @@ def test_visit_date_not_before_diagnosis_date(test_user, single_row_valid_df):
     ],
 )
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_alternative_formats_for_sex(test_user, dummy_sheet_csv, alternative, expected):
     one_row_csv = modify_raw_csv(
         dummy_sheet_csv,
@@ -3289,6 +3410,7 @@ def test_alternative_formats_for_sex(test_user, dummy_sheet_csv, alternative, ex
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_mix_of_standard_and_alternative_formats_for_sex(test_user, dummy_sheet_csv):
     two_rows_csv = modify_raw_csv(
         dummy_sheet_csv,
@@ -3319,6 +3441,7 @@ def test_mix_of_standard_and_alternative_formats_for_sex(test_user, dummy_sheet_
     ],
 )
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_bad_data_for_ethnic_category(test_user, dummy_sheet_csv, value):
     one_row_csv = modify_raw_csv(
         dummy_sheet_csv,
@@ -3358,6 +3481,7 @@ def test_bad_data_for_ethnic_category(test_user, dummy_sheet_csv, value):
     ],
 )
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_bad_data_for_positive_small_integer_fields(
     test_user, dummy_sheet_csv, model_field
 ):
@@ -3417,6 +3541,7 @@ def test_bad_data_for_positive_small_integer_fields(
     ],
 )
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
     headings = csv_definition_for(model_field)
 
@@ -3468,6 +3593,7 @@ def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
     ],
 )
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_bad_data_for_date_fields(test_user, dummy_sheet_csv, model_field):
     headings = csv_definition_for(model_field)
 
@@ -3510,6 +3636,7 @@ def test_bad_data_for_date_fields(test_user, dummy_sheet_csv, model_field):
     ],
 )
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_bad_data_for_decimal_fields(test_user, dummy_sheet_csv, model_field):
     headings = csv_definition_for(model_field)
 
@@ -3536,6 +3663,7 @@ def test_bad_data_for_decimal_fields(test_user, dummy_sheet_csv, model_field):
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/999
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_non_breaking_space_in_iso_8859_1_csv(test_user, dummy_sheet_csv):
     """
     Test that a non-breaking space in an ISO-8859-1 CSV is handled correctly

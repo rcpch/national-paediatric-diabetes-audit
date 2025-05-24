@@ -136,7 +136,7 @@ INSTALLED_APPS = [
     "captcha",
     "citext",
     # application
-    "project.npda.apps.NpdaConfig", # Use the AppConfig path
+    "project.npda.apps.NpdaConfig",
     # oauth2 - after npda
     'oauth2_provider',
 ]

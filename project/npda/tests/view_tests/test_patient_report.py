@@ -5,7 +5,7 @@ from http import HTTPStatus
 
 # Python imports
 import pytest
-from django.db.models import Count
+from django.test import override_settings
 
 # 3rd party imports
 from django.urls import reverse
@@ -20,7 +20,6 @@ from project.npda.general_functions.data_generator_extended import (
 # E12 imports
 from project.npda.models import NPDAUser
 from project.npda.models.audit_period import AuditPeriod
-from project.npda.models.patient import Patient
 from project.npda.models.submission import Submission
 from project.npda.tests.constants_for_tests import ALDER_HEY_PZ_CODE
 from project.npda.tests.factories import test_user_rcpch_audit_team_data
@@ -29,7 +28,7 @@ from project.npda.urls import patient_report_urlpatterns
 
 logger = logging.getLogger(__name__)
 
-
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_anonymous_user_cannot_access_patient_report(
     client,
 ):
@@ -42,6 +41,7 @@ def test_anonymous_user_cannot_access_patient_report(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_no_duplicate_patients_in_report(
     seed_groups_fixture,
     seed_users_fixture,

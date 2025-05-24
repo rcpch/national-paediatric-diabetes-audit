@@ -1,7 +1,6 @@
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
-from django.views.generic import TemplateView
 from two_factor.urls import urlpatterns as tf_urls
 from .npda.views.npda_users import RCPCHLoginView
 from .npda.views import *
@@ -24,5 +23,4 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("", include(tf_urls)),
     path("", include("project.npda.urls")),
-    path("api/", include("project.npda.api.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

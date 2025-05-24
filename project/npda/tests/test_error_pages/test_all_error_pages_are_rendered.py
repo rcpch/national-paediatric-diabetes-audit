@@ -1,3 +1,4 @@
+from django.test import override_settings
 from django.test import SimpleTestCase, override_settings
 from django.urls import reverse
 
@@ -25,6 +26,7 @@ class CustomErrorHandlerTests(SimpleTestCase):
             self.assertEqual(response.status_code, 404)
             self.assertTemplateUsed(response, "errors/404.html")
 
+    @override_settings(SECURE_SSL_REDIRECT=False)
     def test_csrf_fail(self):
         response = self.client.get(reverse("csrf_fail"))
         self.assertEqual(response.status_code, 403)

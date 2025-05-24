@@ -1,4 +1,5 @@
 import pytest
+from django.test import override_settings
 
 # Django imports
 from django.apps import apps
@@ -59,6 +60,7 @@ def set_view_preference(client, view_preference, pz_code):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_users_can_only_see_patients_from_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
@@ -86,6 +88,7 @@ def test_users_can_only_see_patients_from_their_pdu(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_rcpch_audit_team_can_see_patients_from_all_pdus(
     seed_groups_fixture,
     seed_users_fixture,
@@ -123,6 +126,7 @@ def test_rcpch_audit_team_can_see_patients_from_all_pdus(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_user_with_unexpected_view_preference(
     seed_groups_fixture,
     seed_users_fixture,
@@ -158,6 +162,7 @@ def test_user_with_unexpected_view_preference(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_rcpch_audit_team_can_see_all_patients(
     seed_groups_fixture,
     seed_users_fixture,
@@ -190,6 +195,7 @@ def test_rcpch_audit_team_can_see_all_patients(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_users_can_only_edit_patients_from_their_own_pdu(
     seed_groups_fixture,
     seed_users_fixture,
@@ -215,6 +221,7 @@ def test_users_can_only_edit_patients_from_their_own_pdu(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_rcpch_audit_team_can_edit_patients_from_any_pdu(
     seed_groups_fixture,
     seed_users_fixture,
@@ -244,6 +251,7 @@ def test_rcpch_audit_team_can_edit_patients_from_any_pdu(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_users_can_only_see_patient_visits_from_their_own_pdu(
     seed_groups_fixture,
     seed_users_fixture,
@@ -269,6 +277,7 @@ def test_users_can_only_see_patient_visits_from_their_own_pdu(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_rcpch_audit_team_can_see_visits_from_all_pdus(
     seed_groups_fixture,
     seed_users_fixture,
@@ -298,6 +307,7 @@ def test_rcpch_audit_team_can_see_visits_from_all_pdus(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_users_can_only_edit_patient_visits_from_their_own_pdu(
     seed_groups_fixture,
     seed_users_fixture,
@@ -324,6 +334,7 @@ def test_users_can_only_edit_patient_visits_from_their_own_pdu(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_rcpch_audit_team_can_edit_visits_from_all_pdus(
     seed_groups_fixture,
     seed_users_fixture,

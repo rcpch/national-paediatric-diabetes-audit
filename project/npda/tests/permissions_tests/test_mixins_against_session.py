@@ -1,34 +1,27 @@
 """
 Test that users who do not have the can_upload_csv permission cannot save a patient through the questionnaire view.
 """
-import dataclasses
 import logging
-from datetime import date
 from decimal import Decimal
 from unittest.mock import Mock, patch
 
 # Django imports
 from django.contrib.sessions.middleware import SessionMiddleware
-from django.utils import timezone
 from django.urls import reverse
 from django.contrib.gis.geos import Point
 
 # 3rd party imports
 import pytest
+from django.test import override_settings
 
 # E12 imports
 from project.npda.tests.factories.patient_factory import PatientFactory, VALID_FIELDS
-from project.npda.tests.factories.paediatrics_diabetes_unit_factory import (
-    PaediatricsDiabetesUnitFactory,
-)
-from project.constants.user import RCPCH_AUDIT_TEAM
 from project.npda.forms.patient_form import PatientForm
 from project.npda.forms.visit_form import VisitForm
-from project.npda.models import NPDAUser, Visit, Patient, Transfer, AuditPeriod
+from project.npda.models import NPDAUser, Patient, Transfer, AuditPeriod
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 from project.npda.tests.utils import login_and_verify_user
 from project.npda.tests.UserDataClasses import test_user_audit_centre_editor_data
-from project.npda.general_functions import audit_period
 from project.npda.tests.factories.visit_factory import VisitFactory, COMPLETED_VISIT
 from project.npda.tests.factories.patient_factory import (
     VALID_FIELDS,
@@ -80,6 +73,7 @@ class TestQuestionnaireView:
                 yield None
 
     @pytest.fixture(autouse=True)
+    @override_settings(SECURE_SSL_REDIRECT=False)
     def setup(
         self, seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
     ):
