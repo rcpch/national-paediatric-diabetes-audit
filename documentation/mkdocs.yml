@@ -168,3 +168,5 @@ nav:
   - API:
     - API Overview: 'developer/api/api.md'
     - API Authentication: 'developer/api/authentication.md'
+    - API Endpoints: 'developer/api/endpoints.md'
+    - API Response: 'developer/api/response.md'
