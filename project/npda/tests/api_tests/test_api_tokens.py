@@ -195,25 +195,25 @@ class TestPatientAPIPermissions:
         ).first()
         
         # Create token with wrong scope
-        token = create_oauth2_token(user, oauth2_application, scopes="patient:write")
+        token = create_oauth2_token(user, oauth2_application, scopes="patient:write", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.token}')
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
         url = reverse("api:api_patient_list")
         response = api_client.get(url)
         
         assert response.status_code == HTTPStatus.FORBIDDEN
-        assert "required scopes" in response.data["detail"].lower()
+        assert "you do not have permission to perform this action." in response.data["detail"].lower()
 
     def test_patient_list_with_valid_read_scope(self, api_client, oauth2_application, seed_groups_fixture, seed_users_fixture):
         """Test that tokens with patient:read scope are accepted."""
         ah_pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
         user = NPDAUser.objects.filter(
-                organisation_employers__paediatric_diabetes_unit=ah_pdu
+                organisation_employers__pz_code=ah_pdu.pz_code
             ).first()
         
-        token = create_oauth2_token(user, oauth2_application, scopes="patient:read")
+        token = create_oauth2_token(user, oauth2_application, scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.token}')
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
         url = reverse("api:api_patient_list")
         response = api_client.get(url)
         
@@ -224,19 +224,48 @@ class TestPatientAPIPermissions:
         """Test that users only see patients from their assigned PDUs."""
         ah_pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
         ah_user = NPDAUser.objects.filter(
-                organisation_employers__paediatric_diabetes_unit=ah_pdu
+                organisation_employers__pz_code=ah_pdu.pz_code
             ).first()
         
         # Create patients in different PDUs
         ah_pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
         gosh_pdu = PaediatricDiabetesUnit.objects.get(pz_code=GOSH_PZ_CODE)
         
-        ah_patients = create_test_patients_in_pdu(ah_pdu, count=2)
-        gosh_patients = create_test_patients_in_pdu(gosh_pdu, count=2)
+        ah_patients = PatientFactory.create_batch(
+            size=2,
+            transfer__paediatric_diabetes_unit=ah_pdu,
+        )
+        gosh_patients = PatientFactory.create_batch(
+            size=2,
+            transfer__paediatric_diabetes_unit=gosh_pdu,
+        )
         
-        token = create_oauth2_token(ah_user, oauth2_application, scopes="patient:read")
+        for patient in ah_patients:
+            submission, _ = Submission.objects.get_or_create(
+                paediatric_diabetes_unit=ah_pdu,
+                submission_active=True,
+                defaults={
+                    'audit_year': timezone.now().year,
+                    'submission_date': timezone.now(),
+                    'submission_by': ah_user,
+                }
+            )
+            submission.patients.add(patient)
+        for patient in gosh_patients:
+            submission, _ = Submission.objects.get_or_create(
+                paediatric_diabetes_unit=gosh_pdu,
+                submission_active=True,
+                defaults={
+                    'audit_year': timezone.now().year,
+                    'submission_date': timezone.now(),
+                    'submission_by': ah_user,
+                }
+            )
+            submission.patients.add(patient)
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.token}')
+        token = create_oauth2_token(ah_user, oauth2_application, scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
+        
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
         url = reverse("api:api_patient_list")
         response = api_client.get(url)
         
@@ -246,6 +275,10 @@ class TestPatientAPIPermissions:
         nhs_numbers = [patient["nhs_number"] for patient in response.data]
         ah_nhs_numbers = [p.nhs_number for p in ah_patients]
         gosh_nhs_numbers = [p.nhs_number for p in gosh_patients]
+
+        print(f"Alder Hey NHS Numbers: {ah_nhs_numbers}")
+        print(f"GOSH NHS Numbers: {gosh_nhs_numbers}")
+        print(f"Response NHS Numbers: {nhs_numbers}")
         
         for nhs_number in ah_nhs_numbers:
             assert nhs_number in nhs_numbers
@@ -262,12 +295,12 @@ class TestPatientAPIPermissions:
         """Test that different user roles can access patient list with read scope."""
         ah_pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
         user = NPDAUser.objects.filter(
-                organisation_employers__paediatric_diabetes_unit=ah_pdu
+                organisation_employers__pz_code=ah_pdu.pz_code
             ).first()
         
-        token = create_oauth2_token(user, oauth2_application, scopes="patient:read")
+        token = create_oauth2_token(user, oauth2_application, scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.token}')
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
         url = reverse("api:api_patient_list")
         response = api_client.get(url)
         
@@ -286,9 +319,9 @@ class TestPatientAPIPermissions:
         ah_patients = create_test_patients_in_pdu(ah_pdu, count=2)
         gosh_patients = create_test_patients_in_pdu(gosh_pdu, count=2)
         
-        token = create_oauth2_token(rcpch_user, oauth2_application, scopes="patient:read")
+        token = create_oauth2_token(rcpch_user, oauth2_application, scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.token}')
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
         url = reverse("api:api_patient_list")
         response = api_client.get(url)
         
@@ -306,7 +339,7 @@ class TestPatientAPIPermissions:
         # Create user with multiple employers
         ah_pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
         user = NPDAUser.objects.filter(
-                organisation_employers__paediatric_diabetes_unit=ah_pdu
+                organisation_employers__pz_code=ah_pdu.pz_code
             ).first()
         
         gosh_pdu = PaediatricDiabetesUnit.objects.get(pz_code=GOSH_PZ_CODE)
@@ -321,9 +354,9 @@ class TestPatientAPIPermissions:
         ah_patients = create_test_patients_in_pdu(ah_pdu, count=2)
         gosh_patients = create_test_patients_in_pdu(gosh_pdu, count=2)
         
-        token = create_oauth2_token(user, oauth2_application, scopes="patient:read")
+        token = create_oauth2_token(user, oauth2_application, scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.token}')
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
         url = reverse("api:api_patient_list")
         response = api_client.get(url)
         
@@ -347,9 +380,9 @@ class TestPatientAPIResponseHeaders:
             organisation_employers__paediatric_diabetes_unit=ah_pdu
         ).first()
         
-        token = create_oauth2_token(user, oauth2_application, scopes="patient:read")
+        token = create_oauth2_token(user, oauth2_application, scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.token}')
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
         url = reverse("api:api_patient_list")
         response = api_client.get(url)
         
@@ -389,9 +422,9 @@ class TestPatientDetailAPI:
         patients = create_test_patients_in_pdu(ah_pdu, count=1)
         patient = patients[0]
         
-        token = create_oauth2_token(ah_user, oauth2_application, scopes="patient:read")
+        token = create_oauth2_token(ah_user, oauth2_application, scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.token}')
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
         url = reverse("api:api_patient_detail", kwargs={"pk": patient.nhs_number})
         response = api_client.get(url)
         
@@ -449,9 +482,9 @@ class TestPatientDetailAPI:
         gosh_patients = create_test_patients_in_pdu(gosh_pdu, count=1)
         patient = gosh_patients[0]
         
-        token = create_oauth2_token(ah_user, oauth2_application, scopes="patient:read")
+        token = create_oauth2_token(ah_user, oauth2_application, scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.token}')
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
         url = reverse("api:api_patient_detail", kwargs={"pk": patient.nhs_number})
         response = api_client.get(url)
         
@@ -464,9 +497,9 @@ class TestPatientDetailAPI:
             organisation_employers__pz_code=ALDER_HEY_PZ_CODE
         ).first()
         
-        token = create_oauth2_token(ah_user, oauth2_application, scopes="patient:read")
+        token = create_oauth2_token(ah_user, oauth2_application, scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.token}')
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
         url = reverse("api:api_patient_detail", kwargs={"pk": "9999999999"})  # Non-existent NHS number
         response = api_client.get(url)
         
@@ -486,9 +519,9 @@ class TestPatientAPIEdgeCases:
         ah_user.organisation_employers.clear()
         ah_user.save()
         
-        token = create_oauth2_token(ah_user, oauth2_application, scopes="patient:read")
+        token = create_oauth2_token(ah_user, oauth2_application, scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.token}')
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
         url = reverse("api:api_patient_list")
         response = api_client.get(url)
         
@@ -510,7 +543,7 @@ class TestPatientAPIEdgeCases:
             scope="patient:read",
         )
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.token}')
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
         url = reverse("api:api_patient_list")
         response = api_client.get(url)
         
@@ -522,9 +555,9 @@ class TestPatientAPIEdgeCases:
             organisation_employers__pz_code=ALDER_HEY_PZ_CODE
         )
         
-        token = create_oauth2_token(ah_users.first(), oauth2_application, scopes="patient:read patient:write")
-        
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.token}')
+        token = create_oauth2_token(ah_users.first(), oauth2_application, scopes="patient:read patient:write", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
+        print(f"Created token with scopes: {token.access_token}")
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
         url = reverse("api:api_patient_list")
         response = api_client.get(url)
         
