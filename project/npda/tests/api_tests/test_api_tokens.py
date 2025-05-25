@@ -28,6 +28,7 @@ from rest_framework.test import APIClient
 from project.npda.models import NPDAUser, Patient, Submission, Transfer
 from project.npda.models.organisation_employer import OrganisationEmployer
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
+from project.npda.models import PDUAccessTokenProfile
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
 from project.npda.tests.UserDataClasses import (
@@ -74,21 +75,27 @@ def api_client():
 
 def create_oauth2_token(user, application, scopes="patient:read", pdu=None):
     """Helper function to create OAuth2 tokens with specific scopes and PDU context."""
-    token = AccessToken.objects.create(
-        user=user,
-        application=application,
-        token=f"test-token-{user.id}-{scopes.replace(':', '-').replace(' ', '-')}",
-        expires=timezone.now() + timezone.timedelta(hours=1),
-        scope=scopes,
-    )
     
+    pdu_token = None
     # Mock PDU profile if provided
     if pdu:
-        token.pdu_profile = True
-        token.paediatric_diabetes_unit = pdu
-        token.save()
+        token = AccessToken.objects.create(
+            application=application,
+            token=f"test-token-{user.id}-{scopes.replace(':', '-').replace(' ', '-')}",
+            expires=timezone.now() + timezone.timedelta(hours=1),
+            scope=scopes,
+        )
+        pdu_token = PDUAccessTokenProfile.objects.create(
+            access_token=token,
+            paediatric_diabetes_unit=pdu,
+            description=f"Token for {user.username} in {pdu.pz_code}",
+            access_level="readonly",
+            is_active=True,
+            contact_email=user.email if user.email else None,
+            contact_name=user.get_full_name() if user.get_full_name() else user.username,
+        )
     
-    return token
+    return pdu_token
 
 def create_test_patients_in_pdu(pdu, count=3):
     """Helper function to create test patients in a specific PDU."""
@@ -367,23 +374,22 @@ class TestPatientAPIResponseHeaders:
         assert response.status_code == HTTPStatus.UNAUTHORIZED
         assert "Invalid token" in response.data["detail"] or "credentials" in response.data["detail"].lower()
 
-
+@pytest.mark.usefixtures("seed_groups_fixture", "seed_users_fixture", "seed_audit_periods_fixture")
 class TestPatientDetailAPI:
     """Test patient detail endpoint (GET /patients/{identifier}/)."""
 
-    def test_patient_detail_by_nhs_number(self, api_client, oauth2_application, seed_groups_fixture, seed_users_fixture):
+    def test_patient_detail_by_nhs_number(self, api_client, oauth2_application):
         """Test retrieving a patient by NHS number."""
-        ah_pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
-        user = NPDAUser.objects.filter(
-                organisation_employers__paediatric_diabetes_unit=ah_pdu
-            ).first()
+        ah_user = NPDAUser.objects.filter(
+            organisation_employers__pz_code=ALDER_HEY_PZ_CODE
+        ).first()
         
         # Create test patient
         ah_pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
         patients = create_test_patients_in_pdu(ah_pdu, count=1)
         patient = patients[0]
         
-        token = create_oauth2_token(user, oauth2_application, scopes="patient:read")
+        token = create_oauth2_token(ah_user, oauth2_application, scopes="patient:read")
         
         api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.token}')
         url = reverse("api:api_patient_detail", kwargs={"pk": patient.nhs_number})
@@ -392,12 +398,11 @@ class TestPatientDetailAPI:
         assert response.status_code == HTTPStatus.OK
         assert response.data["nhs_number"] == patient.nhs_number
 
-    def test_patient_detail_by_urn(self, api_client, oauth2_application, seed_groups_fixture, seed_users_fixture):
+    def test_patient_detail_by_urn(self, api_client, oauth2_application):
         """Test retrieving a patient by Unique Reference Number."""
-        ah_pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
-        user = NPDAUser.objects.filter(
-                organisation_employers__paediatric_diabetes_unit=ah_pdu
-            ).first()
+        ah_user = NPDAUser.objects.filter(
+            organisation_employers__pz_code="PZ248"  # Jersey PDU
+        ).first()
         
         # Create test patient with URN
         patient = PatientFactory(
@@ -405,38 +410,39 @@ class TestPatientDetailAPI:
             unique_reference_number="URN123456",
         )
         
-        ah_pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
+        jersey_pdu = PaediatricDiabetesUnit.objects.get(pz_code="PZ248") # Jersey PDU
         Transfer.objects.create(
             patient=patient,
-            paediatric_diabetes_unit=ah_pdu,
+            paediatric_diabetes_unit=jersey_pdu,
         )
         
         submission, _ = Submission.objects.get_or_create(
-            paediatric_diabetes_unit=ah_pdu,
+            paediatric_diabetes_unit=jersey_pdu,
             submission_active=True,
             defaults={
                 'audit_year': timezone.now().year,
                 'submission_date': timezone.now(),
-                'submission_by': user,
+                'submission_by': ah_user,
             }
         )
         submission.patients.add(patient)
         
-        token = create_oauth2_token(user, oauth2_application, scopes="patient:read")
-        
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.token}')
+        token = create_oauth2_token(ah_user, oauth2_application, scopes="patient:read", pdu=jersey_pdu)
+
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
         url = reverse("api:api_patient_detail", kwargs={"pk": patient.unique_reference_number})
         response = api_client.get(url)
+
+        print(f"Response data: {response.data}")  # Debugging output
         
         assert response.status_code == HTTPStatus.OK
         assert response.data["unique_reference_number"] == patient.unique_reference_number
 
-    def test_patient_detail_not_in_pdu_returns_404(self, api_client, oauth2_application, seed_groups_fixture, seed_users_fixture):
+    def test_patient_detail_not_in_pdu_returns_404(self, api_client, oauth2_application):
         """Test that patients not in user's PDU return 404."""
-        ah_pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
         ah_user = NPDAUser.objects.filter(
-                organisation_employers__paediatric_diabetes_unit=ah_pdu
-            ).first()
+            organisation_employers__pz_code=ALDER_HEY_PZ_CODE
+        ).first()
         
         # Create patient in different PDU
         gosh_pdu = PaediatricDiabetesUnit.objects.get(pz_code=GOSH_PZ_CODE)
@@ -452,14 +458,13 @@ class TestPatientDetailAPI:
         assert response.status_code == HTTPStatus.NOT_FOUND
         assert "not found in your accessible patients" in response.data["detail"]
 
-    def test_patient_detail_invalid_identifier_returns_404(self, api_client, oauth2_application, seed_groups_fixture, seed_users_fixture):
+    def test_patient_detail_invalid_identifier_returns_404(self, api_client, oauth2_application):
         """Test that invalid patient identifiers return 404."""
-        ah_pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
-        user = NPDAUser.objects.filter(
-                organisation_employers__paediatric_diabetes_unit=ah_pdu
-            ).first()
+        ah_user = NPDAUser.objects.filter(
+            organisation_employers__pz_code=ALDER_HEY_PZ_CODE
+        ).first()
         
-        token = create_oauth2_token(user, oauth2_application, scopes="patient:read")
+        token = create_oauth2_token(ah_user, oauth2_application, scopes="patient:read")
         
         api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.token}')
         url = reverse("api:api_patient_detail", kwargs={"pk": "9999999999"})  # Non-existent NHS number

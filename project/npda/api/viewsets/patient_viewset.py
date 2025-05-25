@@ -113,13 +113,6 @@ class PatientViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         if hasattr(self.request, 'pdu_profile') and self.request.pdu_profile:
             return self.request.paediatric_diabetes_unit
         
-        # Session-based authentication - get from session
-        pz_code = self.request.session.get("pz_code")
-        if pz_code:
-            from django.apps import apps
-            PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-            return PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-        
         return None
     
     def create(self, request, *args, **kwargs):
@@ -299,7 +292,6 @@ class PatientViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         """
         Internal method to handle both full and partial updates with comprehensive logging.
         """
-        print("Being called _perform_update")
         instance = self.get_object()
         patient_identifier = instance.nhs_number or instance.unique_reference_number or f"ID {instance.id}"
         
@@ -439,10 +431,13 @@ class PatientViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         """
         queryset = self.get_queryset() # the queryset is already filtered by user's PDUs
         lookup_value = self.kwargs.get('pk')  # DRF still uses 'pk' in kwargs
+
+        print(f"🔍 Looking up patient with identifier: {lookup_value}")
         
         if not lookup_value:
             raise Http404("No patient identifier provided")
         
+        print(self.get_pdu_for_request())
         # Try to find patient by NHS number first, then URN
         try:
             # URNs are only used in Jersey
