@@ -10,7 +10,7 @@ from oauth2_provider.contrib.rest_framework import TokenHasScope, TokenHasReadWr
 from django_filters.rest_framework import DjangoFilterBackend
 
 from project.npda.filtersets.patient_filterset import PatientFilter
-from project.npda.models import Patient, AuditPeriod,Transfer, Submission, NPDAUser
+from project.npda.models import Patient, AuditPeriod,Transfer, Submission, NPDAUser, PaediatricDiabetesUnit
 from project.npda.api.serializers.patient_serializer import PatientSerializer
 from project.npda.general_functions import get_audit_period_for_date
 from project.npda.api.response_metadata import NPDAResponseMixin
@@ -84,13 +84,17 @@ class PatientViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         elif not user.is_superuser and not user.is_rcpch_audit_team_member and not user.is_rcpch_staff:
             # Session-based authentication - filter by user's PDUs
             if hasattr(user, 'paediatric_diabetes_units'):
-                pdu_codes = user.paediatric_diabetes_units.values_list('pz_code', flat=True)
-                queryset = queryset.filter(paediatric_diabetes_unit__pz_code__in=pdu_codes)
-                print(f"🔐 Session-based PDU scoped query: {list(pdu_codes)}")
+                pdu_codes = user.paediatric_diabetes_units.values_list('paediatric_diabetes_unit__pz_code', flat=True)
+                paediatric_diabetes_units = PaediatricDiabetesUnit.objects.filter(pz_code__in=pdu_codes)
+                transfers = Transfer.objects.filter(
+                    paediatric_diabetes_unit__in=paediatric_diabetes_units,
+                    date_leaving_service__isnull=True,
+                    reason_leaving_service__isnull=True
+                )
+                queryset = queryset.filter(paediatric_diabetes_units__in=transfers)
             else:
-                # User has no assigned PDUs - return empty queryset
+                # User has no assigned PDUs - return empty queryset 
                 queryset = queryset.none()
-                print("⚠️ Session user has no assigned PDUs - returning empty queryset")
         
         else:
             # Superuser or RCPCH staff - can see all patients
