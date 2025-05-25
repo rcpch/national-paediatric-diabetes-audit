@@ -227,84 +227,137 @@ class VisitSerializer(serializers.ModelSerializer):
         Use VisitForm validation for all business logic validation.
         Patient is provided from the URL context, not from POST data.
         """
-        # Get patient from the viewset context (set by get_patient() method)
+        # Get patient from context (set by viewset)
         patient = self.context.get('patient')
         
-        if not patient and not self.instance:
-            # This should not happen if the viewset is set up correctly
+        if not patient:
             raise serializers.ValidationError({
-                'patient': 'Patient context not available. This visit must be created through /patients/{id}/visits/ endpoint.'
+                'patient': 'Patient context not available. This visit must be created through /api/v1/patients/{id}/visits/ endpoint.'
             })
         
-        # For updates, use the existing patient
+        # Prepare initial data with just the patient
+        initial_data = {
+            'patient': patient,
+        }
+        
+        # Create the form with proper initial data
         if self.instance:
-            patient = self.instance.patient
+            # For updates
+            form = VisitForm(
+                data=attrs,
+                initial=initial_data,
+                instance=self.instance
+            )
+        else:
+            # For creates
+            form = VisitForm(
+                data=attrs,
+                initial=initial_data
+            )
         
-        # Verify PDU access if context is available
-        user_pdu = self.context.get('paediatric_diabetes_unit')
-        if user_pdu and patient:
-            from project.npda.models import Transfer
-            
-            patient_pdus = Transfer.objects.filter(
-                patient=patient,
-                date_leaving_service__isnull=True  # Active transfers
-            ).values_list('paediatric_diabetes_unit', flat=True)
-            
-            if user_pdu.pk not in patient_pdus:
-                raise serializers.ValidationError({
-                    'patient': 'Patient is not accessible within your PDU scope'
-                })
-        
-        # Create VisitForm with patient in initial data
-        form_data = attrs.copy()
-        form_initial = {'patient': patient}
-        
-        # Create form instance
-        form_instance = self.instance if self.instance else None
-        
-        form = VisitForm(
-            data=form_data,
-            initial=form_initial,
-            instance=form_instance,
-        )
-        
-        # Run form validation - this will call all the clean methods and external validators
         if not form.is_valid():
-            # Convert form errors to serializer validation errors
-            form_errors = {}
-            for field, errors in form.errors.items():
-                if field == '__all__':
-                    # Non-field errors
-                    form_errors['non_field_errors'] = errors
-                else:
-                    form_errors[field] = errors
-            
-            raise serializers.ValidationError(form_errors)
+            # Convert form errors to DRF format
+            errors = {}
+            for field, field_errors in form.errors.items():
+                errors[field] = field_errors
+            if form.non_field_errors():
+                errors['non_field_errors'] = form.non_field_errors()
+            raise serializers.ValidationError(errors)
         
-        # Store the validated form instance for use in create/update
+        # Store the validated form to use in create/update
         self._validated_form = form
         
-        # Return the cleaned data from the form plus the patient
-        cleaned_data = form.cleaned_data.copy()
-        cleaned_data['patient'] = patient
-        
-        return cleaned_data
+        return attrs
     
     def create(self, validated_data):
         """
-        Create a visit instance using the form's save method to ensure
-        all external validation and calculations are applied.
+        Create a visit instance using the form's validated data.
+        Patient comes from the context.
         """
+        # Get patient from context
+        patient = self.context.get('patient')
+        
+        if not patient:
+            raise serializers.ValidationError({
+                'patient': 'Patient context not available. This visit must be created through /api/v1/patients/{id}/visits/ endpoint.'
+            })
+        
+        # Check if we have the validated form from the validate() method
         if hasattr(self, '_validated_form'):
-            return self._validated_form.save()
+            # Get the cleaned data from the form validation
+            cleaned_data = self._validated_form.cleaned_data.copy()
+            
+            # Add the patient foreign key to the cleaned data
+            cleaned_data['patient'] = patient
+            
+            # Create the visit instance using the cleaned form data
+            visit = Visit.objects.create(**cleaned_data)
+            
+            # Copy any calculated fields from the form's async validation results
+            if hasattr(self._validated_form, 'async_validation_results') and self._validated_form.async_validation_results:
+                results = self._validated_form.async_validation_results
+                
+                # Set BMI if calculated
+                if hasattr(results, 'bmi') and results.bmi:
+                    visit.bmi = results.bmi
+                
+                # Set centiles if calculated
+                for field_prefix in ['height', 'weight', 'bmi']:
+                    result = getattr(results, f'{field_prefix}_result', None)
+                    if result and not isinstance(result, Exception):
+                        if hasattr(result, 'centile'):
+                            setattr(visit, f'{field_prefix}_centile', result.centile)
+                        if hasattr(result, 'sds'):
+                            setattr(visit, f'{field_prefix}_sds', result.sds)
+                
+                # Save the visit with calculated fields
+                visit.save()
+            
+            return visit
         else:
-            return super().create(validated_data)
+            # This shouldn't happen if validate() was called properly
+            raise serializers.ValidationError({
+                'non_field_errors': 'Form validation failed. Please check all required fields.'
+            })
     
     def update(self, instance, validated_data):
         """
-        Update a visit instance using the form's save method.
+        Update a visit instance using the form's validated data.
+        Patient relationship should not change during updates.
         """
+        # Check if we have the validated form from the validate() method
         if hasattr(self, '_validated_form'):
-            return self._validated_form.save()
+            # Get the cleaned data from the form validation
+            cleaned_data = self._validated_form.cleaned_data.copy()
+            
+            # Remove patient from cleaned_data if it exists (patient shouldn't change)
+            cleaned_data.pop('patient', None)
+            
+            # Update the instance with cleaned data
+            for field, value in cleaned_data.items():
+                if hasattr(instance, field):
+                    setattr(instance, field, value)
+            
+            # Copy any calculated fields from the form's async validation results
+            if hasattr(self._validated_form, 'async_validation_results') and self._validated_form.async_validation_results:
+                results = self._validated_form.async_validation_results
+                
+                # Set BMI if calculated
+                if hasattr(results, 'bmi') and results.bmi:
+                    instance.bmi = results.bmi
+                
+                # Set centiles if calculated
+                for field_prefix in ['height', 'weight', 'bmi']:
+                    result = getattr(results, f'{field_prefix}_result', None)
+                    if result and not isinstance(result, Exception):
+                        if hasattr(result, 'centile'):
+                            setattr(instance, f'{field_prefix}_centile', result.centile)
+                        if hasattr(result, 'sds'):
+                            setattr(instance, f'{field_prefix}_sds', result.sds)
+            
+            # Save the updated instance
+            instance.save()
+            return instance
         else:
+            # Fallback to standard DRF update
             return super().update(instance, validated_data)

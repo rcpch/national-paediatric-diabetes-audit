@@ -132,13 +132,12 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         patient_identifier = patient.nhs_number or patient.unique_reference_number or f"ID {patient.id}"
         pdu = self.get_pdu_for_request()
         pdu_info = f" for PDU {pdu.pz_code}" if pdu else ""
-        logger.info(f"📋 Visit list requested for patient {patient_identifier} by {request.user.email}{pdu_info}")
+        logger.info(f"📋 Visit list requested for patient {patient_identifier} by {pdu}{pdu_info}")
         
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             response_data = self.get_paginated_response(serializer.data)
-            
             # Add metadata to paginated response
             if hasattr(response_data, 'data'):
                 return self.create_npda_response(
@@ -150,6 +149,7 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
             return response_data
         
         serializer = self.get_serializer(queryset, many=True)
+
         return self.create_npda_response(
             data=serializer.data,
             status=status.HTTP_200_OK,
@@ -163,9 +163,11 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         """
         patient = self.get_patient()
         instance = self.get_object()
+        pdu = self.get_pdu_for_request()
+        pdu_info = f" for PDU {pdu.pz_code}" if pdu else ""
         patient_identifier = patient.nhs_number or patient.unique_reference_number or f"ID {patient.id}"
         
-        logger.info(f"🔍 Visit {instance.id} retrieved for patient {patient_identifier} by {request.user.email}")
+        logger.info(f"🔍 Visit {instance.id} retrieved for patient {patient_identifier} by {pdu} ({pdu_info})")
         
         serializer = self.get_serializer(instance)
         return self.create_npda_response(
@@ -182,29 +184,21 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         """
         patient = self.get_patient()  # This validates PDU access
         
-        # No need to re-validate PDU since get_patient() already did it
         pdu = self.get_pdu_for_request()
         if not pdu:
             return Response(
                 {"detail": "No PDU context available for this request"}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         patient_identifier = patient.nhs_number or patient.unique_reference_number or f"ID {patient.id}"
-        logger.info(f"📝 Creating visit for patient {patient_identifier} in PDU {pdu.pz_code} by user {request.user.email}")
+        logger.info(f"📝 Creating visit for patient {patient_identifier} in PDU {pdu.pz_code}")
         
-        # Add patient identifier to request data automatically
-        request_data = request.data.copy()
-        if patient.nhs_number:
-            request_data['patient_nhs_number'] = patient.nhs_number
-        elif patient.unique_reference_number:
-            request_data['patient_unique_reference_number'] = patient.unique_reference_number
-        
-        # Use transaction to ensure atomicity
         with transaction.atomic():
-            serializer = self.get_serializer(data=request_data)
+            serializer = self.get_serializer(data=request.data)
             if serializer.is_valid(raise_exception=True):
-                self.perform_create(serializer)
+                # Call perform_create which will handle saving with patient
+                visit = self.perform_create(serializer)
                 
                 logger.info(f"✅ Visit created successfully for patient {patient_identifier}")
                 
@@ -214,16 +208,11 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
                     advisory_message=f"Visit created for patient {patient_identifier}",
                     advisory_type='info'
                 )
-            else:
-                return Response(
-                    serializer.errors, 
-                    status=status.HTTP_400_BAD_REQUEST
-                )
 
     def perform_create(self, serializer):
         """
         Save the visit record with all required validations.
-        The VisitForm handles all business logic validation and external validators.
+        The serializer handles patient assignment and VisitForm validation.
         """
         paediatric_diabetes_unit = self.get_pdu_for_request()
         
@@ -231,12 +220,15 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
             raise ValueError("No PDU context available for visit creation")
         
         try:
+            # Don't pass patient - it's already in serializer context
             visit = serializer.save()
             
             # Log successful creation with patient context
             patient_identifier = visit.patient.nhs_number or visit.patient.unique_reference_number or f"ID {visit.patient.id}"
             logger.info(f"✅ Visit {visit.id} successfully created for patient {patient_identifier} "
-                       f"via OAuth2 for PDU {paediatric_diabetes_unit.pz_code}")
+                    f"via OAuth2 for PDU {paediatric_diabetes_unit.pz_code}")
+            
+            return visit
             
         except Exception as e:
             logger.error(f"❌ Failed to create visit: {str(e)}")
@@ -247,8 +239,9 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         Handle PUT requests for full visit record updates.
         """
         patient = self.get_patient()
+        pdu = self.get_pdu_for_request()
         patient_identifier = patient.nhs_number or patient.unique_reference_number or f"ID {patient.id}"
-        logger.info(f"🔄 PUT request for visit update for patient {patient_identifier} by user {request.user.email}")
+        logger.info(f"🔄 PUT request for visit update for patient {patient_identifier} by{pdu}")
         return self._perform_update(request, partial=False, method="PUT", *args, **kwargs)
 
     def partial_update(self, request, *args, **kwargs):
@@ -256,8 +249,9 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         Handle PATCH requests for partial visit record updates.
         """
         patient = self.get_patient()
+        pdu = self.get_pdu_for_request()
         patient_identifier = patient.nhs_number or patient.unique_reference_number or f"ID {patient.id}"
-        logger.info(f"🔄 PATCH request for visit update for patient {patient_identifier} by user {request.user.email}")
+        logger.info(f"🔄 PATCH request for visit update for patient {patient_identifier} by {pdu}")
         return self._perform_update(request, partial=True, method="PATCH", *args, **kwargs)
 
     def _perform_update(self, request, partial=False, method="UPDATE", *args, **kwargs):
@@ -267,8 +261,9 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         patient = self.get_patient()
         instance = self.get_object()
         patient_identifier = patient.nhs_number or patient.unique_reference_number or f"ID {patient.id}"
+        pdu = self.get_pdu_for_request()
         
-        logger.info(f"🔄 {method} update attempt for visit {instance.id} (patient {patient_identifier}) by {request.user.email}")
+        logger.info(f"🔄 {method} update attempt for visit {instance.id} (patient {patient_identifier}) by {pdu}")
         
         # Log the fields being updated (for audit purposes)
         updated_fields = list(request.data.keys()) if hasattr(request, 'data') else []
@@ -313,6 +308,25 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
                 advisory_type='warning'
             )
     
+    def perform_update(self, serializer):
+        """
+        Save the updated visit record with all required validations.
+        The serializer handles patient validation and VisitForm validation.
+        """
+        try:
+            # The serializer's update() method handles all the form validation
+            visit = serializer.save()
+            
+            # Log successful update with patient context
+            patient_identifier = visit.patient.nhs_number or visit.patient.unique_reference_number or f"ID {visit.patient.id}"
+            logger.debug(f"✅ Visit {visit.id} successfully updated for patient {patient_identifier}")
+            
+            return visit
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to update visit: {str(e)}")
+            raise ValueError(f"Failed to update visit record: {str(e)}")
+    
     def get_serializer_context(self):
         """
         Provide context needed for form validation in the serializer.
@@ -323,6 +337,13 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         pdu = self.get_pdu_for_request()
         if pdu:
             context['paediatric_diabetes_unit'] = pdu
+        
+        try:
+            # Add patient context
+            patient = self.get_patient()
+            context['patient'] = patient
+        except Exception as e:
+            logger.error(f"Error retrieving patient for serializer context: {str(e)}")
         
         # Add audit period context
         try:

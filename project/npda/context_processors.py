@@ -1,5 +1,6 @@
 from datetime import datetime
 from django.conf import settings
+from django_auto_logout.context_processors import auto_logout_client
 from project.npda.models.audit_period import AuditPeriod
 
 
@@ -22,3 +23,18 @@ def context_from_settings(request):
         "site_contact_email": settings.SITE_CONTACT_EMAIL,
         "instance_label": settings.INSTANCE_LABEL
     }
+
+def conditional_auto_logout(request):
+    """
+    Only apply auto_logout context processor for non-API requests.
+    """
+    # Skip for API requests
+    if request.path.startswith('/api/'):
+        return {}
+    
+    # Import and call the original processor for web requests
+    try:
+        return auto_logout_client(request)
+    except AttributeError:
+        # Fallback if user is None
+        return {}
