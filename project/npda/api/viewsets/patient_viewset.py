@@ -431,18 +431,14 @@ class PatientViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         """
         queryset = self.get_queryset() # the queryset is already filtered by user's PDUs
         lookup_value = self.kwargs.get('pk')  # DRF still uses 'pk' in kwargs
-
-        print(f"🔍 Looking up patient with identifier: {lookup_value}")
         
         if not lookup_value:
             raise Http404("No patient identifier provided")
-        
-        print(self.get_pdu_for_request())
         # Try to find patient by NHS number first, then URN
         try:
             # URNs are only used in Jersey
             pdu = self.get_pdu_for_request()
-            if pdu and pdu.pz_code == 'JER':
+            if pdu and pdu.pz_code == 'PZ248':  # Jersey PDU code
                 patient = queryset.get(unique_reference_number=lookup_value)
             else:
                 patient = queryset.get(nhs_number=lookup_value)

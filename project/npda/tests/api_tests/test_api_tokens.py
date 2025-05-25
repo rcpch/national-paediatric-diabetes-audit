@@ -377,7 +377,7 @@ class TestPatientAPIResponseHeaders:
         """Test that responses include NPDA standard headers."""
         ah_pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
         user = NPDAUser.objects.filter(
-            organisation_employers__paediatric_diabetes_unit=ah_pdu
+            organisation_employers__pz_code=ah_pdu.pz_code
         ).first()
         
         token = create_oauth2_token(user, oauth2_application, scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
@@ -465,8 +465,6 @@ class TestPatientDetailAPI:
         api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
         url = reverse("api:api_patient_detail", kwargs={"pk": patient.unique_reference_number})
         response = api_client.get(url)
-
-        print(f"Response data: {response.data}")  # Debugging output
         
         assert response.status_code == HTTPStatus.OK
         assert response.data["unique_reference_number"] == patient.unique_reference_number
@@ -538,12 +536,21 @@ class TestPatientAPIEdgeCases:
         token = AccessToken.objects.create(
             user=user,
             application=oauth2_application,
-            token="expired-token-12345",
             expires=timezone.now() - timezone.timedelta(hours=1),  # Expired
             scope="patient:read",
         )
+
+        pdu_token = PDUAccessTokenProfile.objects.create(
+            access_token=token,
+            paediatric_diabetes_unit=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE),
+            description=f"Token for {user.username} in {ALDER_HEY_PZ_CODE}",
+            access_level="readonly",
+            is_active=True,
+            contact_email=user.email if user.email else None,
+            contact_name=user.get_full_name() if user.get_full_name() else user.username,
+        )
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {pdu_token.access_token}')
         url = reverse("api:api_patient_list")
         response = api_client.get(url)
         
