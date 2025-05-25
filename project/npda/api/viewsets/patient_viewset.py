@@ -349,45 +349,48 @@ class PatientViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
                 advisory_message=f"{method} update operation failed - please try again",
                 advisory_type='warning'
             )
+    
+    # DESTRUCTIVE ACTIONS ARE DISABLED FOR NOW
+    # This is untested and unclear right now why this would be needed
 
-    def destroy(self, request, *args, **kwargs):
-        """
-        Delete a patient record with PDU scope validation.
-        """
-        instance = self.get_object()
+    # def destroy(self, request, *args, **kwargs):
+    #     """
+    #     Delete a patient record with PDU scope validation.
+    #     """
+    #     instance = self.get_object()
         
-        # Verify the patient is in the accessible queryset
-        if instance not in self.get_queryset():
-            return self.create_npda_response(
-                data={"detail": "You do not have permission to delete this patient record"},
-                status=status.HTTP_403_FORBIDDEN,
-                advisory_message="Access denied - patient not in your PDU scope",
-                advisory_type='warning'
-            )
+    #     # Verify the patient is in the accessible queryset
+    #     if instance not in self.get_queryset():
+    #         return self.create_npda_response(
+    #             data={"detail": "You do not have permission to delete this patient record"},
+    #             status=status.HTTP_403_FORBIDDEN,
+    #             advisory_message="Access denied - patient not in your PDU scope",
+    #             advisory_type='warning'
+    #         )
         
-        # Store patient identifier before deletion
-        patient_identifier = instance.nhs_number or instance.unique_reference_number or f"ID {instance.id}"
+    #     # Store patient identifier before deletion
+    #     patient_identifier = instance.nhs_number or instance.unique_reference_number or f"ID {instance.id}"
         
-        try:
-            with transaction.atomic():
-                self.perform_destroy(instance)
+    #     try:
+    #         with transaction.atomic():
+    #             self.perform_destroy(instance)
             
-            # Success response for deletion
-            return self.create_npda_response(
-                data={"detail": "Patient record deleted successfully"},
-                status=status.HTTP_204_NO_CONTENT,
-                advisory_message=f"Patient {patient_identifier} permanently removed from system",
-                advisory_type='warning'  # Use warning for deletion as it's irreversible
-            )
+    #         # Success response for deletion
+    #         return self.create_npda_response(
+    #             data={"detail": "Patient record deleted successfully"},
+    #             status=status.HTTP_204_NO_CONTENT,
+    #             advisory_message=f"Patient {patient_identifier} permanently removed from system",
+    #             advisory_type='warning'  # Use warning for deletion as it's irreversible
+    #         )
             
-        except Exception as e:
-            logger.error(f"❌ Failed to delete patient {patient_identifier}: {str(e)}")
-            return self.create_npda_response(
-                data={"detail": "Failed to delete patient record"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                advisory_message="Delete operation failed - please try again",
-                advisory_type='warning'
-            )
+    #     except Exception as e:
+    #         logger.error(f"❌ Failed to delete patient {patient_identifier}: {str(e)}")
+    #         return self.create_npda_response(
+    #             data={"detail": "Failed to delete patient record"},
+    #             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    #             advisory_message="Delete operation failed - please try again",
+    #             advisory_type='warning'
+    #         )
 
     def get_serializer_context(self):
         """

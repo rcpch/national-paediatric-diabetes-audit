@@ -17,7 +17,7 @@ urlpatterns = [
         'get': 'retrieve',
         'put': 'update',
         'patch': 'partial_update',
-        'delete': 'destroy'
+        # 'delete': 'destroy' # DESTRUCTIVE METHOD: Uncomment if needed
     }), name='api_patient_detail'),
     
     # OAuth2 and auth endpoints
