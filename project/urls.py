@@ -23,4 +23,5 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("", include(tf_urls)),
     path("", include("project.npda.urls")),
+    path("api/v1/", include("project.npda.api.urls", namespace="api")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
