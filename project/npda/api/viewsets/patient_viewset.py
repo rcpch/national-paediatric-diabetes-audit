@@ -350,6 +350,16 @@ class PatientViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
                 advisory_type='warning'
             )
     
+    def destroy(self, request, *args, **kwargs):
+        """
+        Delete operations are not supported for visits.
+        Use the web interface for visit management.
+        """
+        return Response(
+            {"detail": "Delete operations are not supported for patients. Use the web interface for visit management."},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED
+        )
+    
     # DESTRUCTIVE ACTIONS ARE DISABLED FOR NOW
     # This is untested and unclear right now why this would be needed
 
