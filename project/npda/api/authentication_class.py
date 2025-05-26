@@ -2,6 +2,9 @@ from oauth2_provider.contrib.rest_framework import OAuth2Authentication
 from rest_framework import exceptions
 from django.utils import timezone
 from project.npda.models import PDUAccessTokenProfile
+import logging
+
+logger = logging.getLogger(__name__)
 
 class PDUScopedOAuth2Authentication(OAuth2Authentication):
     """
@@ -33,13 +36,20 @@ class PDUScopedOAuth2Authentication(OAuth2Authentication):
             if not pdu_profile.is_active:
                 raise exceptions.AuthenticationFailed('Token has been revoked')
                 
-            # Add PDU context to the request
+            # Add PDU context to the request (for backward compatibility)
             request.pdu_profile = pdu_profile
             request.paediatric_diabetes_unit = pdu_profile.paediatric_diabetes_unit
+            
+            # ✅ KEY FIX: Also attach to the token object for permission class access
+            token.pdu_profile = pdu_profile
+            
+            logger.debug(f"✅ PDU profile attached: {pdu_profile.access_level} for PDU {pdu_profile.paediatric_diabetes_unit.pz_code}")
             
         except PDUAccessTokenProfile.DoesNotExist:
             # Token exists but no PDU scoping
             request.pdu_profile = None
             request.paediatric_diabetes_unit = None
+            token.pdu_profile = None
+            logger.warning(f"❌ No PDU profile found for token {token.token}")
             
         return user, token

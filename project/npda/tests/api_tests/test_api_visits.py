@@ -70,12 +70,16 @@ def api_client():
     client = APIClient()
     return client
 
-def create_oauth2_token(user, application, scopes="patient:read", pdu=None):
-    """Helper function to create OAuth2 tokens with specific scopes and PDU context."""
+def create_oauth2_token(user, application, access_level="read", scopes="patient:read", pdu=None):
+    """
+    Helper function to create OAuth2 tokens with specific scopes and PDU context.
+    Access level can be 'read' or 'readwrite' or 'admin'.
+    """
     pdu_token = None
     # Mock PDU profile if provided
     if pdu:
         token = AccessToken.objects.create(
+            user=user,  
             application=application,
             token=f"test-token-{user.id}-{scopes.replace(':', '-').replace(' ', '-')}",
             expires=timezone.now() + timezone.timedelta(hours=1),
@@ -85,14 +89,11 @@ def create_oauth2_token(user, application, scopes="patient:read", pdu=None):
             access_token=token,
             paediatric_diabetes_unit=pdu,
             description=f"Token for {user.username} in {pdu.pz_code}",
-            access_level="readonly" if "read" in scopes else "readwrite",
+            access_level=access_level,
             is_active=True,
             contact_email=user.email if user.email else None,
             contact_name=user.get_full_name() if user.get_full_name() else user.username,
         )
-    
-    print(pdu_token)
-    print(scopes)
     
     return pdu_token
 
@@ -231,7 +232,7 @@ class TestVisitAPIPermissions:
         assert Visit.objects.all().count() == 4
         
         # Create token for Alder Hey user
-        token = create_oauth2_token(ah_user, oauth2_application, scopes="patient:read", pdu=ah_pdu)
+        token = create_oauth2_token(ah_user, oauth2_application, access_level="readwrite", scopes="patient:read", pdu=ah_pdu)
         
         api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
         
@@ -699,9 +700,9 @@ class TestVisitAPIUserRoles:
         # RCPCH user should have access to both PDUs
         
         # Use any PDU for token (RCPCH should see all)
-        token = create_oauth2_token(rcpch_user, oauth2_application, scopes="admin", pdu=ah_pdu)
+        token = create_oauth2_token(user=rcpch_user, application=oauth2_application, access_level="admin", scopes="patient:readwrite", pdu=ah_pdu)
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token.token}')
         
         # Should be able to access both PDU patients' visits
         ah_url = reverse("api:api_patient_visits", kwargs={"patient_pk": ah_patient.nhs_number})

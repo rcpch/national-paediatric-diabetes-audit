@@ -6,9 +6,10 @@ import logging
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from django.http import Http404
-from oauth2_provider.contrib.rest_framework import TokenHasScope, TokenHasReadWriteScope
-from django_filters.rest_framework import DjangoFilterBackend
 
+from django_filters.rest_framework import DjangoFilterBackend
+from project.npda.api.permissions import TokenHasPatientScopeAndPDUAccess
+from project.npda.api.authentication_class import PDUScopedOAuth2Authentication
 from project.npda.filtersets.patient_filterset import PatientFilter
 from project.npda.models import Patient, AuditPeriod,Transfer, Submission, NPDAUser, PaediatricDiabetesUnit
 from project.npda.api.serializers.patient_serializer import PatientSerializer
@@ -35,6 +36,11 @@ class PatientViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
     serializer_class = PatientSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = PatientFilter
+    authentication_classes = [PDUScopedOAuth2Authentication]
+    permission_classes = [TokenHasPatientScopeAndPDUAccess]
+
+    # Only allow read and write operations, no delete
+    http_method_names = ['get', 'post', 'put', 'patch', 'options', 'head']
 
     def get_permissions(self):
         """
@@ -42,66 +48,56 @@ class PatientViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         """
         if self.action in ['list', 'retrieve']:
             # Read operations - require read scope
-            permission_classes = [TokenHasScope]
+            permission_classes = [TokenHasPatientScopeAndPDUAccess]
             self.required_scopes = ['patient:read']
         else:
             # Write operations - require write scope
-            permission_classes = [TokenHasScope]
+            permission_classes = [TokenHasPatientScopeAndPDUAccess]
             self.required_scopes = ['patient:write']
         
         return [permission() for permission in permission_classes]
     
     def get_queryset(self):
         """
-        Filter patients based on authentication method and PDU access.
-        
-        For OAuth2 tokens with PDU profiles: Filter to the token's specific PDU
-        For session-based authentication: Filter to user's assigned PDUs
-        For superusers: Return all patients
+        Return all patients - permission class handles PDU scoping.
         """
-        user = self.request.user
-        
-        # Start with all patients
-        queryset = Patient.objects.all()
-        
-        # Check if this is an OAuth2 request with PDU scoping
-        if hasattr(self.request, 'pdu_profile') and self.request.pdu_profile:
-            # OAuth2 token with PDU profile - scope to the token's PDU
-            pdu = self.request.paediatric_diabetes_unit
-            if pdu:
-                queryset = queryset.filter(
-                    submissions__paediatric_diabetes_unit__pz_code=pdu.pz_code,
-                    submissions__paediatric_diabetes_unit__active=True
-                )
-                # Add debug info for development
-                print(f"🔐 OAuth2 PDU scoped query: {pdu.pz_code} ({pdu.lead_organisation_name})")
+        current_audit_dates = get_audit_period_for_date(timezone.now())
+        pdu = self.get_pdu_for_request()
+        if Submission.objects.filter(
+            submission_active=True,
+            audit_period__start_date__year=current_audit_dates[0].year,
+            audit_period__end_date__year=current_audit_dates[1].year,
+        ).exists():
+            # Get PDU context
+            if hasattr(self.request.auth, 'scope') and self.request.auth.scope:
+                token_scopes = self.request.auth.scope.split()
+                if 'admin:cross-pdu' in token_scopes:
+                    # Get the current submission for the active audit period
+                    current_submission = Submission.objects.get(
+                        submission_active=True,
+                        audit_period__start_date__year=current_audit_dates[0].year,
+                        audit_period__end_date__year=current_audit_dates[1].year,
+                    )
             else:
-                # Token exists but no PDU scoping - return empty queryset for safety
-                queryset = queryset.none()
-                print("⚠️ OAuth2 token found but no PDU scoping - returning empty queryset")
-        
-        # Apply PDU filtering for session-based authentication (non-superusers)
-        elif not user.is_superuser and not user.is_rcpch_audit_team_member and not user.is_rcpch_staff:
-            # Session-based authentication - filter by user's PDUs
-            if hasattr(user, 'paediatric_diabetes_units'):
-                pdu_codes = user.paediatric_diabetes_units.values_list('paediatric_diabetes_unit__pz_code', flat=True)
-                paediatric_diabetes_units = PaediatricDiabetesUnit.objects.filter(pz_code__in=pdu_codes)
-                transfers = Transfer.objects.filter(
-                    paediatric_diabetes_unit__in=paediatric_diabetes_units,
-                    date_leaving_service__isnull=True,
-                    reason_leaving_service__isnull=True
-                )
-                queryset = queryset.filter(paediatric_diabetes_units__in=transfers)
-            else:
-                # User has no assigned PDUs - return empty queryset 
-                queryset = queryset.none()
-        
+                # For session-based authentication, use the PDU from the request
+                if pdu:
+                    current_submission = Submission.objects.filter(
+                        paediatric_diabetes_unit=pdu,
+                        submission_active=True,
+                        audit_period__start_date__year=current_audit_dates[0].year,
+                        audit_period__end_date__year=current_audit_dates[1].year,
+                    ).first()
+                else:
+                    raise Http404("No PDU context available for this request")
+
+                return  current_submission.patients.all()
+            logger.warning("No active submission found for the current audit period")
+            return Patient.objects.none()  # No active submission found for the current audit period
         else:
-            # Superuser or RCPCH staff - can see all patients
-            print(f"🔐 Superuser/RCPCH staff access: {user.email}")
+            # No active submission for the current audit period
+            logger.warning("No active submission found for the current audit period")
+            return Patient.objects.none()
         
-        return queryset
-    
     def get_pdu_for_request(self):
         """
         Get the PDU for the current request based on authentication method.
@@ -115,6 +111,24 @@ class PatientViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         
         return None
     
+    def list(self, request, *args, **kwargs):
+        """
+        List all patients in the current PDU's active submission for the current audit period.
+        Uses the PatientFilter to apply any query parameters.
+        """
+        logger.info(f"🔍 Listing patients for PDU {self.get_pdu_for_request().pz_code if self.get_pdu_for_request() else 'unknown'}")
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        # Serialize the queryset
+        serializer = self.get_serializer(queryset, many=True)
+        
+        return self.create_npda_response(
+            data=serializer.data,
+            status=status.HTTP_200_OK,
+            advisory_message=f"{queryset.count()} patients list retrieved successfully",
+            advisory_type='info'
+        )
+
     def create(self, request, *args, **kwargs):
         """
         Create a new patient record with validation and proper associations.

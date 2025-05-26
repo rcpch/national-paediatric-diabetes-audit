@@ -344,14 +344,13 @@ REST_FRAMEWORK = {
 }
 OAUTH2_PROVIDER = {
     'SCOPES': {
-        'read': 'Read scope',
-        'write': 'Write scope',
-        'patient:read': 'Read patient data',
-        'patient:write': 'Write patient data',
+        'patient:read': 'Read patient and visit data',
+        'patient:write': 'Write patient and visit data',
+        'admin:cross-pdu': 'Admin access across all PDUs',  # Add this
     },
-    'ACCESS_TOKEN_EXPIRE_SECONDS': 86400,  # 24 hours (much more reasonable for API-to-API)
-    'REFRESH_TOKEN_EXPIRE_SECONDS': 86400 * 7,  # 7 days (not used in client credentials but good to set)
-    'REFRESH_TOKEN_GRACE_PERIOD_SECONDS': 120,  # 2 minutes grace period
+    'ACCESS_TOKEN_EXPIRE_SECONDS': 86400,
+    'REFRESH_TOKEN_EXPIRE_SECONDS': 86400 * 7,
+    'REFRESH_TOKEN_GRACE_PERIOD_SECONDS': 120,
     'ROTATE_REFRESH_TOKEN': True,
 }
 # Global settings for Django OAuth Toolkit (using default models)

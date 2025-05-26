@@ -13,6 +13,32 @@ NPDAUser = get_user_model()
 class Command(BaseCommand):
     help = 'Create a PDU-scoped API token for testing'
 
+    from django.core.management.base import BaseCommand
+
+class Command(BaseCommand):
+    help = 'Create OAuth2 tokens with PDU scoping'
+    
+    def get_scopes_for_access_level(self, access_level):
+        """
+        Map access levels to appropriate OAuth scopes.
+        Patient scopes cover both patient and visit data.
+        """
+        scope_mappings = {
+            'readonly': [
+                'patient:read'
+            ],
+            'readwrite': [
+                'patient:read', 
+                'patient:write'
+            ],
+            'admin': [
+                'patient:read', 
+                'patient:write',
+                'admin:cross-pdu'  # Special scope for cross-PDU access
+            ]
+        }
+        return ' '.join(scope_mappings.get(access_level, ['patient:read']))
+
     def add_arguments(self, parser):
         parser.add_argument('--user-email', type=str, required=True, help='Email of the user')
         parser.add_argument('--pz-code', type=str, required=True, help='PZ code of the PDU')
@@ -31,6 +57,14 @@ class Command(BaseCommand):
             # Get the PDU
             pdu = PaediatricDiabetesUnit.objects.get(pz_code=options['pz_code'])
             self.stdout.write(f"✅ Found PDU: {pdu.lead_organisation_name} ({pdu.pz_code})")
+
+            # Determine scopes: use provided scopes or auto-determine from access level
+            if options.get('scopes'):
+                token_scopes = options['scopes']
+                self.stdout.write(f"📝 Using provided scopes: {token_scopes}")
+            else:
+                token_scopes = self.get_scopes_for_access_level(options['access_level'])
+                self.stdout.write(f"🔧 Auto-determined scopes for '{options['access_level']}': {token_scopes}")
 
             # Get or create the application
             if options.get('create_application'):
@@ -90,7 +124,7 @@ class Command(BaseCommand):
                 application=application,
                 token=token_string,
                 expires=expires,
-                scope=options['scopes']
+                scope=token_scopes  # Use the determined scopes
             )
 
             # Create the PDU profile
@@ -106,7 +140,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS('\n🎉 Token created successfully!'))
             self.stdout.write(f"Token: {token_string}")
             self.stdout.write(f"Expires: {expires}")
-            self.stdout.write(f"Scopes: {options['scopes']}")
+            self.stdout.write(f"Scopes: {token_scopes}")
             self.stdout.write(f"PDU: {pdu.lead_organisation_name} ({pdu.pz_code})")
             self.stdout.write(f"Access Level: {options['access_level']}")
             self.stdout.write(f"Application: {application.name}")
@@ -120,6 +154,12 @@ class Command(BaseCommand):
                 is_active=True
             ).count()
             self.stdout.write(f"\n📊 Total active tokens for this PDU: {existing_tokens}")
+
+            # Show scope mapping for reference
+            self.stdout.write(self.style.WARNING('\n📚 Available access levels and their scopes:'))
+            for level in ['readonly', 'readwrite', 'admin']:
+                scopes = self.get_scopes_for_access_level(level)
+                self.stdout.write(f"   {level}: {scopes}")
 
         except NPDAUser.DoesNotExist:
             self.stdout.write(self.style.ERROR(f"❌ User with email '{options['user_email']}' not found"))

@@ -6,9 +6,10 @@ import logging
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from django.http import Http404
-from oauth2_provider.contrib.rest_framework import TokenHasScope, TokenHasReadWriteScope
 from django_filters.rest_framework import DjangoFilterBackend
 
+from project.npda.api.permissions import TokenHasPatientScopeAndPDUAccess
+from project.npda.api.authentication_class import PDUScopedOAuth2Authentication
 from project.npda.models import Visit, Patient, AuditPeriod, Transfer, Submission, NPDAUser, PaediatricDiabetesUnit
 from project.npda.api.serializers.visit_serializer import VisitSerializer
 from project.npda.general_functions import get_audit_period_for_date
@@ -34,6 +35,8 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
     """
     serializer_class = VisitSerializer
     filter_backends = [DjangoFilterBackend]
+    authentication_classes = [PDUScopedOAuth2Authentication]
+    permission_classes = [TokenHasPatientScopeAndPDUAccess]
     
     # Allow read and write operations, but no delete
     http_method_names = ['get', 'post', 'put', 'patch', 'options', 'head']
@@ -41,49 +44,66 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
     def get_permissions(self):
         """
         Instantiates and returns the list of permissions that this view requires.
-        Since visits are nested under patients, we inherit the same permission model.
         """
         if self.action in ['list', 'retrieve']:
             # Read operations - require read scope
-            permission_classes = [TokenHasScope]
+            permission_classes = [TokenHasPatientScopeAndPDUAccess]
             self.required_scopes = ['patient:read']
         else:
-            # Write operations - require write scope  
-            permission_classes = [TokenHasScope]
+            # Write operations - require write scope
+            permission_classes = [TokenHasPatientScopeAndPDUAccess]
             self.required_scopes = ['patient:write']
         
         return [permission() for permission in permission_classes]
 
+    # def get_patient(self):
+    #     """
+    #     Get the patient from the URL parameters.
+    #     Access control is handled by the permission class.
+    #     """
+    #     patient_pk = self.kwargs.get('patient_pk')
+    #     if not patient_pk:
+    #         raise Http404("No patient identifier provided")
+        
+    #     pdu = self.get_pdu_for_request()
+        
+    #     try:
+    #         # Find patient 
+    #         if pdu and pdu.pz_code == 'PZ248':  # Jersey PDU code
+    #             patient = Patient.objects.get(unique_reference_number=patient_pk)
+    #         else:
+    #             patient = Patient.objects.get(nhs_number=patient_pk)
+            
+    #         # Permission class already validated access - no need to recheck
+    #         return patient
+            
+    #     except Patient.DoesNotExist:
+    #         logger.warning(f"❌ Patient not found for identifier: {patient_pk}")
+    #         raise Http404(f"Patient with identifier '{patient_pk}' not found")
+        
+    #     except Patient.MultipleObjectsReturned:
+    #         logger.error(f"❌ Multiple patients found for identifier: {patient_pk}")
+    #         raise Http404(f"Multiple patients found for identifier '{patient_pk}'")
     def get_patient(self):
         """
-        Get the patient from the URL parameters and verify access.
-        This method handles all the PDU scoping validation.
+        Get the patient from the URL parameters.
+        Access control is handled by the permission class, so this just does lookup.
         """
         patient_pk = self.kwargs.get('patient_pk')
         if not patient_pk:
             raise Http404("No patient identifier provided")
         
-        # Get PDU for scoping
         pdu = self.get_pdu_for_request()
         
         try:
-            # Find patient with PDU scoping
+            # Find patient based on PDU context
             if pdu and pdu.pz_code == 'PZ248':  # Jersey PDU code
                 patient = Patient.objects.get(unique_reference_number=patient_pk)
             else:
                 patient = Patient.objects.get(nhs_number=patient_pk)
             
-            # Verify patient is in accessible PDU - this is the key security check
-            if pdu:
-                patient_pdus = Transfer.objects.filter(
-                    patient=patient,
-                    date_leaving_service__isnull=True,
-                    reason_leaving_service__isnull=True
-                ).values_list('paediatric_diabetes_unit', flat=True)
-                
-                if pdu.pk not in patient_pdus:
-                    raise Http404("Patient not accessible within your PDU scope")
-            
+            # Permission class already validated access - no need to recheck PDU scoping
+            logger.debug(f"✅ Patient {patient_pk} found for API access")
             return patient
             
         except Patient.DoesNotExist:
@@ -96,17 +116,19 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         """
-        Filter visits to only those belonging to the specified patient.
-        Since get_patient() already validates PDU access, we can trust this is secure.
+        Return visits for the specified patient.
+        Permission class handles all PDU scoping, so this is safe.
         """
-        patient = self.get_patient()  # This call validates PDU access
+        patient_pk = self.kwargs.get('patient_pk')
+        if not patient_pk:
+            return Visit.objects.none()
         
-        # Return visits for this specific patient, ordered by date
-        queryset = Visit.objects.filter(
-            patient=patient
-        ).select_related('patient').order_by('-visit_date', '-id')
-        
-        return queryset
+        try:
+            # Simple patient lookup - permission class will handle PDU scoping
+            patient = Patient.objects.get(nhs_number=patient_pk)
+            return Visit.objects.filter(patient=patient).select_related('patient').order_by('-visit_date', '-id')
+        except Patient.DoesNotExist:
+            return Visit.objects.none()
     
     def get_pdu_for_request(self):
         """
@@ -115,9 +137,9 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         Returns:
             PaediatricDiabetesUnit: The PDU to use for this request
         """
-        # OAuth2 token with PDU profile
-        if hasattr(self.request, 'pdu_profile') and self.request.pdu_profile:
-            return self.request.paediatric_diabetes_unit
+        # OAuth2 token with PDU profile - FIX: Look in request.auth
+        if hasattr(self.request.auth, 'pdu_profile') and self.request.auth.pdu_profile:
+            return self.request.auth.pdu_profile.paediatric_diabetes_unit 
         
         return None
     
@@ -131,8 +153,7 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         # Log the request for audit purposes
         patient_identifier = patient.nhs_number or patient.unique_reference_number or f"ID {patient.id}"
         pdu = self.get_pdu_for_request()
-        pdu_info = f" for PDU {pdu.pz_code}" if pdu else ""
-        logger.info(f"📋 Visit list requested for patient {patient_identifier} by {pdu}{pdu_info}")
+        logger.info(f"📋 Visit list requested for patient {patient_identifier} by {pdu}")
         
         page = self.paginate_queryset(queryset)
         if page is not None:
@@ -153,7 +174,7 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         return self.create_npda_response(
             data=serializer.data,
             status=status.HTTP_200_OK,
-            advisory_message=f"Retrieved {len(serializer.data)} visits for patient {patient_identifier}{pdu_info}",
+            advisory_message=f"Retrieved {len(serializer.data)} visits for patient {patient_identifier} from {pdu}",
             advisory_type='info'
         )
     

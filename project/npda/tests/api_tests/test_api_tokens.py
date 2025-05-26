@@ -25,7 +25,8 @@ from django.utils import timezone
 from oauth2_provider.models import Application, AccessToken
 from rest_framework.test import APIClient
 
-from project.npda.models import NPDAUser, Patient, Submission, Transfer
+from project.npda.general_functions import get_audit_period_for_date
+from project.npda.models import AuditPeriod, NPDAUser, Patient, Submission, Transfer
 from project.npda.models.organisation_employer import OrganisationEmployer
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 from project.npda.models import PDUAccessTokenProfile
@@ -73,7 +74,7 @@ def api_client():
     """Create an API client for testing."""
     return APIClient()
 
-def create_oauth2_token(user, application, scopes="patient:read", pdu=None):
+def create_oauth2_token(user, application, access_level="readonly", scopes="patient:read", pdu=None):
     """Helper function to create OAuth2 tokens with specific scopes and PDU context."""
     
     pdu_token = None
@@ -89,7 +90,7 @@ def create_oauth2_token(user, application, scopes="patient:read", pdu=None):
             access_token=token,
             paediatric_diabetes_unit=pdu,
             description=f"Token for {user.username} in {pdu.pz_code}",
-            access_level="readonly",
+            access_level=access_level,
             is_active=True,
             contact_email=user.email if user.email else None,
             contact_name=user.get_full_name() if user.get_full_name() else user.username,
@@ -239,15 +240,22 @@ class TestPatientAPIPermissions:
             size=2,
             transfer__paediatric_diabetes_unit=gosh_pdu,
         )
-        
+        current_audit_dates = get_audit_period_for_date(timezone.now())
+        audit_period = AuditPeriod.objects.create(
+            start_date=current_audit_dates[0],
+            end_date=current_audit_dates[1],
+            is_open=True,
+            is_visible=True,
+        )
         for patient in ah_patients:
             submission, _ = Submission.objects.get_or_create(
                 paediatric_diabetes_unit=ah_pdu,
                 submission_active=True,
                 defaults={
-                    'audit_year': timezone.now().year,
+                    'audit_period': audit_period,
                     'submission_date': timezone.now(),
                     'submission_by': ah_user,
+                    'audit_year': audit_period.start_date.year,
                 }
             )
             submission.patients.add(patient)
@@ -256,16 +264,20 @@ class TestPatientAPIPermissions:
                 paediatric_diabetes_unit=gosh_pdu,
                 submission_active=True,
                 defaults={
-                    'audit_year': timezone.now().year,
+                    'audit_period': audit_period,
                     'submission_date': timezone.now(),
                     'submission_by': ah_user,
+                    'audit_year': audit_period.start_date.year,
                 }
             )
             submission.patients.add(patient)
         
-        token = create_oauth2_token(ah_user, oauth2_application, scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
+        assert Submission.objects.filter(paediatric_diabetes_unit=ah_pdu, submission_active=True).get().patients.all().count() == 2
+        assert Submission.objects.filter(paediatric_diabetes_unit=gosh_pdu, submission_active=True).get().patients.all().count() == 2
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
+        token = create_oauth2_token(ah_user, oauth2_application, access_level="readonly", scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
+        
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token.token}')
         url = reverse("api:api_patient_list")
         response = api_client.get(url)
         

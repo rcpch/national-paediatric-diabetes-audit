@@ -83,11 +83,12 @@ Authorization: Bearer 9yWxnyYif8BiJN9BZPFFoCTvjh_a-yZHabmSathOqTM
 📊 Total active tokens for this PDU: 2
 ```
 
-#### Scope
+#### Scope and Access-Level
 
-Options include:
+Options for access_level include:
 `'readonly', 'readwrite', 'admin'`
-They should be space separated
+Options for scopes are more granular and should be space separated
+`patient:read patient:write admin:cross-pdu`
 
 #### How to use
 
