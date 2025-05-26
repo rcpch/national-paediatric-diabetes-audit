@@ -1,6 +1,14 @@
-from rest_framework import serializers
+# Django imports
 from django.core.exceptions import ValidationError as DjangoValidationError
-from project.npda.models import Visit, Patient, PaediatricDiabetesUnit
+
+# Django REST Framework imports
+from rest_framework import serializers
+
+# Third-party imports
+from drf_spectacular.utils import extend_schema_serializer, OpenApiExample
+
+#  RCPCH imports
+from project.npda.models import Visit
 from project.npda.forms.visit_form import VisitForm
 from project.constants import (
     SMOKING_STATUS,
@@ -16,7 +24,47 @@ from project.constants import (
     GLUCOSE_MONITORING_TYPES,
 )
 
-
+@extend_schema_serializer(
+    examples=[
+        OpenApiExample(
+            'Visit Example',
+            value={
+                "visit_date": "2023-10-01",
+                "height": 150.0,
+                "weight": 50.0,
+                "height_weight_observation_date": "2023-10-01",
+                "bmi": 22.2,
+                "hba1c": 48.0,
+                "hba1c_format": "mmol/mol",
+                "treatment": "insulin",
+                "closed_loop_system": 1,
+                "glucose_monitoring": 1,
+                "systolic_blood_pressure": 120,
+                "diastolic_blood_pressure": 80,
+                "retinal_screening_result": 1,
+                # Other fields...
+            },
+            description="Example of a visit record with various fields filled out.",
+            status_codes=["200"],
+        ),
+        OpenApiExample(
+            'Visit Creation Example',
+            value={
+                "visit_date": "2023-10-01",
+                "height": 150.0,
+                "weight": 50.0,
+                "height_weight_observation_date": "2023-10-01",
+                "hba1c": 48.0,
+                "hba1c_format": 2,  # 2 for mmol/mol
+                "hba1c_date": "2023-10-01",
+                "treatment": "insulin",
+                # Other fields...
+            },
+            description="Example of creating a visit record with mandatory fields.",
+            status_codes=["201"],
+        ),
+    ]
+)
 class VisitSerializer(serializers.ModelSerializer):
     """
     Serializer for the Visit model in nested patient context.

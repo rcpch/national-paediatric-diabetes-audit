@@ -1,13 +1,21 @@
-from django.apps import apps
-from django.db import transaction
-from django.utils import timezone
+# python imports
 import logging
 
+# django imports
+from django.apps import apps
+from django.db import transaction
+from django.http import Http404
+from django.utils import timezone
+
+# django rest framework imports
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
-from django.http import Http404
 
+# third-party imports
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+
+# RCPCH imports
 from project.npda.api.permissions import TokenHasPatientScopeAndPDUAccess
 from project.npda.api.authentication_class import PDUScopedOAuth2Authentication
 from project.npda.filtersets.patient_filterset import PatientFilter
@@ -116,6 +124,19 @@ class PatientViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         
         return None
     
+    @extend_schema(
+        responses={
+            200: PatientSerializer(many=True),
+            400: 'Bad Request',
+            403: 'Forbidden',
+            404: 'Not Found',
+            500: 'Internal Server Error'
+        },
+        operation_id='listPatients',
+        summary='List all patients in the current PDU\'s active submission for the current audit period.',
+        description='This endpoint retrieves all patients associated with the current PDU\'s active submission for the current audit period. It applies any query parameters using the PatientFilter.',
+        tags=['Patients'],
+    )
     def list(self, request, *args, **kwargs):
         """
         List all patients in the current PDU's active submission for the current audit period.
@@ -133,7 +154,52 @@ class PatientViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
             advisory_message=f"{queryset.count()} patients list retrieved successfully",
             advisory_type='info'
         )
+   
+    @extend_schema(
+        responses={
+            200: PatientSerializer,
+            400: 'Bad Request',
+            403: 'Forbidden',
+            404: 'Not Found',
+            500: 'Internal Server Error'
+        },
+        operation_id='retrievePatient',
+        summary='Retrieve a single patient record by NHS Number or Unique Reference Number.',
+        description='This endpoint retrieves a single patient record by NHS Number or Unique Reference Number. The patient must be associated with the current PDU\'s active submission for the current audit period.',
+        tags=['Patients'],
+    )
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Retrieve a single patient record by NHS Number or Unique Reference Number.
+        The patient must be associated with the current PDU's active submission for the current audit period.
+        """
+        logger.info(f"🔍 Retrieving patient with identifier {kwargs.get('pk')} for PDU {self.get_pdu_for_request().pz_code if self.get_pdu_for_request() else 'unknown'}")
+        instance = self.get_object()
+        
+        # Serialize the instance
+        serializer = self.get_serializer(instance)
+        
+        return self.create_npda_response(
+            data=serializer.data,
+            status=status.HTTP_200_OK,
+            advisory_message=f"Patient {instance.nhs_number} retrieved successfully",
+            advisory_type='info'
+        )
 
+    @extend_schema(
+        request=PatientSerializer,
+        responses={
+            201: PatientSerializer,
+            400: 'Bad Request',
+            403: 'Forbidden',
+            404: 'Not Found',
+            500: 'Internal Server Error'
+        },
+        operation_id='createPatient',
+        summary='Create a new patient record in the current PDU\'s active submission for the current audit period.',
+        description='This endpoint creates a new patient record, ensuring that the patient is valid and has no errors. The patient is associated with the correct PDU and added to the current audit year submission. NHS Number and Unique Reference Number are validated for uniqueness within the submission. Handles transfers if the patient exists in another PDU. Validates that there is an active audit period for this request.',
+        tags=['Patients'],
+    )
     def create(self, request, *args, **kwargs):
         """
         Create a new patient record with validation and proper associations.
@@ -292,6 +358,20 @@ class PatientViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
                 # The transaction.atomic() will automatically rollback all changes
                 raise ValueError(f"Failed to create patient record with required associations: {str(e)}")
     
+    @extend_schema(
+        request=PatientSerializer,
+        responses={
+            200: PatientSerializer,
+            400: 'Bad Request',
+            403: 'Forbidden',
+            404: 'Not Found',
+            500: 'Internal Server Error'
+        },
+        operation_id='updatePatient',
+        summary='Update an existing patient record in the current PDU\'s active submission for the current audit period.',
+        description='This endpoint updates an existing patient record, ensuring that the patient is valid and has no errors. The patient must be associated with the correct PDU and the update will be applied to the current audit year submission. NHS Number and Unique Reference Number are validated for uniqueness within the submission. Handles transfers if the patient exists in another PDU. Validates that there is an active audit period for this request.',
+        tags=['Patients'],
+    )
     def update(self, request, *args, **kwargs):
         """
         Handle PUT requests for full patient record updates.
@@ -299,7 +379,21 @@ class PatientViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         """
         logger.info(f"🔄 PUT request for patient update by user {request.user.id}")
         return self._perform_update(request, partial=False, method="PUT", *args, **kwargs)
-
+    
+    @extend_schema(
+        request=PatientSerializer,
+        responses={
+            200: PatientSerializer,
+            400: 'Bad Request',
+            403: 'Forbidden',
+            404: 'Not Found',
+            500: 'Internal Server Error'
+        },
+        operation_id='partialUpdatePatient',
+        summary='Partially update an existing patient record in the current PDU\'s active submission for the current audit period.',
+        description='This endpoint partially updates an existing patient record, allowing only provided fields to be updated. The patient must be associated with the correct PDU and the update will be applied to the current audit year submission. NHS Number and Unique Reference Number are validated for uniqueness within the submission. Handles transfers if the patient exists in another PDU. Validates that there is an active audit period for this request.',
+        tags=['Patients'],
+    )
     def partial_update(self, request, *args, **kwargs):
         """
         Handle PATCH requests for partial patient record updates.
@@ -378,48 +472,6 @@ class PatientViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
             {"detail": "Delete operations are not supported for patients. Use the web interface for visit management."},
             status=status.HTTP_405_METHOD_NOT_ALLOWED
         )
-    
-    # DESTRUCTIVE ACTIONS ARE DISABLED FOR NOW
-    # This is untested and unclear right now why this would be needed
-
-    # def destroy(self, request, *args, **kwargs):
-    #     """
-    #     Delete a patient record with PDU scope validation.
-    #     """
-    #     instance = self.get_object()
-        
-    #     # Verify the patient is in the accessible queryset
-    #     if instance not in self.get_queryset():
-    #         return self.create_npda_response(
-    #             data={"detail": "You do not have permission to delete this patient record"},
-    #             status=status.HTTP_403_FORBIDDEN,
-    #             advisory_message="Access denied - patient not in your PDU scope",
-    #             advisory_type='warning'
-    #         )
-        
-    #     # Store patient identifier before deletion
-    #     patient_identifier = instance.nhs_number or instance.unique_reference_number or f"ID {instance.id}"
-        
-    #     try:
-    #         with transaction.atomic():
-    #             self.perform_destroy(instance)
-            
-    #         # Success response for deletion
-    #         return self.create_npda_response(
-    #             data={"detail": "Patient record deleted successfully"},
-    #             status=status.HTTP_204_NO_CONTENT,
-    #             advisory_message=f"Patient {patient_identifier} permanently removed from system",
-    #             advisory_type='warning'  # Use warning for deletion as it's irreversible
-    #         )
-            
-    #     except Exception as e:
-    #         logger.error(f"❌ Failed to delete patient {patient_identifier}: {str(e)}")
-    #         return self.create_npda_response(
-    #             data={"detail": "Failed to delete patient record"},
-    #             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-    #             advisory_message="Delete operation failed - please try again",
-    #             advisory_type='warning'
-    #         )
 
     def get_serializer_context(self):
         """

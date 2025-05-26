@@ -1,10 +1,12 @@
 from oauth2_provider.contrib.rest_framework import OAuth2Authentication
 from rest_framework import exceptions
 from django.utils import timezone
+from drf_spectacular.authentication import OpenApiAuthenticationExtension
 from project.npda.models import PDUAccessTokenProfile
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 class PDUScopedOAuth2Authentication(OAuth2Authentication):
     """
@@ -53,3 +55,84 @@ class PDUScopedOAuth2Authentication(OAuth2Authentication):
             logger.warning(f"❌ No PDU profile found for token {token.token}")
             
         return user, token
+
+class PDUAuthenticationExtension(OpenApiAuthenticationExtension):
+    target_class = 'project.npda.api.authentication_class.PDUScopedOAuth2Authentication'
+    name = 'PDUScopedOAuth2Authentication'
+    match_subclasses = False
+
+    def get_security_definition(self, auto_schema):
+        return {
+            'type': 'oauth2',
+            'flows': {
+                'clientCredentials': {
+                    'tokenUrl': '/o/token/',
+                    'scopes': {
+                        'read:patient': 'Read access to PDU data',
+                        'write:patient': 'Write access to PDU data',
+                        'admin:cross-pdu': 'Administrative access to PDU data'
+                    }
+                }
+            }
+        }
+
+    def get_security_requirement(self, auto_schema):
+        return {'PDUScopedOAuth2Authentication': []}
+    def get_authentication(self, auto_schema):
+        return PDUScopedOAuth2Authentication()
+    def get_operation_security(self, auto_schema, operation):
+        # Ensure that the operation has the correct security requirements
+        if 'PDUScopedOAuth2Authentication' not in operation.security:
+            operation.security.append({'PDUScopedOAuth2Authentication': []})
+        return operation.security
+    def get_operation_parameters(self, auto_schema, operation):
+        # Add any additional parameters if needed
+        return operation.parameters
+    def get_operation_responses(self, auto_schema, operation):
+        # Ensure that the operation has the correct responses
+        if '401' not in operation.responses:
+            operation.responses['401'] = {
+                'description': 'Unauthorized',
+                'content': {
+                    'application/json': {
+                        'schema': {
+                            'type': 'object',
+                            'properties': {
+                                'detail': {
+                                    'type': 'string',
+                                    'example': 'Authentication credentials were not provided.'
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        return operation.responses
+    def get_operation_tags(self, auto_schema, operation):
+        # Ensure that the operation has the correct tags
+        if 'PDUScopedOAuth2Authentication' not in operation.tags:
+            operation.tags.append('PDUScopedOAuth2Authentication')
+        return operation.tags
+    def get_operation_summary(self, auto_schema, operation):
+        # Ensure that the operation has a summary
+        if not operation.summary:
+            operation.summary = 'PDU Scoped OAuth2 Authentication'
+        return operation.summary
+    def get_operation_description(self, auto_schema, operation):
+        # Ensure that the operation has a description
+        if not operation.description:
+            operation.description = 'This operation uses PDU Scoped OAuth2 Authentication.'
+        return operation.description
+    def get_operation_deprecated(self, auto_schema, operation):
+        # Ensure that the operation is not deprecated
+        if operation.deprecated is None:
+            operation.deprecated = False
+        return operation.deprecated
+    def get_operation_external_docs(self, auto_schema, operation):
+        # Ensure that the operation has external documentation if needed
+        if not operation.external_docs:
+            operation.external_docs = {
+                'description': 'Find out more about PDU Scoped OAuth2 Authentication',
+                'url': 'https://example.com/pdu-scoped-oauth2-authentication'
+            }
+        return operation.external_docs

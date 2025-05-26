@@ -1,8 +1,11 @@
+# Python imports
+
+# DRF imports
 from rest_framework import serializers
-from django.contrib.gis.geos import Point
+
+# RCPCH imports
 from project.npda.models import Patient, ETHNICITIES, DIABETES_TYPES, SEX_TYPE
 from project.npda.forms.patient_form import PatientForm
-
 
 class PatientSerializer(serializers.ModelSerializer):
     """

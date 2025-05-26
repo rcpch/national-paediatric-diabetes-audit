@@ -21,6 +21,9 @@ from dotenv import load_dotenv
 #  django imports
 from django.core.management.utils import get_random_secret_key
 
+from .constants import (
+    ETHNICITIES, DIABETES_TYPES, SEX_TYPE)
+
 # RCPCH imports
 from .logging_settings import (
     LOGGING,
@@ -122,6 +125,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # third party
     "django_filters",
+    "drf_spectacular",
     # django htmx
     "django_htmx",
     # 2fa
@@ -341,6 +345,7 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
     ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 OAUTH2_PROVIDER = {
     'SCOPES': {
@@ -361,7 +366,13 @@ OAUTH2_PROVIDER_REFRESH_TOKEN_MODEL = 'oauth2_provider.RefreshToken'
 
 SECURE_SSL_REDIRECT = True
 
-
+SPECTACULAR_SETTINGS = {
+    "TITLE": "National Paediatric Diabetes Audit API",
+    "DESCRIPTION": "API for the National Paediatric Diabetes Audit",
+    # 'OAUTH2_SCOPES':["patient:read", "patient:write", "admin:cross-pdu"],
+    "SWAGGER_UI_FAVICON_HREF": f"{STATICFILES_DIRS[0]}/favicon.ico",
+    "SERVE AUTHENTICATION": True,  # Enable authentication in the schema view
+}
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 

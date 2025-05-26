@@ -1,13 +1,22 @@
-from django.apps import apps
-from django.db import transaction
-from django.utils import timezone
+# Python imports
 import logging
 
-from rest_framework import viewsets, permissions, status
-from rest_framework.response import Response
+# Django imports
+from django.apps import apps
 from django.http import Http404
-from django_filters.rest_framework import DjangoFilterBackend
+from django.db import transaction
+from django.utils import timezone
+
+# Django REST Framework imports
+from rest_framework import viewsets, status
+from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
+
+# Third-party imports
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+
+# Local imports
 from project.npda.api.permissions import TokenHasPatientScopeAndPDUAccess
 from project.npda.api.authentication_class import PDUScopedOAuth2Authentication
 from project.npda.models import Visit, Patient, AuditPeriod, Transfer, Submission, NPDAUser, PaediatricDiabetesUnit
@@ -155,6 +164,24 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         
         return None
     
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='patient_pk',
+                type=str,
+            )
+        ],
+        responses={
+            200: VisitSerializer(many=True),
+            404: 'Not Found',
+            400: 'Bad Request',
+            500: 'Internal Server Error'
+        },
+        operation_id='list_visits',
+        summary='List Visits for Patient',
+        description='Retrieve a list of visits for the specified patient. The patient is identified by the `patient_pk` URL parameter. This endpoint supports pagination and filtering.',
+        tags=['Visits']
+    )
     def list(self, request, *args, **kwargs):
         """
         Return a list of visits for the specified patient.
@@ -190,6 +217,24 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
             advisory_type='info'
         )
     
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='patient_pk',
+                type=str,
+            )
+        ],
+        responses={
+            200: VisitSerializer,
+            404: 'Not Found',
+            400: 'Bad Request',
+            500: 'Internal Server Error'
+        },
+        operation_id='retrieve_visit',
+        summary='Retrieve Visit for Patient',
+        description='Retrieve a specific visit record for the specified patient. The patient is identified by the `patient_pk` URL parameter.',
+        tags=['Visits']
+    )
     def retrieve(self, request, *args, **kwargs):
         """
         Return a specific visit for the specified patient.
@@ -210,6 +255,24 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
             advisory_type='info'
         )
     
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='patient_pk',
+                type=str,
+            )
+        ],
+        request=VisitSerializer,
+        responses={
+            201: VisitSerializer,
+            400: 'Bad Request',
+            500: 'Internal Server Error'
+        },
+        operation_id='create_visit',
+        summary='Create Visit for Patient',
+        description='Create a new visit record for the specified patient. The patient is identified by the `patient_pk` URL parameter.',
+        tags=['Visits']
+    )
     def create(self, request, *args, **kwargs):
         """
         Create a new visit record for the specified patient.
@@ -267,6 +330,24 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
             logger.error(f"❌ Failed to create visit: {str(e)}")
             raise ValueError(f"Failed to create visit record: {str(e)}")
     
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='patient_pk',
+                type=str,
+            )
+        ],
+        request=VisitSerializer,
+        responses={
+            200: VisitSerializer,
+            400: 'Bad Request',
+            500: 'Internal Server Error'
+        },
+        operation_id='update_visit',
+        summary='Update Visit for Patient',
+        description='Update an existing visit record for the specified patient. The patient is identified by the `patient_pk` URL parameter.',
+        tags=['Visits']
+    )
     def update(self, request, *args, **kwargs):
         """
         Handle PUT requests for full visit record updates.
@@ -277,6 +358,24 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         logger.info(f"🔄 PUT request for visit update for patient {patient_identifier} by{pdu}")
         return self._perform_update(request, partial=False, method="PUT", *args, **kwargs)
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='patient_pk',
+                type=str,
+            )
+        ],
+        request=VisitSerializer,
+        responses={
+            200: VisitSerializer,
+            400: 'Bad Request',
+            500: 'Internal Server Error'
+        },
+        operation_id='partial_update_visit',
+        summary='Partial Update Visit for Patient',
+        description='Partially update an existing visit record for the specified patient. The patient is identified by the `patient_pk` URL parameter.',
+        tags=['Visits']
+    )
     def partial_update(self, request, *args, **kwargs):
         """
         Handle PATCH requests for partial visit record updates.
