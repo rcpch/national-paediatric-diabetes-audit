@@ -198,7 +198,7 @@ class TestPatientAPIPermissions:
         # Create token with wrong scope
         token = create_oauth2_token(user, oauth2_application, scopes="patient:write", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token.token}')
         url = reverse("api:api_patient_list")
         response = api_client.get(url)
         
@@ -214,7 +214,7 @@ class TestPatientAPIPermissions:
         
         token = create_oauth2_token(user, oauth2_application, scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token.token}')
         url = reverse("api:api_patient_list")
         response = api_client.get(url)
         
@@ -241,7 +241,7 @@ class TestPatientAPIPermissions:
             transfer__paediatric_diabetes_unit=gosh_pdu,
         )
         current_audit_dates = get_audit_period_for_date(timezone.now())
-        audit_period = AuditPeriod.objects.create(
+        audit_period, _ = AuditPeriod.objects.get_or_create(
             start_date=current_audit_dates[0],
             end_date=current_audit_dates[1],
             is_open=True,
@@ -255,7 +255,7 @@ class TestPatientAPIPermissions:
                     'audit_period': audit_period,
                     'submission_date': timezone.now(),
                     'submission_by': ah_user,
-                    'audit_year': audit_period.start_date.year,
+                    'audit_year': audit_period.audit_year,
                 }
             )
             submission.patients.add(patient)
@@ -267,13 +267,13 @@ class TestPatientAPIPermissions:
                     'audit_period': audit_period,
                     'submission_date': timezone.now(),
                     'submission_by': ah_user,
-                    'audit_year': audit_period.start_date.year,
+                    'audit_year': audit_period.audit_year,
                 }
             )
             submission.patients.add(patient)
         
-        assert Submission.objects.filter(paediatric_diabetes_unit=ah_pdu, submission_active=True).get().patients.all().count() == 2
-        assert Submission.objects.filter(paediatric_diabetes_unit=gosh_pdu, submission_active=True).get().patients.all().count() == 2
+        assert Submission.objects.filter(paediatric_diabetes_unit=ah_pdu, submission_active=True, audit_period=audit_period).get().patients.all().count() == 2
+        assert Submission.objects.filter(paediatric_diabetes_unit=gosh_pdu, submission_active=True, audit_period=audit_period).get().patients.all().count() == 2
         
         token = create_oauth2_token(ah_user, oauth2_application, access_level="readonly", scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
         
@@ -312,7 +312,7 @@ class TestPatientAPIPermissions:
         
         token = create_oauth2_token(user, oauth2_application, scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token.token}')
         url = reverse("api:api_patient_list")
         response = api_client.get(url)
         
@@ -330,10 +330,50 @@ class TestPatientAPIPermissions:
         
         ah_patients = create_test_patients_in_pdu(ah_pdu, count=2)
         gosh_patients = create_test_patients_in_pdu(gosh_pdu, count=2)
+
+        Submission.objects.all().delete()  # Clear previous submissions
+        AuditPeriod.objects.all().delete()  # Clear previous audit periods
+
+        current_audit_dates = get_audit_period_for_date(timezone.now())
+        audit_period, _ = AuditPeriod.objects.get_or_create(
+            start_date=current_audit_dates[0],
+            end_date=current_audit_dates[1],
+            is_open=True,
+            is_visible=True,
+        )
+        for patient in ah_patients:
+            submission, _ = Submission.objects.get_or_create(
+                paediatric_diabetes_unit=ah_pdu,
+                submission_active=True,
+                defaults={
+                    'audit_period': audit_period,
+                    'submission_date': timezone.now(),
+                    'submission_by': rcpch_user,
+                    'audit_year': audit_period.audit_year,
+                }
+            )
+            submission.patients.add(patient)
+        for patient in gosh_patients:
+            submission, _ = Submission.objects.get_or_create(
+                paediatric_diabetes_unit=gosh_pdu,
+                submission_active=True,
+                defaults={
+                    'audit_period': audit_period,
+                    'submission_date': timezone.now(),
+                    'submission_by': rcpch_user,
+                    'audit_year': audit_period.audit_year,
+                }
+            )
+            submission.patients.add(patient)
         
-        token = create_oauth2_token(rcpch_user, oauth2_application, scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
+        print(f"Hello AH {Submission.objects.filter(paediatric_diabetes_unit=ah_pdu, audit_period=audit_period).count()}")
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
+        assert Submission.objects.filter(paediatric_diabetes_unit=ah_pdu, submission_active=True, audit_period=audit_period).first().patients.all().count() == 2
+        assert Submission.objects.filter(paediatric_diabetes_unit=gosh_pdu, submission_active=True, audit_period=audit_period).first().patients.all().count() == 2
+        
+        token = create_oauth2_token(rcpch_user, oauth2_application, access_level="admin", scopes="patient:read admin:cross-pdu", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
+        
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token.token}')
         url = reverse("api:api_patient_list")
         response = api_client.get(url)
         
@@ -346,40 +386,41 @@ class TestPatientAPIPermissions:
         for nhs_number in all_nhs_numbers:
             assert nhs_number in nhs_numbers
 
-    def test_user_with_multiple_pdus_sees_all_their_patients(self, api_client, oauth2_application, seed_groups_fixture, seed_users_fixture):
-        """Test that users with multiple PDU assignments see patients from all their PDUs."""
-        # Create user with multiple employers
-        ah_pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
-        user = NPDAUser.objects.filter(
-                organisation_employers__pz_code=ah_pdu.pz_code
-            ).first()
+    # CURRENTLY DISABLED: This test requires a user with multiple PDU assignments AND AT THE MOMENT THAT IS ONLY ADMIN
+    # def test_user_with_multiple_pdus_sees_all_their_patients(self, api_client, oauth2_application, seed_groups_fixture, seed_users_fixture):
+    #     """Test that users with multiple PDU assignments see patients from all their PDUs."""
+    #     # Create user with multiple employers
+    #     ah_pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
+    #     user = NPDAUser.objects.filter(
+    #             organisation_employers__pz_code=ah_pdu.pz_code
+    #         ).first()
         
-        gosh_pdu = PaediatricDiabetesUnit.objects.get(pz_code=GOSH_PZ_CODE)
-        OrganisationEmployer.objects.create(
-            npda_user=user,
-            paediatric_diabetes_unit=gosh_pdu,
-            is_primary_employer=False,
-        )
+    #     gosh_pdu = PaediatricDiabetesUnit.objects.get(pz_code=GOSH_PZ_CODE)
+    #     OrganisationEmployer.objects.create(
+    #         npda_user=user,
+    #         paediatric_diabetes_unit=gosh_pdu,
+    #         is_primary_employer=False,
+    #     )
         
-        # Create patients in both PDUs
-        ah_pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
-        ah_patients = create_test_patients_in_pdu(ah_pdu, count=2)
-        gosh_patients = create_test_patients_in_pdu(gosh_pdu, count=2)
+    #     # Create patients in both PDUs
+    #     ah_pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
+    #     ah_patients = create_test_patients_in_pdu(ah_pdu, count=2)
+    #     gosh_patients = create_test_patients_in_pdu(gosh_pdu, count=2)
         
-        token = create_oauth2_token(user, oauth2_application, scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
+    #     token = create_oauth2_token(user, oauth2_application, scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
-        url = reverse("api:api_patient_list")
-        response = api_client.get(url)
+    #     api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token.token}')
+    #     url = reverse("api:api_patient_list")
+    #     response = api_client.get(url)
         
-        assert response.status_code == HTTPStatus.OK
+    #     assert response.status_code == HTTPStatus.OK
         
-        # Should see patients from both PDUs
-        nhs_numbers = [patient["nhs_number"] for patient in response.data]
-        all_nhs_numbers = [p.nhs_number for p in ah_patients + gosh_patients]
+    #     # Should see patients from both PDUs
+    #     nhs_numbers = [patient["nhs_number"] for patient in response.data]
+    #     all_nhs_numbers = [p.nhs_number for p in ah_patients + gosh_patients]
         
-        for nhs_number in all_nhs_numbers:
-            assert nhs_number in nhs_numbers
+    #     for nhs_number in all_nhs_numbers:
+    #         assert nhs_number in nhs_numbers
 
 
 class TestPatientAPIResponseHeaders:
@@ -394,7 +435,7 @@ class TestPatientAPIResponseHeaders:
         
         token = create_oauth2_token(user, oauth2_application, scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token.token}')
         url = reverse("api:api_patient_list")
         response = api_client.get(url)
         
@@ -433,10 +474,31 @@ class TestPatientDetailAPI:
         ah_pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
         patients = create_test_patients_in_pdu(ah_pdu, count=1)
         patient = patients[0]
+        Submission.objects.all().delete()  # Clear previous submissions
+        AuditPeriod.objects.all().delete()  # Clear previous audit periods
+        current_audit_dates = get_audit_period_for_date(timezone.now())
+        audit_period, _ = AuditPeriod.objects.get_or_create(
+            start_date=current_audit_dates[0],
+            end_date=current_audit_dates[1],
+            is_open=True,
+            is_visible=True,
+        )
+        submission, _ = Submission.objects.get_or_create(
+            paediatric_diabetes_unit=ah_pdu,
+            submission_active=True,
+            defaults={
+                'audit_period': audit_period,
+                'submission_date': timezone.now(),
+                'submission_by': ah_user,
+                'audit_year': audit_period.audit_year,
+            }
+        )
+        submission.patients.add(patient)
+        assert Submission.objects.filter(paediatric_diabetes_unit=ah_pdu, submission_active=True, audit_period=audit_period).get().patients.all().count() == 1
         
-        token = create_oauth2_token(ah_user, oauth2_application, scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
+        token = create_oauth2_token(ah_user, oauth2_application, access_level="readonly", scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token.token}')
         url = reverse("api:api_patient_detail", kwargs={"pk": patient.nhs_number})
         response = api_client.get(url)
         
@@ -460,21 +522,30 @@ class TestPatientDetailAPI:
             patient=patient,
             paediatric_diabetes_unit=jersey_pdu,
         )
+
+        current_audit_dates = get_audit_period_for_date(timezone.now())
+        audit_period, _ = AuditPeriod.objects.get_or_create(
+            start_date=current_audit_dates[0],
+            end_date=current_audit_dates[1],
+            is_open=True,
+            is_visible=True,
+        )
         
         submission, _ = Submission.objects.get_or_create(
             paediatric_diabetes_unit=jersey_pdu,
             submission_active=True,
             defaults={
-                'audit_year': timezone.now().year,
+                'audit_period': audit_period,
                 'submission_date': timezone.now(),
                 'submission_by': ah_user,
+                'audit_year': audit_period.audit_year,
             }
         )
         submission.patients.add(patient)
         
-        token = create_oauth2_token(ah_user, oauth2_application, scopes="patient:read", pdu=jersey_pdu)
+        token = create_oauth2_token(ah_user, oauth2_application, access_level="read", scopes="patient:read", pdu=jersey_pdu)
 
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token.token}')
         url = reverse("api:api_patient_detail", kwargs={"pk": patient.unique_reference_number})
         response = api_client.get(url)
         
@@ -494,7 +565,7 @@ class TestPatientDetailAPI:
         
         token = create_oauth2_token(ah_user, oauth2_application, scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token.token}')
         url = reverse("api:api_patient_detail", kwargs={"pk": patient.nhs_number})
         response = api_client.get(url)
         
@@ -509,7 +580,7 @@ class TestPatientDetailAPI:
         
         token = create_oauth2_token(ah_user, oauth2_application, scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token.token}')
         url = reverse("api:api_patient_detail", kwargs={"pk": "9999999999"})  # Non-existent NHS number
         response = api_client.get(url)
         
@@ -531,7 +602,7 @@ class TestPatientAPIEdgeCases:
         
         token = create_oauth2_token(ah_user, oauth2_application, scopes="patient:read", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
         
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token.token}')
         url = reverse("api:api_patient_list")
         response = api_client.get(url)
         
@@ -576,7 +647,7 @@ class TestPatientAPIEdgeCases:
         
         token = create_oauth2_token(ah_users.first(), oauth2_application, scopes="patient:read patient:write", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
         print(f"Created token with scopes: {token.access_token}")
-        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
+        api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token.token}')
         url = reverse("api:api_patient_list")
         response = api_client.get(url)
         

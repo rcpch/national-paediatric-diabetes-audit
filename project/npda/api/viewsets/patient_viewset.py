@@ -62,36 +62,41 @@ class PatientViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         Return all patients - permission class handles PDU scoping.
         """
         current_audit_dates = get_audit_period_for_date(timezone.now())
+        audit_period = AuditPeriod.objects.filter(
+            start_date = current_audit_dates[0],
+            end_date = current_audit_dates[1],
+            is_open=True,
+            is_visible=True,
+        ).first()
         pdu = self.get_pdu_for_request()
+        
         if Submission.objects.filter(
             submission_active=True,
-            audit_period__start_date__year=current_audit_dates[0].year,
-            audit_period__end_date__year=current_audit_dates[1].year,
+            audit_period=audit_period,
         ).exists():
             # Get PDU context
             if hasattr(self.request.auth, 'scope') and self.request.auth.scope:
                 token_scopes = self.request.auth.scope.split()
                 if 'admin:cross-pdu' in token_scopes:
                     # Get the current submission for the active audit period
-                    current_submission = Submission.objects.get(
-                        submission_active=True,
-                        audit_period__start_date__year=current_audit_dates[0].year,
-                        audit_period__end_date__year=current_audit_dates[1].year,
-                    )
-            else:
-                # For session-based authentication, use the PDU from the request
-                if pdu:
                     current_submission = Submission.objects.filter(
-                        paediatric_diabetes_unit=pdu,
                         submission_active=True,
-                        audit_period__start_date__year=current_audit_dates[0].year,
-                        audit_period__end_date__year=current_audit_dates[1].year,
+                        audit_period=audit_period,
                     ).first()
                 else:
-                    raise Http404("No PDU context available for this request")
+                    # For session-based authentication, use the PDU from the request
+                    if pdu:
+                        current_submission = Submission.objects.filter(
+                            paediatric_diabetes_unit=pdu,
+                            submission_active=True,
+                            audit_period=audit_period,
+                        ).first()
+                    else:
+                        raise Http404("No PDU context available for this request")
 
                 return  current_submission.patients.all()
-            logger.warning("No active submission found for the current audit period")
+            
+            logger.warning("No active submission found for the current audit period within the PDU scope")
             return Patient.objects.none()  # No active submission found for the current audit period
         else:
             # No active submission for the current audit period
