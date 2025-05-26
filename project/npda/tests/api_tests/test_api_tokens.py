@@ -141,7 +141,6 @@ def test_url_resolution(seed_groups_fixture, seed_users_fixture):
     # Test API URLs
     try:
         api_patient_list = reverse("api:api_patient_list")
-        print(f"API patient_list: {api_patient_list}")
         assert api_patient_list == "/api/v1/patients/"
     except Exception as e:
         print(f"API patient_list failed: {e}")
@@ -149,7 +148,6 @@ def test_url_resolution(seed_groups_fixture, seed_users_fixture):
     # Test web app URLs (if you have them)
     try:
         web_patient_list = reverse("patients")  # Use your actual web app URL name
-        print(f"Web patient list: {web_patient_list}")
         assert web_patient_list == "/patients/"
     except Exception as e:
         print(f"Web patient list failed: {e}")
@@ -288,10 +286,6 @@ class TestPatientAPIPermissions:
         ah_nhs_numbers = [p.nhs_number for p in ah_patients]
         gosh_nhs_numbers = [p.nhs_number for p in gosh_patients]
 
-        print(f"Alder Hey NHS Numbers: {ah_nhs_numbers}")
-        print(f"GOSH NHS Numbers: {gosh_nhs_numbers}")
-        print(f"Response NHS Numbers: {nhs_numbers}")
-        
         for nhs_number in ah_nhs_numbers:
             assert nhs_number in nhs_numbers
         
@@ -365,8 +359,6 @@ class TestPatientAPIPermissions:
                 }
             )
             submission.patients.add(patient)
-        
-        print(f"Hello AH {Submission.objects.filter(paediatric_diabetes_unit=ah_pdu, audit_period=audit_period).count()}")
         
         assert Submission.objects.filter(paediatric_diabetes_unit=ah_pdu, submission_active=True, audit_period=audit_period).first().patients.all().count() == 2
         assert Submission.objects.filter(paediatric_diabetes_unit=gosh_pdu, submission_active=True, audit_period=audit_period).first().patients.all().count() == 2
@@ -646,7 +638,6 @@ class TestPatientAPIEdgeCases:
         )
         
         token = create_oauth2_token(ah_users.first(), oauth2_application, scopes="patient:read patient:write", pdu=PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE))
-        print(f"Created token with scopes: {token.access_token}")
         api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token.token}')
         url = reverse("api:api_patient_list")
         response = api_client.get(url)

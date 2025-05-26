@@ -7,7 +7,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from django.http import Http404
 from django_filters.rest_framework import DjangoFilterBackend
-
+from rest_framework.exceptions import PermissionDenied
 from project.npda.api.permissions import TokenHasPatientScopeAndPDUAccess
 from project.npda.api.authentication_class import PDUScopedOAuth2Authentication
 from project.npda.models import Visit, Patient, AuditPeriod, Transfer, Submission, NPDAUser, PaediatricDiabetesUnit
@@ -40,6 +40,8 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
     
     # Allow read and write operations, but no delete
     http_method_names = ['get', 'post', 'put', 'patch', 'options', 'head']
+    raise_exception_on_empty = True  # Raise 404 if no visits found for patient
+    required_scopes = ['patient:read', 'patient:write']  # Default scopes for read/write operations
 
     def get_permissions(self):
         """
@@ -56,37 +58,10 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         
         return [permission() for permission in permission_classes]
 
-    # def get_patient(self):
-    #     """
-    #     Get the patient from the URL parameters.
-    #     Access control is handled by the permission class.
-    #     """
-    #     patient_pk = self.kwargs.get('patient_pk')
-    #     if not patient_pk:
-    #         raise Http404("No patient identifier provided")
-        
-    #     pdu = self.get_pdu_for_request()
-        
-    #     try:
-    #         # Find patient 
-    #         if pdu and pdu.pz_code == 'PZ248':  # Jersey PDU code
-    #             patient = Patient.objects.get(unique_reference_number=patient_pk)
-    #         else:
-    #             patient = Patient.objects.get(nhs_number=patient_pk)
-            
-    #         # Permission class already validated access - no need to recheck
-    #         return patient
-            
-    #     except Patient.DoesNotExist:
-    #         logger.warning(f"❌ Patient not found for identifier: {patient_pk}")
-    #         raise Http404(f"Patient with identifier '{patient_pk}' not found")
-        
-    #     except Patient.MultipleObjectsReturned:
-    #         logger.error(f"❌ Multiple patients found for identifier: {patient_pk}")
-    #         raise Http404(f"Multiple patients found for identifier '{patient_pk}'")
     def get_patient(self):
         """
-        Get the patient from the URL parameters.
+        Get the patient from the URL parameters for the current active submission.
+        One patient can be in multiple submissions, but we only need the one for this request.
         Access control is handled by the permission class, so this just does lookup.
         """
         patient_pk = self.kwargs.get('patient_pk')
@@ -94,13 +69,51 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
             raise Http404("No patient identifier provided")
         
         pdu = self.get_pdu_for_request()
+        token_scopes = self.request.auth.scope.split() if hasattr(self.request.auth, 'scope') else []
+        current_audit_dates = get_audit_period_for_date(timezone.now())
+        audit_period = AuditPeriod.objects.filter(
+            start_date = current_audit_dates[0],
+            end_date = current_audit_dates[1],
+            is_open=True,
+            is_visible=True,
+        ).first()
+
+        if Submission.objects.filter(
+            submission_active=True,
+            patients__nhs_number=patient_pk,
+            audit_period=audit_period
+        ).exists():
+            active_submission_for_this_patient = Submission.objects.filter(
+            submission_active=True,
+            patients__nhs_number=patient_pk,
+            audit_period=audit_period
+        )
+        elif Submission.objects.filter(
+            submission_active=True,
+            patients__unique_reference_number=patient_pk,
+            audit_period=audit_period
+        ).exists():
+            active_submission_for_this_patient = Submission.objects.filter(
+            submission_active=True,
+            patients__unique_reference_number=patient_pk,
+            audit_period=audit_period
+        )
+        else:
+            logger.warning(f"❌ No active submission found for patient {patient_pk}")
+            raise Http404(f"No active submission found for patient with identifier '{patient_pk}'")
+
+        if active_submission_for_this_patient.first().paediatric_diabetes_unit != pdu and  'admin:cross-pdu' not in token_scopes:
+            logger.debug(f"✅ Active submission found for patient {patient_pk} in PDU {pdu.pz_code}")
+            raise PermissionDenied(
+                f"Patient not accessible within your PDU scope"
+            )
         
         try:
             # Find patient based on PDU context
             if pdu and pdu.pz_code == 'PZ248':  # Jersey PDU code
-                patient = Patient.objects.get(unique_reference_number=patient_pk)
+                patient = active_submission_for_this_patient.first().patients.all().filter(unique_reference_number=patient_pk).get()
             else:
-                patient = Patient.objects.get(nhs_number=patient_pk)
+                patient = active_submission_for_this_patient.first().patients.all().filter(nhs_number=patient_pk).get()
             
             # Permission class already validated access - no need to recheck PDU scoping
             logger.debug(f"✅ Patient {patient_pk} found for API access")
@@ -116,8 +129,8 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         """
-        Return visits for the specified patient.
-        Permission class handles all PDU scoping, so this is safe.
+        Return visits for the specified patient in the current active submission.
+        Permission class handles all PDU scoping.
         """
         patient_pk = self.kwargs.get('patient_pk')
         if not patient_pk:
@@ -125,8 +138,8 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         
         try:
             # Simple patient lookup - permission class will handle PDU scoping
-            patient = Patient.objects.get(nhs_number=patient_pk)
-            return Visit.objects.filter(patient=patient).select_related('patient').order_by('-visit_date', '-id')
+            patient = self.get_patient()
+            return Visit.objects.filter(patient=patient).order_by('-visit_date', '-id')
         except Patient.DoesNotExist:
             return Visit.objects.none()
     
@@ -137,7 +150,6 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         Returns:
             PaediatricDiabetesUnit: The PDU to use for this request
         """
-        # OAuth2 token with PDU profile - FIX: Look in request.auth
         if hasattr(self.request.auth, 'pdu_profile') and self.request.auth.pdu_profile:
             return self.request.auth.pdu_profile.paediatric_diabetes_unit 
         
@@ -188,7 +200,7 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         pdu_info = f" for PDU {pdu.pz_code}" if pdu else ""
         patient_identifier = patient.nhs_number or patient.unique_reference_number or f"ID {patient.id}"
         
-        logger.info(f"🔍 Visit {instance.id} retrieved for patient {patient_identifier} by {pdu} ({pdu_info})")
+        logger.info(f"🔍 Visit {instance.id} retrieved for patient {patient_identifier} {pdu_info}")
         
         serializer = self.get_serializer(instance)
         return self.create_npda_response(

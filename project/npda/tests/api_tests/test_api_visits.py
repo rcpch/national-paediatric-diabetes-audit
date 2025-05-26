@@ -26,7 +26,7 @@ from oauth2_provider.models import Application, AccessToken
 from django.contrib.auth.models import AnonymousUser
 from rest_framework.test import APIClient
 
-from project.npda.models import NPDAUser, Patient, Submission, Transfer, Visit
+from project.npda.models import NPDAUser, Patient, Submission, Transfer, Visit, AuditPeriod
 from project.npda.models.organisation_employer import OrganisationEmployer
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 from project.npda.models import PDUAccessTokenProfile
@@ -38,6 +38,7 @@ from project.npda.tests.UserDataClasses import (
     test_user_audit_centre_reader_data,
     test_user_rcpch_audit_team_data,
 )
+from project.npda.general_functions import get_audit_period_for_date
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +105,8 @@ def create_test_patient_with_visits(pdu, visit_count=3):
         unique_reference_number=None,
         diagnosis_date="2024-01-01",
     )
+
+    Visit.objects.filter(visit_date__isnull=True).delete()  # Ensure no visits without date
     
     # Create transfer record
     Transfer.objects.create(
@@ -117,12 +120,21 @@ def create_test_patient_with_visits(pdu, visit_count=3):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=pdu.pz_code
     ).first()
+
+    audit_period_dates  = get_audit_period_for_date(timezone.now())  # Ensure audit period is set up
+    audit_period, _ = AuditPeriod.objects.get_or_create(
+        start_date=audit_period_dates[0],
+        end_date=audit_period_dates[1],
+        is_open=True,
+        is_visible=True,
+    )
     
     submission, _ = Submission.objects.get_or_create(
         paediatric_diabetes_unit=pdu,
         submission_active=True,
         defaults={
-            'audit_year': timezone.now().year,
+            'audit_period': audit_period,
+            'audit_year': audit_period.audit_year,
             'submission_date': timezone.now(),
             'submission_by': user,
         }
@@ -194,6 +206,29 @@ class TestVisitAPIPermissions:
         token = create_oauth2_token(user, oauth2_application, scopes="patient:read", pdu=ah_pdu)
         patient, visits = create_test_patient_with_visits(ah_pdu, visit_count=3)
         # the patient factory creates a patient with a visit without a date so we need to remove it
+
+        # Add the patient to a submission to ensure it is active
+        Submission.objects.all().delete()  # Clear previous submissions
+        AuditPeriod.objects.all().delete()  # Clear previous audit periods
+        current_audit_dates = get_audit_period_for_date(timezone.now())
+        audit_period, _ = AuditPeriod.objects.get_or_create(
+            start_date=current_audit_dates[0],
+            end_date=current_audit_dates[1],
+            is_open=True,
+            is_visible=True,
+        )
+        submission, _ = Submission.objects.get_or_create(
+            paediatric_diabetes_unit=ah_pdu,
+            submission_active=True,
+            defaults={
+                'audit_period': audit_period,
+                'submission_date': timezone.now(),
+                'submission_by': user,
+                'audit_year': audit_period.audit_year,
+            }
+        )
+        submission.patients.add(patient)
+
         Visit.objects.filter(patient=patient, visit_date__isnull=True).delete()
         assert Visit.objects.all().count() == 3
         
@@ -223,16 +258,25 @@ class TestVisitAPIPermissions:
         ah_user = NPDAUser.objects.filter(
             organisation_employers__pz_code=ALDER_HEY_PZ_CODE
         ).first()
+        gosh_user = NPDAUser.objects.filter(
+            organisation_employers__pz_code=GOSH_PZ_CODE
+        ).first()
         
         # Create patients and visits in different PDUs
-        ah_patient, ah_visits = create_test_patient_with_visits(ah_pdu, visit_count=2)
-        gosh_patient, gosh_visits = create_test_patient_with_visits(gosh_pdu, visit_count=2)
+        ah_patient, ah_visits = create_test_patient_with_visits(ah_pdu, visit_count=2) # create 2 visits for Alder Hey patient, register the patient in the submission
+        gosh_patient, gosh_visits = create_test_patient_with_visits(gosh_pdu, visit_count=2) # create 2 visits for Alder Hey patient, register the patient in the submission
+
+        assert Visit.objects.all().count() == 4  # Total visits across both PDUs
+        # Ensure both patients are in their respective submissions
+        assert ah_patient in Submission.objects.filter(paediatric_diabetes_unit=ah_pdu).first().patients.all()
+        assert gosh_patient in Submission.objects.filter(paediatric_diabetes_unit=gosh_pdu).first().patients.all()
+
+
         # the patient factory creates a patient with a visit without a date so we need to remove it
-        Visit.objects.filter(visit_date__isnull=True).delete()
         assert Visit.objects.all().count() == 4
         
         # Create token for Alder Hey user
-        token = create_oauth2_token(ah_user, oauth2_application, access_level="readwrite", scopes="patient:read", pdu=ah_pdu)
+        token = create_oauth2_token(ah_user, oauth2_application, access_level="read", scopes="patient:read", pdu=ah_pdu)
         
         api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
         
@@ -245,7 +289,7 @@ class TestVisitAPIPermissions:
         # Should NOT be able to access GOSH patient visits
         gosh_url = reverse("api:api_patient_visits", kwargs={"patient_pk": gosh_patient.nhs_number})
         gosh_response = api_client.get(gosh_url)
-        assert gosh_response.status_code == HTTPStatus.NOT_FOUND
+        assert gosh_response.status_code == HTTPStatus.FORBIDDEN
         assert "Patient not accessible within your PDU scope" in gosh_response.data["detail"]
 
     def test_visit_detail_requires_patient_read_scope(self, api_client, oauth2_application):
@@ -312,12 +356,21 @@ class TestVisitAPIPermissions:
             patient=patient,
             paediatric_diabetes_unit=jersey_pdu,
         )
+
+        audit_period_dates = get_audit_period_for_date(timezone.now())
+        audit_period, _ = AuditPeriod.objects.get_or_create(
+            start_date=audit_period_dates[0],
+            end_date=audit_period_dates[1],
+            is_open=True,
+            is_visible=True,
+        )
         
         submission, _ = Submission.objects.get_or_create(
             paediatric_diabetes_unit=jersey_pdu,
             submission_active=True,
             defaults={
-                'audit_year': timezone.now().year,
+                'audit_period': audit_period,
+                'audit_year': audit_period.audit_year,
                 'submission_date': timezone.now(),
                 'submission_by': user,
             }
@@ -325,7 +378,11 @@ class TestVisitAPIPermissions:
         submission.patients.add(patient)
         
         # Create a visit
-        visit = VisitFactory(patient=patient)
+        VisitFactory(patient=patient)
+
+        assert submission.patients.filter(unique_reference_number="URN123456").exists()
+        assert submission.patients.count() == 1
+        assert Visit.objects.filter(patient=patient).count() == 1
         
         token = create_oauth2_token(user, oauth2_application, scopes="patient:read", pdu=jersey_pdu)
         
@@ -424,7 +481,7 @@ class TestVisitAPIWriteOperations:
         url = reverse("api:api_patient_visits", kwargs={"patient_pk": gosh_patient.nhs_number})
         response = api_client.post(url, data=visit_data, format='json')
         
-        assert response.status_code == HTTPStatus.NOT_FOUND
+        assert response.status_code == HTTPStatus.FORBIDDEN
 
     def test_visit_create_with_invalid_data_returns_validation_errors(self, api_client, oauth2_application):
         """Test that invalid visit data returns proper validation errors."""
@@ -433,7 +490,7 @@ class TestVisitAPIWriteOperations:
             organisation_employers__pz_code=ALDER_HEY_PZ_CODE
         ).first()
         
-        token = create_oauth2_token(user, oauth2_application, scopes="patient:write", pdu=ah_pdu)
+        token = create_oauth2_token(user, oauth2_application, access_level="readwrite", scopes="patient:write", pdu=ah_pdu)
         
         patient, _ = create_test_patient_with_visits(ah_pdu, visit_count=0)
         
@@ -459,7 +516,7 @@ class TestVisitAPIWriteOperations:
         ).first()
         
         # Create token with only read scope
-        token = create_oauth2_token(user, oauth2_application, scopes="patient:read", pdu=ah_pdu)
+        token = create_oauth2_token(user, oauth2_application, access_level="readwrite", scopes="patient:read", pdu=ah_pdu)
         
         patient, visits = create_test_patient_with_visits(ah_pdu, visit_count=1)
         visit = visits[0]
@@ -555,7 +612,7 @@ class TestVisitAPIEdgeCases:
         response = api_client.get(url)
         
         assert response.status_code == HTTPStatus.NOT_FOUND
-        assert "Patient with identifier '9999999999' not found" in response.data["detail"]
+        assert "No active submission found for patient with identifier '9999999999'" in response.data["detail"]
 
     def test_visit_detail_for_nonexistent_visit(self, api_client, oauth2_application):
         """Test that requesting non-existent visit returns 404."""
@@ -700,7 +757,7 @@ class TestVisitAPIUserRoles:
         # RCPCH user should have access to both PDUs
         
         # Use any PDU for token (RCPCH should see all)
-        token = create_oauth2_token(user=rcpch_user, application=oauth2_application, access_level="admin", scopes="patient:readwrite", pdu=ah_pdu)
+        token = create_oauth2_token(user=rcpch_user, application=oauth2_application, access_level="admin", scopes="patient:read patient:write admin:cross-pdu", pdu=ah_pdu)
         
         api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token.token}')
         
