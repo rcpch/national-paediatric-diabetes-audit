@@ -93,6 +93,10 @@ def paediatric_diabetes_units_seeder():
                 pz_code=pdu["pz_code"],
                 defaults=default,
             )
+            if is_rcpch:
+                new_pdu.parent_ods_code = "PZ999"
+                new_pdu.parent = "Royal College of Paediatrics and Child Health"
+                new_pdu.save()
         except DatabaseError as e:
             logger.error(f"Error creating PaediatricDiabetesUnit: {e}")
             continue

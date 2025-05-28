@@ -1,6 +1,6 @@
 {% extends 'dashboard/components/bases/base_card.html' %}
 {% block card_title %}
-  Distribution of patients ({{ pdu_object.lead_organisation_name }} {{ pdu_object.pz_code }})
+  Distribution of patients - {{ pdu_object.parent_name }} ({{ pdu_object.pz_code }})
 {% endblock card_title %}
 {% block card_body %}
   <div hx-get="{% url 'get_map_chart_partial' %}"

@@ -186,7 +186,7 @@ class SubmissionsListView(
                     When(latest_submission_date__gte=F("quarter4_start"), latest_submission_date__lte=F("quarter4_end"), then=Value(4)),
                     output_field=IntegerField(),
                 ),
-            ).values("pz_code", "lead_organisation_name", "latest_submission_quarter")
+            ).values("pz_code", "parent_name", "latest_submission_quarter")
             column_chart = create_column_chart(paediatric_diabetes_units, selected_audit_year)
             context["column_chart"] = column_chart.to_html(full_html=False)
             context["submission_statistics"] = submission_stats(selected_audit_year)

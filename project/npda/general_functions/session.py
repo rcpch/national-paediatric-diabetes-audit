@@ -80,9 +80,11 @@ def create_session_object(user):
     submission_actions = get_submission_actions(pz_code, audit_period.audit_year())
     audit_period_data = get_audit_period_session_data(audit_period, user)
 
+    print(pdu_choices)
+
     session = {
         "pz_code": pz_code,
-        "lead_organisation": primary_organisation.paediatric_diabetes_unit.lead_organisation_name,
+        "parent": primary_organisation.paediatric_diabetes_unit.parent_name,
         "pdu_choices": list(pdu_choices),
         "selected_audit_year": audit_period.audit_year(),
     } | submission_actions | audit_period_data
@@ -93,7 +95,6 @@ def create_session_object(user):
 def refresh_session_filters(request, pz_code=None, audit_year=None, csv_upload=None, questionnaire=None):
     session = {}
 
-    Submission = apps.get_model("npda", "Submission")
     PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
     AuditPeriod = apps.get_model("npda", "AuditPeriod")
 
@@ -125,10 +126,10 @@ def refresh_session_filters(request, pz_code=None, audit_year=None, csv_upload=N
             raise PermissionDenied()
 
         session["pz_code"] = pz_code
-        session["lead_organisation"] = PaediatricDiabetesUnit.objects.get(
+        session["parent"] = PaediatricDiabetesUnit.objects.get(
             pz_code=pz_code,
             active=True
-        ).lead_organisation_name
+        ).parent_name
         session["pdu_choices"] = list(
             organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
                 requesting_user=user, user_instance=None

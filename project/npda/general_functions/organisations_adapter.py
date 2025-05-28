@@ -58,15 +58,13 @@ def paediatric_diabetes_units_to_populate_select_field(
             )
 
     return (
-        filtered_pdus.order_by("lead_organisation_name")
+        filtered_pdus.order_by("parent_name")
         .annotate(
-            paediatric_diabetes_unit_name=Concat(
-                F("lead_organisation_name"),
+            paediatric_diabetes_unit_name=
                 Case(
                     When(
                         parent_name__isnull=False,
                         then=Concat(
-                            Value(" - "),
                             F("parent_name"),
                             Value(" - "),
                             Upper(F("paediatric_diabetes_network_name")),
@@ -75,7 +73,6 @@ def paediatric_diabetes_units_to_populate_select_field(
                             output_field=CharField(),
                         ),
                     )
-                ),
             )
         )
         .values_list("pz_code", "paediatric_diabetes_unit_name")
