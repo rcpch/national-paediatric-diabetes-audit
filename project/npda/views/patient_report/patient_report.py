@@ -39,6 +39,7 @@ class TableCategories(Enum):
     CARE_AT_DIAGNOSIS = "care_at_diagnosis"
     ADMISSIONS = "admissions"
     TREATMENT = "treatment"
+    OUTCOMES = "outcomes"
 
     @classmethod
     def values(cls):
@@ -144,7 +145,9 @@ class PatientReportView(
             raise ValueError(f"Invalid category: {category}")
         self.selected_category = category
         pz_code = request.session.get("pz_code")
-        calculation_date = AuditPeriod.objects.get_audit_period_for_request(self.request).kpi_calculation_date()
+        calculation_date = AuditPeriod.objects.get_audit_period_for_request(
+            self.request
+        ).kpi_calculation_date()
         calculate_kpis = CalculateKPIS(
             calculation_date=calculation_date, return_pt_querysets=True
         )
@@ -176,7 +179,7 @@ class PatientReportView(
                 output_field=BooleanField(),
             )
         )
-        if self.selected_category == "health_checks":
+        if self.selected_category == TableCategories.HEALTH_CHECKS.value:
             pt_qs = pt_qs.annotate(
                 is_gte_12yo=Q(
                     date_of_birth__lte=calculation_date - relativedelta(years=12)
@@ -325,7 +328,7 @@ class PatientReportView(
                 "num_total",
                 "passed_retinal_screening",
             )
-        elif self.selected_category == "additional_care_processes":
+        elif self.selected_category == TableCategories.ADDITIONAL_CARE_PROCESSES.value:
             pt_qs = pt_qs.annotate(
                 hba1c_4plus=Case(
                     When(
@@ -447,7 +450,7 @@ class PatientReportView(
                 "influenza_immunisation_recommended",
                 "sick_day_rules_advice",
             )
-        elif self.selected_category == "care_at_diagnosis":
+        elif self.selected_category == TableCategories.CARE_AT_DIAGNOSIS.value:
             today = date.today()
             all_t1dm_pts = all_t1dm_pts.filter(
                 Q(diagnosis_date__gte=today - relativedelta(days=90))
@@ -507,7 +510,7 @@ class PatientReportView(
                     "carbohydrate_counting_education",
                 )
             )
-        elif self.selected_category == "admissions":
+        elif self.selected_category == TableCategories.ADMISSIONS.value:
             pt_qs = (
                 pt_qs.annotate(
                     number_of_admissions=Count(
@@ -559,7 +562,7 @@ class PatientReportView(
                 )
             )
             pt_qs = self._calculate_hba1c_values(pt_qs, calculation_date)
-        elif self.selected_category == "treatment":
+        elif self.selected_category == TableCategories.TREATMENT.value:
             pt_qs = pt_qs.annotate(
                 treatment_regimen=Case(
                     When(
@@ -750,7 +753,7 @@ class PatientReportView(
                 else:
                     patient["is_first_complete_year_of_care"] = False
             context["patients"] = patients
-        
+
         # Get the totals of each item of the health check data as well as the total
         # of those eligible for the health check
         total_passed_bmi = 0
@@ -769,7 +772,7 @@ class PatientReportView(
         total_eligible_foot_exam = 0
         if self.selected_category == TableCategories.HEALTH_CHECKS.value:
             for patient in context["patients"]:
-               if patient["is_complete_year_of_care"]:
+                if patient["is_complete_year_of_care"]:
                     total_passed_bmi += patient["passed_bmi"]
                     total_eligible_bmi += 1
                     total_passed_hba1c += patient["passed_hba1c"]
@@ -783,7 +786,9 @@ class PatientReportView(
                         # total_eligible_retinal_screening += 1
                         total_passed_blood_pressure += patient["passed_blood_pressure"]
                         total_eligible_blood_pressure += 1
-                        total_passed_urinary_albumin += patient["passed_urinary_albumin"]
+                        total_passed_urinary_albumin += patient[
+                            "passed_urinary_albumin"
+                        ]
                         total_eligible_urinary_albumin += 1
                         total_passed_foot_exam += patient["passed_foot_exam"]
                         total_eligible_foot_exam += 1
@@ -821,4 +826,3 @@ class PatientReportView(
                 return ["patient_report/health_checks_table_partial.html"]
 
         return ["patient_report/patient_report.html"]
-    
