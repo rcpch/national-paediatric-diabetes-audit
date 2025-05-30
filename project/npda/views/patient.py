@@ -349,7 +349,7 @@ class PatientCreateView(
         if (
             pdu.parent_name is not None
         ):  # if the PDU has a parent, include the parent name in the title
-            title = f"Add New Child to {pdu.parent_name} - {pdu.parent_name} ({pz_code})"
+            title = f"Add New Child to  {pdu.parent_name} ({pz_code})"
         context["title"] = title
         context["button_title"] = "Create New Child Patient Record"
         context["form_method"] = "create"
@@ -491,7 +491,7 @@ class PatientUpdateView(
         if (
             transfer.paediatric_diabetes_unit.parent_name is not None
         ):  # if the PDU has a parent, include the parent name in the title
-            title = f"Add New Child to {transfer.paediatric_diabetes_unit.parent_name} - {transfer.paediatric_diabetes_unit.parent_name} ({transfer.paediatric_diabetes_unit.pz_code})"
+            title = f"Add New Child to {transfer.paediatric_diabetes_unit.parent_name} ({transfer.paediatric_diabetes_unit.pz_code})"
         context["title"] = title
         context["button_title"] = "Save Changes"
         context["form_method"] = "update"
