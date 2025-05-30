@@ -11,11 +11,6 @@ from project.npda.models import PaediatricDiabetesUnit
 NPDAUser = get_user_model()
 
 class Command(BaseCommand):
-    help = 'Create a PDU-scoped API token for testing'
-
-    from django.core.management.base import BaseCommand
-
-class Command(BaseCommand):
     help = 'Create OAuth2 tokens with PDU scoping'
     
     def get_scopes_for_access_level(self, access_level):
