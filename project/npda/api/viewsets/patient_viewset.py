@@ -13,7 +13,7 @@ from rest_framework.response import Response
 
 # third-party imports
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 
 # RCPCH imports
 from project.npda.api.permissions import TokenHasPatientScopeAndPDUAccess
@@ -126,11 +126,73 @@ class PatientViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
     
     @extend_schema(
         responses={
-            200: PatientSerializer(many=True),
-            400: 'Bad Request',
-            403: 'Forbidden',
-            404: 'Not Found',
-            500: 'Internal Server Error'
+            200: OpenApiResponse(
+                description='List of patients',
+                examples=[
+                    OpenApiExample(
+                        'Patient List',
+                        value=[
+                            {
+                                "id": 1,
+                                "nhs_number": "1234567890",
+                                "unique_reference_number": "URN123456",
+                                "name": "John Doe",
+                                "dob": "2000-01-01",
+                                "pdu_code": "PZ001"
+                            },
+                            {
+                                "id": 2,
+                                "nhs_number": "0987654321",
+                                "unique_reference_number": "URN654321",
+                                "name": "Jane Smith",
+                                "dob": "2001-02-02",
+                                "pdu_code": "PZ001"
+                            }
+                        ],
+                        status_codes=[200]
+                    )
+                ]
+            ),
+            400: OpenApiResponse(
+                description='Bad Request',
+                examples=[
+                    OpenApiExample(
+                        'Invalid Query Parameters',
+                        value={"detail": "Invalid query parameters provided"},
+                        status_codes=[400]
+                    )
+                ]
+            ),
+            403: OpenApiResponse(
+                description='Forbidden',
+                examples=[
+                    OpenApiExample(
+                        'Access Denied',
+                        value={"detail": "You do not have permission to access this resource"},
+                        status_codes=[403]
+                    )
+                ]
+            ),
+            404: OpenApiResponse(
+                description='Not Found',
+                examples=[
+                    OpenApiExample(
+                        'No Active Submission',
+                        value={"detail": "No active submission found for the current audit period"},
+                        status_codes=[404]
+                    )
+                ]
+            ),
+            500: OpenApiResponse(
+                description='Internal Server Error',
+                examples=[
+                    OpenApiExample(
+                        'Server Error',
+                        value={"detail": "An unexpected error occurred while processing the request"},
+                        status_codes=[500]
+                    )
+                ]
+            )
         },
         operation_id='listPatients',
         summary='List all patients in the current PDU\'s active submission for the current audit period.',
@@ -384,10 +446,49 @@ class PatientViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         request=PatientSerializer,
         responses={
             200: PatientSerializer,
-            400: 'Bad Request',
-            403: 'Forbidden',
-            404: 'Not Found',
-            500: 'Internal Server Error'
+            400: OpenApiResponse(
+                description='Bad Request',
+                examples=[
+                    OpenApiExample(
+                        'Validation Error',
+                        value={
+                            "nhs_number": ["This field must be unique within the submission."],
+                            "unique_reference_number": ["This field must be unique within the submission."]
+                        },
+                        status_codes=[400]
+                    )
+                ]
+            ),
+            403: OpenApiResponse(
+                description='Forbidden',
+                examples=[
+                    OpenApiExample(
+                        'Access Denied',
+                        value={"detail": "You do not have permission to modify this patient record"},
+                        status_codes=[403]
+                    )
+                ]
+            ),
+            404: OpenApiResponse(
+                description='Not Found',
+                examples=[
+                    OpenApiExample(
+                        'Patient Not Found',
+                        value={"detail": "Patient with identifier '1234567890' not found in your accessible patients"},
+                        status_codes=[404]
+                    )
+                ]
+            ),
+            500: OpenApiResponse(
+                description='Internal Server Error',
+                examples=[
+                    OpenApiExample(
+                        'Update Failed',
+                        value={"detail": "Failed to patch update patient record"},
+                        status_codes=[500]
+                    )
+                ]
+            )
         },
         operation_id='partialUpdatePatient',
         summary='Partially update an existing patient record in the current PDU\'s active submission for the current audit period.',

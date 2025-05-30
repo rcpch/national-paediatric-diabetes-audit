@@ -22,7 +22,7 @@ from dotenv import load_dotenv
 from django.core.management.utils import get_random_secret_key
 
 from .constants import (
-    ETHNICITIES, DIABETES_TYPES, SEX_TYPE)
+    ETHNICITIES, DIABETES_TYPES, SEX_TYPE, YES_NO_UNKNOWN,)
 
 # RCPCH imports
 from .logging_settings import (
@@ -372,6 +372,9 @@ SPECTACULAR_SETTINGS = {
     # 'OAUTH2_SCOPES':["patient:read", "patient:write", "admin:cross-pdu"],
     "SWAGGER_UI_FAVICON_HREF": f"{STATICFILES_DIRS[0]}/favicon.ico",
     "SERVE AUTHENTICATION": True,  # Enable authentication in the schema view
+    "ENUM_NAME_OVERRIDES": {
+        "PsychologicalAdditionalSupportStatusEnum": YES_NO_UNKNOWN,
+    }
 }
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
