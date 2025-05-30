@@ -80,8 +80,6 @@ def create_session_object(user):
     submission_actions = get_submission_actions(pz_code, audit_period.audit_year())
     audit_period_data = get_audit_period_session_data(audit_period, user)
 
-    print(pdu_choices)
-
     session = {
         "pz_code": pz_code,
         "parent": primary_organisation.paediatric_diabetes_unit.parent_name,

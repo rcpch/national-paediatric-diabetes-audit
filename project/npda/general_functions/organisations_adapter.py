@@ -57,7 +57,7 @@ def paediatric_diabetes_units_to_populate_select_field(
                 npda_users__npda_user=requesting_user
             )
 
-    return (
+    pdu_choices = (
         filtered_pdus.order_by("parent_name")
         .annotate(
             paediatric_diabetes_unit_name=
@@ -77,3 +77,5 @@ def paediatric_diabetes_units_to_populate_select_field(
         )
         .values_list("pz_code", "paediatric_diabetes_unit_name")
     )
+
+    return pdu_choices
