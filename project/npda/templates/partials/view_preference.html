@@ -31,7 +31,7 @@
       {% for pdu_choice in pdu_choices %}
         <option value="{{ pdu_choice.0 }}"
                 {% if chosen_pdu == pdu_choice.0 %}selected="{{ chosen_pdu }}"{% endif %}>
-          {{ pdu_choice.1 }} [{{ pdu_choice.0 }}]
+          {{ pdu_choice.0 }} {{ pdu_choice.1 }}
         </option>
       {% endfor %}
     </select>
