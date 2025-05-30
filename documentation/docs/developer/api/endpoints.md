@@ -12,11 +12,11 @@ This is not a replacement for the OpenAPI spec.
 | GET |	/patients/{id}/	| retrieve | Get specific patient |
 | PUT |	/patients/{id}/	| update | Full update of patient |
 | PATCH |	/patients/{id}/ |	partial_update | Partial update of patient |
-| GET |	/patients/{id}/visit | list | Get all visits for a given patient |
-| POST |	/patients/{id}/visit | create | Create a visit for a given patient |
-| GET |	/patients/{id}/visit/{id} | retrieve | Retrieve a visit for a given patient |
-| PUT |	/patients/{id}/visit | update | Update a visit for a given patient |
-| PATCH |	/patients/{id}/visit | partial update | Partial update of a visit for a given patient |
+| GET |	/patients/{id}/visits/ | list | Get all visits for a given patient |
+| POST |	/patients/{id}/visits/ | create | Create a visit for a given patient |
+| GET |	/patients/{id}/visits/{id} | retrieve | Retrieve a visit for a given patient |
+| PUT |	/patients/{id}/visits/ | update | Update a visit for a given patient |
+| PATCH |	/patients/{id}/visits/ | partial update | Partial update of a visit for a given patient |
 
 The patient id accepted is the NHS number of the patient (or the Unique Reference Number if from Jersey). The visit id is the individual visit id and would need to be persisted by the user for later use.
 
@@ -73,7 +73,8 @@ curl -X POST \
     "bmi_centile": null
   }' \
   http://npda.localhost/api/v1/patients/0339520329/visits/
-  ```
+
+```
 
   Would yield:
 
@@ -129,6 +130,6 @@ curl -X POST \
 ]
 ```
 
-Note the `visit_id` is included and would need to be persisted for any subsequent `PATCH` or `PUT` requests to update the visit.
+Note the visit `id` is included and would need to be persisted for any subsequent `PATCH` or `PUT` requests to update the visit.
 
 The OpenAPI specification can be viewed at: `{{baseurl}}/api/v1/schema/docs/`
