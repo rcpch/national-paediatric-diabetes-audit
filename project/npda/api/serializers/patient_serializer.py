@@ -3,6 +3,9 @@
 # DRF imports
 from rest_framework import serializers
 
+# Third-party imports
+from drf_spectacular.utils import extend_schema_field
+
 # RCPCH imports
 from project.npda.models import Patient, ETHNICITIES, DIABETES_TYPES, SEX_TYPE
 from project.npda.forms.patient_form import PatientForm
@@ -73,6 +76,18 @@ class PatientSerializer(serializers.ModelSerializer):
             'location_wgs', 'location_bng', 'location_wgs84',
         ]
     
+    @extend_schema_field({
+        'type': 'object',
+        'nullable': True,
+        'properties': {
+            'type': {'type': 'string', 'enum': ['Point']},
+            'coordinates': {
+                'type': 'array',
+                'items': {'type': 'number'},
+                'example': [0.0, 0.0]
+            }
+        }
+    })
     def get_location_wgs(self, obj):
         """Convert PointField to GeoJSON format for the API"""
         if obj.location_wgs:
@@ -81,7 +96,19 @@ class PatientSerializer(serializers.ModelSerializer):
                 'coordinates': [obj.location_wgs.x, obj.location_wgs.y]
             }
         return None
-    
+
+    @extend_schema_field({
+        'type': 'object',
+        'nullable': True,
+        'properties': {
+            'type': {'type': 'string', 'enum': ['Point']},
+            'coordinates': {
+                'type': 'array',
+                'items': {'type': 'number'},
+                'example': [0.0, 0.0]
+            }
+        }
+    })
     def get_location_bng(self, obj):
         """Convert PointField to GeoJSON format for the API"""
         if obj.location_bng:
@@ -91,6 +118,18 @@ class PatientSerializer(serializers.ModelSerializer):
             }
         return None
     
+    @extend_schema_field({
+        'type': 'object',
+        'nullable': True,
+        'properties': {
+            'type': {'type': 'string', 'enum': ['Point']},
+            'coordinates': {
+                'type': 'array',
+                'items': {'type': 'number'},
+                'example': [0.0, 0.0]
+            }
+        }
+    })
     def get_location_wgs84(self, obj):
         """Convert PointField to GeoJSON format for the API"""
         if obj.location_wgs84:
@@ -99,7 +138,7 @@ class PatientSerializer(serializers.ModelSerializer):
                 'coordinates': [obj.location_wgs84.x, obj.location_wgs84.y]
             }
         return None
-    
+
     def validate(self, attrs):
         """
         Use the existing PatientForm validation logic for consistency.
@@ -130,7 +169,7 @@ class PatientSerializer(serializers.ModelSerializer):
         # Return the cleaned data from the form (this includes any modifications
         # made by the external validators)
         return form.cleaned_data
-    
+
     def create(self, validated_data):
         """
         Create a patient instance using the form's save method to ensure
@@ -155,7 +194,7 @@ class PatientSerializer(serializers.ModelSerializer):
         else:
             # Fallback to standard creation if form instance not available
             return super().create(validated_data)
-    
+
     def update(self, instance, validated_data):
         """
         Update a patient instance using the form's save method.
@@ -179,7 +218,7 @@ class PatientSerializer(serializers.ModelSerializer):
         else:
             # Fallback to standard update
             return super().update(instance, validated_data)
-    
+
     def _get_srid_for_field(self, field_name):
         """Helper method to get the SRID for a given field"""
         srid_mapping = {

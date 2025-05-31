@@ -14,7 +14,7 @@ from rest_framework.exceptions import PermissionDenied
 
 # Third-party imports
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 
 # Local imports
 from project.npda.api.permissions import TokenHasPatientScopeAndPDUAccess
@@ -173,9 +173,9 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         ],
         responses={
             200: VisitSerializer(many=True),
-            404: 'Not Found',
-            400: 'Bad Request',
-            500: 'Internal Server Error'
+            404: OpenApiResponse(description='Not Found'),
+            400: OpenApiResponse(description='Bad Request'),
+            500: OpenApiResponse(description='Internal Server Error')
         },
         operation_id='list_visits',
         summary='List Visits for Patient',
@@ -226,9 +226,9 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         ],
         responses={
             200: VisitSerializer,
-            404: 'Not Found',
-            400: 'Bad Request',
-            500: 'Internal Server Error'
+            404: OpenApiResponse(description='Not Found'),
+            400: OpenApiResponse(description='Bad Request'),
+            500: OpenApiResponse(description='Internal Server Error')
         },
         operation_id='retrieve_visit',
         summary='Retrieve Visit for Patient',
@@ -265,8 +265,10 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         request=VisitSerializer,
         responses={
             201: VisitSerializer,
-            400: 'Bad Request',
-            500: 'Internal Server Error'
+            400: OpenApiResponse(description='Bad Request'),
+            403: OpenApiResponse(description='Forbidden'),
+            404: OpenApiResponse(description='Not Found'),
+            500: OpenApiResponse(description='Internal Server Error')
         },
         operation_id='create_visit',
         summary='Create Visit for Patient',
@@ -340,8 +342,10 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         request=VisitSerializer,
         responses={
             200: VisitSerializer,
-            400: 'Bad Request',
-            500: 'Internal Server Error'
+            400: OpenApiResponse(description='Bad Request'),
+            403: OpenApiResponse(description='Forbidden'),
+            404: OpenApiResponse(description='Not Found'),
+            500: OpenApiResponse(description='Internal Server Error')
         },
         operation_id='update_visit',
         summary='Update Visit for Patient',
@@ -368,8 +372,9 @@ class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
         request=VisitSerializer,
         responses={
             200: VisitSerializer,
-            400: 'Bad Request',
-            500: 'Internal Server Error'
+            400: OpenApiResponse(description='Bad Request'),
+            404: OpenApiResponse(description='Not Found'),
+            500: OpenApiResponse(description='Internal Server Error')
         },
         operation_id='partial_update_visit',
         summary='Partial Update Visit for Patient',
