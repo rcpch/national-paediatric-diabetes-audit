@@ -151,4 +151,116 @@ curl -X GET \
   -H "Content-Type: application/json"
 ```
 
-The tokens last 24 hours and so will need refreshing on the client side.
+The tokens last 7 days and so will need refreshing on the client side. This can be changed in the oauth settings in `settings.py`.
+
+### Token Renewal
+
+The renewal process requires the unhashed `client_secret` and `client_id`. Be aware that the secret is hashed on save so must be stored before creation. To be converted to a token as above it needs first to be base64 encoded and can then be passed as a bearer token in the header. For token renewal though the secret and the id are required.
+
+!!! Important
+  **The `client_secret` in the request must not be hashed in the request**
+
+#### Client Credentials Grant Type: Token Renewal (/o/token/)
+
+When an access token obtained via the Client Credentials Grant Type expires, you simply request a new one by making the same POST call to the /o/token/ endpoint. There is no "refresh token" for this grant type.
+
+You can authenticate your client either by sending the client_id and client_secret in the Authorization header (Basic Auth) or directly in the request body (form data).
+
+1. Using Basic Authentication (Recommended for Security)
+
+This method sends your client_id and client_secret in a Base64 encoded Authorization header.
+
+- Endpoint: /o/token/
+- Method: POST
+- Content-Type: application/x-www-form-urlencoded
+- Authorization Header: Basic <base64_encoded_client_id:client_secret>
+- Body (Form Data): grant_type=client_credentials&scope=<your_scopes>
+
+curl Command:
+
+Bash
+
+```bash
+curl -X POST \
+  {{ baseURL }}/o/token/ \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -H 'Authorization: Basic <base64_encoded_client_id:client_secret>' \
+  -d 'grant_type=client_credentials&scope=patient:read'
+```
+
+How to get <base64_encoded_client_id:client_secret>:
+
+Replace YOUR_CLIENT_ID and YOUR_UNHASHED_CLIENT_SECRET with your actual values.
+
+Bash
+
+```bash
+# Example (replace with your actual client_id and client_secret)
+# client_id="4X5N7gkZ83IXtZVR2paHv8phtLtk62twp3ZcWD9g"
+# client_secret="V-0bcNrRBQObeBIFRdSyKwpVRA9vD6_6dfbZlFrnheE"
+
+# Encode them using Python (or a similar tool)
+# python -c "import base64; print(base64.b64encode(b'YOUR_CLIENT_ID:YOUR_UNHASHED_CLIENT_SECRET').decode('utf-8'))"
+
+# Example output of encoding:
+# NFg1Tjdna1o4M0lYdFpWUjJwYUh2OHBodEx0azYydHdwM1pjV0Q5ZzpwYmtkZjJfc2hhMjU2JDEwMDAwMDAkcG9FYW1DcDRiNndYZnFxeDg3emNTUSR2N042RzlCdHE5bWxvc05rZVlzQVJLbml0aFFhM2RHWktadGtKdDlUWmxvPQ==
+# (Use the actual base64 encoded string you get)
+```
+
+Example curl with placeholder encoded credentials:
+
+Bash
+
+```bash
+curl -X POST \
+  {{ baseURL }}/o/token/ \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -H 'Authorization: Basic NFg1Tjdna1o4M0lYdFpWUjJwYUh2OHBodEx0azYydHdwM1pjV0Q5ZzpwYmtkZjJfc2hhMjU2JDEwMDAwMDAkcG9FYW1DcDRiNndYZnFxeDg3emNTUSR2N042RzlCdHE5bWxvc05rZVlzQVJLbml0aFFhM2RHWktadGtKdDlUWmxvPQ==' \
+  -d 'grant_type=client_credentials&scope=patient:read'
+```
+
+2. Using Client Credentials in the Request Body (Less Secure, but supported)
+
+This method sends your client_id and client_secret directly as form parameters in the request body.
+
+- Endpoint: `/o/token/`
+- Method: POST
+- Content-Type: application/x-www-form-urlencoded
+- Body (Form Data): grant_type=client_credentials&client_id=<your_client_id>& client_secret=<your_unhashed_client_secret>&scope=<your_scopes>
+
+curl Command:
+
+Bash
+
+```bash
+curl -X POST \
+  {{ baseURL }}/o/token/ \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'grant_type=client_credentials&client_id=YOUR_CLIENT_ID&client_secret=YOUR_UNHASHED_CLIENT_SECRET&scope=patient:read'
+```
+
+Example curl with placeholder values:
+
+Bash
+
+```bash
+curl -X POST \
+  {{ baseURL }}/o/token/ \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'grant_type=client_credentials&client_id=4X5N7gkZ83IXtZVR2paHv8phtLtk62twp3ZcWD9g&client_secret=V-0bcNrRBQObeBIFRdSyKwpVRA9vD6_6dfbZlFrnheE&scope=patient:read'
+  ```
+
+Expected Successful Response:
+
+A successful response will return a JSON object containing the new access token and its metadata:
+
+JSON
+
+```json
+{
+    "access_token": "YOUR_NEW_ACCESS_TOKEN_HERE",
+    "expires_in": 86400,
+    "token_type": "Bearer",
+    "scope": "patient:read"
+}
+```

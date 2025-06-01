@@ -352,7 +352,7 @@ OAUTH2_PROVIDER = {
         'patient:write': 'Write patient and visit data',
         'admin:cross-pdu': 'Admin access across all PDUs',  # Add this
     },
-    'ACCESS_TOKEN_EXPIRE_SECONDS': 86400, # 24 hours
+    'ACCESS_TOKEN_EXPIRE_SECONDS': 86400 * 7, # 7 days in seconds
     'ALWAYS_RETURN_BASIC_ERRORS': True,  # Always return basic errors for security
      'ALLOWED_GRANT_TYPES': ('authorization_code', 'client_credentials'),
      'OAUTH2_PROVIDER_GRANT_MODEL': 'oauth2_provider.models.Grant',
@@ -362,16 +362,6 @@ OAUTH2_PROVIDER_ACCESS_TOKEN_MODEL = 'oauth2_provider.AccessToken'
 OAUTH2_PROVIDER_ID_TOKEN_MODEL = 'oauth2_provider.IDToken'
 OAUTH2_PROVIDER_APPLICATION_MODEL = 'oauth2_provider.Application'
 OAUTH2_PROVIDER_REFRESH_TOKEN_MODEL = 'oauth2_provider.RefreshToken'
-
-# OAUTH2_PROVIDER.update({
-#     'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.JSONOAuthLibCore',
-#     'RESOURCE_SERVER_TOKEN_CACHING_SECONDS': 3600,
-#     'CLIENT_SECRET_GENERATOR_LENGTH': 128,
-#     'CLIENT_SECRET_GENERATOR_CALLABLE': 'oauth2_provider.generators.generate_client_secret',
-#     'CLIENT_ID_GENERATOR_CLASS': 'oauth2_provider.generators.ClientIdGenerator',
-#     # Add this line to disable client secret hashing:
-#     'CLIENT_SECRET_VALIDATOR_CLASS': 'oauth2_provider.oauth2_validators.ClientSecretValidator',
-# })
 
 # Add to settings.py
 LOGGING = {
