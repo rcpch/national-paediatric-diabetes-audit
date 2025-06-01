@@ -155,12 +155,18 @@ The tokens last 7 days and so will need refreshing on the client side. This can 
 
 ### Token Renewal
 
+That a token is imminently due for renewal can be found by checking the header of any request for the appropriate flag
+
+#### Access Token Expiry Warnings
+
+To provide clients with advanced notice of an impending access token expiry, the API will include a specific HTTP header in responses when the currently used token is nearing its expiration. If an access token has less than 5 minutes (300 seconds) of validity remaining, the API response will include the X-Token-Expires-Soon: true header. Additionally, the X-Token-Expires-In: <seconds> header will be provided, indicating the exact number of seconds until the token's expiration. Clients should monitor for the presence of the X-Token-Expires-Soon header and utilize the X-Token-Expires-In value to proactively request a new access token using the appropriate OAuth2 grant flow, well before the current token becomes invalid. This ensures uninterrupted access to protected resources.
+
+#### Client Credentials Grant Type: Token Renewal (/o/token/)
+
 The renewal process requires the unhashed `client_secret` and `client_id`. Be aware that the secret is hashed on save so must be stored before creation. To be converted to a token as above it needs first to be base64 encoded and can then be passed as a bearer token in the header. For token renewal though the secret and the id are required.
 
 !!! Important
   **The `client_secret` in the request must not be hashed in the request**
-
-#### Client Credentials Grant Type: Token Renewal (/o/token/)
 
 When an access token obtained via the Client Credentials Grant Type expires, you simply request a new one by making the same POST call to the /o/token/ endpoint. There is no "refresh token" for this grant type.
 
