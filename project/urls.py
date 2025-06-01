@@ -31,11 +31,6 @@ urlpatterns = [
     path("", include("project.npda.urls")),
     path("api/v1/", include("project.npda.api.urls", namespace="api")),
     path("api/v1/schema/", SpectacularAPIView.as_view(), name="schema"),
-    # path(
-    #     "api/v1/schema/swagger-ui/",
-    #     SpectacularSwaggerView.as_view(url_name="schema"),
-    #     name="swagger-ui",
-    # ),
     path("api/v1/schema/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="redoc"),
-    # path("api-auth/", include("rest_framework.urls", namespace="rest_framework")),
+    path('o/', include('oauth2_provider.urls', namespace='oauth2_provider')), # OAuth2 endpoints
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

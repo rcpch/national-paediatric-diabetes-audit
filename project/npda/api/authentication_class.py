@@ -1,9 +1,11 @@
+import pytz
 from oauth2_provider.contrib.rest_framework import OAuth2Authentication
 from rest_framework import exceptions
 from django.utils import timezone
 from drf_spectacular.authentication import OpenApiAuthenticationExtension
 from project.npda.models import PDUAccessTokenProfile
 import logging
+from project.npda.models.access_tokens import AccessToken
 
 logger = logging.getLogger(__name__)
 
@@ -20,15 +22,21 @@ class PDUScopedOAuth2Authentication(OAuth2Authentication):
             return None
             
         user, token = result
-        
-        # Check if token is expired
-        if token.expires < timezone.now():
+
+        # Get current time in UTC
+        now = timezone.now()
+
+       # Log what we received from the database
+        token_expires = token.expires
+
+        logger.debug(f"Received token: {token.token}, expires at: {token_expires}, current time: {now}")
+
+        if now > token_expires:
             raise exceptions.AuthenticationFailed('Token has expired')
         
-        # Check if token is close to expiry (within 5 minutes)
-        time_until_expiry = token.expires - timezone.now()
+        # Use raw times for expiry warning too
+        time_until_expiry = token_expires - now
         if time_until_expiry.total_seconds() < 300:  # 5 minutes
-            # Add a header to warn about upcoming expiry
             request.META['HTTP_TOKEN_EXPIRES_SOON'] = 'true'
             request.META['HTTP_TOKEN_EXPIRES_IN'] = str(int(time_until_expiry.total_seconds()))
         
@@ -63,17 +71,8 @@ class PDUAuthenticationExtension(OpenApiAuthenticationExtension):
 
     def get_security_definition(self, auto_schema):
         return {
-            'type': 'oauth2',
-            'flows': {
-                'clientCredentials': {
-                    'tokenUrl': '/o/token/',
-                    'scopes': {
-                        'read:patient': 'Read access to PDU data',
-                        'write:patient': 'Write access to PDU data',
-                        'admin:cross-pdu': 'Administrative access to PDU data'
-                    }
-                }
-            }
+            'type': 'http',
+            'scheme': 'bearer'
         }
 
     def get_security_requirement(self, auto_schema):
