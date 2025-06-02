@@ -1,5 +1,6 @@
 from django.contrib import admin
 
+# Import all models in the same order as they are declared in your models/__init__.py (if possible)
 from .models import (
     AuditPeriod,
     NPDAUser,
@@ -12,6 +13,7 @@ from .models import (
     Visit,
     VisitActivity,
 )
+
 from django.contrib.sessions.models import Session
 
 
