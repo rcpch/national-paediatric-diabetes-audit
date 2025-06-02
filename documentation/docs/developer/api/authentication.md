@@ -202,11 +202,11 @@ Bash
 
 ```bash
 # Example (replace with your actual client_id and client_secret)
-# client_id="4X5N7gkZ83IXtZVR2paHv8phtLtk62twp3ZcWD9g"
-# client_secret="V-0bcNrRBQObeBIFRdSyKwpVRA9vD6_6dfbZlFrnheE"
+client_id="4X5N7gkZ83IXtZVR2paHv8phtLtk62twp3ZcWD9g"
+client_secret="V-0bcNrRBQObeBIFRdSyKwpVRA9vD6_6dfbZlFrnheE"
 
 # Encode them using Python (or a similar tool)
-# python -c "import base64; print(base64.b64encode(b'YOUR_CLIENT_ID:YOUR_UNHASHED_CLIENT_SECRET').decode('utf-8'))"
+python -c "import base64; print(base64.b64encode(b'YOUR_CLIENT_ID:YOUR_UNHASHED_CLIENT_SECRET').decode('utf-8'))"
 
 # Example output of encoding:
 # NFg1Tjdna1o4M0lYdFpWUjJwYUh2OHBodEx0azYydHdwM1pjV0Q5ZzpwYmtkZjJfc2hhMjU2JDEwMDAwMDAkcG9FYW1DcDRiNndYZnFxeDg3emNTUSR2N042RzlCdHE5bWxvc05rZVlzQVJLbml0aFFhM2RHWktadGtKdDlUWmxvPQ==
@@ -269,4 +269,50 @@ JSON
     "token_type": "Bearer",
     "scope": "patient:read"
 }
+```
+
+#### Access Token renewal on the command line
+
+It may on occasion be necessary to renew a token from the the command line.
+
+```console
+python manage.py renew_oauth_token --token 9yWxnyYif8BiJN9BZPFFoCTvjh_a-yZHabmSathOqTM
+#  the token here refers to the bearer token passed in the header
+```
+
+This should return:
+
+```console
+Console Log Level: DEBUG
+File Log Level: DEBUG
+✅ Found existing token (expires: 2025-05-23 23:10:58.129734+00:00)
+✅ Found PDU profile for: ROYAL COLLEGE OF PAEDIATRICS AND CHILD HEALTH
+⚠️  Token expired 2025-05-23 23:10:58.129734+00:00, but proceeding with renewal
+🔒 Deactivated old token
+
+🎉 Token renewed successfully!
+New Token: I-MSm-mH_dMwBDtWPDBhEv0GzsZQe5mytlP5MiYI8_8
+Expires: 2025-06-09 20:11:49.443922+00:00
+Scopes: patient:read
+PDU: ROYAL COLLEGE OF PAEDIATRICS AND CHILD HEALTH (PZ999)
+Access Level: readonly
+User: incubator+reader@rcpch.ac.uk
+
+📋 For Postman:
+Authorization: Bearer I-MSm-mH_dMwBDtWPDBhEv0GzsZQe5mytlP5MiYI8_8
+
+📊 Total active tokens for this PDU: 3
+```
+
+Other attributes include:
+
+```console
+# Basic token renewal (deactivates old token)
+python manage.py renew_oauth_token --token abc123...
+
+# Renew but keep old token active temporarily
+python manage.py renew_oauth_token --token abc123... --keep-old-active
+
+# Renew with extended expiry and new description
+python manage.py renew_oauth_token --token abc123... --extend-expiry-days 30 --description "Extended for special project"
 ```
