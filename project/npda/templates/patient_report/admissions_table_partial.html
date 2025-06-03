@@ -1,7 +1,7 @@
 {% extends "patient_report/base_table.html" %}
 {% load npda_tags %}
 {% block description_box %}
-  {% include "patient_report/description_box.html" with description="Outcomes are presented below for all children and young people <i><b>with T1DM</b></i>. HbA1c excludes all measurements taken in the first 90 days after diagnosis." proportion="with T1DM, admitted (for any reason) in the audit year" extra="Note: this list is filtered to include only children with T1DM who have had an inpatient admission in the audit period." %}
+  {% include "patient_report/description_box.html" with description="Admissions are presented below for all children and young people <i><b>with T1DM</b></i>. HbA1c excludes all measurements taken in the first 90 days after diagnosis." proportion="with T1DM, admitted (for any reason) in the audit year" extra="Note: this list is filtered to include only children with T1DM who have had an inpatient admission in the audit period." %}
 {% endblock %}
 {% block table_headers %}
   <th class="whitespace-normal break-words">

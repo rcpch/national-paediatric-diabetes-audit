@@ -28,7 +28,7 @@ from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.models import Patient, AuditPeriod
 from project.npda.models.db_functions import Round
 from project.npda.views.mixins import CheckPDUListMixin, LoginAndOTPRequiredMixin
-
+from django.db.models import QuerySet
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +54,7 @@ class TableCategories(Enum):
             (cls.CARE_AT_DIAGNOSIS.value, "Care at Diagnosis"),
             (cls.ADMISSIONS.value, "Admissions"),
             (cls.TREATMENT.value, "Treatment"),
+            (cls.OUTCOMES.value, "Outcomes"),
         ]
 
     @classmethod
@@ -75,14 +76,12 @@ class PatientReportView(
     context_object_name = "patients"
     paginate_by = 50
 
-    def _calculate_hba1c_values(self, pt_qs, calculation_date):
+    def _calculate_hba1c_values(
+        self, pt_qs: QuerySet[Patient], calculate_kpis: CalculateKPIS
+    ):
         """Helper function to calculate HbA1c values for a queryset."""
         patient_ids = set(pt_qs.values_list("pk", flat=True))
-        calculate_kpis = CalculateKPIS(
-            calculation_date=calculation_date, return_pt_querysets=True
-        )
-        pz_code = self.request.session.get("pz_code")
-        calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+
         valid_visits_with_hba1c = (
             calculate_kpis._get_valid_visits_for_kpi_44_and_45(
                 Patient.objects.filter(pk__in=patient_ids)
@@ -561,7 +560,38 @@ class PatientReportView(
                     "number_of_dka_admissions",
                 )
             )
-            pt_qs = self._calculate_hba1c_values(pt_qs, calculation_date)
+            pt_qs = self._calculate_hba1c_values(pt_qs, calculate_kpis)
+
+        elif self.selected_category == TableCategories.OUTCOMES.value:
+            # get ALL patients for current submission
+            pt_qs = (
+                calculate_kpis.calculate_kpi_1_total_eligible()
+                .patient_querysets["eligible"]
+                .annotate(
+                    patient_identifier=F(patient_identifier),
+                    is_complete_year_of_care=Case(
+                        When(
+                            Exists(
+                                all_t1dm_pts_with_complete_year_of_care.filter(
+                                    pk=OuterRef("pk")
+                                )
+                            ),
+                            then=True,
+                        ),
+                        default=False,
+                        output_field=BooleanField(),
+                    ),
+                )
+                .values(
+                    "pk",
+                    "patient_identifier",
+                    "is_complete_year_of_care",
+                )
+            )
+
+            # Add HbA1c values to queryset
+            pt_qs = self._calculate_hba1c_values(pt_qs, calculate_kpis)
+
         elif self.selected_category == TableCategories.TREATMENT.value:
             pt_qs = pt_qs.annotate(
                 treatment_regimen=Case(
@@ -695,22 +725,17 @@ class PatientReportView(
                 )
             else:
                 pt_qs = pt_qs.order_by(sort_field)
-                pt_qs = self._calculate_hba1c_values(pt_qs, calculation_date)
+                pt_qs = self._calculate_hba1c_values(pt_qs, calculate_kpis)
         else:
             # Default ordering
             pt_qs = pt_qs.order_by("-is_complete_year_of_care", "nhs_number")
-            pt_qs = self._calculate_hba1c_values(pt_qs, calculation_date)
+            pt_qs = self._calculate_hba1c_values(pt_qs, calculate_kpis)
 
         return pt_qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # if self.request.GET.get("category"):
-        #     # Get the selected category from the request if navigating from dashboard
-        #     self.selected_category = self.request.GET.get("category")
-        # else:
-        #     self.selected_category = TableCategories.HEALTH_CHECKS.value
-        #     context["selected_category"] = self.selected_category
+
         # Jersey
         if self.request.session.get("pz_code") == "PZ248":
             context["is_jersey"] = True
@@ -754,23 +779,21 @@ class PatientReportView(
                     patient["is_first_complete_year_of_care"] = False
             context["patients"] = patients
 
-        # Get the totals of each item of the health check data as well as the total
-        # of those eligible for the health check
-        total_passed_bmi = 0
-        total_eligible_bmi = 0
-        total_passed_hba1c = 0
-        total_eligible_hba1c = 0
-        total_passed_thyroid_screen = 0
-        total_eligible_thyroid_screen = 0
-        total_passed_blood_pressure = 0
-        total_eligible_blood_pressure = 0
-        total_passed_urinary_albumin = 0
-        total_eligible_urinary_albumin = 0
-        total_passed_retinal_screening = 0
-        total_eligible_retinal_screening = 0
-        total_passed_foot_exam = 0
-        total_eligible_foot_exam = 0
         if self.selected_category == TableCategories.HEALTH_CHECKS.value:
+            # Get the totals of each item of the health check data as well as the total
+            # of those eligible for the health check
+            total_passed_bmi = 0
+            total_eligible_bmi = 0
+            total_passed_hba1c = 0
+            total_eligible_hba1c = 0
+            total_passed_thyroid_screen = 0
+            total_eligible_thyroid_screen = 0
+            total_passed_blood_pressure = 0
+            total_eligible_blood_pressure = 0
+            total_passed_urinary_albumin = 0
+            total_eligible_urinary_albumin = 0
+            total_passed_foot_exam = 0
+            total_eligible_foot_exam = 0
             for patient in context["patients"]:
                 if patient["is_complete_year_of_care"]:
                     total_passed_bmi += patient["passed_bmi"]
@@ -780,10 +803,6 @@ class PatientReportView(
                     total_passed_thyroid_screen += patient["passed_thyroid_screen"]
                     total_eligible_thyroid_screen += 1
                     if patient["is_gte_12yo"]:
-                        # total_passed_retinal_screening += (
-                        #     patient["passed_retinal_screening"]
-                        # )
-                        # total_eligible_retinal_screening += 1
                         total_passed_blood_pressure += patient["passed_blood_pressure"]
                         total_eligible_blood_pressure += 1
                         total_passed_urinary_albumin += patient[
