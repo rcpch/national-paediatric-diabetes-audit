@@ -11,13 +11,13 @@
       NHS Number
     {% endif %}
     <div class="block">
-      <span hx-get="?category=admissions&sort=nhs_number&order=asc"
+      <span hx-get="?category=outcomes&sort=nhs_number&order=asc"
             hx-target="#table-area"
             hx-swap="innerHTML"
             class="cursor-pointer">
         <i class="fa-solid fa-up-long {% if sort_field == 'nhs_number' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
       </span>
-      <span hx-get="?category=admissions&sort=nhs_number&order=desc"
+      <span hx-get="?category=outcomes&sort=nhs_number&order=desc"
             hx-target="#table-area"
             hx-swap="innerHTML"
             class="cursor-pointer">
@@ -28,13 +28,13 @@
   <th class="whitespace-normal break-words">
     Mean HbA1c mmol/mol (%)
     <div class="block">
-      <span hx-get="?category=admissions&sort=kpi_44_mean_hba1c&order=asc"
+      <span hx-get="?category=outcomes&sort=kpi_44_mean_hba1c&order=asc"
             hx-target="#table-area"
             hx-swap="innerHTML"
             class="cursor-pointer">
         <i class="fa-solid fa-up-long {% if sort_field == 'kpi_44_mean_hba1c' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
       </span>
-      <span hx-get="?category=admissions&sort=kpi_44_mean_hba1c&order=desc"
+      <span hx-get="?category=outcomes&sort=kpi_44_mean_hba1c&order=desc"
             hx-target="#table-area"
             hx-swap="innerHTML"
             class="cursor-pointer">
@@ -45,13 +45,13 @@
   <th class="whitespace-normal break-words">
     Median HbA1c mmol/mol (%)
     <div class="block">
-      <span hx-get="?category=admissions&sort=kpi_45_median_hba1c&order=asc"
+      <span hx-get="?category=outcomes&sort=kpi_45_median_hba1c&order=asc"
             hx-target="#table-area"
             hx-swap="innerHTML"
             class="cursor-pointer">
         <i class="fa-solid fa-up-long {% if sort_field == 'kpi_45_median_hba1c' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
       </span>
-      <span hx-get="?category=admissions&sort=kpi_45_median_hba1c&order=desc"
+      <span hx-get="?category=outcomes&sort=kpi_45_median_hba1c&order=desc"
             hx-target="#table-area"
             hx-swap="innerHTML"
             class="cursor-pointer">
