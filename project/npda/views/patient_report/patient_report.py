@@ -841,6 +841,8 @@ class PatientReportView(
                 return ["patient_report/admissions_table_partial.html"]
             elif self.selected_category == TableCategories.TREATMENT.value:
                 return ["patient_report/treatment_table_partial.html"]
+            elif self.selected_category == TableCategories.OUTCOMES.value:
+                return ["patient_report/outcomes_table_partial.html"]
             else:
                 return ["patient_report/health_checks_table_partial.html"]
 
