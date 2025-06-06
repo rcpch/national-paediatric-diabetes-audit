@@ -27,5 +27,9 @@ def clean_csv_sex(value):
 def csv_clean(df):
     if not is_numeric_dtype(df["Stated gender"]):
         df["Stated gender"] = df["Stated gender"].apply(clean_csv_sex)
+    
+    # Strip whitespace only fields of whitespaces and replace with None
+    for col in df.select_dtypes(include=['object']).columns:
+        df[col] = df[col].astype(str).str.strip().replace('', None)
 
     return df
