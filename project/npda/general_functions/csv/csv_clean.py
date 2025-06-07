@@ -35,14 +35,26 @@ def clean_csv_measurement(value):
     if value == "":
         return None
     if isinstance(value, str):
+        # Return the string if it contains no digits as this will be handled by the form validation
+        if not any(char.isdigit() for char in value):
+            return value
+        # This string now contains numbers and possibly some characters
         # Remove any non-numeric characters except for decimal points
+        # This will handle cases like "5.9cm", "70kg", etc.
+        # It will also remove any leading or trailing whitespace
+        print(f"Original value: '{value}', {type(value)} {value is None}")
         value = ''.join(char for char in value if char.isdigit() or char == '.')
-    
     try:
+        print(f"Converting value to float: {value}")
         return float(value)
     except ValueError:
         return None
 
+def clean_whitespace(x):
+    if isinstance(x, str):
+        stripped = x.strip()
+        return None if stripped == '' else stripped
+    return x
 
 def csv_clean(df):
     if not is_numeric_dtype(df["Stated gender"]):
@@ -54,10 +66,8 @@ def csv_clean(df):
     if not is_numeric_dtype(df["Patient Weight (kg)"]):
         df["Patient Weight (kg)"] = df["Patient Weight (kg)"].apply(clean_csv_measurement)
     
-    # Strip whitespace only fields of whitespaces and replace with None
+    # Strip whitespace only fields of whitespaces
     for col in df.select_dtypes(include=['object']).columns:
-        df[col] = df[col].astype(str).str.strip().replace('', None)
-    
-
+        df[col] = df[col].apply(clean_whitespace)
 
     return df
