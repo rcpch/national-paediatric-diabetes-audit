@@ -105,6 +105,8 @@ def test_npda_user_cannot_submit_same_patient_twice_within_the_same_submission(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE
     ).first()
 
+    Submission.objects.all().delete()  # Clear any existing submissions
+
     # Login as Alder Hey user
     client = login_and_verify_user(client, ah_user)
 
