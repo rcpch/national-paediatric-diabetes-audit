@@ -42,10 +42,8 @@ def clean_csv_measurement(value):
         # Remove any non-numeric characters except for decimal points
         # This will handle cases like "5.9cm", "70kg", etc.
         # It will also remove any leading or trailing whitespace
-        print(f"Original value: '{value}', {type(value)} {value is None}")
         value = ''.join(char for char in value if char.isdigit() or char == '.')
     try:
-        print(f"Converting value to float: {value}")
         return float(value)
     except ValueError:
         return None
