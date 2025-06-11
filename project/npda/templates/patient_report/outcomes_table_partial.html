@@ -26,6 +26,25 @@
     </div>
   </th>
   <th class="whitespace-normal break-words">
+    Latest HbA1c mmol/mol
+    <br>
+    <span class="text-xs text-gray-400">(Previous HbA1c)</span>
+    <div class="block">
+      <span hx-get="?category=outcomes&sort=latest_hba1c&order=asc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'latest_hba1c' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span hx-get="?category=outcomes&sort=latest_hba1c&order=desc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'latest_hba1c' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
+  </th>
+  <th class="whitespace-normal break-words">
     Mean HbA1c mmol/mol (%)
     <div class="block">
       <span hx-get="?category=outcomes&sort=kpi_44_mean_hba1c&order=asc"
@@ -61,12 +80,17 @@
   </th>
 
 {% endblock %}
-{{ hba1c_data }}
+
 {% block table_body %}
   {% for patient in patients %}
     <tr class="{% if not patient.is_complete_year_of_care %}bg-rcpch_orange_light_tint3{% endif %}">
       <td>
         {% include "patient_report/components/pt_identifier_value.html" with patient_pk=patient.pk is_complete_year_of_care=patient.is_complete_year_of_care patient_identifier=patient.patient_identifier %}
+      </td>
+      <td>
+        {{ patient.latest_hba1c_mmol_mol|none_to_dash }}
+        <br>
+        <span class="text-xs text-gray-500">({{ patient.previous_to_latest_hba1c_mmol_mol|none_to_dash }})</span>
       </td>
       <td>
         {{ patient.kpi_44_mean_hba1c|none_to_dash }} ({{ patient.mean_hba1c_pct|none_to_dash }}%)

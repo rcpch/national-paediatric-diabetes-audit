@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from enum import Enum
 
@@ -18,6 +18,7 @@ from django.db.models import (
     Q,
     Value,
     When,
+    Subquery,
 )
 
 # Django imports
@@ -25,7 +26,7 @@ from django.views.generic import ListView
 from project.constants.hba1c_format import HBA1C_FORMATS
 from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
 from project.npda.kpi_class.kpis import CalculateKPIS
-from project.npda.models import Patient, AuditPeriod
+from project.npda.models import Patient, AuditPeriod, Visit
 from project.npda.models.db_functions import Round
 from project.npda.views.mixins import CheckPDUListMixin, LoginAndOTPRequiredMixin
 from django.db.models import QuerySet
@@ -581,11 +582,61 @@ class PatientReportView(
                         default=False,
                         output_field=BooleanField(),
                     ),
+                    latest_hba1c_mmol_mol=Subquery(
+                        Visit.objects.filter(
+                            patient=OuterRef("pk"),
+                            visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
+                            hba1c__isnull=False,
+                        )
+                        .annotate(
+                            hba1c_mmol_mol=Case(
+                                When(
+                                    Q(hba1c_format=HBA1C_FORMATS[0][0]),
+                                    then=F("hba1c"),
+                                ),
+                                When(
+                                    Q(hba1c_format=HBA1C_FORMATS[1][0]),
+                                    then=(F("hba1c") - Round(Decimal("2.152")))
+                                    / Decimal("0.09148"),
+                                ),
+                                default=None,
+                                output_field=IntegerField(),
+                            )
+                        )
+                        .order_by("-hba1c_date")
+                        .values("hba1c_mmol_mol")[:1]
+                    ),
+                    previous_to_latest_hba1c_mmol_mol=Subquery(
+                        Visit.objects.filter(
+                            patient=OuterRef("pk"),
+                            visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
+                            hba1c__isnull=False,
+                        )
+                        .annotate(
+                            hba1c_mmol_mol=Case(
+                                When(
+                                    Q(hba1c_format=HBA1C_FORMATS[0][0]),
+                                    then=F("hba1c"),
+                                ),
+                                When(
+                                    Q(hba1c_format=HBA1C_FORMATS[1][0]),
+                                    then=(F("hba1c") - Round(Decimal("2.152")))
+                                    / Decimal("0.09148"),
+                                ),
+                                default=None,
+                                output_field=IntegerField(),
+                            )
+                        )
+                        .order_by("-hba1c_date")
+                        .values("hba1c_mmol_mol")[1:2]
+                    ),
                 )
                 .values(
                     "pk",
                     "patient_identifier",
                     "is_complete_year_of_care",
+                    "latest_hba1c_mmol_mol",
+                    "previous_to_latest_hba1c_mmol_mol",
                 )
             )
 
