@@ -30,34 +30,34 @@
     <br>
     <span class="text-xs text-gray-400">(Previous HbA1c)</span>
     <div class="block">
-      <span hx-get="?category=outcomes&sort=latest_hba1c&order=asc"
+      <span hx-get="?category=outcomes&sort=latest_hba1c_mmol_mol&order=asc"
             hx-target="#table-area"
             hx-swap="innerHTML"
             class="cursor-pointer">
-        <i class="fa-solid fa-up-long {% if sort_field == 'latest_hba1c' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+        <i class="fa-solid fa-up-long {% if sort_field == 'latest_hba1c_mmol_mol' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
       </span>
-      <span hx-get="?category=outcomes&sort=latest_hba1c&order=desc"
+      <span hx-get="?category=outcomes&sort=latest_hba1c_mmol_mol&order=desc"
             hx-target="#table-area"
             hx-swap="innerHTML"
             class="cursor-pointer">
-        <i class="fa-solid fa-down-long {% if sort_field == 'latest_hba1c' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+        <i class="fa-solid fa-down-long {% if sort_field == 'latest_hba1c_mmol_mol' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
       </span>
     </div>
   </th>
   <th class="whitespace-normal break-words">
-    Mean HbA1c mmol/mol (%)
+    HbA1Δ (%)
     <div class="block">
-      <span hx-get="?category=outcomes&sort=kpi_44_mean_hba1c&order=asc"
+      <span hx-get="?category=outcomes&sort=hba1c_delta&order=asc"
             hx-target="#table-area"
             hx-swap="innerHTML"
             class="cursor-pointer">
-        <i class="fa-solid fa-up-long {% if sort_field == 'kpi_44_mean_hba1c' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+        <i class="fa-solid fa-up-long {% if sort_field == 'hba1c_delta' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
       </span>
-      <span hx-get="?category=outcomes&sort=kpi_44_mean_hba1c&order=desc"
+      <span hx-get="?category=outcomes&sort=hba1c_delta&order=desc"
             hx-target="#table-area"
             hx-swap="innerHTML"
             class="cursor-pointer">
-        <i class="fa-solid fa-down-long {% if sort_field == 'kpi_44_mean_hba1c' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+        <i class="fa-solid fa-down-long {% if sort_field == 'hba1c_delta' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
       </span>
     </div>
   </th>
@@ -78,6 +78,23 @@
       </span>
     </div>
   </th>
+  <th class="whitespace-normal break-words">
+    Mean HbA1c mmol/mol (%)
+    <div class="block">
+      <span hx-get="?category=outcomes&sort=kpi_44_mean_hba1c&order=asc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'kpi_44_mean_hba1c' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span hx-get="?category=outcomes&sort=kpi_44_mean_hba1c&order=desc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'kpi_44_mean_hba1c' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
+  </th>
 
 {% endblock %}
 
@@ -91,6 +108,25 @@
         {{ patient.latest_hba1c_mmol_mol|none_to_dash }}
         <br>
         <span class="text-xs text-gray-500">({{ patient.previous_to_latest_hba1c_mmol_mol|none_to_dash }})</span>
+      </td>
+      <td>
+        {% if patient.hba1c_delta is not None %}
+          {% if patient.hba1c_delta < 0 %}
+            <span class="text-green-600">
+              <i class="fa-solid fa-arrow-down"></i>
+              {{ patient.hba1c_delta|none_to_dash }} %
+            </span>
+          {% elif patient.hba1c_delta > 0 %}
+            <span class="text-red-600">
+              <i class="fa-solid fa-arrow-up"></i>
+              {{ patient.hba1c_delta|none_to_dash }} %
+            </span>
+          {% else %}
+            {{ patient.hba1c_delta|none_to_dash }} %
+          {% endif %}
+        {% else %}
+          {{ patient.hba1c_delta|none_to_dash }} %
+        {% endif %}
       </td>
       <td>
         {{ patient.kpi_44_mean_hba1c|none_to_dash }} ({{ patient.mean_hba1c_pct|none_to_dash }}%)

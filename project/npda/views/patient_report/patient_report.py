@@ -630,6 +630,22 @@ class PatientReportView(
                         .order_by("-hba1c_date")
                         .values("hba1c_mmol_mol")[1:2]
                     ),
+                    hba1c_delta=Case(
+                        When(
+                            Q(latest_hba1c_mmol_mol__isnull=False)
+                            & Q(previous_to_latest_hba1c_mmol_mol__isnull=False),
+                            then=Round(
+                                (
+                                    F("latest_hba1c_mmol_mol")
+                                    - F("previous_to_latest_hba1c_mmol_mol")
+                                )
+                                * Decimal("100.0")
+                                / F("previous_to_latest_hba1c_mmol_mol")
+                            ),
+                        ),
+                        default=None,
+                        output_field=DecimalField(max_digits=3, decimal_places=1),
+                    ),
                 )
                 .values(
                     "pk",
@@ -637,6 +653,7 @@ class PatientReportView(
                     "is_complete_year_of_care",
                     "latest_hba1c_mmol_mol",
                     "previous_to_latest_hba1c_mmol_mol",
+                    "hba1c_delta",
                 )
             )
 
