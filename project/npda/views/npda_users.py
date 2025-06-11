@@ -103,6 +103,7 @@ class NPDAUserListView(
                 requesting_user=self.request.user, user_instance=self.request.user
             )
         )
+        context["parent"] = self.request.session.get("parent")
         context["chosen_pdu"] = self.request.session.get("pz_code")
         return context
 

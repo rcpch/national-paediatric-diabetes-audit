@@ -103,7 +103,7 @@
                   </td>
                   {% if request.user.view_preference == 2 %}
                     <td>
-                      {{ submission.paediatric_diabetes_unit.pz_code }} ({{ submission.paediatric_diabetes_unit.lead_organisation_name }})
+                      {{ submission.paediatric_diabetes_unit.pz_code }} ({{ submission.paediatric_diabetes_unit.parent_name }})
                     </td>
                   {% endif %}
                   <td class="flex flex-row flex-wrap justify-start items-stretch gap-2 xl:flex-nowrap">

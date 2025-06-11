@@ -6,7 +6,7 @@
     </div>
   {% else %}
     <div>
-      {{ organisation_employer.paediatric_diabetes_unit.lead_organisation_name }}
+      {{ organisation_employer.paediatric_diabetes_unit.parent_name }} ({{ organisation_employer.paediatric_diabetes_unit.pz_code }})
       <button class="bg-rcpch_light_blue text-white font-semibold hover:text-white border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue p-1 m-1"
               hx-post="{% url 'npdauser-update' npda_user.pk %}"
               hx-target="#primary_pdu"

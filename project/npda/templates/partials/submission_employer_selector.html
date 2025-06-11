@@ -4,7 +4,7 @@
   <div>
     <h3 class="font-bold">Important Information</h3>
     <div class="text-xs">
-      You are about to upload data to the NPDA for <strong>{{ request.session.pz_code }} ({{ request.session.lead_organisation }})</strong>.
+      You are about to upload data to the NPDA for <strong>{{ request.session.pz_code }} ({{ request.session.parent }})</strong>.
       {% if employers|length > 1 %}
         <p class="text-xs mt-2 mb-2">
           If this is incorrect, please select the correct employer below.
@@ -21,7 +21,7 @@
                    type="radio"
                    name="employers"
                    value="{{ employer.paediatric_diabetes_unit.pz_code }}"
-                   aria-label="{{ employer.paediatric_diabetes_unit.lead_organisation_name }} ({{ employer.paediatric_diabetes_unit.pz_code }})" />
+                   aria-label="{{ employer.paediatric_diabetes_unit.parent_name }} ({{ employer.paediatric_diabetes_unit.pz_code }})" />
           {% endfor %}
         </form>
       {% endif %}

@@ -3,7 +3,7 @@
      style="max-height: inherit">
   <table class="table table-auto table-pin-cols table-pin-rows border-collapse text-sm text-left text-gray-500 mb-5 font-montserrat">
     <caption class="caption-top font-montserrat text-rcpch_strong_blue font-bold">
-      Table: {{ aggregation_level }}-Level Key Performance Indicators for {{ pdu.lead_organisation_name }} (<span class="font-mono">{{ pdu.pz_code }}</span>)
+      Table: {{ aggregation_level }}-Level Key Performance Indicators for {{ pdu.parent_name }} (<span class="font-mono">{{ pdu.pz_code }}</span>)
       {% if pdu.parent_name is not None %}
         - ({{ pdu.parent_name }}) - {{ pdu.paediatric_diabetes_network_name }} ({{ pdu.paediatric_diabetes_network_code }})
       {% endif %}

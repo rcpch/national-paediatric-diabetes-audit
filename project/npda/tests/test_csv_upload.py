@@ -860,6 +860,8 @@ def test_additional_columns_causes_error(
     single_row_valid_df["extra_one"] = "ada"
     single_row_valid_df["extra_two"] = "lovelace"
 
+    Submission.objects.all().delete() # Clear any previous submissions
+
     # write back into temp
     tmp_csv_path = tmp_path / "dummy_sheet_test.csv"
     single_row_valid_df.to_csv(tmp_csv_path, index=False)
@@ -894,6 +896,8 @@ def test_duplicate_columns_causes_error(single_row_valid_df, client, test_rcpch_
 
     tmp_csv_path = tmp_path / "dummy_sheet_test.csv"
     single_row_valid_df.to_csv(tmp_csv_path, index=False)
+
+    Submission.objects.all().delete()  # Clear any previous submissions
 
     # Log in user
     client = login_and_verify_user(client, test_rcpch_user)
@@ -931,6 +935,8 @@ def test_missing_columns_causes_error(test_rcpch_user, single_row_valid_df, clie
     df = single_row_valid_df.drop(
         columns=["Urinary Albumin Level (ACR)", "Total Cholesterol Level (mmol/l)"]
     )
+
+    Submission.objects.all().delete()  # Clear any previous submissions
 
     tmp_csv_path = tmp_path / "dummy_sheet_test.csv"
     df.to_csv(tmp_csv_path, index=False)
@@ -3551,3 +3557,49 @@ def test_non_breaking_space_in_iso_8859_1_csv(test_user, dummy_sheet_csv):
     errors = csv_upload_sync(test_user, df)
 
     assert len(errors) == 0
+
+@pytest.mark.django_db
+def test_remove_empty_spaces_from_empty_fields(test_user, dummy_sheet_csv):
+    """
+    Test that empty spaces in empty fields are removed
+    """
+    one_row_csv = modify_raw_csv(
+        dummy_sheet_csv,
+        end=2,  # exclusive
+        replacements=[{"row": 1, "column": "Only complete if DKA selected in previous question: During this DKA admission did the patient receive any of the following therapies?", "value": "   "}],
+    )
+
+    df = read_csv_from_str(one_row_csv).df
+
+    errors = csv_upload_sync(test_user, df)
+
+    assert len(errors) == 0
+
+    patient = Patient.objects.first()
+    assert Visit.objects.filter(patient=patient).first().dka_additional_therapies == None, f"Expected empty string for DKA additional therapies, but got {Visit.objects.filter(patient=patient).first().dka_additional_therapies}"
+
+@pytest.mark.django_db
+def test_csv_height_weight_fields_with_units_have_units_removed(test_user, dummy_sheet_csv):
+    """
+    Test that height and weight fields with units have the units removed
+    """
+    one_row_csv = modify_raw_csv(
+        dummy_sheet_csv,
+        end=2,  # exclusive
+        replacements=[
+            {"row": 1, "column": "Patient Height (cm)", "value": "150 cm"},
+            {"row": 1, "column": "Patient Weight (kg)", "value": "50 kg"},
+        ],
+    )
+
+    df = read_csv_from_str(one_row_csv).df
+
+    errors = csv_upload_sync(test_user, df)
+
+    assert len(errors) == 0
+
+    patient = Patient.objects.first()
+    visit = Visit.objects.filter(patient=patient).first()
+
+    assert visit.height == Decimal("150.0"), f"Expected height to be 150.0, but got {visit.height}"
+    assert visit.weight == Decimal("50.0"), f"Expected weight to be 50.0, but got {visit.weight}"
