@@ -34,6 +34,8 @@ CSV_HEADING_OBJECTS = (
         "heading": "Ethnic Category",
         "model_field": "ethnicity",
         "model": "Patient",
+        # Deliberate typo to accomodate automatically generated Wythenshawe CSVs
+        "alternative_headings": ["Ethnic cateogry"]
     },
     {
         "heading": "Diabetes Type",
@@ -44,6 +46,7 @@ CSV_HEADING_OBJECTS = (
         "heading": "Date of Diabetes Diagnosis",
         "model_field": "diagnosis_date",
         "model": "Patient",
+        "alternative_headings": ["Date of Diagnosis"]
     },
     {
         "heading": "Date of leaving service",
@@ -117,11 +120,18 @@ CSV_HEADING_OBJECTS = (
         "heading": "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
         "model_field": "closed_loop_system",
         "model": "Visit",
+        "alternative_headings": [
+            # Trailing bracket to accomodate automatically generated Wythenshawe CSVs 
+            "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this as part of a closed loop system?)"
+        ]
     },
     {
         "heading": "At the time of HbA1c measurement, in addition to standard blood glucose monitoring (SBGM), was the patient using any other method of glucose monitoring?",
         "model_field": "glucose_monitoring",
         "model": "Visit",
+        "alternative_headings": [
+            "At the time of HbA1c measurement, was the patient using any other method of glucose monitoring?"
+        ]
     },
     {
         "heading": "Systolic Blood Pressure",
@@ -254,6 +264,10 @@ CSV_HEADING_OBJECTS = (
         "heading": "Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia",
         "model_field": "sick_day_rules_training_date",
         "model": "Visit",
+        "alternative_headings": [
+            # Missing spacing before brackets to accomodate automatically generated Wythenshawe CSVs
+            "Date of provision of advice('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia"
+        ]
     },
     {
         "heading": "Start date (Hospital Provider Spell)",
@@ -274,6 +288,9 @@ CSV_HEADING_OBJECTS = (
         "heading": "Only complete if DKA selected in previous question: During this DKA admission did the patient receive any of the following therapies?",
         "model_field": "dka_additional_therapies",
         "model": "Visit",
+        "alternative_headings": [
+            "During this DKA admission did the patient receive any of the following therapies?"
+        ]
     },
     {
         "heading": "Only complete if OTHER selected: Reason for admission (free text)",
