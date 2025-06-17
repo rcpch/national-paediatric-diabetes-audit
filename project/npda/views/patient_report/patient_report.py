@@ -606,6 +606,14 @@ class PatientReportView(
                         .order_by("-hba1c_date")
                         .values("hba1c_mmol_mol")[:1]
                     ),
+                    latest_hba1c_pct=Case(
+                        When(
+                            Q(latest_hba1c_mmol_mol__isnull=False) & Q(latest_hba1c_mmol_mol__gt=0),
+                            then=(Decimal("0.09148") * F("latest_hba1c_mmol_mol")) + Decimal("2.152"),
+                        ),
+                        default=None,
+                        output_field=DecimalField(max_digits=4, decimal_places=1),
+                    ),
                     previous_to_latest_hba1c_mmol_mol=Subquery(
                         Visit.objects.filter(
                             patient=OuterRef("pk"),
@@ -630,6 +638,14 @@ class PatientReportView(
                         .order_by("-hba1c_date")
                         .values("hba1c_mmol_mol")[1:2]
                     ),
+                    previous_to_latest_hba1c_pct=Case(
+                        When(
+                            Q(previous_to_latest_hba1c_mmol_mol__isnull=False) & Q(previous_to_latest_hba1c_mmol_mol__gt=0),
+                            then=(Decimal("0.09148") * F("previous_to_latest_hba1c_mmol_mol")) + Decimal("2.152"),
+                        ),
+                        default=None,
+                        output_field=DecimalField(max_digits=4, decimal_places=1),
+                    ),
                     hba1c_delta=Case(
                         When(
                             Q(latest_hba1c_mmol_mol__isnull=False)
@@ -652,13 +668,12 @@ class PatientReportView(
                     "patient_identifier",
                     "is_complete_year_of_care",
                     "latest_hba1c_mmol_mol",
+                    "latest_hba1c_pct",
                     "previous_to_latest_hba1c_mmol_mol",
+                    "previous_to_latest_hba1c_pct",
                     "hba1c_delta",
                 )
             )
-
-            # Add HbA1c values to queryset
-            pt_qs = self._calculate_hba1c_values(pt_qs, calculate_kpis)
 
         elif self.selected_category == TableCategories.TREATMENT.value:
             pt_qs = pt_qs.annotate(
