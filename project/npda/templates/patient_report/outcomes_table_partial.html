@@ -107,13 +107,11 @@
         {% include "patient_report/components/pt_identifier_value.html" with patient_pk=patient.pk is_complete_year_of_care=patient.is_complete_year_of_care patient_identifier=patient.patient_identifier %}
       </td>
       <td>
-        {{ patient.latest_hba1c_mmol_mol|none_to_dash|round_to_1dp }} ({{ patient.latest_hba1c_pct|none_to_dash|round_to_1dp }}%)
-        <br>
-        <span class="text-xs text-gray-500">{{ patient.previous_to_latest_hba1c_mmol_mol|none_to_dash|round_to_1dp }} ({{ patient.previous_to_latest_hba1c_pct|none_to_dash|round_to_1dp }}%) taken {{ patient.days_delta_between_latest_and_previous_hba1c }} days ago</span>
-
-        1{{ patient.latest_hba1c_date }}
-        2{{ patient.previous_to_latest_hba1c_date }}
-        3{{ patient.days_delta_between_latest_and_previous_hba1c }}
+        <div class="tooltip tooltip-bottom" data-tip="Latest: {{ patient.latest_hba1c_date|date:'d/m/Y' }}&#10;Previous: {{ patient.previous_to_latest_hba1c_date|date:'d/m/Y' }}&#10;Time between: {{ patient.days_delta_between_latest_and_previous_hba1c }} days">
+          {{ patient.latest_hba1c_mmol_mol|none_to_dash|round_to_1dp }} ({{ patient.latest_hba1c_pct|none_to_dash|round_to_1dp }}%)
+          <br>
+          <span class="text-xs text-gray-500">{{ patient.previous_to_latest_hba1c_mmol_mol|none_to_dash|round_to_1dp }} ({{ patient.previous_to_latest_hba1c_pct|none_to_dash|round_to_1dp }}%)</span>
+        </div>
       </td>
       <td>
         {% if patient.hba1c_delta is not None %}
@@ -129,6 +127,12 @@
             </span>
           {% else %}
             {{ patient.hba1c_delta|none_to_dash }} %
+          {% endif %}
+          {% comment %} Indicate if date diff is less than 3mo (90 days) {% endcomment %}
+          {% if patient.days_delta_between_latest_and_previous_hba1c < 90 %}
+            <span class="text-amber-500 tooltip tooltip-bottom" data-tip="Time between latest and previous HbA1c measurements is less than 3 months (90 days)">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+            </span>
           {% endif %}
         {% else %}
           {{ patient.hba1c_delta|none_to_dash }} %
