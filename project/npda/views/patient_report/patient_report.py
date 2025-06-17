@@ -19,6 +19,9 @@ from django.db.models import (
     Value,
     When,
     Subquery,
+    ExpressionWrapper,
+    DurationField,
+    Func,
 )
 
 # Django imports
@@ -582,6 +585,40 @@ class PatientReportView(
                         default=False,
                         output_field=BooleanField(),
                     ),
+                    latest_hba1c_date=Subquery(
+                        Visit.objects.filter(
+                            patient=OuterRef("pk"),
+                            visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
+                            hba1c__isnull=False,
+                        )
+                        .order_by("-visit_date")
+                        .values("visit_date")[:1]
+                    ),
+                    previous_to_latest_hba1c_date=Subquery(
+                        Visit.objects.filter(
+                            patient=OuterRef("pk"),
+                            visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
+                            hba1c__isnull=False,
+                        )
+                        .order_by("-visit_date")
+                        .values("visit_date")[1:2]
+                    ),
+                    days_delta_between_latest_and_previous_hba1c=Case(
+                        When(
+                            Q(latest_hba1c_date__isnull=False) & Q(previous_to_latest_hba1c_date__isnull=False),
+                            then=Func(
+                                ExpressionWrapper(
+                                    F("latest_hba1c_date") - F("previous_to_latest_hba1c_date"),
+                                    output_field=DurationField()
+                                ),
+                                function='EXTRACT',
+                                template="EXTRACT(DAY FROM %(expressions)s)",
+                                output_field=IntegerField()
+                            )
+                        ),
+                        default=None,
+                        output_field=IntegerField(),
+                    ),
                     latest_hba1c_mmol_mol=Subquery(
                         Visit.objects.filter(
                             patient=OuterRef("pk"),
@@ -608,8 +645,10 @@ class PatientReportView(
                     ),
                     latest_hba1c_pct=Case(
                         When(
-                            Q(latest_hba1c_mmol_mol__isnull=False) & Q(latest_hba1c_mmol_mol__gt=0),
-                            then=(Decimal("0.09148") * F("latest_hba1c_mmol_mol")) + Decimal("2.152"),
+                            Q(latest_hba1c_mmol_mol__isnull=False)
+                            & Q(latest_hba1c_mmol_mol__gt=0),
+                            then=(Decimal("0.09148") * F("latest_hba1c_mmol_mol"))
+                            + Decimal("2.152"),
                         ),
                         default=None,
                         output_field=DecimalField(max_digits=4, decimal_places=1),
@@ -640,8 +679,13 @@ class PatientReportView(
                     ),
                     previous_to_latest_hba1c_pct=Case(
                         When(
-                            Q(previous_to_latest_hba1c_mmol_mol__isnull=False) & Q(previous_to_latest_hba1c_mmol_mol__gt=0),
-                            then=(Decimal("0.09148") * F("previous_to_latest_hba1c_mmol_mol")) + Decimal("2.152"),
+                            Q(previous_to_latest_hba1c_mmol_mol__isnull=False)
+                            & Q(previous_to_latest_hba1c_mmol_mol__gt=0),
+                            then=(
+                                Decimal("0.09148")
+                                * F("previous_to_latest_hba1c_mmol_mol")
+                            )
+                            + Decimal("2.152"),
                         ),
                         default=None,
                         output_field=DecimalField(max_digits=4, decimal_places=1),
@@ -672,6 +716,9 @@ class PatientReportView(
                     "previous_to_latest_hba1c_mmol_mol",
                     "previous_to_latest_hba1c_pct",
                     "hba1c_delta",
+                    "latest_hba1c_date",
+                    "previous_to_latest_hba1c_date",
+                    "days_delta_between_latest_and_previous_hba1c",
                 )
             )
 

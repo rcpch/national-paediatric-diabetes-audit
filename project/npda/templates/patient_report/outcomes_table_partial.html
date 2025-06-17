@@ -109,7 +109,11 @@
       <td>
         {{ patient.latest_hba1c_mmol_mol|none_to_dash|round_to_1dp }} ({{ patient.latest_hba1c_pct|none_to_dash|round_to_1dp }}%)
         <br>
-        <span class="text-xs text-gray-500">{{ patient.previous_to_latest_hba1c_mmol_mol|none_to_dash|round_to_1dp }} ({{ patient.previous_to_latest_hba1c_pct|none_to_dash|round_to_1dp }}%)</span>
+        <span class="text-xs text-gray-500">{{ patient.previous_to_latest_hba1c_mmol_mol|none_to_dash|round_to_1dp }} ({{ patient.previous_to_latest_hba1c_pct|none_to_dash|round_to_1dp }}%) taken {{ patient.days_delta_between_latest_and_previous_hba1c }} days ago</span>
+
+        1{{ patient.latest_hba1c_date }}
+        2{{ patient.previous_to_latest_hba1c_date }}
+        3{{ patient.days_delta_between_latest_and_previous_hba1c }}
       </td>
       <td>
         {% if patient.hba1c_delta is not None %}
