@@ -3445,8 +3445,6 @@ class CalculateKPIS:
         )
         total_ineligible = self.total_patients_count - total_eligible
 
-        print(eligible_patients)
-
         hba1c_values_by_patient = self.get_median_hba1c_values_by_patient(
             eligible_patients
         )
