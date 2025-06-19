@@ -101,3 +101,53 @@ def test_no_duplicate_patients_in_report(
         patient["patient_identifier"] for patient in response.context["patients"]
     )
     assert len(duplicates) == N_PATIENTS
+
+def test_outcomes_values_are_as_expected(seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+):
+    """Uses known hba1c measurements to assert expected values"""
+
+    # Login as RCPCH Audit Team user
+    ah_rcpch_audit_team_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_rcpch_audit_team_data.role,
+    ).first()
+    client = login_and_verify_user(client, ah_rcpch_audit_team_user)
+
+    # Get audit period and ensure it's open
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    # Create fake patients and visits using FakePatientCreator
+    fake_patient_creator = FakePatientCreator(
+        audit_start_date=audit_period.start_date,
+        audit_end_date=audit_period.end_date,
+    )
+
+    # Create 10 patients with visits
+    N_PATIENTS = 10
+    new_pts = fake_patient_creator.create_and_save_fake_patients(
+        n=N_PATIENTS,
+        age_range=AgeRange.AGE_11_15,
+        hb1ac_target_range=HbA1cTargetRange.TARGET,
+        visit_types=[VisitType.CLINIC, VisitType.CLINIC],
+        visit_kwargs={"is_valid": True},
+    )
+
+    new_submission = Submission.objects.create(
+        paediatric_diabetes_unit=ah_rcpch_audit_team_user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        submission_date=audit_period.start_date,
+        submission_by=ah_rcpch_audit_team_user,
+        submission_active=True,
+    )
+
+    # Add patients to submission
+    new_submission.patients.add(*new_pts)
+
+    # Get the patient report
+    response = client.get(reverse("patient_report"))
+    assert response.status_code == HTTPStatus.OK
