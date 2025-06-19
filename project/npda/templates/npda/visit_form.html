@@ -59,7 +59,7 @@
             {% include 'partials/visit_form_tab.html' with checked=tab.active label=tab.name categories=tab.categories errors=tab.errors %}
           {% endfor %}
         </div>
-        <div class="flex justify-end">
+        <div class="flex justify-end mt-3">
           <button type="submit"
                   value="Submit"
                   class="btn rcpch-btn bg-rcpch_light_blue border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue {% if not perms.npda.change_visit or not can_use_questionnaire or form.patient.is_in_transfer_in_the_last_year %}opacity-40 pointer-events-none{% endif %}">
