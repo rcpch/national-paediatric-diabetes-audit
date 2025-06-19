@@ -1,5 +1,6 @@
 """Tests for the patient report view"""
 
+from decimal import Decimal
 import logging
 from http import HTTPStatus
 
@@ -149,11 +150,13 @@ def test_outcomes_no_hba1c_measurements(
 ):
     """
     Test outcomes view for patient with no HbA1c measurements.
-    
-    Verifies that all HbA1c-related fields are None when a patient 
+
+    Verifies that all HbA1c-related fields are None when a patient
     has visits but no HbA1c data recorded.
     """
-    ah_rcpch_audit_team_user, AUDIT_START_DATE, eligible_criteria = _create_outcomes_test_setup(client)
+    ah_rcpch_audit_team_user, AUDIT_START_DATE, eligible_criteria = (
+        _create_outcomes_test_setup(client)
+    )
 
     # Create patient with no HbA1c measurements (T1DM)
     patient = PatientFactory(
@@ -210,11 +213,13 @@ def test_outcomes_single_hba1c_measurement(
 ):
     """
     Test outcomes view for patient with single HbA1c measurement.
-    
-    Verifies that latest HbA1c values are populated correctly while 
+
+    Verifies that latest HbA1c values are populated correctly while
     previous values remain None, and no delta calculations are performed.
     """
-    ah_rcpch_audit_team_user, AUDIT_START_DATE, eligible_criteria = _create_outcomes_test_setup(client)
+    ah_rcpch_audit_team_user, AUDIT_START_DATE, eligible_criteria = (
+        _create_outcomes_test_setup(client)
+    )
 
     # Create patient with single HbA1c measurement (T2DM)
     patient = PatientFactory(
@@ -254,8 +259,8 @@ def test_outcomes_single_hba1c_measurement(
     patient_data = patients[0]
     assert patient_data["latest_hba1c_mmol_mol"] == 50
     # Calculate expected percentage: (0.09148 * 50) + 2.152 = 6.726
-    expected_pct = round((0.09148 * 50) + 2.152, 1)
-    assert patient_data["latest_hba1c_pct"] == expected_pct
+    EXPECTED_PCT = Decimal((0.09148 * 50) + 2.152)
+    assert abs(patient_data["latest_hba1c_pct"] - EXPECTED_PCT) < 0.01
     assert patient_data["previous_to_latest_hba1c_mmol_mol"] is None
     assert patient_data["previous_to_latest_hba1c_pct"] is None
     assert patient_data["hba1c_delta"] is None
@@ -273,12 +278,14 @@ def test_outcomes_multiple_hba1c_measurements(
 ):
     """
     Test outcomes view for patient with multiple HbA1c measurements.
-    
+
     Verifies that both latest and previous HbA1c values are populated correctly,
-    percentage conversions are accurate, and delta calculations show the 
+    percentage conversions are accurate, and delta calculations show the
     percentage change between measurements.
     """
-    ah_rcpch_audit_team_user, AUDIT_START_DATE, eligible_criteria = _create_outcomes_test_setup(client)
+    ah_rcpch_audit_team_user, AUDIT_START_DATE, eligible_criteria = (
+        _create_outcomes_test_setup(client)
+    )
 
     # Create patient with multiple HbA1c measurements (Other/MODY)
     patient = PatientFactory(
@@ -326,14 +333,18 @@ def test_outcomes_multiple_hba1c_measurements(
 
     patient_data = patients[0]
     assert patient_data["latest_hba1c_mmol_mol"] == 45  # Latest value
-    latest_pct = round((0.09148 * 45) + 2.152, 1)
-    assert patient_data["latest_hba1c_pct"] == latest_pct
+    EXPECTED_PCT = Decimal((0.09148 * 45) + 2.152)
+    assert abs(patient_data["latest_hba1c_pct"] - EXPECTED_PCT) < 0.01
     assert patient_data["previous_to_latest_hba1c_mmol_mol"] == 60  # Previous value
-    previous_pct = round((0.09148 * 60) + 2.152, 1)
-    assert patient_data["previous_to_latest_hba1c_pct"] == previous_pct
+    EXPECTED_PCT = Decimal((0.09148 * 60) + 2.152)
+    assert abs(patient_data["previous_to_latest_hba1c_pct"] - EXPECTED_PCT) < 0.01
     # Calculate expected delta: ((45 - 60) / 60) * 100 = -25.0
     expected_delta = round(((45 - 60) / 60) * 100, 1)
     assert patient_data["hba1c_delta"] == expected_delta
-    assert patient_data["latest_hba1c_date"] == AUDIT_START_DATE + relativedelta(days=20)
-    assert patient_data["previous_to_latest_hba1c_date"] == AUDIT_START_DATE + relativedelta(days=10)
+    assert patient_data["latest_hba1c_date"] == AUDIT_START_DATE + relativedelta(
+        days=20
+    )
+    assert patient_data[
+        "previous_to_latest_hba1c_date"
+    ] == AUDIT_START_DATE + relativedelta(days=10)
     assert patient_data["days_delta_between_latest_and_previous_hba1c"] == 10
