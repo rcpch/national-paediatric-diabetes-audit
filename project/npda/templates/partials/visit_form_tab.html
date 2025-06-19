@@ -141,6 +141,21 @@
       {% endfor %}
     </div>
   {% endfor %}
+  <input type="hidden"
+         name="override_height_weight"
+         value="{{ override_height_weight|yesno:'true,false' }}">
+  <!-- hidden field to store the state of the override_height_weight flag -->
+  {% if override_height_weight %}
+    <div role="alert" class="alert alert-info mt-3 mb-3">
+      <i class="fa-solid fa-circle-info"></i>
+      <div>
+        <h3 class="font-bold">Invalid Measurements - What does it mean?</h3>
+        <div class="text-xs">
+          You cannot submit this form because the measurements you have supplied are invalid. If you are sure values are correct (for example the child may have a growth or skeletal disorder), submit the form and it will save the measurement as provided. You can always change it later.
+        </div>
+      </div>
+    </div>
+  {% endif %}
 </div>
 {% block extra_js %}
   <script>
