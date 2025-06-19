@@ -1,0 +1,201 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+
+[project]
+name = "national-paediatric-diabetes-audit"
+description = "National Paediatric Diabetes Audit (NPDA) platform"
+readme = "README.md"
+requires-python = ">=3.11"
+dynamic = ["version"]
+
+[tool.ruff]
+# Set the maximum line length to 88 (black's default)
+line-length = 88
+
+# Target Python 3.11
+target-version = "py311"
+
+# Include all Python files
+include = ["*.py", "*.pyi", "**/pyproject.toml"]
+
+# Exclude common directories
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+    "migrations",
+    "staticfiles",
+    "staticdocs",
+]
+
+[tool.ruff.lint]
+# Enable pycodestyle (E, W), Pyflakes (F), pyupgrade (UP), flake8-bugbear (B)
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings  
+    "F",  # Pyflakes
+    "UP", # pyupgrade
+    "B",  # flake8-bugbear
+    "SIM", # flake8-simplify
+    "I",  # isort
+]
+
+# Ignore specific rules that might be too strict for Django projects
+ignore = [
+    "E501",  # Line too long (handled by formatter)
+    "B008",  # Do not perform function calls in argument defaults (Django uses this pattern)
+    "UP006", # Use `list` instead of `List` for type annotations (Django compatibility)
+    "UP007", # Use `X | Y` for type annotations (Django compatibility)
+]
+
+# Allow autofix for all enabled rules (when `--fix`) is provided
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.format]
+# Use double quotes for strings
+quote-style = "double"
+
+# Indent with spaces
+indent-style = "space"
+
+# Respect magic trailing commas
+skip-magic-trailing-comma = false
+
+# Automatically detect the appropriate line ending
+line-ending = "auto"
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can use magic values, assertions, and relative imports
+"**/tests/**/*" = ["PLR2004", "S101", "TID252"]
+
+# Django settings can have uppercase variables
+"**/settings.py" = ["N802", "N806"]
+
+# Migration files can have uppercase variables and long lines
+"**/migrations/**" = ["N802", "N806", "E501"]
+
+# Constants files can have uppercase variables
+"**/constants/**" = ["N802", "N806"]
+
+[tool.ruff.lint.isort]
+# Group imports by type
+known-first-party = ["project", "npda"]
+known-third-party = ["django", "pytest", "celery", "pandas", "numpy"]
+
+# Use Django's import style
+section-order = [
+    "future",
+    "standard-library", 
+    "third-party",
+    "first-party",
+    "local-folder"
+]
+
+# Add comments to separate sections
+split-on-trailing-comma = true
+combine-as-imports = true
+
+# Django-specific settings
+force-single-line = false
+lines-after-imports = 2
+
+[tool.isort]
+# Basic settings
+profile = "black"
+line_length = 88
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+
+# Sections
+known_django = "django"
+known_first_party = "project,npda"
+sections = ["FUTURE", "STDLIB", "DJANGO", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+
+# Skip problematic files
+skip_glob = ["*/migrations/*", "*/venv/*", "*/node_modules/*"]
+skip_gitignore = true
+
+# Comments
+import_heading_stdlib = "Python imports"
+import_heading_django = "Django imports"  
+import_heading_thirdparty = "Third-party imports"
+import_heading_firstparty = "RCPCH imports"
+import_heading_localfolder = "Local imports"
+
+[tool.autoflake]
+# Remove unused imports and variables
+remove-all-unused-imports = true
+remove-unused-variables = true
+remove-duplicate-keys = true
+
+# Keep certain imports even if unused (for Django projects)
+ignore-init-module-imports = true
+
+# Expand star imports  
+expand-star-imports = false
+
+# Files to exclude
+exclude = [
+    "__pycache__",
+    ".git",
+    ".tox",
+    "build",
+    "dist",
+    "*.egg-info",
+    "venv",
+    "*/migrations/*",
+    "*/node_modules/*"
+]
+
+# Check only, don't modify files (use --in-place for modification)
+check = false
+in-place = false
+
+[tool.pytest.ini_options]
+# Django settings
+DJANGO_SETTINGS_MODULE = "project.settings"
+python_files = "test_*.py"
+addopts = [
+    "--reuse-db",
+    "-k", "not examples",
+    "-m", "not performance",
+]
+
+# Enable logging
+log_cli = true
+log_cli_level = "INFO"
+
+# Test markers  
+markers = [
+    "examples: mark test as workshop-type / example test",
+    "seed: mark test as 'meta test', just used for seeding", 
+    "performance: mark test as performance test",
+]
+
+# Async support
+asyncio_mode = "auto" 

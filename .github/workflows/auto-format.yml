@@ -47,17 +47,21 @@ jobs:
           if [ -n "$CHANGED_FILES" ]; then
             echo "Formatting files: $CHANGED_FILES"
             
-            # Remove unused imports with autoflake
+            # Remove unused imports with autoflake (uses pyproject.toml config)
             echo "Running autoflake..."
-            autoflake --remove-all-unused-imports --in-place $CHANGED_FILES
+            autoflake --in-place $CHANGED_FILES
             
-            # Sort imports with isort
+            # Sort imports with isort (uses pyproject.toml config)
             echo "Running isort..."
             isort $CHANGED_FILES
             
-            # Format code with ruff
+            # Format code with ruff (uses pyproject.toml config)
             echo "Running ruff format..."
             ruff format $CHANGED_FILES
+            
+            # Run ruff linting with auto-fix (uses pyproject.toml config)
+            echo "Running ruff check with auto-fix..."
+            ruff check --fix $CHANGED_FILES || true
             
             echo "Formatting completed"
           else
