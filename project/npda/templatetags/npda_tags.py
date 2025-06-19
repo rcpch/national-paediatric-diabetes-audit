@@ -483,3 +483,15 @@ def percentage(measure, total):
     if total == 0:
         return "0%"
     return f"{round(int(measure) / int(total) * 100)}%"
+
+@register.filter
+def round_to_1dp(value):
+    """
+    Rounds a number to 1 decimal place
+    """
+    if not value or value =="0":
+        return "-"
+    try:
+        return f"{float(value):.1f}"
+    except (ValueError, TypeError):
+        return value
