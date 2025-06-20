@@ -72,7 +72,9 @@ def paediatric_diabetes_units_to_populate_select_field(
                             default=Value(""),
                             output_field=CharField(),
                         ),
-                    )
+                    ),
+                    default=Value("Royal College of Paediatrics and Child Health"),
+                    output_field=CharField(),
             )
         )
         .values_list("pz_code", "paediatric_diabetes_unit_name")

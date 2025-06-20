@@ -129,6 +129,7 @@ class VisitForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.patient = kwargs["initial"].get("patient")
+        self.override_height_weight = kwargs.pop("override_height_weight", False)
         super(VisitForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
             model_field = Visit._meta.get_field(field_name)
@@ -358,35 +359,35 @@ class VisitForm(forms.ModelForm):
     Custom clean methods for all fields requiring numbers
     """
 
-    def clean_height(self):
-        # Get the height value, if present round it to 1 decimal place
-        data = self.cleaned_data["height"]
-        if data is not None:
-            if data < 40:
-                raise ValidationError(
-                    "Please enter a valid height. Cannot be less than 40cm"
-                )
-            if data > 240:
-                raise ValidationError(
-                    "Please enter a valid height. Cannot be greater than 240cm"
-                )
-            data = round(data, 1)
-        return data
+    # def clean_height(self):
+    #     # Get the height value, if present round it to 1 decimal place
+    #     data = self.cleaned_data["height"]
+    #     if data is not None:
+    #         if data < 40:
+    #             raise ValidationError(
+    #                 "Please enter a valid height. Cannot be less than 40cm"
+    #             )
+    #         if data > 240:
+    #             raise ValidationError(
+    #                 "Please enter a valid height. Cannot be greater than 240cm"
+    #             )
+    #         data = round(data, 1)
+    #     return data
 
-    def clean_weight(self):
-        # Get the weight value, if present round it to 1 decimal place
-        data = self.cleaned_data["weight"]
-        if data is not None:
-            if data < 1:
-                raise ValidationError(
-                    "Patient Weight (kg)' invalid. Cannot be below 1kg"
-                )
-            if data > 200:
-                raise ValidationError(
-                    "Patient Weight (kg)' invalid. Cannot be above 200kg"
-                )
-            data = round(data, 1)
-        return data
+    # def clean_weight(self):
+    #     # Get the weight value, if present round it to 1 decimal place
+    #     data = self.cleaned_data["weight"]
+    #     if data is not None:
+    #         if data < 1:
+    #             raise ValidationError(
+    #                 "Patient Weight (kg)' invalid. Cannot be below 1kg"
+    #             )
+    #         if data > 200:
+    #             raise ValidationError(
+    #                 "Patient Weight (kg)' invalid. Cannot be above 200kg"
+    #             )
+    #         data = round(data, 1)
+    #     return data
 
     def clean_systolic_blood_pressure(self):
         systolic_blood_pressure = self.cleaned_data["systolic_blood_pressure"]
@@ -752,7 +753,7 @@ class VisitForm(forms.ModelForm):
         ]:
             result = getattr(self.async_validation_results, result_field)
 
-            if result and type(result) is ValidationError:
+            if result and type(result) is ValidationError and not self.override_height_weight:
                 for field in fields_to_attach_errors:
                     self.add_error(field, result)
 
@@ -801,7 +802,7 @@ class VisitForm(forms.ModelForm):
                     }
                 )
 
-        # Get centiles for height and weight and bmi if they are present as well as date and sex
+        # Get centiles for height and weight and bmi if they are present as well as date and sex, so long as overriding is not set
         if not getattr(self, "async_validation_results", None):
             self.async_validation_results = validate_visit_sync(
                 birth_date=birth_date,
@@ -1122,7 +1123,7 @@ class VisitForm(forms.ModelForm):
         # I haven't implemented it here. The risk is that future versions of Django will add more
         # behaviour that we miss out on.
 
-        if getattr(self, "async_validation_results"):
+        if getattr(self, "async_validation_results") and not self.override_height_weight:
             self.instance.bmi = self.async_validation_results.bmi
 
             for field_prefix in ["height", "weight", "bmi"]:
