@@ -10,7 +10,7 @@
         {% comment %} Just the default table, htmx views swap this out {% endcomment %}
         {% if selected_category == "treatment" %}
           <!-- slight hack: this is designed for htmx but now we navigate here from the dashboard just for treatment also -->
-          {% include "patient_report/treatment_table_partial.html" with sort_field="treatment" sort_order=sort_order %}
+          {% include "patient_report/treatment_table_partial.html" with sort_field="treatment_regimen" sort_order=sort_order %}
         {% else %}
           {% include "patient_report/health_checks_table_partial.html" with sort_field=sort_field sort_order=sort_order %}
         {% endif %}
