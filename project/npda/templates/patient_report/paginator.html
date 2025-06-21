@@ -25,10 +25,10 @@
            hx-target="#table-area"
            hx-swap="innerHTML"
            class="join-item btn btn-outline">Next</a>
-        <a hx-get="?category={{ selected_category }}&page={{ paginator.num_pages }}"&sort={{ sort_field }}&order={{ sort_order }}"
-          hx-target="#table-area"
-          hx-swap="innerHTML"
-        class="join-item btn btn-outline">Last</a>
+        <a hx-get="?category={{ selected_category }}&page={{ paginator.num_pages }}&sort={{ sort_field }}&order={{ sort_order }}"
+           hx-target="#table-area"
+           hx-swap="innerHTML"
+           class="join-item btn btn-outline">Last</a>
       {% else %}
         <button class="join-item btn btn-outline btn-disabled">Next</button>
         <button class="join-item btn btn-outline btn-disabled">Last</button>
