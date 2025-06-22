@@ -7,6 +7,7 @@ from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.mixins import AccessMixin
+from django.shortcuts import get_object_or_404
 
 from project.npda.models.npda_user import NPDAUser
 from project.npda.models.patient import Patient
@@ -80,7 +81,7 @@ class CheckPDUListMixin(AccessMixin):
         # get pdu that user is requesting access of
         requested_pdu = ""
         if model == "Visit":
-            requested_patient = Patient.objects.get(pk=self.kwargs["patient_id"])
+            requested_patient = get_object_or_404(Patient, pk=self.kwargs["patient_id"])
             Transfer = apps.get_model("npda", "Transfer")
             transfer = Transfer.objects.get(patient=requested_patient)
             requested_pdu = transfer.paediatric_diabetes_unit.pz_code
@@ -145,12 +146,12 @@ class CheckPDUInstanceMixin(AccessMixin):
 
 
         elif model == "Patient":
-            requested_patient = Patient.objects.get(pk=self.kwargs["pk"])
+            requested_patient = get_object_or_404(Patient, pk=self.kwargs["pk"])
             transfer = Transfer.objects.get(patient=requested_patient)
             requested_pdu = transfer.paediatric_diabetes_unit.pz_code
 
         elif model == "Visit":
-            requested_patient = Patient.objects.get(pk=self.kwargs["patient_id"])
+            requested_patient = get_object_or_404(Patient, pk=self.kwargs["patient_id"])
             transfer = Transfer.objects.get(patient=requested_patient)
             requested_pdu = transfer.paediatric_diabetes_unit.pz_code
 

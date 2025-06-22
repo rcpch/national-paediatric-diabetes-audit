@@ -14,7 +14,7 @@ from django.db.models import Count, Case, When, Max, Q, F
 from django.forms import BaseForm
 from django.forms import BaseForm
 from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import render, redirect, reverse
+from django.shortcuts import get_object_or_404, render, redirect, reverse
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
@@ -473,8 +473,7 @@ class PatientUpdateView(
 
     def get_context_data(self, **kwargs):
         Transfer = apps.get_model("npda", "Transfer")
-        # pz_code = self.request.session.get("pz_code")
-        patient = Patient.objects.get(pk=self.kwargs["pk"])
+        patient = get_object_or_404(Patient, pk=self.kwargs["pk"])
         transfer = Transfer.objects.get(patient=patient)
         context = super().get_context_data(**kwargs)
         PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
