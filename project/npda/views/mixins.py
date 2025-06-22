@@ -132,7 +132,7 @@ class CheckPDUInstanceMixin(AccessMixin):
         user_pdus = [org.pz_code for org in request.user.organisation_employers.all()]
 
         if model == "NPDAUser":
-            requested_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
+            requested_user = get_object_or_404(NPDAUser, pk=self.kwargs['pk'])
             if requested_user.organisation_employers.filter(pz_code=request.session.get('pz_code')).exists():
                 if requested_user.number_of_pdu_memberships() == 1:
                     # if the user is a member of the requested pdu and there is only one, then we can use that
