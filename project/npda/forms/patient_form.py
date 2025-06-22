@@ -112,6 +112,7 @@ class PatientForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.audit_year = kwargs.pop("audit_year", None)
+        self.audit_period = kwargs.pop("audit_period", None)
         self.paediatric_diabetes_unit = kwargs.pop("paediatric_diabetes_unit", None)
         self.override_postcode = kwargs.pop("override_postcode", False)
     
@@ -393,31 +394,30 @@ class PatientForm(forms.ModelForm):
         """
         if nhs_number:
             self._validate_field_uniqueness(
-                nhs_number,
-                "nhs_number",
-                "patient__nhs_number",
-                "NHS Number must be unique within this submission.",
+                value=nhs_number,
+                field_name="nhs_number",
+                filter_field="patient__nhs_number",
+                error_message="NHS Number must be unique within this submission.",
             )
 
         if unique_reference_number:
             self._validate_field_uniqueness(
-                unique_reference_number,
-                "unique_reference_number",
-                "patient__unique_reference_number",
-                "Unique Reference Number must be unique within this submission.",
+               value=unique_reference_number,
+                field_name="unique_reference_number",
+                filter_field="patient__unique_reference_number",
+                error_message="Unique Reference Number must be unique within this submission.",
             )
 
     def _validate_field_uniqueness(
         self, value, field_name, filter_field, error_message
     ):
         PatientSubmission = apps.get_model("npda", "PatientSubmission")
-
         def get_submissions_count(filter_kwargs):
             return PatientSubmission.objects.filter(**filter_kwargs).count()
 
         filter_kwargs = {
             "submission__submission_active": True,
-            "submission__audit_year": self.audit_year,
+            "submission__audit_period": self.audit_period,
             filter_field: value,
             "submission__paediatric_diabetes_unit": self.paediatric_diabetes_unit,
         }

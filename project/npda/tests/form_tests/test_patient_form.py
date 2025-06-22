@@ -651,3 +651,41 @@ def test_fail_validation_if_same_patient_twice_in_same_submission(
     new_form.is_valid()
 
     assert "nhs_number" in new_form.errors.as_data()
+
+@pytest.mark.django_db
+def test_pass_validation_if_same_patient_twice_in_same_submission_but_different_pdu(
+    mocked_pdu,
+    mocked_audit_year,
+    seed_groups_fixture,
+    seed_users_fixture,
+):
+    NPDAUser = apps.get_model("npda", "NPDAUser")
+    pdu_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=mocked_pdu.pz_code
+    ).first()
+
+    form = PatientForm(
+        VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu, audit_year=mocked_audit_year
+    )
+    assert len(form.errors.as_data()) == 0
+    patient = form.save()
+
+    # add the patient to a submission
+    Submission = apps.get_model("npda", "Submission")
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=mocked_pdu,
+        audit_year=mocked_audit_year,
+        submission_active=True,
+        submission_date=TODAY,
+        submission_by=pdu_user,
+    )
+    submission.patients.add(patient)
+
+    another_pdu = PaediatricsDiabetesUnitFactory(pz_code="PZ075")
+
+    # Create a new form with the same patient but in a different PDU
+    new_form = PatientForm(
+        VALID_FIELDS, paediatric_diabetes_unit=another_pdu, audit_year=mocked_audit_year
+    )
+    assert new_form.is_valid(), "Form should be valid even with the same patient in a different PDU"
+    assert "nhs_number" not in new_form.errors.as_data(), "There should be no error for nhs_number when the patient is in a different PDU"

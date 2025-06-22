@@ -5,7 +5,6 @@ from datetime import date
 
 # Django imports
 from django.apps import apps
-from django.utils import timezone
 from django.contrib import messages
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
@@ -14,13 +13,10 @@ from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.db.models import Count, Case, When, Max, Q, F
 from django.forms import BaseForm
 from django.forms import BaseForm
-from django.http import HttpResponse
-from django.http.response import HttpResponse
-from django.contrib.postgres.aggregates import StringAgg
-from django.shortcuts import render, redirect, reverse
-from django.template.loader import render_to_string
+from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import get_object_or_404, render, redirect, reverse
 from django.urls import reverse_lazy
-from django.utils.html import escape
+from django.utils import timezone
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
 
@@ -333,11 +329,16 @@ class PatientCreateView(
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+        AuditPeriod = apps.get_model("npda", "AuditPeriod")
         pz_code = self.request.session.get("pz_code")
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
         audit_year = self.request.session.get("selected_audit_year")
         kwargs["paediatric_diabetes_unit"] = pdu
+        kwargs["audit_period"] = AuditPeriod.objects.get_audit_period_for_request(self.request)
         kwargs["audit_year"] = audit_year
+        # Get override_postcode from POST data if available
+        if self.request.method in ('POST', 'PUT'):
+            kwargs['override_postcode'] = self.request.POST.get('override_postcode', 'false') == 'true'
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -355,13 +356,6 @@ class PatientCreateView(
         context["form_method"] = "create"
         context["override_postcode"] = False
         return context
-    
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        # Get override_postcode from POST data if available
-        if self.request.method in ('POST', 'PUT'):
-            kwargs['override_postcode'] = self.request.POST.get('override_postcode', 'false') == 'true'
-        return kwargs
     
     def form_invalid(self, form):
         context = self.get_context_data()
@@ -479,8 +473,7 @@ class PatientUpdateView(
 
     def get_context_data(self, **kwargs):
         Transfer = apps.get_model("npda", "Transfer")
-        # pz_code = self.request.session.get("pz_code")
-        patient = Patient.objects.get(pk=self.kwargs["pk"])
+        patient = get_object_or_404(Patient, pk=self.kwargs["pk"])
         transfer = Transfer.objects.get(patient=patient)
         context = super().get_context_data(**kwargs)
         PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
@@ -510,6 +503,8 @@ class PatientUpdateView(
         return super().form_valid(form)
     
     def form_invalid(self, form):
+        if "delete" in self.request.POST:
+            return redirect(reverse("patient-delete", kwargs={"pk": self.kwargs["pk"]}))
         context = self.get_context_data()
         if "postcode" in form.errors:
             # if the postcode is invalid, we want to allow the user to save the record anyway
@@ -533,6 +528,14 @@ class PatientUpdateView(
     
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
+        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+        AuditPeriod = apps.get_model("npda", "AuditPeriod")
+        pz_code = self.request.session.get("pz_code")
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+        audit_year = self.request.session.get("selected_audit_year")
+        kwargs["paediatric_diabetes_unit"] = pdu
+        kwargs["audit_period"] = AuditPeriod.objects.get_audit_period_for_request(self.request)
+        kwargs["audit_year"] = audit_year
         # Get override_postcode from POST data if available
         if self.request.method in ('POST', 'PUT'):
             kwargs['override_postcode'] = self.request.POST.get('override_postcode', 'false') == 'true'
