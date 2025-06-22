@@ -183,7 +183,8 @@ def csv_parse(csv_file):
             for row_index, (value_before, value_after) in enumerate(
                 zip(column_before, column_after)
             ):
-                if not pd.isna(value_before) and pd.isna(value_after):
+                # Handle empty strings (including spaces) for optional date columns
+                if not pd.isna(value_before) and pd.isna(value_after) and not (type(value_before) is str and value_before.strip() == ""):
                     model_field = csv_definition_for(column)["model_field"]
                     errors_to_return[row_index][model_field].append(
                         "Date format is incorrect (expected DD/MM/YYYY)"

@@ -3586,8 +3586,6 @@ def test_remove_empty_spaces_in_empty_date_fields(test_user, dummy_sheet_csv):
         replacements=[{"row": 1, "column": "Death Date", "value": "   "}],
     )
 
-    print(one_row_csv)
-
     parsed_csv = read_csv_from_str(one_row_csv)
     assert len(parsed_csv.errors_to_return) == 0, f"Expected no errors when parsing CSV, got {parsed_csv.errors_to_return}"
 
