@@ -333,11 +333,16 @@ class PatientCreateView(
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
+        AuditPeriod = apps.get_model("npda", "AuditPeriod")
         pz_code = self.request.session.get("pz_code")
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
         audit_year = self.request.session.get("selected_audit_year")
         kwargs["paediatric_diabetes_unit"] = pdu
+        kwargs["audit_period"] = AuditPeriod.objects.get_audit_period_for_request(self.request)
         kwargs["audit_year"] = audit_year
+        # Get override_postcode from POST data if available
+        if self.request.method in ('POST', 'PUT'):
+            kwargs['override_postcode'] = self.request.POST.get('override_postcode', 'false') == 'true'
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -355,13 +360,6 @@ class PatientCreateView(
         context["form_method"] = "create"
         context["override_postcode"] = False
         return context
-    
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        # Get override_postcode from POST data if available
-        if self.request.method in ('POST', 'PUT'):
-            kwargs['override_postcode'] = self.request.POST.get('override_postcode', 'false') == 'true'
-        return kwargs
     
     def form_invalid(self, form):
         context = self.get_context_data()
@@ -534,6 +532,7 @@ class PatientUpdateView(
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         # Get override_postcode from POST data if available
+        kwargs["audit_period"] = AuditPeriod.objects.get_audit_period_for_request(self.request)
         if self.request.method in ('POST', 'PUT'):
             kwargs['override_postcode'] = self.request.POST.get('override_postcode', 'false') == 'true'
         return kwargs
