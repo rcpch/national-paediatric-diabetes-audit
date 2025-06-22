@@ -3579,6 +3579,23 @@ def test_remove_empty_spaces_from_empty_fields(test_user, dummy_sheet_csv):
     assert Visit.objects.filter(patient=patient).first().dka_additional_therapies == None, f"Expected empty string for DKA additional therapies, but got {Visit.objects.filter(patient=patient).first().dka_additional_therapies}"
 
 @pytest.mark.django_db
+def test_remove_empty_spaces_in_empty_date_fields(test_user, dummy_sheet_csv):
+    one_row_csv = modify_raw_csv(
+        dummy_sheet_csv,
+        end=2,  # exclusive
+        replacements=[{"row": 1, "column": "Death Date", "value": "   "}],
+    )
+
+    df = read_csv_from_str(one_row_csv).df
+
+    errors = csv_upload_sync(test_user, df)
+
+    assert len(errors) == 0
+
+    patient = Patient.objects.first()
+    assert patient.death_date == None, f"Expected empty date for death date, but got {patient.death_date}"
+
+@pytest.mark.django_db
 def test_csv_height_weight_fields_with_units_have_units_removed(test_user, dummy_sheet_csv):
     """
     Test that height and weight fields with units have the units removed
