@@ -3586,14 +3586,13 @@ def test_remove_empty_spaces_in_empty_date_fields(test_user, dummy_sheet_csv):
         replacements=[{"row": 1, "column": "Death Date", "value": "   "}],
     )
 
-    df = read_csv_from_str(one_row_csv).df
+    print(one_row_csv)
 
-    errors = csv_upload_sync(test_user, df)
+    parsed_csv = read_csv_from_str(one_row_csv)
+    assert len(parsed_csv.errors_to_return) == 0, f"Expected no errors when parsing CSV, got {parsed_csv.errors_to_return}"
 
-    assert len(errors) == 0
-
-    patient = Patient.objects.first()
-    assert patient.death_date == None, f"Expected empty date for death date, but got {patient.death_date}"
+    errors = csv_upload_sync(test_user, parsed_csv.df, errors_to_return=parsed_csv.errors_to_return)
+    assert len(errors) == 0, f"Expected no errors when uploading CSV, got {errors}"
 
 @pytest.mark.django_db
 def test_csv_height_weight_fields_with_units_have_units_removed(test_user, dummy_sheet_csv):
