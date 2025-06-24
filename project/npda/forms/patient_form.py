@@ -372,8 +372,8 @@ class PatientForm(forms.ModelForm):
         PatientSubmission = apps.get_model("npda", "PatientSubmission")
 
         @database_sync_to_async
-        def get_submissions_count(filter_kwargs):
-            return PatientSubmission.objects.filter(**filter_kwargs).count()
+        def get_submissions_count(filter_kwargs, exclude_kwargs):
+            return PatientSubmission.objects.filter(**filter_kwargs).exclude(**exclude_kwargs).count()
 
         filter_kwargs = {
             "submission__submission_active": True,
@@ -382,7 +382,12 @@ class PatientForm(forms.ModelForm):
             "submission__paediatric_diabetes_unit": self.paediatric_diabetes_unit,
         }
 
-        count = await get_submissions_count(filter_kwargs)
+        exclude_kwargs = {}
+
+        if self.instance:
+            exclude_kwargs["patient__pk"] = self.instance.pk
+
+        count = await get_submissions_count(filter_kwargs, exclude_kwargs)
 
         if count > 0:
             self.add_error(field_name, ValidationError(error_message))
@@ -412,8 +417,8 @@ class PatientForm(forms.ModelForm):
         self, value, field_name, filter_field, error_message
     ):
         PatientSubmission = apps.get_model("npda", "PatientSubmission")
-        def get_submissions_count(filter_kwargs):
-            return PatientSubmission.objects.filter(**filter_kwargs).count()
+        def get_submissions_count(filter_kwargs, exclude_kwargs):
+            return PatientSubmission.objects.filter(**filter_kwargs).exclude(**exclude_kwargs).count()
 
         filter_kwargs = {
             "submission__submission_active": True,
@@ -422,7 +427,12 @@ class PatientForm(forms.ModelForm):
             "submission__paediatric_diabetes_unit": self.paediatric_diabetes_unit,
         }
 
-        count = get_submissions_count(filter_kwargs)
+        exclude_kwargs = {}
+
+        if self.instance:
+            exclude_kwargs["patient__pk"] = self.instance.pk
+
+        count = get_submissions_count(filter_kwargs, exclude_kwargs)
 
         if count > 0:
             self.add_error(field_name, ValidationError(error_message))
