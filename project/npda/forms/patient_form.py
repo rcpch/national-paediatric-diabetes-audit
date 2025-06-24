@@ -388,6 +388,7 @@ class PatientForm(forms.ModelForm):
             self.add_error(field_name, ValidationError(error_message))
 
     def validate_uniqueness(self, nhs_number, unique_reference_number):
+        print(f"!! validate_uniqueness")
         """
         Validate that the NHS Number or Unique Reference Number is unique within this submission.
         Handles both synchronous and asynchronous contexts.

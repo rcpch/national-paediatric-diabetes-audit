@@ -23,6 +23,7 @@ from project.npda.tests.factories.patient_factory import (
     INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
 )
 from project.npda.tests.factories import PaediatricsDiabetesUnitFactory
+from project.constants import SEX_TYPE
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -689,3 +690,41 @@ def test_pass_validation_if_same_patient_twice_in_same_submission_but_different_
     )
     assert new_form.is_valid(), "Form should be valid even with the same patient in a different PDU"
     assert "nhs_number" not in new_form.errors.as_data(), "There should be no error for nhs_number when the patient is in a different PDU"
+
+
+@pytest.mark.django_db
+def test_edit_patient(mocked_pdu, mocked_audit_year):
+    NPDAUser = apps.get_model("npda", "NPDAUser")
+    pdu_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=mocked_pdu.pz_code
+    ).first()
+
+    form = PatientForm(
+        VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu, audit_year=mocked_audit_year
+    )
+
+    assert len(form.errors.as_data()) == 0
+    patient = form.save()
+
+    # Add the patient to a submission (required to reproduce https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1039)
+    Submission = apps.get_model("npda", "Submission")
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=mocked_pdu,
+        audit_year=mocked_audit_year,
+        submission_active=True,
+        submission_date=TODAY,
+        submission_by=pdu_user,
+    )
+    submission.patients.add(patient)
+
+    form = PatientForm(
+        VALID_FIELDS | { "sex": SEX_TYPE[1][0] },
+        instance=patient,
+        paediatric_diabetes_unit=mocked_pdu,
+        audit_year=mocked_audit_year
+    )
+
+    assert len(form.errors.as_data()) == 0
+    patient = form.save()
+
+    assert patient.sex == SEX_TYPE[1][0]
