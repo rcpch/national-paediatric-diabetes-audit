@@ -583,18 +583,24 @@ def test_reason_leaving_service_invalid(mocked_pdu, mocked_audit_year):
     assert "reason_leaving_service" in form.errors.as_data()
 
 
-@skip("This test is failing")
 @pytest.mark.django_db
-@patch(
-    "project.npda.forms.patient_form.validate_patient_sync",
-    mock_external_validation_result(index_of_multiple_deprivation_quintile=None),
-)
 def test_successful_patient_transfer(mocked_pdu, mocked_audit_year):
     # Create patient
-    patient = Patient.objects.create(
-        **VALID_FIELDS,
+    form = PatientForm(
+        VALID_FIELDS,
         paediatric_diabetes_unit=mocked_pdu,
         audit_year=mocked_audit_year
+    )
+    
+    assert len(form.errors.as_data()) == 0
+    patient = form.save()
+
+    # Create a transfer for the patient (initially created in the view)
+    Transfer.objects.create(
+        paediatric_diabetes_unit=mocked_pdu,
+        patient=patient,
+        date_leaving_service=None,
+        reason_leaving_service=None,
     )
 
     # Update patient
@@ -603,14 +609,14 @@ def test_successful_patient_transfer(mocked_pdu, mocked_audit_year):
         instance=patient,
     )
 
+    assert len(form.errors.as_data()) == 0
     patient = form.save()
 
     transfer = Transfer.objects.get(patient=patient)
 
     assert len(form.errors.as_data()) == 0
     assert form.is_valid()
-    # assert form.save().date_leaving_service == TODAY
-    # assert form.save().reason_leaving_service == 1
+    
     assert transfer.patient == patient
     assert transfer.date_leaving_service == TODAY
     assert transfer.reason_leaving_service == 1
