@@ -918,6 +918,19 @@ class VisitForm(forms.ModelForm):
                 [{"total_cholesterol": total_cholesterol}],
             )
 
+        thyroid_function_date = cleaned_data.get("thyroid_function_date")
+        thyroid_treatment_status = cleaned_data.get("thyroid_treatment_status")
+        if thyroid_function_date is not None and thyroid_treatment_status is None:
+            raise ValidationError(
+                {
+                    "thyroid_treatment_status": [
+                        "Thyroid Treatment Status must be filled in if Thyroid Function Date is filled in"
+                    ]
+                }
+            )
+
+        
+
         psychological_screening_assessment_date = cleaned_data.get(
             "psychological_screening_assessment_date"
         )
