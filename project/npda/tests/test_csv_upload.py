@@ -985,6 +985,14 @@ def test_mixed_case_column_headers(test_user, dummy_sheet_csv):
 
     assert df.columns[0] == "NHS Number"
 
+@pytest.mark.django_db
+def test_column_headers_with_quotes(test_user, dummy_sheet_csv):
+    csv = dummy_sheet_csv.replace("NHS Number", '"NHS Number"')
+    assert '"NHS Number"' in csv
+    df = read_csv_from_str(csv).df
+
+    assert df.columns[0] == "NHS Number"
+
 
 @pytest.mark.django_db
 def test_invalid_nhs_number_column_name(single_row_valid_df, client, test_rcpch_user, tmp_path):
