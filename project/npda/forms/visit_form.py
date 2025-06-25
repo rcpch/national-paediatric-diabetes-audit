@@ -918,19 +918,6 @@ class VisitForm(forms.ModelForm):
                 [{"total_cholesterol": total_cholesterol}],
             )
 
-        thyroid_function_date = cleaned_data.get("thyroid_function_date")
-        thyroid_treatment_status = cleaned_data.get("thyroid_treatment_status")
-
-        has_thyroid_data = thyroid_function_date or thyroid_treatment_status
-        thyroid_treament_prescribed = thyroid_treatment_status not in [1, 99]
-
-        if has_thyroid_data and thyroid_treament_prescribed:
-            measure_must_have_date_and_value(
-                thyroid_function_date,
-                "thyroid_function_date",
-                [{"thyroid_treatment_status": thyroid_treatment_status}],
-            )
-
         psychological_screening_assessment_date = cleaned_data.get(
             "psychological_screening_assessment_date"
         )
