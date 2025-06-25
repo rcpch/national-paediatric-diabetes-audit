@@ -1059,22 +1059,23 @@ def test_thyroid_treatment_status_none_form_fails_validation():
 
 
 @pytest.mark.django_db
-def test_thyroid_function_date_none_form_fails_validation():
+def test_thyroid_function_date_none_form_passes_validation():
     """
-    Test that missing thyroid function date is invalid
+    Test that missing thyroid function date is valid
     """
     patient = PatientFactory()
 
     form = VisitForm(
         data={
+            "visit_date": "2026-01-01",  # Required for validation
             "thyroid_treatment_status": 2,
             "thyroid_function_date": None,
         },
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, f"No thyroid function date offered but test passed"
-    assert "thyroid_function_date" in form.errors
+    assert form.is_valid() == True, f"No thyroid function date offered with treatment should pass"
+    assert "thyroid_function_date" not in form.errors
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/625

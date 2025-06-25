@@ -228,7 +228,6 @@ def modify_raw_csv(csv_str, start=None, end=None, replacements={}):
 
     return output.getvalue()
 
-
 @pytest.mark.django_db
 def test_create_patient(test_user, single_row_valid_df):
 
@@ -2201,7 +2200,7 @@ def test_thyroid_treatment_missing_fails_validation(test_user, single_row_valid_
 
 
 @pytest.mark.django_db
-def test_thyroid_treatment_date_missing_fails_validation(
+def test_thyroid_treatment_date_missing_passes_validation(
     test_user, single_row_valid_df
 ):
     """
@@ -2215,7 +2214,7 @@ def test_thyroid_treatment_date_missing_fails_validation(
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
 
-    assert "thyroid_function_date" in errors[0]
+    assert "thyroid_function_date" not in errors[0]
 
     visit = Visit.objects.first()
 
