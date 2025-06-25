@@ -91,6 +91,9 @@ def csv_parse(csv_file):
     # The template published on the RCPCH website has trailing spaces on 'Observation Date: Thyroid Function '
     df.columns = df.columns.str.strip()
 
+    # issue #1038 - Twinkle users inexplicably submit CSV files with headings that are in quotes.
+    df.columns = df.columns.str.strip('\'"')
+
     # Replace headings which were different from in the old NPDA template with the new
     for column in df.columns:
         lowercase_col = column.lower()
