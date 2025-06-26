@@ -165,9 +165,9 @@ def test_rcpch_user(seed_groups_fixture, seed_users_fixture, seed_audit_periods_
 # https://github.com/pytest-dev/pytest-asyncio/issues/226
 @async_to_sync
 async def csv_upload_sync(
-    user, dataframe, pdu=None, errors_to_return=None
+    user, dataframe, pdu=None, errors_to_return=None, _audit_period=None
 ):
-    audit_period = await AuditPeriod.objects.afirst()
+    audit_period = _audit_period if _audit_period else await AuditPeriod.objects.afirst()
 
     if not pdu:
         pdu = await PaediatricDiabetesUnit.objects.aget(pz_code=ALDER_HEY_PZ_CODE)
@@ -3617,3 +3617,14 @@ def test_csv_height_weight_fields_with_units_have_units_removed(test_user, dummy
 
     assert visit.height == Decimal("150.0"), f"Expected height to be 150.0, but got {visit.height}"
     assert visit.weight == Decimal("50.0"), f"Expected weight to be 50.0, but got {visit.weight}"
+
+@pytest.mark.django_db
+def test_submission_has_audit_period_attached(test_user, single_row_valid_df):
+    audit_period = AuditPeriod.objects.first()
+
+    csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
+
+    assert Submission.objects.count() == 1, "Expected one submission to be created"
+    submission = Submission.objects.first()
+
+    assert submission.audit_period == audit_period, f"Expected submission to have audit period {audit_period}, but got {submission.audit_period}"
