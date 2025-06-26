@@ -15,8 +15,14 @@
     <title>National Paediatric Diabetes Audit Platform | RCPCH</title>
     <!-- Favicon -->
     <link rel="icon" href="{% static 'favicon.ico' %}" />
-    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon-32x32.png' %}" />
-    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'favicon-16x16.png' %}" />
+    <link rel="icon"
+          type="image/png"
+          sizes="32x32"
+          href="{% static 'favicon-32x32.png' %}" />
+    <link rel="icon"
+          type="image/png"
+          sizes="16x16"
+          href="{% static 'favicon-16x16.png' %}" />
     <link rel="apple-touch-icon" href="{% static 'favicon-32x32.png' %}" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -40,7 +46,7 @@
     {% block nav %}
       {% include 'navbar/nav.html' %}
     {% endblock %}
-    {% include 'partials/closing_down_sale.html' %}
+    {% comment %} {% include 'partials/closing_down_sale.html' %} NOTE leaving this here as banners maybe needed in future {% endcomment %}
     {% block content %}{% endblock %}
     {% include 'footer.html' %}
     {% block toasts %}
