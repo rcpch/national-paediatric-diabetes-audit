@@ -1,4 +1,3 @@
-import json
 import collections
 
 from asgiref.sync import async_to_sync
@@ -11,12 +10,12 @@ from project.constants.csv_headings import csv_definition_for
 from project.npda.models import (
     NPDAUser,
     PaediatricDiabetesUnit,
-    Submission
+    Submission,
+    AuditPeriod
 )
 from project.npda.general_functions.csv import (
     csv_upload,
     csv_parse,
-    csv_header,
     create_csv_submission,
     tidy_up_old_submissions
 )
@@ -51,8 +50,13 @@ class Command(BaseCommand):
         parser.add_argument(
             "--audit-year",
             type=str,
-            required=True,
             help="Audit year for the upload",
+        )
+
+        parser.add_argument(
+            "--audit-period",
+            type=int,
+            help="Primary key of the audit period for the upload",
         )
 
         parser.add_argument(
@@ -83,12 +87,12 @@ class Command(BaseCommand):
                 print(f"\t\t{field}: {error}")
 
 
-    def upload_csv_to_single_pdu(self,audit_year, pdu_pz_code, user, parsed_csv, csv_file_bytes, csv_file_name):
+    def upload_csv_to_single_pdu(self,audit_period, pdu_pz_code, user, parsed_csv, csv_file_bytes, csv_file_name):
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=pdu_pz_code)
 
         submission = async_to_sync(create_csv_submission)(
             pdu=pdu,
-            audit_year=audit_year,
+            audit_period=audit_period,
             csv_file_bytes=csv_file_bytes,
             csv_file_name=csv_file_name,
             user=user
@@ -110,7 +114,7 @@ class Command(BaseCommand):
             print(f"Errors during upload:")
             self.print_errors(errors)
     
-    def upload_as_questionnaire_entries(self, audit_year, pdu_pz_code, user, parsed_csv, csv_file_name, merge_into_existing_questionnaire_submissions=False):
+    def upload_as_questionnaire_entries(self, audit_period, user, parsed_csv, csv_file_name, merge_into_existing_questionnaire_submissions=False):
         df = parsed_csv.df
 
         if parsed_csv.errors_to_return:
@@ -134,7 +138,7 @@ class Command(BaseCommand):
             try:
                 submission = Submission.objects.get(
                     paediatric_diabetes_unit=pdu,
-                    audit_year=audit_year,
+                    audit_period=audit_period,
                     submission_active=True
                 )
             except Submission.DoesNotExist:
@@ -157,7 +161,8 @@ class Command(BaseCommand):
             pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
 
             submission = Submission.objects.create(
-                audit_year=audit_year,
+                audit_year=audit_period.audit_year(), ## compatibility
+                audit_period=audit_period,
                 paediatric_diabetes_unit=pdu,
                 submission_active=True,
                 submission_by=user,
@@ -200,7 +205,12 @@ class Command(BaseCommand):
         user_pk = options["user"]
         user = NPDAUser.objects.get(pk=user_pk)
 
-        audit_year = int(options["audit_year"])
+        if options["audit_period"]:
+            audit_period = AuditPeriod.objects.get(pk=options["audit_period"])
+        elif options["audit_year"]:
+            audit_period = AuditPeriod.objects.get(start_date__year=options["audit_year"])
+        else:
+            raise ValueError("Must specify either --audit-period or --audit-year")
 
         if options["import_as_questionnaire_entries"] and options["pz_code"]:
             raise ValueError("Cannot specify both --pz-code and --use-pz-codes-from-file")
@@ -221,9 +231,9 @@ class Command(BaseCommand):
 
         if pdu_pz_code:
             self.upload_csv_to_single_pdu(
-                audit_year, pdu_pz_code, user, parsed_csv, csv_file_bytes, csv_file_name
+                audit_period, pdu_pz_code, user, parsed_csv, csv_file_bytes, csv_file_name
             )
         else:
             self.upload_as_questionnaire_entries(
-                audit_year, pdu_pz_code, user, parsed_csv, csv_file_name, options["merge_into_existing_questionnaire_submissions"]
+                audit_period, user, parsed_csv, csv_file_name, options["merge_into_existing_questionnaire_submissions"]
             )
