@@ -6,8 +6,7 @@ from django.apps import apps
 
 # NPDA Imports
 from project.npda.general_functions import (
-    organisations_adapter,
-    get_audit_period_for_date,
+    organisations_adapter
 )
 
 logger = logging.getLogger(__name__)
