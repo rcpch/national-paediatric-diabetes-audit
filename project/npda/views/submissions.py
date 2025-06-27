@@ -372,7 +372,7 @@ async def upload_csv(request):
 
         new_submission = await create_csv_submission(
             pdu=pdu,
-            audit_year=audit_period.audit_year(),
+            audit_period=audit_period,
             csv_file_bytes=user_csv_bytes,
             csv_file_name=user_csv_filename,
             # The celery task will flip it to active once complete
