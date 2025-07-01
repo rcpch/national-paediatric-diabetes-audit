@@ -9,7 +9,7 @@ import collections
 # django imports
 from django.apps import apps
 from django.utils import timezone
-from django.core.exceptions import ValidationError
+from django.core.exceptions import FieldDoesNotExist
 
 # third part imports
 import pandas as pd
@@ -181,6 +181,24 @@ async def csv_upload(
 
         return True
 
+    # Numbers larger than (max_digits - decimal_places) will fail to save at the database level
+    # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/993
+    def is_too_big_number(model, field_name, value):
+        try:
+            model_definition = model._meta.get_field(field_name)
+
+            max_digits = getattr(model_definition, "max_digits", None)
+            decimal_places = getattr(model_definition, "decimal_places", None)
+
+            if max_digits and decimal_places:
+                max_value = 10 ** (max_digits - decimal_places) - 1
+                return value >= max_value
+
+            return False
+        except FieldDoesNotExist:
+            # Handle fields like date_leaving_service that are on the PatientForm but not on the Patient model
+            return False
+
     def save_errors_and_retain_valid_fields(row_index, form):
         # We want to retain fields so that we can show them in the user interface
         # Use the field value from cleaned_data, falling back to data if it's not there
@@ -189,7 +207,9 @@ async def csv_upload(
             setattr(form.instance, key, value)
 
         for key, value in form.data.items():
-            if key not in form.cleaned_data and can_save_field(form, key):
+            if is_too_big_number(form._meta.model, key, value):
+                setattr(form.instance, key, 0)
+            elif key not in form.cleaned_data and can_save_field(form, key):
                 setattr(form.instance, key, value)
             elif not hasattr(form.instance, key):
                 setattr(form.instance, key, None)
