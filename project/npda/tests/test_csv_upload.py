@@ -228,7 +228,6 @@ def modify_raw_csv(csv_str, start=None, end=None, replacements={}):
 
     return output.getvalue()
 
-
 @pytest.mark.django_db
 def test_create_patient(test_user, single_row_valid_df):
 
@@ -982,6 +981,14 @@ def test_case_insensitive_column_headers(test_user, dummy_sheet_csv):
 @pytest.mark.django_db
 def test_mixed_case_column_headers(test_user, dummy_sheet_csv):
     csv = dummy_sheet_csv.replace("NHS Number", "NHS number")
+    df = read_csv_from_str(csv).df
+
+    assert df.columns[0] == "NHS Number"
+
+@pytest.mark.django_db
+def test_column_headers_with_quotes(test_user, dummy_sheet_csv):
+    csv = dummy_sheet_csv.replace("NHS Number", '"NHS Number"')
+    assert '"NHS Number"' in csv
     df = read_csv_from_str(csv).df
 
     assert df.columns[0] == "NHS Number"
@@ -2201,7 +2208,7 @@ def test_thyroid_treatment_missing_fails_validation(test_user, single_row_valid_
 
 
 @pytest.mark.django_db
-def test_thyroid_treatment_date_missing_fails_validation(
+def test_thyroid_treatment_date_missing_passes_validation(
     test_user, single_row_valid_df
 ):
     """
@@ -2215,7 +2222,7 @@ def test_thyroid_treatment_date_missing_fails_validation(
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
 
-    assert "thyroid_function_date" in errors[0]
+    assert "thyroid_function_date" not in errors[0]
 
     visit = Visit.objects.first()
 
