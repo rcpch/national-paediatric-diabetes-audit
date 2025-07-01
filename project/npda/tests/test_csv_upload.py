@@ -3667,4 +3667,4 @@ def test_visit_with_too_precise_decimal_number_is_rounded(test_user, dummy_sheet
     assert Visit.objects.count() == 1, "Expected one visit to be created"
     visit = Visit.objects.first()
 
-    assert visit.weight == Decimal(34.1)
+    assert visit.weight == Decimal('34.1')
