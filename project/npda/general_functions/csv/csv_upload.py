@@ -192,7 +192,12 @@ async def csv_upload(
 
             if max_digits and decimal_places:
                 max_value = 10 ** (max_digits - decimal_places) - 1
-                return value >= max_value
+
+                try:
+                    return value >= max_value
+                # Missing values or strings
+                except TypeError:
+                    return False
 
             return False
         except FieldDoesNotExist:
@@ -207,7 +212,7 @@ async def csv_upload(
             setattr(form.instance, key, value)
 
         for key, value in form.data.items():
-            if value and is_too_big_number(form._meta.model, key, value):
+            if is_too_big_number(form._meta.model, key, value):
                 setattr(form.instance, key, 0)
             elif key not in form.cleaned_data and can_save_field(form, key):
                 setattr(form.instance, key, value)
