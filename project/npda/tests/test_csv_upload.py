@@ -3628,3 +3628,43 @@ def test_submission_has_audit_period_attached(test_user, single_row_valid_df):
     submission = Submission.objects.first()
 
     assert submission.audit_period == audit_period, f"Expected submission to have audit period {audit_period}, but got {submission.audit_period}"
+
+@pytest.mark.django_db
+def test_visit_with_too_big_decimal_number_still_saves(test_user, dummy_sheet_csv):
+    one_row_csv = modify_raw_csv(
+        dummy_sheet_csv,
+        end=2,  # exclusive
+        replacements=[{"row": 1, "column": "Patient Weight (kg)", "value": "3405.5"}],
+    )
+
+    parsed_csv = read_csv_from_str(one_row_csv)
+    assert len(parsed_csv.errors_to_return) == 0, f"Expected no errors when parsing CSV, got {parsed_csv.errors_to_return}"
+
+    errors = csv_upload_sync(test_user, parsed_csv.df, errors_to_return=parsed_csv.errors_to_return)
+    
+    assert "weight" in errors[0], f"Expected weight to be in errors, but got {errors}"
+
+    assert Visit.objects.count() == 1, "Expected one visit to be created"
+    visit = Visit.objects.first()
+
+    assert visit.weight == Decimal(0)
+    assert "weight" in visit.errors, f"Expected weight to have an error, but got {visit.errors}"
+
+@pytest.mark.django_db
+def test_visit_with_too_precise_decimal_number_is_rounded(test_user, dummy_sheet_csv):
+    one_row_csv = modify_raw_csv(
+        dummy_sheet_csv,
+        end=2,  # exclusive
+        replacements=[{"row": 1, "column": "Patient Weight (kg)", "value": "34.12345612"}],
+    )
+
+    parsed_csv = read_csv_from_str(one_row_csv)
+    assert len(parsed_csv.errors_to_return) == 0, f"Expected no errors when parsing CSV, got {parsed_csv.errors_to_return}"
+
+    errors = csv_upload_sync(test_user, parsed_csv.df, errors_to_return=parsed_csv.errors_to_return)
+    assert len(errors) == 0, f"Expected no errors when uploading CSV, got {errors}"
+
+    assert Visit.objects.count() == 1, "Expected one visit to be created"
+    visit = Visit.objects.first()
+
+    assert visit.weight == Decimal(34.1)
