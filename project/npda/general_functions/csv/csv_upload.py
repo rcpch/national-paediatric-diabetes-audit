@@ -207,7 +207,7 @@ async def csv_upload(
             setattr(form.instance, key, value)
 
         for key, value in form.data.items():
-            if is_too_big_number(form._meta.model, key, value):
+            if value and is_too_big_number(form._meta.model, key, value):
                 setattr(form.instance, key, 0)
             elif key not in form.cleaned_data and can_save_field(form, key):
                 setattr(form.instance, key, value)
