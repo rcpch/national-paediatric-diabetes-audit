@@ -845,11 +845,15 @@ class PatientReportView(
                 "kpi_45_median_hba1c",
             ]:
                 reverse = sort_order == "desc"
+                field_name = sort_field.replace("-", "")
+                # Calculate HbA1c values
+                pt_qs = self._calculate_hba1c_values(pt_qs, calculate_kpis)
+                
                 pt_qs = sorted(
                     pt_qs,
                     key=lambda p: (
-                        p[sort_field.replace("-", "")] is None,
-                        p[sort_field.replace("-", "")] or 0,
+                        p.get(field_name) is None, 
+                        p.get(field_name) or 0,
                     ),
                     reverse=reverse,
                 )
