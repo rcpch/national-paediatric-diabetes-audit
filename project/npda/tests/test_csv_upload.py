@@ -3384,6 +3384,7 @@ def test_bad_data_for_positive_small_integer_fields(
     for [value, expected, assertion_message] in [
         [94, None, f"Failed to handle {model_field} with incorrect choice (94)"],
         [-1, None, f"Failed to handle {model_field} with -1 (negative number)"],
+        [99.5, None, f"Failed to handle {model_field} with 99.5 (float)"],
         [
             9999,
             None,
