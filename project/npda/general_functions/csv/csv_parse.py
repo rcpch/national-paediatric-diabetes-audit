@@ -205,7 +205,7 @@ def csv_parse(csv_file):
         try:
             if column in df.columns:
                 df[column] = df[column].astype(dtype)
-        except ValueError as e:
+        except (ValueError, TypeError) as e:
             parse_type_error_columns.append(column)
             continue
 
