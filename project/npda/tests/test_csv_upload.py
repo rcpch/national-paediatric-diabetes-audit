@@ -1674,14 +1674,14 @@ def test_systolic_blood_pressure_over_240_form_fails_validation(
 
 
 @pytest.mark.django_db
-def test_systolic_blood_pressure_below_80_form_fails_validation(
+def test_systolic_blood_pressure_below_50_form_fails_validation(
     test_user, single_row_valid_df
 ):
     """
     Test that systolic blood pressure value < 80 fails validation
     """
 
-    single_row_valid_df.loc[0, "Systolic Blood Pressure"] = 60
+    single_row_valid_df.loc[0, "Systolic Blood Pressure"] = 49
     single_row_valid_df.loc[0, "Diastolic Blood pressure"] = (
         40  # Note that pressure has a lower case 'p'
     )
@@ -1690,12 +1690,12 @@ def test_systolic_blood_pressure_below_80_form_fails_validation(
     errors = csv_upload_sync(test_user, single_row_valid_df)
     assert (
         "systolic_blood_pressure" in errors[0]
-    ), "Systolic Blood Pressure is < 80 (so really dangerously low!) but passes validation."
+    ), "Systolic Blood Pressure is < 50 (so really dangerously low!) but passes validation."
 
     visit = Visit.objects.first()
     assert (
-        visit.systolic_blood_pressure == 60
-    ), f"Systolic blood pressure should be 60 (and really the child should be in hospital) but was {visit.systolic_blood_pressure}"
+        visit.systolic_blood_pressure == 49
+    ), f"Systolic blood pressure should be 49 (and really the child should be in hospital) but was {visit.systolic_blood_pressure}"
     assert (
         visit.diastolic_blood_pressure == 40
     ), f"Diastolic blood pressure should be 40 but was {visit.diastolic_blood_pressure}"
