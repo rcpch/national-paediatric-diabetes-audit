@@ -363,13 +363,13 @@ class VisitForm(forms.ModelForm):
         systolic_blood_pressure = self.cleaned_data["systolic_blood_pressure"]
 
         if systolic_blood_pressure:
-            if systolic_blood_pressure < 80:
+            if systolic_blood_pressure < 50:
                 raise ValidationError(
-                    "Systolic Blood Pressure out of range. Cannot be below 80"
+                    "Systolic Blood Pressure out of range. Cannot be below 50"
                 )
-            elif systolic_blood_pressure > 240:
+            elif systolic_blood_pressure > 200:
                 raise ValidationError(
-                    "Systolic Blood Pressure out of range. Cannot be above 240"
+                    "Systolic Blood Pressure out of range. Cannot be above 200"
                 )
 
         return systolic_blood_pressure
