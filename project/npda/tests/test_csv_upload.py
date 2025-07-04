@@ -30,7 +30,7 @@ from project.npda.general_functions.csv import (
     create_csv_submission,
     tidy_up_old_submissions
 )
-from project.constants import csv_definition_for, ALL_DATES
+from project.constants import csv_definition_for, ALL_VISIT_DATES
 from project.npda.models import (
     NPDAUser,
     Patient,
@@ -3683,17 +3683,39 @@ def test_visit_form_dates_outside_of_audit_period(test_user, single_row_valid_df
     """
     Test that all dates outside in a visit of the audit period are flagged as errors, but the visit is still created
     2024 / 2025 audit period is seeded in the fixture
+    All the dates tested include:
+        visit_date
+        height_weight_observation_date
+        hba1c_date
+        blood_pressure_observation_date
+        foot_examination_observation_date
+        retinal_screening_observation_date
+        albumin_creatinine_ratio_date
+        total_cholesterol_date
+        thyroid_function_date
+        coeliac_screen_date
+        psychological_screening_assessment_date
+        smoking_cessation_referral_date
+        carbohydrate_counting_level_three_education_date
+        dietician_additional_appointment_date
+        flu_immunisation_recommended_date
+        sick_day_rules_training_date
+        hospital_admission_date
+        hospital_discharge_date
     """
     audit_period = AuditPeriod.objects.first() # this will be 2024 / 2025
-    
-    single_row_valid_df.loc[0, "Visit/Appointment Date"] = "01/01/2020"
-    single_row_valid_df.loc[0, "Start date (Hospital Provider Spell)"] = "01/01/2020"
-    single_row_valid_df.loc[0, "Discharge date (Hospital provider spell)"] = "01/08/2020"   # mm/dd/yyyy
+    # set date of birth to 01/01/2015 as this cannot be after the other mocked dates
+    single_row_valid_df.loc[0, "Date of Birth"] = "01/01/2015"
+    # set date of diabetes diagnosis to 01/01/2018 as this cannot be after the other mocked dates
+    single_row_valid_df.loc[0, "Date of Diabetes Diagnosis"] = "01/01/2018"
+
+    # set all the dates associated with the visit to 01/01/2020
+    for date_field in ALL_VISIT_DATES:
+        single_row_valid_df.loc[0, date_field] = "01/01/2020"
 
     assert Visit.objects.count() == 0, "Expected no visits to be created before the test"
     
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
-    assert "visit_date" in errors[0], f"Expected visit_date to be in errors, but got {errors}"
-    assert "hospital_admission_date" in errors[0], f"Expected hospital_admission_date to be in errors, but got {errors}"
-    assert "hospital_discharge_date" in errors[0], f"Expected hospital_discharge_date to be in errors, but got {errors}"
+    for date_field in ALL_VISIT_DATES:
+        assert date_field in errors[0], f"Expected {date_field} to be in errors, but got {errors}"
     assert Visit.objects.count() == 1, "Expected the visit still to be created even though visit date outside of audit period"
