@@ -63,9 +63,9 @@ def csv_clean(df):
         df["Patient Height (cm)"] = df["Patient Height (cm)"].apply(clean_csv_measurement)
     if not is_numeric_dtype(df["Patient Weight (kg)"]):
         df["Patient Weight (kg)"] = df["Patient Weight (kg)"].apply(clean_csv_measurement)
-    
+
     # Strip whitespace only fields of whitespaces
-    for col in df.select_dtypes(include=['object']).columns:
+    for col in df.select_dtypes(include=['string', 'object']).columns:
         df[col] = df[col].apply(clean_whitespace)
 
     return df
