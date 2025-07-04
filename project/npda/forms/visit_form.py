@@ -723,7 +723,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
-            audit_period=self.audit_period,
+            audit_period=None, # Hospital admission dates are not bound by the audit period
         )
         if valid == False:
             raise ValidationError(error)
