@@ -1,6 +1,5 @@
 import dataclasses
 import datetime
-from pprint import pprint
 import tempfile
 import csv
 import collections
@@ -18,9 +17,7 @@ from dateutil.relativedelta import relativedelta
 from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.contrib.gis.geos import Point
-from httpx import HTTPError
 from django.contrib.messages import get_messages
-from django.test import Client
 from django.urls import reverse
 
 from project.constants.user import RCPCH_AUDIT_TEAM
@@ -28,7 +25,9 @@ from project.npda.general_functions.csv import (
     csv_upload,
     csv_parse,
     create_csv_submission,
-    tidy_up_old_submissions
+)
+from project.npda.general_functions.quarter_for_date import (
+    current_audit_year_start_date,
 )
 from project.constants import csv_definition_for, ALL_VISIT_DATES
 from project.npda.models import (
@@ -389,7 +388,12 @@ def test_error_in_multiple_visits(test_user, one_patient_two_visits):
         "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
     ] = 3
 
-    errors = csv_upload_sync(test_user, df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=df["Visit/Appointment Date"][1].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, df, _audit_period=audit_period)
     assert "treatment" in errors[0]
 
     assert Visit.objects.count() == 2
@@ -422,7 +426,16 @@ def test_multiple_patients_where_one_has_visit_errors_and_the_other_does_not(
         "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
     ] = 3
 
-    errors = csv_upload_sync(test_user, df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=df["Visit/Appointment Date"][1].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    # # set all the visit dates to be the same so we can test the treatment error
+    # for item_date in ALL_VISIT_DATES:
+    #     df[item_date[1]] = df["Visit/Appointment Date"][1]
+
+    errors = csv_upload_sync(test_user, df, _audit_period=audit_period)
     assert "treatment" in errors[0]
 
     [patient_one, patient_two] = Patient.objects.all()
@@ -706,6 +719,12 @@ def test_invalid_postcode(test_user, single_row_valid_df):
 )
 def test_error_validating_postcode(test_user, single_row_valid_df):
     single_row_valid_df["Postcode of usual address"] = "WC1X 8SH"
+
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][1].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
     errors = csv_upload_sync(test_user, single_row_valid_df)
 
     assert len(errors) == 0
@@ -740,6 +759,11 @@ def test_invalid_gp_ods_code(test_user, single_row_valid_df):
 )
 def test_error_validating_gp_ods_code(test_user, single_row_valid_df):
     single_row_valid_df["GP Practice Code"] = "G85023"
+
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][1].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
     assert len(errors) == 0
@@ -972,6 +996,11 @@ def test_case_insensitive_column_headers(test_user, dummy_sheet_csv):
 
     parsed_csv = read_csv_from_str(csv)
     assert len(parsed_csv.additional_columns) == 0
+
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=parsed_csv.df["Visit/Appointment Date"][1].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, parsed_csv.df)
 

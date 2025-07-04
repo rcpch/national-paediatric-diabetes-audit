@@ -1151,11 +1151,12 @@ def measure_must_have_date_and_value(date_field, date_field_name, field_list):
                     }
                 )
     field_name_list = ", ".join(field_name_list)
-    if date_field is None:
+    if date_field is None and any(value is not None for field in field_list for value in field.values()):
+        # If the date is None and any of the values are not None, we raise an error
         errors.update(
             {
                 date_field_name: [
-                    f"Missing date. {field_name_list} and the associated date must all be completed."
+                    f"Absent or invalid date error. {field_name_list} and the associated date must all be completed."
                 ]
             }
         )
