@@ -749,6 +749,25 @@ def test_error_validating_gp_ods_code(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+def test_gp_ods_code_trailing_space(test_user, dummy_sheet_csv):
+    with patch(
+        "project.npda.general_functions.csv.csv_upload.validate_patient_async",
+        AsyncMock(return_value=MOCK_PATIENT_EXTERNAL_VALIDATION_RESULT),
+    ) as mock_validate_patient_async:
+        one_row_csv = modify_raw_csv(
+            dummy_sheet_csv,
+            end=2,  # exclusive
+            replacements=[{"row": 1, "column": "GP Practice Code", "value": "G85023 "}],
+        )
+
+        df = read_csv_from_str(one_row_csv).df
+        csv_upload_sync(test_user, df)
+
+        assert mock_validate_patient_async.call_count == 1
+        assert mock_validate_patient_async.mock_calls[0].kwargs['gp_practice_ods_code'] == "G85023"
+
+
+@pytest.mark.django_db
 def test_lookup_index_of_multiple_deprivation(test_user, single_row_valid_df):
     csv_upload_sync(test_user, single_row_valid_df)
 
