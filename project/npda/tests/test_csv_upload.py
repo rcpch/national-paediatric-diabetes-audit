@@ -1,6 +1,6 @@
 import dataclasses
 import datetime
-import re
+from pprint import pprint
 import tempfile
 import csv
 import collections
@@ -3708,6 +3708,10 @@ def test_visit_form_dates_outside_of_audit_period(test_user, single_row_valid_df
     single_row_valid_df.loc[0, "Date of Birth"] = "01/01/2015"
     # set date of diabetes diagnosis to 01/01/2018 as this cannot be after the other mocked dates
     single_row_valid_df.loc[0, "Date of Diabetes Diagnosis"] = "01/01/2018"
+    # set a smoking cessation outcome
+    single_row_valid_df.loc[0, "Does the patient smoke?"] = 2 # Current smoker
+    # set reason for admission to 1 (stabilisation) as this is required for the hospital admission dates
+    single_row_valid_df.loc[0, "Reason for admission"] = 1 # Stabilisation
 
     # set all the dates associated with the visit to 01/01/2020
     for date_field in ALL_VISIT_DATES:
@@ -3717,5 +3721,5 @@ def test_visit_form_dates_outside_of_audit_period(test_user, single_row_valid_df
     
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
     for date_field in ALL_VISIT_DATES:
-        assert date_field in errors[0], f"Expected {date_field} to be in errors, but got {errors}"
+        assert date_field[0] in errors[0], f"Expected {date_field} to be in errors, but got {errors}"
     assert Visit.objects.count() == 1, "Expected the visit still to be created even though visit date outside of audit period"

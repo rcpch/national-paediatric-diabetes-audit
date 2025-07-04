@@ -161,7 +161,7 @@ async def csv_upload(
             Visit,
         )
 
-        form = VisitForm(data=fields, initial={"patient": patient_form.instance})
+        form = VisitForm(data=fields, initial={"patient": patient_form.instance}, audit_period=submission.audit_period)
         form.async_validation_results = await validate_visit_async(
             birth_date=patient_form.cleaned_data.get("date_of_birth"),
             observation_date=fields["height_weight_observation_date"],

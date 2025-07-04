@@ -7,11 +7,13 @@ from unittest.mock import Mock, patch
 
 from django.core.exceptions import ValidationError
 
+from project.constants import ALL_VISIT_DATES
 from project.npda.forms.visit_form import VisitForm
 from project.npda.forms.external_visit_validators import (
     VisitExternalValidationResult,
     CentileAndSDS,
 )
+from project.npda.models import Visit, AuditPeriod
 from project.npda.tests.factories.patient_factory import PatientFactory
 
 
@@ -2075,3 +2077,56 @@ def test_visit_date_before_birth_date_fails_validation():
     # Trigger the cleaners
     assert form.is_valid() == False, f"Visit date before birth date should fail"
     assert "visit_date" in form.errors
+
+# testing dates outside of the range of the audit period
+@pytest.mark.django_db
+def test_visit_form_dates_outside_of_audit_period():
+    """
+    Test that all dates outside in a visit of the audit period are flagged as errors, but the visit is still created
+    2024 / 2025 audit period is seeded in the fixture
+    All the dates tested include:
+        visit_date
+        height_weight_observation_date
+        hba1c_date
+        blood_pressure_observation_date
+        foot_examination_observation_date
+        retinal_screening_observation_date
+        albumin_creatinine_ratio_date
+        total_cholesterol_date
+        thyroid_function_date
+        coeliac_screen_date
+        psychological_screening_assessment_date
+        smoking_cessation_referral_date
+        carbohydrate_counting_level_three_education_date
+        dietician_additional_appointment_date
+        flu_immunisation_recommended_date
+        sick_day_rules_training_date
+        hospital_admission_date
+        hospital_discharge_date
+    """
+    audit_period = AuditPeriod.objects.first() # this will be 2024 / 2025
+    patient = PatientFactory()
+    # set date of birth to 01/01/2015 as this cannot be after the other mocked dates
+    patient.date_of_birth = datetime.date(2015, 1, 10)
+    patient.diagnosis_date = datetime.date(2018, 1, 1) # set diagnosis date to 01/01/2018
+    patient.smoking_status = 2 # Current smoker
+    patient.hospital_admission_reason = 1 # Stabilisation
+    patient.save()
+    data = {}
+
+    # set all the dates associated with the visit to 01/01/2020
+    for date_field in ALL_VISIT_DATES:
+        data.update({date_field[0]: "01/01/2020"})
+    
+    form = VisitForm(
+        data=data,
+        initial={"patient": patient},
+        audit_period=audit_period,
+    )
+
+    # Trigger the cleaners
+    assert form.is_valid() == False, f"The dates outside of the audit period should fail, but got {form.errors}"
+    assert "visit_date" in form.errors
+
+    for date_field in ALL_VISIT_DATES:
+        assert date_field[0] in form.errors, f"Expected {date_field} to be in errors, but got {form.errors}"
