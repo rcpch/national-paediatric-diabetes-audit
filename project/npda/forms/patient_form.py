@@ -377,7 +377,7 @@ class PatientForm(forms.ModelForm):
 
         filter_kwargs = {
             "submission__submission_active": True,
-            "submission__audit_year": self.audit_year,
+            "submission__audit_period": self.audit_period,
             filter_field: value,
             "submission__paediatric_diabetes_unit": self.paediatric_diabetes_unit,
         }
@@ -422,7 +422,7 @@ class PatientForm(forms.ModelForm):
 
         filter_kwargs = {
             "submission__submission_active": True,
-            "submission__audit_year": self.audit_year,
+            "submission__audit_period": self.audit_period,
             filter_field: value,
             "submission__paediatric_diabetes_unit": self.paediatric_diabetes_unit,
         }

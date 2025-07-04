@@ -4,6 +4,7 @@ import collections
 from asgiref.sync import async_to_sync
 import numpy as np
 
+from django.apps import apps
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
@@ -16,7 +17,6 @@ from project.npda.models import (
 from project.npda.general_functions.csv import (
     csv_upload,
     csv_parse,
-    csv_header,
     create_csv_submission,
     tidy_up_old_submissions
 )
@@ -85,10 +85,15 @@ class Command(BaseCommand):
 
     def upload_csv_to_single_pdu(self,audit_year, pdu_pz_code, user, parsed_csv, csv_file_bytes, csv_file_name):
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=pdu_pz_code)
+        AuditPeriod = apps.get_model("npda", "AuditPeriod")
+        audit_period = AuditPeriod.objects.filter(
+            start_date__year=audit_year
+        ).first()
 
         submission = async_to_sync(create_csv_submission)(
             pdu=pdu,
-            audit_year=audit_year,
+            audit_year=audit_year, # compatibility
+            audit_period=audit_period,
             csv_file_bytes=csv_file_bytes,
             csv_file_name=csv_file_name,
             user=user
@@ -125,6 +130,10 @@ class Command(BaseCommand):
 
         submissions_by_pz_code = {}
 
+        audit_period = apps.get_model("npda", "AuditPeriod").objects.filter(
+            start_date__year=audit_year
+        ).first()
+
         for pz_code in df["PDU Number"].unique():
             try:
                 pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
@@ -134,7 +143,7 @@ class Command(BaseCommand):
             try:
                 submission = Submission.objects.get(
                     paediatric_diabetes_unit=pdu,
-                    audit_year=audit_year,
+                    audit_period=audit_period,
                     submission_active=True
                 )
             except Submission.DoesNotExist:
@@ -155,9 +164,11 @@ class Command(BaseCommand):
 
         for pz_code in pz_codes_that_need_submissions:
             pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-
+            audit_period = apps.get_model("npda", "AuditPeriod").objects.filter(
+                start_date__year=audit_year
+            ).first()
             submission = Submission.objects.create(
-                audit_year=audit_year,
+                audit_period=audit_period,
                 paediatric_diabetes_unit=pdu,
                 submission_active=True,
                 submission_by=user,

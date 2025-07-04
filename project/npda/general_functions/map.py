@@ -60,8 +60,13 @@ def get_children_by_pdu_audit_year(
     Patient = apps.get_model("npda", "Patient")
     Submission = apps.get_model("npda", "Submission")
 
+    AuditPeriod = apps.get_model("npda", "AuditPeriod")
+    audit_period = AuditPeriod.objects.filter(
+        start_date__year=audit_year,
+    ).first()
+
     submission = Submission.objects.filter(
-        audit_year=audit_year,
+        audit_period=audit_period,
         paediatric_diabetes_unit=paediatric_diabetes_unit,
         submission_active=True,
     ).first()

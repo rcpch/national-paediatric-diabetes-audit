@@ -3676,3 +3676,24 @@ def test_visit_with_too_precise_decimal_number_is_rounded(test_user, dummy_sheet
     visit = Visit.objects.first()
 
     assert visit.weight == Decimal('34.1')
+
+# testing dates outside of the range of the audit period
+@pytest.mark.django_db
+def test_visit_form_dates_outside_of_audit_period(test_user, single_row_valid_df, seed_audit_periods_fixture):
+    """
+    Test that all dates outside in a visit of the audit period are flagged as errors, but the visit is still created
+    2024 / 2025 audit period is seeded in the fixture
+    """
+    audit_period = AuditPeriod.objects.first() # this will be 2024 / 2025
+    
+    single_row_valid_df.loc[0, "Visit/Appointment Date"] = "01/01/2020"
+    single_row_valid_df.loc[0, "Start date (Hospital Provider Spell)"] = "01/01/2020"
+    single_row_valid_df.loc[0, "Discharge date (Hospital provider spell)"] = "01/08/2020"   # mm/dd/yyyy
+
+    assert Visit.objects.count() == 0, "Expected no visits to be created before the test"
+    
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
+    assert "visit_date" in errors[0], f"Expected visit_date to be in errors, but got {errors}"
+    assert "hospital_admission_date" in errors[0], f"Expected hospital_admission_date to be in errors, but got {errors}"
+    assert "hospital_discharge_date" in errors[0], f"Expected hospital_discharge_date to be in errors, but got {errors}"
+    assert Visit.objects.count() == 1, "Expected the visit still to be created even though visit date outside of audit period"

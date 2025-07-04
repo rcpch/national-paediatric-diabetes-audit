@@ -130,6 +130,7 @@ class VisitForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.patient = kwargs["initial"].get("patient")
         self.override_height_weight = kwargs.pop("override_height_weight", False)
+        self.audit_period = kwargs.pop("audit_period", None)
         super(VisitForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
             model_field = Visit._meta.get_field(field_name)
@@ -483,6 +484,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)

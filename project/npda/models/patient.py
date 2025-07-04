@@ -226,11 +226,17 @@ class Patient(models.Model):
             app_label="npda", model_name="PatientSubmission"
         )
 
+        audit_period = apps.get_model(
+            app_label="npda", model_name="AuditPeriod"
+        ).objects.filter(
+            start_date__year=current_audit_year
+        ).first()
+
         return (
             PatientSubmission.objects.filter(
                 patient__nhs_number=self.nhs_number,
                 patient__unique_reference_number=self.unique_reference_number,
-                submission__audit_year=current_audit_year,
+                submission__audit_period=audit_period,
                 submission__submission_active=True,
             ).count()
             > 1
@@ -248,11 +254,17 @@ class Patient(models.Model):
             app_label="npda", model_name="PatientSubmission"
         )
 
+        audit_period = apps.get_model(
+            app_label="npda", model_name="AuditPeriod"
+        ).objects.filter(
+            start_date__year=current_audit_year
+        ).first()
+
         all_submissions = (
             PatientSubmission.objects.filter(
                 patient__nhs_number=self.nhs_number,
                 patient__unique_reference_number=self.unique_reference_number,
-                submission__audit_year=current_audit_year,
+                submission__audit_period=audit_period,
                 submission__submission_active=True,
             )
             .exclude(
@@ -261,3 +273,27 @@ class Patient(models.Model):
             .all()
         )
         return all_submissions
+    
+    def submission_for_current_audit_period(self):
+        """
+        Returns the audit period for the patient
+        """
+        AuditPeriod = apps.get_model(app_label="npda", model_name="AuditPeriod")
+        current_audit_period = AuditPeriod.objects.filter(
+            start_date__lte=date.today(),
+            end_date__gte=date.today()
+        ) # get the first current audit period if there is more than one
+        
+        submission = None
+        if current_audit_period.exists():
+            Submission = Submission = apps.get_model(app_label="npda", model_name="Submission")
+            submission = Submission.objects.filter(
+                audit_period=current_audit_period.first(),
+                submission_active=True,
+                patientsubmission__patient=self
+            ).first()
+        return submission
+
+
+
+
