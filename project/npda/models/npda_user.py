@@ -269,6 +269,35 @@ class NPDAUser(AbstractUser, PermissionsMixin):
 
     def viewing_data_nationally(self):
         return self.is_rcpch_audit_team_member and self.view_preference == 2
+    
+    def user_roles(self):
+        roles = []
+        if self.is_rcpch_audit_team_member:
+            roles.append("RCPCH Audit Team Member")
+        if self.is_rcpch_staff:
+            roles.append("RCPCH Staff")
+        if self.is_patient_or_carer:
+            roles.append("Patient or Carer")
+        if self.role == RCPCH_AUDIT_TEAM:
+            roles.append("RCPCH Audit Team")
+        return ", ".join(roles)
+    
+    def user_groups(self):
+        """
+        Returns a list of group names the user belongs to.
+        """
+        return [group.name for group in self.groups.all()]
+    
+    def user_groups_readable(self):
+        """
+        Returns a readable string of group names the user belongs to.
+        """
+        
+        group_keys = self.user_groups()
+        if not group_keys:
+            return "No groups"
+        readable_names = [READABLE_GROUPNAMES.get(group, group) for group in group_keys]
+        return ", ".join(readable_names)
 
     def __unicode__(self):
         return self.email
