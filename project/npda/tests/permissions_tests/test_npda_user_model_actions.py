@@ -582,43 +582,65 @@ def test_audit_team_can_add_employers_outside_of_their_pdu(
     assert employers == { ALDER_HEY_PZ_CODE, GOSH_PZ_CODE }
 
 
-# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/911
 @pytest.mark.django_db
+@pytest.mark.parametrize(
+    "user_flag",
+    [
+        "is_superuser",
+        "is_staff",
+        "is_rcpch_audit_team_member",
+        "is_rcpch_staff"
+    ],
+)
 def test_coordinators_cannot_set_user_flags(
     seed_groups_fixture,
     seed_users_fixture,
     seed_audit_periods_fixture,
     client,
+    user_flag
 ):
     coordinator = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE, role=AUDIT_CENTRE_COORDINATOR
     ).first()
 
-    assert coordinator.is_superuser is False
+    assert getattr(coordinator, user_flag) is False
 
     client = login_and_verify_user(client, coordinator)
 
     url = reverse("npdauser-update", kwargs={"pk": coordinator.pk})
 
-    response = client.post(url, data={
+    data = {
         "add_employer": ALDER_HEY_PZ_CODE,
         "first_name": coordinator.first_name,
         "surname": coordinator.surname,
         "email": coordinator.email,
         "role": coordinator.role,
-        "is_superuser": "on",
-    })
+    }
+
+    data[user_flag] = "on"
+
+    client.post(url, data)
 
     coordinator.refresh_from_db()
-    assert coordinator.is_superuser is False
+    assert getattr(coordinator, user_flag) is False
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize(
+    "user_flag",
+    [
+        "is_superuser",
+        "is_staff",
+        "is_rcpch_audit_team_member",
+        "is_rcpch_staff"
+    ],
+)
 def test_coordinators_cannot_create_users_with_flags(
     seed_groups_fixture,
     seed_users_fixture,
     seed_audit_periods_fixture,
     client,
+    user_flag
 ):
     user_count_before = NPDAUser.objects.count()
 
@@ -630,17 +652,17 @@ def test_coordinators_cannot_create_users_with_flags(
 
     url = reverse("npdauser-create")
 
-    client.post(
-        url,
-        {
-            "first_name": "Bob",
-            "surname": "Bobertson",
-            "email": "bob@bobertson.com",
-            "add_employer": ALDER_HEY_PZ_CODE,
-            "role": AUDIT_CENTRE_COORDINATOR,
-            "is_superuser": "on"
-        },
-    )
+    data = {
+        "first_name": "Bob",
+        "surname": "Bobertson",
+        "email": "bob@bobertson.com",
+        "add_employer": ALDER_HEY_PZ_CODE,
+        "role": AUDIT_CENTRE_COORDINATOR,
+    }
+
+    data[user_flag] = "on"
+
+    client.post(url, data)
 
     user_count_after = NPDAUser.objects.count()
     assert user_count_after == user_count_before
