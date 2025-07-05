@@ -150,6 +150,8 @@ MIDDLEWARE = [
     "django_otp.middleware.OTPMiddleware",
     # autologout
     "django_auto_logout.middleware.auto_logout",
+    # custom middleware
+    "project.npda.middleware.NPDAUserMiddleware",
 ]
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
