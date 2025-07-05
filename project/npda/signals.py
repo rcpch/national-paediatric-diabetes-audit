@@ -98,4 +98,4 @@ def two_factor_auth_setup(request, user, device, **kwargs):
 
 # helper functions
 def get_client_ip(request):
-    return request.META.get("REMOTE_ADDR")
+    return request.META.get("HTTP_X_FORWARDED_FOR") or request.META.get("REMOTE_ADDR")

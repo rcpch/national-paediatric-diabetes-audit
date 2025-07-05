@@ -17,6 +17,7 @@ from project.npda.general_functions.group_for_group import group_for_role
 # RCPCH imports
 from ...constants.styles.form_styles import *
 from ..models import NPDAUser, VisitActivity
+from ..signals import get_client_ip
 
 
 # Logging setup
@@ -213,7 +214,7 @@ class CaptchaAuthenticationForm(AuthenticationForm):
                 ):
                     VisitActivity.objects.create(
                         activity=6,
-                        ip_address=self.request.META.get("REMOTE_ADDR"),
+                        ip_address=get_client_ip(self.request),
                         npdauser=user,  # password lockout - activity 6
                     )
                     raise forms.ValidationError(

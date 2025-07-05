@@ -44,6 +44,7 @@ from ..general_functions import (
 from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
 from .mixins import LoginAndOTPRequiredMixin
 from ...constants import RCPCH_AUDIT_TEAM, AUDIT_CENTRE_READER, AUDIT_CENTRE_EDITOR
+from ..signals import get_client_ip
 
 # from ..signals import password_reset_sent
 
@@ -583,7 +584,7 @@ class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
             VisitActivity.objects.create(
                 npdauser=user,
                 activity=4,
-                ip_address=self.request.META.get("REMOTE_ADDR"),
+                ip_address=get_client_ip(self.request),
             )  # password reset link sent
         return super().form_valid(form)
 
