@@ -16,9 +16,11 @@
                 <p>Password last set: {{ npdauser.password_last_set|none_to_dash }}</p>
                 <p>Account created: {{ npdauser.date_joined|none_to_dash }}</p>
                 <p>Account created by: {{ npdauser.created_by|none_to_dash }}</p>
-                <p>
-                  Account last updated by: {{ npdauser.created_by|none_to_dash }} at {{ npdauser.updated_at|none_to_dash }}
-                </p>
+                <p>Roles of granting user: {{ npdauser.created_by.user_roles }}</p>
+                <p>Groups of granting user: {{ npdauser.created_by.user_groups_readable }}</p>
+                <hr />
+                <p>Account last updated by: {{ npdauser.created_by|none_to_dash }}</p>
+                <p>Account last updated on: {{ npdauser.updated_on|none_to_dash }}</p>
               </div>
             </div>
           </div>
