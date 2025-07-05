@@ -629,13 +629,52 @@ def test_coordinators_cannot_set_user_flags(
 @pytest.mark.parametrize(
     "user_flag",
     [
-        "is_superuser",
-        "is_staff",
         "is_rcpch_audit_team_member",
         "is_rcpch_staff"
     ],
 )
-def test_coordinators_cannot_create_users_with_flags(
+def test_coordinators_cannot_create_users_with_superuser_flags(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    user_flag
+):
+    user_count_before = NPDAUser.objects.count()
+
+    coordinator = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE, role=AUDIT_CENTRE_COORDINATOR
+    ).first()
+
+    client = login_and_verify_user(client, coordinator)
+
+    url = reverse("npdauser-create")
+
+    data = {
+        "first_name": "Bob",
+        "surname": "Bobertson",
+        "email": "bob@bobertson.com",
+        "add_employer": ALDER_HEY_PZ_CODE,
+        "role": AUDIT_CENTRE_COORDINATOR,
+    }
+
+    data[user_flag] = "on"
+
+    client.post(url, data)
+
+    user_count_after = NPDAUser.objects.count()
+    assert user_count_after == user_count_before
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "user_flag",
+    [
+        "is_superuser",
+        "is_staff"
+    ],
+)
+def test_coordinators_cannot_create_users_with_django_admin_flags(
     seed_groups_fixture,
     seed_users_fixture,
     seed_audit_periods_fixture,
