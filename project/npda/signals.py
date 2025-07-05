@@ -16,7 +16,7 @@ from django.conf import settings
 from two_factor.signals import user_verified
 
 # RCPCH
-from .general_functions import create_session_object, send_email_to_recipients
+from .general_functions import create_session_object, send_email_to_recipients, get_client_ip
 from .middleware import get_current_user
 from .models import VisitActivity, NPDAUser
 
@@ -175,9 +175,6 @@ def log_and_notify_user_changes(sender, instance, created, **kwargs):
 """
 Helper functions
 """
-def get_client_ip(request):
-    return request.META.get("REMOTE_ADDR")
-
 def _detect_changes(instance, original_values):
     """
     Compare current instance with original values to detect changes.
