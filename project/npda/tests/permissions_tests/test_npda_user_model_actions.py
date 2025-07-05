@@ -1287,3 +1287,82 @@ def test_coordinators_with_multiple_employers_cannot_view_user_logs_with_multipl
 
     # Check that the response is successful
     assert response.status_code == HTTPStatus.FORBIDDEN
+
+@pytest.mark.django_db
+def test_user_creation_has_a_timestamp_and_user(
+    client: Client,
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+):
+    """Test that user creation has a timestamp and user."""
+
+    # Create a test user
+    test_user = NPDAUser.objects.filter(
+        role=AUDIT_CENTRE_COORDINATOR,
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+    ).first()
+
+    # Login user
+    client = login_and_verify_user(client, test_user)
+
+    # Create a new user
+    url = reverse("npdauser-create")
+    response = client.post(
+        url,
+        {
+            "first_name": "Alice",
+            "surname": "Smith",
+            "email": "alice.smith@nhs.net",
+            "role": AUDIT_CENTRE_COORDINATOR,
+            "add_employer": ALDER_HEY_PZ_CODE,
+        },
+    )
+    
+    new_user = NPDAUser.objects.get(email="alice.smith@nhs.net")
+    assert new_user.created_by == test_user
+    assert new_user.created_at is not None
+    assert new_user.created_at <= timezone.now()  # Ensure the timestamp is not in the future
+
+@pytest.mark.django_db
+def test_user_update_has_a_timestamp_and_user(
+    client: Client,
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+):
+    """Test that user creation has a timestamp and user."""
+
+    # Create a test user
+    test_user = NPDAUser.objects.filter(
+        role=AUDIT_CENTRE_COORDINATOR,
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+    ).first()
+
+    user_with_role = NPDAUser.objects.filter(
+        role=AUDIT_CENTRE_READER,
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+    ).first()
+
+    # Login user
+    client = login_and_verify_user(client, test_user)
+
+    # Create a new user
+    url = reverse("npdauser-update", kwargs={"pk": user_with_role.pk})
+    response = client.post(
+        url,
+        {
+            "role": AUDIT_CENTRE_COORDINATOR,
+            "surname": user_with_role.surname, # Required fields
+            "first_name": user_with_role.first_name,  # Required fields
+            "email": user_with_role.email,  # Required fields
+            "add_employer": ALDER_HEY_PZ_CODE,  # Required fields
+        },
+    )
+    
+    new_user = NPDAUser.objects.get(email=user_with_role.email)
+    assert new_user.email == user_with_role.email
+    assert new_user.role != AUDIT_CENTRE_READER  # Ensure the role has been updated
+    assert new_user.updated_at is not None
+    assert new_user.updated_at <= timezone.now()  # Ensure the timestamp is not in the future
+    assert new_user.role == AUDIT_CENTRE_COORDINATOR

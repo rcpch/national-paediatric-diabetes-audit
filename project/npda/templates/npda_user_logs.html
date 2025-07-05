@@ -19,8 +19,8 @@
                 <p>Roles of granting user: {{ npdauser.created_by.user_roles }}</p>
                 <p>Groups of granting user: {{ npdauser.created_by.user_groups_readable }}</p>
                 <hr />
-                <p>Account last updated by: {{ npdauser.created_by|none_to_dash }}</p>
-                <p>Account last updated on: {{ npdauser.updated_on|none_to_dash }}</p>
+                <p>Account last updated by: {{ npdauser.updated_by|none_to_dash }}</p>
+                <p>Account last updated on: {{ npdauser.updated_at|none_to_dash }}</p>
               </div>
             </div>
           </div>
