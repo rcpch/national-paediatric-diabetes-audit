@@ -1,10 +1,10 @@
 from django.conf.urls.static import static
-from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import TemplateView
 from two_factor.urls import urlpatterns as tf_urls
 from .npda.views.npda_users import RCPCHLoginView
 from .npda.views import *
+from .npda.admin import admin_site
 
 # Custom error pages
 handler400 = "project.npda.views.error_400"
@@ -21,7 +21,7 @@ for item in tf_urls:
         break
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path("admin/", admin_site.urls),
     path("", include(tf_urls)),
     path("", include("project.npda.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
