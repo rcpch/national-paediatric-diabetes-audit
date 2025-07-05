@@ -164,13 +164,10 @@ def save_csv_uploading_user_to_visitactivity(request):
     """
     VisitActivity = apps.get_model("npda", "VisitActivity")
     
-    # Create or update the VisitActivity entry for the user
-    VisitActivity.objects.update_or_create(
+    # Create VisitActivity entry for the user
+    VisitActivity.objects.create(
         npdauser=request.user,
-        defaults={
-            "activity": 8,  # UPLOADED_CSV
-            "ip_address": get_client_ip(request=request),
-            "activity_datetime": timezone.now(),
-        }
+        activity=8,  # UPLOADED_CSV
+        ip_address=get_client_ip(request=request),
+        activity_datetime=timezone.now(),
     )
-    return None

@@ -2077,25 +2077,7 @@ def test_visit_date_before_birth_date_fails_validation():
     assert form.is_valid() == False, f"Visit date before birth date should fail"
     assert "visit_date" in form.errors
 
-@pytest.mark.django_db
-def test_visit_form_dates_outside_of_audit_period():
-    """
-    Test that all dates outside of the audit period are flagged as errors
-    2024 / 2025 audit period is seeded in the fixture
-    All the dates tested include:
-        visit_date, height_weight_observation_date, hba1c_date,
-        blood_pressure_observation_date, foot_examination_observation_date,
-        retinal_screening_observation_date, albumin_creatinine_ratio_date,
-        total_cholesterol_date, thyroid_function_date, coeliac_screen_date,
-        psychological_screening_assessment_date, smoking_cessation_referral_date,
-        carbohydrate_counting_level_three_education_date,
-        dietician_additional_appointment_date, flu_immunisation_recommended_date,
-        sick_day_rules_training_date, hospital_admission_date
-        **hospital_discharge_date EXCLUDED as it is possible to have an admission 
-        without a discharge date in the audit period**
-    """
-    # Test data with dates outside audit period
-    test_data_list = [
+@pytest.mark.parametrize("test_case_index,test_data", enumerate([
         {
             'visit_date': "2020-01-01",
             'height_weight_observation_date': "2020-01-01",
@@ -2178,7 +2160,26 @@ def test_visit_form_dates_outside_of_audit_period():
             'hospital_discharge_date': "2020-01-08",
             'hospital_admission_reason': 1,  # patient stabilisation
         }
-    ]
+    ]))
+@pytest.mark.django_db
+def test_visit_form_dates_outside_of_audit_period(test_case_index, test_data):
+    """
+    Test that all dates outside of the audit period are flagged as errors
+    2024 / 2025 audit period is seeded in the fixture
+    All the dates tested include:
+        visit_date, height_weight_observation_date, hba1c_date,
+        blood_pressure_observation_date, foot_examination_observation_date,
+        retinal_screening_observation_date, albumin_creatinine_ratio_date,
+        total_cholesterol_date, thyroid_function_date, coeliac_screen_date,
+        psychological_screening_assessment_date, smoking_cessation_referral_date,
+        carbohydrate_counting_level_three_education_date,
+        dietician_additional_appointment_date, flu_immunisation_recommended_date,
+        sick_day_rules_training_date, hospital_admission_date
+        **hospital_discharge_date EXCLUDED as it is possible to have an admission 
+        without a discharge date in the audit period**
+    """
+    # Test data with dates outside audit period
+    
     
     # Create patient once
     audit_period = AuditPeriod.objects.first()  # this will be 2024 / 2025
@@ -2190,25 +2191,23 @@ def test_visit_form_dates_outside_of_audit_period():
     patient.save()
     
     # Test each data scenario
-    for i, data in enumerate(test_data_list):
-        with pytest.raises(AssertionError, match="should be invalid"):
-            form = VisitForm(
-                data=data,
-                initial={
-                    "patient": patient,
-                },
-                audit_period=audit_period
-            )
-            
-            # Trigger the cleaners
-            is_valid = form.is_valid()
-            
-            # Extract the date field being tested from the data
-            date_fields = [key for key in data.keys() if 'date' in key]
-            tested_field = date_fields[0] if date_fields[0] != "hospital_discharge_date" and date_fields else 'unknown'
-            
-            assert not is_valid, f"Test case {i+1} ({tested_field}): Form should be invalid due to dates outside audit period, but got valid form. Errors: {form.errors}"
-            
-            # Verify that visit_date is always in errors (since all test cases have dates outside audit period)
-            assert "visit_date" in form.errors, f"Test case {i+1} ({tested_field}): visit_date should be in form errors"
-            assert tested_field in form.errors, f"Test case {i+1} ({tested_field}): {tested_field} should be in form errors"
+    form = VisitForm(
+        data=test_data,
+        initial={
+            "patient": patient,
+        },
+        audit_period=audit_period
+    )
+    
+    # Trigger the cleaners
+    is_valid = form.is_valid()
+    
+    # Extract the date field being tested from the data
+    date_fields = [key for key in test_data.keys() if 'date' in key]
+    tested_field = date_fields[0] if date_fields[0] != "hospital_discharge_date" and date_fields else 'unknown'
+    
+    assert not is_valid, f"Test case {test_case_index+1} ({tested_field}): Form should be invalid due to dates outside audit period, but got valid form. Errors: {form.errors}"
+    
+    # Verify that visit_date is always in errors (since all test cases have dates outside audit period)
+    assert "visit_date" in form.errors, f"Test case {i+1} ({tested_field}): visit_date should be in form errors"
+    assert tested_field in form.errors, f"Test case {i+1} ({tested_field}): {tested_field} should be in form errors"
