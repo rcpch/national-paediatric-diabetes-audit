@@ -642,8 +642,6 @@ def test_coordinators_cannot_create_users_with_flags(
     client,
     user_flag
 ):
-    user_count_before = NPDAUser.objects.count()
-
     coordinator = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE, role=AUDIT_CENTRE_COORDINATOR
     ).first()
@@ -664,8 +662,8 @@ def test_coordinators_cannot_create_users_with_flags(
 
     client.post(url, data)
 
-    user_count_after = NPDAUser.objects.count()
-    assert user_count_after == user_count_before
+    user = NPDAUser.objects.get(email="bob@bobertson.com")
+    assert getattr(user, user_flag) is False
 
 
 @pytest.mark.django_db
