@@ -1,5 +1,6 @@
 from django.apps import apps
 from django.contrib import admin
+from two_factor.admin import AdminSiteOTPRequired
 
 from .models import (
     NPDAUser,
@@ -14,6 +15,7 @@ from .models import (
 )
 from django.contrib.sessions.models import Session
 
+admin.site.__class__ = AdminSiteOTPRequired
 
 @admin.register(OrganisationEmployer)
 class OrganisationEmployerAdmin(admin.ModelAdmin):
