@@ -2,22 +2,23 @@
 import logging
 
 # django imports
+from django.apps import apps
+from django.core.mail import send_mail
+from django.conf import settings
 from django.contrib.auth.signals import (
     user_logged_in,
     user_logged_out,
     user_login_failed,
 )
-from django.db.models.signals import pre_save, post_save
+from django.db.models.signals import pre_save, post_save, post_delete, pre_delete
 from django.dispatch import receiver
-from django.core.mail import send_mail
-from django.conf import settings
 
 # third party imports
 from two_factor.signals import user_verified
 
 # RCPCH
 from .general_functions import create_session_object, send_email_to_recipients, get_client_ip
-from .models import VisitActivity, NPDAUser
+from .models import VisitActivity, NPDAUser, OrganisationEmployer
 
 # Logging setup
 logger = logging.getLogger(__name__)
@@ -69,6 +70,10 @@ ACTIVITY = (
         (11, "User record changed"), # CHANGED_USER_RECORD
         (12, "User role changed"), # CHANGED_USER_ROLE
         (13, "Superuser or admin status changed"), # CHANGED_ADMIN_FLAG
+        (14, "User record deleted"), # DELETED_USER_RECORD
+        (15, "User assigned to PDU"),      # ASSIGNED_USER_TO_PDU
+        (16, "User removed from PDU"),     # REMOVED_USER_FROM_PDU
+        (17, "User PDU role changed"),     # USER_PDU_ROLE_CHANGED
     )
 
 
@@ -190,6 +195,85 @@ def log_and_notify_user_changes(sender, instance, created, **kwargs):
                 # Send email notifications for critical changes
                 _send_change_notifications(instance, changes, current_user)
 
+@receiver(post_save, sender=OrganisationEmployer)
+def log_user_pdu_assignment(sender, instance, created, **kwargs):
+    """
+    Log when a user is assigned to or updated in a PDU.
+    """
+    from .middleware import get_current_user
+    current_user = get_current_user()
+    
+    if created:
+        # New PDU assignment
+        details = f"User {instance.npda_user.email} assigned to PDU {instance.paediatric_diabetes_unit.pz_code} ({instance.paediatric_diabetes_unit.parent_name}) by {current_user.email if current_user else 'system'}"
+        
+        _log_user_activity(
+            user=instance.npda_user,
+            activity_type=15,  # USER_ASSIGNED_TO_PDU
+            details=details,
+            current_user=current_user
+        )
+        
+        # Send notification to admins about new PDU assignment
+        _send_pdu_assignment_notification(instance, current_user, is_new=True)
+        
+        logger.info(f"User {instance.npda_user.email} assigned to PDU {instance.paediatric_diabetes_unit.pz_code}")
+    else:
+        # PDU assignment updated (role change, etc.)
+        details = f"PDU assignment updated for user {instance.npda_user.email} at PDU {instance.paediatric_diabetes_unit.pz_code} by {current_user.email if current_user else 'system'}"
+        
+        _log_user_activity(
+            user=instance.npda_user,
+            activity_type=15,  # USER_ASSIGNED_TO_PDU
+            details=details,
+            current_user=current_user
+        )
+        
+        logger.info(f"PDU assignment updated for user {instance.npda_user.email} at PDU {instance.paediatric_diabetes_unit.pz_code}")
+
+
+@receiver(post_delete, sender=OrganisationEmployer)
+def log_user_pdu_removal(sender, instance, **kwargs):
+    """
+    Log when a user is removed from a PDU.
+    """
+    from .middleware import get_current_user
+    current_user = get_current_user()
+    
+    details = f"User {instance.npda_user.email} removed from PDU {instance.paediatric_diabetes_unit.pz_code} ({instance.paediatric_diabetes_unit.parent_name}) by {current_user.email if current_user else 'system'}"
+    
+    _log_user_activity(
+        user=instance.npda_user,
+        activity_type=16,  # REMOVED_USER_FROM_PDU
+        details=details,
+        current_user=current_user
+    )
+    
+    # Send notification to admins about PDU removal
+    _send_pdu_assignment_notification(instance, current_user, is_new=False, is_removal=True)
+    
+    logger.info(f"User {instance.npda_user.email} removed from PDU {instance.paediatric_diabetes_unit.pz_code}")
+
+@receiver(pre_save, sender=OrganisationEmployer)
+def capture_pdu_assignment_changes(sender, instance, **kwargs):
+    """
+    Capture the original state before save to compare changes.
+    """
+    OrganisationEmployer = apps.get_model('npda', 'OrganisationEmployer')
+    if instance.pk:  # Only for existing assignments (updates)
+        try:
+            original = OrganisationEmployer.objects.get(pk=instance.pk)
+            print(f"Capturing original values for OrganisationEmployer {original}")
+            instance._original_values = {
+                'paediatric_diabetes_unit': original.paediatric_diabetes_unit,
+                'npda_user': original.npda_user,
+                'is_primary_employer': getattr(original, 'is_primary_employer', None),
+                # Add other fields you want to track
+            }
+        except OrganisationEmployer.DoesNotExist:
+            instance._original_values = {}
+    else:
+        instance._original_values = {}
 
 """
 Helper functions
@@ -395,6 +479,10 @@ def _map_changes_to_visit_activity(changes):
         (CHANGED_USER_RECORD, "User record changed"),
         (CHANGED_USER_ROLE, "User role changed"),
         (CHANGED_ADMIN_FLAG, "Superuser or admin status changed"),
+        (DELETED_USER_RECORD, "User record deleted"), # 14
+        (ASSIGNED_USER_TO_PDU, "User assigned to PDU"),      # 15
+        (REMOVED_USER_FROM_PDU, "User removed from PDU"),     # 16
+        (USER_PDU_ROLE_CHANGED, "User PDU role changed"),     # 17
     )
     """
 
@@ -410,3 +498,103 @@ def _map_changes_to_visit_activity(changes):
     else:
         # Default to a generic user update activity
         return 11
+
+def _send_pdu_assignment_notification(organisation_employer_instance, current_user, is_new=False, is_removal=False):
+    """
+    Send notification when user PDU assignments change.
+    """
+    user = organisation_employer_instance.npda_user
+    pdu = organisation_employer_instance.paediatric_diabetes_unit
+    
+    if is_removal:
+        action = "removed from"
+        subject = f"NPDA User Removed from PDU - {user.get_full_name()}"
+    elif is_new:
+        action = "assigned to"
+        subject = f"NPDA User Assigned to PDU - {user.get_full_name()}"
+    else:
+        action = "updated in"
+        subject = f"NPDA User PDU Assignment Updated - {user.get_full_name()}"
+    
+    message = f"""
+    A user's PDU assignment has been modified:
+    
+    User: {user.get_full_name()} ({user.email})
+    PDU: {pdu.parent_name} ({pdu.pz_code})
+    Action: User {action} PDU
+    Modified by: {current_user.email if current_user else 'System'}
+    
+    Role in PDU: {getattr(user, 'role', 'Not specified')}
+    """
+    
+    # Send to audit team members
+    admin_emails = NPDAUser.objects.filter(
+        is_rcpch_audit_team_member=True,
+        is_active=True
+    ).values_list('email', flat=True)
+    
+    try:
+        send_email_to_recipients(
+            recipients=list(admin_emails),
+            subject=subject,
+            message=message
+        )
+        logger.info(f"PDU assignment notification sent for user {user.email}")
+    except Exception as e:
+        logger.error(f"Failed to send PDU assignment notification for user {user.email}: {e}")
+
+def _send_user_deletion_notification(user_instance, current_user):
+    """
+    Send notification when a user is deleted.
+    """
+    # Get the deletion data we captured in pre_delete
+    deletion_data = getattr(user_instance, '_deletion_data', {})
+    
+    subject = f"NPDA User Deleted - {deletion_data.get('full_name', 'Unknown User')}"
+    
+    pdu_info = ""
+    if deletion_data.get('pdu_names'):
+        pdu_info = f"\nPDU Memberships: {', '.join(deletion_data['pdu_names'])}"
+    
+    message = f"""
+    An NPDA user has been DELETED:
+    
+    User: {deletion_data.get('full_name', 'Unknown')} ({deletion_data.get('email', 'Unknown')})
+    Role: {deletion_data.get('role', 'Unknown')}
+    Active: {deletion_data.get('is_active', 'Unknown')}
+    Audit Team Member: {deletion_data.get('is_rcpch_audit_team_member', 'Unknown')}
+    RCPCH Staff: {deletion_data.get('is_rcpch_staff', 'Unknown')}
+    Date Joined: {deletion_data.get('date_joined', 'Unknown')}
+    Last Login: {deletion_data.get('last_login', 'Never') if deletion_data.get('last_login') else 'Never'}{pdu_info}
+    
+    Deleted by: {current_user.email if current_user else 'System'}
+    
+    ⚠️ This action cannot be undone. All user data has been permanently removed.
+    """
+    
+    # Send to audit team members
+    admin_emails = NPDAUser.objects.filter(
+        is_rcpch_audit_team_member=True,
+        is_active=True
+    ).exclude(pk=user_instance.pk).values_list('email', flat=True)  # Exclude the deleted user if they were an admin
+    
+    try:
+        send_email_to_recipients(
+            recipients=list(admin_emails),
+            subject=subject,
+            message=message
+        )
+        logger.info(f"User deletion notification sent for: {deletion_data.get('email', 'Unknown')}")
+    except Exception as e:
+        logger.error(f"Failed to send user deletion notification: {e}")
+
+def _get_current_request():
+    """
+    Helper function to get current request from middleware.
+    You'll need to add this to your middleware if not already present.
+    """
+    from .middleware import get_current_request
+    try:
+        return get_current_request()
+    except (AttributeError, ImportError):
+        return None

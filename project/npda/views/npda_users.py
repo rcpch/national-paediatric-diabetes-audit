@@ -330,9 +330,11 @@ class NPDAUserUpdateView(
                     npda_user=selected_npda_user
                 ).update(is_primary_employer=False)
                 # set the selected employer to True
-                OrganisationEmployer.objects.filter(
+                selected_employer = OrganisationEmployer.objects.filter(
                     pk=request.POST.get("organisation_employer_id")
-                ).update(is_primary_employer=True)
+                ).get()
+                selected_employer.is_primary_employer=True
+                selected_employer.save()
 
             elif request.POST.get("add_employer"):
                 PaediatricDiabetesUnit = apps.get_model(
