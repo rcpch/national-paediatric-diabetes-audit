@@ -80,14 +80,15 @@ class SubmissionsListView(
         pdu = PaediatricDiabetesUnit.objects.get(
             pz_code=self.request.session.get("pz_code"),
         )
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
         if self.request.user.viewing_data_nationally():
             base_queryset = self.model.objects.filter(
-                audit_year=self.request.session.get("selected_audit_year")
+                audit_period=audit_period,
             ).all()
         else:
             base_queryset = self.model.objects.filter(
                 paediatric_diabetes_unit=pdu,
-                audit_year=self.request.session.get("selected_audit_year"),
+                audit_period=audit_period,
             )
 
         final = base_queryset.annotate(
@@ -96,7 +97,7 @@ class SubmissionsListView(
                 "submission_by__first_name", Value(" "), "submission_by__surname"
             ),
         ).order_by(
-            "audit_year",
+            "audit_period__year",
             "-submission_active",
             "-submission_date",
         )
@@ -140,12 +141,13 @@ class SubmissionsListView(
             )
         
         if self.request.user.viewing_data_nationally():
-            selected_audit_year = AuditPeriod.objects.get_audit_period_for_request(self.request).audit_year()
+            audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
+            selected_audit_year = audit_period.audit_year()
 
             latest_active_submission = Submission.objects.filter(
                 paediatric_diabetes_unit=OuterRef("pk"),
                 submission_active=True,
-                audit_year=selected_audit_year,
+                audit_period=audit_period,
             ).order_by("paediatric_diabetes_unit").values("submission_date")[:1]
 
             paediatric_diabetes_units = PaediatricDiabetesUnit.objects.annotate(
@@ -369,7 +371,7 @@ async def upload_csv(request):
 
         audit_period = await sync_to_async(AuditPeriod.objects.get_audit_period_for_request)(request)
         if not audit_period.is_open and not (request.user.is_superuser or request.user.is_rcpch_audit_team_member):
-            raise PermissionDenied(f"Upload is closed for {audit_period.audit_year()}.")
+            raise PermissionDenied(f"Upload is closed for {audit_period}.")
 
         new_submission = await create_csv_submission(
             pdu=pdu,
@@ -399,7 +401,7 @@ def upload_csv_in_progress(request):
 
     last_submission = Submission.objects.filter(
         paediatric_diabetes_unit__pz_code=pz_code,
-        audit_year=audit_period.audit_year(),
+        audit_period=audit_period,
     ).order_by("-submission_date").first()
 
     seconds_since_submission = (datetime.now(timezone.utc) - last_submission.submission_date).seconds
@@ -493,46 +495,36 @@ def submission_stats(selected_audit_year):
     - the paediatric diabetes unit with the most visits
     """
 
+    audit_period = AuditPeriod.objects.filter(start_date__year=selected_audit_year).first()
+
     # Retrieve the latest submission data for the selected audit year
     latest_submission_data = Submission.objects.filter(
-        audit_year=selected_audit_year,
+        audit_period=audit_period,
         paediatric_diabetes_unit__active=True,
         submission_active=True
     ).order_by(
         '-submission_date'
-    )
-    if latest_submission_data.exists():
-        latest_submission_data = latest_submission_data.first()
-    else:
-        latest_submission_data = None
+    ).first()
 
     fewest_errors = Submission.objects.filter(
-        audit_year = selected_audit_year,
+        audit_period=audit_period,
         submission_active=True,
         paediatric_diabetes_unit__active=True
     ).annotate(
         error_count=Count('errors')
     ).order_by(
         'error_count'
-    )
-    if fewest_errors.exists():
-        fewest_errors = fewest_errors.first()
-    else:
-        fewest_errors = None
+    ).first()
 
     most_patients = Submission.objects.filter(
-        audit_year = selected_audit_year,
+        audit_period=audit_period,
         submission_active=True,
         paediatric_diabetes_unit__active=True
     ).annotate(
         patient_count=Count('patients')
     ).order_by(
         '-patient_count'
-    )
-    if most_patients.exists():
-        most_patients = most_patients.first()
-    else:
-        most_patients = None
+    ).first()
 
     most_visits = Submission.objects.filter(
         audit_year = selected_audit_year,
@@ -543,7 +535,7 @@ def submission_stats(selected_audit_year):
         visits_per_patient=Count('patients')/Count('patients__visit')
     ).order_by(
         '-visits_per_patient'
-    )
+    ).first()
 
 
     latest_submission_paediatric_diabetes_unit, submission_date = getattr(latest_submission_data, "paediatric_diabetes_unit", None), getattr(latest_submission_data,"submission_date", None)
@@ -573,4 +565,3 @@ def submission_stats(selected_audit_year):
     return submission_statistics
 
 
-    

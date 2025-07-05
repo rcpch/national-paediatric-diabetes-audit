@@ -77,7 +77,7 @@ class Submission(models.Model):
     class Meta:
         verbose_name = "Submission"
         verbose_name_plural = "Submissions"
-        ordering = ("audit_year",)
+        ordering = ("submission_date",)
 
     def delete(self, *args, **kwargs):
         if self.submission_active:

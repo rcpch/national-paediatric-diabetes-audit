@@ -43,7 +43,6 @@ from project.npda.models import (
 async def create_csv_submission(pdu, audit_period, csv_file_bytes, csv_file_name, submission_active, user=None, ip_address=None):
     old_submission = await Submission.objects.filter(
         paediatric_diabetes_unit=pdu,
-        audit_year=audit_period.audit_year(), # compatibility
         audit_period=audit_period,
         submission_active=True,
     ).afirst()
@@ -56,7 +55,6 @@ async def create_csv_submission(pdu, audit_period, csv_file_bytes, csv_file_name
         submission_date=timezone.now(),
         submission_by=user,
         paediatric_diabetes_unit=pdu,
-        audit_year=audit_period.audit_year(), # compatibility
         audit_period=audit_period,
         csv_file=csv_file_bytes,
         csv_file_name=csv_file_name,

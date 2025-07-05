@@ -513,12 +513,12 @@ def submission_and_calculation_date(request):
 
     if Submission.objects.filter(
         paediatric_diabetes_unit=pdu,
-        audit_year=audit_period.audit_year(),
+        audit_period=audit_period,
         submission_active=True,
     ).exists():
         submission = Submission.objects.get(
             paediatric_diabetes_unit=pdu,
-            audit_year=audit_period.audit_year(),
+            audit_period=audit_period,
             submission_active=True,
         )
         
