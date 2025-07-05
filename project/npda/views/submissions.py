@@ -45,6 +45,7 @@ from ..models import (
 )
 from ..forms.upload import UploadFileForm
 from ..tasks import upload_csv_task
+from ..signals import get_client_ip
 
 
 logger = logging.getLogger(__name__)
@@ -378,7 +379,7 @@ async def upload_csv(request):
             # The celery task will flip it to active once complete
             submission_active=False,
             user=request.user,
-            ip_address=request.META.get("REMOTE_ADDR"),
+            ip_address=get_client_ip(request),
         )
 
         upload_csv_task.delay(new_submission.id)

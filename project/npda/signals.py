@@ -143,7 +143,6 @@ def two_factor_auth_setup(request, user, device, **kwargs):
             activity=7, ip_address=get_client_ip(request), npdauser=user
         )  # Two factor authentication set up
 
-
 @receiver(pre_save, sender=NPDAUser)
 def capture_user_changes(sender, instance, **kwargs):
     """
