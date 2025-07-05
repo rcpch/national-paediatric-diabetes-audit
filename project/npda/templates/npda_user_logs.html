@@ -30,6 +30,8 @@
                 <tr>
                   <th scope="col" class="py-3 w-1/12">Visit Date</th>
                   <th scope="col" class="py-3 w-1/12">Visit Type</th>
+                  <th scope="col" class="py-3 w-1/12">Changed By</th>
+                  <th scope="col" class="py-3 w-1/12">Details</th>
                   <th scope="col" class="py-3 w-1/12">IP Address</th>
                 </tr>
               </thead>
@@ -38,6 +40,8 @@
                   <tr class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white">
                     <td>{{ visitactivity.activity_datetime }}</td>
                     <td>{{ visitactivity.get_activity_display }}</td>
+                    <td>{{ visitactivity.npdauser_admin|none_to_dash }}</td>
+                    <td>{{ visitactivity.details|none_to_dash }}</td>
                     <td>{{ visitactivity.ip_address }}</td>
                   </tr>
                 {% endfor %}
@@ -51,6 +55,8 @@
                         {% if visitactivities|length > 1 %}s{% endif %}
                       </strong>
                     </th>
+                    <th></th>
+                    <th></th>
                     <th></th>
                     <th></th>
                   </tr>

@@ -318,10 +318,8 @@ class NPDAUser(AbstractUser, PermissionsMixin):
         # are automatically set by Django when the model is saved, so we don't need to set
         if user_creating_or_updating_user and user_creating_or_updating_user.is_authenticated:
             if not self.pk:
-                print(f"Creating NPDAUser: {self.email} with user: {user_creating_or_updating_user}")
                 # If this is a new record, set the created_by field
                 self.created_by = user_creating_or_updating_user
-            print(f"UPdating NPDAUser: {self.email} with user: {user_creating_or_updating_user}")
             self.updated_by = user_creating_or_updating_user
 
         if self.has_usable_password() and not self.email_confirmed:

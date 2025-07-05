@@ -70,10 +70,12 @@
             {% else %}
               {% if field|exclude_admin_user_field:request.user %}
                 <input type="checkbox"
-                       name="{{ field.name }} "
+                       name="{{ field.name }}"
                        id="{{ field.id_for_label }}"
-                       class="toggle border-rcpch_light_blue hover:bg-rcpch_pink bg-rcpch_grey js-toggle-checkbox {% if form.name.value %}border-rcpch_pink bg-rcpch_pink{% endif %}"
-                       {% if field.value %}checked{% endif %} />
+                       value="1"
+                       class="toggle border-rcpch_light_blue hover:bg-rcpch_pink bg-rcpch_grey js-toggle-checkbox {% if field.value %}border-rcpch_pink bg-rcpch_pink{% endif %}"
+                       {% if field.value %}checked{% endif %}
+                       {% if not perms.npda.change_npdauser %}disabled{% endif %} />
                 <!-- disabled in the form class if not correct permissions -->
               {% endif %}
             {% endif %}

@@ -17,7 +17,6 @@ from two_factor.signals import user_verified
 
 # RCPCH
 from .general_functions import create_session_object, send_email_to_recipients, get_client_ip
-from .middleware import get_current_user
 from .models import VisitActivity, NPDAUser
 
 # Logging setup
@@ -39,6 +38,7 @@ EMAIL_TRIGGER_FIELDS = [
     'is_rcpch_audit_team_member',
     'is_rcpch_staff',
     'is_superuser',
+    'is_staff',
     'email'
 ]
 
@@ -48,11 +48,29 @@ LOGGED_FIELDS = [
     'is_active',
     'is_rcpch_audit_team_member', 
     'is_rcpch_staff',
+    'is_staff',
+    'is_superuser',
     'email',
     'first_name',
     'surname',
-    'title'
 ]
+
+ACTIVITY = (
+        (1, "Successful login"), # SUCCESSFUL_LOGIN
+        (2, "Login failed"), # UNSUCCESSFUL_LOGIN
+        (3, "Logout"), # LOGOUT
+        (4, "Password reset link sent"), # PASSWORD_RESET_LINK_SENT
+        (5, "Password reset successfully"), # PASSWORD_RESET
+        (6, "Password lockout"), # PASSWORD_LOCKOUT
+        (7, "Two factor authentication set up"), # SETUP_TWO_FACTOR_AUTHENTICATION
+        (8, "Uploaded CSV"), # UPLOADED_CSV
+        (9, "Touched patient record"), #  - This is not implemented yet # TOUCHED_PATIENT_RECORD
+        (10, "Created a user record"),  # CREATED_USER_RECORD
+        (11, "User record changed"), # CHANGED_USER_RECORD
+        (12, "User role changed"), # CHANGED_USER_ROLE
+        (13, "Superuser or admin status changed"), # CHANGED_ADMIN_FLAG
+    )
+
 
 @receiver(user_logged_in)
 def log_user_login(sender, request, user, **kwargs):
@@ -144,18 +162,19 @@ def log_and_notify_user_changes(sender, instance, created, **kwargs):
     """
     Log changes and send notifications after user is saved.
     """
+    from .middleware import get_current_user
     current_user = get_current_user()
     
     if created:
         # Log user creation
         _log_user_activity(
             user=instance,
-            activity_type="user_created",
+            activity_type=10,  # CREATED_USER_RECORD
             details=f"User created by {current_user.email if current_user else 'system'}",
             current_user=current_user
         )
         
-        # Send welcome email notification to admins
+        # Send email notification to admins
         _send_user_creation_notification(instance, current_user)
         
     else:
@@ -195,9 +214,28 @@ def _detect_changes(instance, original_values):
 
 def _log_user_activity(user, activity_type, details, current_user=None):
     """
-    Create a log entry for user activity.
+    Create a log entry for user activity and store it in VisitActivity as well as logging it.
     """
-    logging.warning(f"Logging user activity: {activity_type} for user {user.email}: {details}. Current user: {current_user.email if current_user else 'system'}")
+    try:
+        from .middleware import get_current_request
+
+        current_request = get_current_request()
+        
+        ip_address = get_client_ip(current_request) if current_request else None
+        
+        VisitActivity.objects.create(
+            activity=activity_type,
+            ip_address=ip_address,
+            npdauser=user,
+            npdauser_admin=current_user,
+            details=details
+        )
+    except Exception as e:
+        logging.error(f"Failed to log user activity for {user.email}: {e}")
+        return
+    
+    activity_type_name = dict(ACTIVITY).get(activity_type, "Unknown activity")
+    logging.warning(f"Logging user activity: {activity_type_name} for user {user.email}: {details}. Current user: {current_user.email if current_user else 'system'}")
 
 def _log_user_changes(user, changes, current_user):
     """
@@ -210,10 +248,12 @@ def _log_user_changes(user, changes, current_user):
         change_details.append(change_detail)
     
     details = f"User updated by {current_user.email if current_user else 'system'}: {'; '.join(change_details)}"
+
+    activity_type = _map_changes_to_visit_activity(changes)
     
     _log_user_activity(
         user=user,
-        activity_type="user_updated", 
+        activity_type=activity_type, 
         details=details,
         current_user=current_user
     )
@@ -337,3 +377,36 @@ def _send_user_creation_notification(user, current_user):
         logger.info(f"User creation notification sent for: {user.email}")
     except Exception as e:
         logger.error(f"Failed to send user creation notification for {user.email}: {e}")
+
+def _map_changes_to_visit_activity(changes):
+    """
+    Map changes to VisitActivity activity codes.
+    ACTIVITY = (
+        (SUCCESSFUL_LOGIN, "Successful login"),
+        (UNSUCCESSFUL_LOGIN, "Login failed"),
+        (LOGOUT, "Logout"),
+        (PASSWORD_RESET_LINK_SENT, "Password reset link sent"),
+        (PASSWORD_RESET, "Password reset successfully"),
+        (PASSWORD_LOCKOUT, "Password lockout"),
+        (SETUP_TWO_FACTOR_AUTHENTICATION, "Two factor authentication set up"),
+        (UPLOADED_CSV, "Uploaded CSV"),
+        (TOUCHED_PATIENT_RECORD, "Touched patient record"), #  - This is not implemented yet
+        (CREATED_USER_RECORD, "Created a user record"), 
+        (CHANGED_USER_RECORD, "User record changed"),
+        (CHANGED_USER_ROLE, "User role changed"),
+        (CHANGED_ADMIN_FLAG, "Superuser or admin status changed"),
+    )
+    """
+
+    ADMIN_FLAGS = ['is_active', 'is_rcpch_audit_team_member', 'is_rcpch_staff']
+    USER_RECORD_FIELDS = ['email', 'first_name', 'surname']
+    
+    if 'role' in changes:
+        return 12  # CHANGED_USER_ROLE
+    elif any(field in changes for field in ADMIN_FLAGS):
+        return 13  # CHANGED_ADMIN_FLAG
+    elif any(field in changes for field in USER_RECORD_FIELDS):
+        return 11   # CHANGED_USER_RECORD
+    else:
+        # Default to a generic user update activity
+        return 11

@@ -528,7 +528,9 @@ class NPDAUserLogsListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Li
         npdauser_id = self.kwargs.get("npdauser_id")
         context = super(NPDAUserLogsListView, self).get_context_data(**kwargs)
         npdauser = NPDAUser.objects.get(pk=npdauser_id)
-        visitactivities = VisitActivity.objects.filter(npdauser=npdauser)
+        visitactivities = VisitActivity.objects.filter(npdauser=npdauser).order_by(
+            "-activity_datetime"
+        )
         context["visitactivities"] = visitactivities
         context["npdauser"] = npdauser
         return context

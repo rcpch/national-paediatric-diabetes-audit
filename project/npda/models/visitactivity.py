@@ -12,7 +12,11 @@ class VisitActivity(models.Model):
     PASSWORD_LOCKOUT = 6
     SETUP_TWO_FACTOR_AUTHENTICATION = 7
     UPLOADED_CSV = 8
-    TOUCHED_PATIENT_RECORD = 9
+    TOUCHED_PATIENT_RECORD = 9 # This is not implemented yet
+    CREATED_USER_RECORD = 10
+    CHANGED_USER_RECORD = 11
+    CHANGED_USER_ROLE = 12
+    CHANGED_ADMIN_FLAG = 13
 
     ACTIVITY = (
         (SUCCESSFUL_LOGIN, "Successful login"),
@@ -23,7 +27,11 @@ class VisitActivity(models.Model):
         (PASSWORD_LOCKOUT, "Password lockout"),
         (SETUP_TWO_FACTOR_AUTHENTICATION, "Two factor authentication set up"),
         (UPLOADED_CSV, "Uploaded CSV"),
-        (TOUCHED_PATIENT_RECORD, "Touched patient record"),
+        (TOUCHED_PATIENT_RECORD, "Touched patient record"), #  - This is not implemented yet
+        (CREATED_USER_RECORD, "Created a user record"), 
+        (CHANGED_USER_RECORD, "User record changed"),
+        (CHANGED_USER_ROLE, "User role changed"),
+        (CHANGED_ADMIN_FLAG, "Superuser or admin status changed"),
     )
 
     activity_datetime = models.DateTimeField(auto_created=True, default=timezone.now)
@@ -33,6 +41,21 @@ class VisitActivity(models.Model):
     ip_address = models.CharField(max_length=250, blank=True, null=True)
 
     npdauser = models.ForeignKey("npda.NPDAUser", on_delete=models.CASCADE)
+
+    npdauser_admin = models.ForeignKey(
+        "npda.NPDAUser",
+        on_delete=models.CASCADE,
+        related_name="npdauser_admin",
+        blank=True,
+        null=True,
+        help_text="The user with admin permissions responsible for the activity, if applicable.",
+    )
+
+    details = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Additional details about the activity, if applicable.",
+    )
 
     class Meta:
         indexes = [models.Index(fields=["-activity_datetime"])]
