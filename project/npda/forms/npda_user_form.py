@@ -110,7 +110,6 @@ class NPDAUserForm(forms.ModelForm):
                     "You cannot change the email address of this user."
                 )
 
-
 class NPDAUpdatePasswordForm(SetPasswordForm):
     # form show when setting or resetting password
     # password validation occurs here and updates the password_last_set field

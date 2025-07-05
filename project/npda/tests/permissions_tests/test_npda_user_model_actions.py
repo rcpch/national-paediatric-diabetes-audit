@@ -360,7 +360,6 @@ def test_coordinators_cannot_change_their_employer_htmx(
 
     assert employers == {ALDER_HEY_PZ_CODE}
 
-
 # Not actually used in the UI but possible to construct manually
 @pytest.mark.django_db
 def test_coordinators_cannot_change_their_employer_post(
@@ -580,6 +579,13 @@ def test_audit_team_can_add_employers_outside_of_their_pdu(
     employers = { e.pz_code for e in ah_coordinator.organisation_employers.all() }
 
     assert employers == { ALDER_HEY_PZ_CODE, GOSH_PZ_CODE }
+
+    VisitActivity = apps.get_model("npda", "VisitActivity")
+    assert VisitActivity.objects.filter(
+        npdauser=ah_coordinator,
+        activity=15, # Assigned to a new PDU
+        npdauser_admin=audit_team_user,  # The user who made the change
+    ).exists(), "Expected a VisitActivity to be created when a coordinator tries to change their PDU."
 
 
 @pytest.mark.django_db
@@ -1097,7 +1103,7 @@ def test_coordinators_can_edit_users_with_multiple_employers_even_if_in_same_pdu
 
     # Check that the response is successful
     assert response.status_code == HTTPStatus.OK
-
+    
 @pytest.mark.django_db
 def test_coordinators_cannot_delete_users_with_multiple_employers_even_if_in_same_pdu(
     client: Client,
@@ -1295,7 +1301,10 @@ def test_user_creation_has_a_timestamp_and_user(
     seed_users_fixture,
     seed_audit_periods_fixture,
 ):
-    """Test that user creation has a timestamp and user."""
+    """
+    Test that user creation has a timestamp and user.
+    Also checks that the VisitActivity is created for user creation.
+    """
 
     # Create a test user
     test_user = NPDAUser.objects.filter(
@@ -1323,6 +1332,12 @@ def test_user_creation_has_a_timestamp_and_user(
     assert new_user.created_by == test_user
     assert new_user.created_at is not None
     assert new_user.created_at <= timezone.now()  # Ensure the timestamp is not in the future
+
+    VisitActivity = apps.get_model("npda.VisitActivity")
+    assert VisitActivity.objects.filter(
+        npdauser=new_user,
+        activity=10,  # User creation
+    ).exists(), "VisitActivity should have been created for user creation"
 
 @pytest.mark.django_db
 def test_user_update_has_a_timestamp_and_user(
@@ -1366,3 +1381,10 @@ def test_user_update_has_a_timestamp_and_user(
     assert new_user.updated_at is not None
     assert new_user.updated_at <= timezone.now()  # Ensure the timestamp is not in the future
     assert new_user.role == AUDIT_CENTRE_COORDINATOR
+
+    VisitActivity = apps.get_model("npda.VisitActivity")
+    assert VisitActivity.objects.filter(
+        npdauser=new_user,
+        activity=12,  # User role change
+        npdauser_admin=test_user,  # The user who made the change
+    ).exists(), "VisitActivity should have been created with new user role change"

@@ -276,6 +276,13 @@ class NPDAUserUpdateView(
             .order_by("-is_primary_employer")
         )
         return context
+    
+    def form_invalid(self, form):
+        response = super().form_invalid(form)
+        print("Form is invalid")
+        print(form.errors)
+        return response
+    
 
     def form_valid(self, form):
         if not self.request.user.has_perm("npda.change_npdauser"):
