@@ -130,6 +130,7 @@ class VisitForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.patient = kwargs["initial"].get("patient")
         self.override_height_weight = kwargs.pop("override_height_weight", False)
+        self.audit_period = kwargs.pop("audit_period", None)
         super(VisitForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
             model_field = Visit._meta.get_field(field_name)
@@ -438,6 +439,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -453,6 +455,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -468,6 +471,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -483,6 +487,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -498,6 +503,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -513,6 +519,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -528,6 +535,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -543,6 +551,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -558,6 +567,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -573,6 +583,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -588,6 +599,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -603,6 +615,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -618,6 +631,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -633,6 +647,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -648,6 +663,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -663,6 +679,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -690,6 +707,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -705,6 +723,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=None, # Hospital admission dates are not bound by the audit period
         )
         if valid == False:
             raise ValidationError(error)
@@ -1132,11 +1151,12 @@ def measure_must_have_date_and_value(date_field, date_field_name, field_list):
                     }
                 )
     field_name_list = ", ".join(field_name_list)
-    if date_field is None:
+    if date_field is None and any(value is not None for field in field_list for value in field.values()):
+        # If the date is None and any of the values are not None, we raise an error
         errors.update(
             {
                 date_field_name: [
-                    f"Missing date. {field_name_list} and the associated date must all be completed."
+                    f"Absent or invalid date error. {field_name_list} and the associated date must all be completed."
                 ]
             }
         )

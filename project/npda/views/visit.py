@@ -21,7 +21,7 @@ from ..general_functions import (
     get_visit_tabs,
     visit_falls_within_audit_period_Q_object,
 )
-from ..models import Patient, Transfer, Visit
+from ..models import Patient, Transfer, Visit, AuditPeriod
 from .mixins import (
     CheckCanCompleteQuestionnaireMixin,
     CheckCurrentAuditYearMixin,
@@ -177,6 +177,7 @@ class VisitCreateView(
         # Get override_postcode from POST data if available
         if self.request.method in ('POST', 'PUT'):
             kwargs['override_height_weight'] = self.request.POST.get('override_height_weight', 'false') == 'true'
+            kwargs['audit_period'] = AuditPeriod.objects.get_audit_period_for_request(self.request)
         return kwargs
 
     def get_initial(self):
@@ -268,6 +269,7 @@ class VisitUpdateView(
         # Get override_postcode from POST data if available
         if self.request.method in ('POST', 'PUT'):
             kwargs['override_height_weight'] = self.request.POST.get('override_height_weight', 'false') == 'true'
+            kwargs['audit_period'] = AuditPeriod.objects.get_audit_period_for_request(self.request)
         return kwargs
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:

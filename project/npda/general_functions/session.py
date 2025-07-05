@@ -15,11 +15,15 @@ logger = logging.getLogger(__name__)
 
 def get_submission_actions(pz_code, audit_year):
     Submission = apps.get_model("npda", "Submission")
+    AuditPeriod = apps.get_model("npda", "AuditPeriod")
+    audit_period = AuditPeriod.objects.filter(
+        start_date__year=audit_year
+    ).first()  # Ensure the audit period exists for the given year
 
     submission = Submission.objects.filter(
         paediatric_diabetes_unit__pz_code=pz_code,
         submission_active=True,
-        audit_year=audit_year,
+        audit_period=audit_period,
     ).first()
 
     can_complete_questionnaire = True

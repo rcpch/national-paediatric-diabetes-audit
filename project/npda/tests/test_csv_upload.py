@@ -1,6 +1,5 @@
 import dataclasses
 import datetime
-import re
 import tempfile
 import csv
 import collections
@@ -18,9 +17,7 @@ from dateutil.relativedelta import relativedelta
 from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.contrib.gis.geos import Point
-from httpx import HTTPError
 from django.contrib.messages import get_messages
-from django.test import Client
 from django.urls import reverse
 
 from project.constants.user import RCPCH_AUDIT_TEAM
@@ -28,9 +25,11 @@ from project.npda.general_functions.csv import (
     csv_upload,
     csv_parse,
     create_csv_submission,
-    tidy_up_old_submissions
 )
-from project.constants import csv_definition_for, ALL_DATES
+from project.npda.general_functions.quarter_for_date import (
+    current_audit_year_start_date,
+)
+from project.constants import csv_definition_for, ALL_VISIT_DATES
 from project.npda.models import (
     NPDAUser,
     Patient,
@@ -389,7 +388,12 @@ def test_error_in_multiple_visits(test_user, one_patient_two_visits):
         "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
     ] = 3
 
-    errors = csv_upload_sync(test_user, df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=df["Visit/Appointment Date"][1].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, df, _audit_period=audit_period)
     assert "treatment" in errors[0]
 
     assert Visit.objects.count() == 2
@@ -422,7 +426,16 @@ def test_multiple_patients_where_one_has_visit_errors_and_the_other_does_not(
         "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
     ] = 3
 
-    errors = csv_upload_sync(test_user, df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=df["Visit/Appointment Date"][1].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    # # set all the visit dates to be the same so we can test the treatment error
+    # for item_date in ALL_VISIT_DATES:
+    #     df[item_date[1]] = df["Visit/Appointment Date"][1]
+
+    errors = csv_upload_sync(test_user, df, _audit_period=audit_period)
     assert "treatment" in errors[0]
 
     [patient_one, patient_two] = Patient.objects.all()
@@ -706,7 +719,13 @@ def test_invalid_postcode(test_user, single_row_valid_df):
 )
 def test_error_validating_postcode(test_user, single_row_valid_df):
     single_row_valid_df["Postcode of usual address"] = "WC1X 8SH"
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert len(errors) == 0
 
@@ -741,7 +760,12 @@ def test_invalid_gp_ods_code(test_user, single_row_valid_df):
 def test_error_validating_gp_ods_code(test_user, single_row_valid_df):
     single_row_valid_df["GP Practice Code"] = "G85023"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
     assert len(errors) == 0
 
     patient = Patient.objects.first()
@@ -992,7 +1016,12 @@ def test_case_insensitive_column_headers(test_user, dummy_sheet_csv):
     parsed_csv = read_csv_from_str(csv)
     assert len(parsed_csv.additional_columns) == 0
 
-    errors = csv_upload_sync(test_user, parsed_csv.df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=parsed_csv.df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, parsed_csv.df, _audit_period=audit_period)
 
     assert len(errors) == 0
 
@@ -1437,7 +1466,12 @@ def test_hba1c_value_ifcc_less_than_20(test_user, single_row_valid_df):
     single_row_valid_df.loc[0, "HbA1c result format"] = 1  # IFCC (mmol/mol)
     single_row_valid_df.loc[0, "Observation Date: Hba1c Value"] = "01/01/2022"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "hba1c" in errors[0]
 
@@ -1454,7 +1488,11 @@ def test_hba1c_value_ifcc_more_than_195(test_user, single_row_valid_df):
     single_row_valid_df.loc[0, "HbA1c result format"] = 1  # IFCC (mmol/mol)
     single_row_valid_df.loc[0, "Observation Date: Hba1c Value"] = "01/01/2022"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "hba1c" in errors[0]
 
@@ -1471,7 +1509,12 @@ def test_hba1c_value_dcct_more_than_20(test_user, single_row_valid_df):
     single_row_valid_df.loc[0, "HbA1c result format"] = 2  # DCCT (%)
     single_row_valid_df.loc[0, "Observation Date: Hba1c Value"] = "01/01/2022"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "hba1c" in errors[0]
 
@@ -1488,7 +1531,11 @@ def test_hba1c_value_dcct_less_than_3(test_user, single_row_valid_df):
     single_row_valid_df.loc[0, "HbA1c result format"] = 2  # DCCT (%)
     single_row_valid_df.loc[0, "Observation Date: Hba1c Value"] = "01/01/2022"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "hba1c" in errors[0]
 
@@ -1505,7 +1552,11 @@ def test_hba1c_missing(test_user, single_row_valid_df):
     single_row_valid_df.loc[0, "HbA1c result format"] = 2  # DCCT (%)
     single_row_valid_df.loc[0, "Observation Date: Hba1c Value"] = "01/01/2022"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "hba1c" in errors[0]
 
@@ -1532,7 +1583,12 @@ def test_treatment_closed_loop_passes_validation(test_user, single_row_valid_df)
         "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
     ] = 1
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
     assert len(errors) == 0
 
     visit = Visit.objects.first()
@@ -1553,7 +1609,12 @@ def test_treatment_missing_closed_loop_form_fails_validation(
         "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
     ] = 1
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
     assert "treatment" in errors[0]
 
     visit = Visit.objects.first()
@@ -1576,7 +1637,12 @@ def test_treatment_mdi_but_closed_loop_selected_form_fails_validation(
         "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
     ] = 2  # Closed loop system (licensed)
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
     assert "closed_loop_system" in errors[0]
 
     visit = Visit.objects.first()
@@ -1599,9 +1665,14 @@ def test_blood_pressure_values_passes_validation(test_user, single_row_valid_df)
     single_row_valid_df.loc[0, "Diastolic Blood pressure"] = (
         80  # Note that pressure has a lower case 'p'
     )
-    single_row_valid_df.loc[0, "Observation Date (Blood Pressure)"] = "01/01/2022"
+    single_row_valid_df.loc[0, "Observation Date (Blood Pressure)"] = "01/01/2023"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
     assert len(errors) == 0
 
     visit = Visit.objects.first()
@@ -1618,9 +1689,14 @@ def test_blood_pressure_missing_values_fails_validation(test_user, single_row_va
     single_row_valid_df.loc[0, "Diastolic Blood pressure"] = (
         80  # Note that pressure has a lower case 'p'
     )
-    single_row_valid_df.loc[0, "Observation Date (Blood Pressure)"] = "01/01/2022"
+    single_row_valid_df.loc[0, "Observation Date (Blood Pressure)"] = "01/01/2023"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
     assert (
         "systolic_blood_pressure" in errors[0]
     ), "Systolic Blood Pressure is None but passes validation."
@@ -1644,7 +1720,12 @@ def test_blood_pressure_missing_date_form_fails_validation(
     )
     single_row_valid_df.loc[0, "Observation Date (Blood Pressure)"] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
     assert (
         "blood_pressure_observation_date" in errors[0]
     ), "Blood Pressure observation date is None but passes validation."
@@ -1673,9 +1754,14 @@ def test_systolic_blood_pressure_over_240_form_fails_validation(
     single_row_valid_df.loc[0, "Diastolic Blood pressure"] = (
         80  # Note that pressure has a lower case 'p'
     )
-    single_row_valid_df.loc[0, "Observation Date (Blood Pressure)"] = "01/01/2022"
+    single_row_valid_df.loc[0, "Observation Date (Blood Pressure)"] = "01/01/2023"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
     assert (
         "systolic_blood_pressure" in errors[0]
     ), "Systolic Blood Pressure is >240 (so really dangerously high!) but passes validation."
@@ -1688,8 +1774,8 @@ def test_systolic_blood_pressure_over_240_form_fails_validation(
         visit.diastolic_blood_pressure == 80
     ), f"Diastolic blood pressure should be 80 but was {visit.diastolic_blood_pressure}"
     assert visit.blood_pressure_observation_date == datetime.date(
-        2022, 1, 1
-    ), f"Blood pressure observation date should be 1/1/2022 but is {visit.blood_pressure_observation_date}"
+        2023, 1, 1
+    ), f"Blood pressure observation date should be 1/1/2023 but is {visit.blood_pressure_observation_date}"
 
 
 @pytest.mark.django_db
@@ -1704,9 +1790,14 @@ def test_systolic_blood_pressure_below_50_form_fails_validation(
     single_row_valid_df.loc[0, "Diastolic Blood pressure"] = (
         40  # Note that pressure has a lower case 'p'
     )
-    single_row_valid_df.loc[0, "Observation Date (Blood Pressure)"] = "01/01/2022"
+    single_row_valid_df.loc[0, "Observation Date (Blood Pressure)"] = "01/01/2023"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
     assert (
         "systolic_blood_pressure" in errors[0]
     ), "Systolic Blood Pressure is < 50 (so really dangerously low!) but passes validation."
@@ -1719,8 +1810,8 @@ def test_systolic_blood_pressure_below_50_form_fails_validation(
         visit.diastolic_blood_pressure == 40
     ), f"Diastolic blood pressure should be 40 but was {visit.diastolic_blood_pressure}"
     assert visit.blood_pressure_observation_date == datetime.date(
-        2022, 1, 1
-    ), f"Blood pressure observation date should be 1/1/2022 but is {visit.blood_pressure_observation_date}"
+        2023, 1, 1
+    ), f"Blood pressure observation date should be 1/1/203 but is {visit.blood_pressure_observation_date}"
 
 
 @pytest.mark.django_db
@@ -1735,9 +1826,14 @@ def test_diastolic_blood_pressure_over_120_form_fails_validation(
     single_row_valid_df.loc[0, "Diastolic Blood pressure"] = (
         125  # Note that pressure has a lower case 'p'
     )
-    single_row_valid_df.loc[0, "Observation Date (Blood Pressure)"] = "01/01/2022"
+    single_row_valid_df.loc[0, "Observation Date (Blood Pressure)"] = "01/01/2023"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
     assert (
         "diastolic_blood_pressure" in errors[0]
     ), "Diastolic Blood Pressure is >120 (so really dangerously high!) but passes validation."
@@ -1750,8 +1846,8 @@ def test_diastolic_blood_pressure_over_120_form_fails_validation(
         visit.diastolic_blood_pressure == 125
     ), f"Diastolic blood pressure should be 125 (and really the child should be in hospital) but was {visit.diastolic_blood_pressure}"
     assert visit.blood_pressure_observation_date == datetime.date(
-        2022, 1, 1
-    ), f"Blood pressure observation date should be 1/1/2022 but is {visit.blood_pressure_observation_date}"
+        2023, 1, 1
+    ), f"Blood pressure observation date should be 1/1/2023 but is {visit.blood_pressure_observation_date}"
 
 
 @pytest.mark.django_db
@@ -1766,9 +1862,14 @@ def test_diastolic_blood_pressure_below_20_form_fails_validation(
     single_row_valid_df.loc[0, "Diastolic Blood pressure"] = (
         15  # Note that pressure has a lower case 'p'
     )
-    single_row_valid_df.loc[0, "Observation Date (Blood Pressure)"] = "01/01/2022"
+    single_row_valid_df.loc[0, "Observation Date (Blood Pressure)"] = "01/01/2023"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
     assert (
         "diastolic_blood_pressure" in errors[0]
     ), "Diastolic Blood Pressure is < 20 (so really dangerously low!) but passes validation."
@@ -1781,8 +1882,8 @@ def test_diastolic_blood_pressure_below_20_form_fails_validation(
         visit.diastolic_blood_pressure == 15
     ), f"Diastolic blood pressure should be 15 (and really the child should be in hospital) but was {visit.diastolic_blood_pressure}"
     assert visit.blood_pressure_observation_date == datetime.date(
-        2022, 1, 1
-    ), f"Blood pressure observation date should be 1/1/2022 but is {visit.blood_pressure_observation_date}"
+        2023, 1, 1
+    ), f"Blood pressure observation date should be 1/1/2023 but is {visit.blood_pressure_observation_date}"
 
 
 """
@@ -1795,10 +1896,15 @@ def test_decs_value_form_passes_validation(test_user, single_row_valid_df):
     """
     Test that DECS value is accepted
     """
-    single_row_valid_df.loc[0, "Retinal Screening date"] = "01/01/2022"
+    single_row_valid_df.loc[0, "Retinal Screening date"] = "01/01/2023"
     single_row_valid_df.loc[0, "Retinal Screening Result"] = 1  # Normal
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert (
         len(errors) == 0
@@ -1806,8 +1912,8 @@ def test_decs_value_form_passes_validation(test_user, single_row_valid_df):
 
     visit = Visit.objects.first()
     assert visit.retinal_screening_observation_date == datetime.date(
-        2022, 1, 1
-    ), f"Saved Retinal screening date should be 1/1/2022, but was {visit.retinal_screening_observation_date}"
+        2023, 1, 1
+    ), f"Saved Retinal screening date should be 1/1/2023, but was {visit.retinal_screening_observation_date}"
     assert (
         visit.retinal_screening_result == 1
     ), f"Saved Retinal screening result should be 1 (Normal), but was {visit.retinal_screening_result}"
@@ -1818,10 +1924,15 @@ def test_decs_value_none_form_fails_validation(test_user, single_row_valid_df):
     """
     Test that a missing DECS value is invalid
     """
-    single_row_valid_df.loc[0, "Retinal Screening date"] = "01/01/2022"
+    single_row_valid_df.loc[0, "Retinal Screening date"] = "01/01/2023"
     single_row_valid_df.loc[0, "Retinal Screening Result"] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert (
         "retinal_screening_result" in errors[0]
@@ -1829,8 +1940,8 @@ def test_decs_value_none_form_fails_validation(test_user, single_row_valid_df):
 
     visit = Visit.objects.first()
     assert visit.retinal_screening_observation_date == datetime.date(
-        2022, 1, 1
-    ), f"Saved Retinal screening date should be 1/1/2022, but was {visit.retinal_screening_observation_date}"
+        2023, 1, 1
+    ), f"Saved Retinal screening date should be 1/1/2023, but was {visit.retinal_screening_observation_date}"
     assert (
         visit.retinal_screening_result == None
     ), f"Saved Retinal screening result should be None, but was {visit.retinal_screening_result}"
@@ -1844,7 +1955,12 @@ def test_decs_date_none_form_fails_validation(test_user, single_row_valid_df):
     single_row_valid_df.loc[0, "Retinal Screening date"] = None
     single_row_valid_df.loc[0, "Retinal Screening Result"] = 1  # Normal
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert (
         "retinal_screening_observation_date" in errors[0]
@@ -1871,9 +1987,14 @@ def test_urine_albumin_value_form_passes_validation(test_user, single_row_valid_
     """
     single_row_valid_df.loc[0, "Urinary Albumin Level (ACR)"] = 30
     single_row_valid_df.loc[0, "Albuminuria Stage"] = 1  # Normal
-    single_row_valid_df.loc[0, "Observation Date: Urinary Albumin Level"] = "01/01/2022"
+    single_row_valid_df.loc[0, "Observation Date: Urinary Albumin Level"] = "01/01/2023"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert len(errors) == 0
 
@@ -1886,8 +2007,8 @@ def test_urine_albumin_value_form_passes_validation(test_user, single_row_valid_
         visit.albuminuria_stage == 1
     ), f"Saved urine albumin stage should be 1 (Normal), but was {visit.albuminuria_stage}"
     assert visit.albumin_creatinine_ratio_date == datetime.date(
-        2022, 1, 1
-    ), f"Saved urine albumin observation date should be 1/1/2022, but was {visit.albumin_creatinine_ratio_date}"
+        2023, 1, 1
+    ), f"Saved urine albumin observation date should be 1/1/2023, but was {visit.albumin_creatinine_ratio_date}"
 
 
 @pytest.mark.django_db
@@ -1899,9 +2020,14 @@ def test_urine_albumin_value_below_range_form_fails_validation(
     """
     single_row_valid_df.loc[0, "Urinary Albumin Level (ACR)"] = -10
     single_row_valid_df.loc[0, "Albuminuria Stage"] = 1  # Normal
-    single_row_valid_df.loc[0, "Observation Date: Urinary Albumin Level"] = "01/01/2022"
+    single_row_valid_df.loc[0, "Observation Date: Urinary Albumin Level"] = "01/01/2023"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert (
         "albumin_creatinine_ratio" in errors[0]
@@ -1916,8 +2042,8 @@ def test_urine_albumin_value_below_range_form_fails_validation(
         visit.albuminuria_stage == 1
     ), f"Saved urine albumin stage should be 1 (Normal), but was {visit.albuminuria_stage}"
     assert visit.albumin_creatinine_ratio_date == datetime.date(
-        2022, 1, 1
-    ), f"Saved urine albumin observation date should be 1/1/2022, but was {visit.albumin_creatinine_ratio_date}"
+        2023, 1, 1
+    ), f"Saved urine albumin observation date should be 1/1/2023, but was {visit.albumin_creatinine_ratio_date}"
 
 
 @pytest.mark.django_db
@@ -1929,9 +2055,14 @@ def test_urine_albumin_value_above_range_form_fails_validation(
     """
     single_row_valid_df.loc[0, "Urinary Albumin Level (ACR)"] = 1000
     single_row_valid_df.loc[0, "Albuminuria Stage"] = 1  # Normal
-    single_row_valid_df.loc[0, "Observation Date: Urinary Albumin Level"] = "01/01/2022"
+    single_row_valid_df.loc[0, "Observation Date: Urinary Albumin Level"] = "01/01/2023"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert (
         "albumin_creatinine_ratio" in errors[0]
@@ -1946,8 +2077,8 @@ def test_urine_albumin_value_above_range_form_fails_validation(
         visit.albuminuria_stage == 1
     ), f"Saved urine albumin stage should be 1 (Normal), but was {visit.albuminuria_stage}"
     assert visit.albumin_creatinine_ratio_date == datetime.date(
-        2022, 1, 1
-    ), f"Saved urine albumin observation date should be 1/1/2022, but was {visit.albumin_creatinine_ratio_date}"
+        2023, 1, 1
+    ), f"Saved urine albumin observation date should be 1/1/2023, but was {visit.albumin_creatinine_ratio_date}"
 
 
 @pytest.mark.django_db
@@ -1959,9 +2090,14 @@ def test_urine_albumin_value_missing_form_fails_validation(
     """
     single_row_valid_df.loc[0, "Urinary Albumin Level (ACR)"] = None
     single_row_valid_df.loc[0, "Albuminuria Stage"] = 1  # Normal
-    single_row_valid_df.loc[0, "Observation Date: Urinary Albumin Level"] = "01/01/2022"
+    single_row_valid_df.loc[0, "Observation Date: Urinary Albumin Level"] = "01/01/2023"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert (
         "albumin_creatinine_ratio" in errors[0]
@@ -1976,8 +2112,8 @@ def test_urine_albumin_value_missing_form_fails_validation(
         visit.albuminuria_stage == 1
     ), f"Saved urine albumin stage should be 1 (Normal), but was {visit.albuminuria_stage}"
     assert visit.albumin_creatinine_ratio_date == datetime.date(
-        2022, 1, 1
-    ), f"Saved urine albumin observation date should be 1/1/2022, but was {visit.albumin_creatinine_ratio_date}"
+        2023, 1, 1
+    ), f"Saved urine albumin observation date should be 1/1/2023, but was {visit.albumin_creatinine_ratio_date}"
 
 
 @pytest.mark.django_db
@@ -1989,9 +2125,14 @@ def test_urine_albumin_stage_missing_form_fails_validation(
     """
     single_row_valid_df.loc[0, "Urinary Albumin Level (ACR)"] = 10
     single_row_valid_df.loc[0, "Albuminuria Stage"] = None
-    single_row_valid_df.loc[0, "Observation Date: Urinary Albumin Level"] = "01/01/2022"
+    single_row_valid_df.loc[0, "Observation Date: Urinary Albumin Level"] = "01/01/2023"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert (
         "albuminuria_stage" in errors[0]
@@ -2006,8 +2147,8 @@ def test_urine_albumin_stage_missing_form_fails_validation(
         visit.albuminuria_stage == None
     ), f"Saved urine albumin stage should be None, but was {visit.albuminuria_stage}"
     assert visit.albumin_creatinine_ratio_date == datetime.date(
-        2022, 1, 1
-    ), f"Saved urine albumin observation date should be 1/1/2022, but was {visit.albumin_creatinine_ratio_date}"
+        2023, 1, 1
+    ), f"Saved urine albumin observation date should be 1/1/2023, but was {visit.albumin_creatinine_ratio_date}"
 
 
 @pytest.mark.django_db
@@ -2021,7 +2162,12 @@ def test_urine_albumin_date_missing_form_fails_validation(
     single_row_valid_df.loc[0, "Albuminuria Stage"] = 1  # Normal
     single_row_valid_df.loc[0, "Observation Date: Urinary Albumin Level"] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert (
         "albumin_creatinine_ratio_date" in errors[0]
@@ -2052,10 +2198,15 @@ def test_total_cholesterol_value_form_passes_validation(test_user, single_row_va
     """
     single_row_valid_df.loc[0, "Total Cholesterol Level (mmol/l)"] = 5
     single_row_valid_df.loc[0, "Observation Date: Total Cholesterol Level"] = (
-        "01/01/2022"
+        "01/01/2023"
     )
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert len(errors) == 0
 
@@ -2065,8 +2216,8 @@ def test_total_cholesterol_value_form_passes_validation(test_user, single_row_va
         visit.total_cholesterol == 5
     ), f"Saved total cholesterol should be 5, but was {visit.total_cholesterol}"
     assert visit.total_cholesterol_date == datetime.date(
-        2022, 1, 1
-    ), f"Saved total cholesterol observation date should be 1/1/2022, but was {visit.total_cholesterol_date}"
+        2023, 1, 1
+    ), f"Saved total cholesterol observation date should be 1/1/2023, but was {visit.total_cholesterol_date}"
 
 
 @pytest.mark.django_db
@@ -2078,10 +2229,15 @@ def test_total_cholesterol_value_above_reference_form_fails_validation(
     """
     single_row_valid_df.loc[0, "Total Cholesterol Level (mmol/l)"] = 20
     single_row_valid_df.loc[0, "Observation Date: Total Cholesterol Level"] = (
-        "01/01/2022"
+        "01/01/2023"
     )
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert (
         "total_cholesterol" in errors[0]
@@ -2093,8 +2249,8 @@ def test_total_cholesterol_value_above_reference_form_fails_validation(
         visit.total_cholesterol == 20
     ), f"Saved total cholesterol should be 1000, but was {visit.total_cholesterol}"
     assert visit.total_cholesterol_date == datetime.date(
-        2022, 1, 1
-    ), f"Saved total cholesterol observation date should be 1/1/2022, but was {visit.total_cholesterol_date}"
+        2023, 1, 1
+    ), f"Saved total cholesterol observation date should be 1/1/2023, but was {visit.total_cholesterol_date}"
 
 
 @pytest.mark.django_db
@@ -2106,10 +2262,15 @@ def test_total_cholesterol_value_below_reference_form_fails_validation(
     """
     single_row_valid_df.loc[0, "Total Cholesterol Level (mmol/l)"] = 0.1
     single_row_valid_df.loc[0, "Observation Date: Total Cholesterol Level"] = (
-        "01/01/2022"
+        "01/01/2023"
     )
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert (
         "total_cholesterol" in errors[0]
@@ -2121,8 +2282,8 @@ def test_total_cholesterol_value_below_reference_form_fails_validation(
         "0.1"
     ), f"Saved total cholesterol should be 0, but was {visit.total_cholesterol}"
     assert visit.total_cholesterol_date == datetime.date(
-        2022, 1, 1
-    ), f"Saved total cholesterol observation date should be 1/1/2022, but was {visit.total_cholesterol_date}"
+        2023, 1, 1
+    ), f"Saved total cholesterol observation date should be 1/1/2023, but was {visit.total_cholesterol_date}"
 
 
 @pytest.mark.django_db
@@ -2134,10 +2295,15 @@ def test_total_cholesterol_value_missing_form_fails_validation(
     """
     single_row_valid_df.loc[0, "Total Cholesterol Level (mmol/l)"] = None
     single_row_valid_df.loc[0, "Observation Date: Total Cholesterol Level"] = (
-        "01/01/2022"
+        "01/01/2023"
     )
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert (
         "total_cholesterol" in errors[0]
@@ -2149,8 +2315,8 @@ def test_total_cholesterol_value_missing_form_fails_validation(
         visit.total_cholesterol is None
     ), f"Saved total cholesterol should be None, but was {visit.total_cholesterol}"
     assert visit.total_cholesterol_date == datetime.date(
-        2022, 1, 1
-    ), f"Saved total cholesterol observation date should be 1/1/2022, but was {visit.total_cholesterol_date}"
+        2023, 1, 1
+    ), f"Saved total cholesterol observation date should be 1/1/2023, but was {visit.total_cholesterol_date}"
 
 
 @pytest.mark.django_db
@@ -2163,7 +2329,12 @@ def test_total_cholesterol_date_missing_form_fails_validation(
     single_row_valid_df.loc[0, "Total Cholesterol Level (mmol/l)"] = 5
     single_row_valid_df.loc[0, "Observation Date: Total Cholesterol Level"] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert (
         "total_cholesterol_date" in errors[0]
@@ -2193,16 +2364,21 @@ def test_thyroid_treatment_passes_validation(test_user, single_row_valid_df):
         0,
         "At time of, or following measurement of thyroid function, was the patient prescribed any thyroid treatment?",
     ] = 1  # Normal
-    single_row_valid_df.loc[0, "Observation Date: Thyroid Function"] = "01/01/2022"
+    single_row_valid_df.loc[0, "Observation Date: Thyroid Function"] = "01/01/2023"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert len(errors) == 0
 
     visit = Visit.objects.first()
 
     assert visit.thyroid_treatment_status == 1
-    assert visit.thyroid_function_date == datetime.date(2022, 1, 1)
+    assert visit.thyroid_function_date == datetime.date(2023, 1, 1)
 
 
 @pytest.mark.django_db
@@ -2214,16 +2390,21 @@ def test_thyroid_treatment_missing_fails_validation(test_user, single_row_valid_
         0,
         "At time of, or following measurement of thyroid function, was the patient prescribed any thyroid treatment?",
     ] = None
-    single_row_valid_df.loc[0, "Observation Date: Thyroid Function"] = "01/01/2022"
+    single_row_valid_df.loc[0, "Observation Date: Thyroid Function"] = "01/01/2023"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "thyroid_treatment_status" in errors[0]
 
     visit = Visit.objects.first()
 
     assert visit.thyroid_treatment_status is None
-    assert visit.thyroid_function_date == datetime.date(2022, 1, 1)
+    assert visit.thyroid_function_date == datetime.date(2023, 1, 1)
 
 
 @pytest.mark.django_db
@@ -2239,7 +2420,12 @@ def test_thyroid_treatment_date_missing_passes_validation(
     ] = 2
     single_row_valid_df.loc[0, "Observation Date: Thyroid Function"] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "thyroid_function_date" not in errors[0]
 
@@ -2260,19 +2446,24 @@ def test_coeliac_screening_passes_validation(test_user, single_row_valid_df):
     Test that coeliac screening is accepted
     """
     single_row_valid_df.loc[0, "Observation Date: Coeliac Disease Screening"] = (
-        "01/01/2022"
+        "01/01/2023"
     )
     single_row_valid_df.loc[
         0, "Has the patient been recommended a Gluten-free diet?"
     ] = 1  # Yes
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert len(errors) == 0
 
     visit = Visit.objects.first()
 
-    assert visit.coeliac_screen_date == datetime.date(2022, 1, 1)
+    assert visit.coeliac_screen_date == datetime.date(2023, 1, 1)
     assert visit.gluten_free_diet == 1
 
 
@@ -2280,19 +2471,24 @@ def test_coeliac_screening_passes_validation(test_user, single_row_valid_df):
 @pytest.mark.django_db
 def test_coeliac_screening_missing_fails_validation(test_user, single_row_valid_df):
     single_row_valid_df.loc[0, "Observation Date: Coeliac Disease Screening"] = (
-        "01/01/2022"
+        "01/01/2023"
     )
     single_row_valid_df.loc[
         0, "Has the patient been recommended a Gluten-free diet?"
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "gluten_free_diet" not in errors[0]
 
     visit = Visit.objects.first()
 
-    assert visit.coeliac_screen_date == datetime.date(2022, 1, 1)
+    assert visit.coeliac_screen_date == datetime.date(2023, 1, 1)
     assert visit.gluten_free_diet is None
 
 
@@ -2306,7 +2502,12 @@ def test_coeliac_screening_date_missing_passes_validation(
         0, "Has the patient been recommended a Gluten-free diet?"
     ] = 1
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "coeliac_screen_date" not in errors[0]
 
@@ -2328,19 +2529,24 @@ def test_psychological_support_passes_validation(test_user, single_row_valid_df)
     """
     single_row_valid_df.loc[
         0, "Observation Date - Psychological Screening Assessment"
-    ] = "01/01/2022"
+    ] = "01/01/2023"
     single_row_valid_df.loc[
         0,
         "Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?",
     ] = 1
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert len(errors) == 0
 
     visit = Visit.objects.first()
 
-    assert visit.psychological_screening_assessment_date == datetime.date(2022, 1, 1)
+    assert visit.psychological_screening_assessment_date == datetime.date(2023, 1, 1)
     assert visit.psychological_additional_support_status == 1
 
 
@@ -2351,19 +2557,24 @@ def test_psychological_support_missing_fails_validation(test_user, single_row_va
     """
     single_row_valid_df.loc[
         0, "Observation Date - Psychological Screening Assessment"
-    ] = "01/01/2022"
+    ] = "01/01/2023"
     single_row_valid_df.loc[
         0,
         "Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?",
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "psychological_additional_support_status" in errors[0]
 
     visit = Visit.objects.first()
 
-    assert visit.psychological_screening_assessment_date == datetime.date(2022, 1, 1)
+    assert visit.psychological_screening_assessment_date == datetime.date(2023, 1, 1)
     assert visit.psychological_additional_support_status is None
 
 
@@ -2382,7 +2593,12 @@ def test_psychological_support_date_missing_fails_validation(
         "Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?",
     ] = 1
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "psychological_screening_assessment_date" in errors[0]
 
@@ -2405,7 +2621,12 @@ def test_psychological_support_date_missing_fails_validation(
         "Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?",
     ] = 99  # Unknown
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "psychological_screening_assessment_date" not in errors[0]
 
@@ -2428,16 +2649,21 @@ def test_smoking_status_passes_validation(test_user, single_row_valid_df):
     single_row_valid_df.loc[
         0,
         "Date of offer of referral to smoking cessation service (if patient is a current smoker)",
-    ] = "01/01/2022"
+    ] = "01/01/2023"
     single_row_valid_df.loc[0, "Does the patient smoke?"] = 2  # Current smoker
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert len(errors) == 0
 
     visit = Visit.objects.first()
 
-    assert visit.smoking_cessation_referral_date == datetime.date(2022, 1, 1)
+    assert visit.smoking_cessation_referral_date == datetime.date(2023, 1, 1)
     assert visit.smoking_status == 2
 
 
@@ -2452,7 +2678,12 @@ def test_smoking_status_non_smoker_passes_validation(test_user, single_row_valid
     ] = None
     single_row_valid_df.loc[0, "Does the patient smoke?"] = 1  # Non-smoker
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert len(errors) == 0
 
@@ -2472,16 +2703,21 @@ def test_smoking_status_non_smoker_referral_date_provided_fails_validation(
     single_row_valid_df.loc[
         0,
         "Date of offer of referral to smoking cessation service (if patient is a current smoker)",
-    ] = "01/01/2022"
+    ] = "01/01/2023"
     single_row_valid_df.loc[0, "Does the patient smoke?"] = 1  # Non-smoker
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "smoking_cessation_referral_date" in errors[0]
 
     visit = Visit.objects.first()
 
-    assert visit.smoking_cessation_referral_date == datetime.date(2022, 1, 1)
+    assert visit.smoking_cessation_referral_date == datetime.date(2023, 1, 1)
     assert visit.smoking_status == 1
 
 
@@ -2493,16 +2729,21 @@ def test_smoking_status_missing_fails_validation(test_user, single_row_valid_df)
     single_row_valid_df.loc[
         0,
         "Date of offer of referral to smoking cessation service (if patient is a current smoker)",
-    ] = "01/01/2022"
+    ] = "01/01/2023"
     single_row_valid_df.loc[0, "Does the patient smoke?"] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "smoking_cessation_referral_date" in errors[0]
 
     visit = Visit.objects.first()
 
-    assert visit.smoking_cessation_referral_date == datetime.date(2022, 1, 1)
+    assert visit.smoking_cessation_referral_date == datetime.date(2023, 1, 1)
     assert visit.smoking_status is None
 
 
@@ -2520,7 +2761,12 @@ def test_smoking_status_smoker_does_not_require_cessation_referral_date(
     ] = None
     single_row_valid_df.loc[0, "Does the patient smoke?"] = 2  # Current smoker
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert len(errors) == 0
 
@@ -2547,17 +2793,22 @@ def test_dietician_referral_status_additional_offered_form_passes_validation(
         "Was the patient offered an additional appointment with a paediatric dietitian?",
     ] = 1
     single_row_valid_df.loc[0, "Date of additional appointment with dietitian"] = (
-        "01/01/2022"
+        "01/01/2023"
     )
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert len(errors) == 0
 
     visit = Visit.objects.first()
 
     assert visit.dietician_additional_appointment_offered == 1
-    assert visit.dietician_additional_appointment_date == datetime.date(2022, 1, 1)
+    assert visit.dietician_additional_appointment_date == datetime.date(2023, 1, 1)
 
 
 @pytest.mark.django_db
@@ -2573,7 +2824,12 @@ def test_dietician_no_additional_offered_form_passes_validation(
     ] = 2
     single_row_valid_df.loc[0, "Date of additional appointment with dietitian"] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert len(errors) == 0
 
@@ -2595,17 +2851,22 @@ def test_dietician_no_additional_offered_date_provided_fail_validation(
         "Was the patient offered an additional appointment with a paediatric dietitian?",
     ] = 2
     single_row_valid_df.loc[0, "Date of additional appointment with dietitian"] = (
-        "01/01/2022"
+        "01/01/2023"
     )
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "dietician_additional_appointment_date" in errors[0]
 
     visit = Visit.objects.first()
 
     assert visit.dietician_additional_appointment_offered == 2
-    assert visit.dietician_additional_appointment_date == datetime.date(2022, 1, 1)
+    assert visit.dietician_additional_appointment_date == datetime.date(2023, 1, 1)
 
 
 @pytest.mark.django_db
@@ -2622,7 +2883,12 @@ def test_dietician_additional_offered_date_missing_passes_validation(
     ] = 1
     single_row_valid_df.loc[0, "Date of additional appointment with dietitian"] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "dietician_additional_appointment_date" not in errors[0]
 
@@ -2644,17 +2910,22 @@ def test_dietician_additional_offered_no_but_date_offered_fail_validation(
         "Was the patient offered an additional appointment with a paediatric dietitian?",
     ] = 2
     single_row_valid_df.loc[0, "Date of additional appointment with dietitian"] = (
-        "01/01/2022"
+        "01/01/2023"
     )
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "dietician_additional_appointment_date" in errors[0]
 
     visit = Visit.objects.first()
 
     assert visit.dietician_additional_appointment_offered == 2
-    assert visit.dietician_additional_appointment_date == datetime.date(2022, 1, 1)
+    assert visit.dietician_additional_appointment_date == datetime.date(2023, 1, 1)
 
 
 """
@@ -2670,10 +2941,10 @@ def test_inpatient_admission_stabilisation_passes_validation(
     Test that inpatient admission for stabilisation is accepted
     """
     single_row_valid_df.loc[0, "Start date (Hospital Provider Spell)"] = (
-        "01/01/2022"  # mm/dd/yyyy
+        "01/01/2023"  # mm/dd/yyyy
     )
     single_row_valid_df.loc[0, "Discharge date (Hospital provider spell)"] = (
-        "01/02/2022"  # mm/dd/yyyy
+        "01/02/2023"  # mm/dd/yyyy
     )
     single_row_valid_df.loc[0, "Reason for admission"] = 1  # Stabilisation
     single_row_valid_df.loc[
@@ -2684,18 +2955,23 @@ def test_inpatient_admission_stabilisation_passes_validation(
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert len(errors) == 0
 
     visit = Visit.objects.first()
 
     assert visit.hospital_admission_date == datetime.date(
-        2022, 1, 1
-    ), f"Admission date should be 1/1/2022, but was {visit.hospital_admission_date}"
+        2023, 1, 1
+    ), f"Admission date should be 1/1/2023, but was {visit.hospital_admission_date}"
     assert visit.hospital_discharge_date == datetime.date(
-        2022, 1, 2
-    ), f"Discharge date should be 2/1/2022, but was {visit.hospital_discharge_date}"
+        2023, 1, 2
+    ), f"Discharge date should be 2/1/2023, but was {visit.hospital_discharge_date}"
     assert (
         visit.hospital_admission_reason == 1
     ), f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
@@ -2727,7 +3003,12 @@ def test_inpatient_admission_stabilisation_missing_date_fails_validation(
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "hospital_admission_date" in errors[0]
 
@@ -2751,7 +3032,7 @@ def test_inpatient_admission_stabilisation_discharge_date_before_admission_date_
         "01/08/2022"  # mm/dd/yyyy
     )
     single_row_valid_df.loc[0, "Discharge date (Hospital provider spell)"] = (
-        "01/01/2022"  # mm/dd/yyyy
+        "01/01/2023"  # mm/dd/yyyy
     )
     single_row_valid_df.loc[0, "Reason for admission"] = 1
     single_row_valid_df.loc[
@@ -2762,14 +3043,19 @@ def test_inpatient_admission_stabilisation_discharge_date_before_admission_date_
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "hospital_admission_date" in errors[0]
 
     visit = Visit.objects.first()
 
     assert visit.hospital_admission_date == datetime.date(year=2022, month=1, day=8)
-    assert visit.hospital_discharge_date == datetime.date(year=2022, month=1, day=1)
+    assert visit.hospital_discharge_date == datetime.date(year=2023, month=1, day=1)
     assert visit.hospital_admission_reason == 1
     assert visit.dka_additional_therapies == None
     assert visit.hospital_admission_other == None
@@ -2782,12 +3068,12 @@ def test_inpatient_admission_stabilisation_discharge_date_before_diagnosis_date_
     """
     Test that inpatient admission for stabilisation is rejected if discharge date before admission date
     """
-    single_row_valid_df.loc[0, "Date of Diabetes Diagnosis"] = "1/10/2022"  # mm/dd/yyyy
+    single_row_valid_df.loc[0, "Date of Diabetes Diagnosis"] = "1/10/2021"  # mm/dd/yyyy
     single_row_valid_df.loc[0, "Start date (Hospital Provider Spell)"] = (
-        "01/01/2022"  # mm/dd/yyyy
+        "01/08/2023"  # mm/dd/yyyy
     )
     single_row_valid_df.loc[0, "Discharge date (Hospital provider spell)"] = (
-        "01/08/2022"  # mm/dd/yyyy
+        "01/01/2023"  # mm/dd/yyyy
     )
     single_row_valid_df.loc[0, "Reason for admission"] = 1
     single_row_valid_df.loc[
@@ -2798,21 +3084,26 @@ def test_inpatient_admission_stabilisation_discharge_date_before_diagnosis_date_
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
-    assert "hospital_discharge_date" in errors[0]
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
+
+    assert "hospital_admission_date" in errors[0]
 
     visit = Visit.objects.first()
 
     assert visit.patient.diagnosis_date == datetime.date(
-        2022, 1, 10
-    ), f"Diagnosis date should be 1/1/2022, but was {visit.patient.diagnosis_date}"
+        2021, 1, 10
+    ), f"Diagnosis date should be 1/1/2021, but was {visit.patient.diagnosis_date}"
     assert visit.hospital_admission_date == datetime.date(
-        2022, 1, 1
-    ), f"Admission date should be 1/1/2022, but was {visit.hospital_admission_date}"
+        2023, 1, 8
+    ), f"Admission date should be 8/1/2023, but was {visit.hospital_admission_date}"
     assert visit.hospital_discharge_date == datetime.date(
-        2022, 1, 8
-    ), f"Discharge date should be 8/1/2022, but was {visit.hospital_discharge_date}"
+        2023, 1, 1
+    ), f"Discharge date should be 1/1/2023, but was {visit.hospital_discharge_date}"
     assert (
         visit.hospital_admission_reason == 1
     ), f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
@@ -2845,7 +3136,12 @@ def test_inpatient_admission_stabilisation_discharge_date_after_date_of_death_fa
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "hospital_discharge_date" in errors[0]
 
@@ -2879,10 +3175,10 @@ def test_inpatient_admission_stabilisation_dka_additional_therapies_provided_fai
     Test that inpatient admission for stabilisation is rejected if DKA additional therapies provided
     """
     single_row_valid_df.loc[0, "Start date (Hospital Provider Spell)"] = (
-        "01/01/2022"  # mm/dd/yyyy
+        "01/01/2023"  # mm/dd/yyyy
     )
     single_row_valid_df.loc[0, "Discharge date (Hospital provider spell)"] = (
-        "01/08/2022"  # mm/dd/yyyy
+        "01/08/2023"  # mm/dd/yyyy
     )
     single_row_valid_df.loc[0, "Reason for admission"] = 1  # Stabilisation
     single_row_valid_df.loc[
@@ -2893,18 +3189,23 @@ def test_inpatient_admission_stabilisation_dka_additional_therapies_provided_fai
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "dka_additional_therapies" in errors[0]
 
     visit = Visit.objects.first()
 
     assert visit.hospital_admission_date == datetime.date(
-        2022, 1, 1
-    ), f"Admission date should be 1/1/2022, but was {visit.hospital_admission_date}"
+        2023, 1, 1
+    ), f"Admission date should be 1/1/2023, but was {visit.hospital_admission_date}"
     assert visit.hospital_discharge_date == datetime.date(
-        2022, 1, 8
-    ), f"Discharge date should be 8/1/2022, but was {visit.hospital_discharge_date}"
+        2023, 1, 8
+    ), f"Discharge date should be 8/1/2023, but was {visit.hospital_discharge_date}"
     assert (
         visit.hospital_admission_reason == 1
     ), f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
@@ -2924,10 +3225,10 @@ def test_inpatient_admission_stabilisation_hospital_admission_other_provided_fai
     Test that inpatient admission for stabilisation is rejected if DKA additional therapies provided
     """
     single_row_valid_df.loc[0, "Start date (Hospital Provider Spell)"] = (
-        "01/01/2022"  # mm/dd/yyyy
+        "01/01/2023"  # mm/dd/yyyy
     )
     single_row_valid_df.loc[0, "Discharge date (Hospital provider spell)"] = (
-        "01/08/2022"  # mm/dd/yyyy
+        "01/08/2023"  # mm/dd/yyyy
     )
     single_row_valid_df.loc[0, "Reason for admission"] = 1  # Stabilisation
     single_row_valid_df.loc[
@@ -2938,18 +3239,23 @@ def test_inpatient_admission_stabilisation_hospital_admission_other_provided_fai
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "dka_additional_therapies" in errors[0]
 
     visit = Visit.objects.first()
 
     assert visit.hospital_admission_date == datetime.date(
-        2022, 1, 1
-    ), f"Admission date should be 1/1/2022, but was {visit.hospital_admission_date}"
+        2023, 1, 1
+    ), f"Admission date should be 1/1/2023, but was {visit.hospital_admission_date}"
     assert visit.hospital_discharge_date == datetime.date(
-        2022, 1, 8
-    ), f"Discharge date should be 8/1/2022, but was {visit.hospital_discharge_date}"
+        2023, 1, 8
+    ), f"Discharge date should be 8/1/2023, but was {visit.hospital_discharge_date}"
     assert (
         visit.hospital_admission_reason == 1
     ), f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
@@ -2967,10 +3273,10 @@ def test_inpatient_admission_dka_passes_validation(test_user, single_row_valid_d
     Test that inpatient admission for DKA with additional therapies is accepted
     """
     single_row_valid_df.loc[0, "Start date (Hospital Provider Spell)"] = (
-        "01/01/2022"  # mm/dd/yyyy
+        "01/01/2023"  # mm/dd/yyyy
     )
     single_row_valid_df.loc[0, "Discharge date (Hospital provider spell)"] = (
-        "01/08/2022"  # mm/dd/yyyy
+        "01/08/2023"  # mm/dd/yyyy
     )
     single_row_valid_df.loc[0, "Reason for admission"] = 2  # DKA
     single_row_valid_df.loc[
@@ -2981,17 +3287,22 @@ def test_inpatient_admission_dka_passes_validation(test_user, single_row_valid_d
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert len(errors) == 0
 
     visit = Visit.objects.first()
 
     assert visit.hospital_admission_date == datetime.date(
-        2022, 1, 1
+        2023, 1, 1
     ), f"Admission date should be 1/1/2022, but was {visit.hospital_admission_date}"
     assert visit.hospital_discharge_date == datetime.date(
-        2022, 1, 8
+        2023, 1, 8
     ), f"Discharge date should be 8/1/2022, but was {visit.hospital_discharge_date}"
     assert (
         visit.hospital_admission_reason == 2
@@ -3026,7 +3337,12 @@ def test_inpatient_admission_dka_additional_therapies_missing_fails_validation(
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "dka_additional_therapies" in errors[0]
 
@@ -3057,10 +3373,10 @@ def test_inpatient_admission_dka_additional_therapies_hospital_admission_also_pr
     Tests that a hospital admission for DKA with additional therapies is rejected if hospital admission other is provided
     """
     single_row_valid_df.loc[0, "Start date (Hospital Provider Spell)"] = (
-        "01/01/2022"  # mm/dd/yyyy
+        "01/01/2023"  # mm/dd/yyyy
     )
     single_row_valid_df.loc[0, "Discharge date (Hospital provider spell)"] = (
-        "01/08/2022"  # mm/dd/yyyy
+        "01/08/2023"  # mm/dd/yyyy
     )
     single_row_valid_df.loc[0, "Reason for admission"] = 2  # DKA
     single_row_valid_df.loc[
@@ -3071,18 +3387,23 @@ def test_inpatient_admission_dka_additional_therapies_hospital_admission_also_pr
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = "Other reason"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "hospital_admission_reason" in errors[0]
 
     visit = Visit.objects.first()
 
     assert visit.hospital_admission_date == datetime.date(
-        2022, 1, 1
-    ), f"Admission date should be 1/1/2022, but was {visit.hospital_admission_date}"
+        2023, 1, 1
+    ), f"Admission date should be 1/1/2023, but was {visit.hospital_admission_date}"
     assert visit.hospital_discharge_date == datetime.date(
-        2022, 1, 8
-    ), f"Discharge date should be 8/1/2022, but was {visit.hospital_discharge_date}"
+        2023, 1, 8
+    ), f"Discharge date should be 8/1/2023, but was {visit.hospital_discharge_date}"
     assert (
         visit.hospital_admission_reason == 2
     ), f"Admission reason should be 2 (DKA), but was {visit.hospital_admission_reason}"
@@ -3100,10 +3421,10 @@ def test_inpatient_admission_other_passes_validation(test_user, single_row_valid
     Test that inpatient admission for other reason is accepted
     """
     single_row_valid_df.loc[0, "Start date (Hospital Provider Spell)"] = (
-        "01/01/2022"  # mm/dd/yyyy
+        "01/01/2023"  # mm/dd/yyyy
     )
     single_row_valid_df.loc[0, "Discharge date (Hospital provider spell)"] = (
-        "01/08/2022"  # mm/dd/yyyy
+        "01/08/2023"  # mm/dd/yyyy
     )
     single_row_valid_df.loc[0, "Reason for admission"] = 6  # Other
     single_row_valid_df.loc[
@@ -3114,18 +3435,23 @@ def test_inpatient_admission_other_passes_validation(test_user, single_row_valid
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = "Other reason"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
-    assert len(errors) == 0
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
+
+    assert len(errors) == 0, "Should not have any errors but got: " + str(errors)
 
     visit = Visit.objects.first()
 
     assert visit.hospital_admission_date == datetime.date(
-        2022, 1, 1
-    ), f"Admission date should be 1/1/2022, but was {visit.hospital_admission_date}"
+        2023, 1, 1
+    ), f"Admission date should be 1/1/2023, but was {visit.hospital_admission_date}"
     assert visit.hospital_discharge_date == datetime.date(
-        2022, 1, 8
-    ), f"Discharge date should be 8/1/2022, but was {visit.hospital_discharge_date}"
+        2023, 1, 8
+    ), f"Discharge date should be 8/1/2023, but was {visit.hospital_discharge_date}"
     assert (
         visit.hospital_admission_reason == 6
     ), f"Admission reason should be 6 (other), but was {visit.hospital_admission_reason}"
@@ -3146,10 +3472,10 @@ def test_inpatient_admission_other_missing_fails_validation(
     """
 
     single_row_valid_df.loc[0, "Start date (Hospital Provider Spell)"] = (
-        "01/01/2022"  # mm/dd/yyyy
+        "01/01/2023"  # mm/dd/yyyy
     )
     single_row_valid_df.loc[0, "Discharge date (Hospital provider spell)"] = (
-        "01/08/2022"  # mm/dd/yyyy
+        "01/08/2023"  # mm/dd/yyyy
     )
     single_row_valid_df.loc[0, "Reason for admission"] = 6  # Other
     single_row_valid_df.loc[
@@ -3160,18 +3486,23 @@ def test_inpatient_admission_other_missing_fails_validation(
         0, "Only complete if OTHER selected: Reason for admission (free text)"
     ] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "hospital_admission_other" in errors[0]
 
     visit = Visit.objects.first()
 
     assert visit.hospital_admission_date == datetime.date(
-        2022, 1, 1
-    ), f"Admission date should be 1/1/2022, but was {visit.hospital_admission_date}"
+        2023, 1, 1
+    ), f"Admission date should be 1/1/2023, but was {visit.hospital_admission_date}"
     assert visit.hospital_discharge_date == datetime.date(
-        2022, 1, 8
-    ), f"Discharge date should be 8/1/2022, but was {visit.hospital_discharge_date}"
+        2023, 1, 8
+    ), f"Discharge date should be 8/1/2023, but was {visit.hospital_discharge_date}"
     assert (
         visit.hospital_admission_reason == 6
     ), f"Admission reason should be 6 (other), but was {visit.hospital_admission_reason}"
@@ -3193,17 +3524,22 @@ def test_visit_date_provided_passes_validation(test_user, single_row_valid_df):
     """
     Test that a visit date is accepted
     """
-    single_row_valid_df.loc[0, "Visit/Appointment Date"] = "01/01/2025"  # mm/dd/yyyy
+    single_row_valid_df.loc[0, "Visit/Appointment Date"] = "01/01/2023"  # mm/dd/yyyy
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
-    assert len(errors) == 0
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
+
+    assert len(errors) == 0, "Should not have any errors but got: " + str(errors)
 
     visit = Visit.objects.first()
 
     assert visit.visit_date == datetime.date(
-        2025, 1, 1
-    ), f"Visit/Appointment Date should be 1/1/2025, but was {visit.visit_date}"
+        2023, 1, 1
+    ), f"Visit/Appointment Date should be 1/1/2023, but was {visit.visit_date}"
 
 
 @pytest.mark.django_db
@@ -3213,7 +3549,7 @@ def test_visit_date_missing_fails_validation(test_user, single_row_valid_df):
     """
     single_row_valid_df.loc[0, "Visit/Appointment Date"] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=None)
 
     assert "visit_date" in errors[0], f"Expected error in visit_date, but got None"
 
@@ -3232,7 +3568,12 @@ def test_visit_date_not_before_date_of_birth(test_user, single_row_valid_df):
     single_row_valid_df.loc[0, "Date of Birth"] = "01/01/2022"
     single_row_valid_df.loc[0, "Visit/Appointment Date"] = "01/01/2021"  # mm/dd/yyyy
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "visit_date" in errors[0]
 
@@ -3254,7 +3595,12 @@ def test_visit_date_not_after_date_of_death(test_user, single_row_valid_df):
     single_row_valid_df.loc[0, "Death Date"] = "01/01/2022"  # mm/dd/yyyy
     single_row_valid_df.loc[0, "Visit/Appointment Date"] = "01/01/2023"  # mm/dd/yyyy
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "visit_date" in errors[0]
 
@@ -3278,7 +3624,12 @@ def test_visit_date_not_before_diagnosis_date(test_user, single_row_valid_df):
     )
     single_row_valid_df.loc[0, "Visit/Appointment Date"] = "01/01/2021"  # mm/dd/yyyy
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "visit_date" in errors[0]
 
@@ -3313,7 +3664,12 @@ def test_alternative_formats_for_sex(test_user, dummy_sheet_csv, alternative, ex
 
     df = read_csv_from_str(one_row_csv).df
 
-    errors = csv_upload_sync(test_user, df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, df, _audit_period=audit_period)
     assert len(errors) == 0
 
     patient = Patient.objects.first()
@@ -3331,10 +3687,15 @@ def test_mix_of_standard_and_alternative_formats_for_sex(test_user, dummy_sheet_
 
     df = read_csv_from_str(two_rows_csv).df
 
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
     # Double check we do have different patients
     assert df["NHS Number"].nunique() == 2
 
-    errors = csv_upload_sync(test_user, df)
+    errors = csv_upload_sync(test_user, df, _audit_period=audit_period)
     assert len(errors) == 0
 
     [patient1, patient2] = Patient.objects.all()
@@ -3464,7 +3825,12 @@ def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
 
     df = read_csv_from_str(one_row_csv).df
 
-    errors = csv_upload_sync(test_user, df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, df, _audit_period=audit_period)
 
     assert len(errors) > 0
     assert model.objects.count() == 1
@@ -3557,7 +3923,12 @@ def test_bad_data_for_decimal_fields(test_user, dummy_sheet_csv, model_field):
 
     df = read_csv_from_str(one_row_csv).df
 
-    errors = csv_upload_sync(test_user, df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, df, _audit_period=audit_period)
 
     assert len(errors) > 0
     assert model.objects.count() == 1
@@ -3581,7 +3952,12 @@ def test_non_breaking_space_in_iso_8859_1_csv(test_user, dummy_sheet_csv):
 
     df = read_csv_from_str(one_row_csv, encoding="iso-8859-1").df
 
-    errors = csv_upload_sync(test_user, df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, df, _audit_period=audit_period)
 
     assert len(errors) == 0
 
@@ -3598,7 +3974,12 @@ def test_remove_empty_spaces_from_empty_fields(test_user, dummy_sheet_csv):
 
     df = read_csv_from_str(one_row_csv).df
 
-    errors = csv_upload_sync(test_user, df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, df, _audit_period=audit_period)
 
     assert len(errors) == 0
 
@@ -3616,7 +3997,13 @@ def test_remove_empty_spaces_in_empty_date_fields(test_user, dummy_sheet_csv):
     parsed_csv = read_csv_from_str(one_row_csv)
     assert len(parsed_csv.errors_to_return) == 0, f"Expected no errors when parsing CSV, got {parsed_csv.errors_to_return}"
 
-    errors = csv_upload_sync(test_user, parsed_csv.df, errors_to_return=parsed_csv.errors_to_return)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=parsed_csv.df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, parsed_csv.df, _audit_period=audit_period, errors_to_return=parsed_csv.errors_to_return)
+
     assert len(errors) == 0, f"Expected no errors when uploading CSV, got {errors}"
 
 @pytest.mark.django_db
@@ -3635,7 +4022,12 @@ def test_csv_height_weight_fields_with_units_have_units_removed(test_user, dummy
 
     df = read_csv_from_str(one_row_csv).df
 
-    errors = csv_upload_sync(test_user, df)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, df, _audit_period=audit_period)
 
     assert len(errors) == 0
 
@@ -3667,7 +4059,12 @@ def test_visit_with_too_big_decimal_number_still_saves(test_user, dummy_sheet_cs
     parsed_csv = read_csv_from_str(one_row_csv)
     assert len(parsed_csv.errors_to_return) == 0, f"Expected no errors when parsing CSV, got {parsed_csv.errors_to_return}"
 
-    errors = csv_upload_sync(test_user, parsed_csv.df, errors_to_return=parsed_csv.errors_to_return)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=parsed_csv.df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, parsed_csv.df, _audit_period=audit_period, errors_to_return=parsed_csv.errors_to_return)
     
     assert "weight" in errors[0], f"Expected weight to be in errors, but got {errors}"
 
@@ -3688,10 +4085,65 @@ def test_visit_with_too_precise_decimal_number_is_rounded(test_user, dummy_sheet
     parsed_csv = read_csv_from_str(one_row_csv)
     assert len(parsed_csv.errors_to_return) == 0, f"Expected no errors when parsing CSV, got {parsed_csv.errors_to_return}"
 
-    errors = csv_upload_sync(test_user, parsed_csv.df, errors_to_return=parsed_csv.errors_to_return)
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=parsed_csv.df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, parsed_csv.df, errors_to_return=parsed_csv.errors_to_return, _audit_period=audit_period)
     assert len(errors) == 0, f"Expected no errors when uploading CSV, got {errors}"
 
     assert Visit.objects.count() == 1, "Expected one visit to be created"
     visit = Visit.objects.first()
 
     assert visit.weight == Decimal('34.1')
+
+# testing dates outside of the range of the audit period
+@pytest.mark.django_db
+def test_visit_form_dates_outside_of_audit_period(test_user, single_row_valid_df, seed_audit_periods_fixture):
+    """
+    Test that all dates outside in a visit of the audit period are flagged as errors, but the visit is still created
+    2024 / 2025 audit period is seeded in the fixture
+    All the dates tested include:
+        visit_date
+        height_weight_observation_date
+        hba1c_date
+        blood_pressure_observation_date
+        foot_examination_observation_date
+        retinal_screening_observation_date
+        albumin_creatinine_ratio_date
+        total_cholesterol_date
+        thyroid_function_date
+        coeliac_screen_date
+        psychological_screening_assessment_date
+        smoking_cessation_referral_date
+        carbohydrate_counting_level_three_education_date
+        dietician_additional_appointment_date
+        flu_immunisation_recommended_date
+        sick_day_rules_training_date
+        hospital_admission_date
+        **hospital_discharge_date NOT INCLUDED AS IT IS POSSIBLE TO BE DISCHARGED AFTER THE AUDIT ENDS**
+    """
+    audit_period = AuditPeriod.objects.first() # this will be 2024 / 2025
+    # set date of birth to 01/01/2015 as this cannot be after the other mocked dates
+    single_row_valid_df.loc[0, "Date of Birth"] = "01/01/2015"
+    # set date of diabetes diagnosis to 01/01/2018 as this cannot be after the other mocked dates
+    single_row_valid_df.loc[0, "Date of Diabetes Diagnosis"] = "01/01/2018"
+    # set a smoking cessation outcome
+    single_row_valid_df.loc[0, "Does the patient smoke?"] = 2 # Current smoker
+    # set reason for admission to 1 (stabilisation) as this is required for the hospital admission dates
+    single_row_valid_df.loc[0, "Reason for admission"] = 1 # Stabilisation
+
+    # set all the dates associated with the visit to 01/01/2020
+    for date_field in ALL_VISIT_DATES:
+        single_row_valid_df.loc[0, date_field] = "01/01/2020"
+    
+    # REMOVE the hospital discharge date as this is not included in the test
+    ALL_VISIT_DATES.remove(("hospital_discharge_date", "Discharge date (Hospital provider spell)"))
+
+    assert Visit.objects.count() == 0, "Expected no visits to be created before the test"
+    
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
+    for date_field in ALL_VISIT_DATES:
+        assert date_field[0] in errors[0], f"Expected {date_field} to be in errors, but got {errors}"
+    assert Visit.objects.count() == 1, "Expected the visit still to be created even though visit date outside of audit period"

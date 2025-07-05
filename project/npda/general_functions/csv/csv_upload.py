@@ -76,7 +76,8 @@ async def create_csv_submission(pdu, audit_period, csv_file_bytes, csv_file_name
 async def tidy_up_old_submissions(pdu, new_submission):
     all_submissions = Submission.objects.filter(
         paediatric_diabetes_unit=pdu,
-        audit_year=new_submission.audit_year,
+        audit_year=new_submission.audit_year, # compatibility
+        audit_period=new_submission.audit_period,
     )
 
     async for submission in all_submissions:
@@ -143,7 +144,7 @@ async def csv_upload(
         form = PatientForm(
             fields,
             paediatric_diabetes_unit=pdu,
-            audit_year=submission.audit_year,
+            audit_period=submission.audit_period
         )
         form.async_validation_results = await validate_patient_async(
             postcode=fields["postcode"],
@@ -160,7 +161,7 @@ async def csv_upload(
             Visit,
         )
 
-        form = VisitForm(data=fields, initial={"patient": patient_form.instance})
+        form = VisitForm(data=fields, initial={"patient": patient_form.instance}, audit_period=submission.audit_period)
         form.async_validation_results = await validate_visit_async(
             birth_date=patient_form.cleaned_data.get("date_of_birth"),
             observation_date=fields["height_weight_observation_date"],
@@ -168,6 +169,7 @@ async def csv_upload(
             weight=fields["weight"],
             sex=patient_form.cleaned_data.get("sex"),
             async_client=async_client,
+            audit_period=submission.audit_period,
         )
 
         return form

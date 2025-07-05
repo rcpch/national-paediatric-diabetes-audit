@@ -1,17 +1,18 @@
 import dataclasses
 import datetime
 from decimal import Decimal
-
 import pytest
 from unittest.mock import Mock, patch
 
 from django.core.exceptions import ValidationError
 
+from project.constants import ALL_VISIT_DATES
 from project.npda.forms.visit_form import VisitForm
 from project.npda.forms.external_visit_validators import (
     VisitExternalValidationResult,
     CentileAndSDS,
 )
+from project.npda.models import Visit, AuditPeriod
 from project.npda.tests.factories.patient_factory import PatientFactory
 
 
@@ -2075,3 +2076,139 @@ def test_visit_date_before_birth_date_fails_validation():
     # Trigger the cleaners
     assert form.is_valid() == False, f"Visit date before birth date should fail"
     assert "visit_date" in form.errors
+
+@pytest.mark.django_db
+def test_visit_form_dates_outside_of_audit_period():
+    """
+    Test that all dates outside of the audit period are flagged as errors
+    2024 / 2025 audit period is seeded in the fixture
+    All the dates tested include:
+        visit_date, height_weight_observation_date, hba1c_date,
+        blood_pressure_observation_date, foot_examination_observation_date,
+        retinal_screening_observation_date, albumin_creatinine_ratio_date,
+        total_cholesterol_date, thyroid_function_date, coeliac_screen_date,
+        psychological_screening_assessment_date, smoking_cessation_referral_date,
+        carbohydrate_counting_level_three_education_date,
+        dietician_additional_appointment_date, flu_immunisation_recommended_date,
+        sick_day_rules_training_date, hospital_admission_date
+        **hospital_discharge_date EXCLUDED as it is possible to have an admission 
+        without a discharge date in the audit period**
+    """
+    # Test data with dates outside audit period
+    test_data_list = [
+        {
+            'visit_date': "2020-01-01",
+            'height_weight_observation_date': "2020-01-01",
+            'height': 150,
+            'weight': 50,
+        },
+        {
+            'visit_date': "2020-01-01",
+            'hba1c_date': "2020-01-01",
+            'hba1c': 58,
+            'hba1c_format': 1,  # mmol/mol
+        },
+        {
+            'visit_date': "2020-01-01",
+            'blood_pressure_observation_date': "2020-01-01",
+            'systolic_blood_pressure': 120,
+            'diastolic_blood_pressure': 80,
+        },
+        {
+            'visit_date': "2020-01-01",
+            'foot_examination_observation_date': "2020-01-01",
+            'foot_examination_status': 1,  # Normal
+        },
+        {
+            'visit_date': "2020-01-01",
+            'retinal_screening_observation_date': "2020-01-01",
+            'retinal_screening_result': 1,  # Normal
+        },
+        {
+            'visit_date': "2020-01-01",
+            'albumin_creatinine_ratio_date': "2020-01-01",
+            'albumin_creatinine_ratio': 30,
+            'albuminuria_stage': 1,  # Normal
+        },
+        {
+            'visit_date': "2020-01-01",
+            'total_cholesterol_date': "2020-01-01",
+            'total_cholesterol': 4.5,
+        },
+        {
+            'visit_date': "2020-01-01",
+            'thyroid_function_date': "2020-01-01",
+            'thyroid_treatment_status': 1,  # Normal
+        },
+        {
+            'visit_date': "2020-01-01",
+            'coeliac_screen_date': "2020-01-01",
+            'gluten_free_diet': 1,  # Normal
+        },
+        {
+            'visit_date': "2020-01-01",
+            'psychological_screening_assessment_date': "2020-01-01",
+            'psychological_additional_support_status': 1,  # Normal
+        },
+        {
+            'visit_date': "2020-01-01",
+            'smoking_cessation_referral_date': "2020-01-01",
+            'smoking_status': 2,  # Current smoker
+        },
+        {
+            'visit_date': "2020-01-01",
+            'carbohydrate_counting_level_three_education_date': "2020-01-01",
+        },
+        {
+            'visit_date': "2020-01-01",
+            'dietician_additional_appointment_offered': 1,  # Yes
+            'dietician_additional_appointment_date': "2020-02-02",  # Date after visit date
+        },
+        {
+            'visit_date': "2020-02-02", 
+            'flu_immunisation_recommended_date': "2020-01-01",
+        },
+        {
+            'visit_date': "2020-01-01",
+            'sick_day_rules_training_date': "2020-01-01",
+        },
+        {
+            'visit_date': "2020-01-01",
+            'hospital_admission_date': "2020-01-01",
+            'hospital_discharge_date': "2020-01-08",
+            'hospital_admission_reason': 1,  # patient stabilisation
+        }
+    ]
+    
+    # Create patient once
+    audit_period = AuditPeriod.objects.first()  # this will be 2024 / 2025
+    patient = PatientFactory()
+    # Set date of birth to 01/01/2015 as this cannot be after the other mocked dates
+    patient.date_of_birth = datetime.date(2015, 1, 10)
+    patient.diagnosis_date = datetime.date(2018, 1, 1)  # set diagnosis date to 01/01/2018
+    patient.smoking_status = 2  # Current smoker
+    patient.save()
+    
+    # Test each data scenario
+    for i, data in enumerate(test_data_list):
+        with pytest.raises(AssertionError, match="should be invalid"):
+            form = VisitForm(
+                data=data,
+                initial={
+                    "patient": patient,
+                },
+                audit_period=audit_period
+            )
+            
+            # Trigger the cleaners
+            is_valid = form.is_valid()
+            
+            # Extract the date field being tested from the data
+            date_fields = [key for key in data.keys() if 'date' in key]
+            tested_field = date_fields[0] if date_fields[0] != "hospital_discharge_date" and date_fields else 'unknown'
+            
+            assert not is_valid, f"Test case {i+1} ({tested_field}): Form should be invalid due to dates outside audit period, but got valid form. Errors: {form.errors}"
+            
+            # Verify that visit_date is always in errors (since all test cases have dates outside audit period)
+            assert "visit_date" in form.errors, f"Test case {i+1} ({tested_field}): visit_date should be in form errors"
+            assert tested_field in form.errors, f"Test case {i+1} ({tested_field}): {tested_field} should be in form errors"

@@ -118,9 +118,10 @@ class PatientListView(
                 srid=4326,
             )
             paediatric_diabetes_unit.save()
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
         filtered_patients = Q(
             submissions__submission_active=True,
-            submissions__audit_year=self.request.session.get("selected_audit_year"),
+            submissions__audit_period=audit_period
         )
 
         # filter by contents of the search bar
@@ -163,7 +164,7 @@ class PatientListView(
         )
 
         patient_queryset = patient_queryset.annotate(
-            audit_year=F("submissions__audit_year"),
+            audit_year=F("submissions__audit_period__start_date__year"),
             visit_error_count=Count(
                 Case(When(this_audit_year_visits & Q(visit__is_valid=False), then=1))
             ),
