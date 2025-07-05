@@ -168,8 +168,7 @@ async def csv_upload(
             height=fields["height"],
             weight=fields["weight"],
             sex=patient_form.cleaned_data.get("sex"),
-            async_client=async_client,
-            audit_period=submission.audit_period,
+            async_client=async_client
         )
 
         return form

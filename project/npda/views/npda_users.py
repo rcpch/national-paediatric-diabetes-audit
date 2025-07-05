@@ -44,6 +44,7 @@ from ..general_functions import (
 from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
 from .mixins import LoginAndOTPRequiredMixin
 from ...constants import RCPCH_AUDIT_TEAM, AUDIT_CENTRE_READER, AUDIT_CENTRE_EDITOR
+from ..signals import get_client_ip
 
 # from ..signals import password_reset_sent
 
@@ -186,6 +187,16 @@ class NPDAUserCreateView(
                 "You do not have permission to add a user with RCPCH Audit Team role."
             )
 
+        if form.cleaned_data["is_rcpch_audit_team_member"] and not (self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member):
+            raise PermissionDenied(
+                "You do not have permission to add a user with the is_rcpch_audit_team_member flag."
+            )
+
+        if form.cleaned_data["is_rcpch_staff"] and not (self.request.user.is_superuser or self.request.user.is_rcpch_staff):
+            raise PermissionDenied(
+                "You do not have permission to add a user with the is_rcpch_staff flag."
+            )
+
         new_user = form.save(commit=False)
         new_user.set_unusable_password()
         new_user.is_active = True
@@ -292,7 +303,17 @@ class NPDAUserUpdateView(
         
         if form.cleaned_data["role"] == RCPCH_AUDIT_TEAM and not (self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member):
             raise PermissionDenied(
-                "You do not have permission to add a user with RCPCH Audit Team role."
+                "You do not have permission to grant the RCPCH Audit Team role."
+            )
+
+        if form.cleaned_data["is_rcpch_audit_team_member"] and not (self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member):
+            raise PermissionDenied(
+                "You do not have permission to set the is_rcpch_audit_team_member flag."
+            )
+
+        if form.cleaned_data["is_rcpch_staff"] and not (self.request.user.is_superuser or self.request.user.is_rcpch_staff):
+            raise PermissionDenied(
+                "You do not have permission to set the is_rcpch_staff flag."
             )
         
         user = form.save(commit=False)
@@ -598,7 +619,7 @@ class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
             VisitActivity.objects.create(
                 npdauser=user,
                 activity=4,
-                ip_address=self.request.META.get("REMOTE_ADDR"),
+                ip_address=get_client_ip(self.request),
             )  # password reset link sent
         return super().form_valid(form)
 
