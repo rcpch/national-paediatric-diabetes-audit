@@ -2182,7 +2182,13 @@ def test_visit_form_dates_outside_of_audit_period(test_case_index, test_data):
     
     
     # Create patient once
-    audit_period = AuditPeriod.objects.first()  # this will be 2024 / 2025
+    audit_period = AuditPeriod.objects.create(
+        start_date=datetime.date(2024, 4, 1),
+        end_date=datetime.date(2025, 3, 31),
+        is_open=True,
+        is_visible=True
+    )  # this will be 2024 / 2025
+    
     patient = PatientFactory()
     # Set date of birth to 01/01/2015 as this cannot be after the other mocked dates
     patient.date_of_birth = datetime.date(2015, 1, 10)
@@ -2206,7 +2212,7 @@ def test_visit_form_dates_outside_of_audit_period(test_case_index, test_data):
     date_fields = [key for key in test_data.keys() if 'date' in key]
     tested_field = date_fields[0] if date_fields[0] != "hospital_discharge_date" and date_fields else 'unknown'
     
-    assert not is_valid, f"Test case {test_case_index+1} ({tested_field}): Form should be invalid due to dates outside audit period, but got valid form. Errors: {form.errors}"
+    assert not is_valid, f"Test case {test_case_index+1} ({tested_field}): Form should be invalid due to dates outside audit period {audit_period}, but got valid form. Errors: {form.errors}"
     
     # Verify that visit_date is always in errors (since all test cases have dates outside audit period)
     assert "visit_date" in form.errors, f"Test case {i+1} ({tested_field}): visit_date should be in form errors"
