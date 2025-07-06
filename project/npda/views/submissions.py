@@ -368,6 +368,7 @@ async def upload_csv(request):
             return redirect("upload_csv")
 
         audit_period = await sync_to_async(AuditPeriod.objects.get_audit_period_for_request)(request)
+
         if not audit_period.is_open and not (request.user.is_superuser or request.user.is_rcpch_audit_team_member):
             raise PermissionDenied(f"Upload is closed for {audit_period.audit_year()}.")
 

@@ -284,6 +284,14 @@ def test_reader_cannot_upload_csv(
     
     file = dummy_sheets_folder / "dummy_sheet_test.csv"
 
+    # Set session to allow user permissions
+    session = client.session
+    session["can_upload_csv"] = True
+    session["can_complete_questionnaire"] = False
+    session["pz_code"] = ALDER_HEY_PZ_CODE
+    # session["selected_audit_year"] = audit_period.audit_year()
+    session.save()
+
     # upload the CSV file by posting to  'home' view
     url = reverse("upload_csv")
     with open(file, "rb") as f:

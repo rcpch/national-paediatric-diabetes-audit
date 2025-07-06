@@ -180,7 +180,7 @@ class CheckCurrentAuditYearMixin(AccessMixin):
 
     def dispatch(self, request, *args, **kwargs):
         audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
-
+        
         if not audit_period:
             logger.warning(
                 f"User {request.user} tried to create/edit or delete data in an unknown audit period."
@@ -193,7 +193,6 @@ class CheckCurrentAuditYearMixin(AccessMixin):
                     f"User {request.user} tried to create/edit or delete data in a closed audit year."
                 )
                 raise PermissionDenied()
-
         return super().dispatch(request, *args, **kwargs)
 
 

@@ -47,26 +47,7 @@
                 {% endfor %}
               </tbody>
               <tfoot>
-                {% if visitactivities %}
-                  <tr class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white py-5">
-                    <th class="px-2">
-                      <strong>
-                        Total: {{ visitactivities|length }} User visit
-                        {% if visitactivities|length > 1 %}s{% endif %}
-                      </strong>
-                    </th>
-                    <th></th>
-                    <th></th>
-                    <th></th>
-                    <th></th>
-                  </tr>
-                {% else %}
-                  <tr class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white py-5">
-                    <th>
-                      <h5>No activity yet!</h5>
-                    </th>
-                  </tr>
-                {% endif %}
+                {% include 'partials/page_elements/user_log_table_page_controls.html' %}
               </tfoot>
             </table>
           {% else %}

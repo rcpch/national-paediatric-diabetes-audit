@@ -487,6 +487,18 @@ class NPDAUserLogsListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Li
     model = VisitActivity
     permission_required = "npda.view_visitactivity"
     permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
+    paginate_by = 50
+    context_object_name = "visitactivities"
+
+    def get_queryset(self):
+        npdauser_id = self.kwargs.get("npdauser_id")
+        if not npdauser_id:
+            logger.error("No NPDAUser ID provided in the request")
+            return VisitActivity.objects.none()
+        npdauser = NPDAUser.objects.get(pk=npdauser_id)
+        return VisitActivity.objects.filter(npdauser=npdauser).order_by(
+            "-activity_datetime"
+        )
 
     def has_permission(self):
         """
@@ -548,14 +560,15 @@ class NPDAUserLogsListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Li
         return True
 
     def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
         npdauser_id = self.kwargs.get("npdauser_id")
-        context = super(NPDAUserLogsListView, self).get_context_data(**kwargs)
-        npdauser = NPDAUser.objects.get(pk=npdauser_id)
-        visitactivities = VisitActivity.objects.filter(npdauser=npdauser).order_by(
-            "-activity_datetime"
-        )
-        context["visitactivities"] = visitactivities
-        context["npdauser"] = npdauser
+        
+        try:
+            npdauser = NPDAUser.objects.get(pk=npdauser_id)
+            context["npdauser"] = npdauser
+        except NPDAUser.DoesNotExist:
+            context["npdauser"] = None
+        
         return context
 
 
