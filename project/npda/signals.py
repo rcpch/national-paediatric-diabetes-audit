@@ -3,7 +3,6 @@ import logging
 
 # django imports
 from django.apps import apps
-from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth.signals import (
     user_logged_in,
@@ -36,6 +35,7 @@ This file contains signals that are triggered when:
 
 # Fields that should trigger email notifications when changed
 EMAIL_TRIGGER_FIELDS = [
+    'is_superuser',
     'is_rcpch_audit_team_member',
     'is_rcpch_staff',
     'is_superuser',
@@ -50,7 +50,6 @@ LOGGED_FIELDS = [
     'is_rcpch_audit_team_member', 
     'is_rcpch_staff',
     'is_staff',
-    'is_superuser',
     'email',
     'first_name',
     'surname',
@@ -218,12 +217,12 @@ def log_user_pdu_assignment(sender, instance, created, **kwargs):
         
         logger.info(f"User {instance.npda_user.email} assigned to PDU {instance.paediatric_diabetes_unit.pz_code}")
     else:
-        # PDU assignment updated (role change, etc.)
+        # PDU assignment updated (is_primary change, etc.)
         details = f"PDU assignment updated for user {instance.npda_user.email} at PDU {instance.paediatric_diabetes_unit.pz_code} by {current_user.email if current_user else 'system'}"
         
         _log_user_activity(
             user=instance.npda_user,
-            activity_type=15,  # USER_ASSIGNED_TO_PDU
+            activity_type=17,  # PDU_ROLE_CHANGED
             details=details,
             current_user=current_user
         )
@@ -262,7 +261,6 @@ def capture_pdu_assignment_changes(sender, instance, **kwargs):
     if instance.pk:  # Only for existing assignments (updates)
         try:
             original = OrganisationEmployer.objects.get(pk=instance.pk)
-            print(f"Capturing original values for OrganisationEmployer {original}")
             instance._original_values = {
                 'paediatric_diabetes_unit': original.paediatric_diabetes_unit,
                 'npda_user': original.npda_user,
@@ -415,16 +413,10 @@ def _send_admin_notification(user, changes, current_user):
     Changes:
     {chr(10).join(f'• {detail}' for detail in change_details)}
     """
-    
-    # Send to audit team members
-    admin_emails = NPDAUser.objects.filter(
-        is_rcpch_audit_team_member=True,
-        is_active=True
-    ).values_list('email', flat=True)
-    
+    # send to admins
     try:
         send_email_to_recipients(
-            recipients=list(admin_emails),
+            recipients=settings.ADMIN_EMAIL_LIST,
             subject=subject,
             message=message
         )
@@ -446,14 +438,9 @@ def _send_user_creation_notification(user, current_user):
     """
     
     # Send to audit team members  
-    admin_emails = NPDAUser.objects.filter(
-        is_rcpch_audit_team_member=True,
-        is_active=True
-    ).values_list('email', flat=True)
-    
     try:
         send_email_to_recipients(
-            recipients=list(admin_emails),
+            recipients=settings.ADMIN_EMAIL_LIST,
             subject=subject,
             message=message
         )
@@ -525,16 +512,10 @@ def _send_pdu_assignment_notification(organisation_employer_instance, current_us
     
     Role in PDU: {getattr(user, 'role', 'Not specified')}
     """
-    
     # Send to audit team members
-    admin_emails = NPDAUser.objects.filter(
-        is_rcpch_audit_team_member=True,
-        is_active=True
-    ).values_list('email', flat=True)
-    
     try:
         send_email_to_recipients(
-            recipients=list(admin_emails),
+            recipients=settings.ADMIN_EMAIL_LIST,
             subject=subject,
             message=message
         )
@@ -572,14 +553,9 @@ def _send_user_deletion_notification(user_instance, current_user):
     """
     
     # Send to audit team members
-    admin_emails = NPDAUser.objects.filter(
-        is_rcpch_audit_team_member=True,
-        is_active=True
-    ).exclude(pk=user_instance.pk).values_list('email', flat=True)  # Exclude the deleted user if they were an admin
-    
     try:
         send_email_to_recipients(
-            recipients=list(admin_emails),
+            recipients=settings.ADMIN_EMAIL_LIST,
             subject=subject,
             message=message
         )
