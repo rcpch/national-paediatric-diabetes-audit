@@ -34,13 +34,12 @@ class PatientSubmission(models.Model):
 
 def save(self, *args, **kwargs):
     # Check for existing submissions for the same patient and audit year
-    audit_period = self.submission.audit_period
     if (
         PatientSubmission.objects.filter(
             (
-                Q(patient__nhs_number=self.patient__nhs_number)
+                Q(patient__nhs_number=self.patient.nhs_number)
                 | Q(
-                    patient__unique_reference_number=self.patient__unique_reference_number
+                    patient__unique_reference_number=self.patient.unique_reference_number
                 )
             ),
             submission__audit_period=self.submission.audit_period,

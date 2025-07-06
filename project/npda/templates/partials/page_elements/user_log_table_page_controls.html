@@ -1,0 +1,27 @@
+<tr class="bg-rcpch_dark_blue py-5 text-xs text-white text-gray-700 uppercase bg-gray-50">
+  <th class="px-2" colspan="3"></th>
+  <th colspan="1"></th>
+  <th colspan="1" class="px-2">
+    <div class="pagination text-right">
+      <span class="step-links">
+        {% if page_obj.has_previous %}
+          <a href="?page=1">« first</a>
+          <a href="?page={{ page_obj.previous_page_number }}">previous</a>
+        {% endif %}
+        <span class="current">
+          Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+        </span>
+        {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}">next</a>
+          <a href="?page={{ page_obj.paginator.num_pages }}">last »</a>
+        {% endif %}
+      </span>
+      <span class="tooltip tooltip-bottom" data-tip="User Logs">
+        <strong>
+          {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ paginator.count }} User events.
+        </strong>
+        <i class="fa-solid fa-info-circle"></i>
+      </span>
+    </div>
+  </th>
+</tr>

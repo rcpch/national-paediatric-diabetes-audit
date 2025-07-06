@@ -1,22 +1,37 @@
 {% extends "base.html" %}
+{% load npda_tags %}
 {% load static %}
 {% block content %}
-  <div class="flex flex-row min-h-screen justify-center px-10">
+  <div class="flex flex-row min-h-screen px-10">
     <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
       <div class="inline-block min-w-full py-2 sm:px-6 lg:px-8">
         <div class="relative overflow-x-auto">
-          <strong>NPDA Audit Access Logs for {{ npdauser.get_full_name }} (NPDA User ID-{{ npdauser.pk }})</strong>
-          <p class="text-gray-400 font-montserrat">
-            <small>Password last set: {{ npdauser.password_last_set }}</small>
-            <br />
-            <small>Account created: {{ npdauser.date_joined }}</small>
-          </p>
+          <div class="alert alert-info shadow-lg mb-5 alert-vertical sm:alert-horizontal">
+            <i class="fa-solid fa-circle-info text-2xl mr-3"></i>
+            <div>
+              <h3 class="text-lg font-semibold">
+                NPDA Audit Access Logs for {{ npdauser.get_full_name }} (NPDA User ID-{{ npdauser.pk }})
+              </h3>
+              <div class="text-gray-800 font-montserrat text-xs mt-2">
+                <p>Password last set: {{ npdauser.password_last_set|none_to_dash }}</p>
+                <p>Account created: {{ npdauser.date_joined|none_to_dash }}</p>
+                <p>Account created by: {{ npdauser.created_by|none_to_dash }}</p>
+                <p>Roles of granting user: {{ npdauser.created_by.user_roles }}</p>
+                <p>Groups of granting user: {{ npdauser.created_by.user_groups_readable }}</p>
+                <hr />
+                <p>Account last updated by: {{ npdauser.updated_by|none_to_dash }}</p>
+                <p>Account last updated on: {{ npdauser.updated_at|none_to_dash }}</p>
+              </div>
+            </div>
+          </div>
           {% if visitactivities %}
             <table class="lg-table-fixed table-fixed w-full text-sm text-left rtl:text-left text-gray-500 text-gray-400 mb-5 font-montserrat">
               <thead class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white">
                 <tr>
                   <th scope="col" class="py-3 w-1/12">Visit Date</th>
                   <th scope="col" class="py-3 w-1/12">Visit Type</th>
+                  <th scope="col" class="py-3 w-1/12">Changed By</th>
+                  <th scope="col" class="py-3 w-1/12">Details</th>
                   <th scope="col" class="py-3 w-1/12">IP Address</th>
                 </tr>
               </thead>
@@ -25,29 +40,14 @@
                   <tr class="border-b bg-white text-rcpch_light_blue border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white">
                     <td>{{ visitactivity.activity_datetime }}</td>
                     <td>{{ visitactivity.get_activity_display }}</td>
+                    <td>{{ visitactivity.npdauser_admin|none_to_dash }}</td>
+                    <td>{{ visitactivity.details|none_to_dash }}</td>
                     <td>{{ visitactivity.ip_address }}</td>
                   </tr>
                 {% endfor %}
               </tbody>
               <tfoot>
-                {% if visitactivities %}
-                  <tr class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white py-5">
-                    <th class="px-2">
-                      <strong>
-                        Total: {{ visitactivities|length }} User visit
-                        {% if visitactivities|length > 1 %}s{% endif %}
-                      </strong>
-                    </th>
-                    <th></th>
-                    <th></th>
-                  </tr>
-                {% else %}
-                  <tr class="text-xs text-gray-700 uppercase bg-gray-50 bg-rcpch_dark_blue text-white py-5">
-                    <th>
-                      <h5>No activity yet!</h5>
-                    </th>
-                  </tr>
-                {% endif %}
+                {% include 'partials/page_elements/user_log_table_page_controls.html' %}
               </tfoot>
             </table>
           {% else %}

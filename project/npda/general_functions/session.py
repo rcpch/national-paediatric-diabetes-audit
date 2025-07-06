@@ -1,13 +1,14 @@
 from asgiref.sync import sync_to_async
 import logging
 
-from django.core.exceptions import PermissionDenied
 from django.apps import apps
+from django.core.exceptions import PermissionDenied
+from django.utils import timezone
 
 # NPDA Imports
 from project.npda.general_functions import (
     organisations_adapter,
-    get_audit_period_for_date,
+    get_client_ip,
 )
 
 logger = logging.getLogger(__name__)
@@ -155,3 +156,18 @@ def refresh_session_filters(request, pz_code=None, audit_year=None, csv_upload=N
 
     request.session.update(session)
     request.session.modified = True
+
+def save_csv_uploading_user_to_visitactivity(request):
+    """
+    Save the user who is uploading a CSV to the VisitActivity model.
+    This is used to track who is uploading CSVs and when.
+    """
+    VisitActivity = apps.get_model("npda", "VisitActivity")
+    
+    # Create VisitActivity entry for the user
+    VisitActivity.objects.create(
+        npdauser=request.user,
+        activity=8,  # UPLOADED_CSV
+        ip_address=get_client_ip(request=request),
+        activity_datetime=timezone.now(),
+    )

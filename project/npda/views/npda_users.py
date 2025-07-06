@@ -265,6 +265,7 @@ class NPDAUserUpdateView(
                 user_instance=self.get_object(),
             )
         )
+        
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -308,12 +309,15 @@ class NPDAUserUpdateView(
                 "You do not have permission to set the is_rcpch_staff flag."
             )
         
-        user = form.save(commit=True)
+        user = form.save(commit=False)
+        user.save() # save the user first to ensure the user instance is updated and the updated_by and updated_at fields are set
+        form.save_m2m()  # save the m2m fields (groups, employers, etc.)
         # remove all groups and add the user to the right group
         user.groups.clear()
         group = group_for_role(user.role)
         if group:
             user.groups.add(group)
+        
         return super().form_valid(form)
 
     def post(self, request: HttpRequest, *args: str, **kwargs) -> HttpResponse:
@@ -347,9 +351,11 @@ class NPDAUserUpdateView(
                     npda_user=selected_npda_user
                 ).update(is_primary_employer=False)
                 # set the selected employer to True
-                OrganisationEmployer.objects.filter(
+                selected_employer = OrganisationEmployer.objects.filter(
                     pk=request.POST.get("organisation_employer_id")
-                ).update(is_primary_employer=True)
+                ).get()
+                selected_employer.is_primary_employer=True
+                selected_employer.save()
 
             elif request.POST.get("add_employer"):
                 PaediatricDiabetesUnit = apps.get_model(
@@ -481,6 +487,18 @@ class NPDAUserLogsListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Li
     model = VisitActivity
     permission_required = "npda.view_visitactivity"
     permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
+    paginate_by = 50
+    context_object_name = "visitactivities"
+
+    def get_queryset(self):
+        npdauser_id = self.kwargs.get("npdauser_id")
+        if not npdauser_id:
+            logger.error("No NPDAUser ID provided in the request")
+            return VisitActivity.objects.none()
+        npdauser = NPDAUser.objects.get(pk=npdauser_id)
+        return VisitActivity.objects.filter(npdauser=npdauser).order_by(
+            "-activity_datetime"
+        )
 
     def has_permission(self):
         """
@@ -542,12 +560,15 @@ class NPDAUserLogsListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Li
         return True
 
     def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
         npdauser_id = self.kwargs.get("npdauser_id")
-        context = super(NPDAUserLogsListView, self).get_context_data(**kwargs)
-        npdauser = NPDAUser.objects.get(pk=npdauser_id)
-        visitactivities = VisitActivity.objects.filter(npdauser=npdauser)
-        context["visitactivities"] = visitactivities
-        context["npdauser"] = npdauser
+        
+        try:
+            npdauser = NPDAUser.objects.get(pk=npdauser_id)
+            context["npdauser"] = npdauser
+        except NPDAUser.DoesNotExist:
+            context["npdauser"] = None
+        
         return context
 
 

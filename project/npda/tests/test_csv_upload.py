@@ -4041,6 +4041,8 @@ def test_csv_height_weight_fields_with_units_have_units_removed(test_user, dummy
 def test_submission_has_audit_period_attached(test_user, single_row_valid_df):
     audit_period = AuditPeriod.objects.first()
 
+    Submission.objects.all().delete()  # Clear any previous submissions
+
     csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert Submission.objects.count() == 1, "Expected one submission to be created"

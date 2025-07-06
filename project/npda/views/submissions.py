@@ -28,7 +28,7 @@ from project.npda.views.decorators import login_and_otp_required
 
 # RCPCH imports
 from project.constants.colors import RCPCH_LIGHT_BLUE
-from ..general_functions.session import refresh_session_filters
+from ..general_functions.session import refresh_session_filters, save_csv_uploading_user_to_visitactivity
 from ..general_functions.csv import (
     download_csv,
     download_xlsx,
@@ -368,6 +368,7 @@ async def upload_csv(request):
             return redirect("upload_csv")
 
         audit_period = await sync_to_async(AuditPeriod.objects.get_audit_period_for_request)(request)
+
         if not audit_period.is_open and not (request.user.is_superuser or request.user.is_rcpch_audit_team_member):
             raise PermissionDenied(f"Upload is closed for {audit_period.audit_year()}.")
 
@@ -386,6 +387,8 @@ async def upload_csv(request):
 
         # update the session fields - this stores that the user has uploaded a csv and disables the ability to use the questionnaire
         await sync_to_async(refresh_session_filters)(request, csv_upload=True)
+
+        await sync_to_async(save_csv_uploading_user_to_visitactivity)(request=request)
         
         return redirect("upload-csv-in-progress")
 

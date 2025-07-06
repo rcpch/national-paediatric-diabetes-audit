@@ -88,6 +88,7 @@ class VisitAdmin(admin.ModelAdmin):
 @admin.register(VisitActivity)
 class VisitActivityAdmin(admin.ModelAdmin):
     search_fields = ("activity_datetime", "pk", "ip_address")
+    ordering = ("-activity_datetime",)
 
 
 @admin.register(Submission)
