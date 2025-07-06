@@ -318,7 +318,7 @@ def _log_user_activity(user, activity_type, details, current_user=None):
         return
     
     activity_type_name = dict(ACTIVITY).get(activity_type, "Unknown activity")
-    logging.warning(f"Logging user activity: {activity_type_name} for user {user.email}: {details}. Current user: {current_user.email if current_user else 'system'}")
+    logging.info(f"Logging user activity: {activity_type_name} for user {user.email}: {details}. Current user: {current_user.email if current_user else 'system'}")
 
 def _log_user_changes(user, changes, current_user):
     """
