@@ -29,6 +29,16 @@ django_loggers = {
     )
 }
 
+request_loggers = {}
+
+if os.getenv("ENABLE_REQUEST_LOGGING", "False") == "True":
+    request_loggers = {
+        "npda_request_log": {
+            "handlers": ["npda_console_request_log"],
+            "level": CONSOLE_LOG_LEVEL,
+        }
+    }
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -134,10 +144,7 @@ LOGGING = {
         "two_factor": {
             "handlers": ["npda_console", "npda_logfile", "mail_admins"],
         },
-        "npda_request_log": {
-            "handlers": ["npda_console_request_log"],
-            "level": CONSOLE_LOG_LEVEL,
-        }
+        **request_loggers
     },
 }
 
