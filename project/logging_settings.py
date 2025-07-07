@@ -81,12 +81,21 @@ LOGGING = {
                 "CRITICAL": "bold_red",
             },
         },
+        "npda_request_log": {
+            "format": "%(message)s",
+        }
     },
     "handlers": {
         "npda_console": {
             "level": CONSOLE_LOG_LEVEL,
             "class": "logging.StreamHandler",
             "formatter": "simple",
+            "filters": [],
+        },
+        "npda_console_request_log": {
+            "level": CONSOLE_LOG_LEVEL,
+            "class": "logging.StreamHandler",
+            "formatter": "npda_request_log",
             "filters": [],
         },
         "django_console": {
@@ -124,6 +133,10 @@ LOGGING = {
         "two_factor": {
             "handlers": ["npda_console", "npda_logfile", "mail_admins"],
         },
+        "npda_request_log": {
+            "handlers": ["npda_console_request_log"],
+            "level": CONSOLE_LOG_LEVEL,
+        }
     },
 }
 
