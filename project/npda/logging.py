@@ -33,13 +33,21 @@ def get_current_request():
     except AttributeError:
         return None
 
-class NPDACustomLoggingMiddleware:
+class NPDACustomLoggingAttributesMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
         set_current_user(getattr(request, 'user', None))
         set_current_request(request)
+        response = self.get_response(request)
+        return response
+
+class NPDARequestLoggingMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
         response = self.get_response(request)
 
         # This replaces the old gunicorn request logging which used this format string
