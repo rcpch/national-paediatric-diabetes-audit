@@ -52,11 +52,17 @@ class NPDARequestLoggingMiddleware:
         response = self.get_response(request)
 
         # The dev server already does request logging
-        if not settings.DEBUG:
+        if settings.DEBUG:
             # This replaces the old gunicorn request logging which used this format string
             # %({x-forwarded-for}i)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
             gunicorn_formatted_datetime = datetime.now().astimezone().strftime("%d/%m/%y:%H:%M:%S %z")
 
-            request_logger.info(f"{request.META.get('HTTP_X_FORWARDED_FOR', '')} - {get_current_user()} [{gunicorn_formatted_datetime}] \"{request.method} {request.get_full_path()}\" {response.status_code} {response.get('Content-Length', "-")} \"{request.META.get('HTTP_REFERER', '-')}\" \"{request.META.get('HTTP_USER_AGENT', '-')}\" audit_year=\"{request.session.get('selected_audit_year', '-')}\" pz_code=\"{request.session.get('pz_code', '-')}\"")
+            user = get_current_user()
+            
+            username_to_log = user if user else "-"
+            if user and hasattr(user, "email"):
+                username_to_log = user.email
+
+            request_logger.info(f"{request.META.get('HTTP_X_FORWARDED_FOR', '')} - {username_to_log} [{gunicorn_formatted_datetime}] \"{request.method} {request.get_full_path()}\" {response.status_code} {response.get('Content-Length', "-")} \"{request.META.get('HTTP_REFERER', '-')}\" \"{request.META.get('HTTP_USER_AGENT', '-')}\" audit_year=\"{request.session.get('selected_audit_year', '-')}\" pz_code=\"{request.session.get('pz_code', '-')}\"")
 
         return response
