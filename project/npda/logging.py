@@ -53,8 +53,6 @@ class NPDACustomLoggingAttributesMiddleware:
 
         return response
 
-enable_request_logging = settings.ENABLE_REQUEST_LOGGING and not os.environ.get("PYTEST_VERSION")
-
 class NPDARequestLoggingMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
@@ -63,7 +61,7 @@ class NPDARequestLoggingMiddleware:
         response = self.get_response(request)
 
         # The dev server already does request logging
-        if enable_request_logging:
+        if settings.ENABLE_REQUEST_LOGGING:
             # This replaces the old gunicorn request logging which used this format string
             # %({x-forwarded-for}i)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
             gunicorn_formatted_datetime = datetime.now().astimezone().strftime("%d/%m/%y:%H:%M:%S %z")
