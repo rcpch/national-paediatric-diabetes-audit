@@ -1,6 +1,7 @@
 from django.apps import apps
 from django.contrib import admin
-from two_factor.admin import AdminSiteOTPRequired
+from django.conf import settings
+from two_factor.admin import AdminSiteOTPRequiredMixin
 
 from .models import (
     NPDAUser,
@@ -15,7 +16,14 @@ from .models import (
 )
 from django.contrib.sessions.models import Session
 
-admin.site.__class__ = AdminSiteOTPRequired
+class NPDAAdminSite(AdminSiteOTPRequiredMixin, admin.AdminSite):
+    def has_permission(self, request):
+        if settings.DEBUG and (request.user.is_superuser or request.user.is_staff):
+            return True
+        
+        return super().has_permission(request)
+
+admin.site.__class__ = NPDAAdminSite
 
 @admin.register(OrganisationEmployer)
 class OrganisationEmployerAdmin(admin.ModelAdmin):
