@@ -81,6 +81,7 @@ LOGGING = {
                 "CRITICAL": "bold_red",
             },
         },
+        # The logging middleware generates the format for compatibility with the old gunicorn request logs
         "npda_request_log": {
             "format": "%(message)s",
         }
