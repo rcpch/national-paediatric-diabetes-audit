@@ -165,7 +165,7 @@ def log_and_notify_user_changes(sender, instance, created, **kwargs):
     """
     Log changes and send notifications after user is saved.
     """
-    from .middleware import get_current_user
+    from .logging import get_current_user
     current_user = get_current_user()
     
     if created:
@@ -198,7 +198,7 @@ def log_user_pdu_assignment(sender, instance, created, **kwargs):
     """
     Log when a user is assigned to or updated in a PDU.
     """
-    from .middleware import get_current_user
+    from .logging import get_current_user
     current_user = get_current_user()
     
     if created:
@@ -235,7 +235,7 @@ def log_user_pdu_removal(sender, instance, **kwargs):
     """
     Log when a user is removed from a PDU.
     """
-    from .middleware import get_current_user
+    from .logging import get_current_user
     current_user = get_current_user()
     
     details = f"User {instance.npda_user.email} removed from PDU {instance.paediatric_diabetes_unit.pz_code} ({instance.paediatric_diabetes_unit.parent_name}) by {current_user.email if current_user else 'system'}"
@@ -298,7 +298,7 @@ def _log_user_activity(user, activity_type, details, current_user=None):
     Create a log entry for user activity and store it in VisitActivity as well as logging it.
     """
     try:
-        from .middleware import get_current_request
+        from .logging import get_current_request
 
         current_request = get_current_request()
         

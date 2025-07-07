@@ -12,7 +12,7 @@ import citext
 
 from ...constants import *
 from ..general_functions import *
-from ..middleware import get_current_user
+from ..logging import get_current_user
 
 
 def title_to_choice(title_to_find):

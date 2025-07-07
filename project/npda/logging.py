@@ -2,7 +2,12 @@
 # This is used to track the user making changes in the admin interface as well as in the view by storing 
 # the user in thread-local storage. 
 
+import logging
+from datetime import datetime
 from threading import local
+
+request_logger = logging.getLogger(__name__)
+
 _user = local()
 
 def set_current_user(user):
@@ -28,7 +33,7 @@ def get_current_request():
     except AttributeError:
         return None
 
-class NPDAUserMiddleware:
+class NPDACustomLoggingMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
@@ -36,7 +41,13 @@ class NPDAUserMiddleware:
         set_current_user(getattr(request, 'user', None))
         set_current_request(request)
         response = self.get_response(request)
-        
+
+        # This replaces the old gunicorn request logging which used this format string
+        # %({x-forwarded-for}i)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+        gunicorn_formatted_datetime = datetime.now().astimezone().strftime("%d/%m/%y:%H:%M:%S %z")
+
+        request_logger.info(f"{request.META.get('HTTP_X_FORWARDED_FOR', '')} - {get_current_user()} {gunicorn_formatted_datetime} \"{request.method} {request.get_full_path()}\" {response.status_code} {response.get('Content-Length', "-")} \"{request.META.get('HTTP_REFERER', '-')}\" \"{request.META.get('HTTP_USER_AGENT', '-')}\"")
+
         # Clean up thread-local storage after request
         if hasattr(_user, 'value'):
             delattr(_user, 'value')
