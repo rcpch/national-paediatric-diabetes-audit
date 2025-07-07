@@ -562,14 +562,3 @@ def _send_user_deletion_notification(user_instance, current_user):
         logger.info(f"User deletion notification sent for: {deletion_data.get('email', 'Unknown')}")
     except Exception as e:
         logger.error(f"Failed to send user deletion notification: {e}")
-
-def _get_current_request():
-    """
-    Helper function to get current request from middleware.
-    You'll need to add this to your middleware if not already present.
-    """
-    from .middleware import get_current_request
-    try:
-        return get_current_request()
-    except (AttributeError, ImportError):
-        return None
