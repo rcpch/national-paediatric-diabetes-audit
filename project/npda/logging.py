@@ -52,7 +52,7 @@ class NPDARequestLoggingMiddleware:
         response = self.get_response(request)
 
         # The dev server already does request logging
-        if settings.DEBUG:
+        if not settings.DEBUG:
             # This replaces the old gunicorn request logging which used this format string
             # %({x-forwarded-for}i)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
             gunicorn_formatted_datetime = datetime.now().astimezone().strftime("%d/%m/%y:%H:%M:%S %z")
