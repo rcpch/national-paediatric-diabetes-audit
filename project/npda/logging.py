@@ -42,7 +42,15 @@ class NPDACustomLoggingAttributesMiddleware:
     def __call__(self, request):
         set_current_user(getattr(request, 'user', None))
         set_current_request(request)
+
         response = self.get_response(request)
+
+        # Clean up thread-local storage after request
+        if hasattr(_user, 'value'):
+            delattr(_user, 'value')
+        if hasattr(_user, 'request'):
+            delattr(_user, 'request')
+
         return response
 
 enable_request_logging = settings.ENABLE_REQUEST_LOGGING and not os.environ.get("PYTEST_VERSION")
