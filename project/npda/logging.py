@@ -5,6 +5,7 @@
 import logging
 from datetime import datetime
 from threading import local
+from django.conf import settings
 
 request_logger = logging.getLogger(__name__)
 
@@ -50,16 +51,12 @@ class NPDARequestLoggingMiddleware:
     def __call__(self, request):
         response = self.get_response(request)
 
-        # This replaces the old gunicorn request logging which used this format string
-        # %({x-forwarded-for}i)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
-        gunicorn_formatted_datetime = datetime.now().astimezone().strftime("%d/%m/%y:%H:%M:%S %z")
+        # The dev server already does request logging
+        if not settings.DEBUG:
+            # This replaces the old gunicorn request logging which used this format string
+            # %({x-forwarded-for}i)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+            gunicorn_formatted_datetime = datetime.now().astimezone().strftime("%d/%m/%y:%H:%M:%S %z")
 
-        request_logger.info(f"{request.META.get('HTTP_X_FORWARDED_FOR', '')} - {get_current_user()} {gunicorn_formatted_datetime} \"{request.method} {request.get_full_path()}\" {response.status_code} {response.get('Content-Length', "-")} \"{request.META.get('HTTP_REFERER', '-')}\" \"{request.META.get('HTTP_USER_AGENT', '-')}\"")
-
-        # Clean up thread-local storage after request
-        if hasattr(_user, 'value'):
-            delattr(_user, 'value')
-        if hasattr(_user, 'request'):
-            delattr(_user, 'request')
+            request_logger.info(f"{request.META.get('HTTP_X_FORWARDED_FOR', '')} - {get_current_user()} {gunicorn_formatted_datetime} \"{request.method} {request.get_full_path()}\" {response.status_code} {response.get('Content-Length', "-")} \"{request.META.get('HTTP_REFERER', '-')}\" \"{request.META.get('HTTP_USER_AGENT', '-')}\"")
             
         return response
