@@ -140,6 +140,8 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    # Has to come before CommonMiddleware to access Content-Length
+    "project.npda.logging.NPDARequestLoggingMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -150,8 +152,8 @@ MIDDLEWARE = [
     "django_otp.middleware.OTPMiddleware",
     # autologout
     "django_auto_logout.middleware.auto_logout",
-    # custom middleware
-    "project.npda.middleware.NPDAUserMiddleware",
+    # set logging context variables (eg user)
+    "project.npda.logging.NPDACustomLoggingAttributesMiddleware",
 ]
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
@@ -377,3 +379,5 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_HSTS_SECONDS = os.environ.get("SECURE_HSTS_SECONDS")
 SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get("SECURE_HSTS_INCLUDE_SUBDOMAINS")
 SECURE_HSTS_PRELOAD = os.environ.get("SECURE_HSTS_PRELOAD")
+
+ENABLE_REQUEST_LOGGING = os.getenv("ENABLE_REQUEST_LOGGING", "False") == "True"
