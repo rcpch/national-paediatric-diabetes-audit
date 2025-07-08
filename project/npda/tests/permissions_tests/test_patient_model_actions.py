@@ -26,6 +26,7 @@ def create_submission_with_patient(user):
 
     submission = Submission.objects.create(
         audit_year=audit_period.audit_year(),
+        audit_period=audit_period,
         submission_date=f"{audit_period.audit_year()}-04-01T00:00:00Z",
         submission_active=True,
         submission_by=user,

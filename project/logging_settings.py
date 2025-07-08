@@ -29,13 +29,23 @@ django_loggers = {
     )
 }
 
+request_loggers = {}
+
+if os.getenv("ENABLE_REQUEST_LOGGING", "False") == "True":
+    request_loggers = {
+        "npda_request_log": {
+            "handlers": ["npda_console_request_log"],
+            "level": CONSOLE_LOG_LEVEL,
+        }
+    }
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "filters": {
         "require_debug_false": {
             "()": "django.utils.log.RequireDebugFalse",
-        },
+        }
     },
     "formatters": {
         "django.server": {
@@ -81,12 +91,22 @@ LOGGING = {
                 "CRITICAL": "bold_red",
             },
         },
+        # The logging middleware generates the format for compatibility with the old gunicorn request logs
+        "npda_request_log": {
+            "format": "%(message)s",
+        }
     },
     "handlers": {
         "npda_console": {
             "level": CONSOLE_LOG_LEVEL,
             "class": "logging.StreamHandler",
             "formatter": "simple",
+            "filters": [],
+        },
+        "npda_console_request_log": {
+            "level": CONSOLE_LOG_LEVEL,
+            "class": "logging.StreamHandler",
+            "formatter": "npda_request_log",
             "filters": [],
         },
         "django_console": {
@@ -124,6 +144,7 @@ LOGGING = {
         "two_factor": {
             "handlers": ["npda_console", "npda_logfile", "mail_admins"],
         },
+        **request_loggers
     },
 }
 

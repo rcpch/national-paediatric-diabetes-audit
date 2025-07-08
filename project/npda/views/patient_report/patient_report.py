@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from enum import Enum
 
@@ -18,6 +18,10 @@ from django.db.models import (
     Q,
     Value,
     When,
+    Subquery,
+    ExpressionWrapper,
+    DurationField,
+    Func,
 )
 
 # Django imports
@@ -25,10 +29,10 @@ from django.views.generic import ListView
 from project.constants.hba1c_format import HBA1C_FORMATS
 from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
 from project.npda.kpi_class.kpis import CalculateKPIS
-from project.npda.models import Patient, AuditPeriod
+from project.npda.models import Patient, AuditPeriod, Visit
 from project.npda.models.db_functions import Round
 from project.npda.views.mixins import CheckPDUListMixin, LoginAndOTPRequiredMixin
-
+from django.db.models import QuerySet
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +43,7 @@ class TableCategories(Enum):
     CARE_AT_DIAGNOSIS = "care_at_diagnosis"
     ADMISSIONS = "admissions"
     TREATMENT = "treatment"
+    OUTCOMES = "outcomes"
 
     @classmethod
     def values(cls):
@@ -53,6 +58,7 @@ class TableCategories(Enum):
             (cls.CARE_AT_DIAGNOSIS.value, "Care at Diagnosis"),
             (cls.ADMISSIONS.value, "Admissions"),
             (cls.TREATMENT.value, "Treatment"),
+            (cls.OUTCOMES.value, "Outcomes"),
         ]
 
     @classmethod
@@ -74,14 +80,12 @@ class PatientReportView(
     context_object_name = "patients"
     paginate_by = 50
 
-    def _calculate_hba1c_values(self, pt_qs, calculation_date):
+    def _calculate_hba1c_values(
+        self, pt_qs: QuerySet[Patient], calculate_kpis: CalculateKPIS
+    ):
         """Helper function to calculate HbA1c values for a queryset."""
         patient_ids = set(pt_qs.values_list("pk", flat=True))
-        calculate_kpis = CalculateKPIS(
-            calculation_date=calculation_date, return_pt_querysets=True
-        )
-        pz_code = self.request.session.get("pz_code")
-        calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+
         valid_visits_with_hba1c = (
             calculate_kpis._get_valid_visits_for_kpi_44_and_45(
                 Patient.objects.filter(pk__in=patient_ids)
@@ -144,7 +148,9 @@ class PatientReportView(
             raise ValueError(f"Invalid category: {category}")
         self.selected_category = category
         pz_code = request.session.get("pz_code")
-        calculation_date = AuditPeriod.objects.get_audit_period_for_request(self.request).kpi_calculation_date()
+        calculation_date = AuditPeriod.objects.get_audit_period_for_request(
+            self.request
+        ).kpi_calculation_date()
         calculate_kpis = CalculateKPIS(
             calculation_date=calculation_date, return_pt_querysets=True
         )
@@ -176,7 +182,7 @@ class PatientReportView(
                 output_field=BooleanField(),
             )
         )
-        if self.selected_category == "health_checks":
+        if self.selected_category == TableCategories.HEALTH_CHECKS.value:
             pt_qs = pt_qs.annotate(
                 is_gte_12yo=Q(
                     date_of_birth__lte=calculation_date - relativedelta(years=12)
@@ -325,7 +331,7 @@ class PatientReportView(
                 "num_total",
                 "passed_retinal_screening",
             )
-        elif self.selected_category == "additional_care_processes":
+        elif self.selected_category == TableCategories.ADDITIONAL_CARE_PROCESSES.value:
             pt_qs = pt_qs.annotate(
                 hba1c_4plus=Case(
                     When(
@@ -447,7 +453,7 @@ class PatientReportView(
                 "influenza_immunisation_recommended",
                 "sick_day_rules_advice",
             )
-        elif self.selected_category == "care_at_diagnosis":
+        elif self.selected_category == TableCategories.CARE_AT_DIAGNOSIS.value:
             today = date.today()
             all_t1dm_pts = all_t1dm_pts.filter(
                 Q(diagnosis_date__gte=today - relativedelta(days=90))
@@ -507,7 +513,7 @@ class PatientReportView(
                     "carbohydrate_counting_education",
                 )
             )
-        elif self.selected_category == "admissions":
+        elif self.selected_category == TableCategories.ADMISSIONS.value:
             pt_qs = (
                 pt_qs.annotate(
                     number_of_admissions=Count(
@@ -558,8 +564,165 @@ class PatientReportView(
                     "number_of_dka_admissions",
                 )
             )
-            pt_qs = self._calculate_hba1c_values(pt_qs, calculation_date)
-        elif self.selected_category == "treatment":
+            pt_qs = self._calculate_hba1c_values(pt_qs, calculate_kpis)
+
+        elif self.selected_category == TableCategories.OUTCOMES.value:
+            # get ALL patients for current submission
+            pt_qs = (
+                calculate_kpis.calculate_kpi_1_total_eligible()
+                .patient_querysets["eligible"]
+                .annotate(
+                    patient_identifier=F(patient_identifier),
+                    is_complete_year_of_care=Case(
+                        When(
+                            Exists(
+                                all_t1dm_pts_with_complete_year_of_care.filter(
+                                    pk=OuterRef("pk")
+                                )
+                            ),
+                            then=True,
+                        ),
+                        default=False,
+                        output_field=BooleanField(),
+                    ),
+                    latest_hba1c_date=Subquery(
+                        Visit.objects.filter(
+                            patient=OuterRef("pk"),
+                            visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
+                            hba1c__isnull=False,
+                        )
+                        .order_by("-visit_date")
+                        .values("visit_date")[:1]
+                    ),
+                    previous_to_latest_hba1c_date=Subquery(
+                        Visit.objects.filter(
+                            patient=OuterRef("pk"),
+                            visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
+                            hba1c__isnull=False,
+                        )
+                        .order_by("-visit_date")
+                        .values("visit_date")[1:2]
+                    ),
+                    days_delta_between_latest_and_previous_hba1c=Case(
+                        When(
+                            Q(latest_hba1c_date__isnull=False) & Q(previous_to_latest_hba1c_date__isnull=False),
+                            then=Func(
+                                ExpressionWrapper(
+                                    F("latest_hba1c_date") - F("previous_to_latest_hba1c_date"),
+                                    output_field=DurationField()
+                                ),
+                                function='EXTRACT',
+                                template="EXTRACT(DAY FROM %(expressions)s)",
+                                output_field=IntegerField()
+                            )
+                        ),
+                        default=None,
+                        output_field=IntegerField(),
+                    ),
+                    latest_hba1c_mmol_mol=Subquery(
+                        Visit.objects.filter(
+                            patient=OuterRef("pk"),
+                            visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
+                            hba1c__isnull=False,
+                        )
+                        .annotate(
+                            hba1c_mmol_mol=Case(
+                                When(
+                                    Q(hba1c_format=HBA1C_FORMATS[0][0]),
+                                    then=F("hba1c"),
+                                ),
+                                When(
+                                    Q(hba1c_format=HBA1C_FORMATS[1][0]),
+                                    then=(F("hba1c") - Round(Decimal("2.152")))
+                                    / Decimal("0.09148"),
+                                ),
+                                default=None,
+                                output_field=IntegerField(),
+                            )
+                        )
+                        .order_by("-hba1c_date")
+                        .values("hba1c_mmol_mol")[:1]
+                    ),
+                    latest_hba1c_pct=Case(
+                        When(
+                            Q(latest_hba1c_mmol_mol__isnull=False)
+                            & Q(latest_hba1c_mmol_mol__gt=0),
+                            then=(Decimal("0.09148") * F("latest_hba1c_mmol_mol"))
+                            + Decimal("2.152"),
+                        ),
+                        default=None,
+                        output_field=DecimalField(max_digits=4, decimal_places=1),
+                    ),
+                    previous_to_latest_hba1c_mmol_mol=Subquery(
+                        Visit.objects.filter(
+                            patient=OuterRef("pk"),
+                            visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
+                            hba1c__isnull=False,
+                        )
+                        .annotate(
+                            hba1c_mmol_mol=Case(
+                                When(
+                                    Q(hba1c_format=HBA1C_FORMATS[0][0]),
+                                    then=F("hba1c"),
+                                ),
+                                When(
+                                    Q(hba1c_format=HBA1C_FORMATS[1][0]),
+                                    then=(F("hba1c") - Round(Decimal("2.152")))
+                                    / Decimal("0.09148"),
+                                ),
+                                default=None,
+                                output_field=IntegerField(),
+                            )
+                        )
+                        .order_by("-hba1c_date")
+                        .values("hba1c_mmol_mol")[1:2]
+                    ),
+                    previous_to_latest_hba1c_pct=Case(
+                        When(
+                            Q(previous_to_latest_hba1c_mmol_mol__isnull=False)
+                            & Q(previous_to_latest_hba1c_mmol_mol__gt=0),
+                            then=(
+                                Decimal("0.09148")
+                                * F("previous_to_latest_hba1c_mmol_mol")
+                            )
+                            + Decimal("2.152"),
+                        ),
+                        default=None,
+                        output_field=DecimalField(max_digits=4, decimal_places=1),
+                    ),
+                    hba1c_delta=Case(
+                        When(
+                            Q(latest_hba1c_mmol_mol__isnull=False)
+                            & Q(previous_to_latest_hba1c_mmol_mol__isnull=False),
+                            then=Round(
+                                (
+                                    F("latest_hba1c_mmol_mol")
+                                    - F("previous_to_latest_hba1c_mmol_mol")
+                                )
+                                * Decimal("100.0")
+                                / F("previous_to_latest_hba1c_mmol_mol")
+                            ),
+                        ),
+                        default=None,
+                        output_field=DecimalField(max_digits=3, decimal_places=1),
+                    ),
+                )
+                .values(
+                    "pk",
+                    "patient_identifier",
+                    "is_complete_year_of_care",
+                    "latest_hba1c_mmol_mol",
+                    "latest_hba1c_pct",
+                    "previous_to_latest_hba1c_mmol_mol",
+                    "previous_to_latest_hba1c_pct",
+                    "hba1c_delta",
+                    "latest_hba1c_date",
+                    "previous_to_latest_hba1c_date",
+                    "days_delta_between_latest_and_previous_hba1c",
+                )
+            )
+
+        elif self.selected_category == TableCategories.TREATMENT.value:
             pt_qs = pt_qs.annotate(
                 treatment_regimen=Case(
                     When(
@@ -682,32 +845,31 @@ class PatientReportView(
                 "kpi_45_median_hba1c",
             ]:
                 reverse = sort_order == "desc"
+                field_name = sort_field.replace("-", "")
+                # Calculate HbA1c values
+                pt_qs = self._calculate_hba1c_values(pt_qs, calculate_kpis)
+                
                 pt_qs = sorted(
                     pt_qs,
                     key=lambda p: (
-                        p[sort_field.replace("-", "")] is None,
-                        p[sort_field.replace("-", "")] or 0,
+                        p.get(field_name) is None, 
+                        p.get(field_name) or 0,
                     ),
                     reverse=reverse,
                 )
             else:
                 pt_qs = pt_qs.order_by(sort_field)
-                pt_qs = self._calculate_hba1c_values(pt_qs, calculation_date)
+                pt_qs = self._calculate_hba1c_values(pt_qs, calculate_kpis)
         else:
             # Default ordering
             pt_qs = pt_qs.order_by("-is_complete_year_of_care", "nhs_number")
-            pt_qs = self._calculate_hba1c_values(pt_qs, calculation_date)
+            pt_qs = self._calculate_hba1c_values(pt_qs, calculate_kpis)
 
         return pt_qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # if self.request.GET.get("category"):
-        #     # Get the selected category from the request if navigating from dashboard
-        #     self.selected_category = self.request.GET.get("category")
-        # else:
-        #     self.selected_category = TableCategories.HEALTH_CHECKS.value
-        #     context["selected_category"] = self.selected_category
+
         # Jersey
         if self.request.session.get("pz_code") == "PZ248":
             context["is_jersey"] = True
@@ -750,26 +912,24 @@ class PatientReportView(
                 else:
                     patient["is_first_complete_year_of_care"] = False
             context["patients"] = patients
-        
-        # Get the totals of each item of the health check data as well as the total
-        # of those eligible for the health check
-        total_passed_bmi = 0
-        total_eligible_bmi = 0
-        total_passed_hba1c = 0
-        total_eligible_hba1c = 0
-        total_passed_thyroid_screen = 0
-        total_eligible_thyroid_screen = 0
-        total_passed_blood_pressure = 0
-        total_eligible_blood_pressure = 0
-        total_passed_urinary_albumin = 0
-        total_eligible_urinary_albumin = 0
-        total_passed_retinal_screening = 0
-        total_eligible_retinal_screening = 0
-        total_passed_foot_exam = 0
-        total_eligible_foot_exam = 0
+
         if self.selected_category == TableCategories.HEALTH_CHECKS.value:
+            # Get the totals of each item of the health check data as well as the total
+            # of those eligible for the health check
+            total_passed_bmi = 0
+            total_eligible_bmi = 0
+            total_passed_hba1c = 0
+            total_eligible_hba1c = 0
+            total_passed_thyroid_screen = 0
+            total_eligible_thyroid_screen = 0
+            total_passed_blood_pressure = 0
+            total_eligible_blood_pressure = 0
+            total_passed_urinary_albumin = 0
+            total_eligible_urinary_albumin = 0
+            total_passed_foot_exam = 0
+            total_eligible_foot_exam = 0
             for patient in context["patients"]:
-               if patient["is_complete_year_of_care"]:
+                if patient["is_complete_year_of_care"]:
                     total_passed_bmi += patient["passed_bmi"]
                     total_eligible_bmi += 1
                     total_passed_hba1c += patient["passed_hba1c"]
@@ -777,13 +937,11 @@ class PatientReportView(
                     total_passed_thyroid_screen += patient["passed_thyroid_screen"]
                     total_eligible_thyroid_screen += 1
                     if patient["is_gte_12yo"]:
-                        # total_passed_retinal_screening += (
-                        #     patient["passed_retinal_screening"]
-                        # )
-                        # total_eligible_retinal_screening += 1
                         total_passed_blood_pressure += patient["passed_blood_pressure"]
                         total_eligible_blood_pressure += 1
-                        total_passed_urinary_albumin += patient["passed_urinary_albumin"]
+                        total_passed_urinary_albumin += patient[
+                            "passed_urinary_albumin"
+                        ]
                         total_eligible_urinary_albumin += 1
                         total_passed_foot_exam += patient["passed_foot_exam"]
                         total_eligible_foot_exam += 1
@@ -817,8 +975,9 @@ class PatientReportView(
                 return ["patient_report/admissions_table_partial.html"]
             elif self.selected_category == TableCategories.TREATMENT.value:
                 return ["patient_report/treatment_table_partial.html"]
+            elif self.selected_category == TableCategories.OUTCOMES.value:
+                return ["patient_report/outcomes_table_partial.html"]
             else:
                 return ["patient_report/health_checks_table_partial.html"]
 
         return ["patient_report/patient_report.html"]
-    

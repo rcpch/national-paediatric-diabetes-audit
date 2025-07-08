@@ -129,6 +129,8 @@ class VisitForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.patient = kwargs["initial"].get("patient")
+        self.override_height_weight = kwargs.pop("override_height_weight", False)
+        self.audit_period = kwargs.pop("audit_period", None)
         super(VisitForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
             model_field = Visit._meta.get_field(field_name)
@@ -358,47 +360,17 @@ class VisitForm(forms.ModelForm):
     Custom clean methods for all fields requiring numbers
     """
 
-    def clean_height(self):
-        # Get the height value, if present round it to 1 decimal place
-        data = self.cleaned_data["height"]
-        if data is not None:
-            if data < 40:
-                raise ValidationError(
-                    "Please enter a valid height. Cannot be less than 40cm"
-                )
-            if data > 240:
-                raise ValidationError(
-                    "Please enter a valid height. Cannot be greater than 240cm"
-                )
-            data = round(data, 1)
-        return data
-
-    def clean_weight(self):
-        # Get the weight value, if present round it to 1 decimal place
-        data = self.cleaned_data["weight"]
-        if data is not None:
-            if data < 1:
-                raise ValidationError(
-                    "Patient Weight (kg)' invalid. Cannot be below 1kg"
-                )
-            if data > 200:
-                raise ValidationError(
-                    "Patient Weight (kg)' invalid. Cannot be above 200kg"
-                )
-            data = round(data, 1)
-        return data
-
     def clean_systolic_blood_pressure(self):
         systolic_blood_pressure = self.cleaned_data["systolic_blood_pressure"]
 
         if systolic_blood_pressure:
-            if systolic_blood_pressure < 80:
+            if systolic_blood_pressure < 50:
                 raise ValidationError(
-                    "Systolic Blood Pressure out of range. Cannot be below 80"
+                    "Systolic Blood Pressure out of range. Cannot be below 50"
                 )
-            elif systolic_blood_pressure > 240:
+            elif systolic_blood_pressure > 200:
                 raise ValidationError(
-                    "Systolic Blood Pressure out of range. Cannot be above 240"
+                    "Systolic Blood Pressure out of range. Cannot be above 200"
                 )
 
         return systolic_blood_pressure
@@ -467,6 +439,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -482,6 +455,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -497,6 +471,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -512,6 +487,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -527,6 +503,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -542,6 +519,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -557,6 +535,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -572,6 +551,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -587,6 +567,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -602,6 +583,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -617,6 +599,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -632,6 +615,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -647,6 +631,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -662,6 +647,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -677,6 +663,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -692,6 +679,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -719,6 +707,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
         )
         if valid == False:
             raise ValidationError(error)
@@ -734,6 +723,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
+            audit_period=None, # Hospital admission dates are not bound by the audit period
         )
         if valid == False:
             raise ValidationError(error)
@@ -752,7 +742,7 @@ class VisitForm(forms.ModelForm):
         ]:
             result = getattr(self.async_validation_results, result_field)
 
-            if result and type(result) is ValidationError:
+            if result and type(result) is ValidationError and not self.override_height_weight:
                 for field in fields_to_attach_errors:
                     self.add_error(field, result)
 
@@ -762,7 +752,7 @@ class VisitForm(forms.ModelForm):
         def round_to_one_decimal_place(value):
             return Decimal(value).quantize(
                 Decimal("0.1"), rounding=ROUND_HALF_UP
-            )  # round to 1 decimal place: although the rounding is done in the clean methods for height and weight, this is a final check
+            )  # round to 1 decimal place
 
         birth_date = self.patient.date_of_birth
         sex = self.patient.sex
@@ -801,7 +791,7 @@ class VisitForm(forms.ModelForm):
                     }
                 )
 
-        # Get centiles for height and weight and bmi if they are present as well as date and sex
+        # Get centiles for height and weight and bmi if they are present as well as date and sex, so long as overriding is not set
         if not getattr(self, "async_validation_results", None):
             self.async_validation_results = validate_visit_sync(
                 birth_date=birth_date,
@@ -949,16 +939,16 @@ class VisitForm(forms.ModelForm):
 
         thyroid_function_date = cleaned_data.get("thyroid_function_date")
         thyroid_treatment_status = cleaned_data.get("thyroid_treatment_status")
-
-        has_thyroid_data = thyroid_function_date or thyroid_treatment_status
-        thyroid_treament_prescribed = thyroid_treatment_status not in [1, 99]
-
-        if has_thyroid_data and thyroid_treament_prescribed:
-            measure_must_have_date_and_value(
-                thyroid_function_date,
-                "thyroid_function_date",
-                [{"thyroid_treatment_status": thyroid_treatment_status}],
+        if thyroid_function_date is not None and thyroid_treatment_status is None:
+            raise ValidationError(
+                {
+                    "thyroid_treatment_status": [
+                        "Thyroid Treatment Status must be filled in if Thyroid Function Date is filled in"
+                    ]
+                }
             )
+
+        
 
         psychological_screening_assessment_date = cleaned_data.get(
             "psychological_screening_assessment_date"
@@ -1122,7 +1112,7 @@ class VisitForm(forms.ModelForm):
         # I haven't implemented it here. The risk is that future versions of Django will add more
         # behaviour that we miss out on.
 
-        if getattr(self, "async_validation_results"):
+        if getattr(self, "async_validation_results") and not self.override_height_weight:
             self.instance.bmi = self.async_validation_results.bmi
 
             for field_prefix in ["height", "weight", "bmi"]:
@@ -1161,11 +1151,12 @@ def measure_must_have_date_and_value(date_field, date_field_name, field_list):
                     }
                 )
     field_name_list = ", ".join(field_name_list)
-    if date_field is None:
+    if date_field is None and any(value is not None for field in field_list for value in field.values()):
+        # If the date is None and any of the values are not None, we raise an error
         errors.update(
             {
                 date_field_name: [
-                    f"Missing date. {field_name_list} and the associated date must all be completed."
+                    f"Absent or invalid date error. {field_name_list} and the associated date must all be completed."
                 ]
             }
         )

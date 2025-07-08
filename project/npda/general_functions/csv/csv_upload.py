@@ -9,7 +9,7 @@ import collections
 # django imports
 from django.apps import apps
 from django.utils import timezone
-from django.core.exceptions import ValidationError
+from django.core.exceptions import FieldDoesNotExist
 
 # third part imports
 import pandas as pd
@@ -40,10 +40,11 @@ from project.npda.models import (
     VisitActivity
 )
 
-async def create_csv_submission(pdu, audit_year, csv_file_bytes, csv_file_name, submission_active, user=None, ip_address=None):
+async def create_csv_submission(pdu, audit_period, csv_file_bytes, csv_file_name, submission_active, user=None, ip_address=None):
     old_submission = await Submission.objects.filter(
         paediatric_diabetes_unit=pdu,
-        audit_year=audit_year,
+        audit_year=audit_period.audit_year(), # compatibility
+        audit_period=audit_period,
         submission_active=True,
     ).afirst()
 
@@ -55,7 +56,8 @@ async def create_csv_submission(pdu, audit_year, csv_file_bytes, csv_file_name, 
         submission_date=timezone.now(),
         submission_by=user,
         paediatric_diabetes_unit=pdu,
-        audit_year=audit_year,
+        audit_year=audit_period.audit_year(), # compatibility
+        audit_period=audit_period,
         csv_file=csv_file_bytes,
         csv_file_name=csv_file_name,
         submission_active=submission_active
@@ -74,7 +76,8 @@ async def create_csv_submission(pdu, audit_year, csv_file_bytes, csv_file_name, 
 async def tidy_up_old_submissions(pdu, new_submission):
     all_submissions = Submission.objects.filter(
         paediatric_diabetes_unit=pdu,
-        audit_year=new_submission.audit_year,
+        audit_year=new_submission.audit_year, # compatibility
+        audit_period=new_submission.audit_period,
     )
 
     async for submission in all_submissions:
@@ -141,7 +144,7 @@ async def csv_upload(
         form = PatientForm(
             fields,
             paediatric_diabetes_unit=pdu,
-            audit_year=submission.audit_year,
+            audit_period=submission.audit_period
         )
         form.async_validation_results = await validate_patient_async(
             postcode=fields["postcode"],
@@ -158,14 +161,14 @@ async def csv_upload(
             Visit,
         )
 
-        form = VisitForm(data=fields, initial={"patient": patient_form.instance})
+        form = VisitForm(data=fields, initial={"patient": patient_form.instance}, audit_period=submission.audit_period)
         form.async_validation_results = await validate_visit_async(
             birth_date=patient_form.cleaned_data.get("date_of_birth"),
             observation_date=fields["height_weight_observation_date"],
             height=fields["height"],
             weight=fields["weight"],
             sex=patient_form.cleaned_data.get("sex"),
-            async_client=async_client,
+            async_client=async_client
         )
 
         return form
@@ -179,6 +182,29 @@ async def csv_upload(
 
         return True
 
+    # Numbers larger than (max_digits - decimal_places) will fail to save at the database level
+    # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/993
+    def is_too_big_number(model, field_name, value):
+        try:
+            model_definition = model._meta.get_field(field_name)
+
+            max_digits = getattr(model_definition, "max_digits", None)
+            decimal_places = getattr(model_definition, "decimal_places", None)
+
+            if max_digits and decimal_places:
+                max_value = 10 ** (max_digits - decimal_places) - 1
+
+                try:
+                    return value >= max_value
+                # Missing values or strings
+                except TypeError:
+                    return False
+
+            return False
+        except FieldDoesNotExist:
+            # Handle fields like date_leaving_service that are on the PatientForm but not on the Patient model
+            return False
+
     def save_errors_and_retain_valid_fields(row_index, form):
         # We want to retain fields so that we can show them in the user interface
         # Use the field value from cleaned_data, falling back to data if it's not there
@@ -187,7 +213,9 @@ async def csv_upload(
             setattr(form.instance, key, value)
 
         for key, value in form.data.items():
-            if key not in form.cleaned_data and can_save_field(form, key):
+            if is_too_big_number(form._meta.model, key, value):
+                setattr(form.instance, key, 0)
+            elif key not in form.cleaned_data and can_save_field(form, key):
                 setattr(form.instance, key, value)
             elif not hasattr(form.instance, key):
                 setattr(form.instance, key, None)

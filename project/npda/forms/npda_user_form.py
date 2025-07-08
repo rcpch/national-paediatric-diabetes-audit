@@ -17,6 +17,7 @@ from project.npda.general_functions.group_for_group import group_for_role
 # RCPCH imports
 from ...constants.styles.form_styles import *
 from ..models import NPDAUser, VisitActivity
+from ..signals import get_client_ip
 
 
 # Logging setup
@@ -39,8 +40,6 @@ class NPDAUserForm(forms.ModelForm):
             "first_name",
             "surname",
             "email",
-            "is_staff",
-            "is_superuser",
             "is_rcpch_audit_team_member",
             "is_rcpch_staff",
             "role",
@@ -51,12 +50,6 @@ class NPDAUserForm(forms.ModelForm):
             "first_name": forms.TextInput(attrs={"class": TEXT_INPUT}),
             "surname": forms.TextInput(attrs={"class": TEXT_INPUT}),
             "email": forms.EmailInput(attrs={"class": TEXT_INPUT}),
-            "is_staff": forms.CheckboxInput(attrs={"class": "toggle border-rcpch_light_blue js-toggle-checkbox"}),
-            "is_superuser": forms.CheckboxInput(
-                attrs={
-                    "class": "toggle border-rcpch_light_blue bg-rcpch_light_blue checked:bg-rcpch_pink_light_tint2 checked:border-rcpch_pink hover:bg-rcpch_pink"
-                }
-            ),
             "is_rcpch_audit_team_member": forms.CheckboxInput(
                 attrs={
                     "class": "toggle border-rcpch_light_blue bg-rcpch_light_blue checked:bg-rcpch_pink_light_tint2 checked:border-rcpch_pink hover:bg-rcpch_pink"
@@ -109,7 +102,6 @@ class NPDAUserForm(forms.ModelForm):
                 self.fields["email"].help_text = _(
                     "You cannot change the email address of this user."
                 )
-
 
 class NPDAUpdatePasswordForm(SetPasswordForm):
     # form show when setting or resetting password
@@ -213,7 +205,7 @@ class CaptchaAuthenticationForm(AuthenticationForm):
                 ):
                     VisitActivity.objects.create(
                         activity=6,
-                        ip_address=self.request.META.get("REMOTE_ADDR"),
+                        ip_address=get_client_ip(self.request),
                         npdauser=user,  # password lockout - activity 6
                     )
                     raise forms.ValidationError(

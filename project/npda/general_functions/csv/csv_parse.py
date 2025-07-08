@@ -91,6 +91,9 @@ def csv_parse(csv_file):
     # The template published on the RCPCH website has trailing spaces on 'Observation Date: Thyroid Function '
     df.columns = df.columns.str.strip()
 
+    # issue #1038 - Twinkle users inexplicably submit CSV files with headings that are in quotes.
+    df.columns = df.columns.str.strip('\'"')
+
     # Replace headings which were different from in the old NPDA template with the new
     for column in df.columns:
         lowercase_col = column.lower()
@@ -183,7 +186,8 @@ def csv_parse(csv_file):
             for row_index, (value_before, value_after) in enumerate(
                 zip(column_before, column_after)
             ):
-                if not pd.isna(value_before) and pd.isna(value_after):
+                # Handle empty strings (including spaces) for optional date columns
+                if not pd.isna(value_before) and pd.isna(value_after) and not (type(value_before) is str and value_before.strip() == ""):
                     model_field = csv_definition_for(column)["model_field"]
                     errors_to_return[row_index][model_field].append(
                         "Date format is incorrect (expected DD/MM/YYYY)"
@@ -201,7 +205,7 @@ def csv_parse(csv_file):
         try:
             if column in df.columns:
                 df[column] = df[column].astype(dtype)
-        except ValueError as e:
+        except (ValueError, TypeError) as e:
             parse_type_error_columns.append(column)
             continue
 

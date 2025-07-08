@@ -44,6 +44,7 @@ from ..general_functions import (
 from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
 from .mixins import LoginAndOTPRequiredMixin
 from ...constants import RCPCH_AUDIT_TEAM, AUDIT_CENTRE_READER, AUDIT_CENTRE_EDITOR
+from ..signals import get_client_ip
 
 # from ..signals import password_reset_sent
 
@@ -103,6 +104,7 @@ class NPDAUserListView(
                 requesting_user=self.request.user, user_instance=self.request.user
             )
         )
+        context["parent"] = self.request.session.get("parent")
         context["chosen_pdu"] = self.request.session.get("pz_code")
         return context
 
@@ -185,6 +187,16 @@ class NPDAUserCreateView(
                 "You do not have permission to add a user with RCPCH Audit Team role."
             )
 
+        if form.cleaned_data["is_rcpch_audit_team_member"] and not (self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member):
+            raise PermissionDenied(
+                "You do not have permission to add a user with the is_rcpch_audit_team_member flag."
+            )
+
+        if form.cleaned_data["is_rcpch_staff"] and not (self.request.user.is_superuser or self.request.user.is_rcpch_staff):
+            raise PermissionDenied(
+                "You do not have permission to add a user with the is_rcpch_staff flag."
+            )
+
         new_user = form.save(commit=False)
         new_user.set_unusable_password()
         new_user.is_active = True
@@ -253,6 +265,7 @@ class NPDAUserUpdateView(
                 user_instance=self.get_object(),
             )
         )
+        
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -283,15 +296,28 @@ class NPDAUserUpdateView(
         
         if form.cleaned_data["role"] == RCPCH_AUDIT_TEAM and not (self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member):
             raise PermissionDenied(
-                "You do not have permission to add a user with RCPCH Audit Team role."
+                "You do not have permission to grant the RCPCH Audit Team role."
+            )
+
+        if form.cleaned_data["is_rcpch_audit_team_member"] and not (self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member):
+            raise PermissionDenied(
+                "You do not have permission to set the is_rcpch_audit_team_member flag."
+            )
+
+        if form.cleaned_data["is_rcpch_staff"] and not (self.request.user.is_superuser or self.request.user.is_rcpch_staff):
+            raise PermissionDenied(
+                "You do not have permission to set the is_rcpch_staff flag."
             )
         
-        user = form.save(commit=True)
+        user = form.save(commit=False)
+        user.save() # save the user first to ensure the user instance is updated and the updated_by and updated_at fields are set
+        form.save_m2m()  # save the m2m fields (groups, employers, etc.)
         # remove all groups and add the user to the right group
         user.groups.clear()
         group = group_for_role(user.role)
         if group:
             user.groups.add(group)
+        
         return super().form_valid(form)
 
     def post(self, request: HttpRequest, *args: str, **kwargs) -> HttpResponse:
@@ -325,9 +351,11 @@ class NPDAUserUpdateView(
                     npda_user=selected_npda_user
                 ).update(is_primary_employer=False)
                 # set the selected employer to True
-                OrganisationEmployer.objects.filter(
+                selected_employer = OrganisationEmployer.objects.filter(
                     pk=request.POST.get("organisation_employer_id")
-                ).update(is_primary_employer=True)
+                ).get()
+                selected_employer.is_primary_employer=True
+                selected_employer.save()
 
             elif request.POST.get("add_employer"):
                 PaediatricDiabetesUnit = apps.get_model(
@@ -459,6 +487,18 @@ class NPDAUserLogsListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Li
     model = VisitActivity
     permission_required = "npda.view_visitactivity"
     permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
+    paginate_by = 50
+    context_object_name = "visitactivities"
+
+    def get_queryset(self):
+        npdauser_id = self.kwargs.get("npdauser_id")
+        if not npdauser_id:
+            logger.error("No NPDAUser ID provided in the request")
+            return VisitActivity.objects.none()
+        npdauser = NPDAUser.objects.get(pk=npdauser_id)
+        return VisitActivity.objects.filter(npdauser=npdauser).order_by(
+            "-activity_datetime"
+        )
 
     def has_permission(self):
         """
@@ -520,12 +560,15 @@ class NPDAUserLogsListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Li
         return True
 
     def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
         npdauser_id = self.kwargs.get("npdauser_id")
-        context = super(NPDAUserLogsListView, self).get_context_data(**kwargs)
-        npdauser = NPDAUser.objects.get(pk=npdauser_id)
-        visitactivities = VisitActivity.objects.filter(npdauser=npdauser)
-        context["visitactivities"] = visitactivities
-        context["npdauser"] = npdauser
+        
+        try:
+            npdauser = NPDAUser.objects.get(pk=npdauser_id)
+            context["npdauser"] = npdauser
+        except NPDAUser.DoesNotExist:
+            context["npdauser"] = None
+        
         return context
 
 
@@ -582,7 +625,7 @@ class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
             VisitActivity.objects.create(
                 npdauser=user,
                 activity=4,
-                ip_address=self.request.META.get("REMOTE_ADDR"),
+                ip_address=get_client_ip(self.request),
             )  # password reset link sent
         return super().form_valid(form)
 

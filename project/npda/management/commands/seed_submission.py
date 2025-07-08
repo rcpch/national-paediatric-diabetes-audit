@@ -78,6 +78,7 @@ from project.npda.models import (
     Patient,
     Submission,
     OrganisationEmployer,
+    AuditPeriod
 )
 
 letter_name_map = {
@@ -222,9 +223,14 @@ class Command(BaseCommand):
             visit_kwargs={"is_valid": True},
         )
 
+        audit_period = AuditPeriod.objects.filter(
+            start_date__year=audit_start_date.year,
+        ).first()
+
         new_submission = Submission.objects.create(
             paediatric_diabetes_unit=primary_pdu_for_user,
-            audit_year=audit_start_date.year,
+            audit_year=audit_start_date.year, # compatibility
+            audit_period=audit_period,
             submission_date=submission_date,
             submission_by=submission_by,
             submission_active=True

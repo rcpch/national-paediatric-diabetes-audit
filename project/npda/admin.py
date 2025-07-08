@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.conf import settings
+from two_factor.admin import AdminSiteOTPRequiredMixin
 
 # Import all models in the same order as they are declared in your models/__init__.py (if possible)
 from .models import (
@@ -15,14 +17,22 @@ from .models import (
 
 from django.contrib.sessions.models import Session
 
+class NPDAAdminSite(AdminSiteOTPRequiredMixin, admin.AdminSite):
+    def has_permission(self, request):
+        if settings.DEBUG and (request.user.is_superuser or request.user.is_staff):
+            return True
+        
+        return super().has_permission(request)
+
+admin.site.__class__ = NPDAAdminSite
 
 @admin.register(OrganisationEmployer)
 class OrganisationEmployerAdmin(admin.ModelAdmin):
     search_fields = (
         "pk",
         "paediatric_diabetes_unit__pz_code",
-        "paediatric_diabetes_unit__lead_organisation_ods_code",
-        "paediatric_diabetes_unit__lead_organisation_name",
+        "paediatric_diabetes_unit__parent_ods_code",
+        "paediatric_diabetes_unit__parent_name",
         "npda_user__email",
         "npda_user__first_name",
         "npda_user__surname",
@@ -30,7 +40,7 @@ class OrganisationEmployerAdmin(admin.ModelAdmin):
     list_display = (
         "pk",
         "paediatric_diabetes_unit__pz_code",
-        "paediatric_diabetes_unit__lead_organisation_name",
+        "paediatric_diabetes_unit__parent_name",
         "npda_user__email",
         "npda_user__first_name",
         "npda_user__surname",
@@ -62,16 +72,16 @@ class PaediatricDiabetesUnitAdmin(admin.ModelAdmin):
     search_fields = (
         "pk",
         "pz_code",
-        "lead_organisation_ods_code",
-        "lead_organisation_name",
+        "parent_ods_code",
+        "parent_name",
     )
     list_display = (
         "pz_code",
-        "lead_organisation_ods_code",
-        "lead_organisation_name",
+        "parent_ods_code",
+        "parent_name",
         "active",
     )
-    ordering = ("lead_organisation_name",)
+    ordering = ("parent_name",)
 
 
 @admin.register(Transfer)
@@ -87,6 +97,7 @@ class VisitAdmin(admin.ModelAdmin):
 @admin.register(VisitActivity)
 class VisitActivityAdmin(admin.ModelAdmin):
     search_fields = ("activity_datetime", "pk", "ip_address")
+    ordering = ("-activity_datetime",)
 
 
 @admin.register(Submission)

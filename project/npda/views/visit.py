@@ -21,7 +21,7 @@ from ..general_functions import (
     get_visit_tabs,
     visit_falls_within_audit_period_Q_object,
 )
-from ..models import Patient, Transfer, Visit
+from ..models import Patient, Transfer, Visit, AuditPeriod
 from .mixins import (
     CheckCanCompleteQuestionnaireMixin,
     CheckCurrentAuditYearMixin,
@@ -110,6 +110,7 @@ class VisitCreateView(
         context["form_method"] = "create"
         context["button_title"] = "Create New Visit"
         context["visit_tabs"] = get_visit_tabs(form=None)
+        context["override_height_weight"] = False
         # Getting the PDU for the patient most of the time will be the same as the selected PDU in session.
         # However, if the user has selected a different PDU in the session but has come here from a national view
         # then we can't use that.
@@ -170,6 +171,14 @@ class VisitCreateView(
         return reverse(
             "patient_visits", kwargs={"patient_id": self.kwargs["patient_id"]}
         )
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        # Get override_postcode from POST data if available
+        if self.request.method in ('POST', 'PUT'):
+            kwargs['override_height_weight'] = self.request.POST.get('override_height_weight', 'false') == 'true'
+            kwargs['audit_period'] = AuditPeriod.objects.get_audit_period_for_request(self.request)
+        return kwargs
 
     def get_initial(self):
         initial = super().get_initial()
@@ -187,6 +196,30 @@ class VisitCreateView(
 
         super(VisitCreateView, self).form_valid(form)
         return HttpResponseRedirect(self.get_success_url())
+    
+    def form_invalid(self, form):
+        context = self.get_context_data()
+        if "height" in form.errors or "weight" in form.errors:
+            # if the height or weight  is invalid, we want to allow the user to save the record anyway
+            if form.override_height_weight:
+                form.cleaned_data["override_height_weight"] = True
+                messages.warning(
+                    self.request,
+                    "The height or weight you have entered is invalid. The record will be saved but please check the measurement values and update it if necessary.",
+                )
+                form.postcode = form.cleaned_data["override_height_weight"]
+            else:
+                context['button_title'] = "Save Measurements Anyway"
+                context['override_height_weight'] = True
+                messages.error(
+                    self.request,
+                    "The measurement(s) you have entered are invalid. Please check the values entered and try again.",
+                )
+                form.override_height_weight = True
+            return self.render_to_response(context)
+        return super().form_invalid(form)
+
+
 
 
 class VisitUpdateView(
@@ -230,6 +263,14 @@ class VisitUpdateView(
         patient = Patient.objects.get(pk=self.kwargs["patient_id"])
         initial["patient"] = patient
         return initial
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        # Get override_postcode from POST data if available
+        if self.request.method in ('POST', 'PUT'):
+            kwargs['override_height_weight'] = self.request.POST.get('override_height_weight', 'false') == 'true'
+            kwargs['audit_period'] = AuditPeriod.objects.get_audit_period_for_request(self.request)
+        return kwargs
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
         if "delete" in self.request.POST:
@@ -245,6 +286,28 @@ class VisitUpdateView(
         return HttpResponseRedirect(
             redirect_to=reverse("patient_visits", kwargs=context)
         )
+    
+    def form_invalid(self, form):
+        context = self.get_context_data()
+        if "height" in form.errors or "weight" in form.errors:
+            # if the height or weight  is invalid, we want to allow the user to save the record anyway
+            if form.override_height_weight:
+                form.cleaned_data["override_height_weight"] = True
+                messages.warning(
+                    self.request,
+                    "The height or weight you have entered is invalid. The record will be saved but please check the measurement values and update it if necessary.",
+                )
+                form.postcode = form.cleaned_data["override_height_weight"]
+            else:
+                context['button_title'] = "Save Measurements Anyway"
+                context['override_height_weight'] = True
+                messages.error(
+                    self.request,
+                    "The measurement(s) you have entered are invalid. Please check the values entered and try again.",
+                )
+                form.override_height_weight = True
+            return self.render_to_response(context)
+        return super().form_invalid(form)
 
 
 class VisitDeleteView(

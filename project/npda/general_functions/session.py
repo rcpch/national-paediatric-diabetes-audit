@@ -1,13 +1,14 @@
 from asgiref.sync import sync_to_async
 import logging
 
-from django.core.exceptions import PermissionDenied
 from django.apps import apps
+from django.core.exceptions import PermissionDenied
+from django.utils import timezone
 
 # NPDA Imports
 from project.npda.general_functions import (
     organisations_adapter,
-    get_audit_period_for_date,
+    get_client_ip,
 )
 
 logger = logging.getLogger(__name__)
@@ -15,11 +16,15 @@ logger = logging.getLogger(__name__)
 
 def get_submission_actions(pz_code, audit_year):
     Submission = apps.get_model("npda", "Submission")
+    AuditPeriod = apps.get_model("npda", "AuditPeriod")
+    audit_period = AuditPeriod.objects.filter(
+        start_date__year=audit_year
+    ).first()  # Ensure the audit period exists for the given year
 
     submission = Submission.objects.filter(
         paediatric_diabetes_unit__pz_code=pz_code,
         submission_active=True,
-        audit_year=audit_year,
+        audit_period=audit_period,
     ).first()
 
     can_complete_questionnaire = True
@@ -82,7 +87,7 @@ def create_session_object(user):
 
     session = {
         "pz_code": pz_code,
-        "lead_organisation": primary_organisation.paediatric_diabetes_unit.lead_organisation_name,
+        "parent": primary_organisation.paediatric_diabetes_unit.parent_name,
         "pdu_choices": list(pdu_choices),
         "selected_audit_year": audit_period.audit_year(),
     } | submission_actions | audit_period_data
@@ -93,7 +98,6 @@ def create_session_object(user):
 def refresh_session_filters(request, pz_code=None, audit_year=None, csv_upload=None, questionnaire=None):
     session = {}
 
-    Submission = apps.get_model("npda", "Submission")
     PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
     AuditPeriod = apps.get_model("npda", "AuditPeriod")
 
@@ -125,10 +129,10 @@ def refresh_session_filters(request, pz_code=None, audit_year=None, csv_upload=N
             raise PermissionDenied()
 
         session["pz_code"] = pz_code
-        session["lead_organisation"] = PaediatricDiabetesUnit.objects.get(
+        session["parent"] = PaediatricDiabetesUnit.objects.get(
             pz_code=pz_code,
             active=True
-        ).lead_organisation_name
+        ).parent_name
         session["pdu_choices"] = list(
             organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
                 requesting_user=user, user_instance=None
@@ -152,3 +156,18 @@ def refresh_session_filters(request, pz_code=None, audit_year=None, csv_upload=N
 
     request.session.update(session)
     request.session.modified = True
+
+def save_csv_uploading_user_to_visitactivity(request):
+    """
+    Save the user who is uploading a CSV to the VisitActivity model.
+    This is used to track who is uploading CSVs and when.
+    """
+    VisitActivity = apps.get_model("npda", "VisitActivity")
+    
+    # Create VisitActivity entry for the user
+    VisitActivity.objects.create(
+        npdauser=request.user,
+        activity=8,  # UPLOADED_CSV
+        ip_address=get_client_ip(request=request),
+        activity_datetime=timezone.now(),
+    )

@@ -7,6 +7,7 @@ from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.mixins import AccessMixin
+from django.shortcuts import get_object_or_404
 
 from project.npda.models.npda_user import NPDAUser
 from project.npda.models.patient import Patient
@@ -80,7 +81,7 @@ class CheckPDUListMixin(AccessMixin):
         # get pdu that user is requesting access of
         requested_pdu = ""
         if model == "Visit":
-            requested_patient = Patient.objects.get(pk=self.kwargs["patient_id"])
+            requested_patient = get_object_or_404(Patient, pk=self.kwargs["patient_id"])
             Transfer = apps.get_model("npda", "Transfer")
             transfer = Transfer.objects.get(patient=requested_patient)
             requested_pdu = transfer.paediatric_diabetes_unit.pz_code
@@ -131,7 +132,7 @@ class CheckPDUInstanceMixin(AccessMixin):
         user_pdus = [org.pz_code for org in request.user.organisation_employers.all()]
 
         if model == "NPDAUser":
-            requested_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
+            requested_user = get_object_or_404(NPDAUser, pk=self.kwargs['pk'])
             if requested_user.organisation_employers.filter(pz_code=request.session.get('pz_code')).exists():
                 if requested_user.number_of_pdu_memberships() == 1:
                     # if the user is a member of the requested pdu and there is only one, then we can use that
@@ -145,12 +146,12 @@ class CheckPDUInstanceMixin(AccessMixin):
 
 
         elif model == "Patient":
-            requested_patient = Patient.objects.get(pk=self.kwargs["pk"])
+            requested_patient = get_object_or_404(Patient, pk=self.kwargs["pk"])
             transfer = Transfer.objects.get(patient=requested_patient)
             requested_pdu = transfer.paediatric_diabetes_unit.pz_code
 
         elif model == "Visit":
-            requested_patient = Patient.objects.get(pk=self.kwargs["patient_id"])
+            requested_patient = get_object_or_404(Patient, pk=self.kwargs["patient_id"])
             transfer = Transfer.objects.get(patient=requested_patient)
             requested_pdu = transfer.paediatric_diabetes_unit.pz_code
 
@@ -179,7 +180,7 @@ class CheckCurrentAuditYearMixin(AccessMixin):
 
     def dispatch(self, request, *args, **kwargs):
         audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
-
+        
         if not audit_period:
             logger.warning(
                 f"User {request.user} tried to create/edit or delete data in an unknown audit period."
@@ -192,7 +193,6 @@ class CheckCurrentAuditYearMixin(AccessMixin):
                     f"User {request.user} tried to create/edit or delete data in a closed audit year."
                 )
                 raise PermissionDenied()
-
         return super().dispatch(request, *args, **kwargs)
 
 

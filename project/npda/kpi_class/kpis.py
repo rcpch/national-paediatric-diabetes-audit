@@ -3508,6 +3508,7 @@ class CalculateKPIS:
         hba1c_values_by_patient = defaultdict(
             lambda: {"hb1ac_values": [], "nhs_number": ""}
         )
+        
         for visit in valid_visits:
             hba1c_values_by_patient[visit["patient__pk"]]["hb1ac_values"].append(
                 visit["hba1c"]
@@ -3518,6 +3519,10 @@ class CalculateKPIS:
 
         # Now calculate the median for each patient
         for patient_id, values in hba1c_values_by_patient.items():
+            # remove  empty hba1c values
+            values["hb1ac_values"] = [
+                value for value in values["hb1ac_values"] if value is not None
+            ]
             hba1c_values_by_patient[patient_id]["median"] = self.calculate_median(
                 values["hb1ac_values"]
             )

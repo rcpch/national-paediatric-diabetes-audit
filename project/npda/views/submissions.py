@@ -28,7 +28,7 @@ from project.npda.views.decorators import login_and_otp_required
 
 # RCPCH imports
 from project.constants.colors import RCPCH_LIGHT_BLUE
-from ..general_functions.session import refresh_session_filters
+from ..general_functions.session import refresh_session_filters, save_csv_uploading_user_to_visitactivity
 from ..general_functions.csv import (
     download_csv,
     download_xlsx,
@@ -45,6 +45,7 @@ from ..models import (
 )
 from ..forms.upload import UploadFileForm
 from ..tasks import upload_csv_task
+from ..signals import get_client_ip
 
 
 logger = logging.getLogger(__name__)
@@ -186,7 +187,7 @@ class SubmissionsListView(
                     When(latest_submission_date__gte=F("quarter4_start"), latest_submission_date__lte=F("quarter4_end"), then=Value(4)),
                     output_field=IntegerField(),
                 ),
-            ).values("pz_code", "lead_organisation_name", "latest_submission_quarter")
+            ).values("pz_code", "parent_name", "latest_submission_quarter")
             column_chart = create_column_chart(paediatric_diabetes_units, selected_audit_year)
             context["column_chart"] = column_chart.to_html(full_html=False)
             context["submission_statistics"] = submission_stats(selected_audit_year)
@@ -367,24 +368,27 @@ async def upload_csv(request):
             return redirect("upload_csv")
 
         audit_period = await sync_to_async(AuditPeriod.objects.get_audit_period_for_request)(request)
+
         if not audit_period.is_open and not (request.user.is_superuser or request.user.is_rcpch_audit_team_member):
             raise PermissionDenied(f"Upload is closed for {audit_period.audit_year()}.")
 
         new_submission = await create_csv_submission(
             pdu=pdu,
-            audit_year=audit_period.audit_year(),
+            audit_period=audit_period,
             csv_file_bytes=user_csv_bytes,
             csv_file_name=user_csv_filename,
             # The celery task will flip it to active once complete
             submission_active=False,
             user=request.user,
-            ip_address=request.META.get("REMOTE_ADDR"),
+            ip_address=get_client_ip(request),
         )
 
         upload_csv_task.delay(new_submission.id)
 
         # update the session fields - this stores that the user has uploaded a csv and disables the ability to use the questionnaire
         await sync_to_async(refresh_session_filters)(request, csv_upload=True)
+
+        await sync_to_async(save_csv_uploading_user_to_visitactivity)(request=request)
         
         return redirect("upload-csv-in-progress")
 

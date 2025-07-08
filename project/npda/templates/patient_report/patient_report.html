@@ -2,15 +2,15 @@
 {% load static %}
 {% load npda_tags %}
 {% block content %}
-  <div class="p-4 font-montserrat text-rcpch_dark_blue">
+  <div class="p-4 font-montserrat text-rcpch_dark_blue w-full">
     <!-- SELECT TABS & TABLE -->
     <div class="p-4" hx-boost="true">
       <h1 class="text-2xl font-bold mb-4">Patient Report</h1>
-      <div id="table-area" hx-swap="innerHTML">
+      <div id="table-area" hx-swap="innerHTML" class="w-full">
         {% comment %} Just the default table, htmx views swap this out {% endcomment %}
         {% if selected_category == "treatment" %}
           <!-- slight hack: this is designed for htmx but now we navigate here from the dashboard just for treatment also -->
-          {% include "patient_report/treatment_table_partial.html" with sort_field="treatment" sort_order=sort_order %}
+          {% include "patient_report/treatment_table_partial.html" with sort_field=sort_field sort_order=sort_order %}
         {% else %}
           {% include "patient_report/health_checks_table_partial.html" with sort_field=sort_field sort_order=sort_order %}
         {% endif %}

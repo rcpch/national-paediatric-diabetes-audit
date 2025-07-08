@@ -149,6 +149,8 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    # Has to come before CommonMiddleware to access Content-Length
+    "project.npda.logging.NPDARequestLoggingMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -159,6 +161,8 @@ MIDDLEWARE = [
     "django_otp.middleware.OTPMiddleware",
     # autologout
     "django_auto_logout.middleware.auto_logout",
+    # set logging context variables (eg user)
+    "project.npda.logging.NPDACustomLoggingAttributesMiddleware",
 ]
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
@@ -302,8 +306,20 @@ PASSWORD_RESET_TIMEOUT = os.environ.get(
 SITE_CONTACT_EMAIL = os.environ.get("SITE_CONTACT_EMAIL")
 
 ADMINS = os.environ.get("ADMINS", '')
+# NOTE THAT IN DEVELOPMENT THIS LIST WILL BE EMPTY SO EMAILS WILL NOT BE SENT
+# This is a list of admin emails that will receive notifications for changes to the NPDAUser model
+ADMIN_EMAIL_LIST = [SITE_CONTACT_EMAIL]
+if ADMINS:
+    # If ADMINS is set, split it by commas and take the first part after the colon
+    ADMIN_EMAIL_LIST += [e.split(":")[1] for e in ADMINS.split(",") if e]
+if len(ADMIN_EMAIL_LIST) == 0:
+    logger.warning("No admin emails configured. Please set SITE_CONTACT_EMAIL or ADMINS in settings.py.")
+    ADMIN_EMAIL_LIST = ["admin@rcpch.dummy"]  # Fallback for development
+
+# Set the ADMINS variable to a list of tuples (name, email)
 if ADMINS:
     ADMINS = [e.split(":") for e in  ADMINS.split(",")]
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
@@ -431,3 +447,5 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_HSTS_SECONDS = os.environ.get("SECURE_HSTS_SECONDS")
 SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get("SECURE_HSTS_INCLUDE_SUBDOMAINS")
 SECURE_HSTS_PRELOAD = os.environ.get("SECURE_HSTS_PRELOAD")
+
+ENABLE_REQUEST_LOGGING = os.getenv("ENABLE_REQUEST_LOGGING", "False") == "True"
