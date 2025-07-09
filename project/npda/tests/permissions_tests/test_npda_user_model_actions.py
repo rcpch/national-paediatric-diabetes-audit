@@ -701,6 +701,7 @@ def test_coordinators_cannot_create_users_with_superuser_flags(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 @pytest.mark.parametrize(
     "user_flag",
     [
@@ -733,7 +734,9 @@ def test_coordinators_cannot_create_users_with_django_admin_flags(
 
     data[user_flag] = "on"
 
-    client.post(url, data)
+    response = client.post(url, data)
+
+    print(f"Checking user flag {user_flag} {response.status_code}")
 
     user = NPDAUser.objects.get(email="bob@bobertson.com")
     assert getattr(user, user_flag) is False
@@ -1460,6 +1463,7 @@ def test_coordinators_with_multiple_employers_cannot_view_user_logs_with_multipl
     assert response.status_code == HTTPStatus.FORBIDDEN
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_user_creation_has_a_timestamp_and_user(
     client: Client,
     seed_groups_fixture,
@@ -1505,6 +1509,7 @@ def test_user_creation_has_a_timestamp_and_user(
     ).exists(), "VisitActivity should have been created for user creation"
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_user_update_has_a_timestamp_and_user(
     client: Client,
     seed_groups_fixture,

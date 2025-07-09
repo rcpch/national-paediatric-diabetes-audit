@@ -7,6 +7,7 @@ from http import HTTPStatus
 # Python imports
 import pytest
 from django.test import override_settings
+from django.apps import apps
 
 # 3rd party imports
 from django.urls import reverse
@@ -125,6 +126,8 @@ def _create_outcomes_test_setup(client):
     audit_period.is_open = True
     audit_period.save()
 
+    Patient = apps.get_model("npda", "Patient")
+
     # Clear existing patients
     Patient.objects.all().delete()
 
@@ -142,6 +145,7 @@ def _create_outcomes_test_setup(client):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_outcomes_no_hba1c_measurements(
     seed_groups_fixture,
     seed_users_fixture,
@@ -205,6 +209,7 @@ def test_outcomes_no_hba1c_measurements(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_outcomes_single_hba1c_measurement(
     seed_groups_fixture,
     seed_users_fixture,
@@ -270,6 +275,7 @@ def test_outcomes_single_hba1c_measurement(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_outcomes_multiple_hba1c_measurements(
     seed_groups_fixture,
     seed_users_fixture,
