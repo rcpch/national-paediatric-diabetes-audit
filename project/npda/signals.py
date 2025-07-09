@@ -230,7 +230,7 @@ def log_user_pdu_assignment(sender, instance, created, **kwargs):
         logger.info(f"PDU assignment updated for user {instance.npda_user.email} at PDU {instance.paediatric_diabetes_unit.pz_code}")
 
 
-@receiver(post_delete, sender=OrganisationEmployer)
+@receiver(pre_delete, sender=OrganisationEmployer)
 def log_user_pdu_removal(sender, instance, **kwargs):
     """
     Log when a user is removed from a PDU.
@@ -240,17 +240,17 @@ def log_user_pdu_removal(sender, instance, **kwargs):
     
     details = f"User {instance.npda_user.email} removed from PDU {instance.paediatric_diabetes_unit.pz_code} ({instance.paediatric_diabetes_unit.parent_name}) by {current_user.email if current_user else 'system'}"
     
-    _log_user_activity(
-        user=instance.npda_user,
-        activity_type=16,  # REMOVED_USER_FROM_PDU
-        details=details,
-        current_user=current_user
-    )
+    # _log_user_activity(
+    #     user=instance.npda_user,
+    #     activity_type=16,  # REMOVED_USER_FROM_PDU
+    #     details=details,
+    #     current_user=current_user
+    # )
     
     # Send notification to admins about PDU removal
     _send_pdu_assignment_notification(instance, current_user, is_new=False, is_removal=True)
     
-    logger.info(f"User {instance.npda_user.email} removed from PDU {instance.paediatric_diabetes_unit.pz_code}")
+    logger.info(details)
 
 @receiver(pre_save, sender=OrganisationEmployer)
 def capture_pdu_assignment_changes(sender, instance, **kwargs):
