@@ -23,7 +23,7 @@
     </thead>
     <tbody>
       {% for npda_user in npdauser_list %}
-        <tr class="text-rcpch_light_blue bg-white border-b border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white">
+        <tr class="text-rcpch_light_blue bg-white border-b border-gray-100 hover:bg-r hover:bg-rcpch_light_blue hover:text-white {% if npda_user.is_active == False %}opacity-50 cursor-not-allowed pointer-events-none bg-rcpch_lightest_grey {% endif %}">
           <td class="text-left">
             {% if npda_user.number_of_pdu_memberships < 2 %}
               <div class="tooltip tooltip-right"
