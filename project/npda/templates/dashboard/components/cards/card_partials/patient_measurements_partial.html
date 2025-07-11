@@ -69,4 +69,89 @@
       </div>
     </div>
   </a>
+  <a href="{% url 'patients' %}"
+     class="tooltip"
+     data-tip="Click here to view health check total counts for all patients with T1 diabetes in this submission">
+    <div class="flex flex-row justify-between text-center justify-center">
+      <div class="stats shadow">
+        <div class="stat place-items-center">
+          <div class="stat-figure text-primary"></div>
+          <div class="stat-title">BMI</div>
+          <div class="stat-value {% if submission_visit_error_count > 0 %}text-rcpch_pink{% else %}text-rcpch_light_blue{% endif %}">
+            {{ submission_visit_error_count }}
+          </div>
+          <div class="stat-desc">
+            visits have data errors
+            {% if submission_visit_error_count > 0 %}
+              affecting <strong>{{ affected_patients }}</strong> patients
+            {% endif %}
+          </div>
+          <div class="stat-desc">Last upload: {{ submission_date }}</div>
+        </div>
+        {% comment %}  Thyroid {% endcomment %}
+        <div class="stat place-items-center">
+          <div class="stat-figure text-primary"></div>
+          <div class="stat-title">Thyroid</div>
+          <div class="stat-value {% if submission_visit_error_count > 0 %}text-rcpch_pink{% else %}text-rcpch_light_blue{% endif %}">
+            {{ submission_visit_error_count }}
+          </div>
+          <div class="stat-desc">
+            visits have data errors
+            {% if submission_visit_error_count > 0 %}
+              affecting <strong>{{ affected_patients }}</strong> patients
+            {% endif %}
+          </div>
+          <div class="stat-desc">Last upload: {{ submission_date }}</div>
+        </div>
+        {% comment %}  Blood Pressure {% endcomment %}
+        <div class="stat place-items-center">
+          <div class="stat-figure text-primary"></div>
+          <div class="stat-title">Blood Pressure</div>
+          <div class="stat-value {% if submission_visit_error_count > 0 %}text-rcpch_pink{% else %}text-rcpch_light_blue{% endif %}">
+            {{ submission_visit_error_count }}
+          </div>
+          <div class="stat-desc">
+            visits have data errors
+            {% if submission_visit_error_count > 0 %}
+              affecting <strong>{{ affected_patients }}</strong> patients
+            {% endif %}
+          </div>
+          <div class="stat-desc">Last upload: {{ submission_date }}</div>
+        </div>
+        {% comment %}  {% endcomment %}
+        {% comment %}  ACR {% endcomment %}
+        <div class="stat place-items-center">
+          <div class="stat-figure text-primary"></div>
+          <div class="stat-title">Albumin/Creatinine Ratio</div>
+          <div class="stat-value text-rcpch_light_blue">
+            {{ total_passed_urinary_albumin|percentage:total_eligible_urinary_albumin }}%
+          </div>
+          <div class="stat-desc">
+            visits have data errors
+            {% if submission_visit_error_count > 0 %}
+              affecting <strong>{{ affected_patients }}</strong> patients
+            {% endif %}
+          </div>
+          <div class="stat-desc">Last upload: {{ submission_date }}</div>
+        </div>
+        {% comment %}  {% endcomment %}
+        {% comment %}  ACR {% endcomment %}
+        <div class="stat place-items-center">
+          <div class="stat-figure text-primary"></div>
+          <div class="stat-title">Feet</div>
+          <div class="stat-value {% if submission_visit_error_count > 0 %}text-rcpch_pink{% else %}text-rcpch_light_blue{% endif %}">
+            {{ submission_visit_error_count }}
+          </div>
+          <div class="stat-desc">
+            visits have data errors
+            {% if submission_visit_error_count > 0 %}
+              affecting <strong>{{ affected_patients }}</strong> patients
+            {% endif %}
+          </div>
+          <div class="stat-desc">Last upload: {{ submission_date }}</div>
+        </div>
+        {% comment %}  {% endcomment %}
+      </div>
+    </div>
+  </a>
 </div>
