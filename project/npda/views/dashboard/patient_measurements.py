@@ -112,6 +112,9 @@ def patient_measurements(request):
 def patient_health_check_totals(pz_code, calculation_date):
     """
     Returns the totals for the patient health check KPIs.
+    Note this repeats some of the logic in the patient_report. Probably should be refactored into a common function.
+    This function calculates the totals for the health checks for all T1DM patients in a given PZ code for a specific calculation date.
+    It uses the CalculateKPIS class to get the patient querysets and then applies the necessary filters and annotations to calculate the totals for each health check KPI
     """
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -181,155 +184,7 @@ def patient_health_check_totals(pz_code, calculation_date):
         pk__in=complete_year_12plus.values_list("pk", flat=True)
     ).count()
     total_eligible_foot_exam = complete_year_12plus.count()
-    # pt_qs = pt_qs.annotate(
-    #     is_gte_12yo=Q(
-    #         date_of_birth__lte=calculation_date - relativedelta(years=12)
-    #     ),
-    #     passed_hba1c=Case(
-    #         When(
-    #             Exists(
-    #                 kpi_calculations_object.calculate_kpi_25_hba1c()
-    #                 .patient_querysets["passed"]
-    #                 .filter(pk=OuterRef("pk"))
-    #             ),
-    #             then=True,
-    #         ),
-    #         default=False,
-    #         output_field=BooleanField(),
-    #     ),
-    #     passed_bmi=Case(
-    #         When(
-    #             Exists(
-    #                 kpi_calculations_object.calculate_kpi_26_bmi()
-    #                 .patient_querysets["passed"]
-    #                 .filter(pk=OuterRef("pk"))
-    #             ),
-    #             then=True,
-    #         ),
-    #         default=False,
-    #         output_field=BooleanField(),
-    #     ),
-    #     passed_thyroid_screen=Case(
-    #         When(
-    #             Exists(
-    #                 kpi_calculations_object.calculate_kpi_27_thyroid_screen()
-    #                 .patient_querysets["passed"]
-    #                 .filter(pk=OuterRef("pk"))
-    #             ),
-    #             then=True,
-    #         ),
-    #         default=False,
-    #         output_field=BooleanField(),
-    #     ),
-    #     passed_blood_pressure=Case(
-    #         When(
-    #             Exists(
-    #                 kpi_calculations_object.calculate_kpi_28_blood_pressure()
-    #                 .patient_querysets["passed"]
-    #                 .filter(pk=OuterRef("pk"))
-    #             ),
-    #             then=True,
-    #         ),
-    #         default=Case(
-    #             When(is_gte_12yo=True, then=False),
-    #             default=None,
-    #             output_field=BooleanField(),
-    #         ),
-    #         output_field=BooleanField(),
-    #     ),
-    #     passed_urinary_albumin=Case(
-    #         When(
-    #             Exists(
-    #                 kpi_calculations_object.calculate_kpi_29_urinary_albumin()
-    #                 .patient_querysets["passed"]
-    #                 .filter(pk=OuterRef("pk"))
-    #             ),
-    #             then=True,
-    #         ),
-    #         default=Case(
-    #             When(is_gte_12yo=True, then=False),
-    #             default=None,
-    #             output_field=BooleanField(),
-    #         ),
-    #         output_field=BooleanField(),
-    #     ),
-    #     passed_retinal_screening=Case(
-    #         When(
-    #             Exists(
-    #                 kpi_calculations_object.calculate_kpi_30_retinal_screening()
-    #                 .patient_querysets["passed"]
-    #                 .filter(pk=OuterRef("pk"))
-    #             ),
-    #             then=True,
-    #         ),
-    #         default=Case(
-    #             When(is_gte_12yo=True, then=False),
-    #             default=None,
-    #             output_field=BooleanField(),
-    #         ),
-    #         output_field=BooleanField(),
-    #     ),
-    #     passed_foot_exam=Case(
-    #         When(
-    #             Exists(
-    #                 kpi_calculations_object.calculate_kpi_31_foot_examination()
-    #                 .patient_querysets["passed"]
-    #                 .filter(pk=OuterRef("pk"))
-    #             ),
-    #             then=True,
-    #         ),
-    #         default=Case(
-    #             When(is_gte_12yo=True, then=False),
-    #             default=None,
-    #             output_field=BooleanField(),
-    #         ),
-    #         output_field=BooleanField(),
-    #     ),
-    #     num_passed=Case(
-    #         When(
-    #             is_gte_12yo=True,
-    #             then=(
-    #                 Case(When(passed_hba1c=True, then=1), default=0)
-    #                 + Case(When(passed_bmi=True, then=1), default=0)
-    #                 + Case(When(passed_thyroid_screen=True, then=1), default=0)
-    #                 + Case(When(passed_blood_pressure=True, then=1), default=0)
-    #                 + Case(When(passed_urinary_albumin=True, then=1), default=0)
-    #                 + Case(When(passed_foot_exam=True, then=1), default=0)
-    #             ),
-    #         ),
-    #         When(
-    #             is_gte_12yo=False,
-    #             then=(
-    #                 Case(When(passed_hba1c=True, then=1), default=0)
-    #                 + Case(When(passed_bmi=True, then=1), default=0)
-    #                 + Case(When(passed_thyroid_screen=True, then=1), default=0)
-    #             ),
-    #         ),
-    #         default=0,
-    #         output_field=IntegerField(),
-    #     ),
-    #     num_total=Case(
-    #         When(is_gte_12yo=True, then=6),
-    #         When(is_gte_12yo=False, then=3),
-    #         default=0,
-    #         output_field=IntegerField(),
-    #     ),
-    # ).values(
-    #     "pk",
-    #     "patient_identifier",
-    #     "is_gte_12yo",
-    #     "is_complete_year_of_care",
-    #     "passed_hba1c",
-    #     "passed_bmi",
-    #     "passed_thyroid_screen",
-    #     "passed_blood_pressure",
-    #     "passed_urinary_albumin",
-    #     "passed_foot_exam",
-    #     "num_passed",
-    #     "num_total",
-    #     "passed_retinal_screening",
-    # )
-
+    
     # Gather totals
     return {
         "total_passed_bmi": total_passed_bmi,
