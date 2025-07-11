@@ -449,47 +449,6 @@ class NPDAUserUpdateView(
             else:
                 return super().post(request, *args, **kwargs)
 
-        
-
-
-class NPDAUserDeleteView(
-    LoginAndOTPRequiredMixin,
-    CheckPDUInstanceMixin,
-    PermissionRequiredMixin,
-    SuccessMessageMixin,
-    DeleteView,
-):
-    """
-    Handle deletion of user from audit
-    """
-
-    permission_required = "npda.delete_npdauser"
-    permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
-
-    model = NPDAUser
-    success_message = "NPDA User removed from database"
-    success_url = reverse_lazy("npda_users")
-
-    def post(self, request, *args, **kwargs):
-        """
-        Coordinators and RCPCH Audit Team can delete users, but only RCPCH Audit Team can delete those with multiple employers
-        Coordinators should not be able to delete themselves
-        """
-        requested_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
-        if requested_user.number_of_pdu_memberships() > 1:
-            if not (
-                self.request.user.is_superuser
-                or self.request.user.is_rcpch_audit_team_member
-            ):
-                raise PermissionDenied(
-                    "You do not have permission to delete this user as they are members of more than one PDU. Contact the NPDA for assistance."
-                )
-        if requested_user.pk == self.request.user.pk:
-            raise PermissionDenied(
-                "You cannot delete your own account. Contact the NPDA for assistance."
-            )
-        return super().post(request, *args, **kwargs)
-
 
 class NPDAUserLogsListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, ListView):
     template_name = "npda_user_logs.html"
