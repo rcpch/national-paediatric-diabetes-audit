@@ -2,6 +2,7 @@ import os
 
 from django.core.management.base import BaseCommand
 from azure.identity import DefaultAzureCredential
+from django.conf import settings
 
 # https://www.postgresql.org/docs/current/libpq-pgpass.html
 #
@@ -30,5 +31,8 @@ class Command(BaseCommand):
     help = "Generate a Postgres password file to use an Azure managed identity to authenticate with the database."
 
     def handle(self, *args, **options):
+        if settings.TEMP_TEST_1089_THROW_ON_STARTUP:
+            raise Exception("TEMP_TEST_1089_THROW_ON_STARTUP is set, throwing an exception on startup")
+
         write_azure_pg_password_file()
         
