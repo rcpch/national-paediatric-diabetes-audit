@@ -1,5 +1,13 @@
+from dateutil.relativedelta import relativedelta
+from django.db.models import (
+    BooleanField,
+    Case,
+    Exists,
+    F,
+    OuterRef,
+    When,
+)
 from django.shortcuts import render
-from project.npda.general_functions.audit_period import audit_period_for_audit_year
 from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.views.dashboard import helpers as hp
 from project.npda.views.decorators import login_and_otp_required
@@ -19,7 +27,8 @@ def patient_measurements(request):
         calculation_date=calculation_date, return_pt_querysets=True
     )
 
-    calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
+    kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
+
 
     # {
     #     "all": {
@@ -77,15 +86,260 @@ def patient_measurements(request):
         "dashboard/components/cards/card_partials/patient_measurements_partial.html"
     )
 
-    return render(
-        request,
-        template_name=template,
-        context={
-            "selected_audit_year": audit_period.audit_year(),
-            "pz_code": pz_code,
-            "hba1c_value_counts_stratified_by_diabetes_type": hba1c_value_counts_stratified_by_diabetes_type,
-            "submission_visit_error_count": submission_visit_error_count,
-            "submission_date": submission_date,
-            "affected_patients": affected_patients,
-        },
+    returned_patient_health_check_totals = patient_health_check_totals(
+        pz_code=pz_code,
+        calculation_date=calculation_date,
     )
+
+    context={
+        "selected_audit_year": audit_period.audit_year(),
+        "pz_code": pz_code,
+        "hba1c_value_counts_stratified_by_diabetes_type": hba1c_value_counts_stratified_by_diabetes_type,
+        "submission_visit_error_count": submission_visit_error_count,
+        "submission_date": submission_date,
+        "affected_patients": affected_patients,
+        "health_check_totals": returned_patient_health_check_totals,
+    }
+    context.update(**returned_patient_health_check_totals)
+    
+
+    return render(
+        request=request,
+        context=context,
+        template_name=template,
+    )
+
+def patient_health_check_totals(pz_code, calculation_date):
+    """
+    Returns the totals for the patient health check KPIs.
+    """
+    calculate_kpis = CalculateKPIS(
+        calculation_date=calculation_date, return_pt_querysets=True
+    )
+    calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+    # Select all T1DM patients for PZ code - Note that Jersey (PZ248) has a different patient identifier field
+    patient_identifier = (
+            "nhs_number" if pz_code != "PZ248" else "unique_reference_number"
+        )
+    all_t1dm_pts = (
+        calculate_kpis.calculate_kpi_3_total_t1dm()
+        .patient_querysets["eligible"]
+        .annotate(patient_identifier=F(patient_identifier))
+    )
+    all_t1dm_pts_with_complete_year_of_care = (
+        calculate_kpis.calculate_kpi_5_total_t1dm_complete_year().patient_querysets[
+            "eligible"
+        ]
+    )
+    pt_qs = all_t1dm_pts.annotate(
+        is_complete_year_of_care=Case(
+            When(
+                Exists(
+                    all_t1dm_pts_with_complete_year_of_care.filter(
+                        pk=OuterRef("pk")
+                    )
+                ),
+                then=True,
+            ),
+            default=False,
+            output_field=BooleanField(),
+        )
+    )
+
+    # Use the patient querysets to calculate totals
+    # Pre-calculate totals for the health checks from the base queryset before adding category-specific annotations
+    complete_year_patients = pt_qs.filter(is_complete_year_of_care=True)
+    
+    # Calculate totals using the KPI methods directly
+    
+    total_passed_bmi = calculate_kpis.calculate_kpi_26_bmi().patient_querysets["passed"].filter(
+        pk__in=complete_year_patients.values_list("pk", flat=True)
+    ).count()
+    total_eligible_bmi = complete_year_patients.count()
+    
+    total_passed_thyroid_screen = calculate_kpis.calculate_kpi_27_thyroid_screen().patient_querysets["passed"].filter(
+        pk__in=complete_year_patients.values_list("pk", flat=True)
+    ).count()
+    total_eligible_thyroid_screen = complete_year_patients.count()
+    
+    # For age-specific checks (12+ years old)
+    complete_year_12plus = complete_year_patients.filter(
+        date_of_birth__lte=calculation_date - relativedelta(years=12)
+    )
+    
+    total_passed_blood_pressure = calculate_kpis.calculate_kpi_28_blood_pressure().patient_querysets["passed"].filter(
+        pk__in=complete_year_12plus.values_list("pk", flat=True)
+    ).count()
+    total_eligible_blood_pressure = complete_year_12plus.count()
+    
+    total_passed_urinary_albumin = calculate_kpis.calculate_kpi_29_urinary_albumin().patient_querysets["passed"].filter(
+        pk__in=complete_year_12plus.values_list("pk", flat=True)
+    ).count()
+    total_eligible_urinary_albumin = complete_year_12plus.count()
+    
+    total_passed_foot_exam = calculate_kpis.calculate_kpi_31_foot_examination().patient_querysets["passed"].filter(
+        pk__in=complete_year_12plus.values_list("pk", flat=True)
+    ).count()
+    total_eligible_foot_exam = complete_year_12plus.count()
+    # pt_qs = pt_qs.annotate(
+    #     is_gte_12yo=Q(
+    #         date_of_birth__lte=calculation_date - relativedelta(years=12)
+    #     ),
+    #     passed_hba1c=Case(
+    #         When(
+    #             Exists(
+    #                 kpi_calculations_object.calculate_kpi_25_hba1c()
+    #                 .patient_querysets["passed"]
+    #                 .filter(pk=OuterRef("pk"))
+    #             ),
+    #             then=True,
+    #         ),
+    #         default=False,
+    #         output_field=BooleanField(),
+    #     ),
+    #     passed_bmi=Case(
+    #         When(
+    #             Exists(
+    #                 kpi_calculations_object.calculate_kpi_26_bmi()
+    #                 .patient_querysets["passed"]
+    #                 .filter(pk=OuterRef("pk"))
+    #             ),
+    #             then=True,
+    #         ),
+    #         default=False,
+    #         output_field=BooleanField(),
+    #     ),
+    #     passed_thyroid_screen=Case(
+    #         When(
+    #             Exists(
+    #                 kpi_calculations_object.calculate_kpi_27_thyroid_screen()
+    #                 .patient_querysets["passed"]
+    #                 .filter(pk=OuterRef("pk"))
+    #             ),
+    #             then=True,
+    #         ),
+    #         default=False,
+    #         output_field=BooleanField(),
+    #     ),
+    #     passed_blood_pressure=Case(
+    #         When(
+    #             Exists(
+    #                 kpi_calculations_object.calculate_kpi_28_blood_pressure()
+    #                 .patient_querysets["passed"]
+    #                 .filter(pk=OuterRef("pk"))
+    #             ),
+    #             then=True,
+    #         ),
+    #         default=Case(
+    #             When(is_gte_12yo=True, then=False),
+    #             default=None,
+    #             output_field=BooleanField(),
+    #         ),
+    #         output_field=BooleanField(),
+    #     ),
+    #     passed_urinary_albumin=Case(
+    #         When(
+    #             Exists(
+    #                 kpi_calculations_object.calculate_kpi_29_urinary_albumin()
+    #                 .patient_querysets["passed"]
+    #                 .filter(pk=OuterRef("pk"))
+    #             ),
+    #             then=True,
+    #         ),
+    #         default=Case(
+    #             When(is_gte_12yo=True, then=False),
+    #             default=None,
+    #             output_field=BooleanField(),
+    #         ),
+    #         output_field=BooleanField(),
+    #     ),
+    #     passed_retinal_screening=Case(
+    #         When(
+    #             Exists(
+    #                 kpi_calculations_object.calculate_kpi_30_retinal_screening()
+    #                 .patient_querysets["passed"]
+    #                 .filter(pk=OuterRef("pk"))
+    #             ),
+    #             then=True,
+    #         ),
+    #         default=Case(
+    #             When(is_gte_12yo=True, then=False),
+    #             default=None,
+    #             output_field=BooleanField(),
+    #         ),
+    #         output_field=BooleanField(),
+    #     ),
+    #     passed_foot_exam=Case(
+    #         When(
+    #             Exists(
+    #                 kpi_calculations_object.calculate_kpi_31_foot_examination()
+    #                 .patient_querysets["passed"]
+    #                 .filter(pk=OuterRef("pk"))
+    #             ),
+    #             then=True,
+    #         ),
+    #         default=Case(
+    #             When(is_gte_12yo=True, then=False),
+    #             default=None,
+    #             output_field=BooleanField(),
+    #         ),
+    #         output_field=BooleanField(),
+    #     ),
+    #     num_passed=Case(
+    #         When(
+    #             is_gte_12yo=True,
+    #             then=(
+    #                 Case(When(passed_hba1c=True, then=1), default=0)
+    #                 + Case(When(passed_bmi=True, then=1), default=0)
+    #                 + Case(When(passed_thyroid_screen=True, then=1), default=0)
+    #                 + Case(When(passed_blood_pressure=True, then=1), default=0)
+    #                 + Case(When(passed_urinary_albumin=True, then=1), default=0)
+    #                 + Case(When(passed_foot_exam=True, then=1), default=0)
+    #             ),
+    #         ),
+    #         When(
+    #             is_gte_12yo=False,
+    #             then=(
+    #                 Case(When(passed_hba1c=True, then=1), default=0)
+    #                 + Case(When(passed_bmi=True, then=1), default=0)
+    #                 + Case(When(passed_thyroid_screen=True, then=1), default=0)
+    #             ),
+    #         ),
+    #         default=0,
+    #         output_field=IntegerField(),
+    #     ),
+    #     num_total=Case(
+    #         When(is_gte_12yo=True, then=6),
+    #         When(is_gte_12yo=False, then=3),
+    #         default=0,
+    #         output_field=IntegerField(),
+    #     ),
+    # ).values(
+    #     "pk",
+    #     "patient_identifier",
+    #     "is_gte_12yo",
+    #     "is_complete_year_of_care",
+    #     "passed_hba1c",
+    #     "passed_bmi",
+    #     "passed_thyroid_screen",
+    #     "passed_blood_pressure",
+    #     "passed_urinary_albumin",
+    #     "passed_foot_exam",
+    #     "num_passed",
+    #     "num_total",
+    #     "passed_retinal_screening",
+    # )
+
+    # Gather totals
+    return {
+        "total_passed_bmi": total_passed_bmi,
+        "total_eligible_bmi": total_eligible_bmi,
+        "total_passed_thyroid_screen": total_passed_thyroid_screen,
+        "total_eligible_thyroid_screen": total_eligible_thyroid_screen,
+        "total_passed_blood_pressure": total_passed_blood_pressure,
+        "total_eligible_blood_pressure": total_eligible_blood_pressure,
+        "total_passed_urinary_albumin": total_passed_urinary_albumin,
+        "total_eligible_urinary_albumin": total_eligible_urinary_albumin,
+        "total_passed_foot_exam": total_passed_foot_exam,
+        "total_eligible_foot_exam": total_eligible_foot_exam,
+    }
