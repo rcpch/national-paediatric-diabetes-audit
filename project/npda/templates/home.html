@@ -13,11 +13,17 @@
           <p>{{pdu.1}}</p>
           <div class="card-actions justify-end">
             <div>
-              <button class="btn btn-primary">Upload data</button>
+              <a class="btn btn-primary" href="{% url 'view_preference' %}?pz_code_select_name={{ pdu.0}}&next_page=patients">
+                Upload data
+              </a>
             </div>
             <div>
-              <button class="btn btn-info">Unit Report</button>
-              <button class="btn btn-info">Patient Report</button>
+              <a class="btn btn-info" href="{% url 'view_preference' %}?pz_code_select_name={{ pdu.0}}&next_page=dashboard">
+                Unit Report
+              </a>
+              <a class="btn btn-info" href="{% url 'view_preference' %}?pz_code_select_name={{ pdu.0}}&next_page=patient_report">
+                Patient Report
+              </a>
             </div>
           </div>
         </div>

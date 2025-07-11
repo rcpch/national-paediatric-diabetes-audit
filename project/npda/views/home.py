@@ -3,8 +3,9 @@ from asgiref.sync import sync_to_async
 import logging
 
 # Django imports
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import HttpResponse
+from django.urls import reverse
 
 from project.npda.general_functions.csv import csv_header
 from ..general_functions.session import refresh_session_filters
@@ -52,17 +53,28 @@ def download_template(request):
 
 def view_preference(request):
     """
-    HTMX callback from the button press in the view_preference.html template.
+    Called from:
+      - HTMX callback from the switcher in view_preference.html
+      - Following the PDU specific links (upload data etc) from the home page
     """
+    next_page = request.GET.get("next_page", None)
 
-    view_preference_selection = request.POST.get("view_preference", None)
+    def get_param(name):
+        return request.GET.get(name, request.POST.get(name, None))
+
+    view_preference_selection = get_param("view_preference")
+    selected_pz_code = get_param("pz_code_select_name")
+
     view_preference = get_or_update_view_preference(
         request.user, view_preference_selection
     )
-    selected_pz_code = request.POST.get("pz_code_select_name", None)
 
-    # includes a validation step
+    # includes a permission check
     refresh_session_filters(request, pz_code=selected_pz_code)
+
+    if next_page:
+        # Use reverse to avoid an open redirect
+        return redirect(reverse(next_page))
 
     # Reload the page to apply the new view preference
     return HttpResponse(status=204, headers={"HX-Refresh": "true"})
