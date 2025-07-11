@@ -437,6 +437,15 @@ class NPDAUserUpdateView(
                     "npda_users",
                 )
                 return redirect(redirect_url)
+            elif "deactivate" in request.POST:
+                npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
+                npda_user.is_active = False
+                npda_user.save()
+                messages.success(
+                    request,
+                    f"NPDA User {npda_user.email} has been deactivated.",
+                )
+                return redirect(reverse("npda_users"))
             else:
                 return super().post(request, *args, **kwargs)
 
