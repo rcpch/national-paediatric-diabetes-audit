@@ -20,14 +20,15 @@ from dotenv import load_dotenv
 #  django imports
 from django.core.management.utils import get_random_secret_key
 
+# Has to be before logging_settings as that reads ENABLE_REQUEST_LOGGING
+load_dotenv("envs/.env")
+
 # RCPCH imports
 from .logging_settings import (
     LOGGING,
 )  # no it is not an unused import, it pulls LOGGING into the settings file
 
 logger = logging.getLogger(__name__)
-
-load_dotenv("envs/.env")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
