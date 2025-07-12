@@ -8,8 +8,6 @@ from project.npda.models import Visit, Submission, AuditPeriod
 
 @login_and_otp_required()
 def patient_measurements(request):
-
-    # First need to get the relevant calculations
     pz_code = request.session.get("pz_code")
 
     audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
@@ -51,11 +49,7 @@ def patient_measurements(request):
         calculate_kpis.calculate_kpi_hba1c_vals_stratified_by_diabetes_type()
     )
 
-    current_submission = Submission.objects.filter(
-        audit_period=audit_period,
-        paediatric_diabetes_unit__pz_code=pz_code,
-        submission_active=True
-    ).first()
+    current_submission = Submission.objects.get_submission_for_request(request, audit_period=audit_period)
 
     if current_submission:
         visits = Visit.objects.filter(patient__in=current_submission.patients.all())

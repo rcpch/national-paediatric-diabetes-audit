@@ -247,22 +247,10 @@ def all_patient_charts(request):
         "Unknown": 0,
     }
 
-    if Submission.objects.filter(
-        audit_year=audit_period.audit_year(),
-        submission_active=True,
-        paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
-        paediatric_diabetes_unit__active=True,
-    ).exists():
-        all_patients_in_this_submission = (
-            Submission.objects.filter(
-                audit_year=audit_period.audit_year(),
-                submission_active=True,
-                paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
-                paediatric_diabetes_unit__active=True,
-            )
-            .get()
-            .patients.all()
-        )
+    current_submission = Submission.objects.get_submission_for_request(request, audit_period=audit_period)
+
+    if current_submission:
+        all_patients_in_this_submission = current_submission.patients.all()
 
         for patient in all_patients_in_this_submission.values(
             "pk",
