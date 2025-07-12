@@ -51,18 +51,13 @@ def patient_measurements(request):
         calculate_kpis.calculate_kpi_hba1c_vals_stratified_by_diabetes_type()
     )
 
-    if Submission.objects.filter(
-        audit_year=audit_period.audit_year(),
+    current_submission = Submission.objects.filter(
+        audit_period=audit_period,
         paediatric_diabetes_unit__pz_code=pz_code,
-        paediatric_diabetes_unit__active=True,
-        submission_active=True,
-    ).exists():
-        current_submission = Submission.objects.filter(
-            audit_year=audit_period.audit_year(),
-            paediatric_diabetes_unit__pz_code=pz_code,
-            paediatric_diabetes_unit__active=True,
-            submission_active=True,
-        ).get()
+        submission_active=True
+    ).first()
+
+    if current_submission:
         visits = Visit.objects.filter(patient__in=current_submission.patients.all())
         submission_visits_with_errors = visits.filter(errors__isnull=False)
         submission_visit_error_count = submission_visits_with_errors.count()
@@ -81,8 +76,6 @@ def patient_measurements(request):
         request,
         template_name=template,
         context={
-            "selected_audit_year": audit_period.audit_year(),
-            "pz_code": pz_code,
             "hba1c_value_counts_stratified_by_diabetes_type": hba1c_value_counts_stratified_by_diabetes_type,
             "submission_visit_error_count": submission_visit_error_count,
             "submission_date": submission_date,
