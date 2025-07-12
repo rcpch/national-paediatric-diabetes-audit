@@ -402,7 +402,7 @@ def upload_csv_in_progress(request):
 
     last_submission = Submission.objects.filter(
         paediatric_diabetes_unit__pz_code=pz_code,
-        audit_year=audit_period.audit_year(),
+        audit_period=audit_period
     ).order_by("-submission_date").first()
 
     seconds_since_submission = (datetime.now(timezone.utc) - last_submission.submission_date).seconds
