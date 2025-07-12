@@ -207,18 +207,8 @@ class PatientListView(
         submission = None
         submission_error_count = 0
 
-        # TODO MRB: this should probably be a method on the Submission model?
-        #           https://github.com/rcpch/national-paediatric-diabetes-audit/issues/533
         if pz_code and selected_audit_year:
-            submission = (
-                Submission.objects.filter(
-                    paediatric_diabetes_unit__pz_code=pz_code,
-                    paediatric_diabetes_unit__active=True,
-                    audit_year=selected_audit_year,
-                )
-                .order_by("-submission_date")
-                .first()
-            )
+            submission = Submission.objects.get_submission_for_request(self.request)
 
             if submission and submission.errors:
                 submission_errors = json.loads(submission.errors)
