@@ -155,13 +155,55 @@ class CheckPDUInstanceMixin(AccessMixin):
             transfer = Transfer.objects.get(patient=requested_patient)
             requested_pdu = transfer.paediatric_diabetes_unit.pz_code
 
-        if (
+        if('activate' in request.POST or 'deactivate' in request.POST):
+            # If the user is trying to activate or deactivate a user, we need to check if they are allowed to do so
+            # This is only allowed if they have delete permissions for the user model, are in the same PDU (if not a superuser or audit team member), and the user is not in multiple PDUs
+            # Finally, they must not be trying to activate/deactivate themselves
+            if request.user.pk == int(self.kwargs.get('pk', 0)):
+                # If the user is trying to activate/deactivate themselves, we deny access
+                logger.warning(
+                    "User %s is trying to activate/deactivate themselves with PDU %s",
+                    request.user,
+                    requested_pdu,
+                )
+                raise PermissionDenied()
+            if request.user.has_perm('npda.delete_npdauser'):
+                # If the user has delete permissions, they can activate or deactivate users, so long as they are in the same PDU and the user is not in multiple PDUs, or 
+                # they are a superuser or audit team member and the user is not in multiple PDUs
+                requested_user = get_object_or_404(NPDAUser, pk=self.kwargs['pk'])
+                if (requested_pdu in user_pdus and requested_user.organisation_employers.count() == 1) or ((request.user.is_superuser or request.user.is_rcpch_audit_team_member) and requested_user.organisation_employers.count() == 1):
+                    logger.info(
+                        "User %s is trying to activate/deactivate a user with PDU %s",
+                        request.user,
+                        requested_pdu,
+                    )
+                    # Allow access to the view
+                    return super().dispatch(request, *args, **kwargs)
+                else:
+                    # User is trying to activate/deactivate a user with multiple PDUs, but they are not a superuser or audit team member
+                    logger.warning(
+                        "User %s is trying to activate/deactivate a user with PDU %s but does not have the correct permissions",
+                        request.user,
+                        requested_pdu,
+                    )
+                    # If they are not a superuser or audit team member, deny access
+                    raise PermissionDenied()
+            else:
+                # No permissions: You shall not pass! 🧙🏻‍♂️
+                logger.warning(
+                    "User %s is trying to activate/deactivate a user with PDU %s but does not have delete permissions",
+                    request.user,
+                    requested_pdu,
+                )
+                # If they are not a superuser or audit team member, deny access
+                raise PermissionDenied()
+        elif (
             request.user.is_superuser
             or request.user.is_rcpch_audit_team_member
             or (requested_pdu in user_pdus)
         ):
             return super().dispatch(request, *args, **kwargs)
-
+            
         else:
             logger.warning(
                 "User %s is unverified. Tried accessing %s but only has access to %s",

@@ -162,14 +162,16 @@
         </div>
       </div>
     </dialog>
-    <!-- Add this hidden form for the actual submission -->
-    <form id="deactivate-form"
-          method="post"
-          action="{% url 'npdauser-update' npda_user.pk %}"
-          style="display: none">
-      {% csrf_token %}
-      <input type="hidden" name="deactivate" value="true">
-    </form>
+    <!-- Add this hidden form for the actual submission -  only show if this is a bound form -->
+    {% if form_method == "update" %}
+      <form id="deactivate-form"
+            method="post"
+            action="{% url 'npdauser-update' npda_user.pk %}"
+            style="display: none">
+        {% csrf_token %}
+        <input type="hidden" name="deactivate" value="true">
+      </form>
+    {% endif %}
   </div>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
