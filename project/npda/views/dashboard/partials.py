@@ -42,32 +42,21 @@ def get_map_chart_partial(request):
     if not request.htmx:
         return HttpResponseBadRequest("This view is only accessible via HTMX")
 
-    # Fetch data from query parameters
-    pz_code: str = request.session.get("pz_code")
-    selected_audit_year = request.session.get("selected_audit_year")
+    submission = Submission.objects.get_submission_for_request(request)
+    lead_organisation_ods_code = submission.paediatric_diabetes_unit.lead_organisation_ods_code
 
     try:
-        paediatric_diabetes_unit = PaediatricDiabetesUnitClass.objects.get(
-            pz_code=pz_code
-        )
-
-        # get lead organisation for the selected PDU
         pdu_lead_organisation = fetch_organisation_by_ods_code(
-            ods_code=paediatric_diabetes_unit.lead_organisation_ods_code
+            ods_code=lead_organisation_ods_code
         )
     except:
         raise ValueError(
-            f"Lead organisation for PDU {paediatric_diabetes_unit.lead_organisation_ods_code=} not found"
+            f"Lead organisation for PDU {lead_organisation_ods_code=} not found"
         )
 
     try:
-
-        # thes are all registered patients for the current cohort at the selected organisation to be plotted in the map
-        patients_to_plot = get_children_by_pdu_audit_year(
-            paediatric_diabetes_unit=paediatric_diabetes_unit,
-            paediatric_diabetes_unit_lead_organisation=pdu_lead_organisation,
-            audit_year=selected_audit_year,
-        )
+        # these are all registered patients for the current cohort at the selected organisation to be plotted in the map
+        patients_to_plot = get_children_by_pdu_audit_year(submission,pdu_lead_organisation)
 
         # aggregated distances (mean, median, max, min) that patients have travelled to the selected organisation
         aggregated_distances, patient_distances_dataframe = (
@@ -81,7 +70,7 @@ def get_map_chart_partial(request):
             generate_distance_from_organisation_scatterplot_figure(
                 geo_df=patient_distances_dataframe,
                 pdu_lead_organisation=pdu_lead_organisation,
-                paediatric_diabetes_unit=paediatric_diabetes_unit,
+                paediatric_diabetes_unit=submission.paediatric_diabetes_unit,
             )
         )
 
@@ -122,7 +111,7 @@ def get_metric_scatter_plot(request):
 
         if request.method == "POST":
             selected_chart = request.POST["scatter_plot_select"]
-            submission, calculation_date = submission_and_calculation_date(request)
+            calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
             data, title, tooltip_text = get_selected_chart_data(
                 selected_chart, calculation_date, request.session.get("pz_code")
             )
@@ -247,7 +236,7 @@ def get_new_diagnoses_partial(request):
     # Get new diagnoses this submission
     pz_code = request.session.get("pz_code")
 
-    submission, calculation_date = submission_and_calculation_date(request)
+    calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=False
@@ -278,7 +267,7 @@ def get_new_admissions_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    submission, calculation_date = submission_and_calculation_date(request)
+    calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=False
@@ -305,7 +294,7 @@ def get_transitioned_to_adult_service_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    submission, calculation_date = submission_and_calculation_date(request)
+    calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -336,7 +325,7 @@ def get_moved_out_of_area_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    submission, calculation_date = submission_and_calculation_date(request)
+    calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -363,7 +352,7 @@ def get_n_on_hcl_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    submission, calculation_date = submission_and_calculation_date(request)
+    calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -402,7 +391,7 @@ def get_pump_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    submission, calculation_date = submission_and_calculation_date(request)
+    calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -438,7 +427,7 @@ def get_cgm_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    submission, calculation_date = submission_and_calculation_date(request)
+    calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -492,39 +481,3 @@ def get_selected_chart_data(selected_chart: str, calculation_date: date, pz_code
             "Numbers of patients with diabetes transitioned to adult services by quarter. These numbers include all patients who transition to adults by quarter in blue. Cumulative totals by quarter are shown in grey.",
         )
 
-
-def submission_and_calculation_date(request):
-    # Get new diagnoses this submission
-    pz_code = request.session.get("pz_code")
-
-    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
-        "npda", "PaediatricDiabetesUnit"
-    )
-    try:
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-    except PaediatricDiabetesUnit.DoesNotExist:
-        messages.error(
-            request=request,
-            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
-        )
-        return render(request, "dashboard.html")
-
-    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
-
-    if Submission.objects.filter(
-        paediatric_diabetes_unit=pdu,
-        audit_year=audit_period.audit_year(),
-        submission_active=True,
-    ).exists():
-        submission = Submission.objects.get(
-            paediatric_diabetes_unit=pdu,
-            audit_year=audit_period.audit_year(),
-            submission_active=True,
-        )
-        
-    else:
-        submission = None
-    
-    calculation_date = audit_period.kpi_calculation_date()
-
-    return submission, calculation_date
