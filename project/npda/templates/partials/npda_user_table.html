@@ -38,7 +38,7 @@
               <th scope="col"></th>
               <th scope="col"></th>
               <th scope="col"></th>
-              <th scope="col"></th>
+              {% if request.user.view_preference == 2 %}<th scope="col"></th>{% endif %}
             </tr>
           </thead>
         {% endifchanged %}
