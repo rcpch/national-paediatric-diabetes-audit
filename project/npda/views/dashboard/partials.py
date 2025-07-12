@@ -122,7 +122,7 @@ def get_metric_scatter_plot(request):
 
         if request.method == "POST":
             selected_chart = request.POST["scatter_plot_select"]
-            submission, calculation_date = submission_and_calculation_date(request)
+            calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date
             data, title, tooltip_text = get_selected_chart_data(
                 selected_chart, calculation_date, request.session.get("pz_code")
             )
@@ -247,7 +247,7 @@ def get_new_diagnoses_partial(request):
     # Get new diagnoses this submission
     pz_code = request.session.get("pz_code")
 
-    submission, calculation_date = submission_and_calculation_date(request)
+    calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=False
@@ -278,7 +278,7 @@ def get_new_admissions_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    submission, calculation_date = submission_and_calculation_date(request)
+    calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=False
@@ -305,7 +305,7 @@ def get_transitioned_to_adult_service_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    submission, calculation_date = submission_and_calculation_date(request)
+    calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -336,7 +336,7 @@ def get_moved_out_of_area_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    submission, calculation_date = submission_and_calculation_date(request)
+    calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -363,7 +363,7 @@ def get_n_on_hcl_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    submission, calculation_date = submission_and_calculation_date(request)
+    calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -402,7 +402,7 @@ def get_pump_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    submission, calculation_date = submission_and_calculation_date(request)
+    calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -438,7 +438,7 @@ def get_cgm_partial(request):
 
     pz_code = request.session.get("pz_code")
 
-    submission, calculation_date = submission_and_calculation_date(request)
+    calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
 
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
@@ -492,39 +492,3 @@ def get_selected_chart_data(selected_chart: str, calculation_date: date, pz_code
             "Numbers of patients with diabetes transitioned to adult services by quarter. These numbers include all patients who transition to adults by quarter in blue. Cumulative totals by quarter are shown in grey.",
         )
 
-
-def submission_and_calculation_date(request):
-    # Get new diagnoses this submission
-    pz_code = request.session.get("pz_code")
-
-    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
-        "npda", "PaediatricDiabetesUnit"
-    )
-    try:
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-    except PaediatricDiabetesUnit.DoesNotExist:
-        messages.error(
-            request=request,
-            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
-        )
-        return render(request, "dashboard.html")
-
-    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
-
-    if Submission.objects.filter(
-        paediatric_diabetes_unit=pdu,
-        audit_year=audit_period.audit_year(),
-        submission_active=True,
-    ).exists():
-        submission = Submission.objects.get(
-            paediatric_diabetes_unit=pdu,
-            audit_year=audit_period.audit_year(),
-            submission_active=True,
-        )
-        
-    else:
-        submission = None
-    
-    calculation_date = audit_period.kpi_calculation_date()
-
-    return submission, calculation_date
