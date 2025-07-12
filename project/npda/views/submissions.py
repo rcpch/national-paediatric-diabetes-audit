@@ -13,7 +13,7 @@ from django.apps import apps
 from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, Case, When, F, Value, IntegerField, OuterRef, Subquery
+from django.db.models import Count, Case, When, F, Value, IntegerField, OuterRef, Subquery, Max, DateField
 from django.db.models.functions import Concat, ExtractMonth, ExtractYear
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
@@ -95,10 +95,16 @@ class SubmissionsListView(
             full_name_submission_by=Concat(
                 "submission_by__first_name", Value(" "), "submission_by__surname"
             ),
+            latest_patient_visit_date=Subquery(
+                Patient.objects.filter(submissions=OuterRef("pk"), visit__visit_date__isnull=False)
+                .order_by("-visit__visit_date")
+                .values("visit__visit_date")[:1]
+            ),
         ).order_by(
             "audit_year",
             "-submission_active",
             "-submission_date",
+            "-latest_patient_visit_date"
         )
 
         return final
@@ -140,57 +146,46 @@ class SubmissionsListView(
             )
         
         if self.request.user.viewing_data_nationally():
-            selected_audit_year = AuditPeriod.objects.get_audit_period_for_request(self.request).audit_year()
-
-            latest_active_submission = Submission.objects.filter(
-                paediatric_diabetes_unit=OuterRef("pk"),
-                submission_active=True,
-                audit_year=selected_audit_year,
-            ).order_by("paediatric_diabetes_unit").values("submission_date")[:1]
-
-            paediatric_diabetes_units = PaediatricDiabetesUnit.objects.annotate(
-                latest_submission_date=Subquery(latest_active_submission),
-                submission_month=ExtractMonth("latest_submission_date"),
-                submission_year_raw=ExtractYear("latest_submission_date"),
-                # Determine the audit year for the submission date
-                audit_year_for_submission=Case(
-                    When(submission_month__gte=4, then=F("submission_year_raw")),
-                    default=F("submission_year_raw") - 1,
+            selected_audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
+            # Start with ALL active PDUs, not just those with submissions
+            chart_data = PaediatricDiabetesUnit.objects.filter(
+                active=True
+            ).annotate(
+                # Get the latest visit date from active submissions (if any)
+                latest_patient_visit_date=Subquery(
+                    self.get_queryset().filter(
+                        paediatric_diabetes_unit=OuterRef('pk'),
+                        submission_active=True,
+                        latest_patient_visit_date__isnull=False
+                    ).values('latest_patient_visit_date')[:1]
+                ),
+                # Extract month and year from the latest visit date
+                visit_month=ExtractMonth("latest_patient_visit_date"),
+                visit_year_raw=ExtractYear("latest_patient_visit_date"),
+                # Calculate quarter based on visit date (None for PDUs with no submissions)
+                latest_visit_quarter=Case(
+                    When(visit_month__in=[4, 5, 6], then=Value(1)),
+                    When(visit_month__in=[7, 8, 9], then=Value(2)),
+                    When(visit_month__in=[10, 11, 12], then=Value(3)),
+                    When(visit_month__in=[1, 2, 3], then=Value(4)),
+                    default=Value(0),  # 0 for PDUs with no submissions
                     output_field=IntegerField(),
-                ),
-                # Define the start dates for each quarter based on the audit year (using the selected audit year for context)
-                quarter1_start=Case(
-                    When(submission_month__gte=4, then=date(selected_audit_year, 4, 1)),
-                    default=date(selected_audit_year - 1, 4, 1),
-                ),
-                quarter2_start=Case(
-                    When(submission_month__gte=4, then=date(selected_audit_year, 7, 1)),
-                    default=date(selected_audit_year - 1, 7, 1),
-                ),
-                quarter3_start=Case(
-                    When(submission_month__gte=4, then=date(selected_audit_year, 10, 1)),
-                    default=date(selected_audit_year - 1, 10, 1),
-                ),
-                quarter4_start=Case(
-                    When(submission_month__gte=4, then=date(selected_audit_year + 1, 1, 1)),
-                    default=date(selected_audit_year, 1, 1),
-                ),
-                quarter4_end=Case(
-                    When(submission_month__gte=4, then=date(selected_audit_year + 1, 3, 31)),
-                    default=date(selected_audit_year, 3, 31),
-                ),
-                # Determine the quarter using conditional expressions
-                latest_submission_quarter=Case(
-                    When(latest_submission_date__gte=F("quarter1_start"), latest_submission_date__lt=F("quarter2_start"), then=Value(1)),
-                    When(latest_submission_date__gte=F("quarter2_start"), latest_submission_date__lt=F("quarter3_start"), then=Value(2)),
-                    When(latest_submission_date__gte=F("quarter3_start"), latest_submission_date__lt=F("quarter4_start"), then=Value(3)),
-                    When(latest_submission_date__gte=F("quarter4_start"), latest_submission_date__lte=F("quarter4_end"), then=Value(4)),
-                    output_field=IntegerField(),
-                ),
-            ).values("pz_code", "parent_name", "latest_submission_quarter")
-            column_chart = create_column_chart(paediatric_diabetes_units, selected_audit_year)
+                )
+            ).values(
+                "pz_code",
+                "parent_name", 
+                "latest_visit_quarter"
+            )
+
+            
+            column_chart = create_column_chart(chart_data, selected_audit_period.audit_year())
             context["column_chart"] = column_chart.to_html(full_html=False)
-            context["submission_statistics"] = submission_stats(selected_audit_year)
+            context['non_submission_pdus'] = chart_data.filter(latest_visit_quarter=0).values_list(
+                "pz_code",
+                "parent_name"
+            )
+            context["audit_period"] = selected_audit_period
+            context["submission_statistics"] = submission_stats(selected_audit_period.audit_year())
 
         return context
 
@@ -232,7 +227,6 @@ class SubmissionsListView(
                 queryset = queryset.filter(submission_active=True)
 
             self.object_list = queryset
-            print(f"Toggle result after: {toggle_result}")
             context = self.get_context_data(object_list=self.object_list)
             context["toggle_inactive_submissions"] = toggle_result
             return render(request=request, template_name=template, context=context)
@@ -460,29 +454,65 @@ def switch_paediatric_diabetes_unit(request):
 
 def create_column_chart(pdus_by_latest_submission, selected_audit_year):
     """
-    Create a column chart based on the latest submission data.
+    Create a bar chart based on the latest submission data.
     """
     # Create a Pandas DataFrame
     df = pd.DataFrame(pdus_by_latest_submission)
 
-    # Create the Plotly column chart
-    fig = go.Figure(data=[go.Bar(x=df['pz_code'], y=df['latest_submission_quarter'], marker_color=RCPCH_LIGHT_BLUE)])
+     # Create horizontal bar chart (quarters on x-axis, PDUs on y-axis)
+    fig = go.Figure(data=[
+        go.Bar(
+            x=df['latest_visit_quarter'],  # Quarter values on x-axis
+            y=df['pz_code'],  # PZ codes on y-axis (creates horizontal bars)
+            customdata=df['parent_name'],  # Use parent_name for hover text
+            orientation='h',  # Horizontal orientation
+            marker_color= RCPCH_LIGHT_BLUE,
+            text=[f"Q{q}" if q > 0 else "No Data" for q in df['latest_visit_quarter']],
+            textposition='inside',  # Text inside bars for horizontal layout
+            hovertemplate='<b>%{y} (%{customdata})</b><br>Quarter: %{text}<extra></extra>',
+            textfont=dict(
+                color='white', 
+                size=12,
+                family='Montserrat' # Change font family
+            ),
+            hoverlabel=dict(
+                bgcolor=RCPCH_LIGHT_BLUE,  
+                bordercolor=RCPCH_LIGHT_BLUE, 
+                font=dict(
+                    color='white',
+                    size=14,
+                    family='Montserrat'
+                )
+        ))
+    ])
 
-    # Update layout
+    # Update layout for horizontal bars
     fig.update_layout(
-        title=f"Latest Submission Quarter by PZ Code (Audit Year: {selected_audit_year})",
-        xaxis_title="PZ Code",
-        yaxis_title="Latest Submission Quarter",
+        title=dict(
+            text=f"Latest Submission Data by Quarter (using latest visit date) against PZ Code (Audit Year: {selected_audit_year})",
+            font=dict(
+                family='Montserrat',
+                size=16,
+                color='black'
+            ),
+            x=0.5,  # Center the title horizontally
+            xanchor='center'  # Anchor the title at its center
+        ),
+        xaxis_title="Latest Quarter (by Latest Visit Date)",
+        yaxis_title="PZ Code",
         xaxis=dict(
-            tickangle=-45,
-            tickfont=dict(color='black')  # Set a default color for all labels
+            tickvals=[0, 1, 2, 3, 4],
+            ticktext=["No Data", "Q1", "Q2", "Q3", "Q4"],
+            range=[0, 4.5]  # Ensure all values are visible
         ),
         yaxis=dict(
-            tickvals=[1, 2, 3, 4],
-            ticktext=["Q1", "Q2", "Q3", "Q4"]
+            tickfont=dict(color='black', size=10),  # Smaller font for many PDUs
+            automargin=True  # Auto-adjust margins for long PDU names
         ),
         paper_bgcolor='white',
-        
+        height=max(400, len(df) * 25),  # Dynamic height based on number of PDUs
+        margin=dict(l=100, r=50, t=80, b=50),  # Adjust margins for PDU labels
+        showlegend=False
     )
 
     return fig
