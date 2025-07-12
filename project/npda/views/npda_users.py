@@ -23,6 +23,7 @@ from django.views.generic import ListView
 # third party imports
 from two_factor.views import LoginView as TwoFactorLoginView
 from django_filters.views import FilterView
+from django_otp import devices_for_user, user_has_device
 
 from project.constants.user import AUDIT_CENTRE_COORDINATOR
 from project.npda.filtersets.npdauser_filterset import NPDAUserFilterSet
@@ -269,6 +270,9 @@ class NPDAUserUpdateView(
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
+        user = NPDAUser.objects.get(pk=self.kwargs["pk"])
+
         context["show_rcpch_team"] = (
             self.request.user.is_superuser
             or self.request.user.is_rcpch_audit_team_member
@@ -279,12 +283,20 @@ class NPDAUserUpdateView(
         context["title"] = "Edit NPDA User Details"
         context["button_title"] = "Save"
         context["form_method"] = "update"
-        context["npda_user"] = NPDAUser.objects.get(pk=self.kwargs["pk"])
+        context["npda_user"] = user
         context["organisation_employers"] = (
-            OrganisationEmployer.objects.filter(npda_user=context["npda_user"])
+            OrganisationEmployer.objects.filter(npda_user=user)
             .all()
             .order_by("-is_primary_employer")
         )
+
+        context["has_two_factor"] = user_has_device(user)
+
+        two_factor_devices = devices_for_user(user)
+        # The name doesn't describe the method used
+        two_factor_devices = [f"{device.name} ({str(type(device).__name__)})" for device in two_factor_devices]
+        context["two_factor_devices"] = two_factor_devices
+
         return context
 
     def form_valid(self, form):
@@ -436,6 +448,7 @@ class NPDAUserUpdateView(
                     "npda_users",
                 )
                 return redirect(redirect_url)
+
             elif "deactivate" in request.POST:
                 # Deactivation pathway - toggle the is_active field of the user. A user can only be deactivated if they are not a superuser or RCPCH Audit Team member.
                 # That of course can happen but for now we will only do this in the admin interface.
@@ -461,6 +474,26 @@ class NPDAUserUpdateView(
                     success_message
                 )
                 return redirect(reverse("npda_users"))
+
+            elif "reset-two-factor" in request.POST:
+                if not request.user.is_superuser or not request.user.is_rcpch_audit_team_member:
+                    raise PermissionDenied("You do not have permission to reset two-factor authentication.")
+
+                npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
+                
+                devices = devices_for_user(user=npda_user)
+                for device in devices:
+                    device.delete()
+
+                messages.success(
+                    request,
+                    f"Two-factor authentication reset for {npda_user.email}.",
+                )
+                redirect_url = reverse(
+                    "npda_users",
+                )
+                return redirect(redirect_url)
+
             else:
                 return super().post(request, *args, **kwargs)
 

@@ -93,6 +93,27 @@
           </div>
         </div>
       {% endfor %}
+      <div class="flex flex-row">
+        <strong class="font-montserrat font-bold md:w-1/3 text-right pr-2 mb-2">Two Factor Authentication</strong>
+        <div class="text-left md:w-2/3 mb-2" id="primary_pdu">
+          {% if not has_two_factor %}
+            <p class="text-gray-700">Not yet registered</p>
+          {% else %}
+            <ul >
+              {% for device in two_factor_devices %}
+                <li class="list-none">{{device}}</li>
+              {% endfor %}
+            </ul>
+            {% if form_method == 'update' and two_factor_devices %}
+              <button value="Submit"
+                      name="reset-two-factor"
+                      class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-1.5 px-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue {% if not perms.npda.change_npdauser %}disabled{% endif %}">
+                Reset Two-Factor Authentication
+              </button>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
       <button type="submit"
               value="Submit"
               class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 mt-20 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue mb-5 {% if not perms.npda.change_npdauser %}btn-disabled opacity-50 cursor-not-allowed pointer-events-none {% endif %}">
