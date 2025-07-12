@@ -51,25 +51,11 @@ Functions to return scatter plot of children by postcode
 """
 
 
-def get_children_by_pdu_audit_year(
-    audit_year, paediatric_diabetes_unit, paediatric_diabetes_unit_lead_organisation
-):
+def get_children_by_pdu_audit_year(submission, paediatric_diabetes_unit_lead_organisation):
     """
     Returns a list of children by postcode for a given audit year and paediatric diabetes unit
     """
     Patient = apps.get_model("npda", "Patient")
-    Submission = apps.get_model("npda", "Submission")
-
-    AuditPeriod = apps.get_model("npda", "AuditPeriod")
-    audit_period = AuditPeriod.objects.filter(
-        start_date__year=audit_year,
-    ).first()
-
-    submission = Submission.objects.filter(
-        audit_period=audit_period,
-        paediatric_diabetes_unit=paediatric_diabetes_unit,
-        submission_active=True,
-    ).first()
 
     if submission is None:
         return Patient.objects.none()

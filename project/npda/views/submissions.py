@@ -370,7 +370,7 @@ async def upload_csv(request):
         audit_period = await sync_to_async(AuditPeriod.objects.get_audit_period_for_request)(request)
 
         if not audit_period.is_open and not (request.user.is_superuser or request.user.is_rcpch_audit_team_member):
-            raise PermissionDenied(f"Upload is closed for {audit_period.audit_year()}.")
+            raise PermissionDenied(f"Upload is closed for {audit_period}.")
 
         new_submission = await create_csv_submission(
             pdu=pdu,
@@ -402,7 +402,7 @@ def upload_csv_in_progress(request):
 
     last_submission = Submission.objects.filter(
         paediatric_diabetes_unit__pz_code=pz_code,
-        audit_year=audit_period.audit_year(),
+        audit_period=audit_period
     ).order_by("-submission_date").first()
 
     seconds_since_submission = (datetime.now(timezone.utc) - last_submission.submission_date).seconds
