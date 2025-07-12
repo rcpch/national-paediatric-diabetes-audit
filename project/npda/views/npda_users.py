@@ -87,12 +87,11 @@ class NPDAUserListView(
 
         if self.request.user.viewing_data_nationally():
             return (
-                queryset.order_by("surname")
+                queryset.order_by("-is_active", "surname")
             )
 
         return (
-            queryset.filter(organisation_employers__pz_code=pz_code)
-            .order_by("surname")
+            queryset.filter(organisation_employers__pz_code=pz_code).order_by("-is_active", "surname")
         )
 
     def get_context_data(self, **kwargs):
