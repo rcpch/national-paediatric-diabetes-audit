@@ -25,7 +25,7 @@
             {{ hba1c_value_counts_stratified_by_diabetes_type.t2dm.mean_mmol_mol|hba1c_units:True }} {{ hba1c_value_counts_stratified_by_diabetes_type.t2dm.mean_percent|hba1c_units:False }}
           </td>
           <td>
-            {{ hba1c_value_counts_stratified_by_diabetes_type.other.mean_mmol_mol|hba1c_units:True }} {{ hba1c_value_counts_stratified_by_diabetes_type.other.mean_percent|hba1c_units:False }}
+            {{ hba1c_value_counts_stratified_by_diabetes_type.other.mean_mmol_mol|hba1c_units:True }} {{ hba1c_value_counts_stratified_by_diabetes_type.other.median_percent|hba1c_units:False }}
           </td>
         </tr>
         <tr>
@@ -46,11 +46,11 @@
       </tbody>
     </table>
   </div>
-  {% comment %} stats {% endcomment %}
+  <!-- Data Quality Stats -->
   <a href="{% url 'patients' %}"
      class="tooltip"
      data-tip="Click here to view all patients and review any data quality issues">
-    <div class="flex flex-row justify-between text-center justify-center">
+    <div class="flex flex-row justify-between text-center justify-center mb-4">
       <div class="stats shadow">
         <div class="stat place-items-center">
           <div class="stat-figure text-primary"></div>
@@ -65,6 +65,112 @@
             {% endif %}
           </div>
           <div class="stat-desc">Last upload: {{ submission_date }}</div>
+        </div>
+      </div>
+    </div>
+  </a>
+  <!-- Health Checks Stats -->
+  <a href="{% url 'patient_report' %}"
+     class="tooltip block"
+     data-tip="Click here to view health check total counts for all patients with T1 diabetes in this submission">
+    <!-- Health Checks Title -->
+    <div class="text-center mb-2">
+      <h3 class="text-base font-semibold text-rcpch_light_blue">Health Checks</h3>
+    </div>
+    <!-- Stats Container - Compact and responsive -->
+    <div class="stats stats-vertical lg:stats-horizontal shadow text-rcpch_light_blue w-full overflow-hidden">
+      <!-- BMI Stat -->
+      <div class="stat place-items-center p-2">
+        <div class="stat-figure">
+          <i class="fa-solid fa-weight-scale fa-lg text-rcpch_light_blue"></i>
+        </div>
+        <div class="stat-title text-xs">BMI</div>
+        <div class="stat-value text-sm text-rcpch_light_blue">
+          {{ total_passed_bmi|percentage:total_eligible_bmi }}
+        </div>
+        <div class="stat-desc text-xs">
+          {{ total_passed_bmi }}/{{ total_eligible_bmi }}
+        </div>
+      </div>
+      <!-- Thyroid Stat -->
+      <div class="stat place-items-center p-2">
+        <div class="stat-figure">
+          <svg xmlns="http://www.w3.org/2000/svg"
+               viewBox="0 0 512 512"
+               height="24px"
+               width="24px"
+               fill="#11a7f2">
+            <path d=" M144 96 C100 96, 64 168, 64 256 S100 416, 144 416 C164 416, 192 384, 192 304 V208 C192 128, 164 96, 144 96 Z  M304 96 C348 96, 384 168, 384 256 S348 416, 304 416 C284 416, 256 384, 256 304 V208 C256 128, 284 96, 304 96 Z  M192 208 H256 V304 H192 Z " />
+          </svg>
+        </div>
+        <div class="stat-title text-xs">Thyroid</div>
+        <div class="stat-value text-sm text-rcpch_light_blue">
+          {{ total_passed_thyroid_screen|percentage:total_eligible_thyroid_screen }}
+        </div>
+        <div class="stat-desc text-xs">
+          {{ total_passed_thyroid_screen }}/{{ total_eligible_thyroid_screen }}
+        </div>
+      </div>
+      <!-- Blood Pressure Stat -->
+      <div class="stat place-items-center p-2">
+        <div class="stat-figure">
+          <i class="fa-solid fa-heart-pulse fa-lg text-rcpch_light_blue"></i>
+        </div>
+        <div class="stat-title text-xs">BP</div>
+        <div class="stat-value text-sm text-rcpch_light_blue">
+          {{ total_passed_blood_pressure|percentage:total_eligible_blood_pressure }}
+        </div>
+        <div class="stat-desc text-xs">
+          {{ total_passed_blood_pressure }}/{{ total_eligible_blood_pressure }}
+        </div>
+      </div>
+      <!-- ACR Stat -->
+      <div class="stat place-items-center p-2">
+        <div class="stat-figure">
+          <svg xmlns="http://www.w3.org/2000/svg"
+               viewBox="0 0 512 512"
+               height="24px"
+               width="24px"
+               fill="#11a7f2">
+            <!-- Left kidney -->
+            <path d=" M176 96 C112 96, 64 160, 64 256 C64 352, 112 416, 176 416 C208 416, 224 384, 224 352 C224 320, 208 288, 208 256 C208 224, 224 192, 224 160 C224 128, 208 96, 176 96 Z" />
+            <!-- Right kidney -->
+            <path d=" M336 96 C400 96, 448 160, 448 256 C448 352, 400 416, 336 416 C304 416, 288 384, 288 352 C288 320, 304 288, 304 256 C304 224, 288 192, 288 160 C288 128, 304 96, 336 96 Z" />
+          </svg>
+        </div>
+        <div class="stat-title text-xs">ACR</div>
+        <div class="stat-value text-sm text-rcpch_light_blue">
+          {{ total_passed_urinary_albumin|percentage:total_eligible_urinary_albumin }}
+        </div>
+        <div class="stat-desc text-xs">
+          {{ total_passed_urinary_albumin }}/{{ total_eligible_urinary_albumin }}
+        </div>
+      </div>
+      <!-- Foot Examination Stat -->
+      <div class="stat place-items-center p-2">
+        <div class="stat-figure">
+          <svg fill="#11a7f2"
+               height="24px"
+               width="24px"
+               version="1.1"
+               xmlns="http://www.w3.org/2000/svg"
+               viewBox="0 0 489.978 489.978">
+            <g>
+            <path d="M184.231,239.9c43.9,23.3,64.5,75.4,49.8,123.3c-2.7,8.6-5.1,17.5-7,26.4c-7.8,40,2.7,90.2,46.7,99.1 c22.2,4.7,44.3-3.9,59.9-20.2c46.5-50.5,32.3-202.6,31.9-240.7c0-16.7-0.4-33.8-7-49.4c-14.8-35-56.4-49-93.3-58.7 c-60.6-22.1-98.8,5.8-111.6,26.4S131.531,212.5,184.231,239.9z" />
+            <ellipse cx="141.831" cy="44.3" rx="31.5" ry="44.3" />
+            <ellipse cx="214.631" cy="51.7" rx="18.7" ry="26.4" />
+            <ellipse cx="272.931" cy="68" rx="16.7" ry="23.3" />
+            <ellipse cx="326.131" cy="81.7" rx="14.8" ry="20.6" />
+            <ellipse transform="matrix(-0.2014 0.9795 -0.9795 -0.2014 546.9331 -227.4809)" cx="366.2" cy="109.218" rx="18.3" ry="13.2" />
+            </g>
+          </svg>
+        </div>
+        <div class="stat-title text-xs">Feet</div>
+        <div class="stat-value text-sm text-rcpch_light_blue">
+          {{ total_passed_foot_exam|percentage:health_check_totals.total_eligible_foot_exam }}
+        </div>
+        <div class="stat-desc text-xs">
+          {{ total_passed_foot_exam }}/{{ total_eligible_foot_exam }}
         </div>
       </div>
     </div>

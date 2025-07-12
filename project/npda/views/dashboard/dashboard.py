@@ -146,6 +146,14 @@ def dashboard(request):
         "aggregation_level": "pdu",
     }
 
+    # Gather totals for the patient health check KPIs
+    # patient_health_check_totals_to_return = patient_health_check_totals(
+    #     calculate_kpis=calculate_kpis,
+    #     pz_code=pz_code,
+    #     calculation_date=calculation_date,
+    # )
+    # context.update(patient_health_check_totals_to_return)
+
     return render(request, template_name=template, context=context)
 
 
