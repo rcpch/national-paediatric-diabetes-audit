@@ -111,7 +111,7 @@ def get_metric_scatter_plot(request):
 
         if request.method == "POST":
             selected_chart = request.POST["scatter_plot_select"]
-            calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date
+            calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
             data, title, tooltip_text = get_selected_chart_data(
                 selected_chart, calculation_date, request.session.get("pz_code")
             )
