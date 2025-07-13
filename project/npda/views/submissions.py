@@ -16,6 +16,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Case, When, F, Value, IntegerField, OuterRef, Subquery, Max, DateField
 from django.db.models.functions import Concat, ExtractMonth, ExtractYear
 from django.http import HttpResponse
+from django.urls import reverse
 from django.shortcuts import render, redirect
 from django.views.generic import ListView
 
@@ -410,15 +411,17 @@ def upload_csv_in_progress(request):
     seconds_since_submission = (datetime.now(timezone.utc) - last_submission.submission_date).seconds
     minutes_since_submission = seconds_since_submission / 60
 
-    timeout = minutes_since_submission > 10
+    timeout = seconds_since_submission > 30
     if timeout:
         # Error to trigger admin email
+        response = HttpResponse()
+        response.headers["HX-Redirect"] = reverse("patients")
         logger.error(f"Submission timed out. Submission ID: {last_submission.pk}. PZ Code: {pz_code}")
         messages.error(
             request,
             f"{last_submission.csv_file_name} took too long to process. Please contact the NPDA team for assistance.",
         )
-        return redirect("patients") 
+        return response
     
     else:
         total_patients = last_submission.total_unique_patients
