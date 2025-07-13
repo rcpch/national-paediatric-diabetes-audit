@@ -1,0 +1,29 @@
+<div class="mb-10 text-4xl font-bold text-center">
+  Processing {{ csv_file_name }}. Your data is being uploaded....
+</div>
+<div class="text-center text-3xl">
+  Your CSV has {{ total_patients }} patients in {{ total_rows }} rows. These being prepared and processed and saved to NPDA...
+</div>
+<div class="radial-progress text-rcpch_light_blue mt-5 mb-5 font-montserrat font-semibold"
+     style="--value:{{ patient_progress|floatformat:0 }};
+            --size:12rem;
+            --thickness: 1.2rem"
+     aria-valuenow="{{ patients_so_far }}"
+     aria-valuemax="{{ total_patients }}"
+     role="progressbar">{{ patients_so_far }}/{{ total_patients }}</div>
+<div class="stats shadow">
+  <div class="stat">
+    <div class="stat-title">Visits processed so far</div>
+    <div class="stat-value text-center">{{ visits_so_far }}</div>
+    <div class="stat-desc">of {{ total_rows }} rows</div>
+  </div>
+</div>
+<div class="container flex flex-row justify-center items-center my-20">
+  {% if not completed %}
+    <div class="alert alert-warning shadow-lg">
+      <i class="fa-solid fa-info"></i>
+      <span>Upload is still in progress. Please wait...</span>
+    </div>
+  </div>
+{% endif %}
+</div>

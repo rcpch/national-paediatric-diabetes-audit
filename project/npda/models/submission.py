@@ -77,6 +77,27 @@ class Submission(models.Model):
         blank=True,
     )
 
+    total_unique_patients = models.IntegerField(
+        "Total unique patients",
+        help_text="Total number of unique patients in this submission",
+        null=True,
+        blank=True,
+    )
+
+    visit_counts_per_patient = models.JSONField(
+        "Visit counts per patient",
+        help_text="Counts of visits per patient in this submission",
+        null=True,
+        blank=True,
+    )
+
+    total_unique_visits = models.IntegerField(
+        "Total unique visits",
+        help_text="Total number of unique visits in this submission",
+        null=True,
+        blank=True,
+    )
+
     patients = models.ManyToManyField(
         to="npda.Patient", through="npda.PatientSubmission", related_name="submissions"
     )

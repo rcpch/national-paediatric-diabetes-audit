@@ -33,7 +33,8 @@ from ..general_functions.csv import (
     download_csv,
     download_xlsx,
     csv_parse,
-    create_csv_submission
+    create_csv_submission,
+    gather_unique_patient_and_visit_counts
 )
 from .mixins import LoginAndOTPRequiredMixin
 from ..models import (
@@ -377,6 +378,13 @@ async def upload_csv(request):
             ip_address=get_client_ip(request),
         )
 
+        # Gather unique patient and visit counts and update the submission
+        patient_count, visit_per_patient_count, total_rows = gather_unique_patient_and_visit_counts(parsed_csv.df, is_jersey)
+        new_submission.total_unique_patients = patient_count
+        new_submission.total_unique_visits = total_rows
+        new_submission.visit_counts_per_patient = json.dumps(visit_per_patient_count)
+        await sync_to_async(new_submission.save)()
+        
         upload_csv_task.delay(new_submission.id)
 
         # update the session fields - this stores that the user has uploaded a csv and disables the ability to use the questionnaire
@@ -410,20 +418,38 @@ def upload_csv_in_progress(request):
             request,
             f"{last_submission.csv_file_name} took too long to process. Please contact the NPDA team for assistance.",
         )
-
-    if last_submission and not last_submission.submission_active and not timeout:
+        return redirect("submissions-list")
+    
+    else:
+        total_patients = last_submission.total_unique_patients
+        total_rows = last_submission.total_unique_visits
         patients_so_far = Patient.objects.filter(submissions=last_submission).count()
         visits_so_far = Patient.objects.filter(submissions=last_submission).aggregate(Count("visit"))["visit__count"]
-
+        upload_complete = total_rows == visits_so_far and total_patients == patients_so_far
+        csv_file_name = last_submission.csv_file_name
         context = {
-            "csv_file_name": last_submission.csv_file_name,
+            "csv_file_name": csv_file_name,
             "patients_so_far": patients_so_far,
-            "visits_so_far": visits_so_far
+            "visits_so_far": visits_so_far,
+            "total_patients": total_patients,
+            "total_rows": total_rows,
+            "patient_progress": patients_so_far / total_patients * 100 if total_patients else 0,
+            "upload_complete": upload_complete,
         }
 
-        return render(request, "upload_csv/upload_in_progress.html", context=context)
+        if request.htmx:
+            if upload_complete:
+                response = render(request, "upload_csv/upload_complete.html", context=context)
+                return response
+            else:
+                return render(request, "upload_csv/uploading_csv.html", context=context)
+
+    return render(request, "upload_csv/upload_in_progress.html", context=context)
+
     
-    return redirect("patients") 
+    
+    # return render(request, "upload_csv/upload_in_progress.html", context=context)
+    # return redirect("patients")
 
 @login_and_otp_required()
 def switch_paediatric_diabetes_unit(request):
