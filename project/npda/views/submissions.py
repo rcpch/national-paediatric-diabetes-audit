@@ -409,69 +409,45 @@ def upload_csv_in_progress(request):
     ).order_by("-submission_date").first()
 
     seconds_since_submission = (datetime.now(timezone.utc) - last_submission.submission_date).seconds
-    minutes_since_submission = seconds_since_submission / 60
 
     timeout = seconds_since_submission > 15
-    if timeout:
-        # Error to return to the user if the submission has timed out
-        if last_submission:
-            total_patients = last_submission.total_unique_patients
-            total_rows = last_submission.total_unique_visits
-            patients_so_far = Patient.objects.filter(submissions=last_submission).count()
-            visits_so_far = Patient.objects.filter(submissions=last_submission).aggregate(Count("visit"))["visit__count"]
-            upload_complete = True
-            csv_file_name = last_submission.csv_file_name
-            context = {
-                "csv_file_name": csv_file_name,
-                "patients_so_far": patients_so_far,
-                "visits_so_far": visits_so_far,
-                "total_patients": total_patients,
-                "total_rows": total_rows,
-                "patient_progress": patients_so_far / total_patients * 100 if total_patients else 0,
-                "upload_complete": upload_complete,
-                "timeout": True,
-            }
-            response = render(request, "upload_csv/upload_complete.html", context=context)
-            return response
-
-        response = HttpResponse()
-        response.headers["HX-Redirect"] = reverse("patients")
-        logger.error(f"Submission timed out. Submission ID: {last_submission.pk}. PZ Code: {pz_code}")
-        messages.error(
-            request,
-            f"{last_submission.csv_file_name} took too long to process. Please contact the NPDA team for assistance.",
-        )
-        return response
     
-    else:
-        total_patients = last_submission.total_unique_patients
-        total_rows = last_submission.total_unique_visits
-        patients_so_far = Patient.objects.filter(submissions=last_submission).count()
-        visits_so_far = Patient.objects.filter(submissions=last_submission).aggregate(Count("visit"))["visit__count"]
-        upload_complete = total_rows == visits_so_far and total_patients == patients_so_far
-        csv_file_name = last_submission.csv_file_name
-        context = {
-            "csv_file_name": csv_file_name,
-            "patients_so_far": patients_so_far,
-            "visits_so_far": visits_so_far,
-            "total_patients": total_patients,
-            "total_rows": total_rows,
-            "patient_progress": patients_so_far / total_patients * 100 if total_patients else 0,
-            "upload_complete": upload_complete,
-            "timeout": timeout,
-        }
+    total_patients = last_submission.total_unique_patients
+    total_rows = last_submission.total_unique_visits
+    patients_so_far = Patient.objects.filter(submissions=last_submission).count()
+    visits_so_far = Patient.objects.filter(submissions=last_submission).aggregate(Count("visit"))["visit__count"]
+    upload_complete = total_rows == visits_so_far and total_patients == patients_so_far
+    csv_file_name = last_submission.csv_file_name
+    if timeout:
+        upload_complete = True # if timeout, we assume the upload is complete as this triggers redirect to upload_complete template
+        if last_submission:
+            pass
+        else:
+            # here there is an error with the headers or the csv file is empty
+            # we return an error message to the user and redirect them to the patients page
+            messages.error(
+                request,
+                "The upload has timed out. Please try again.",
+            )
+            return redirect("patients")
+    
+    context = {
+        "csv_file_name": csv_file_name,
+        "patients_so_far": patients_so_far,
+        "visits_so_far": visits_so_far,
+        "total_patients": total_patients,
+        "total_rows": total_rows,
+        "patient_progress": patients_so_far / total_patients * 100 if total_patients else 0,
+        "upload_complete": upload_complete,
+        "timeout": timeout,
+    }
 
-        if request.htmx:
-            response = render(request, "upload_csv/upload_in_progress_wrapper.html", context=context)
-            return response
+    if request.htmx:
+        response = render(request, "upload_csv/upload_in_progress_wrapper.html", context=context)
+        return response
             
 
     return render(request, "upload_csv/upload_in_progress.html", context=context)
-
-    
-    
-    # return render(request, "upload_csv/upload_in_progress.html", context=context)
-    # return redirect("patients")
 
 @login_and_otp_required()
 def switch_paediatric_diabetes_unit(request):
