@@ -418,7 +418,7 @@ def upload_csv_in_progress(request):
             request,
             f"{last_submission.csv_file_name} took too long to process. Please contact the NPDA team for assistance.",
         )
-        return redirect("submissions-list")
+        return redirect("patients") 
     
     else:
         total_patients = last_submission.total_unique_patients
