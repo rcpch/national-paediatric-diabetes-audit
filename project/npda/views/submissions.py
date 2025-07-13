@@ -411,9 +411,29 @@ def upload_csv_in_progress(request):
     seconds_since_submission = (datetime.now(timezone.utc) - last_submission.submission_date).seconds
     minutes_since_submission = seconds_since_submission / 60
 
-    timeout = seconds_since_submission > 30
+    timeout = seconds_since_submission > 15
     if timeout:
-        # Error to trigger admin email
+        # Error to return to the user if the submission has timed out
+        if last_submission:
+            total_patients = last_submission.total_unique_patients
+            total_rows = last_submission.total_unique_visits
+            patients_so_far = Patient.objects.filter(submissions=last_submission).count()
+            visits_so_far = Patient.objects.filter(submissions=last_submission).aggregate(Count("visit"))["visit__count"]
+            upload_complete = True
+            csv_file_name = last_submission.csv_file_name
+            context = {
+                "csv_file_name": csv_file_name,
+                "patients_so_far": patients_so_far,
+                "visits_so_far": visits_so_far,
+                "total_patients": total_patients,
+                "total_rows": total_rows,
+                "patient_progress": patients_so_far / total_patients * 100 if total_patients else 0,
+                "upload_complete": upload_complete,
+                "timeout": True,
+            }
+            response = render(request, "upload_csv/upload_complete.html", context=context)
+            return response
+
         response = HttpResponse()
         response.headers["HX-Redirect"] = reverse("patients")
         logger.error(f"Submission timed out. Submission ID: {last_submission.pk}. PZ Code: {pz_code}")
@@ -438,14 +458,13 @@ def upload_csv_in_progress(request):
             "total_rows": total_rows,
             "patient_progress": patients_so_far / total_patients * 100 if total_patients else 0,
             "upload_complete": upload_complete,
+            "timeout": timeout,
         }
 
         if request.htmx:
-            if upload_complete:
-                response = render(request, "upload_csv/upload_complete.html", context=context)
-                return response
-            else:
-                return render(request, "upload_csv/uploading_csv.html", context=context)
+            response = render(request, "upload_csv/upload_in_progress_wrapper.html", context=context)
+            return response
+            
 
     return render(request, "upload_csv/upload_in_progress.html", context=context)
 

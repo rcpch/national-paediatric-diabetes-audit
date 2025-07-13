@@ -1,0 +1,14 @@
+<div id="upload-container">
+  {% if not upload_complete %}
+    <div id="csv-in-progress-upload-container"
+         class="container flex flex-col justify-center items-center my-20"
+         hx-get="{% url 'upload-csv-in-progress' %}"
+         hx-trigger="every 1s"
+         hx-target="#upload-container"
+         hx-swap="outerHTML">
+      {% include 'upload_csv/uploading_csv.html' with total_patients=total_patients total_rows=total_rows visits_so_far=visits_so_far patients_so_far=patients_so_far csv_file_name=csv_file_name patient_progress=patient_progress %}
+    </div>
+  {% else %}
+    {% include 'upload_csv/upload_complete.html' with total_patients=total_patients total_rows=total_rows visits_so_far=visits_so_far patients_so_far=patients_so_far %}
+  {% endif %}
+</div>
