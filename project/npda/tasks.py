@@ -17,7 +17,7 @@ def test_task():
     logger.info("These are the PDUs registered in the database:")
 
     for pdu in PaediatricDiabetesUnit.objects.all():
-        logger.info(f"\t{pdu.parent_name} [{pdu.pz_code}]")
+        logger.info(f"\t{pdu.lead_organisation_name} [{pdu.pz_code}]")
 
 
 @shared_task
