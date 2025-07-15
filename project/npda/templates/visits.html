@@ -8,7 +8,7 @@
         <div class="w-full overflow-x-auto relative">
           {% include 'partials/page_elements/data_rules_banner.html' %}
           <div>
-            <strong>All {{ paediatric_diabetes_unit.parent_name }} ({{ paediatric_diabetes_unit.pz_code }}) Visits (April {{ submission.audit_year }} - March {{ request.session.selected_audit_year|add:'1' }}) for {% nhs_number_vs_urn pz_code %} {% nhs_number_vs_urn pz_code patient %} (NPDA ID-{{ patient.pk }})</strong>
+            <strong>All {{ paediatric_diabetes_unit.lead_organisation_name }} ({{ paediatric_diabetes_unit.pz_code }}) Visits (April {{ submission.audit_year }} - March {{ request.session.selected_audit_year|add:'1' }}) for {% nhs_number_vs_urn pz_code %} {% nhs_number_vs_urn pz_code patient %} (NPDA ID-{{ patient.pk }})</strong>
           </div>
           {% if visits %}
             <table class="font-montserrat table-md w-full table mb-5 text-sm text-left text-gray-400 text-gray-500 rtl:text-right">

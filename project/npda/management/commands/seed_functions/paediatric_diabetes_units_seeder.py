@@ -36,7 +36,7 @@ def paediatric_diabetes_units_seeder():
             lead_organisation_ods_code = (
                 pdu.get("primary_organisation") or {}
             ).get("ods_code")
-            lead_organisation_name = (pdu.get("primary_organisation") or {}).get("name")
+            lead_organisation_name = pdu.get("name")
             last_updated = pdu.get("last_updated") or None
             active = pdu.get("active") or None
 

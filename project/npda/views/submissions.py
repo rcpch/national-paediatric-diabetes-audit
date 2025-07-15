@@ -173,7 +173,7 @@ class SubmissionsListView(
                 )
             ).values(
                 "pz_code",
-                "parent_name", 
+                "lead_organisation_name", 
                 "latest_visit_quarter"
             )
 
@@ -182,7 +182,7 @@ class SubmissionsListView(
             context["column_chart"] = column_chart.to_html(full_html=False)
             context['non_submission_pdus'] = chart_data.filter(latest_visit_quarter=0).values_list(
                 "pz_code",
-                "parent_name"
+                "lead_organisation_name"
             )
             context["audit_period"] = selected_audit_period
             context["submission_statistics"] = submission_stats(selected_audit_period.audit_year())
@@ -464,7 +464,7 @@ def create_column_chart(pdus_by_latest_submission, selected_audit_year):
         go.Bar(
             x=df['latest_visit_quarter'],  # Quarter values on x-axis
             y=df['pz_code'],  # PZ codes on y-axis (creates horizontal bars)
-            customdata=df['parent_name'],  # Use parent_name for hover text
+            customdata=df['lead_organisation_name'],  # Use lead_organisation_name for hover text
             orientation='h',  # Horizontal orientation
             marker_color= RCPCH_LIGHT_BLUE,
             text=[f"Q{q}" if q > 0 else "No Data" for q in df['latest_visit_quarter']],

@@ -9,7 +9,7 @@
       {{ submission_statistics.latest_submission.pdu.pz_code|none_to_dash }}
     </div>
     <div class="stat-desc">
-      {{ submission_statistics.latest_submission.pdu.parent_name|none_to_dash }} on {{ submission_statistics.latest_submission.submission_date|none_to_dash }}
+      {{ submission_statistics.latest_submission.pdu.lead_organisation_name|none_to_dash }} on {{ submission_statistics.latest_submission.submission_date|none_to_dash }}
     </div>
   </div>
   <div class="stat shadow">
@@ -21,7 +21,7 @@
       {{ submission_statistics.fewest_errors.error_number|none_to_dash }}
     </div>
     <div class="stat-desc">
-      {{ submission_statistics.fewest_errors.pdu.parent_name|none_to_dash }} ({{ submission_statistics.fewest_errors.pdu.pz_code|none_to_dash }})
+      {{ submission_statistics.fewest_errors.pdu.lead_organisation_name|none_to_dash }} ({{ submission_statistics.fewest_errors.pdu.pz_code|none_to_dash }})
     </div>
   </div>
   <div class="stat">
@@ -33,7 +33,7 @@
       {{ submission_statistics.most_patients.patient_number|none_to_dash }}
     </div>
     <div class="stat-desc">
-      {{ submission_statistics.most_patients.pdu.parent_name|none_to_dash }} ({{ submission_statistics.most_patients.pdu.pz_code|none_to_dash }})
+      {{ submission_statistics.most_patients.pdu.lead_organisation_name|none_to_dash }} ({{ submission_statistics.most_patients.pdu.pz_code|none_to_dash }})
     </div>
   </div>
   <div class="stat">
@@ -45,7 +45,7 @@
       {{ submission_statistics.most_visits.visit_number_per_patient|none_to_dash }}
     </div>
     <div class="stat-desc">
-      {{ submission_statistics.most_visits.pdu.parent_name|none_to_dash }} ({{ submission_statistics.most_patients.pdu.pz_code|none_to_dash }})
+      {{ submission_statistics.most_visits.pdu.lead_organisation_name|none_to_dash }} ({{ submission_statistics.most_patients.pdu.pz_code|none_to_dash }})
     </div>
   </div>
 </div>

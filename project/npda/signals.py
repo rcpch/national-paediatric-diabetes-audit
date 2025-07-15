@@ -203,7 +203,7 @@ def log_user_pdu_assignment(sender, instance, created, **kwargs):
     
     if created:
         # New PDU assignment
-        details = f"User {instance.npda_user.email} assigned to PDU {instance.paediatric_diabetes_unit.pz_code} ({instance.paediatric_diabetes_unit.parent_name}) by {current_user.email if current_user else 'system'}"
+        details = f"User {instance.npda_user.email} assigned to PDU {instance.paediatric_diabetes_unit.pz_code} ({instance.paediatric_diabetes_unit.lead_organisation_name}) by {current_user.email if current_user else 'system'}"
         
         _log_user_activity(
             user=instance.npda_user,
@@ -238,7 +238,7 @@ def log_user_pdu_removal(sender, instance, **kwargs):
     from .logging import get_current_user
     current_user = get_current_user()
     
-    details = f"User {instance.npda_user.email} removed from PDU {instance.paediatric_diabetes_unit.pz_code} ({instance.paediatric_diabetes_unit.parent_name}) by {current_user.email if current_user else 'system'}"
+    details = f"User {instance.npda_user.email} removed from PDU {instance.paediatric_diabetes_unit.pz_code} ({instance.paediatric_diabetes_unit.lead_organisation_name}) by {current_user.email if current_user else 'system'}"
     
     # _log_user_activity(
     #     user=instance.npda_user,
@@ -506,7 +506,7 @@ def _send_pdu_assignment_notification(organisation_employer_instance, current_us
     A user's PDU assignment has been modified:
     
     User: {user.get_full_name()} ({user.email})
-    PDU: {pdu.parent_name} ({pdu.pz_code})
+    PDU: {pdu.lead_organisation_name} ({pdu.pz_code})
     Action: User {action} PDU
     Modified by: {current_user.email if current_user else 'System'}
     
