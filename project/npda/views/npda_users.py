@@ -476,23 +476,23 @@ class NPDAUserUpdateView(
                 return redirect(reverse("npda_users"))
 
             elif "reset-two-factor" in request.POST:
-                if not request.user.is_superuser or not request.user.is_rcpch_audit_team_member:
+                if request.user.is_superuser or request.user.is_rcpch_audit_team_member:
+                    npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
+                    
+                    devices = devices_for_user(user=npda_user)
+                    for device in devices:
+                        device.delete()
+
+                    messages.success(
+                        request,
+                        f"Two-factor authentication reset for {npda_user.email}.",
+                    )
+                    redirect_url = reverse(
+                        "npda_users",
+                    )
+                    return redirect(redirect_url)
+                else:
                     raise PermissionDenied("You do not have permission to reset two-factor authentication.")
-
-                npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
-                
-                devices = devices_for_user(user=npda_user)
-                for device in devices:
-                    device.delete()
-
-                messages.success(
-                    request,
-                    f"Two-factor authentication reset for {npda_user.email}.",
-                )
-                redirect_url = reverse(
-                    "npda_users",
-                )
-                return redirect(redirect_url)
 
             else:
                 return super().post(request, *args, **kwargs)

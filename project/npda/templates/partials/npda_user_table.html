@@ -142,7 +142,7 @@
             <td class="w-1/12 text-center">
               <div class="tooltip tooltip-top">
                 <span class="tooltip tooltip-left"
-                      data-tip="{% for item in npda_user.organisation_employers.all %}{{ item.parent_name }} ({{ item.pz_code }}){% if not forloop.last %}, {% endif %}{% endfor %}">
+                      data-tip="{% for item in npda_user.organisation_employers.all %}{{ item.lead_organisation_name }} ({{ item.pz_code }}){% if not forloop.last %}, {% endif %}{% endfor %}">
                   <i class="fa-solid fa-hospital fa-xl text-rcpch_pink ml-2 mr-2"></i>
                   {% for item in npda_user.organisation_employers.all %}
                     {{ item }}

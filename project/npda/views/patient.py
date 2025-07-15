@@ -207,18 +207,8 @@ class PatientListView(
         submission = None
         submission_error_count = 0
 
-        # TODO MRB: this should probably be a method on the Submission model?
-        #           https://github.com/rcpch/national-paediatric-diabetes-audit/issues/533
         if pz_code and selected_audit_year:
-            submission = (
-                Submission.objects.filter(
-                    paediatric_diabetes_unit__pz_code=pz_code,
-                    paediatric_diabetes_unit__active=True,
-                    audit_year=selected_audit_year,
-                )
-                .order_by("-submission_date")
-                .first()
-            )
+            submission = Submission.objects.get_submission_for_request(self.request)
 
             if submission and submission.errors:
                 submission_errors = json.loads(submission.errors)
@@ -347,11 +337,7 @@ class PatientCreateView(
         pz_code = self.request.session.get("pz_code")
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
         context = super().get_context_data(**kwargs)
-        title = f"Add New Child to {pdu.parent_name}  ({pdu.pz_code})"
-        if (
-            pdu.parent_name is not None
-        ):  # if the PDU has a parent, include the parent name in the title
-            title = f"Add New Child to  {pdu.parent_name} ({pz_code})"
+        title = f"Add New Child to {pdu.lead_organisation_name}  ({pdu.pz_code})"
         context["title"] = title
         context["button_title"] = "Create New Child Patient Record"
         context["form_method"] = "create"
@@ -481,11 +467,7 @@ class PatientUpdateView(
         pdu = PaediatricDiabetesUnit.objects.get(
             pz_code=transfer.paediatric_diabetes_unit.pz_code
         )
-        title = f"Edit Child Details in {pdu.parent_name}  ({transfer.paediatric_diabetes_unit.pz_code})"
-        if (
-            transfer.paediatric_diabetes_unit.parent_name is not None
-        ):  # if the PDU has a parent, include the parent name in the title
-            title = f"Add New Child to {transfer.paediatric_diabetes_unit.parent_name} ({transfer.paediatric_diabetes_unit.pz_code})"
+        title = f"Edit Child Details in {pdu.lead_organisation_name}  ({transfer.paediatric_diabetes_unit.pz_code})"
         context["title"] = title
         context["button_title"] = "Save Changes"
         context["form_method"] = "update"
