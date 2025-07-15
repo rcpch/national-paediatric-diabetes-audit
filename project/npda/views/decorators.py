@@ -86,15 +86,15 @@ def check_data_permissions():
             can_view_all_data = request.user.is_superuser or request.user.is_rcpch_audit_team_member
 
             try:
-                audit_period = AuditPeriod.objects.get(pk=kwargs["audit_period_id"])
+                audit_period = AuditPeriod.objects.get(slug=kwargs["audit_period"])
             except AuditPeriod.DoesNotExist as e:
                 if not can_view_all_data:
-                    raise PermissionDenied(f"Audit period {kwargs['audit_period_id']} does not exist")
+                    raise PermissionDenied(f"Audit period {kwargs['audit_period']} does not exist")
 
                 raise e
 
             if not audit_period.is_visible and not can_view_all_data:
-                raise PermissionDenied(f"Audit period {kwargs['audit_period_id']} is not visible")
+                raise PermissionDenied(f"Audit period {kwargs['audit_period']} is not visible")
 
             try:
                 pdu = PaediatricDiabetesUnit.objects.get(pz_code=kwargs["pz_code"])
@@ -119,7 +119,6 @@ def check_data_permissions():
                 "pdu": pdu
             }
 
-            del next_kwargs["audit_period_id"]
             del next_kwargs["pz_code"]
 
             return view(request, *args, **next_kwargs)

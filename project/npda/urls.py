@@ -189,7 +189,7 @@ dashboard_urlpatterns = [
         name="patient_measurements",
     ),
     path(
-        "period/<str:audit_period_id>/pdu/<str:pz_code>/test",
+        "period/<str:audit_period>/pdu/<str:pz_code>/test",
         view=test_tenant_view,
         name="test_tenant_view",
     )
