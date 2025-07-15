@@ -24,7 +24,7 @@ from django.views.generic import ListView
 import pandas as pd
 import plotly.graph_objects as go
 
-from project.npda.views.decorators import login_and_otp_required
+from project.npda.views.decorators import login_and_otp_required, check_data_permissions
 
 # RCPCH imports
 from project.constants.colors import RCPCH_LIGHT_BLUE
@@ -305,7 +305,8 @@ class SubmissionsListView(
 
 
 @login_and_otp_required()
-async def upload_csv(request):
+@check_data_permissions()
+async def upload_csv(request, audit_period, pdu):
     if request.session.get("can_upload_csv") is False:
         # If the user does not have permission to upload csvs, redirect them to the submissions page
         return redirect("dashboard")

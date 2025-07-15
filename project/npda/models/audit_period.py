@@ -16,6 +16,7 @@ class AuditPeriodManager(models.Manager):
 
         return audit_period
 
+    # TODO MRB: replace with the check_data_permissions mixin?
     def get_audit_period_for_request(self, request):
         selected_audit_year = request.session.get("selected_audit_year", None)
 

@@ -22,29 +22,40 @@ from .views.dashboard.patient_characteristics import (
     all_patient_charts,
 )
 
+data_prefix = "period/<str:audit_period>/pdu/<str:pz_code>"
+
 urlpatterns = [
     path("", view=home, name="home"),
     path("home", view=home, name="home"),
+    # TODO MRB: do this one too
     path(
         "home/download_template",
         view=download_template,
         name="download_template",
     ),
+    # TODO MRB: remove these
     path("view_preference", view=view_preference, name="view_preference"),
     path("audit-year", view=audit_year, name="audit-year"),
+
     path("upload_csv", view=upload_csv, name="upload_csv"),
+    path(f"{data_prefix}/upload_csv", view=upload_csv, name="upload_csv"),
+    
     path("upload_csv_in_progress", view=upload_csv_in_progress, name="upload-csv-in-progress"),
+
+    # TODO MRB: remove this
     path(
         "switch_paediatric_diabetes_unit",
         view=switch_paediatric_diabetes_unit,
         name="switch_paediatric_diabetes_unit",
     ),
+
     # Submission views
     path(
         "submissions",
         view=SubmissionsListView.as_view(),
         name="submissions",
     ),
+    
     # Patient views
     path(
         "patients",
@@ -189,7 +200,7 @@ dashboard_urlpatterns = [
         name="patient_measurements",
     ),
     path(
-        "period/<str:audit_period>/pdu/<str:pz_code>/test",
+        f"{data_prefix}/test",
         view=test_tenant_view,
         name="test_tenant_view",
     )
