@@ -188,6 +188,11 @@ dashboard_urlpatterns = [
         view=patient_measurements,
         name="patient_measurements",
     ),
+    path(
+        "period/<str:audit_period_id>/pdu/<str:pz_code>/test",
+        view=test_tenant_view,
+        name="test_tenant_view",
+    )
 ]
 
 patient_report_urlpatterns = [

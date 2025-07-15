@@ -3,9 +3,13 @@ from functools import wraps
 from django.shortcuts import redirect
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from asgiref.sync import sync_to_async
 import asyncio
 import logging
+
+from ..models import AuditPeriod, PaediatricDiabetesUnit
+
 
 logger = logging.getLogger(__name__)
 
@@ -71,5 +75,55 @@ def login_and_otp_required():
             return async_login_and_otp_required
         else:
             return sync_login_and_otp_required
+
+    return decorator
+
+
+def check_data_permissions():
+    def decorator(view):
+        @wraps(view)
+        def wrapped_view(request, *args, **kwargs):
+            can_view_all_data = request.user.is_superuser or request.user.is_rcpch_audit_team_member
+
+            try:
+                audit_period = AuditPeriod.objects.get(pk=kwargs["audit_period_id"])
+            except AuditPeriod.DoesNotExist as e:
+                if not can_view_all_data:
+                    raise PermissionDenied(f"Audit period {kwargs['audit_period_id']} does not exist")
+
+                raise e
+
+            if not audit_period.is_visible and not can_view_all_data:
+                raise PermissionDenied(f"Audit period {kwargs['audit_period_id']} is not visible")
+
+            try:
+                pdu = PaediatricDiabetesUnit.objects.get(pz_code=kwargs["pz_code"])
+            except PaediatricDiabetesUnit.DoesNotExist as e:
+                if not can_view_all_data:
+                    raise PermissionDenied(f"PDU {kwargs['pz_code']} does not exist")
+
+                raise e
+
+            if not can_view_all_data:
+                can_view_this_pdu = request.user.organisation_employers.filter(
+                    pz_code=pdu.pz_code
+                ).exists()
+
+                if not can_view_this_pdu:
+                    raise PermissionDenied(
+                        f"User {request.user} does not have permission to view PDU {pdu.pz_code}"
+                    )
+
+            next_kwargs = kwargs | {
+                "audit_period": audit_period,
+                "pdu": pdu
+            }
+
+            del next_kwargs["audit_period_id"]
+            del next_kwargs["pz_code"]
+
+            return view(request, *args, **next_kwargs)
+
+        return wrapped_view
 
     return decorator

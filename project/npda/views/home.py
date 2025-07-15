@@ -11,7 +11,7 @@ from ..general_functions.session import refresh_session_filters
 from ..general_functions.view_preference import get_or_update_view_preference
 
 # RCPCH imports
-from .decorators import login_and_otp_required
+from .decorators import login_and_otp_required, check_data_permissions
 
 from project.npda.tasks import test_task
 
@@ -94,3 +94,8 @@ def celery_test_task(request):
     test_task.delay()
 
     return HttpResponse(status=204)
+
+
+@check_data_permissions()
+def test_tenant_view(request, audit_period, pdu):
+    return HttpResponse(f"This is a test tenant view. Audit Period: {audit_period}, PDU: {pdu}")
