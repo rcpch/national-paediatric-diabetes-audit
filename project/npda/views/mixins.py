@@ -12,6 +12,8 @@ from django.shortcuts import get_object_or_404
 from project.npda.models.npda_user import NPDAUser
 from project.npda.models.patient import Patient
 from project.npda.models.audit_period import AuditPeriod
+from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
+from project.npda.models.transfer import Transfer
 
 
 logger = logging.getLogger(__name__)
@@ -71,39 +73,20 @@ class CheckPDUListMixin(AccessMixin):
         if not request.user.is_authenticated:
             return self.handle_no_permission()
 
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(request, *args, **kwargs)
+        pdu = PaediatricDiabetesUnit.objects.get_audit_period_for_request(request, *args, **kwargs)
+
         model = self.get_model().__name__
 
-        # get PDU assigned to user
-        user_pdus = request.user.organisation_employers.values_list(
-            "pz_code", flat=True
-        )
-
-        # get pdu that user is requesting access of
-        requested_pdu = ""
         if model == "Visit":
-            requested_patient = get_object_or_404(Patient, pk=self.kwargs["patient_id"])
-            Transfer = apps.get_model("npda", "Transfer")
-            transfer = Transfer.objects.get(patient=requested_patient)
-            requested_pdu = transfer.paediatric_diabetes_unit.pz_code
+            transfer = Transfer.objects.get(patient__id=self.kwargs["patient_id"])
+            if not transfer.paediatric_diabetes_unit in request.user.organisation_employers.all():
+                raise PermissionDenied(f"User {request.user} does not have permission to view {model} for PDU {pdu.pz_code} in audit period {audit_period.slug}")
+        
+        self.audit_period = audit_period
+        self.pdu = pdu
 
-        elif model == "NPDAUser" or model == "Patient":
-            requested_pdu = request.session.get("pz_code")
-
-        if (
-            request.user.is_superuser
-            or request.user.is_rcpch_audit_team_member
-            or (requested_pdu in user_pdus)
-        ):
-            return super().dispatch(request, *args, **kwargs)
-
-        else:
-            logger.info(
-                "User %s is unverified. Tried accessing %s but only has access to %s",
-                request.user,
-                requested_pdu,
-                user_pdus,
-            )
-            raise PermissionDenied()
+        return super().dispatch(request, *args, **kwargs)
 
 
 class CheckPDUInstanceMixin(AccessMixin):

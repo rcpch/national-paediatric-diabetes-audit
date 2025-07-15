@@ -1,8 +1,7 @@
 from datetime import date
 
 from django.contrib.gis.db import models
-from django.core.exceptions import ValidationError
-
+from django.core.exceptions import ValidationError, PermissionDenied
 
 class AuditPeriodManager(models.Manager):
     def get_default_audit_period(self):
@@ -16,14 +15,27 @@ class AuditPeriodManager(models.Manager):
 
         return audit_period
 
-    # TODO MRB: replace with the check_data_permissions mixin?
-    def get_audit_period_for_request(self, request):
-        selected_audit_year = request.session.get("selected_audit_year", None)
+    def get_audit_period_for_request(self, request, *args, **kwargs):
+        can_view_all_data = request.user.is_superuser or request.user.is_rcpch_audit_team_member
 
-        audit_period = AuditPeriod.objects.filter(
-            start_date__year=selected_audit_year
-        ).first()
-        
+        if "audit_period" in kwargs:
+            try:
+                audit_period = AuditPeriod.objects.get(slug=kwargs["audit_period"])
+            except AuditPeriod.DoesNotExist as e:
+                if not can_view_all_data:
+                    raise PermissionDenied(f"Audit period {kwargs['audit_period']} does not exist")
+
+                raise e
+
+            if not audit_period.is_visible and not can_view_all_data:
+                raise PermissionDenied(f"Audit period {kwargs['audit_period']} is not visible")
+        else:
+            selected_audit_year = request.session.get("selected_audit_year", None)
+
+            audit_period = AuditPeriod.objects.filter(
+                start_date__year=selected_audit_year
+            ).first()
+
         return audit_period
 
 
