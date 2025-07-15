@@ -287,7 +287,7 @@ class PatientCreateView(
     LoginAndOTPRequiredMixin,
     PermissionRequiredMixin,
     SuccessMessageMixin,
-    CheckCurrentAuditYearMixin,
+    CheckPDUListMixin,
     CheckCanCompleteQuestionnaireMixin,
     CreateView,
 ):
@@ -305,25 +305,17 @@ class PatientCreateView(
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-        AuditPeriod = apps.get_model("npda", "AuditPeriod")
-        pz_code = self.request.session.get("pz_code")
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-        audit_year = self.request.session.get("selected_audit_year")
-        kwargs["paediatric_diabetes_unit"] = pdu
-        kwargs["audit_period"] = AuditPeriod.objects.get_audit_period_for_request(self.request)
-        kwargs["audit_year"] = audit_year
+        kwargs["paediatric_diabetes_unit"] = self.pdu
+        kwargs["audit_period"] = self.audit_period
+        kwargs["audit_year"] = self.audit_period.audit_year()
         # Get override_postcode from POST data if available
         if self.request.method in ('POST', 'PUT'):
             kwargs['override_postcode'] = self.request.POST.get('override_postcode', 'false') == 'true'
         return kwargs
 
     def get_context_data(self, **kwargs):
-        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-        pz_code = self.request.session.get("pz_code")
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
         context = super().get_context_data(**kwargs)
-        title = f"Add New Child to {pdu.lead_organisation_name}  ({pdu.pz_code})"
+        title = f"Add New Child to {self.pdu.lead_organisation_name}  ({self.pdu.pz_code})"
         context["title"] = title
         context["button_title"] = "Create New Child Patient Record"
         context["form_method"] = "create"
@@ -360,19 +352,12 @@ class PatientCreateView(
             patient.errors = None
             patient.save()
 
-            # add the PDU to the patient record
-            # get or create the paediatric diabetes unit object
-            PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-            paediatric_diabetes_unit = PaediatricDiabetesUnit.objects.get(
-                pz_code=self.request.session.get("pz_code"),
-            )
-
             Transfer = apps.get_model("npda", "Transfer")
             if Transfer.objects.filter(patient=patient).exists():
                 # the patient is being transferred from another PDU. Update the previous_pz_code field
                 transfer = Transfer.objects.get(patient=patient)
-                transfer.previous_pz_code = transfer.paediatric_diabetes_unit.pz_code
-                transfer.paediatric_diabetes_unit = paediatric_diabetes_unit
+                transfer.previous_pz_code = self.pdu.pz_code
+                transfer.paediatric_diabetes_unit = self.pdu
                 transfer.date_leaving_service = (
                     form.cleaned_data.get("date_leaving_service"),
                 )
@@ -382,7 +367,7 @@ class PatientCreateView(
                 transfer.save()
             else:
                 Transfer.objects.create(
-                    paediatric_diabetes_unit=paediatric_diabetes_unit,
+                    paediatric_diabetes_unit=self.pdu,
                     patient=patient,
                     date_leaving_service=None,
                     reason_leaving_service=None,
@@ -395,7 +380,7 @@ class PatientCreateView(
 
             submission, created = Submission.objects.update_or_create(
                 audit_year=audit_period.audit_year(),
-                paediatric_diabetes_unit=paediatric_diabetes_unit,
+                paediatric_diabetes_unit=self.pdu,
                 submission_active=True,
                 defaults={
                     "submission_by": NPDAUser.objects.get(pk=self.request.user.pk),
