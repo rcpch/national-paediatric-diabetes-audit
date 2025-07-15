@@ -14,6 +14,9 @@ class PaediatricDiabetesUnit(models.Model):
         max_length=10,
         help_text="Enter the organisation ODS code",
     )
+    # NB: since 15/07/2025 this is populated from the "name" field in the API, not the name of the lead organisation
+    #  - https://github.com/rcpch/rcpch-nhs-organisations/pull/109
+    #  - https://github.com/rcpch/rcpch-nhs-organisations/pull/110
     lead_organisation_name = models.CharField(
         max_length=75,
         help_text="Enter the organisation name",
