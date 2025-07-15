@@ -35,6 +35,8 @@ class AuditPeriod(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
 
+    slug = models.SlugField(unique=True)
+
     # For compatibility with old code
     def audit_year(self):
         return self.start_date.year
