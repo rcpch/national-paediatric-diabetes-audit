@@ -2,12 +2,6 @@
 
 from django.db import migrations, models
 
-def generate_placeholder_slug():
-    generate_placeholder_slug.count += 1
-    return f"placeholder-{generate_placeholder_slug.count}"
-
-generate_placeholder_slug.count = 0
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -24,8 +18,13 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="auditperiod",
             name="slug",
-            field=models.SlugField(default=generate_placeholder_slug, unique=True),
+            field=models.SlugField(default="-"),
             preserve_default=False,
         ),
-        migrations.RunPython(get_audit_period_slug, migrations.RunPython.noop)
+        migrations.RunPython(get_audit_period_slug, migrations.RunPython.noop),
+        migrations.AlterField(
+            model_name="auditperiod",
+            name="slug",
+            field=models.SlugField(unique=True),
+        ) 
     ]
