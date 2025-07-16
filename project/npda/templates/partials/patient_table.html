@@ -203,7 +203,7 @@
             {{ patient.distance_from_lead_organisation|round_distance:1 }} km
           </td>
           <td class="text-right whitespace-nowrap">
-            <a href="{% url 'patient_visits' patient.pk %}"
+            <a href="{% data_url 'pdu-patient-visits' patient_id=patient.pk %}"
                class="align-center flex tooltip tooltip-left {% if patient.visit_error_count < 1 %} text-rcpch_pink {% else %} text-rcpch_red {% endif %}"
                data-tip="{% if patient.visit_error_count > 0 %} {{ patient.visit_error_count }} visit{{ patient.visit_error_count|pluralize }} {{ patient.visit_error_count|pluralize:'has, have' }} errors that need addressing. Items have been saved but will not be included until rectified. {% else %} View patient visits April {{ request.session.selected_audit_year }} - March {{ request.session.selected_audit_year|add:'1' }} {% endif %}">
               {% if patient.visit_error_count > 0 %}

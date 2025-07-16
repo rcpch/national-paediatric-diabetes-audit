@@ -66,10 +66,10 @@
             {{ button_title }}
           </button>
           <a class="btn rcpch-btn bg-rcpch_yellow_light_tint1 border border-rcpch_yellow_light_tint1 hover:bg-rcpch_yellow hover:border-rcpch_yellow"
-             href="{% url 'patient_visits' patient_id=patient_id %}">Cancel</a>
+             href="{% data_url 'pdu-patient-visits' patient_id=patient_id %}">Cancel</a>
           {% if form_method == 'update' and perms.npda.delete_visit %}
             <a class="btn rcpch-btn bg-rcpch_red text-white font-semibold hover:text-white py-2.5 px-3 border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint {% if not perms.npda.change_visit or not can_use_questionnaire or form.patient.is_in_transfer_in_the_last_year %}opacity-40 pointer-events-none{% endif %}"
-               href="{% url 'visit-delete' patient_id visit.pk %}">Delete</a>
+               href="{% data_url 'pdu-visit-delete' patient_id=patient_id pk=visit.pk %}">Delete</a>
           {% endif %}
         </div>
       </form>
