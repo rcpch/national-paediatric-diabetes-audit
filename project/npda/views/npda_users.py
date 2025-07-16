@@ -42,7 +42,7 @@ from ..general_functions import (
     group_for_role,
     organisations_adapter,
 )
-from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
+from .mixins import LoginAndOTPRequiredMixin
 from .mixins import LoginAndOTPRequiredMixin
 from ...constants import RCPCH_AUDIT_TEAM, AUDIT_CENTRE_READER, AUDIT_CENTRE_EDITOR
 from ..signals import get_client_ip
@@ -70,7 +70,7 @@ NPDAUser list and NPDAUser creation, deletion and update
 
 
 class NPDAUserListView(
-    LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, FilterView
+    LoginAndOTPRequiredMixin, PermissionRequiredMixin, FilterView
 ):
     permission_required = "npda.view_npdauser"
     permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
@@ -80,33 +80,19 @@ class NPDAUserListView(
     context_object_name = "npdauser_list"
 
     def get_queryset(self):
-        """
-        Apply ordering
-        """
         queryset = super().get_queryset()
-        pz_code = self.request.session.get("pz_code")
+        
+        if self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member:
+            return queryset.order_by("surname")
 
-        if self.request.user.viewing_data_nationally():
-            return (
-                queryset.order_by("surname")
-            )
-
-        return (
-            queryset.filter(organisation_employers__pz_code=pz_code)
-            .order_by("surname")
-        )
+        # Distinct required to remove duplicates that come from the __in query
+        return queryset.filter(
+            organisation_employers__in= self.request.user.organisation_employers.all()
+        ).order_by("surname").distinct()
 
     def get_context_data(self, **kwargs):
         context = super(NPDAUserListView, self).get_context_data(**kwargs)
         context["title"] = "NPDA Users"
-        context["pz_code"] = self.request.session.get("pz_code")
-        context["pdu_choices"] = (
-            organisations_adapter.paediatric_diabetes_units_to_populate_select_field(  # This is used to populate the select field in view preference form
-                requesting_user=self.request.user, user_instance=self.request.user
-            )
-        )
-        context["parent"] = self.request.session.get("parent")
-        context["chosen_pdu"] = self.request.session.get("pz_code")
         return context
 
     def get(self, request, *args: str, **kwargs) -> HttpResponse:
@@ -238,7 +224,6 @@ class NPDAUserCreateView(
 
 class NPDAUserUpdateView(
     LoginAndOTPRequiredMixin,
-    CheckPDUInstanceMixin,
     PermissionRequiredMixin,
     SuccessMessageMixin,
     UpdateView,
@@ -475,7 +460,6 @@ class NPDAUserUpdateView(
 
 class NPDAUserDeleteView(
     LoginAndOTPRequiredMixin,
-    CheckPDUInstanceMixin,
     PermissionRequiredMixin,
     SuccessMessageMixin,
     DeleteView,
