@@ -15,7 +15,7 @@ from django.forms import BaseForm
 from django.forms import BaseForm
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, redirect, reverse
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
@@ -301,7 +301,9 @@ class PatientCreateView(
     model = Patient
     form_class = PatientForm
     success_message = "New child record created successfully"
-    success_url = reverse_lazy("patients")
+    
+    def get_success_url(self):
+        return reverse("pdu-patients", kwargs={"audit_period": self.audit_period.slug, "pz_code": self.pdu.pz_code})
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()

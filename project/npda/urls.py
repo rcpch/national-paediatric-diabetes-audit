@@ -38,8 +38,9 @@ urlpatterns = [
     path("audit-year", view=audit_year, name="audit-year"),
 
     path("upload_csv", view=upload_csv, name="upload_csv"),
-    path(f"{data_prefix}/upload_csv", view=upload_csv, name="upload_csv"),
+    path(f"{data_prefix}/upload_csv", view=upload_csv, name="pdu-upload-csv"),
     
+    # TODO MRB: do this one
     path("upload_csv_in_progress", view=upload_csv_in_progress, name="upload-csv-in-progress"),
 
     # TODO MRB: remove this
@@ -65,7 +66,7 @@ urlpatterns = [
     path(
         f"{data_prefix}/patients",
         view=PatientListView.as_view(),
-        name="patients",
+        name="pdu-patients",
     ),
     path(
         "patient/add/",
@@ -75,12 +76,17 @@ urlpatterns = [
     path(
         f"{data_prefix}/patient/add/",
         PatientCreateView.as_view(),
-        name="patient-add"
+        name="pdu-patient-add"
     ),
     path(
         "patient/<int:pk>/update",
         PatientUpdateView.as_view(),
         name="patient-update",
+    ),
+    path(
+        f"{data_prefix}/patient/<int:pk>/update",
+        PatientUpdateView.as_view(),
+        name="pdu-patient-update",
     ),
     path(
         "patient/<int:pk>/delete",
