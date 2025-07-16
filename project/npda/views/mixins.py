@@ -8,6 +8,7 @@ from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.mixins import AccessMixin
 from django.shortcuts import get_object_or_404
+from django.urls import reverse
 
 from project.npda.models.npda_user import NPDAUser
 from project.npda.models.patient import Patient
@@ -57,6 +58,14 @@ class LoginAndOTPRequiredMixin(AccessMixin):
 
 
 class PDUPermissionMixin(AccessMixin):
+    def data_reverse(self, viewname, kwargs={}):
+        next_kwargs = kwargs | {
+            "audit_period": self.audit_period.slug,
+            "pz_code": self.pdu.pz_code
+        }
+
+        return reverse(viewname, kwargs=next_kwargs)
+
     def get_model(self):
         if hasattr(self, "model") and self.model:
             return self.model

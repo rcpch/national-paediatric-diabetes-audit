@@ -13,9 +13,8 @@ from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.db.models import Count, Case, When, Max, Q, F
 from django.forms import BaseForm
 from django.forms import BaseForm
-from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import get_object_or_404, render, redirect, reverse
-from django.urls import reverse, reverse_lazy
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, render, redirect
 from django.utils import timezone
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
@@ -302,7 +301,7 @@ class PatientCreateView(
     success_message = "New child record created successfully"
     
     def get_success_url(self):
-        return reverse("pdu-patients", kwargs={"audit_period": self.audit_period.slug, "pz_code": self.pdu.pz_code})
+        return self.data_reverse("pdu-patients")
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -428,7 +427,7 @@ class PatientUpdateView(
     PatientSubmission = apps.get_model("npda", "PatientSubmission")
 
     def get_success_url(self):
-        return reverse("pdu-patients", kwargs={"audit_period": self.audit_period.slug, "pz_code": self.pdu.pz_code})
+        return self.data_reverse("pdu-patients")
 
     def get_context_data(self, **kwargs):
         Transfer = apps.get_model("npda", "Transfer")
@@ -444,6 +443,9 @@ class PatientUpdateView(
         return context
 
     def form_valid(self, form: BaseForm) -> HttpResponse:
+        if "delete" in self.request.POST:
+            return redirect(self.data_reverse("pdu-patient-delete", kwargs={"pk": self.kwargs["pk"]}))
+
         patient = form.save(commit=False)
         patient.is_valid = True
         patient.errors = None
@@ -452,6 +454,9 @@ class PatientUpdateView(
         return super().form_valid(form)
     
     def form_invalid(self, form):
+        if "delete" in self.request.POST:
+            return redirect(self.data_reverse("pdu-patient-delete", kwargs={"pk": self.kwargs["pk"]}))
+
         context = self.get_context_data()
         if "postcode" in form.errors:
             # if the postcode is invalid, we want to allow the user to save the record anyway
@@ -504,10 +509,10 @@ class PatientDeleteView(
     success_message = "Child removed from database"
     
     def get_success_url(self):
-        return reverse("pdu-patients", kwargs={"audit_period": self.audit_period.slug, "pz_code": self.pdu.pz_code})
+        return self.data_reverse("pdu-patients")
 
     def post(self, request, *args, **kwargs):
         if "cancel" in request.POST:
-            return redirect(reverse("pdu-patient-update", kwargs={"audit_period": self.audit_period.slug, "pz_code": self.pdu.pz_code, "pk": self.kwargs["pk"]}))
+            return redirect(self.data_reverse("pdu-patient-update", kwargs={"pk": self.kwargs["pk"]}))
 
         return super().post(request, *args, **kwargs)

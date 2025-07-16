@@ -93,6 +93,12 @@ urlpatterns = [
         PatientDeleteView.as_view(),
         name="patient-delete",
     ),
+    path(
+        f"{data_prefix}/patient/<int:pk>/delete",
+        PatientDeleteView.as_view(),
+        name="pdu-patient-delete",
+    ),
+
     # Visit views
     path(
         "patient/<int:patient_id>/visits",
