@@ -10,22 +10,18 @@ from django.db.models import (
 from django.shortcuts import render
 from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.views.dashboard import helpers as hp
-from project.npda.views.decorators import login_and_otp_required
+from project.npda.views.decorators import login_and_otp_required, check_data_permissions
 from project.npda.models import Visit, Submission, AuditPeriod
 
 
 @login_and_otp_required()
-def patient_measurements(request):
-    pz_code = request.session.get("pz_code")
-
-    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
-    calculation_date = audit_period.kpi_calculation_date()
-    
+@check_data_permissions()
+def patient_measurements(request, audit_period, pdu):
     calculate_kpis = CalculateKPIS(
-        calculation_date=calculation_date, return_pt_querysets=True
+        calculation_date=audit_period.kpi_calculation_date(), return_pt_querysets=True
     )
 
-    kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
+    kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pdu.pz_code])
 
 
     # {
@@ -76,13 +72,13 @@ def patient_measurements(request):
     )
 
     returned_patient_health_check_totals = patient_health_check_totals(
-        pz_code=pz_code,
-        calculation_date=calculation_date,
+        pz_code=pdu.pz_code,
+        calculation_date=audit_period.kpi_calculation_date(),
     )
 
     context={
         "selected_audit_year": audit_period.audit_year(),
-        "pz_code": pz_code,
+        "pz_code": pdu.pz_code,
         "hba1c_value_counts_stratified_by_diabetes_type": hba1c_value_counts_stratified_by_diabetes_type,
         "submission_visit_error_count": submission_visit_error_count,
         "submission_date": submission_date,

@@ -1,9 +1,10 @@
 {% extends 'dashboard/components/bases/base_card.html' %}
+{% load npda_tags %}
 {% block card_title %}
   Distribution of patients - {{ pdu_object.lead_organisation_name }} ({{ pdu_object.pz_code }})
 {% endblock card_title %}
 {% block card_body %}
-  <div hx-get="{% url 'get_map_chart_partial' %}"
+  <div hx-get="{% data_url 'pdu_get_map_chart_partial' %}"
        hx-trigger="load"
        hx-swap="innerHTML"
        hx-target="#organisation_cases_map"

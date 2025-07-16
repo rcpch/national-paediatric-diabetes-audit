@@ -1,10 +1,11 @@
 {% extends "dashboard/components/bases/base_secondary_card.html" %}
+{% load npda_tags %}
 {% block card_title %}
     Moved Out of Area
     {% include 'common/docs_icon_link_button.html' with rel_url="developer/kpis/patient_characteristics/#calculation_7" fa_icon_class="fa-solid fa-eye" %}
 {% endblock %}
 {% block card_content %}
-    <div hx-get="{% url 'get_moved_out_of_area_partial' %}"
+    <div hx-get="{% data_url 'pdu_get_moved_out_of_area_partial' %}"
          hx-trigger="load"
          hx-swap="innerHTML"
          _="on htmx:afterSwap remove #loading-spinner-moved-out-of-area-card">

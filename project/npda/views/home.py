@@ -94,8 +94,3 @@ def celery_test_task(request):
     test_task.delay()
 
     return HttpResponse(status=204)
-
-
-@check_data_permissions()
-def test_tenant_view(request, audit_period, pdu):
-    return HttpResponse(f"This is a test tenant view. Audit Period: {audit_period}, PDU: {pdu}")

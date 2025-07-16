@@ -13,7 +13,7 @@
     <input class="btn filter-reset"
            {% if diabetes_type.selected %}checked{% endif %}
            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-           hx-post="{% url 'patient_ages' %}"
+           hx-post="{% data_url 'pdu_patient_ages' %}"
            hx-target="#patient_ages"
            hx-swap="innerHTML"
            hx-trigger="click"
