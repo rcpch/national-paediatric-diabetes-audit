@@ -480,6 +480,9 @@ class NPDAUserDeleteView(
         Coordinators and RCPCH Audit Team can delete users, but only RCPCH Audit Team can delete those with multiple employers
         Coordinators should not be able to delete themselves
         """
+        if "cancel" in request.POST:
+            return redirect(reverse("npda_users"))
+
         requested_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
         if requested_user.number_of_pdu_memberships() > 1:
             if not (
