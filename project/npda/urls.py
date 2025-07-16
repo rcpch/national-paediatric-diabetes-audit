@@ -11,7 +11,6 @@ from project.npda.views import (
     VisitDeleteView,
     VisitUpdateView,
 )
-from project.npda.views.dashboard.dashboard import temp_set_eligible_kpi_7
 
 from .views import *
 from .views.dashboard import dashboard, partials
@@ -186,6 +185,11 @@ dashboard_urlpatterns = [
         "dashboard",
         view=dashboard.dashboard,
         name="dashboard",
+    ),
+    path(
+        f"{data_prefix}/dashboard",
+        view=dashboard.dashboard,
+        name="pdu_dashboard",
     ),
     path(
         "get_metric_scatter_plot",
