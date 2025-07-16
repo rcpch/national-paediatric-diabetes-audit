@@ -26,20 +26,20 @@ def paediatric_diabetes_units_to_populate_select_field(
 
     if user_instance:
         # populate the select field with paediatric diabetes units that the user is not already affiliated with
-        if (
-            requesting_user.is_superuser
-            or requesting_user.is_rcpch_audit_team_member
-            or requesting_user.is_rcpch_staff
-        ):
-            # return all paediatric diabetes units excluding those were the user is employed
-            filtered_pdus = PaediatricDiabetesUnit.objects.all().exclude(
-                npda_users__npda_user=user_instance,
-                active=True
-            )
+
+        # exclude those where the user is already employed
+        filtered_pdus = PaediatricDiabetesUnit.objects.all().exclude(
+            npda_users__npda_user=user_instance,
+            active=True
+        )
+
+        if requesting_user.is_superuser or requesting_user.is_rcpch_audit_team_member:
+            # can assign to any pdu
+            pass
         else:
-            # return only those paediatric diabetes units that a user is already affiliated with
-            filtered_pdus = PaediatricDiabetesUnit.objects.filter(
-                npda_users__npda_user=user_instance
+            # can only assign to those pdus that the requesting_user is affiliated with
+            filtered_pdus = filtered_pdus.filter(
+                npda_users__npda_user=requesting_user
             )
     else:
         # no user instance is provided - therefore need the organisation_choices to be populated with all organisations based on requesting_user user permissions

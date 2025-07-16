@@ -338,19 +338,37 @@ class NPDAUserUpdateView(
             if request.POST.get("update") == "delete":
                 # delete the selected employer
                 # cannot delete the primary employer but can set another employer as primary first and then delete the employer
-                OrganisationEmployer.objects.filter(
+                old_employer = OrganisationEmployer.objects.get(
                     pk=request.POST.get("organisation_employer_id")
-                ).delete()
+                )
+
+                is_my_pdu = old_employer.paediatric_diabetes_unit not in self.request.user.organisation_employers.all()
+
+                if is_my_pdu and not (self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member):
+                    raise PermissionDenied(
+                        f"You do not have permission to remove users from {old_employer.paediatric_diabetes_unit.pz_code}. Contact the NPDA for assistance."
+                    )
+
+                old_employer.delete()
             elif request.POST.get("update") == "update":
                 # set the selected employer as the primary employer. Reset all other employers to False before setting the selected employer to True since only one employer can be primary
+                selected_employer = OrganisationEmployer.objects.get(
+                    pk=request.POST.get("organisation_employer_id")
+                )
+
+                is_my_pdu = selected_employer.paediatric_diabetes_unit not in self.request.user.organisation_employers.all()
+
+                if is_my_pdu and not (self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member):
+                    raise PermissionDenied(
+                        f"You do not have permission to set the default employer to {selected_employer.paediatric_diabetes_unit.pz_code}. Contact the NPDA for assistance."
+                    )
+                
                 # set all employers to False
                 OrganisationEmployer.objects.filter(
                     npda_user=selected_npda_user
                 ).update(is_primary_employer=False)
+                
                 # set the selected employer to True
-                selected_employer = OrganisationEmployer.objects.filter(
-                    pk=request.POST.get("organisation_employer_id")
-                ).get()
                 selected_employer.is_primary_employer=True
                 selected_employer.save()
 

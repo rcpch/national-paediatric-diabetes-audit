@@ -411,6 +411,19 @@ def screen_ineligible(value):
 
 
 @register.filter
+def employer_match(organisation_employer, user):
+    """
+    Checks if the user can modify the given organisation employer.
+    RCPCH staff and audit team members can view all employers.
+    This is not an actual permissions check (that's done in the view) but affects what controls appear.
+    """
+    if user.is_superuser or user.is_rcpch_staff or user.is_rcpch_audit_team_member:
+        return True
+
+    return organisation_employer.paediatric_diabetes_unit in user.organisation_employers.all()
+
+
+@register.filter
 def exclude_admin_user_field(field, user):
     """
     Excludes the is_admin_user field from the npda user form unless the user is an RCPCH staff member/superuser
