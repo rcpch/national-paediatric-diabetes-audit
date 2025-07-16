@@ -411,20 +411,6 @@ def screen_ineligible(value):
 
 
 @register.filter
-def employer_match(user_to_match, user):
-    """
-    Checks if the user_to_match has an employer in common with the user (the logged in user)
-    RCPCH staff and audit team members can view all users
-    """
-    if user.is_superuser or user.is_rcpch_staff or user.is_rcpch_audit_team_member:
-        return True
-    for employer in user_to_match.organisation_employers.all():
-        if employer in user.organisation_employers.all():
-            return True
-    return False
-
-
-@register.filter
 def exclude_admin_user_field(field, user):
     """
     Excludes the is_admin_user field from the npda user form unless the user is an RCPCH staff member/superuser
