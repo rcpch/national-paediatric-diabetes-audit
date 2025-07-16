@@ -411,6 +411,8 @@ def screen_ineligible(value):
     return value
 
 
+# TODO MRB: this should do a full intersection. At the moment doesn't work if the target user has the
+#           the same set of employers as the requesting user 
 @register.filter
 def employer_match(user_to_match, user):
     """

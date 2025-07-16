@@ -85,9 +85,10 @@ class NPDAUserListView(
         if self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member:
             return queryset.order_by("surname")
         
+        # Distinct required to remove duplicates that come from the __in query
         return queryset.filter(
             organisation_employers__in= self.request.user.organisation_employers.all()
-        ).order_by("surname")
+        ).order_by("surname").distinct()
 
     def get_context_data(self, **kwargs):
         context = super(NPDAUserListView, self).get_context_data(**kwargs)
@@ -98,10 +99,7 @@ class NPDAUserListView(
         response = super().get(request, *args, **kwargs)
 
         if request.htmx:
-            # filter the npdausers to only those in the same organisation as the user
-            # trigger a GET request from the patient table to update the list of npdausers
-            # by calling the get_queryset method again with the new ods_code/pz_code stored in session
-
+            # Callback for changing employer
             return render(
                 request,
                 "partials/npda_user_table.html",
@@ -146,13 +144,13 @@ class NPDAUserCreateView(
         context["title"] = "Add New NPDA User"
         context["button_title"] = "Add"
         context["form_method"] = "create"
-        context["selected_pdu"] = self.request.session.get("pz_code")
+        context["selected_pdu"] = self.request.user.organisation_employers.first()
         return context
 
     def form_valid(self, form):
         PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
 
-        new_user_pz_code = form.cleaned_data["add_employer"] or self.request.session.get("pz_code")
+        new_user_pz_code = form.cleaned_data["add_employer"]
 
         my_pz_codes = self.request.user.organisation_employers.values_list("pz_code", flat=True)
 
@@ -217,13 +215,12 @@ class NPDAUserCreateView(
 
     def get_success_url(self) -> str:
         return reverse(
-            "npda_users",
+            "npda-users",
         )
 
 
 class NPDAUserUpdateView(
     LoginAndOTPRequiredMixin,
-    PDUPermissionMixin,
     PermissionRequiredMixin,
     SuccessMessageMixin,
     UpdateView,
@@ -238,7 +235,7 @@ class NPDAUserUpdateView(
     model = NPDAUser
     form_class = NPDAUserForm
     success_message = "NPDA User record updated successfully"
-    success_url = reverse_lazy("npda_users")
+    success_url = reverse_lazy("npda-users")
 
     def get_form_kwargs(self):
         # add the request object to the form kwargs
@@ -431,7 +428,7 @@ class NPDAUserUpdateView(
                     f"Confirmation and password reset request resent to {npda_user.email}.",
                 )
                 redirect_url = reverse(
-                    "npda_users",
+                    "npda-users",
                 )
                 return redirect(redirect_url)
             elif "reset-two-factor" in request.POST:
@@ -447,7 +444,7 @@ class NPDAUserUpdateView(
                         f"Two-factor authentication reset for {npda_user.email}.",
                     )
                     redirect_url = reverse(
-                        "npda_users",
+                        "npda-users",
                     )
                     return redirect(redirect_url)
                 else:
@@ -474,13 +471,16 @@ class NPDAUserDeleteView(
 
     model = NPDAUser
     success_message = "NPDA User removed from database"
-    success_url = reverse_lazy("npda_users")
+    success_url = reverse_lazy("npda-users")
 
     def post(self, request, *args, **kwargs):
         """
         Coordinators and RCPCH Audit Team can delete users, but only RCPCH Audit Team can delete those with multiple employers
         Coordinators should not be able to delete themselves
         """
+        if "cancel" in request.POST:
+            return redirect(reverse("npda-users"))
+
         requested_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
         if requested_user.number_of_pdu_memberships() > 1:
             if not (
