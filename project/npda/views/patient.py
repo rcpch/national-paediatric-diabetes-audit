@@ -44,8 +44,7 @@ from ..forms.patient_form import PatientForm
 from .mixins import (
     CheckCanCompleteQuestionnaireMixin,
     CheckCurrentAuditYearMixin,
-    CheckPDUInstanceMixin,
-    CheckPDUListMixin,
+    PDUPermissionMixin,
     LoginAndOTPRequiredMixin,
 )
 from ..general_functions.session import refresh_session_filters
@@ -55,7 +54,7 @@ logger = logging.getLogger(__name__)
 
 class PatientListView(
     LoginAndOTPRequiredMixin,
-    CheckPDUListMixin,
+    PDUPermissionMixin,
     PermissionRequiredMixin,
     ListView,
 ):
@@ -287,7 +286,7 @@ class PatientCreateView(
     LoginAndOTPRequiredMixin,
     PermissionRequiredMixin,
     SuccessMessageMixin,
-    CheckPDUListMixin,
+    PDUPermissionMixin,
     CheckCanCompleteQuestionnaireMixin,
     CreateView,
 ):
@@ -377,18 +376,15 @@ class PatientCreateView(
             # add patient to the latest audit year and the logged in user's PDU
             # the form is initialised with the current audit year
 
-            Submission = apps.get_model("npda", "Submission")
-            audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
-
             submission, created = Submission.objects.update_or_create(
-                audit_year=audit_period.audit_year(),
+                audit_year=self.audit_period.audit_year(),
                 paediatric_diabetes_unit=self.pdu,
                 submission_active=True,
                 defaults={
                     "submission_by": NPDAUser.objects.get(pk=self.request.user.pk),
                     "submission_by": NPDAUser.objects.get(pk=self.request.user.pk),
                     "submission_date": timezone.now(),
-                    "audit_period": audit_period
+                    "audit_period": self.audit_period
                 },
             )
             submission.patients.add(patient)
@@ -410,7 +406,7 @@ class PatientCreateView(
 
 class PatientUpdateView(
     LoginAndOTPRequiredMixin,
-    CheckPDUInstanceMixin,
+    PDUPermissionMixin,
     PermissionRequiredMixin,
     SuccessMessageMixin,
     CheckCurrentAuditYearMixin,
@@ -427,20 +423,19 @@ class PatientUpdateView(
     model = Patient
     form_class = PatientForm
     success_message = "New child record updated successfully"
-    success_url = reverse_lazy("patients")
+    
     Submission = apps.get_model("npda", "Submission")
     PatientSubmission = apps.get_model("npda", "PatientSubmission")
+
+    def get_success_url(self):
+        return reverse("pdu-patients", kwargs={"audit_period": self.audit_period.slug, "pz_code": self.pdu.pz_code})
 
     def get_context_data(self, **kwargs):
         Transfer = apps.get_model("npda", "Transfer")
         patient = get_object_or_404(Patient, pk=self.kwargs["pk"])
         transfer = Transfer.objects.get(patient=patient)
         context = super().get_context_data(**kwargs)
-        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-        pdu = PaediatricDiabetesUnit.objects.get(
-            pz_code=transfer.paediatric_diabetes_unit.pz_code
-        )
-        title = f"Edit Child Details in {pdu.lead_organisation_name}  ({transfer.paediatric_diabetes_unit.pz_code})"
+        title = f"Edit Child Details in {self.pdu.lead_organisation_name}  ({transfer.paediatric_diabetes_unit.pz_code})"
         context["title"] = title
         context["button_title"] = "Save Changes"
         context["form_method"] = "update"
@@ -449,8 +444,6 @@ class PatientUpdateView(
         return context
 
     def form_valid(self, form: BaseForm) -> HttpResponse:
-        if "delete" in self.request.POST:
-            return redirect(reverse("patient-delete", kwargs={"pk": self.kwargs["pk"]}))
         patient = form.save(commit=False)
         patient.is_valid = True
         patient.errors = None
@@ -459,8 +452,6 @@ class PatientUpdateView(
         return super().form_valid(form)
     
     def form_invalid(self, form):
-        if "delete" in self.request.POST:
-            return redirect(reverse("patient-delete", kwargs={"pk": self.kwargs["pk"]}))
         context = self.get_context_data()
         if "postcode" in form.errors:
             # if the postcode is invalid, we want to allow the user to save the record anyway
@@ -484,14 +475,9 @@ class PatientUpdateView(
     
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-        AuditPeriod = apps.get_model("npda", "AuditPeriod")
-        pz_code = self.request.session.get("pz_code")
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-        audit_year = self.request.session.get("selected_audit_year")
-        kwargs["paediatric_diabetes_unit"] = pdu
-        kwargs["audit_period"] = AuditPeriod.objects.get_audit_period_for_request(self.request)
-        kwargs["audit_year"] = audit_year
+        kwargs["paediatric_diabetes_unit"] = self.pdu
+        kwargs["audit_period"] = self.audit_period
+        kwargs["audit_year"] = self.audit_period.audit_year()
         # Get override_postcode from POST data if available
         if self.request.method in ('POST', 'PUT'):
             kwargs['override_postcode'] = self.request.POST.get('override_postcode', 'false') == 'true'
@@ -501,7 +487,7 @@ class PatientUpdateView(
 
 class PatientDeleteView(
     LoginAndOTPRequiredMixin,
-    CheckPDUInstanceMixin,
+    PDUPermissionMixin,
     PermissionRequiredMixin,
     SuccessMessageMixin,
     CheckCurrentAuditYearMixin,
@@ -516,9 +502,12 @@ class PatientDeleteView(
     permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
     model = Patient
     success_message = "Child removed from database"
-    success_url = reverse_lazy("patients")
+    
+    def get_success_url(self):
+        return reverse("pdu-patients", kwargs={"audit_period": self.audit_period.slug, "pz_code": self.pdu.pz_code})
 
     def post(self, request, *args, **kwargs):
         if "cancel" in request.POST:
-            return redirect(reverse("patient-update", kwargs={"pk": self.kwargs["pk"]}))
+            return redirect(reverse("pdu-patient-update", kwargs={"audit_period": self.audit_period.slug, "pz_code": self.pdu.pz_code, "pk": self.kwargs["pk"]}))
+
         return super().post(request, *args, **kwargs)

@@ -25,8 +25,7 @@ from ..models import Patient, Transfer, Visit, AuditPeriod
 from .mixins import (
     CheckCanCompleteQuestionnaireMixin,
     CheckCurrentAuditYearMixin,
-    CheckPDUInstanceMixin,
-    CheckPDUListMixin,
+    PDUPermissionMixin,
     LoginAndOTPRequiredMixin,
 )
 
@@ -35,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 class PatientVisitsListView(
-    LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, ListView
+    LoginAndOTPRequiredMixin, PDUPermissionMixin, PermissionRequiredMixin, ListView
 ):
     """
     The PatientVisitsListView class.
@@ -224,7 +223,7 @@ class VisitCreateView(
 
 class VisitUpdateView(
     LoginAndOTPRequiredMixin,
-    CheckPDUInstanceMixin,
+    PDUPermissionMixin,
     PermissionRequiredMixin,
     CheckCurrentAuditYearMixin,
     CheckCanCompleteQuestionnaireMixin,
@@ -312,7 +311,7 @@ class VisitUpdateView(
 
 class VisitDeleteView(
     LoginAndOTPRequiredMixin,
-    CheckPDUInstanceMixin,
+    PDUPermissionMixin,
     PermissionRequiredMixin,
     SuccessMessageMixin,
     CheckCurrentAuditYearMixin,

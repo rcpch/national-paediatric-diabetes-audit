@@ -31,7 +31,7 @@ from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REAS
 from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.models import Patient, AuditPeriod, Visit
 from project.npda.models.db_functions import Round
-from project.npda.views.mixins import CheckPDUListMixin, LoginAndOTPRequiredMixin
+from project.npda.views.mixins import PDUPermissionMixin, LoginAndOTPRequiredMixin
 from django.db.models import QuerySet
 
 logger = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ class TableCategories(Enum):
 
 class PatientReportView(
     LoginAndOTPRequiredMixin,
-    CheckPDUListMixin,
+    PDUPermissionMixin,
     ListView,
 ):
     # Perms

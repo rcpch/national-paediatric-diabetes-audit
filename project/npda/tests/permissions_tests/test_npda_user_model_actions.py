@@ -494,7 +494,7 @@ def test_coordinators_cannot_create_audit_team_members(
 
 
 # These tests pass already before fixing https://github.com/rcpch/national-paediatric-diabetes-audit/issues/906
-# as handled by CheckPDUInstanceMixin but leaving them in for completeness sake.
+# as handled by the permissions mixin but leaving them in for completeness sake.
 @pytest.mark.django_db
 def test_coordinators_cannot_delete_users_outside_of_their_pdu(
     seed_groups_fixture,

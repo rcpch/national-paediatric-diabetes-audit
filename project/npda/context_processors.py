@@ -4,7 +4,7 @@ from project.npda.models.audit_period import AuditPeriod
 
 
 def session_data(request):
-    # Permission checking done in @check_data_permissions or CheckPDUListMixin
+    # Permission checking done in @check_data_permissions or PDUPermissionMixin
     # We are fine to trust it here as this is for rendering purposes
     pz_code = request.resolver_match.kwargs.get("pz_code", request.session.get("pz_code", None))
     
