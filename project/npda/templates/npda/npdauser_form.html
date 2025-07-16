@@ -120,7 +120,7 @@
         {{ button_title }}
       </button>
       <a class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 mt-20 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue"
-         href="{% url 'npda_users' %}">Back to list</a>
+         href="{% url 'npda-users' %}">Back to list</a>
       {% if form_method == 'update' %}
         {% if not npda_user.email_confirmed %}
           <button value="Submit"
