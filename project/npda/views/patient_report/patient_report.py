@@ -493,14 +493,6 @@ class PatientReportView(
             )
         elif self.selected_category == TableCategories.CARE_AT_DIAGNOSIS.value:
             today = date.today()
-            all_t1dm_pts = all_t1dm_pts.filter(
-                Q(diagnosis_date__gte=today - relativedelta(days=90))
-            )
-            all_t1dm_pts_with_complete_year_of_care = (
-                all_t1dm_pts_with_complete_year_of_care.filter(
-                    Q(diagnosis_date__gte=today - relativedelta(days=90))
-                )
-            )
 
             pt_qs = (
                 pt_qs.filter(Q(diagnosis_date__gte=today - relativedelta(days=90)))
