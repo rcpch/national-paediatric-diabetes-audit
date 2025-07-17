@@ -43,6 +43,14 @@ def get_map_chart_partial(request):
         return HttpResponseBadRequest("This view is only accessible via HTMX")
 
     submission = Submission.objects.get_submission_for_request(request)
+
+    if not submission:
+        return render(
+            request,
+            "dashboard/map_chart_partial.html",
+            {"info": "No patient data yet"},
+        )
+
     lead_organisation_ods_code = submission.paediatric_diabetes_unit.lead_organisation_ods_code
 
     try:
