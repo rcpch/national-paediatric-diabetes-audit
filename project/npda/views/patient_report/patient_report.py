@@ -492,53 +492,51 @@ class PatientReportView(
                 "sick_day_rules_advice",
             )
         elif self.selected_category == TableCategories.CARE_AT_DIAGNOSIS.value:
-            pt_qs = (
-                pt_qs.annotate(
-                    coeliac_disease_screening=Case(
-                        When(
-                            Exists(
-                                calculate_kpis.calculate_kpi_41_coeliac_disease_screening()
-                                .patient_querysets["passed"]
-                                .filter(pk=OuterRef("pk"))
-                            ),
-                            then=True,
+            (pt_qs, _) = calculate_kpis.get_total_kpi_2_eligible_pts_base_query_set_and_total_count()
+            pt_qs = pt_qs.annotate(
+                patient_identifier=F(patient_identifier),
+                coeliac_disease_screening=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_41_coeliac_disease_screening()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
                         ),
-                        default=False,
-                        output_field=BooleanField(),
+                        then=True,
                     ),
-                    thyroid_disease_screening=Case(
-                        When(
-                            Exists(
-                                calculate_kpis.calculate_kpi_42_thyroid_disease_screening()
-                                .patient_querysets["passed"]
-                                .filter(pk=OuterRef("pk"))
-                            ),
-                            then=True,
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+                thyroid_disease_screening=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_42_thyroid_disease_screening()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
                         ),
-                        default=False,
-                        output_field=BooleanField(),
+                        then=True,
                     ),
-                    carbohydrate_counting_education=Case(
-                        When(
-                            Exists(
-                                calculate_kpis.calculate_kpi_43_carbohydrate_counting_education()
-                                .patient_querysets["passed"]
-                                .filter(pk=OuterRef("pk"))
-                            ),
-                            then=True,
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+                carbohydrate_counting_education=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_43_carbohydrate_counting_education()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
                         ),
-                        default=False,
-                        output_field=BooleanField(),
+                        then=True,
                     ),
-                )
-                .values(
-                    "pk",
-                    "patient_identifier",
-                    "is_complete_year_of_care",
-                    "coeliac_disease_screening",
-                    "thyroid_disease_screening",
-                    "carbohydrate_counting_education",
-                )
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+            ).values(
+                "pk",
+                "patient_identifier",
+                "coeliac_disease_screening",
+                "thyroid_disease_screening",
+                "carbohydrate_counting_education",
             )
         elif self.selected_category == TableCategories.ADMISSIONS.value:
             pt_qs = (
@@ -889,7 +887,12 @@ class PatientReportView(
                 pt_qs = self._calculate_hba1c_values(pt_qs, calculate_kpis)
         else:
             # Default ordering
-            pt_qs = pt_qs.order_by("-is_complete_year_of_care", "nhs_number")
+            order_by = ["-is_complete_year_of_care", patient_identifier]
+
+            if self.selected_category == TableCategories.CARE_AT_DIAGNOSIS.value:
+                order_by = [patient_identifier]
+
+            pt_qs = pt_qs.order_by(*order_by)
             pt_qs = self._calculate_hba1c_values(pt_qs, calculate_kpis)
 
         return pt_qs

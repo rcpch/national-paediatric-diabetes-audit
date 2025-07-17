@@ -78,9 +78,10 @@
 {% endblock %}
 {% block table_body %}
   {% for patient in patients %}
-    <tr class="{% if not patient.is_complete_year_of_care %}bg-rcpch_orange_light_tint3{% endif %}">
+    <tr>
       <td>
-        {% include "patient_report/components/pt_identifier_value.html" with patient_pk=patient.pk is_complete_year_of_care=patient.is_complete_year_of_care patient_identifier=patient.patient_identifier %}
+        {% comment %}HACK: say the patient has completed a year of care just to suppress the tooltip{% endcomment %}
+        {% include "patient_report/components/pt_identifier_value.html" with patient_pk=patient.pk patient_identifier=patient.patient_identifier is_complete_year_of_care=True %}
       </td>
       <td>
         {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.coeliac_disease_screening %}
