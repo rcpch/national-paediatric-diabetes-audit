@@ -492,11 +492,8 @@ class PatientReportView(
                 "sick_day_rules_advice",
             )
         elif self.selected_category == TableCategories.CARE_AT_DIAGNOSIS.value:
-            today = date.today()
-
             pt_qs = (
-                pt_qs.filter(Q(diagnosis_date__gte=today - relativedelta(days=90)))
-                .annotate(
+                pt_qs.annotate(
                     coeliac_disease_screening=Case(
                         When(
                             Exists(
