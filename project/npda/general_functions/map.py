@@ -2,6 +2,7 @@
 import logging
 import json
 import os
+from functools import cache
 
 # django imports
 from django.conf import settings
@@ -49,6 +50,19 @@ logger = logging.getLogger(__name__)
 """
 Functions to return scatter plot of children by postcode
 """
+
+@cache
+def load_gdf(file):
+    file_path = os.path.join(
+        settings.BASE_DIR,
+        "project",
+        "constants",
+        "English IMD 2019",
+        file,
+    )
+
+    gdf = gpd.GeoDataFrame.from_file(file_path)
+    return gdf
 
 
 def get_children_by_pdu_audit_year(submission, paediatric_diabetes_unit_lead_organisation):
@@ -131,25 +145,9 @@ def generate_distance_from_organisation_scatterplot_figure(
     # # Load the IMD data (there are two files of merged data, one with IMD ranks merged with english LSOA shapes,
     # the other with IMD ranks merged with welsh LSOA shapes)
 
-    welsh_file_path = os.path.join(
-        settings.BASE_DIR,
-        "project",
-        "constants",
-        "English IMD 2019",
-        "merged_lsoa_wales.json",
-    )
-
-    english_file_path = os.path.join(
-        settings.BASE_DIR,
-        "project",
-        "constants",
-        "English IMD 2019",
-        "merged_lsoa_england.json",
-    )
-
     # store each of the files in a separate dataframe - this is needed because in some cases, both datasets are plotted together
-    welsh_gdf = gpd.GeoDataFrame.from_file(welsh_file_path)
-    english_gdf = gpd.GeoDataFrame.from_file(english_file_path)
+    welsh_gdf = load_gdf("merged_lsoa_wales.json")
+    english_gdf = load_gdf("merged_lsoa_england.json")
 
     english_gdf.set_geometry("geometry")
 
