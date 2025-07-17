@@ -454,19 +454,11 @@ class NPDAUserUpdateView(
                 # That of course can happen but for now we will only do this in the admin interface.
                 npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
                 success_message = f"{npda_user.email} deactivated successfully."
-                if npda_user.is_superuser or npda_user.is_rcpch_audit_team_member:
-                    raise PermissionDenied(
-                        "You cannot deactivate a superuser or RCPCH Audit Team member."
-                    )
+                
                 if npda_user.is_active is False:
                     success_message = f"{npda_user.email} successfully reactivated."
                     npda_user.is_active = True
                 else:
-                    # deactivate the user
-                    if npda_user.is_rcpch_staff:
-                        raise PermissionDenied(
-                            "You cannot deactivate a RCPCH staff member."
-                        )
                     npda_user.is_active = False
                 npda_user.save()
                 messages.success(
