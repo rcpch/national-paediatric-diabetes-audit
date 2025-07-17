@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 import itertools
 import logging
 import re
@@ -495,3 +495,7 @@ def round_to_1dp(value):
         return f"{float(value):.1f}"
     except (ValueError, TypeError):
         return value
+
+@register.filter
+def plus_days(value, days):
+    return value + timedelta(days=days)
