@@ -534,6 +534,7 @@ class PatientReportView(
             ).values(
                 "pk",
                 "patient_identifier",
+                "diagnosis_date",
                 "coeliac_disease_screening",
                 "thyroid_disease_screening",
                 "carbohydrate_counting_education",

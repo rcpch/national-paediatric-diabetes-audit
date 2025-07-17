@@ -25,6 +25,9 @@
     </div>
   </th>
   <th class="whitespace-normal break-words">
+    Date of Diagnosis
+  </th>
+  <th class="whitespace-normal break-words">
     Coeliac disease screening
     <div class="block">
       <span hx-get="?category=care_at_diagnosis&sort=coeliac_disease_screening&order=desc"
@@ -82,6 +85,9 @@
       <td>
         {% comment %}HACK: say the patient has completed a year of care just to suppress the tooltip{% endcomment %}
         {% include "patient_report/components/pt_identifier_value.html" with patient_pk=patient.pk patient_identifier=patient.patient_identifier is_complete_year_of_care=True %}
+      </td>
+      <td>
+        {{patient.diagnosis_date}}
       </td>
       <td>
         {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.coeliac_disease_screening %}
