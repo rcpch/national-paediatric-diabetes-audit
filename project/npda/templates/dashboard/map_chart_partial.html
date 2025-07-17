@@ -2,6 +2,10 @@
   <div class="alert alert-danger">
     <i class="fa-solid fa-person-circle-exclamation"></i> {{ error }}
   </div>
+{% elif info %}
+  <div class="alert alert-info">
+    <i class="fa-solid fa-person-circle-exclamation"></i> {{ info }}
+  </div>
 {% elif chart_html %}
   <div id='chart_html'>{{ chart_html|safe }}</div>
   {% if aggregated_distances.max_distance_travelled_km %}
