@@ -157,7 +157,7 @@ class CheckPDUInstanceMixin(AccessMixin):
 
         if('activate' in request.POST or 'deactivate' in request.POST):
             # If the user is trying to activate or deactivate a user, we need to check if they are allowed to do so
-            # This is only allowed if they have delete permissions for the user model, are in the same PDU (if not a superuser or audit team member), and the user is not in multiple PDUs
+            # This is only allowed if they have delete permissions for the user model, are in the same PDU (if not a superuser or audit team member or RCPCH staff), and the user is not in multiple PDUs
             # Finally, they must not be trying to activate/deactivate themselves
             if request.user.pk == int(self.kwargs.get('pk', 0)):
                 # If the user is trying to activate/deactivate themselves, we deny access
@@ -169,9 +169,9 @@ class CheckPDUInstanceMixin(AccessMixin):
                 raise PermissionDenied()
             if request.user.has_perm('npda.delete_npdauser'):
                 # If the user has delete permissions, they can activate or deactivate users, so long as they are in the same PDU and the user is not in multiple PDUs, or 
-                # they are a superuser or audit team member and the user is not in multiple PDUs
+                # they are a superuser or audit team member or rcpch staff and the user is not in multiple PDUs
                 requested_user = get_object_or_404(NPDAUser, pk=self.kwargs['pk'])
-                if (requested_pdu in user_pdus and requested_user.organisation_employers.count() == 1) or ((request.user.is_superuser or request.user.is_rcpch_audit_team_member) and requested_user.organisation_employers.count() == 1):
+                if (requested_pdu in user_pdus and requested_user.organisation_employers.count() == 1) or ((request.user.is_superuser or request.user.is_rcpch_audit_team_member or request.user.is_rcpch_staff) and requested_user.organisation_employers.count() == 1):
                     logger.info(
                         "User %s is trying to activate/deactivate a user with PDU %s",
                         request.user,

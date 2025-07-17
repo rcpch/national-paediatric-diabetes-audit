@@ -450,7 +450,7 @@ class NPDAUserUpdateView(
                 return redirect(redirect_url)
 
             elif "deactivate" in request.POST:
-                # Deactivation pathway - toggle the is_active field of the user. A user can only be deactivated if they are not a superuser or RCPCH Audit Team member.
+                # Deactivation pathway - toggle the is_active field of the user. A user can only be deactivated if they are not a superuser
                 # That of course can happen but for now we will only do this in the admin interface.
                 npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
                 success_message = f"{npda_user.email} deactivated successfully."

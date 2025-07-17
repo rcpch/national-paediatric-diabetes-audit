@@ -99,9 +99,9 @@
           {% if not has_two_factor %}
             <p class="text-gray-700">Not yet registered</p>
           {% else %}
-            <ul >
+            <ul>
               {% for device in two_factor_devices %}
-                <li class="list-none">{{device}}</li>
+                <li class="list-none">{{ device }}</li>
               {% endfor %}
             </ul>
             {% if form_method == 'update' and two_factor_devices %}
@@ -132,7 +132,7 @@
         <button name="deactivate"
                 type="button"
                 id="deactivate-btn"
-                {% if not perms.npda.change_npdauser or not npda_user.is_active and not perms.npda.activate_npdauser %}disabled{% endif %}
+                {% if not perms.npda.change_npdauser or not npda_user.is_active and not perms.npda.delete_npdauser %}disabled{% endif %}
                 {% if not perms.npda.delete_npdauser or form.instance.pk == request.user.pk %}disabled{% endif %}
                 class="bg-rcpch_red text-white font-semibold hover:text-white py-2.5 px-3 mt-20 border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint {% if not perms.npda.delete_npdauser or form.instance.pk == request.user.pk %}btn-disabled opacity-50 cursor-not-allowed pointer-events-none {% endif %}"
                 onclick="showDeactivateModal()">
