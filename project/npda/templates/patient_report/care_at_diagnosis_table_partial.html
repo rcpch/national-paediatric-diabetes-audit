@@ -1,4 +1,5 @@
 {% extends "patient_report/base_table.html" %}
+{% load npda_tags %}
 {% block description_box %}
   {% include "patient_report/description_box.html" with description="Children and young people with Type 1 diabetes should be screened for thyroid disease and coeliac disease within 90 days of diagnosis. Newly diagnosed children and young people should also receive level 3 carbohydrate counting education within 14 days of diagnosis." proportion="diagnosed with T1DM in the audit year" %}
 {% endblock %}
@@ -23,6 +24,43 @@
         <i class="fa-solid fa-down-long {% if sort_field == 'nhs_number' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
       </span>
     </div>
+  </th>
+  <th class="whitespace-normal break-words">
+    Date of Diagnosis
+    <div class="block">
+      <span hx-get="?category=care_at_diagnosis&sort=diagnosis_date&order=asc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'diagnosis_date' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span hx-get="?category=care_at_diagnosis&sort=diagnosis_date&order=desc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'diagnosis_date' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
+  </th>
+  <th class="whitespace-normal break-words">
+    Carbohydrate counting education
+    <div class="block">
+      <span hx-get="?category=care_at_diagnosis&sort=carbohydrate_counting_education&order=desc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-up-long {% if sort_field == 'carbohydrate_counting_education' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+      <span hx-get="?category=care_at_diagnosis&sort=carbohydrate_counting_education&order=asc"
+            hx-target="#table-area"
+            hx-swap="innerHTML"
+            class="cursor-pointer">
+        <i class="fa-solid fa-down-long {% if sort_field == 'carbohydrate_counting_education' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+      </span>
+    </div>
+  </th>
+  <th>
+    Date of Diagnosis + 14 days
   </th>
   <th class="whitespace-normal break-words">
     Coeliac disease screening
@@ -58,22 +96,8 @@
       </span>
     </div>
   </th>
-  <th class="whitespace-normal break-words">
-    Carbohydrate counting education
-    <div class="block">
-      <span hx-get="?category=care_at_diagnosis&sort=carbohydrate_counting_education&order=desc"
-            hx-target="#table-area"
-            hx-swap="innerHTML"
-            class="cursor-pointer">
-        <i class="fa-solid fa-up-long {% if sort_field == 'carbohydrate_counting_education' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
-      </span>
-      <span hx-get="?category=care_at_diagnosis&sort=carbohydrate_counting_education&order=asc"
-            hx-target="#table-area"
-            hx-swap="innerHTML"
-            class="cursor-pointer">
-        <i class="fa-solid fa-down-long {% if sort_field == 'carbohydrate_counting_education' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
-      </span>
-    </div>
+  <th>
+    Date of Diagnosis + 90 days
   </th>
 {% endblock %}
 {% block table_body %}
@@ -84,13 +108,22 @@
         {% include "patient_report/components/pt_identifier_value.html" with patient_pk=patient.pk patient_identifier=patient.patient_identifier is_complete_year_of_care=True %}
       </td>
       <td>
+        {{patient.diagnosis_date}}
+      </td>
+      <td>
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.carbohydrate_counting_education %}
+      </td>
+      <td>
+        {{patient.diagnosis_date|plus_days:14}}
+      </td>
+      <td>
         {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.coeliac_disease_screening %}
       </td>
       <td>
         {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.thyroid_disease_screening %}
       </td>
       <td>
-        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.carbohydrate_counting_education %}
+        {{patient.diagnosis_date|plus_days:90}}
       </td>
     </tr>
   {% empty %}
