@@ -178,7 +178,8 @@ async def csv_upload_sync(
         csv_file_name=None,
         submission_active=True,
         user=user,
-        ip_address=None
+        ip_address=None,
+        new_dataframe= dataframe
     )
 
     return await csv_upload(

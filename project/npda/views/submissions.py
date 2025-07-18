@@ -1,5 +1,5 @@
 # Python imports
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 import json
 from typing import Any, Iterable
 import logging
@@ -13,10 +13,9 @@ from django.apps import apps
 from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, Case, When, F, Value, IntegerField, OuterRef, Subquery, Max, DateField
+from django.db.models import Count, Case, When, Value, IntegerField, OuterRef, Subquery
 from django.db.models.functions import Concat, ExtractMonth, ExtractYear
 from django.http import HttpResponse
-from django.urls import reverse
 from django.shortcuts import render, redirect
 from django.views.generic import ListView
 
@@ -377,14 +376,8 @@ async def upload_csv(request):
             submission_active=False,
             user=request.user,
             ip_address=get_client_ip(request),
+            new_dataframe=parsed_csv.df
         )
-
-        # Gather unique patient and visit counts and update the submission
-        patient_count, visit_per_patient_count, total_rows = gather_unique_patient_and_visit_counts(parsed_csv.df, is_jersey)
-        new_submission.total_unique_patients = patient_count
-        new_submission.total_unique_visits = total_rows
-        new_submission.visit_counts_per_patient = json.dumps(visit_per_patient_count)
-        await sync_to_async(new_submission.save)()
         
         upload_csv_task.delay(new_submission.id)
 
@@ -420,9 +413,7 @@ def upload_csv_in_progress(request):
     csv_file_name = last_submission.csv_file_name
     if timeout:
         upload_complete = True # if timeout, we assume the upload is complete as this triggers redirect to upload_complete template
-        if last_submission:
-            pass
-        else:
+        if not last_submission:
             # here there is an error with the headers or the csv file is empty
             # we return an error message to the user and redirect them to the patients page
             messages.error(
