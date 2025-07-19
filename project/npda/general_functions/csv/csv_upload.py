@@ -1,10 +1,10 @@
 # python imports
-from datetime import date
 from asgiref.sync import sync_to_async
-import logging
 import asyncio
-import json
 import collections
+import json
+import logging
+import io
 
 # django imports
 from django.apps import apps
@@ -21,7 +21,10 @@ from project.constants import (
     CSV_HEADING_OBJECTS,
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
-    LEAVE_PDU_REASONS,
+)
+from project.npda.general_functions.csv.csv_parse import csv_parse
+from project.npda.general_functions.csv import (
+    gather_unique_patient_and_visit_counts,
 )
 
 # Logging setup
@@ -40,7 +43,7 @@ from project.npda.models import (
     VisitActivity
 )
 
-async def create_csv_submission(pdu, audit_period, csv_file_bytes, csv_file_name, submission_active, user=None, ip_address=None):
+async def create_csv_submission(pdu, audit_period, csv_file_bytes, csv_file_name, submission_active, user=None, ip_address=None, new_dataframe=None):
     old_submission = await Submission.objects.filter(
         paediatric_diabetes_unit=pdu,
         audit_period=audit_period,
@@ -51,6 +54,9 @@ async def create_csv_submission(pdu, audit_period, csv_file_bytes, csv_file_name
         old_submission.submission_active = False
         await old_submission.asave()
     
+    # Gather unique patient and visit counts and update the submission
+    patient_count, visit_per_patient_count, total_rows = gather_unique_patient_and_visit_counts(dataframe=new_dataframe, is_jersey=pdu.pz_code == "PZ248")
+    
     submission = await Submission.objects.acreate(
         submission_date=timezone.now(),
         submission_by=user,
@@ -59,7 +65,10 @@ async def create_csv_submission(pdu, audit_period, csv_file_bytes, csv_file_name
         audit_period=audit_period,
         csv_file=csv_file_bytes,
         csv_file_name=csv_file_name,
-        submission_active=submission_active
+        submission_active=submission_active,
+        total_unique_patients = patient_count,
+        total_unique_visits = total_rows,
+        visit_counts_per_patient = json.dumps(visit_per_patient_count)
     )
     
     if user:

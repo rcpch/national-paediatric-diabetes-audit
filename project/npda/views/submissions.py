@@ -1,5 +1,5 @@
 # Python imports
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 import json
 from typing import Any, Iterable
 import logging
@@ -13,7 +13,7 @@ from django.apps import apps
 from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, Case, When, F, Value, IntegerField, OuterRef, Subquery, Max, DateField
+from django.db.models import Count, Case, When, Value, IntegerField, OuterRef, Subquery
 from django.db.models.functions import Concat, ExtractMonth, ExtractYear
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
@@ -33,7 +33,8 @@ from ..general_functions.csv import (
     download_csv,
     download_xlsx,
     csv_parse,
-    create_csv_submission
+    create_csv_submission,
+    gather_unique_patient_and_visit_counts
 )
 from .mixins import LoginAndOTPRequiredMixin
 from ..models import (
@@ -375,8 +376,9 @@ async def upload_csv(request):
             submission_active=False,
             user=request.user,
             ip_address=get_client_ip(request),
+            new_dataframe=parsed_csv.df
         )
-
+        
         upload_csv_task.delay(new_submission.id)
 
         # update the session fields - this stores that the user has uploaded a csv and disables the ability to use the questionnaire
@@ -400,30 +402,43 @@ def upload_csv_in_progress(request):
     ).order_by("-submission_date").first()
 
     seconds_since_submission = (datetime.now(timezone.utc) - last_submission.submission_date).seconds
-    minutes_since_submission = seconds_since_submission / 60
 
-    timeout = minutes_since_submission > 10
-    if timeout:
-        # Error to trigger admin email
-        logger.error(f"Submission timed out. Submission ID: {last_submission.pk}. PZ Code: {pz_code}")
-        messages.error(
-            request,
-            f"{last_submission.csv_file_name} took too long to process. Please contact the NPDA team for assistance.",
-        )
-
-    if last_submission and not last_submission.submission_active and not timeout:
-        patients_so_far = Patient.objects.filter(submissions=last_submission).count()
-        visits_so_far = Patient.objects.filter(submissions=last_submission).aggregate(Count("visit"))["visit__count"]
-
-        context = {
-            "csv_file_name": last_submission.csv_file_name,
-            "patients_so_far": patients_so_far,
-            "visits_so_far": visits_so_far
-        }
-
-        return render(request, "upload_csv/upload_in_progress.html", context=context)
+    timeout = seconds_since_submission > 15
     
-    return redirect("patients") 
+    total_patients = last_submission.total_unique_patients
+    total_rows = last_submission.total_unique_visits
+    patients_so_far = Patient.objects.filter(submissions=last_submission).count()
+    visits_so_far = Patient.objects.filter(submissions=last_submission).aggregate(Count("visit"))["visit__count"]
+    upload_complete = total_rows == visits_so_far and total_patients == patients_so_far
+    csv_file_name = last_submission.csv_file_name
+    if timeout:
+        upload_complete = True # if timeout, we assume the upload is complete as this triggers redirect to upload_complete template
+        if not last_submission:
+            # here there is an error with the headers or the csv file is empty
+            # we return an error message to the user and redirect them to the patients page
+            messages.error(
+                request,
+                "The upload has timed out. Please try again.",
+            )
+            return redirect("patients")
+    
+    context = {
+        "csv_file_name": csv_file_name,
+        "patients_so_far": patients_so_far,
+        "visits_so_far": visits_so_far,
+        "total_patients": total_patients,
+        "total_rows": total_rows,
+        "patient_progress": patients_so_far / total_patients * 100 if total_patients else 0,
+        "upload_complete": upload_complete,
+        "timeout": timeout,
+    }
+
+    if request.htmx:
+        response = render(request, "upload_csv/upload_in_progress_wrapper.html", context=context)
+        return response
+            
+
+    return render(request, "upload_csv/upload_in_progress.html", context=context)
 
 @login_and_otp_required()
 def switch_paediatric_diabetes_unit(request):
