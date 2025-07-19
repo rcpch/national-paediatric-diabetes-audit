@@ -152,7 +152,7 @@ class PatientReportView(
             self.request
         ).kpi_calculation_date()
         calculate_kpis = CalculateKPIS(
-            calculation_date=calculation_date, return_pt_querysets=True
+            calculation_date=calculation_date, return_pt_querysets=True, is_jersey=pz_code == "PZ248"
         )
         calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
         patient_identifier = (

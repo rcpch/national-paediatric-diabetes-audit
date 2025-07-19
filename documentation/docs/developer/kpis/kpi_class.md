@@ -18,6 +18,9 @@ To initialise an instance of the `CalculateKPIS` class, you can pass in optional
 - `return_pt_querysets` (`bool`, optional):
    If set to `True`, the calculated KPIs will include patient querysets used during the KPI calculation. The default is `False`.
 
+- `is_jersey` (`bool`, optional):
+   If set to `True` assumes the unique identifier for all patient queries is `unique_reference_number` rather than `nhs_number`. The default is `False`.
+
 ```python
 from datetime import date
 from project.npda.kpi_class.kpis import CalculateKPIS
