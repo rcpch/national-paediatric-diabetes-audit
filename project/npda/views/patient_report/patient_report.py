@@ -862,6 +862,8 @@ class PatientReportView(
         # Sort the queryset based on the selected sort field and order
         if sort_field:
             # Handle sort direction
+            if sort_field == "unique_identifier":
+                sort_field = "unique_reference_number" if pz_code == "PZ248" else "nhs_number"
             if sort_order == "desc":
                 sort_field = f"-{sort_field}"
 

@@ -11,17 +11,17 @@
       NHS Number
     {% endif %}
     <div class="block">
-      <span hx-get="?category=health_checks&sort=nhs_number&order=asc"
+      <span hx-get="?category=health_checks&sort=unique_identifier&order=asc"
             hx-target="#table-area"
             hx-swap="innerHTML"
             class="cursor-pointer">
-        <i class="fa-solid fa-up-long {% if sort_field == 'nhs_number' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
+        <i class="fa-solid fa-up-long {% if sort_field == 'unique_identifier' and sort_order == 'asc' %}text-rcpch_pink{% endif %}"></i>
       </span>
-      <span hx-get="?category=health_checks&sort=nhs_number&order=desc"
+      <span hx-get="?category=health_checks&sort=unique_identifier&order=desc"
             hx-target="#table-area"
             hx-swap="innerHTML"
             class="cursor-pointer">
-        <i class="fa-solid fa-down-long {% if sort_field == 'nhs_number' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
+        <i class="fa-solid fa-down-long {% if sort_field == 'unique_identifier' and sort_order == 'desc' %}text-rcpch_pink{% endif %}"></i>
       </span>
     </div>
   </div>
