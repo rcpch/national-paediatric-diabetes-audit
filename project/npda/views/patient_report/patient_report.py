@@ -152,7 +152,7 @@ class PatientReportView(
             self.request
         ).kpi_calculation_date()
         calculate_kpis = CalculateKPIS(
-            calculation_date=calculation_date, return_pt_querysets=True
+            calculation_date=calculation_date, return_pt_querysets=True, is_jersey=pz_code == "PZ248"
         )
         calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
         patient_identifier = (
@@ -862,6 +862,8 @@ class PatientReportView(
         # Sort the queryset based on the selected sort field and order
         if sort_field:
             # Handle sort direction
+            if sort_field == "unique_identifier":
+                sort_field = "unique_reference_number" if pz_code == "PZ248" else "nhs_number"
             if sort_order == "desc":
                 sort_field = f"-{sort_field}"
 

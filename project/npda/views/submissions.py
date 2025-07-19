@@ -361,6 +361,14 @@ async def upload_csv(request):
                 message="CSV file must use NHS number as the identifier column unless uploading for Jersey"
             )
             return redirect("upload_csv")
+        
+        #  the same must be true for the Jersey upload
+        if parsed_csv.identifier_column == "NHS Number" and is_jersey:
+            messages.error(
+                request=request,
+                message="CSV file must use Unique Reference Number as the identifier column unless uploading for Jersey"
+            )
+            return redirect("upload_csv")
 
         audit_period = await sync_to_async(AuditPeriod.objects.get_audit_period_for_request)(request)
 

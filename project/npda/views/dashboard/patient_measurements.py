@@ -22,7 +22,7 @@ def patient_measurements(request):
     calculation_date = audit_period.kpi_calculation_date()
     
     calculate_kpis = CalculateKPIS(
-        calculation_date=calculation_date, return_pt_querysets=True
+        calculation_date=calculation_date, return_pt_querysets=True, is_jersey=pz_code == "PZ248"
     )
 
     kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
@@ -106,7 +106,7 @@ def patient_health_check_totals(pz_code, calculation_date):
     It uses the CalculateKPIS class to get the patient querysets and then applies the necessary filters and annotations to calculate the totals for each health check KPI
     """
     calculate_kpis = CalculateKPIS(
-        calculation_date=calculation_date, return_pt_querysets=True
+        calculation_date=calculation_date, return_pt_querysets=True, is_jersey=pz_code == "PZ248"
     )
     calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
     # Select all T1DM patients for PZ code - Note that Jersey (PZ248) has a different patient identifier field
