@@ -45,6 +45,7 @@ def download_template(request):
     )
 
 
+@login_and_otp_required()
 def view_preference(request):
     """
     HTMX callback from the button press in the view_preference.html template.
