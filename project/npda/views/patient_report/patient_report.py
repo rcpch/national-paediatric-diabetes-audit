@@ -148,9 +148,8 @@ class PatientReportView(
             raise ValueError(f"Invalid category: {category}")
         self.selected_category = category
         pz_code = request.session.get("pz_code")
-        calculation_date = AuditPeriod.objects.get_audit_period_for_request(
-            self.request
-        ).kpi_calculation_date()
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
+        calculation_date = audit_period.kpi_calculation_date()
         calculate_kpis = CalculateKPIS(
             calculation_date=calculation_date, return_pt_querysets=True, is_jersey=pz_code == "PZ248"
         )
@@ -202,9 +201,9 @@ class PatientReportView(
             ).count()
             self.total_eligible_thyroid_screen = complete_year_patients.count()
             
-            # For age-specific checks (12+ years old)
+            # For age-specific checks (12+ years old at start of audit period)
             complete_year_12plus = complete_year_patients.filter(
-                date_of_birth__lte=calculation_date - relativedelta(years=12)
+                date_of_birth__lte=audit_period.start_date - relativedelta(years=12)
             )
             
             self.total_passed_blood_pressure = calculate_kpis.calculate_kpi_28_blood_pressure().patient_querysets["passed"].filter(
@@ -223,7 +222,7 @@ class PatientReportView(
             self.total_eligible_foot_exam = complete_year_12plus.count()
             pt_qs = pt_qs.annotate(
                 is_gte_12yo=Q(
-                    date_of_birth__lte=calculation_date - relativedelta(years=12)
+                    date_of_birth__lte=audit_period.start_date - relativedelta(years=12)
                 ),
                 passed_hba1c=Case(
                     When(
@@ -396,7 +395,7 @@ class PatientReportView(
                     output_field=BooleanField(),
                 ),
                 is_gte_12yo=Q(
-                    date_of_birth__lte=calculation_date - relativedelta(years=12)
+                    date_of_birth__lte=audit_period.start_date - relativedelta(years=12)
                 ),
                 smoking_status=Case(
                     When(

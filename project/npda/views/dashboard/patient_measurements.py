@@ -78,6 +78,7 @@ def patient_measurements(request):
     returned_patient_health_check_totals = patient_health_check_totals(
         pz_code=pz_code,
         calculation_date=calculation_date,
+        audit_start_date=audit_period.start_date
     )
 
     context={
@@ -98,7 +99,7 @@ def patient_measurements(request):
         template_name=template
     )
 
-def patient_health_check_totals(pz_code, calculation_date):
+def patient_health_check_totals(pz_code, calculation_date, audit_start_date):
     """
     Returns the totals for the patient health check KPIs.
     Note this repeats some of the logic in the patient_report. Probably should be refactored into a common function.
@@ -156,7 +157,7 @@ def patient_health_check_totals(pz_code, calculation_date):
     
     # For age-specific checks (12+ years old)
     complete_year_12plus = complete_year_patients.filter(
-        date_of_birth__lte=calculation_date - relativedelta(years=12)
+        date_of_birth__lte=audit_start_date - relativedelta(years=12)
     )
     
     total_passed_blood_pressure = calculate_kpis.calculate_kpi_28_blood_pressure().patient_querysets["passed"].filter(
