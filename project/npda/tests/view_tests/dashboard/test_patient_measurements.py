@@ -76,5 +76,5 @@ def test_measurements_for_patients_turning_12_in_audit_year(
     assert response.status_code == HTTPStatus.OK
 
     assert response.context["total_eligible_blood_pressure"] == 0
-    assert response.context["total_eligble_urinary_albumin"] == 0
+    assert response.context["total_eligible_urinary_albumin"] == 0
     assert response.context["total_eligible_foot_exam"] == 0
