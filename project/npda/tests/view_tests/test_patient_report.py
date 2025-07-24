@@ -412,3 +412,7 @@ def test_health_checks_for_patients_turning_12_in_audit_year(
     assert patient["passed_blood_pressure"] is None
     assert patient["passed_urinary_albumin"] is None
     assert patient["passed_foot_exam"] is None
+
+    assert response.context["total_eligible_blood_pressure"] == 0
+    assert response.context["total_eligible_urinary_albumin"] == 0
+    assert response.context["total_eligible_foot_exam"] == 0
