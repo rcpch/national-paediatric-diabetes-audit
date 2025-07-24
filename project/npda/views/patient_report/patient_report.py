@@ -395,7 +395,7 @@ class PatientReportView(
                     output_field=BooleanField(),
                 ),
                 is_gte_12yo=Q(
-                    date_of_birth__lte=calculation_date - relativedelta(years=12)
+                    date_of_birth__lte=audit_period.start_date - relativedelta(years=12)
                 ),
                 smoking_status=Case(
                     When(
