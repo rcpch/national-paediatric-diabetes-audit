@@ -354,7 +354,7 @@ def test_outcomes_multiple_hba1c_measurements(
 
 
 @pytest.mark.django_db
-def test_health_checks_for_patients_turning_12_in_audit_year(
+def test_report_for_patients_turning_12_in_audit_year(
     seed_groups_fixture,
     seed_users_fixture,
     seed_audit_periods_fixture,
@@ -416,3 +416,17 @@ def test_health_checks_for_patients_turning_12_in_audit_year(
     assert response.context["total_eligible_blood_pressure"] == 0
     assert response.context["total_eligible_urinary_albumin"] == 0
     assert response.context["total_eligible_foot_exam"] == 0
+
+    response = client.get(
+        reverse("patient_report") + f"?category={TableCategories.ADDITIONAL_CARE_PROCESSES.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    assert len(response.context["patients"]) == 1
+
+    patient = response.context["patients"][0]
+
+    assert patient["patient_identifier"] == "4444444444"
+    assert patient["smoking_status"] is None
+    assert patient["smoking_cessation_referral"] is None
