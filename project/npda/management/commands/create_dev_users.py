@@ -7,13 +7,14 @@ from django.contrib.auth import get_user_model
 from project.constants.user import (
     AUDIT_CENTRE_COORDINATOR,
     AUDIT_CENTRE_EDITOR,
-    AUDIT_CENTRE_READER
+    AUDIT_CENTRE_READER,
+    RCPCH_AUDIT_TEAM,
 )
 
 class Command(BaseCommand):
     help = "Create test users using the base set in environment variables: LOCAL_DEV_ADMIN_EMAIL and LOCAL_DEV_ADMIN_PASSWORD."
 
-    def create_user_if_not_exists(self, email, first_name, surname, password, role):
+    def create_user_if_not_exists(self, email, first_name, surname, password, role, is_rcpch_audit_team_member=False):
         user_model = get_user_model()
 
         if not user_model.objects.filter(email=email).exists():
@@ -25,7 +26,8 @@ class Command(BaseCommand):
                 role=role,
                 is_active=True,
                 pz_code="PZ999",  # RCPCH
-                is_primary_employer=True
+                is_primary_employer=True,
+                is_rcpch_audit_team_member=is_rcpch_audit_team_member
             )
             
             self.stdout.write(self.style.SUCCESS(f"Successfully created {email}."))
@@ -47,6 +49,7 @@ class Command(BaseCommand):
         coordinator_dev_email = f"{local_part}+coordinator@{domain}"
         editor_dev_email = f"{local_part}+editor@{domain}"
         reader_dev_email = f"{local_part}+reader@{domain}"
+        rcpch_audit_team_email = f"{local_part}+rcpch_audit_team@{domain}"
         
         if not user_model.objects.filter(email=local_dev_admin_email).exists():
             user_model.objects.create_superuser(
@@ -82,6 +85,15 @@ class Command(BaseCommand):
             surname="Lovelace",
             password=password,
             role=AUDIT_CENTRE_READER,
+        )
+
+        self.create_user_if_not_exists(
+            email=rcpch_audit_team_email,
+            first_name="RCPCHAuditTeamAda",
+            surname="Lovelace",
+            password=password,
+            role=RCPCH_AUDIT_TEAM,
+            is_rcpch_audit_team_member=True
         )
         
 

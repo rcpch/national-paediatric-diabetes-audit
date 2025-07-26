@@ -171,7 +171,7 @@ class CheckPDUInstanceMixin(AccessMixin):
                 # If the user has delete permissions, they can activate or deactivate users, so long as they are in the same PDU and the user is not in multiple PDUs, or 
                 # they are a superuser or audit team member or rcpch staff and the user is not in multiple PDUs
                 requested_user = get_object_or_404(NPDAUser, pk=self.kwargs['pk'])
-                if (requested_pdu in user_pdus and requested_user.organisation_employers.count() == 1) or ((request.user.is_superuser or request.user.is_rcpch_audit_team_member or request.user.is_rcpch_staff) and requested_user.organisation_employers.count() == 1):
+                if (requested_pdu in user_pdus and requested_user.organisation_employers.count() == 1) or (request.user.is_superuser or request.user.is_rcpch_audit_team_member or request.user.is_rcpch_staff):
                     logger.info(
                         "User %s is trying to activate/deactivate a user with PDU %s",
                         request.user,

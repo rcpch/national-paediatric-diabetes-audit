@@ -1310,25 +1310,35 @@ def test_coordinators_cannot_activate_or_deactivate_users_with_multiple_employer
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("action", ["deactivate", "activate"])
-def rcpch_audit_team_and_superusers_cannot_activate_or_deactivate_users_with_multiple_employers(
+def test_rcpch_audit_team_and_superusers_can_activate_or_deactivate_users_with_multiple_employers(
     client: Client,
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     action
 ):
-    """Test that coordinators cannot inactivate or activate users with multiple employers even if they are in the same PDU."""
+    """Test that coordinators can inactivate or activate users with multiple employers even if they are in the same PDU."""
 
     # Create a test user
     test_rcpch_audit_team_member = NPDAUser.objects.filter(
         role=test_user_rcpch_audit_team_data.role,
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
     ).first()
+
+    assert test_rcpch_audit_team_member.organisation_employers.count() > 0, (
+        f"User {test_rcpch_audit_team_member.first_name} ({test_rcpch_audit_team_member.organisation_employers.first().pz_code}) should have at least one employer"
+    )
+
 
     # Create a test user with multiple employers in the same PDU
     test_user_multiple_employers = NPDAUser.objects.filter(
         role=test_user_audit_centre_editor_data.role,
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
     ).first()
+    
+    
+    assert test_user_multiple_employers.organisation_employers.count() > 0, (
+        f"User {test_user_multiple_employers.first_name} ({test_user_multiple_employers.organisation_employers.first().pz_code}) should have at least one employer"
+    )
 
     GOSH = PaediatricDiabetesUnit.objects.get(pz_code=GOSH_PZ_CODE)
     # Add multiple employers to the test user
@@ -1336,6 +1346,10 @@ def rcpch_audit_team_and_superusers_cannot_activate_or_deactivate_users_with_mul
         npda_user=test_user_multiple_employers,
         paediatric_diabetes_unit=GOSH,
         is_primary_employer=False,
+    )
+
+    assert test_user_multiple_employers.organisation_employers.count() > 1, (
+        f"User {test_user_multiple_employers.first_name} should have multiple employers"
     )
 
     if action == "deactivate":
@@ -1351,14 +1365,16 @@ def rcpch_audit_team_and_superusers_cannot_activate_or_deactivate_users_with_mul
 
     # Make a GET request to the user logs page
     url = reverse("npdauser-update", kwargs={"pk": test_user_multiple_employers.pk})
-    response = client.post(url, data={action: 'true'})
+    new_status = 'false' if action == "deactivate" else 'true'
+    response = client.post(url, data={action: new_status})
 
-    # Check that the response is forbidden
-    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert response.status_code != HTTPStatus.FORBIDDEN, (
+        f"RCPCH User {test_rcpch_audit_team_member.first_name} ({test_rcpch_audit_team_member.get_all_employer_organisations()}) should be able to {action} the a {'active' if initial_status else 'inactive'} user with multiple PDUs {test_user_multiple_employers.first_name} ({test_user_multiple_employers.get_all_employer_organisations()})"
+    )
 
     test_user_multiple_employers.refresh_from_db()
-    assert test_user_multiple_employers.is_active == initial_status, (
-        f"User {test_user_multiple_employers.first_name} ({test_user_multiple_employers.pz_code}) should not be able to change the active status of user {test_user_multiple_employers.first_name} ({test_user_multiple_employers.organisation_employers.first().pz_code})"
+    assert test_user_multiple_employers.is_active == True if new_status == 'true' else False, (
+        f"RCPCH User {test_rcpch_audit_team_member.first_name} should be able to {action} an {'active' if initial_status else 'inactive'} user with multiple PDUs {test_user_multiple_employers.first_name} ({test_user_multiple_employers.get_all_employer_organisations()})"
     )
 
 @pytest.mark.django_db
