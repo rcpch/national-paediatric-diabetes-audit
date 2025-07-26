@@ -432,12 +432,18 @@ def exclude_admin_user_field(field, user):
     if user.is_superuser:
         return True
     elif user.is_rcpch_staff or user.is_rcpch_audit_team_member:
-        if field.id_for_label in [
-            "id_is_staff",
-            "id_is_rcpch_staff",
-            "id_is_rcpch_audit_team_member",
-        ]:
-            return True
+        if user.is_rcpch_staff:
+            if field.id_for_label in [
+                "id_is_rcpch_staff",
+            ]:
+                return True
+        if user.is_rcpch_audit_team_member:
+            if field.id_for_label in [
+                "id_is_staff"
+                "id_is_rcpch_staff",
+                "id_is_rcpch_audit_team_member",
+            ]:
+                return True
         return False
     if field.id_for_label in [
         "id_is_staff",

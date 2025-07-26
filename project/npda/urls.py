@@ -96,11 +96,6 @@ urlpatterns = [
         view=NPDAUserUpdateView.as_view(),
         name="npdauser-update",
     ),
-    path(
-        "npda_users/<int:pk>/delete",
-        view=NPDAUserDeleteView.as_view(),
-        name="npdauser-delete",
-    ),
     # Authentication -> NOTE: 2FA is implemented in project-level URLS with tf_urls
     path("captcha/", include("captcha.urls")),
     path("account/", include(auth_urls)),

@@ -88,12 +88,11 @@ class NPDAUserListView(
 
         if self.request.user.viewing_data_nationally():
             return (
-                queryset.order_by("surname")
+                queryset.order_by("-is_active", "surname")
             )
 
         return (
-            queryset.filter(organisation_employers__pz_code=pz_code)
-            .order_by("surname")
+            queryset.filter(organisation_employers__pz_code=pz_code).order_by("-is_active", "surname")
         )
 
     def get_context_data(self, **kwargs):
@@ -329,8 +328,8 @@ class NPDAUserUpdateView(
         group = group_for_role(user.role)
         if group:
             user.groups.add(group)
-        
         return super().form_valid(form)
+    
 
     def post(self, request: HttpRequest, *args: str, **kwargs) -> HttpResponse:
         """
@@ -343,7 +342,6 @@ class NPDAUserUpdateView(
             # these are HTMX post requests from the edit user form
             # it is not called on submission of the form, only of the employers list
             # the return value is a partial view of the employers list, with the select, delete and set primary employer buttons
-
             if not request.user.has_perm("npda.change_npdauser"):
                 raise PermissionDenied(
                     "You do not have permission to edit this user. Contact the NPDA for assistance."
@@ -449,6 +447,25 @@ class NPDAUserUpdateView(
                     "npda_users",
                 )
                 return redirect(redirect_url)
+
+            elif "deactivate" in request.POST:
+                # Deactivation pathway - toggle the is_active field of the user. A user can only be deactivated if they are not a superuser
+                # That of course can happen but for now we will only do this in the admin interface.
+                npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
+                success_message = f"{npda_user.email} deactivated successfully."
+                
+                if npda_user.is_active is False:
+                    success_message = f"{npda_user.email} successfully reactivated."
+                    npda_user.is_active = True
+                else:
+                    npda_user.is_active = False
+                npda_user.save()
+                messages.success(
+                    request,
+                    success_message
+                )
+                return redirect(reverse("npda_users"))
+
             elif "reset-two-factor" in request.POST:
                 if request.user.is_superuser or request.user.is_rcpch_audit_team_member:
                     npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
@@ -467,49 +484,9 @@ class NPDAUserUpdateView(
                     return redirect(redirect_url)
                 else:
                     raise PermissionDenied("You do not have permission to reset two-factor authentication.")
+
             else:
                 return super().post(request, *args, **kwargs)
-
-        
-
-
-class NPDAUserDeleteView(
-    LoginAndOTPRequiredMixin,
-    CheckPDUInstanceMixin,
-    PermissionRequiredMixin,
-    SuccessMessageMixin,
-    DeleteView,
-):
-    """
-    Handle deletion of user from audit
-    """
-
-    permission_required = "npda.delete_npdauser"
-    permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
-
-    model = NPDAUser
-    success_message = "NPDA User removed from database"
-    success_url = reverse_lazy("npda_users")
-
-    def post(self, request, *args, **kwargs):
-        """
-        Coordinators and RCPCH Audit Team can delete users, but only RCPCH Audit Team can delete those with multiple employers
-        Coordinators should not be able to delete themselves
-        """
-        requested_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
-        if requested_user.number_of_pdu_memberships() > 1:
-            if not (
-                self.request.user.is_superuser
-                or self.request.user.is_rcpch_audit_team_member
-            ):
-                raise PermissionDenied(
-                    "You do not have permission to delete this user as they are members of more than one PDU. Contact the NPDA for assistance."
-                )
-        if requested_user.pk == self.request.user.pk:
-            raise PermissionDenied(
-                "You cannot delete your own account. Contact the NPDA for assistance."
-            )
-        return super().post(request, *args, **kwargs)
 
 
 class NPDAUserLogsListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, ListView):

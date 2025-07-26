@@ -99,9 +99,9 @@
           {% if not has_two_factor %}
             <p class="text-gray-700">Not yet registered</p>
           {% else %}
-            <ul >
+            <ul>
               {% for device in two_factor_devices %}
-                <li class="list-none">{{device}}</li>
+                <li class="list-none">{{ device }}</li>
               {% endfor %}
             </ul>
             {% if form_method == 'update' and two_factor_devices %}
@@ -129,10 +129,70 @@
             Resend Confirmation Email
           </button>
         {% endif %}
-        <a class="bg-rcpch_red text-white font-semibold hover:text-white py-2.5 px-3 mt-20 border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint {% if not perms.npda.delete_npdauser or form.instance.pk == request.user.pk %}btn-disabled opacity-50 cursor-not-allowed pointer-events-none {% endif %}"
-           href="{% url 'npdauser-delete' npdauser.pk %}">Delete</a>
+        <button name="deactivate"
+                type="button"
+                id="deactivate-btn"
+                {% if not perms.npda.change_npdauser or not npda_user.is_active and not perms.npda.delete_npdauser %}disabled{% endif %}
+                {% if not perms.npda.delete_npdauser or form.instance.pk == request.user.pk %}disabled{% endif %}
+                class="bg-rcpch_red text-white font-semibold hover:text-white py-2.5 px-3 mt-20 border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint {% if not perms.npda.delete_npdauser or form.instance.pk == request.user.pk %}btn-disabled opacity-50 cursor-not-allowed pointer-events-none {% endif %}"
+                onclick="showDeactivateModal()">
+          {% if npda_user.is_active %}
+            Deactivate
+          {% else %}
+            Activate
+          {% endif %}
+          <i class="fa-solid fa-robot"></i>
+        </button>
       {% endif %}
+      <div class="alert alert-info mb-5">
+        <i class="fa-solid fa-info-circle"></i>
+        <strong>Note:</strong>
+        <span>Users cannot be deleted from NPDA. If a user is nolonger part of the audit team, their account can be deactivated. This allows NPDA to maintain an accurate audit trail.</span>
+      </div>
     </form>
+    {% comment %} modal dialog - are you sure? {% endcomment %}
+    <dialog id="are_you_sure" class="modal">
+      <div class="modal-box">
+        <h3 class="text-lg font-bold">
+          {% if npda_user.is_active %}
+            Deactivate User Account
+          {% else %}
+            Activate User Account
+          {% endif %}
+        </h3>
+        <p class="py-4">
+          {% if npda_user.is_active %}
+            Are you sure you want to deactivate <strong>{{ npda_user.get_full_name }}</strong>?
+            This will prevent them from accessing the NPDA platform.
+          {% else %}
+            Are you sure you want to activate <strong>{{ npda_user.get_full_name }}</strong>?
+            This will restore their access to the NPDA platform.
+          {% endif %}
+        </p>
+        <div class="modal-action">
+          <form method="dialog">
+            <button class="btn" type="button" onclick="closeModal()">Cancel</button>
+          </form>
+          <button class="btn btn-error" type="button" onclick="confirmDeactivation()">
+            {% if npda_user.is_active %}
+              Yes, Deactivate
+            {% else %}
+              Yes, Activate
+            {% endif %}
+          </button>
+        </div>
+      </div>
+    </dialog>
+    <!-- Add this hidden form for the actual submission -  only show if this is a bound form -->
+    {% if form_method == "update" %}
+      <form id="deactivate-form"
+            method="post"
+            action="{% url 'npdauser-update' npda_user.pk %}"
+            style="display: none">
+        {% csrf_token %}
+        <input type="hidden" name="deactivate" value="true">
+      </form>
+    {% endif %}
   </div>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -146,6 +206,31 @@
                 }
             });
         });
+    });
+    function showDeactivateModal() {
+        const modal = document.getElementById("are_you_sure");
+        modal.showModal();
+    }
+
+    function closeModal() {
+        const modal = document.getElementById("are_you_sure");
+        modal.close();
+    }
+
+    function confirmDeactivation() {
+        // Close the modal first
+        closeModal();
+
+        // Submit the hidden form
+        const form = document.getElementById("deactivate-form");
+        form.submit();
+    }
+
+    // Close modal when clicking outside of it
+    document.getElementById("are_you_sure").addEventListener('click', function(event) {
+        if (event.target === this) {
+            closeModal();
+        }
     });
   </script>
 {% endblock %}
