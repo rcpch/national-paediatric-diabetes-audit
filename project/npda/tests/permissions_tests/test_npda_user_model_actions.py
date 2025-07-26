@@ -409,8 +409,6 @@ def test_coordinators_cannot_create_users_outside_of_their_pdu(
 
     url = reverse("npdauser-create")
 
-    print(f"Creating user with URL: {url}")
-
     response = client.post(
         url,
         {
@@ -1309,72 +1307,72 @@ def test_coordinators_cannot_activate_or_deactivate_users_with_multiple_employer
     )
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("action", ["deactivate", "activate"])
-def test_rcpch_audit_team_and_superusers_can_activate_or_deactivate_users_with_multiple_employers(
-    client: Client,
+@pytest.mark.parametrize("initial_active, expected_active, action_label", [
+    (True, False, "deactivate"),
+    (False, True, "activate"),
+])
+def test_rcpch_audit_team_and_superusers_can_toggle_is_active_for_users_with_multiple_employers(
+    client,
     seed_groups_fixture,
     seed_users_fixture,
     seed_audit_periods_fixture,
-    action
+    initial_active,
+    expected_active,
+    action_label
 ):
-    """Test that coordinators can inactivate or activate users with multiple employers even if they are in the same PDU."""
+    """
+    RCPCH audit team and superusers should be able to activate or deactivate users with multiple employers.
+    This test checks both activating and deactivating scenarios.
+    """
 
-    # Create a test user
-    test_rcpch_audit_team_member = NPDAUser.objects.filter(
+    # Get an audit team member
+    audit_team_member = NPDAUser.objects.filter(
         role=test_user_rcpch_audit_team_data.role,
     ).first()
+    assert audit_team_member.organisation_employers.count() > 0
 
-    assert test_rcpch_audit_team_member.organisation_employers.count() > 0, (
-        f"User {test_rcpch_audit_team_member.first_name} ({test_rcpch_audit_team_member.organisation_employers.first().pz_code}) should have at least one employer"
-    )
-
-
-    # Create a test user with multiple employers in the same PDU
-    test_user_multiple_employers = NPDAUser.objects.filter(
+    # Get a user with multiple employers
+    user = NPDAUser.objects.filter(
         role=test_user_audit_centre_editor_data.role,
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
     ).first()
-    
-    
-    assert test_user_multiple_employers.organisation_employers.count() > 0, (
-        f"User {test_user_multiple_employers.first_name} ({test_user_multiple_employers.organisation_employers.first().pz_code}) should have at least one employer"
-    )
+    assert user.organisation_employers.count() > 0
 
-    GOSH = PaediatricDiabetesUnit.objects.get(pz_code=GOSH_PZ_CODE)
-    # Add multiple employers to the test user
+    # Add a second employer
+    gosh_pdu = PaediatricDiabetesUnit.objects.get(pz_code=GOSH_PZ_CODE)
     OrganisationEmployer.objects.create(
-        npda_user=test_user_multiple_employers,
-        paediatric_diabetes_unit=GOSH,
+        npda_user=user,
+        paediatric_diabetes_unit=gosh_pdu,
         is_primary_employer=False,
     )
+    assert user.organisation_employers.count() > 1
 
-    assert test_user_multiple_employers.organisation_employers.count() > 1, (
-        f"User {test_user_multiple_employers.first_name} should have multiple employers"
-    )
+    # Set initial is_active state
+    user.is_active = initial_active
+    user.save()
 
-    if action == "deactivate":
-        test_user_multiple_employers.is_active = True
-    else:  # activate
-        test_user_multiple_employers.is_active = False
-    test_user_multiple_employers.save()
+    # Login as audit team member
+    client = login_and_verify_user(client, audit_team_member)
 
-    initial_status = test_user_multiple_employers.is_active
+    # POST to update user (always send 'deactivate', as per UI logic)
+    url = reverse("npdauser-update", kwargs={"pk": user.pk})
+    response = client.post(url, data={
+        'deactivate': 'true',
+        'first_name': user.first_name,
+        'surname': user.surname,
+        'email': user.email,
+        'role': user.role,
+    })
 
-    # Login user
-    client = login_and_verify_user(client, test_rcpch_audit_team_member)
-
-    # Make a GET request to the user logs page
-    url = reverse("npdauser-update", kwargs={"pk": test_user_multiple_employers.pk})
-    new_status = 'false' if action == "deactivate" else 'true'
-    response = client.post(url, data={action: new_status})
-
+    # Should not be forbidden
     assert response.status_code != HTTPStatus.FORBIDDEN, (
-        f"RCPCH User {test_rcpch_audit_team_member.first_name} ({test_rcpch_audit_team_member.get_all_employer_organisations()}) should be able to {action} the a {'active' if initial_status else 'inactive'} user with multiple PDUs {test_user_multiple_employers.first_name} ({test_user_multiple_employers.get_all_employer_organisations()})"
+        f"Audit team member should be able to {action_label} user {user.first_name}."
     )
 
-    test_user_multiple_employers.refresh_from_db()
-    assert test_user_multiple_employers.is_active == True if new_status == 'true' else False, (
-        f"RCPCH User {test_rcpch_audit_team_member.first_name} should be able to {action} an {'active' if initial_status else 'inactive'} user with multiple PDUs {test_user_multiple_employers.first_name} ({test_user_multiple_employers.get_all_employer_organisations()})"
+    # Refresh and check outcome
+    user.refresh_from_db()
+    assert user.is_active == expected_active, (
+        f"After {action_label}, user.is_active should be {expected_active} but got {user.is_active}."
     )
 
 @pytest.mark.django_db
