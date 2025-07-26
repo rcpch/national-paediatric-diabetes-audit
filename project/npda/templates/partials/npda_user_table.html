@@ -145,7 +145,7 @@
                       data-tip="{% if perms.npda.change_user %}Change {% endif %}{% for item in npda_user.organisation_employers.all %}{{ item.lead_organisation_name }} ({{ item.pz_code }}){% if not forloop.last %}, {% endif %}{% endfor %}">
                   {% if perms.npda.change_user %}
                     <a class="btn btn-ghost btn-xs text-rcpch_pink"
-                       href="{% url 'npdauser-update' npda_user.pk %}">
+                       href="{% url 'npdauser-pdu-update' npda_user.pk %}">
                       <i class ="fa-solid fa-hospital text-rcpch_pink ml-2 mr-2"></i>
                     </a>
                   {% else %}

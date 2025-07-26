@@ -1,12 +1,56 @@
 {% load npda_tags %}
+{% csrf_token %}
 {% for organisation_employer in organisation_employers %}
   {% if organisation_employer.is_primary_employer %}
-    <div>
-      <strong>{{ organisation_employer.paediatric_diabetes_unit.lead_organisation_name }} Primary Employer</strong>
-    </div>
+    <span data-tip="Primary Paediatric Diabetes Unit"
+          class="tooltip tooltip-bottom"
+          class="text-rcpch_strong_blue font-semibold">
+      <strong>{{ organisation_employer.paediatric_diabetes_unit.lead_organisation_name }} </strong>
+      <i class ="fa-solid fa-hospital text-rcpch_pink ml-2 mr-2"></i>
+    </span>
   {% else %}
     <div>
       {{ organisation_employer.paediatric_diabetes_unit.lead_organisation_name }} ({{ organisation_employer.paediatric_diabetes_unit.pz_code }})
+      <button class="bg-rcpch_light_blue text-white font-semibold hover:text-white border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue p-1 m-1"
+              hx-post="{% url 'npdauser-pdu-update' npda_user.pk %}"
+              hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+              hx-include="#add_employer_select"
+              hx-target="#primary_pdu"
+              hx-swap="innerHTML"
+              hx-vals='{"organisation_employer_id":"{{ organisation_employer.pk }}", "update":"update" }'>
+        Set Primary
+      </button>
+      <button class="bg-rcpch_red text-white font-semibold hover:text-white border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint p-1 m-1"
+              hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+              hx-post="{% url 'npdauser-pdu-update' npda_user.pk %}"
+              hx-target="#primary_pdu"
+              hx-swap="innerHTML"
+              hx-vals='{"organisation_employer_id":"{{ organisation_employer.pk }}", "update":"delete" }'>
+        Delete
+      </button>
     </div>
   {% endif %}
 {% endfor %}
+<div id="rcpch_organisation_select" class="mt-5">
+  <div id="add_organisation_button">
+    {% if request.user.organisation_employers|length > 1 or request.user|include_admin_users %}
+      {% comment %} remove the add button if the user  {% endcomment %}
+      <button type="button"
+              class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-1.5 px-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue mb-2 text-xs"
+              _="on click set currentText to my.innerText if currentText is 'Show Employers' set my.innerText to 'Hide Employers' else set my.innerText to 'Show Employers' end toggle .hidden on #add_employer_select toggle .hidden on #add_submit_button">
+        Show Employers
+      </button>
+    {% endif %}
+  </div>
+  <div class="flex flex-row">
+    {% include 'partials/rcpch_organisation_select.html' with employer_choices=employer_choices selected_organisation=selected_pdu %}
+    <button id="add_submit_button"
+            type="button"
+            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+            class="btn bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue mb-2 text-xs hidden"
+            hx-post="{% url 'npdauser-pdu-update' npda_user.pk %}"
+            hx-include="#add_employer_select"
+            hx-swap="innerHTML"
+            hx-target="#primary_pdu">Add</button>
+  </div>
+</div>
