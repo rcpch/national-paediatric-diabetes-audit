@@ -487,6 +487,7 @@ def npdauser_pdu_update(request, pk):
             "employer_choices": organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
                 requesting_user=request.user, user_instance=selected_npda_user
             ),
+            "editable": request.user.has_perm("npda.change_npdauser"),
         },
     )
 

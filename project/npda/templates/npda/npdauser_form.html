@@ -13,14 +13,14 @@
         <div class="flex flex-row">
           {% if field.id_for_label == 'id_add_employer' %}
             {% if npda_user.organisation_employers %}
-              <strong class="font-montserrat font-bold md:w-1/3 text-right pr-2 mb-2">Employer(s)</strong>
-              <div class="text-left md:w-2/3 mb-2" id="primary_pdu">
+              <strong class="font-montserrat font-bold md:w-1/3 text-right pr-2 mt-5">Employer(s)</strong>
+              <div class="text-left md:w-2/3" id="primary_pdu">
                 {% include 'partials/employers.html' with organisation_employers=organisation_employers employer_choices=form.employer_choices %}
               </div>
             {% else %}
-              <strong class="font-montserrat font-bold md:w-1/3 text-right pr-2 mb-2">Employer(s)</strong>
+              <strong class="font-montserrat font-bold md:w-1/3 text-right pr-2 mt-5">Employer(s)</strong>
               <div class="text-left md:w-2/3 mb-2" id="primary_pdu">
-                {% include 'partials/rcpch_organisation_select.html' with employer_choices=form.employer_choices selected_organisation=selected_pdu hidden_on_load=False %}
+                {% include 'partials/rcpch_organisation_select.html' with employer_choices=form.employer_choices selected_organisation=selected_pdu editable=False %}
               </div>
             {% endif %}
           {% endif %}

@@ -17,75 +17,93 @@
         {{ organisation_employer.paediatric_diabetes_unit.lead_organisation_name }} ({{ organisation_employer.paediatric_diabetes_unit.pz_code }})
       </span>
       <div class="flex items-center space-x-3">
-        <span class="tooltip tooltip-left"
-              data-tip="Set as primary paediatric diabetes unit">
-          <button class="text-gray-400 hover:text-rcpch_pink transition-colors duration-200 text-lg"
-                  hx-post="{% url 'npdauser-pdu-update' npda_user.pk %}"
-                  hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                  hx-include="#add_employer_select"
-                  hx-target="#primary_pdu"
-                  hx-swap="innerHTML"
-                  hx-vals='{"organisation_employer_id":"{{ organisation_employer.pk }}", "update":"update" }'
-                  data-action-type="set-primary">
-            <i class="fa-solid fa-hospital"></i>
-          </button>
-        </span>
-        <span class="tooltip tooltip-left"
-              data-tip="Remove affiliation with {{ organisation_employer.paediatric_diabetes_unit.lead_organisation_name }}">
-          <button class="text-red-400 hover:text-red-600 transition-colors duration-200 text-lg"
-                  hx-post="{% url 'npdauser-pdu-update' npda_user.pk %}"
-                  hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                  hx-target="#primary_pdu"
-                  hx-swap="innerHTML"
-                  hx-vals='{"organisation_employer_id":"{{ organisation_employer.pk }}", "update":"delete" }'
-                  data-action-type="delete">
-            <i class="fa-solid fa-trash"></i>
-          </button>
-        </div>
+        {% if editable %}
+          <span class="tooltip tooltip-left"
+                data-tip="Set as primary paediatric diabetes unit">
+            <button class="text-gray-400 hover:text-rcpch_pink transition-colors duration-200 text-lg"
+                    hx-post="{% url 'npdauser-pdu-update' npda_user.pk %}"
+                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                    hx-include="#add_employer_select"
+                    hx-target="#primary_pdu"
+                    hx-swap="innerHTML"
+                    hx-vals='{"organisation_employer_id":"{{ organisation_employer.pk }}", "update":"update" }'
+                    data-action-type="set-primary">
+              <i class="fa-solid fa-hospital"></i>
+            </button>
+          </span>
+          <span class="tooltip tooltip-left"
+                data-tip="Remove affiliation with {{ organisation_employer.paediatric_diabetes_unit.lead_organisation_name }}">
+            <button class="text-red-400 hover:text-red-600 transition-colors duration-200 text-lg"
+                    hx-post="{% url 'npdauser-pdu-update' npda_user.pk %}"
+                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                    hx-target="#primary_pdu"
+                    hx-swap="innerHTML"
+                    hx-vals='{"organisation_employer_id":"{{ organisation_employer.pk }}", "update":"delete" }'
+                    data-action-type="delete">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </span>
+        {% endif %}
       </div>
-    {% endif %}
-  {% endfor %}
-  <div id="rcpch_organisation_select" class="mt-5">
-    <div id="add_organisation_button">
-      {% if request.user.organisation_employers|length > 1 or request.user|include_admin_users %}
-        <button type="button"
-                class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-1.5 px-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue mb-2 text-xs"
-                _="on click set currentText to my.innerText if currentText is 'Show Employers' set my.innerText to 'Hide Employers' else set my.innerText to 'Show Employers' end toggle .hidden on #add_employer_select toggle .hidden on #add_submit_button">
-          Show Employers
-        </button>
-      {% endif %}
     </div>
-    <div class="flex flex-row">
-      {% include 'partials/rcpch_organisation_select.html' with employer_choices=employer_choices selected_organisation=selected_pdu %}
-      <button hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-              id="add_submit_button"
-              class="btn bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue mb-2 text-xs hidden"
-              hx-post="{% url 'npdauser-pdu-update' npda_user.pk %}"
-              hx-include="#add_employer_select"
-              hx-swap="innerHTML"
-              hx-target="#primary_pdu"
-              data-action-type="add">Add</button>
+  {% endif %}
+{% endfor %}
+<div id="rcpch_organisation_select" class="mt-5">
+  <div id="add_organisation_button">
+    {% if request.user.organisation_employers|length > 1 or request.user|include_admin_users and editable %}
+      <button type="button"
+              class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-1.5 px-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue mb-2 text-xs"
+              _="on click set currentText to my.innerText if currentText is 'Show Employers' set my.innerText to 'Hide Employers' else set my.innerText to 'Show Employers' end toggle .hidden on #add_employer_select toggle .hidden on #add_submit_button">
+        Show Employers
+      </button>
+    {% endif %}
+  </div>
+  <div class="flex flex-row">
+    {% include 'partials/rcpch_organisation_select.html' with employer_choices=employer_choices selected_organisation=selected_pdu %}
+    <button hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+            id="add_submit_button"
+            class="btn bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue mb-2 text-xs hidden"
+            hx-post="{% url 'npdauser-pdu-update' npda_user.pk %}"
+            hx-include="#add_employer_select"
+            hx-swap="innerHTML"
+            hx-target="#primary_pdu"
+            data-action-type="add">Add</button>
+  </div>
+  {% if editable %}
+    <!-- these navigation buttons are only show if the form is viewed within the edit employers page -->
+    <div class="mt-10">
+      <a href="{% url 'npdauser-update' npda_user.pk %}"
+         class="btn bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue mb-2 text-xs">
+      Edit {{ npda_user.get_full_name }}</a>
+      <a href="{% url 'npda_users' %}"
+         class="btn bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue mb-2 text-xs">
+      Return to List of NPDA Users</a>
+    </div>
+  {% else %}
+    <a href="{% url 'npdauser-pdu-update' npda_user.pk %}"
+       class="btn bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue mb-2 text-xs">
+    Edit PDU Membership for {{ npda_user.get_full_name }}</a>
+  {% endif %}
+</div>
+<dialog id="are_you_sure_pdu" class="modal">
+  <div class="modal-box">
+    <h3 class="text-lg font-bold">
+      Edit PDU Membership for <span id="modal_user_name">{{ npda_user.get_full_name }}</span>
+    </h3>
+    <p class="py-4">
+      Are you sure you want to make this change to <strong><span id="modal_user_name_confirm">{{ npda_user.get_full_name }}</span></strong>?
+    </p>
+    <div class="modal-action">
+      <button class="btn" type="button" onclick="are_you_sure_pdu.close()">
+        Cancel
+      </button>
+      <button class="btn btn-error" type="button" id="confirm_action_button">
+        Yes, I am sure
+      </button>
     </div>
   </div>
-  <dialog id="are_you_sure_pdu" class="modal">
-    <div class="modal-box">
-      <h3 class="text-lg font-bold">
-        Edit PDU Membership for <span id="modal_user_name">{{ npda_user.get_full_name }}</span>
-      </h3>
-      <p class="py-4">
-        Are you sure you want to make this change to <strong><span id="modal_user_name_confirm">{{ npda_user.get_full_name }}</span></strong>?
-      </p>
-      <div class="modal-action">
-        <button class="btn" type="button" onclick="are_you_sure_pdu.close()">
-          Cancel
-        </button>
-        <button class="btn btn-error" type="button" id="confirm_action_button">
-          Yes, I am sure
-        </button>
-      </div>
-    </div>
-  </dialog>
-  <script>
+</dialog>
+<script>
   document.body.addEventListener('htmx:confirm', function(evt) {
     // Check if the confirmation is for one of our specific buttons
     const button = evt.detail.elt; // The element that triggered the htmx:confirm event
@@ -116,4 +134,4 @@
       dialog.close();
     }
   });
-  </script>
+</script>
