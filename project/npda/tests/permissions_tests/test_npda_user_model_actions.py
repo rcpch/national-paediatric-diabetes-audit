@@ -585,7 +585,7 @@ def test_audit_team_can_add_employers_outside_of_their_pdu(
 
     client = login_and_verify_user(client, audit_team_user)
 
-    url = reverse("npdauser-update", kwargs={"pk": ah_coordinator.pk})
+    url = reverse("npdauser-pdu-update", kwargs={"pk": ah_coordinator.pk})
 
     response = client.post(url, data={
         "add_employer": GOSH_PZ_CODE

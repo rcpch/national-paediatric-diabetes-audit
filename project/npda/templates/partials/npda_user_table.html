@@ -14,7 +14,7 @@
         <th scope="col" class="w-2/12">Name</th>
         <th scope="col" class="w-3/12 px-0">Email</th>
         <th scope="col" class="-mx-6 w-3/12 text-left">Memberships</th>
-        {% if request.user.view_preference == 2 %}
+        {% if perms.npda.can_transfer_npda_lead_centre %}
           <th scope="col" class="w-1/12 text-center">PDU</th>
         {% endif %}
         <th scope="col" class="w-2/12">Role</th>
@@ -38,7 +38,9 @@
               <th scope="col"></th>
               <th scope="col"></th>
               <th scope="col"></th>
-              {% if request.user.view_preference == 2 %}<th scope="col"></th>{% endif %}
+              {% if perms.npda.can_transfer_npda_lead_centre %}
+                <th scope="col"></th>
+              {% endif %}
             </tr>
           </thead>
         {% endifchanged %}
@@ -61,7 +63,7 @@
                 {% endif %}
               </div>
             {% else %}
-              {% if npda_user|employer_match:request.user and perms.npda.view_npda_user %}
+              {% if npda_user|employer_match:request.user and perms.npda.view_npdauser %}
                 <span class="tooltip tooltip-right"
                       data-tip="Member of {{ npda_user.number_of_pdu_memberships }} PDUs. Click to view and edit user details">
                   <a href="{% url 'npdauser-update' npda_user.pk %}"
@@ -138,66 +140,77 @@
               {% endif %}
             </span>
           </td>
-          {% if request.user.view_preference == 2 %}
+          {% if perms.npda.can_transfer_npda_lead_centre %}
             <td class="w-1/12 text-center">
               <div class="tooltip tooltip-top">
                 <span class="tooltip tooltip-left"
-                      data-tip="{% for item in npda_user.organisation_employers.all %}{{ item.lead_organisation_name }} ({{ item.pz_code }}){% if not forloop.last %}, {% endif %}{% endfor %}">
-                  <i class="fa-solid fa-hospital fa-xl text-rcpch_pink ml-2 mr-2"></i>
-                  {% for item in npda_user.organisation_employers.all %}
-                    {{ item }}
-                    {% if not forloop.last %},{% endif %}
-                  {% endfor %}
+                      data-tip="{% if perms.npda.can_transfer_npda_lead_centre %}Change {% endif %}{% for item in npda_user.organisation_employers.all %}{{ item.lead_organisation_name }} ({{ item.pz_code }}){% if not forloop.last %}, {% endif %}{% endfor %}">
+                  {% if perms.npda.can_transfer_npda_lead_centre %}
+                    <a class="btn btn-ghost btn-xs text-rcpch_pink"
+                       href="{% url 'npdauser-pdu-update' npda_user.pk %}">
+                      <i class ="fa-solid fa-hospital text-rcpch_pink ml-2 mr-2"></i>
+                    </a>
+                  {% else %}
+                    <span class="text-rcpch_light_blue flex justify-center items-center px-2">
+                      <i class="fa-solid fa-hospital text-rcpch_pink ml-2 mr-2"></i>
+                    </span>
+                  {% endif %}
                 </span>
-              </div>
-            </td>
-          {% endif %}
-          <td class="px-6 text-left">{{ npda_user.get_role_display }}</td>
-          <td class="w-80 px-2 text-right">
-            {% if request.user.role != 3 and request.user.role != 2 %}
-              <!--readers/editors cannot view logs-->
-              <div class="tooltip tooltip-left"
-                   data-tip="View user logs for {{ npda_user }}">
-                <a href="{% url 'npdauser-logs' npda_user.pk %}"
-                   class="text-rcpch_pink flex justify-center items-center px-2">
-                  <svg class="text-rcpch_pink w-8 h-8"
-                       width="24"
-                       height="24"
-                       viewBox="0 0 24 24"
-                       stroke-width="2"
-                       stroke="currentColor"
-                       fill="none"
-                       stroke-linecap="round"
-                       stroke-linejoin="round">
-                    <path stroke="none" d="M0 0h24v24H0z" />
-                    <polyline points="9 6 15 12 9 18" />
-                  </svg>
-                </a>
-              </div>
-            {% endif %}
+                {% for item in npda_user.organisation_employers.all %}
+                  {{ item }}
+                  {% if not forloop.last %},{% endif %}
+                {% endfor %}
+              </span>
+            </div>
           </td>
-        </tr>
-      {% endfor %}
-    </tbody>
-    <tfoot>
-      {% if npdauser_list %}
-        <tr class="bg-rcpch_dark_blue py-5 text-xs text-white text-gray-700 uppercase bg-gray-50">
-          <th colspan="9" class="px-2">
-            <strong>
-              Total: {{ npdauser_list|length }} User
-              {% if npdauser_list|length > 1 %}s{% endif %}
-            </strong>
-          </th>
-        </tr>
-      {% else %}
-        <tr class="bg-rcpch_dark_blue py-5 text-xs text-white text-gray-700 uppercase bg-gray-50">
-          <th>
-            <h5>No NPDA users yet!</h5>
-          </th>
-        </tr>
-      {% endif %}
-    </tfoot>
-  </table>
+        {% endif %}
+        <!-- End of PDU column -->
+        <td class="px-6 text-left">{{ npda_user.get_role_display }}</td>
+        <td class="w-80 px-2 text-right">
+          {% if request.user.role != 3 and request.user.role != 2 %}
+            <!--readers/editors cannot view logs-->
+            <div class="tooltip tooltip-left"
+                 data-tip="View user logs for {{ npda_user }}">
+              <a href="{% url 'npdauser-logs' npda_user.pk %}"
+                 class="text-rcpch_pink flex justify-center items-center px-2">
+                <svg class="text-rcpch_pink w-8 h-8"
+                     width="24"
+                     height="24"
+                     viewBox="0 0 24 24"
+                     stroke-width="2"
+                     stroke="currentColor"
+                     fill="none"
+                     stroke-linecap="round"
+                     stroke-linejoin="round">
+                  <path stroke="none" d="M0 0h24v24H0z" />
+                  <polyline points="9 6 15 12 9 18" />
+                </svg>
+              </a>
+            </div>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    {% if npdauser_list %}
+      <tr class="bg-rcpch_dark_blue py-5 text-xs text-white text-gray-700 uppercase bg-gray-50">
+        <th colspan="9" class="px-2">
+          <strong>
+            Total: {{ npdauser_list|length }} User
+            {% if npdauser_list|length > 1 %}s{% endif %}
+          </strong>
+        </th>
+      </tr>
+    {% else %}
+      <tr class="bg-rcpch_dark_blue py-5 text-xs text-white text-gray-700 uppercase bg-gray-50">
+        <th>
+          <h5>No NPDA users yet!</h5>
+        </th>
+      </tr>
+    {% endif %}
+  </tfoot>
+</table>
 {% else %}
-  <h5 class="py-5">No NPDA users yet!</h5>
+<h5 class="py-5">No NPDA users yet!</h5>
 {% endif %}

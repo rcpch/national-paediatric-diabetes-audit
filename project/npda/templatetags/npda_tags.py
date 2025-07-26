@@ -454,6 +454,12 @@ def exclude_admin_user_field(field, user):
         return False
     return True
 
+@register.filter
+def multiple_pdu_memberships(user):
+    """
+    Returns true if the user has multiple PDU memberships
+    """
+    return user.number_of_pdu_memberships() > 1
 
 @register.filter
 def include_admin_users(user):

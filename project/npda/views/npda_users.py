@@ -6,12 +6,13 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login, authenticate
-from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.forms import PasswordResetForm
+from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.contrib.auth.views import PasswordResetView
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count
+
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
@@ -26,6 +27,7 @@ from django_filters.views import FilterView
 from django_otp import devices_for_user, user_has_device
 
 from project.constants.user import AUDIT_CENTRE_COORDINATOR
+from .decorators import login_and_otp_required
 from project.npda.filtersets.npdauser_filterset import NPDAUserFilterSet
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 
@@ -338,156 +340,160 @@ class NPDAUserUpdateView(
         to update the employers list is handled here. The HTMX post request is not
         handled in the form_valid method as it is not a form submission.
         """
-        if request.htmx:
-            # these are HTMX post requests from the edit user form
-            # it is not called on submission of the form, only of the employers list
-            # the return value is a partial view of the employers list, with the select, delete and set primary employer buttons
-            if not request.user.has_perm("npda.change_npdauser"):
-                raise PermissionDenied(
-                    "You do not have permission to edit this user. Contact the NPDA for assistance."
-                )
+        if "resend_email" in request.POST:
+            npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
+            subject = "Password Reset Requested"
+            email = construct_confirm_email(request=request, user=npda_user)
 
-            selected_npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
-            if request.POST.get("update") == "delete":
-                # delete the selected employer
-                # cannot delete the primary employer but can set another employer as primary first and then delete the employer
-                OrganisationEmployer.objects.filter(
-                    pk=request.POST.get("organisation_employer_id")
-                ).delete()
-            elif request.POST.get("update") == "update":
-                # set the selected employer as the primary employer. Reset all other employers to False before setting the selected employer to True since only one employer can be primary
-                # set all employers to False
-                OrganisationEmployer.objects.filter(
-                    npda_user=selected_npda_user
-                ).update(is_primary_employer=False)
-                # set the selected employer to True
-                selected_employer = OrganisationEmployer.objects.filter(
-                    pk=request.POST.get("organisation_employer_id")
-                ).get()
-                selected_employer.is_primary_employer=True
-                selected_employer.save()
-
-            elif request.POST.get("add_employer"):
-                PaediatricDiabetesUnit = apps.get_model(
-                    "npda", "PaediatricDiabetesUnit"
-                )
-                # add to new employer to the users employer list after setting any existing employers is_primary_employer to False
-                OrganisationEmployer.objects.filter(
-                    npda_user=selected_npda_user
-                ).update(is_primary_employer=False)
-                # add the user to the appropriate organisation
-                new_employer_pz_code = request.POST.get("add_employer")
-                if new_employer_pz_code:
-                    my_pz_codes = self.request.user.organisation_employers.values_list("pz_code", flat=True)
-
-                    if new_employer_pz_code not in my_pz_codes and not (self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member):
-                        raise PermissionDenied(
-                            f"You do not have permission to add users to {new_employer_pz_code}. Contact the NPDA for assistance."
-                        )
-
-                    # a new employer has been added
-                    selected_pdu = PaediatricDiabetesUnit.objects.get(
-                        pz_code=new_employer_pz_code
-                    )
-
-                    if not selected_pdu.active and not (self.request.user.is_rcpch_audit_team_member or self.request.user.is_superuser):
-                        raise PermissionDenied(
-                            f"{selected_pdu} is inactive. Contact the NPDA for assistance."
-                        )
-
-                    OrganisationEmployer.objects.update_or_create(
-                        paediatric_diabetes_unit=selected_pdu,
-                        npda_user=selected_npda_user,
-                        is_primary_employer=True,
-                    )
-
-                    selected_npda_user.refresh_from_db()
-
-            # return the partial view of the employers list
-            # if the a new employer has been added to the user, the new employer needs to be removed from the add_employer select list
-            # the add_employer select list is repopulated with the remaining organisations - this happens by calling the get_form method
-
-            # get the user being edited
-            user_instance = self.get_object()
-
-            organisation_choices = organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
-                requesting_user=self.request.user, user_instance=user_instance
+            send_email_to_recipients(
+                recipients=[npda_user.email],
+                subject=subject,
+                message=email,
             )
 
-            return render(
-                request=request,
-                template_name="partials/employers.html",
-                context={
-                    "npda_user": selected_npda_user,
-                    "organisation_employers": OrganisationEmployer.objects.filter(
-                        npda_user=selected_npda_user
-                    )
-                    .all()
-                    .order_by("-is_primary_employer"),
-                    "employer_choices": organisation_choices,
-                },
+            messages.success(
+                request,
+                f"Confirmation and password reset request resent to {npda_user.email}.",
             )
-        else:
-            if "resend_email" in request.POST:
+            redirect_url = reverse(
+                "npda_users",
+            )
+            return redirect(redirect_url)
+
+        elif "deactivate" in request.POST:
+            # Deactivation pathway - toggle the is_active field of the user. A user can only be deactivated if they are not a superuser
+            # That of course can happen but for now we will only do this in the admin interface.
+            npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
+            success_message = f"{npda_user.email} deactivated successfully."
+            
+            if npda_user.is_active is False:
+                success_message = f"{npda_user.email} successfully reactivated."
+                npda_user.is_active = True
+            else:
+                npda_user.is_active = False
+            npda_user.save()
+            messages.success(
+                request,
+                success_message
+            )
+            return redirect(reverse("npda_users"))
+
+        elif "reset-two-factor" in request.POST:
+            if request.user.is_superuser or request.user.is_rcpch_audit_team_member:
                 npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
-                subject = "Password Reset Requested"
-                email = construct_confirm_email(request=request, user=npda_user)
-
-                send_email_to_recipients(
-                    recipients=[npda_user.email],
-                    subject=subject,
-                    message=email,
-                )
+                
+                devices = devices_for_user(user=npda_user)
+                for device in devices:
+                    device.delete()
 
                 messages.success(
                     request,
-                    f"Confirmation and password reset request resent to {npda_user.email}.",
+                    f"Two-factor authentication reset for {npda_user.email}.",
                 )
                 redirect_url = reverse(
                     "npda_users",
                 )
                 return redirect(redirect_url)
-
-            elif "deactivate" in request.POST:
-                # Deactivation pathway - toggle the is_active field of the user. A user can only be deactivated if they are not a superuser
-                # That of course can happen but for now we will only do this in the admin interface.
-                npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
-                success_message = f"{npda_user.email} deactivated successfully."
-                
-                if npda_user.is_active is False:
-                    success_message = f"{npda_user.email} successfully reactivated."
-                    npda_user.is_active = True
-                else:
-                    npda_user.is_active = False
-                npda_user.save()
-                messages.success(
-                    request,
-                    success_message
-                )
-                return redirect(reverse("npda_users"))
-
-            elif "reset-two-factor" in request.POST:
-                if request.user.is_superuser or request.user.is_rcpch_audit_team_member:
-                    npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
-                    
-                    devices = devices_for_user(user=npda_user)
-                    for device in devices:
-                        device.delete()
-
-                    messages.success(
-                        request,
-                        f"Two-factor authentication reset for {npda_user.email}.",
-                    )
-                    redirect_url = reverse(
-                        "npda_users",
-                    )
-                    return redirect(redirect_url)
-                else:
-                    raise PermissionDenied("You do not have permission to reset two-factor authentication.")
-
             else:
-                return super().post(request, *args, **kwargs)
+                raise PermissionDenied("You do not have permission to reset two-factor authentication.")
 
+        else:
+            return super().post(request, *args, **kwargs)
+
+@login_and_otp_required()
+@permission_required("npda.can_transfer_npda_lead_centre", raise_exception=True)
+def npdauser_pdu_update(request, pk):
+    # Logic for updating the PDU for the NPDA user with the given pk
+    # these are HTMX post requests from the edit user form
+    # it is not called on submission of the form, only of the employers list
+    # the return value is a partial view of the employers list, with the select, delete and set primary employer buttons
+    template = "partials/pdu_user_affiliation_form.html"
+
+    if not request.user.has_perm("npda.change_npdauser"):
+        raise PermissionDenied(
+            "You do not have permission to edit this user. Contact the NPDA for assistance."
+        )
+
+    selected_npda_user = NPDAUser.objects.get(pk=pk)
+    if request.POST.get("update") == "delete":
+        # delete the selected employer
+        # cannot delete the primary employer but can set another employer as primary first and then delete the employer
+        OrganisationEmployer.objects.filter(
+            pk=request.POST.get("organisation_employer_id")
+        ).delete()
+        template = "partials/employers.html"
+    elif request.POST.get("update") == "update":
+        # set the selected employer as the primary employer. Reset all other employers to False before setting the selected employer to True since only one employer can be primary
+        # set all employers to False
+        template = "partials/employers.html"
+        OrganisationEmployer.objects.filter(
+            npda_user=selected_npda_user
+        ).update(is_primary_employer=False)
+        # set the selected employer to True
+        selected_employer = OrganisationEmployer.objects.filter(
+            pk=request.POST.get("organisation_employer_id")
+        ).get()
+        selected_employer.is_primary_employer=True
+        selected_employer.save()
+
+    elif request.POST.get("add_employer"):
+        template = "partials/employers.html"
+        PaediatricDiabetesUnit = apps.get_model(
+            "npda", "PaediatricDiabetesUnit"
+        )
+        # add to new employer to the users employer list after setting any existing employers is_primary_employer to False
+        OrganisationEmployer.objects.filter(
+            npda_user=selected_npda_user
+        ).update(is_primary_employer=False)
+        # add the user to the appropriate organisation
+        new_employer_pz_code = request.POST.get("add_employer")
+        if new_employer_pz_code:
+            my_pz_codes = request.user.organisation_employers.values_list("pz_code", flat=True)
+
+            if new_employer_pz_code not in my_pz_codes and not (request.user.is_superuser or request.user.is_rcpch_audit_team_member):
+                raise PermissionDenied(
+                    f"You do not have permission to add users to {new_employer_pz_code}. Contact the NPDA for assistance."
+                )
+
+            # a new employer has been added
+            selected_pdu = PaediatricDiabetesUnit.objects.get(
+                pz_code=new_employer_pz_code
+            )
+
+            if not selected_pdu.active and not (request.user.is_rcpch_audit_team_member or request.user.is_superuser):
+                raise PermissionDenied(
+                    f"{selected_pdu} is inactive. Contact the NPDA for assistance."
+                )
+
+            OrganisationEmployer.objects.update_or_create(
+                paediatric_diabetes_unit=selected_pdu,
+                npda_user=selected_npda_user,
+                is_primary_employer=True,
+            )
+
+            selected_npda_user.refresh_from_db()
+
+            # return the partial view of the employers list
+            # if the a new employer has been added to the user, the new employer needs to be removed from the add_employer select list
+            # the add_employer select list is repopulated with the remaining organisations - this happens by calling the get_form method
+
+
+    return render(
+        request=request,
+        template_name=template,
+        context={
+            "npda_user": selected_npda_user,
+            "organisation_employers": OrganisationEmployer.objects.filter(
+                npda_user=selected_npda_user
+            )
+            .all()
+            .order_by("-is_primary_employer"),
+            "employer_choices": organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
+                requesting_user=request.user, user_instance=selected_npda_user
+            ),
+            "editable": request.user.has_perm("npda.change_npdauser"),
+        },
+    )
 
 class NPDAUserLogsListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, ListView):
     template_name = "npda_user_logs.html"
