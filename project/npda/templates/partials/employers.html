@@ -80,9 +80,11 @@
       Return to List of NPDA Users</a>
     </div>
   {% else %}
-    <a href="{% url 'npdauser-pdu-update' npda_user.pk %}"
-       class="btn bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue mb-2 text-xs">
-    Edit PDU Membership for {{ npda_user.get_full_name }}</a>
+    {% if perms.npda.can_transfer_npda_lead_centre %}
+      <a href="{% url 'npdauser-pdu-update' npda_user.pk %} "
+         class="btn bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue mb-2 text-xs">
+      Edit PDU Membership for {{ npda_user.get_full_name }}</a>
+    {% endif %}
   {% endif %}
 </div>
 <dialog id="are_you_sure_pdu" class="modal">

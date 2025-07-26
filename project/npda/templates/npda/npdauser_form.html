@@ -126,7 +126,7 @@
           <button value="Submit"
                   name="resend_email"
                   class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 mt-20 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue {% if not perms.npda.change_npdauser %}disabled{% endif %}">
-            Resend Confirmation Email
+            Resend Confirmation Email {{ npda_user|multiple_pdu_memberships }}
           </button>
         {% endif %}
         <button name="deactivate"
