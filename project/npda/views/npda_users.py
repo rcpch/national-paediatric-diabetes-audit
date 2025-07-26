@@ -6,12 +6,13 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login, authenticate
-from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.forms import PasswordResetForm
+from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.contrib.auth.views import PasswordResetView
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count
+
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
@@ -26,6 +27,7 @@ from django_filters.views import FilterView
 from django_otp import devices_for_user, user_has_device
 
 from project.constants.user import AUDIT_CENTRE_COORDINATOR
+from .decorators import login_and_otp_required
 from project.npda.filtersets.npdauser_filterset import NPDAUserFilterSet
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 
@@ -398,6 +400,8 @@ class NPDAUserUpdateView(
         else:
             return super().post(request, *args, **kwargs)
 
+@login_and_otp_required()
+@permission_required("npda.can_transfer_npda_lead_centre", raise_exception=True)
 def npdauser_pdu_update(request, pk):
     # Logic for updating the PDU for the NPDA user with the given pk
     # these are HTMX post requests from the edit user form
