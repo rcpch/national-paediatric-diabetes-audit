@@ -20,7 +20,7 @@
             {% else %}
               <strong class="font-montserrat font-bold md:w-1/3 text-right pr-2 mt-5">Employer(s)</strong>
               <div class="text-left md:w-2/3 mb-2" id="primary_pdu">
-                {% include 'partials/rcpch_organisation_select.html' with employer_choices=form.employer_choices selected_organisation=selected_pdu editable=False %}
+                {% include 'partials/rcpch_organisation_select.html' with employer_choices=form.employer_choices selected_organisation=selected_pdu %}
               </div>
             {% endif %}
           {% endif %}

@@ -1,6 +1,6 @@
 <select id="add_employer_select"
         name="add_employer"
-        class="select rcpch-select rounded-none hidden">
+        class="select rcpch-select rounded-none {% if hidden %} hidden {% endif %}">
   {% for choice in employer_choices %}
     <option value="{{ choice.0 }}"
             {% if selected_organisation == choice.0 %}selected="{{ choice.0 }}"{% endif %}>
