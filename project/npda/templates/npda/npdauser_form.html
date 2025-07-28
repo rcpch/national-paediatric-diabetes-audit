@@ -17,10 +17,10 @@
               <div class="text-left md:w-2/3" id="primary_pdu">
                 {% include 'partials/employers.html' with organisation_employers=organisation_employers employer_choices=form.employer_choices %}
               </div>
-            {% else %}
+            {% elif form.employer_choices|length > 1 %}
               <strong class="font-montserrat font-bold md:w-1/3 text-right pr-2 mt-5">Employer(s)</strong>
               <div class="text-left md:w-2/3 mb-2" id="primary_pdu">
-                {% include 'partials/rcpch_organisation_select.html' with employer_choices=form.employer_choices selected_organisation=selected_pdu editable=False %}
+                {% include 'partials/rcpch_organisation_select.html' with employer_choices=form.employer_choices selected_organisation=selected_pdu %}
               </div>
             {% endif %}
           {% endif %}
@@ -126,7 +126,7 @@
           <button value="Submit"
                   name="resend_email"
                   class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2 px-3 mt-20 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue {% if not perms.npda.change_npdauser %}disabled{% endif %}">
-            Resend Confirmation Email {{ npda_user|multiple_pdu_memberships }}
+            Resend Confirmation Email
           </button>
         {% endif %}
         <button name="deactivate"
