@@ -322,6 +322,21 @@ class NPDAUserUpdateView(
                 "You do not have permission to set the is_rcpch_staff flag."
             )
         
+        my_pz_codes = set(self.request.user.organisation_employers.values_list("pz_code", flat=True))
+        their_pz_codes = set(self.get_object().organisation_employers.values_list("pz_code", flat=True))
+        restricted_fields = [field for field in ["role", "email"] if field in form.changed_data]
+
+        # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1159
+        # A coordinator can only change the role or email of a user if they share exactly the same PDU assignments
+        # This prevents a coordinator accessing other PDUs by changing the email to one they control and doing a password reset
+        if my_pz_codes != their_pz_codes and restricted_fields and not (self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member):
+            # if the user is changing their role or email, they must be in the same PDU as the logged in user
+            logger.warning(f"User {self.request.user.email} [{my_pz_codes}] tried to change {", ".join(restricted_fields)} of user {self.get_object().email} [{their_pz_codes}] but they do not have exactly the same PDU assignments")
+
+            raise PermissionDenied(
+                "You do not have permission to edit this user. Contact the NPDA for assistance."
+            )
+        
         user = form.save(commit=False)
         user.save() # save the user first to ensure the user instance is updated and the updated_by and updated_at fields are set
         form.save_m2m()  # save the m2m fields (groups, employers, etc.)
