@@ -49,6 +49,7 @@ from project.npda.tests.UserDataClasses import (
     test_user_rcpch_audit_team_data,
 )
 from project.npda.tests.utils import login_and_verify_user
+from project.constants import VIEW_PREFERENCES
 
 logger = logging.getLogger(__name__)
 
@@ -1625,3 +1626,115 @@ def test_user_update_has_a_timestamp_and_user(
         activity=12,  # User role change
         npdauser_admin=test_user,  # The user who made the change
     ).exists(), "VisitActivity should have been created with new user role change"
+
+@pytest.mark.django_db
+def test_coordinator_cannot_change_email_for_user_with_multiple_pdus(
+    client: Client,
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+):
+    # Create a test coordinator in PZ999
+    malicious_coordinator = NPDAUserFactory(
+        first_name="Malicious",
+        surname="Coordinator",
+        role=AUDIT_CENTRE_COORDINATOR,
+        is_active=True,
+        is_staff=False,
+        is_rcpch_audit_team_member=False,
+        is_rcpch_staff=False,
+        groups=[test_user_audit_centre_coordinator_data.group_name],
+        view_preference=VIEW_PREFERENCES[1][0],
+        organisation_employers=["PZ999"],
+    )
+
+    # Create a test reader in PZ999
+    victim_reader = NPDAUserFactory(
+        first_name="Victim",
+        surname="Reader",
+        role=AUDIT_CENTRE_READER,
+        is_active=True,
+        is_staff=False,
+        is_rcpch_audit_team_member=False,
+        is_rcpch_staff=False,
+        groups=[test_user_audit_centre_reader_data.group_name],
+        view_preference=VIEW_PREFERENCES[1][0],
+        organisation_employers=["PZ999", "PZ001"],
+    )
+
+    # Login coordinator
+    client = login_and_verify_user(client, malicious_coordinator)
+
+    email_before = victim_reader.email
+
+    url = reverse("npdauser-update", kwargs={"pk": victim_reader.pk})
+    client.post(
+        url,
+        {
+            "email": "malicious@actor.com",
+            # Other required fields
+            "role": victim_reader.role,
+            "surname": victim_reader.surname,
+            "first_name": victim_reader.first_name,
+        },
+    )
+
+    victim_reader.refresh_from_db()
+
+    assert victim_reader.email == email_before, (
+        f"Malicious coordinator should not be able to change email of user in multiple PDUs.")
+
+@pytest.mark.django_db
+def test_coordinator_cannot_change_role_for_user_with_multiple_pdus(
+    client: Client,
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+):
+    # Create a test coordinator in PZ999
+    malicious_coordinator = NPDAUserFactory(
+        first_name="Malicious Coordinator",
+        role=AUDIT_CENTRE_COORDINATOR,
+        is_active=True,
+        is_staff=False,
+        is_rcpch_audit_team_member=False,
+        is_rcpch_staff=False,
+        groups=[test_user_audit_centre_coordinator_data.group_name],
+        view_preference=VIEW_PREFERENCES[1][0],
+        organisation_employers=["PZ999"],
+    )
+
+    # Create a test reader in PZ999
+    victim_reader = NPDAUserFactory(
+        first_name="Victim Reader",
+        role=AUDIT_CENTRE_READER,
+        is_active=True,
+        is_staff=False,
+        is_rcpch_audit_team_member=False,
+        is_rcpch_staff=False,
+        groups=[test_user_audit_centre_reader_data.group_name],
+        view_preference=VIEW_PREFERENCES[1][0],
+        organisation_employers=["PZ999", "PZ001"],
+    )
+
+    # Login coordinator
+    client = login_and_verify_user(client, malicious_coordinator)
+
+    email_before = victim_reader.email
+
+    url = reverse("npdauser-update", kwargs={"pk": victim_reader.pk})
+    client.post(
+        url,
+        {
+            "role": AUDIT_CENTRE_COORDINATOR,
+            # Other required fields
+            "email": victim_reader.email,
+            "surname": victim_reader.surname,
+            "first_name": victim_reader.first_name,
+        },
+    )
+
+    victim_reader.refresh_from_db()
+
+    assert victim_reader.role == AUDIT_CENTRE_READER, (
+        f"Malicious coordinator should not be able to change role of user in multiple PDUs.")
