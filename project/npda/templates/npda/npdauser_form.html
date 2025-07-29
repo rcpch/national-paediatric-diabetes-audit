@@ -45,7 +45,8 @@
                 <select id="{{ field.id_for_label }}"
                         name="{{ field.html_name }}"
                         class="select rcpch-select rounded-none {% if field.id_for_label == 'id_add_employer' %}hidden{% endif %}"
-                        {% if not perms.npda.change_npdauser %}disabled{% endif %}>
+                        {% if not perms.npda.change_npdauser %}disabled{% endif %}
+                        {% if field.field.widget.attrs.readonly %}disabled{% endif %}>
                   {% for choice in field.field.choices %}
                     {% if not show_rcpch_team and choice.1 == "RCPCH Audit Team" %}
                       <!-- Do nothing, hide Audit Team option if not already in audit team-->

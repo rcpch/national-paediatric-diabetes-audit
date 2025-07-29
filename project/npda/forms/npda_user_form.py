@@ -75,6 +75,7 @@ class NPDAUserForm(forms.ModelForm):
         # get the request object from the kwargs
         self.request = kwargs.pop("request", None)
         employer_choices = kwargs.pop("employer_choices", [])
+        restricted_fields = kwargs.pop("restricted_fields", [])
         super().__init__(*args, **kwargs)
         self.fields["title"].required = False
         self.fields["first_name"].required = True
@@ -87,6 +88,10 @@ class NPDAUserForm(forms.ModelForm):
         self.fields["add_employer"].required = False
         self.fields["add_employer"].choices = employer_choices
         self.employer_choices = employer_choices
+
+        for field in restricted_fields:
+            # Deliberately using readonly rather than disabled as permission checks are done in the view
+            self.fields[field].widget.attrs['readonly'] = True
 
         # only if the form is bound - this user is being updated
         if self.instance.pk is not None:
