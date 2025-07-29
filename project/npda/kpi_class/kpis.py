@@ -1028,7 +1028,13 @@ class CalculateKPIS:
                 paediatric_diabetes_units__date_leaving_service__range=(
                     self.AUDIT_DATE_RANGE
                 )
-            )
+            ),
+            # Transitioned to adult diabetes service
+            Q(
+                paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[0][
+                    0
+                ]
+            ),
         )
 
         # Count eligible patients
