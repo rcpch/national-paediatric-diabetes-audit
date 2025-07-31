@@ -73,7 +73,7 @@
                           <a class="btn btn-sm flex h-full tooltip tooltip-right {% if nhs_number_error or gp_error %} text-rcpch_red {% else %} hover:text-rcpch_pink {% endif %} font-mono text-xs"
                             target="_blank"
                             href="{% url 'patient-update' patient.pk %}"
-                            data-tip="{% if unique_identifier_error or gp_error %} {{ unique_identifier_error }} {{ gp_error }} {% else %} {% if patient.is_in_transfer_in_the_last_year %}Patient in transfer... {% endif %}View patient (NPDA ID {{ patient.pk }}) details (opens new tab) {% if patient.is_part_of_another_active_submission %} Note {% nhs_number_vs_urn pz_code patient %} is part of another active submission for {{ request.session.selected_audit_year }} in {% for submission_unit in patient.paediatric_diabetes_units_which_are_part_of_another_active_submission %} {{ submission_unit.submission.paediatric_diabetes_unit }}, {% endfor %} {% endif %} {% endif %} ">
+                            data-tip="{% if unique_identifier_error or gp_error %} {{ unique_identifier_error }} {{ gp_error }} {% else %} {% if patient.is_in_transfer_in_the_last_year %}Patient in transfer... {% endif %}View patient (NPDA ID {{ patient.pk }}) details (opens new tab) {% if patient.is_part_of_another_active_submission %} Note {% nhs_number_vs_urn pz_code patient %} is part of another active submission for {{ audit_period.display_name }} in {% for submission_unit in patient.paediatric_diabetes_units_which_are_part_of_another_active_submission %} {{ submission_unit.submission.paediatric_diabetes_unit }}, {% endfor %} {% endif %} {% endif %} ">
                           {% nhs_number_vs_urn pz_code patient %}
                           </a>
                           {% if pz_code == 'PZ248' %}
@@ -205,7 +205,7 @@
           <td class="text-right whitespace-nowrap">
             <a href="{% url 'patient_visits' patient.pk %}"
                class="align-center flex tooltip tooltip-left {% if patient.visit_error_count < 1 %} text-rcpch_pink {% else %} text-rcpch_red {% endif %}"
-               data-tip="{% if patient.visit_error_count > 0 %} {{ patient.visit_error_count }} visit{{ patient.visit_error_count|pluralize }} {{ patient.visit_error_count|pluralize:'has, have' }} errors that need addressing. Items have been saved but will not be included until rectified. {% else %} View patient visits April {{ request.session.selected_audit_year }} - March {{ request.session.selected_audit_year|add:'1' }} {% endif %}">
+               data-tip="{% if patient.visit_error_count > 0 %} {{ patient.visit_error_count }} visit{{ patient.visit_error_count|pluralize }} {{ patient.visit_error_count|pluralize:'has, have' }} errors that need addressing. Items have been saved but will not be included until rectified. {% else %} View patient visits {{ audit_period.start_date }} - {{ audit_period.end_date }} {% endif %}">
               {% if patient.visit_error_count > 0 %}
                 <span class="fa-stack">
                   <i class="fa-circle fa-stack-1x fas"></i>
@@ -245,9 +245,9 @@
     <div class="max-w-md">
       <h1 class="text-5xl font-bold font-montserrat text-rcpch_light_blue">
         {% if request.session.can_complete_questionnaire %}
-          Start your {{ selected_audit_year }} submission by adding a patient...
+          Start your {{ audit_period.display_name }} submission by adding a patient...
         {% else %}
-          You have no patients in your submission for {{ selected_audit_year }}...
+          You have no patients in your submission for {{ audit_period.display_name }}...
         {% endif %}
       </h1>
       <i class="fa-solid fa-hand-sparkles text-5xl text-rcpch_light_blue opacity-0 animate-sparkle mt-2"></i>
