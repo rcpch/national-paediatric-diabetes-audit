@@ -217,8 +217,7 @@ class PatientListView(
         context["submission_error_count"] = submission_error_count
 
         context["pz_code"] = pz_code
-        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
-        context["selected_audit_year"] = audit_period.audit_year()
+        context["audit_period"] = AuditPeriod.objects.get_audit_period_for_request(self.request)
         context["pdu_choices"] = (
             organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
                 requesting_user=self.request.user,
