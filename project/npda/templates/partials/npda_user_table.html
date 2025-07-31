@@ -1,11 +1,4 @@
 {% load npda_tags %}
-<h1 class="font-montserrat text-md text-rcpch_dark_blue font-semibold">
-  {% if request.user.view_preference == 1 %}
-    NPDA Users at {{ parent }} ({{ chosen_pdu }})
-  {% elif request.user.view_preference == 2 %}
-    National View - All NPDA Users
-  {% endif %}
-</h1>
 {% if npdauser_list %}
   <table class="font-montserrat table-md w-full table mb-5 text-sm text-left text-gray-400 text-gray-500 rtl:text-right">
     <thead class="bg-rcpch_dark_blue text-xs text-white text-gray-700 uppercase bg-gray-50">
