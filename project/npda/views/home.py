@@ -8,7 +8,6 @@ from django.http import HttpResponse
 
 from project.npda.general_functions.csv import csv_header
 from ..general_functions.session import refresh_session_filters
-from ..general_functions.view_preference import get_or_update_view_preference
 
 # RCPCH imports
 from .decorators import login_and_otp_required
@@ -51,10 +50,6 @@ def view_preference(request):
     HTMX callback from the button press in the view_preference.html template.
     """
 
-    view_preference_selection = request.POST.get("view_preference", None)
-    view_preference = get_or_update_view_preference(
-        request.user, view_preference_selection
-    )
     selected_pz_code = request.POST.get("pz_code_select_name", None)
 
     # includes a validation step
