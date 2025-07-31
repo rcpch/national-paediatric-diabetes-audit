@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("npda", "0037_pduaccesstokenprofile"),
+        ("npda", "0036_npdauser_created_at_npdauser_created_by_and_more"),
     ]
 
     operations = [

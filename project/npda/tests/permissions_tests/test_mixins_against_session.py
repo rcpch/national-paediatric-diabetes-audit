@@ -4,6 +4,7 @@ Test that users who do not have the can_upload_csv permission cannot save a pati
 import logging
 from decimal import Decimal
 from unittest.mock import Mock, patch
+from datetime import date
 
 # Django imports
 from django.contrib.sessions.middleware import SessionMiddleware
