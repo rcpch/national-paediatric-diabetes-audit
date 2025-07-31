@@ -1,4 +1,3 @@
-import datetime
 from functools import wraps
 from django.shortcuts import redirect
 from django.conf import settings
@@ -6,6 +5,8 @@ from django.contrib.auth.decorators import login_required
 from asgiref.sync import sync_to_async
 import asyncio
 import logging
+
+from ..models import AuditPeriod, PaediatricDiabetesUnit
 
 logger = logging.getLogger(__name__)
 
@@ -71,5 +72,48 @@ def login_and_otp_required():
             return async_login_and_otp_required
         else:
             return sync_login_and_otp_required
+
+    return decorator
+
+def check_data_permissions():
+    def _check_data_permissions(request, *args, **kwargs):
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(request, *args, **kwargs)
+        pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(request, *args, **kwargs)
+
+        return (audit_period, pdu)
+
+    def decorator(view):
+        @wraps(view)
+        async def async_check_data_permissions(request, *args, **kwargs):
+            (audit_period, pdu) = await sync_to_async(_check_data_permissions)(request, *args, **kwargs)
+
+            next_kwargs = kwargs | {
+                "audit_period": audit_period,
+                "pdu": pdu
+            }
+
+            if "pz_code" in next_kwargs:
+                del next_kwargs["pz_code"]
+
+            return await view(request, *args, **next_kwargs)
+
+        @wraps(view)
+        def sync_check_data_permissions(request, *args, **kwargs):
+            (audit_period, pdu) = _check_data_permissions(request, *args, **kwargs)
+
+            next_kwargs = kwargs | {
+                "audit_period": audit_period,
+                "pdu": pdu
+            }
+
+            if "pz_code" in next_kwargs:
+                del next_kwargs["pz_code"]
+
+            return view(request, *args, **next_kwargs)
+
+        if asyncio.iscoroutinefunction(view):
+            return async_check_data_permissions
+        else:
+            return sync_check_data_permissions
 
     return decorator

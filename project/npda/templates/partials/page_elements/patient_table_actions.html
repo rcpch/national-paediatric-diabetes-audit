@@ -63,7 +63,7 @@
         <div class="pl-1 pr-1">
             <ul class="menu menu-horizontal">
                 <li>
-                    <a href="{% url 'upload_csv' %}"
+                    <a href="{% data_url 'pdu-upload-csv' %}"
                        class="btn btn-info text-white {% if not perms.npda.can_submit_csv %}btn-disabled{% endif %}">
                         <i class="fa-solid fa-upload"></i>
                         Upload CSV

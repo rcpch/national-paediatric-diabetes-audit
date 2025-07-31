@@ -7,6 +7,7 @@ from django import template, forms
 from django.conf import settings
 from django.contrib.gis.measure import D
 from django.utils.html import conditional_escape, mark_safe
+from django.urls import reverse
 
 from ...constants import (
     # VisitCategories,
@@ -504,3 +505,10 @@ def round_to_1dp(value):
 @register.filter
 def plus_days(value, days):
     return value + timedelta(days=days)
+
+@register.simple_tag(takes_context=True)
+def data_url(context, view_name, *args, **kwargs):
+    return reverse(view_name, kwargs = kwargs | {
+        "pz_code": context.get("pz_code", None),
+        "audit_period": context.get("audit_period_slug", None),
+    })

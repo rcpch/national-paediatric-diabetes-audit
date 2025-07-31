@@ -23,6 +23,8 @@ from .views.dashboard.patient_characteristics import (
     all_patient_charts,
 )
 
+data_prefix = "period/<str:audit_period>/pdu/<str:pz_code>"
+
 urlpatterns = [
     path("", view=home, name="home"),
     path("home", view=home, name="home"),
@@ -34,7 +36,9 @@ urlpatterns = [
     path("view_preference", view=view_preference, name="view_preference"),
     path("audit-year", view=audit_year, name="audit-year"),
     path("upload_csv", view=upload_csv, name="upload_csv"),
+    path(f"{data_prefix}/upload_csv", view=upload_csv, name="pdu-upload-csv"),
     path("upload_csv_in_progress", view=upload_csv_in_progress, name="upload-csv-in-progress"),
+    path(f"{data_prefix}/upload_csv_in_progress", view=upload_csv_in_progress, name="pdu-upload-csv-in-progress"),
     path(
         "switch_paediatric_diabetes_unit",
         view=switch_paediatric_diabetes_unit,

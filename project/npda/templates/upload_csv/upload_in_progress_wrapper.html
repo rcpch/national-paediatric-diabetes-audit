@@ -1,8 +1,9 @@
+{% load npda_tags %}
 <div id="upload-container">
   {% if not upload_complete %}
     <div id="csv-in-progress-upload-container"
          class="container flex flex-col justify-center items-center my-20"
-         hx-get="{% url 'upload-csv-in-progress' %}"
+         hx-get="{% data_url 'pdu-upload-csv-in-progress' %}"
          hx-trigger="every 1s"
          hx-target="#upload-container"
          hx-swap="outerHTML">
