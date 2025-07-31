@@ -81,14 +81,15 @@ class SubmissionsListView(
         pdu = PaediatricDiabetesUnit.objects.get(
             pz_code=self.request.session.get("pz_code"),
         )
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
         if self.request.user.viewing_data_nationally():
             base_queryset = self.model.objects.filter(
-                audit_year=self.request.session.get("selected_audit_year")
+                audit_period=audit_period
             ).all()
         else:
             base_queryset = self.model.objects.filter(
                 paediatric_diabetes_unit=pdu,
-                audit_year=self.request.session.get("selected_audit_year"),
+                audit_period=audit_period
             )
 
         final = base_queryset.annotate(
@@ -121,14 +122,14 @@ class SubmissionsListView(
             is_jersey = False
         context = super().get_context_data(**kwargs)
         context["pz_code"] = self.request.session.get("pz_code")
-        context["selected_audit_year"] = self.request.session.get("selected_audit_year")
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
         Patient = apps.get_model("npda", "Patient")
         context["data"] = None  # data stores csv summary data if a submission exists
         context["column_chart"] = None
         context["submission_statistics"] = None
         requested_active_submission = self.object_list.filter(
             submission_active=True,
-            audit_year=self.request.session.get("selected_audit_year"),
+            audit_period=audit_period,
             paediatric_diabetes_unit__pz_code=self.request.session.get("pz_code"),
             paediatric_diabetes_unit__active=True,
         ).first()  # there can be only one of these
@@ -179,14 +180,14 @@ class SubmissionsListView(
             )
 
             
-            column_chart = create_column_chart(chart_data, selected_audit_period.audit_year())
+            column_chart = create_column_chart(chart_data, selected_audit_period)
             context["column_chart"] = column_chart.to_html(full_html=False)
             context['non_submission_pdus'] = chart_data.filter(latest_visit_quarter=0).values_list(
                 "pz_code",
                 "lead_organisation_name"
             )
             context["audit_period"] = selected_audit_period
-            context["submission_statistics"] = submission_stats(selected_audit_period.audit_year())
+            context["submission_statistics"] = submission_stats(selected_audit_period)
 
         return context
 
@@ -475,7 +476,7 @@ def switch_paediatric_diabetes_unit(request):
 
     return render(request, template, context=context)
 
-def create_column_chart(pdus_by_latest_submission, selected_audit_year):
+def create_column_chart(pdus_by_latest_submission, selected_audit_period):
     """
     Create a bar chart based on the latest submission data.
     """
@@ -512,7 +513,7 @@ def create_column_chart(pdus_by_latest_submission, selected_audit_year):
     # Update layout for horizontal bars
     fig.update_layout(
         title=dict(
-            text=f"Latest Submission Data by Quarter (using latest visit date) against PZ Code (Audit Year: {selected_audit_year})",
+            text=f"Latest Submission Data by Quarter (using latest visit date) against PZ Code (Audit Period: {selected_audit_period.slug})",
             font=dict(
                 family='Montserrat',
                 size=16,
@@ -540,7 +541,7 @@ def create_column_chart(pdus_by_latest_submission, selected_audit_year):
 
     return fig
 
-def submission_stats(selected_audit_year):
+def submission_stats(selected_audit_period):
     """
     View to display submission statistics.
     - the paediatric diabetes unit with the most recent submission
@@ -551,7 +552,7 @@ def submission_stats(selected_audit_year):
 
     # Retrieve the latest submission data for the selected audit year
     latest_submission_data = Submission.objects.filter(
-        audit_year=selected_audit_year,
+        audit_period=selected_audit_period,
         paediatric_diabetes_unit__active=True,
         submission_active=True
     ).order_by(
@@ -563,7 +564,7 @@ def submission_stats(selected_audit_year):
         latest_submission_data = None
 
     fewest_errors = Submission.objects.filter(
-        audit_year = selected_audit_year,
+        audit_period = selected_audit_period,
         submission_active=True,
         paediatric_diabetes_unit__active=True
     ).annotate(
@@ -577,7 +578,7 @@ def submission_stats(selected_audit_year):
         fewest_errors = None
 
     most_patients = Submission.objects.filter(
-        audit_year = selected_audit_year,
+        audit_period = selected_audit_period,
         submission_active=True,
         paediatric_diabetes_unit__active=True
     ).annotate(
@@ -591,7 +592,7 @@ def submission_stats(selected_audit_year):
         most_patients = None
 
     most_visits = Submission.objects.filter(
-        audit_year = selected_audit_year,
+        audit_period = selected_audit_period,
         submission_active=True,
         paediatric_diabetes_unit__active=True
     ).annotate(
