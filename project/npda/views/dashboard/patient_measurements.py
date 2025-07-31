@@ -82,7 +82,6 @@ def patient_measurements(request):
     )
 
     context={
-        "selected_audit_year": audit_period.audit_year(),
         "pz_code": pz_code,
         "hba1c_value_counts_stratified_by_diabetes_type": hba1c_value_counts_stratified_by_diabetes_type,
         "submission_visit_error_count": submission_visit_error_count,
