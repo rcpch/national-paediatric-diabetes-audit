@@ -267,10 +267,6 @@ class NPDAUser(AbstractUser, PermissionsMixin):
 
     def get_all_employer_organisations(self):
         return self.organisation_employers.all()
-
-    # TODO MRB: remove
-    def viewing_data_nationally(self):
-        return self.is_rcpch_audit_team_member and self.view_preference == 2
     
     def user_roles(self):
         roles = []

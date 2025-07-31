@@ -88,7 +88,7 @@ class NPDAUserListView(
         queryset = super().get_queryset()
         pz_code = self.request.session.get("pz_code")
 
-        if self.request.user.viewing_data_nationally():
+        if self.request.user.is_rcpch_audit_team_member:
             return (
                 queryset.order_by("-is_active", "surname")
             )

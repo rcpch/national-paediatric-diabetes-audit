@@ -142,13 +142,10 @@ class PatientListView(
             if combined_q:  # Check if any search terms were provided
                 filtered_patients &= combined_q  # Apply the combined OR query
 
-        # filter patients to the view preference of the user
-        if not self.request.user.viewing_data_nationally():
-            # PDU view
-            filtered_patients &= Q(
-                submissions__paediatric_diabetes_unit__pz_code=pz_code,
-                submissions__paediatric_diabetes_unit__active=True
-            )
+        filtered_patients &= Q(
+            submissions__paediatric_diabetes_unit__pz_code=pz_code,
+            submissions__paediatric_diabetes_unit__active=True
+        )
 
         patient_queryset = patient_queryset.filter(filtered_patients)
 
