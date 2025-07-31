@@ -56,12 +56,10 @@ class PatientVisitsListView(
         patient_id = self.kwargs.get("patient_id")
         context = super(PatientVisitsListView, self).get_context_data(**kwargs)
         patient = Patient.objects.get(pk=patient_id)
-        audit_start_date = datetime.date(
-            year=int(self.request.session.get("selected_audit_year")), month=4, day=1
-        )
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
         submission = patient.submissions.filter(
             submission_active=True,
-            audit_year=self.request.session.get("selected_audit_year"),
+            audit_period=audit_period,
         ).first()
         visits = (
             Visit.objects.filter(  # filter visits to those within the audit year
@@ -69,7 +67,7 @@ class PatientVisitsListView(
             )
             .filter(
                 visit_falls_within_audit_period_Q_object(
-                    audit_start_date=audit_start_date, prepend_query_path=None
+                    audit_start_date=audit_period.start_date, prepend_query_path=None
                 )
             )
             .order_by("is_valid", "id")
