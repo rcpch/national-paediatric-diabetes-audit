@@ -29,6 +29,7 @@ from project.npda.models.paediatric_diabetes_unit import (
 )
 from project.npda.models.submission import Submission
 from project.npda.models.audit_period import AuditPeriod
+from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 from project.npda.views.decorators import login_and_otp_required
 
 logger = logging.getLogger(__name__)
@@ -42,7 +43,9 @@ def get_map_chart_partial(request):
     if not request.htmx:
         return HttpResponseBadRequest("This view is only accessible via HTMX")
 
-    submission = Submission.objects.get_submission_for_request(request)
+    pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(request)
+    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
+    submission = Submission.objects.get_submission_for_request(pdu, audit_period)
 
     if not submission:
         return render(
