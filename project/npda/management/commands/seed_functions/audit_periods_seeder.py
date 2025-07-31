@@ -28,5 +28,6 @@ def audit_periods_seeder():
                 is_open=year == this_year,
                 is_visible=year <= this_year,
                 start_date=audit_start_date,
-                end_date=audit_end_date
+                end_date=audit_end_date,
+                slug=f"{audit_start_date.year}-{audit_end_date.year}"
             )
