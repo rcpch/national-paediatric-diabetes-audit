@@ -178,6 +178,13 @@ def groups_seeder(
         {"codename": "can_download_csv", "content_type": npdauserContentType},
     ]
 
+    COORDINATOR_CUSTOM_PERMISSIONS = [
+        {
+            "codename": CAN_TRANSFER_NPDA_LEAD_CENTRE[0],
+            "content_type": transferContentType,
+        }
+    ]
+
     PATIENT_ACCESS_PERMISSIONS = [
         # currently not used
         {
@@ -231,6 +238,7 @@ def groups_seeder(
             elif group == TRUST_AUDIT_TEAM_COORDINATOR_ACCESS:
                 # basic permissions
                 add_permissions_to_group(COORDINATOR_PERMISSIONS, newGroup)
+                add_permissions_to_group(COORDINATOR_CUSTOM_PERMISSIONS, newGroup)
                 add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
 
             elif group == PATIENT_ACCESS:
