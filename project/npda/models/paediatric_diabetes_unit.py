@@ -1,10 +1,31 @@
 from django.contrib.gis.db import models
+from django.core.exceptions import PermissionDenied
 
+
+class PaediatricDiabetesUnitManager(models.Manager):
+    def get_pdu_for_request(self, request, *args, **kwargs):
+        can_view_all_data = request.user.is_superuser or request.user.is_rcpch_audit_team_member
+
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=request.session["pz_code"])
+
+        if not can_view_all_data:
+            can_view_this_pdu = request.user.organisation_employers.filter(
+                pz_code=pdu.pz_code
+            ).exists()
+
+            if not can_view_this_pdu:
+                raise PermissionDenied(
+                    f"User {request.user} does not have permission to view PDU {pdu.pz_code}"
+                )
+
+        return pdu
 
 class PaediatricDiabetesUnit(models.Model):
     """
     This model stores the paediatric diabetes unit reference PZ code and ODS code of the associated organisation
     """
+
+    objects = PaediatricDiabetesUnitManager()
 
     pz_code = models.CharField(
         max_length=10,

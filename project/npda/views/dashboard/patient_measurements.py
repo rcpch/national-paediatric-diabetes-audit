@@ -11,12 +11,13 @@ from django.shortcuts import render
 from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.views.dashboard import helpers as hp
 from project.npda.views.decorators import login_and_otp_required
-from project.npda.models import Visit, Submission, AuditPeriod
+from project.npda.models import Visit, Submission, AuditPeriod, PaediatricDiabetesUnit
 
 
 @login_and_otp_required()
 def patient_measurements(request):
-    pz_code = request.session.get("pz_code")
+    pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(request)
+    pz_code = pdu.pz_code
 
     audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
     calculation_date = audit_period.kpi_calculation_date()
@@ -58,7 +59,7 @@ def patient_measurements(request):
         calculate_kpis.calculate_kpi_hba1c_vals_stratified_by_diabetes_type()
     )
 
-    current_submission = Submission.objects.get_submission_for_request(request, audit_period=audit_period)
+    current_submission = Submission.objects.get_submission_for_request(pdu, audit_period)
 
     if current_submission:
         visits = Visit.objects.filter(patient__in=current_submission.patients.all())

@@ -3,16 +3,14 @@ from django.core.exceptions import ValidationError
 from django.conf import settings
 
 from .audit_period import AuditPeriod
+from .paediatric_diabetes_unit import PaediatricDiabetesUnit
 
 
 class SubmissionManager(models.Manager):
-    def get_submission_for_request(self, request, audit_period=None):
-        pz_code = request.session.get("pz_code")
-        effective_audit_period = audit_period or AuditPeriod.objects.get_audit_period_for_request(request)
-
+    def get_submission_for_request(self, pdu, audit_period):
         return self.filter(
-            audit_period=effective_audit_period,
-            paediatric_diabetes_unit__pz_code=pz_code,
+            audit_period=audit_period,
+            paediatric_diabetes_unit=pdu,
             submission_active=True
         ).first()
 

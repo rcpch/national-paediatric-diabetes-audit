@@ -28,7 +28,7 @@ from project.constants.colors import (
     RCPCH_LIGHTEST_GREY,
 )
 from project.constants import HBA1C_FORMATS
-from project.npda.models import Visit, AuditPeriod
+from project.npda.models import Visit, AuditPeriod, PaediatricDiabetesUnit
 from project.npda.views.decorators import login_and_otp_required
 
 
@@ -117,11 +117,12 @@ def patient_ages(request):
         "not_specified": 0,
     }
 
+    pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(request)
     audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
 
     number_of_patients = 0
 
-    current_submission = Submission.objects.get_submission_for_request(request, audit_period=audit_period)
+    current_submission = Submission.objects.get_submission_for_request(pdu, audit_period)
 
     if current_submission:
         all_patients_in_this_submission = current_submission.patients.all() 
@@ -215,6 +216,7 @@ def all_patient_charts(request):
     """
     This function is used to generate all the patient characteristics charts
     """
+    pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(request)
     audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
 
     imd_counts = {
@@ -235,7 +237,7 @@ def all_patient_charts(request):
         "Unknown": 0,
     }
 
-    current_submission = Submission.objects.get_submission_for_request(request, audit_period=audit_period)
+    current_submission = Submission.objects.get_submission_for_request(pdu, audit_period)
 
     if current_submission:
         all_patients_in_this_submission = current_submission.patients.all()

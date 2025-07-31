@@ -192,15 +192,15 @@ class PatientListView(
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        pz_code = self.request.session.get("pz_code")
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
 
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code) if pz_code else None
+        pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(self.request)
         context["pdu"] = pdu
 
         submission = None
         submission_error_count = 0
 
-        submission = Submission.objects.get_submission_for_request(self.request)
+        submission = Submission.objects.get_submission_for_request(pdu, audit_period)
 
         if submission and submission.errors:
             submission_errors = json.loads(submission.errors)
@@ -216,15 +216,15 @@ class PatientListView(
         )
         context["submission_error_count"] = submission_error_count
 
-        context["pz_code"] = pz_code
-        context["audit_period"] = AuditPeriod.objects.get_audit_period_for_request(self.request)
+        context["pz_code"] = pdu.pz_code
+        context["audit_period"] = audit_period
         context["pdu_choices"] = (
             organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
                 requesting_user=self.request.user,
                 user_instance=self.request.user,
             )
         )
-        context["chosen_pdu"] = pz_code
+        context["chosen_pdu"] = pdu.pz_code
         context["current_page"] = self.request.GET.get("page", 1)
         context["sort_by"] = self.get_sort_by()
 
