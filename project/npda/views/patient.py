@@ -155,11 +155,7 @@ class PatientListView(
         a_year_ago = timezone.now() - timezone.timedelta(days=365)
 
         this_audit_year_visits = visit_falls_within_audit_period_Q_object(
-            audit_start_date=date(
-                year=int(self.request.session.get("selected_audit_year")),
-                month=4,
-                day=1,
-            ),
+            audit_start_date=audit_period.start_date,
             prepend_query_path="visit",
         )
 
@@ -207,16 +203,15 @@ class PatientListView(
         submission = None
         submission_error_count = 0
 
-        if pz_code and selected_audit_year:
-            submission = Submission.objects.get_submission_for_request(self.request)
+        submission = Submission.objects.get_submission_for_request(self.request)
 
-            if submission and submission.errors:
-                submission_errors = json.loads(submission.errors)
+        if submission and submission.errors:
+            submission_errors = json.loads(submission.errors)
 
-                error_count = 0
-                for errors_for_visit in submission_errors.values():
-                    for errors_for_field in errors_for_visit.values():
-                        submission_error_count += len(errors_for_field)
+            error_count = 0
+            for errors_for_visit in submission_errors.values():
+                for errors_for_field in errors_for_visit.values():
+                    submission_error_count += len(errors_for_field)
 
         context["submission"] = submission
         context["submission_valid_count"] = (
@@ -225,7 +220,7 @@ class PatientListView(
         context["submission_error_count"] = submission_error_count
 
         context["pz_code"] = pz_code
-        context["selected_audit_year"] = selected_audit_year or "None"
+        context["selected_audit_year"] = selected_audit_year
         context["pdu_choices"] = (
             organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
                 requesting_user=self.request.user,
@@ -323,10 +318,8 @@ class PatientCreateView(
         AuditPeriod = apps.get_model("npda", "AuditPeriod")
         pz_code = self.request.session.get("pz_code")
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-        audit_year = self.request.session.get("selected_audit_year")
         kwargs["paediatric_diabetes_unit"] = pdu
         kwargs["audit_period"] = AuditPeriod.objects.get_audit_period_for_request(self.request)
-        kwargs["audit_year"] = audit_year
         # Get override_postcode from POST data if available
         if self.request.method in ('POST', 'PUT'):
             kwargs['override_postcode'] = self.request.POST.get('override_postcode', 'false') == 'true'
@@ -515,10 +508,8 @@ class PatientUpdateView(
         AuditPeriod = apps.get_model("npda", "AuditPeriod")
         pz_code = self.request.session.get("pz_code")
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-        audit_year = self.request.session.get("selected_audit_year")
         kwargs["paediatric_diabetes_unit"] = pdu
         kwargs["audit_period"] = AuditPeriod.objects.get_audit_period_for_request(self.request)
-        kwargs["audit_year"] = audit_year
         # Get override_postcode from POST data if available
         if self.request.method in ('POST', 'PUT'):
             kwargs['override_postcode'] = self.request.POST.get('override_postcode', 'false') == 'true'
