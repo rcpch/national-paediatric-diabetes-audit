@@ -193,9 +193,6 @@ class PatientListView(
         context = super().get_context_data(**kwargs)
 
         pz_code = self.request.session.get("pz_code")
-        selected_audit_year = self.request.session.get(
-            "selected_audit_year"
-        )  # this is the year that that audit period starts in
 
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code) if pz_code else None
         context["pdu"] = pdu
@@ -220,7 +217,8 @@ class PatientListView(
         context["submission_error_count"] = submission_error_count
 
         context["pz_code"] = pz_code
-        context["selected_audit_year"] = selected_audit_year
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
+        context["selected_audit_year"] = audit_period.audit_year()
         context["pdu_choices"] = (
             organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
                 requesting_user=self.request.user,
