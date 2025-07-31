@@ -216,7 +216,6 @@ def groups_seeder(
             newGroup = Group.objects.filter(name=group).get()
 
             # NPDA_AUDIT_TEAM_FULL_ACCESS = RCPCH AUDIT TEAM
-            # NPDA_AUDIT_TEAM_FULL_ACCESS = RCPCH AUDIT TEAM
             if group == NPDA_AUDIT_TEAM_FULL_ACCESS:
                 # basic permissions
                 add_permissions_to_group(RCPCH_AUDIT_TEAM_PERMISSIONS, newGroup)
@@ -305,6 +304,7 @@ def groups_seeder(
                 elif group == TRUST_AUDIT_TEAM_COORDINATOR_ACCESS:
                     # basic permissions
                     add_permissions_to_group(COORDINATOR_PERMISSIONS, newGroup)
+                    add_permissions_to_group(COORDINATOR_CUSTOM_PERMISSIONS, newGroup)
                     add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
 
                 elif group == PATIENT_ACCESS:
