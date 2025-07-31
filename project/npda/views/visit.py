@@ -82,6 +82,7 @@ class PatientVisitsListView(
         paediatric_diabetes_unit = submission.paediatric_diabetes_unit
 
         context["paediatric_diabetes_unit"] = paediatric_diabetes_unit
+        context["audit_period"] = audit_period
 
         return context
 
