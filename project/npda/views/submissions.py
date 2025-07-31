@@ -1,5 +1,5 @@
 # Python imports
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 import json
 from typing import Any, Iterable
 import logging
@@ -13,7 +13,7 @@ from django.apps import apps
 from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, Case, When, F, Value, IntegerField, OuterRef, Subquery, Max, DateField
+from django.db.models import Count, Case, When, Value, IntegerField, OuterRef, Subquery
 from django.db.models.functions import Concat, ExtractMonth, ExtractYear
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
@@ -33,7 +33,8 @@ from ..general_functions.csv import (
     download_csv,
     download_xlsx,
     csv_parse,
-    create_csv_submission
+    create_csv_submission,
+    gather_unique_patient_and_visit_counts
 )
 from .mixins import LoginAndOTPRequiredMixin
 from ..models import (
@@ -80,14 +81,15 @@ class SubmissionsListView(
         pdu = PaediatricDiabetesUnit.objects.get(
             pz_code=self.request.session.get("pz_code"),
         )
-        if self.request.user.viewing_data_nationally():
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
+        if self.request.user.is_rcpch_audit_team_member:
             base_queryset = self.model.objects.filter(
-                audit_year=self.request.session.get("selected_audit_year")
+                audit_period=audit_period
             ).all()
         else:
             base_queryset = self.model.objects.filter(
                 paediatric_diabetes_unit=pdu,
-                audit_year=self.request.session.get("selected_audit_year"),
+                audit_period=audit_period
             )
 
         final = base_queryset.annotate(
@@ -120,14 +122,14 @@ class SubmissionsListView(
             is_jersey = False
         context = super().get_context_data(**kwargs)
         context["pz_code"] = self.request.session.get("pz_code")
-        context["selected_audit_year"] = self.request.session.get("selected_audit_year")
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
         Patient = apps.get_model("npda", "Patient")
         context["data"] = None  # data stores csv summary data if a submission exists
         context["column_chart"] = None
         context["submission_statistics"] = None
         requested_active_submission = self.object_list.filter(
             submission_active=True,
-            audit_year=self.request.session.get("selected_audit_year"),
+            audit_period=audit_period,
             paediatric_diabetes_unit__pz_code=self.request.session.get("pz_code"),
             paediatric_diabetes_unit__active=True,
         ).first()  # there can be only one of these
@@ -145,7 +147,7 @@ class SubmissionsListView(
                 visit_count=Count("visit"),
             )
         
-        if self.request.user.viewing_data_nationally():
+        if self.request.user.is_rcpch_audit_team_member:
             selected_audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
             # Start with ALL active PDUs, not just those with submissions
             chart_data = PaediatricDiabetesUnit.objects.filter(
@@ -173,19 +175,19 @@ class SubmissionsListView(
                 )
             ).values(
                 "pz_code",
-                "parent_name", 
+                "lead_organisation_name", 
                 "latest_visit_quarter"
             )
 
             
-            column_chart = create_column_chart(chart_data, selected_audit_period.audit_year())
+            column_chart = create_column_chart(chart_data, selected_audit_period)
             context["column_chart"] = column_chart.to_html(full_html=False)
             context['non_submission_pdus'] = chart_data.filter(latest_visit_quarter=0).values_list(
                 "pz_code",
-                "parent_name"
+                "lead_organisation_name"
             )
             context["audit_period"] = selected_audit_period
-            context["submission_statistics"] = submission_stats(selected_audit_period.audit_year())
+            context["submission_statistics"] = submission_stats(selected_audit_period)
 
         return context
 
@@ -360,6 +362,14 @@ async def upload_csv(request):
                 message="CSV file must use NHS number as the identifier column unless uploading for Jersey"
             )
             return redirect("upload_csv")
+        
+        #  the same must be true for the Jersey upload
+        if parsed_csv.identifier_column == "NHS Number" and is_jersey:
+            messages.error(
+                request=request,
+                message="CSV file must use Unique Reference Number as the identifier column unless uploading for Jersey"
+            )
+            return redirect("upload_csv")
 
         audit_period = await sync_to_async(AuditPeriod.objects.get_audit_period_for_request)(request)
 
@@ -375,8 +385,9 @@ async def upload_csv(request):
             submission_active=False,
             user=request.user,
             ip_address=get_client_ip(request),
+            new_dataframe=parsed_csv.df
         )
-
+        
         upload_csv_task.delay(new_submission.id)
 
         # update the session fields - this stores that the user has uploaded a csv and disables the ability to use the questionnaire
@@ -400,30 +411,43 @@ def upload_csv_in_progress(request):
     ).order_by("-submission_date").first()
 
     seconds_since_submission = (datetime.now(timezone.utc) - last_submission.submission_date).seconds
-    minutes_since_submission = seconds_since_submission / 60
 
-    timeout = minutes_since_submission > 10
-    if timeout:
-        # Error to trigger admin email
-        logger.error(f"Submission timed out. Submission ID: {last_submission.pk}. PZ Code: {pz_code}")
-        messages.error(
-            request,
-            f"{last_submission.csv_file_name} took too long to process. Please contact the NPDA team for assistance.",
-        )
-
-    if last_submission and not last_submission.submission_active and not timeout:
-        patients_so_far = Patient.objects.filter(submissions=last_submission).count()
-        visits_so_far = Patient.objects.filter(submissions=last_submission).aggregate(Count("visit"))["visit__count"]
-
-        context = {
-            "csv_file_name": last_submission.csv_file_name,
-            "patients_so_far": patients_so_far,
-            "visits_so_far": visits_so_far
-        }
-
-        return render(request, "upload_csv/upload_in_progress.html", context=context)
+    timeout = seconds_since_submission > 15
     
-    return redirect("patients") 
+    total_patients = last_submission.total_unique_patients
+    total_rows = last_submission.total_unique_visits
+    patients_so_far = Patient.objects.filter(submissions=last_submission).count()
+    visits_so_far = Patient.objects.filter(submissions=last_submission).aggregate(Count("visit"))["visit__count"]
+    upload_complete = total_rows == visits_so_far and total_patients == patients_so_far
+    csv_file_name = last_submission.csv_file_name
+    if timeout:
+        upload_complete = True # if timeout, we assume the upload is complete as this triggers redirect to upload_complete template
+        if not last_submission:
+            # here there is an error with the headers or the csv file is empty
+            # we return an error message to the user and redirect them to the patients page
+            messages.error(
+                request,
+                "The upload has timed out. Please try again.",
+            )
+            return redirect("patients")
+    
+    context = {
+        "csv_file_name": csv_file_name,
+        "patients_so_far": patients_so_far,
+        "visits_so_far": visits_so_far,
+        "total_patients": total_patients,
+        "total_rows": total_rows,
+        "patient_progress": patients_so_far / total_patients * 100 if total_patients else 0,
+        "upload_complete": upload_complete,
+        "timeout": timeout,
+    }
+
+    if request.htmx:
+        response = render(request, "upload_csv/upload_in_progress_wrapper.html", context=context)
+        return response
+            
+
+    return render(request, "upload_csv/upload_in_progress.html", context=context)
 
 @login_and_otp_required()
 def switch_paediatric_diabetes_unit(request):
@@ -452,7 +476,7 @@ def switch_paediatric_diabetes_unit(request):
 
     return render(request, template, context=context)
 
-def create_column_chart(pdus_by_latest_submission, selected_audit_year):
+def create_column_chart(pdus_by_latest_submission, selected_audit_period):
     """
     Create a bar chart based on the latest submission data.
     """
@@ -464,7 +488,7 @@ def create_column_chart(pdus_by_latest_submission, selected_audit_year):
         go.Bar(
             x=df['latest_visit_quarter'],  # Quarter values on x-axis
             y=df['pz_code'],  # PZ codes on y-axis (creates horizontal bars)
-            customdata=df['parent_name'],  # Use parent_name for hover text
+            customdata=df['lead_organisation_name'],  # Use lead_organisation_name for hover text
             orientation='h',  # Horizontal orientation
             marker_color= RCPCH_LIGHT_BLUE,
             text=[f"Q{q}" if q > 0 else "No Data" for q in df['latest_visit_quarter']],
@@ -489,7 +513,7 @@ def create_column_chart(pdus_by_latest_submission, selected_audit_year):
     # Update layout for horizontal bars
     fig.update_layout(
         title=dict(
-            text=f"Latest Submission Data by Quarter (using latest visit date) against PZ Code (Audit Year: {selected_audit_year})",
+            text=f"Latest Submission Data by Quarter (using latest visit date) against PZ Code (Audit Period: {selected_audit_period.slug})",
             font=dict(
                 family='Montserrat',
                 size=16,
@@ -517,7 +541,7 @@ def create_column_chart(pdus_by_latest_submission, selected_audit_year):
 
     return fig
 
-def submission_stats(selected_audit_year):
+def submission_stats(selected_audit_period):
     """
     View to display submission statistics.
     - the paediatric diabetes unit with the most recent submission
@@ -528,7 +552,7 @@ def submission_stats(selected_audit_year):
 
     # Retrieve the latest submission data for the selected audit year
     latest_submission_data = Submission.objects.filter(
-        audit_year=selected_audit_year,
+        audit_period=selected_audit_period,
         paediatric_diabetes_unit__active=True,
         submission_active=True
     ).order_by(
@@ -540,7 +564,7 @@ def submission_stats(selected_audit_year):
         latest_submission_data = None
 
     fewest_errors = Submission.objects.filter(
-        audit_year = selected_audit_year,
+        audit_period = selected_audit_period,
         submission_active=True,
         paediatric_diabetes_unit__active=True
     ).annotate(
@@ -554,7 +578,7 @@ def submission_stats(selected_audit_year):
         fewest_errors = None
 
     most_patients = Submission.objects.filter(
-        audit_year = selected_audit_year,
+        audit_period = selected_audit_period,
         submission_active=True,
         paediatric_diabetes_unit__active=True
     ).annotate(
@@ -568,7 +592,7 @@ def submission_stats(selected_audit_year):
         most_patients = None
 
     most_visits = Submission.objects.filter(
-        audit_year = selected_audit_year,
+        audit_period = selected_audit_period,
         submission_active=True,
         paediatric_diabetes_unit__active=True
     ).annotate(

@@ -133,26 +133,12 @@ def dashboard(request):
                 ]["kpi_1_total_eligible"]["total_eligible"]
                 == 0,
                 "data": json.dumps(new_diagnosis_per_quarter_value_counts_pct),
-            },
-            "map": json.dumps(
-                dict(
-                    pdu_pk=pdu.pk,
-                    selected_audit_year=audit_period.audit_year(),
-                )
-            ),
+            }
         },
         # TODO: this should be an enum but we're currently not doing benchmarking so can update
         # at that point
         "aggregation_level": "pdu",
     }
-
-    # Gather totals for the patient health check KPIs
-    # patient_health_check_totals_to_return = patient_health_check_totals(
-    #     calculate_kpis=calculate_kpis,
-    #     pz_code=pz_code,
-    #     calculation_date=calculation_date,
-    # )
-    # context.update(patient_health_check_totals_to_return)
 
     return render(request, template_name=template, context=context)
 

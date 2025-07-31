@@ -24,7 +24,10 @@ from project.npda.models import NPDAUser
 from project.npda.models.audit_period import AuditPeriod
 from project.npda.models.submission import Submission
 from project.npda.tests.constants_for_tests import ALDER_HEY_PZ_CODE
-from project.npda.tests.factories import test_user_rcpch_audit_team_data
+from project.npda.tests.factories import (
+    test_user_rcpch_audit_team_data,
+    test_user_audit_centre_editor_data
+)
 from project.npda.tests.utils import login_and_verify_user
 from project.npda.urls import patient_report_urlpatterns
 from project.npda.tests.factories.patient_factory import PatientFactory
@@ -354,3 +357,82 @@ def test_outcomes_multiple_hba1c_measurements(
         "previous_to_latest_hba1c_date"
     ] == AUDIT_START_DATE + relativedelta(days=10)
     assert patient_data["days_delta_between_latest_and_previous_hba1c"] == 10
+
+
+@pytest.mark.django_db
+def test_report_for_patients_turning_12_in_audit_year(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client
+):
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    date_of_birth = audit_period.start_date - relativedelta(years=11, days=2)
+
+    patient = PatientFactory(
+        nhs_number="4444444444",
+        diabetes_type=DIABETES_TYPES[0][0],  # T1DM
+        date_of_birth=date_of_birth,
+        diagnosis_date=audit_period.start_date - relativedelta(days=2), # complete year of care
+    )
+
+    # Need a visit in the audit period to be eligible
+    VisitFactory(
+        patient=patient,
+        visit_date=audit_period.start_date + relativedelta(days=10),
+        hba1c=60,  # 60 mmol/mol
+        hba1c_format=HBA1C_FORMATS[0][0],  # mmol/mol format
+        hba1c_date=audit_period.start_date + relativedelta(days=10),
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(patient)
+
+    response = client.get(
+        reverse("patient_report") + f"?category={TableCategories.HEALTH_CHECKS.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    assert len(response.context["patients"]) == 1
+
+    patient = response.context["patients"][0]
+
+    assert patient["patient_identifier"] == "4444444444"
+    assert patient["passed_blood_pressure"] is None
+    assert patient["passed_urinary_albumin"] is None
+    assert patient["passed_foot_exam"] is None
+
+    assert response.context["total_eligible_blood_pressure"] == 0
+    assert response.context["total_eligible_urinary_albumin"] == 0
+    assert response.context["total_eligible_foot_exam"] == 0
+
+    response = client.get(
+        reverse("patient_report") + f"?category={TableCategories.ADDITIONAL_CARE_PROCESSES.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    assert len(response.context["patients"]) == 1
+
+    patient = response.context["patients"][0]
+
+    assert patient["patient_identifier"] == "4444444444"
+    assert patient["smoking_status"] is None
+    assert patient["smoking_cessation_referral"] is None

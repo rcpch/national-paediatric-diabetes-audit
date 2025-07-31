@@ -114,7 +114,6 @@ class PatientForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        self.audit_year = kwargs.pop("audit_year", None)
         self.audit_period = kwargs.pop("audit_period", None)
         self.paediatric_diabetes_unit = kwargs.pop("paediatric_diabetes_unit", None)
         self.override_postcode = kwargs.pop("override_postcode", False)

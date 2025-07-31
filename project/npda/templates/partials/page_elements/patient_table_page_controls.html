@@ -1,9 +1,9 @@
 <tr class="bg-rcpch_dark_blue py-5 text-xs text-white text-gray-700 uppercase bg-gray-50">
     <th colspan="8" class="px-2">
         <span class="tooltip tooltip-bottom"
-              data-tip="All patients in this submission for April {{ request.session.selected_audit_year }} - March {{ request.session.selected_audit_year|add:'1' }}. Note this includes patients who have been discharged or transferred out of the unit in the audit year and those that have no visits.">
+              data-tip="All patients in this submission for {{ audit_period.start_date }} - {{ audit_period.end_date }}. Note this includes patients who have been discharged or transferred out of the unit in the audit year and those that have no visits.">
             <strong>
-            {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ paginator.count }} patients in audit year April {{ request.session.selected_audit_year }} - March {{ request.session.selected_audit_year|add:'1' }} at {{ pdu.parent_name }} ({{ pdu.pz_code }})</strong>
+            {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ paginator.count }} patients in audit year {{ audit_period.display_name }} at {{ pdu.lead_organisation_name }} ({{ pdu.pz_code }})</strong>
             <i class="fa-solid fa-info-circle"></i>
         </span>
     </th>

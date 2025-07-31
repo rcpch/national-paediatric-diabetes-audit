@@ -14,7 +14,6 @@ def session_data(request):
         "parent_name": request.session.get("parent_name", None),
         "requested_audit_year": request.session.get("requested_audit_year", None),
         "audit_years": request.session.get("audit_years", []),
-        "parent_name": request.session.get("parent_name", None),
     }
 
 

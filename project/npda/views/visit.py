@@ -56,12 +56,10 @@ class PatientVisitsListView(
         patient_id = self.kwargs.get("patient_id")
         context = super(PatientVisitsListView, self).get_context_data(**kwargs)
         patient = Patient.objects.get(pk=patient_id)
-        audit_start_date = datetime.date(
-            year=int(self.request.session.get("selected_audit_year")), month=4, day=1
-        )
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
         submission = patient.submissions.filter(
             submission_active=True,
-            audit_year=self.request.session.get("selected_audit_year"),
+            audit_period=audit_period,
         ).first()
         visits = (
             Visit.objects.filter(  # filter visits to those within the audit year
@@ -69,7 +67,7 @@ class PatientVisitsListView(
             )
             .filter(
                 visit_falls_within_audit_period_Q_object(
-                    audit_start_date=audit_start_date, prepend_query_path=None
+                    audit_start_date=audit_period.start_date, prepend_query_path=None
                 )
             )
             .order_by("is_valid", "id")
@@ -84,6 +82,7 @@ class PatientVisitsListView(
         paediatric_diabetes_unit = submission.paediatric_diabetes_unit
 
         context["paediatric_diabetes_unit"] = paediatric_diabetes_unit
+        context["audit_period"] = audit_period
 
         return context
 
@@ -111,57 +110,9 @@ class VisitCreateView(
         context["button_title"] = "Create New Visit"
         context["visit_tabs"] = get_visit_tabs(form=None)
         context["override_height_weight"] = False
-        # Getting the PDU for the patient most of the time will be the same as the selected PDU in session.
-        # However, if the user has selected a different PDU in the session but has come here from a national view
-        # then we can't use that.
-        if self.request.user.view_preference == 2:
-            # we potentially have a choice here if the patient is in multiple PDUs
-            PatientSubmission = apps.get_model("npda", "PatientSubmission")
-            if (
-                PatientSubmission.objects.filter(
-                    patient=patient,
-                    submission__audit_year=self.request.session.get(
-                        "selected_audit_year"
-                    ),
-                    submission__submission_active=True,
-                ).count()
-                > 1
-            ):
-                # this patient has more than one active submission
-                # if the user has selected a PDU in the session, we can use that
-                if PatientSubmission.objects.filter(
-                    patient=patient,
-                    submission__audit_year=self.request.session.get(
-                        "selected_audit_year"
-                    ),
-                    submission__submission_active=True,
-                    submission__paediatric_diabetes_unit=PaediatricDiabetesUnit.objects.get(
-                        pz_code=self.request.session.get("pz_code")
-                    ),
-                ).exists():
-                    context["paediatric_diabetes_unit"] = (
-                        PaediatricDiabetesUnit.objects.get(
-                            pz_code=self.request.session.get("pz_code")
-                        )
-                    )
-                else:
-                    # if we can't use the PDU in the session, we shall have to use the first one
-                    context["paediatric_diabetes_unit"] = (
-                        PatientSubmission.objects.filter(
-                            patient=patient,
-                            submission__audit_year=self.request.session.get(
-                                "selected_audit_year"
-                            ),
-                            submission__submission_active=True,
-                        )
-                        .first()
-                        .submission.paediatric_diabetes_unit
-                    )
-        else:
-            PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-            context["paediatric_diabetes_unit"] = PaediatricDiabetesUnit.objects.get(
-                pz_code=self.request.session.get("pz_code")
-            )
+
+        context["paediatric_diabetes_unit"] = patient.submissions.first().paediatric_diabetes_unit
+
         return context
 
     def get_success_url(self):

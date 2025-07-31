@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block content %}
-  {% if request.user.view_preference == 2 %}
+  {% if request.user.is_rcpch_audit_team_member %}
     <div class="grid grid-cols-2 gap-6 mb-6">
       <!-- Chart Column - 50% width -->
       <div class="col-span-1">

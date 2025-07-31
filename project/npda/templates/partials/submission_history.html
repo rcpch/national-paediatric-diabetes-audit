@@ -2,29 +2,13 @@
 {% load npda_tags %}
 {% load humanize %}
 <div>
-  {% if request.user.view_preference == 1 %}
-    <!-- PDU/tTrust/LHB view -->
-    {% if request.user.is_rcpch_audit_team_member or request.user.is_superuser or request.user.is_rcpch_staff %}
-      <div class="alert alert-info mb-2">
-        <i class="fa-solid fa-circle-info"></i>
-        <span class="text-sm text-rcpch_dark_blue font-semibold">
-          You are currently viewing the submissions for {{ lead_organisation }} ({{ pz_code }}) only. If you want a national view of all submissions please remove the PDU filter in the Filters in the menu bar.
-        </span>
-      </div>
-    {% endif %}
+  {% if not request.user.is_rcpch_audit_team_member %}
     <div class="flex flex-row items-center">
       <h1 class="font-montserrat text-md text-rcpch_dark_blue font-semibold">
         All Submissions for {{ lead_organisation }} ({{ pz_code }})
       </h1>
     </div>
-  {% elif request.user.view_preference == 2 %}
-    <!-- National view   -->
-    <div class="alert alert-info mb-2">
-      <i class="fa-solid fa-circle-info"></i>
-      <span class="text-sm text-rcpch_dark_blue font-semibold">
-        You are currently viewing all submissions Nationally. If you want to view submissions only for {{ lead_organisation }} ({{ pz_code }}) (or any PDU) please apply the PDU filter in the Filters in the menu bar.
-      </span>
-    </div>
+  {% else %}
     <h1 class="font-montserrat text-md text-rcpch_dark_blue font-semibold">
       All Submissions Nationally
     </h1>
@@ -54,7 +38,7 @@
               <td>Audit Year</td>
               <td>Patient Qty</td>
               <td>Status</td>
-              {% if request.user.view_preference == 2 %}<td>PDU</td>{% endif %}
+              {% if request.user.is_rcpch_audit_team_member %}<td>PDU</td>{% endif %}
               <td>Actions</td>
             </tr>
           </thead>
@@ -101,9 +85,9 @@
                       </span>
                     {% endif %}
                   </td>
-                  {% if request.user.view_preference == 2 %}
+                  {% if request.user.is_rcpch_audit_team_member %}
                     <td>
-                      {{ submission.paediatric_diabetes_unit.pz_code }} ({{ submission.paediatric_diabetes_unit.parent_name }})
+                      {{ submission.paediatric_diabetes_unit.pz_code }} ({{ submission.paediatric_diabetes_unit.lead_organisation_name }})
                     </td>
                   {% endif %}
                   <td class="flex flex-row flex-wrap justify-start items-stretch gap-2 xl:flex-nowrap">
@@ -114,7 +98,7 @@
                       <input type="hidden" name="audit_id" value="{{ submission.pk }}">
                       {% if submission.submission_active %}
                         <!-- data quality report only visible for PDU view -->
-                        {% if request.user.view_preference == 1 and perms.npda.can_download_csv and can_upload_csv %}
+                        {% if submission.csv_file_name and perms.npda.can_download_csv and can_upload_csv %}
                           <div class="join join-vertical grow items-center lg:join-horizontal">
                             <div class="h-full flex grow items-center px-2 text-white bg-gray-400">
                               <i class="fa-download fas mr-1"></i> Download:
@@ -185,14 +169,7 @@
       </div>
     </div>
     {% if data is not None %}
-      <!-- data quality report only visible for PDU view -->
-      {% if request.user.view_preference == 1 %}
-        {% include 'partials/data_quality_report.html' with data=data submission_errors=submission_errors %}
-      {% elif request.user.view_preference == 2 %}
-        <p class="text-gray-400">
-          It is not possible to view individual data quality reports for an individual Paediatric Diabetes Unit in the National View.
-        </p>
-      {% endif %}
+      {% include 'partials/data_quality_report.html' with data=data submission_errors=submission_errors %}
     {% else %}
       <p class="text-gray-400">
         No data quality report available for {{ request.session.pz_code }}.

@@ -11,18 +11,19 @@ from django.shortcuts import render
 from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.views.dashboard import helpers as hp
 from project.npda.views.decorators import login_and_otp_required
-from project.npda.models import Visit, Submission, AuditPeriod
+from project.npda.models import Visit, Submission, AuditPeriod, PaediatricDiabetesUnit
 
 
 @login_and_otp_required()
 def patient_measurements(request):
-    pz_code = request.session.get("pz_code")
+    pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(request)
+    pz_code = pdu.pz_code
 
     audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
     calculation_date = audit_period.kpi_calculation_date()
     
     calculate_kpis = CalculateKPIS(
-        calculation_date=calculation_date, return_pt_querysets=True
+        calculation_date=calculation_date, return_pt_querysets=True, is_jersey=pz_code == "PZ248"
     )
 
     kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
@@ -58,7 +59,7 @@ def patient_measurements(request):
         calculate_kpis.calculate_kpi_hba1c_vals_stratified_by_diabetes_type()
     )
 
-    current_submission = Submission.objects.get_submission_for_request(request, audit_period=audit_period)
+    current_submission = Submission.objects.get_submission_for_request(pdu, audit_period)
 
     if current_submission:
         visits = Visit.objects.filter(patient__in=current_submission.patients.all())
@@ -78,10 +79,10 @@ def patient_measurements(request):
     returned_patient_health_check_totals = patient_health_check_totals(
         pz_code=pz_code,
         calculation_date=calculation_date,
+        audit_start_date=audit_period.start_date
     )
 
     context={
-        "selected_audit_year": audit_period.audit_year(),
         "pz_code": pz_code,
         "hba1c_value_counts_stratified_by_diabetes_type": hba1c_value_counts_stratified_by_diabetes_type,
         "submission_visit_error_count": submission_visit_error_count,
@@ -98,7 +99,7 @@ def patient_measurements(request):
         template_name=template
     )
 
-def patient_health_check_totals(pz_code, calculation_date):
+def patient_health_check_totals(pz_code, calculation_date, audit_start_date):
     """
     Returns the totals for the patient health check KPIs.
     Note this repeats some of the logic in the patient_report. Probably should be refactored into a common function.
@@ -106,7 +107,7 @@ def patient_health_check_totals(pz_code, calculation_date):
     It uses the CalculateKPIS class to get the patient querysets and then applies the necessary filters and annotations to calculate the totals for each health check KPI
     """
     calculate_kpis = CalculateKPIS(
-        calculation_date=calculation_date, return_pt_querysets=True
+        calculation_date=calculation_date, return_pt_querysets=True, is_jersey=pz_code == "PZ248"
     )
     calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
     # Select all T1DM patients for PZ code - Note that Jersey (PZ248) has a different patient identifier field
@@ -156,7 +157,7 @@ def patient_health_check_totals(pz_code, calculation_date):
     
     # For age-specific checks (12+ years old)
     complete_year_12plus = complete_year_patients.filter(
-        date_of_birth__lte=calculation_date - relativedelta(years=12)
+        date_of_birth__lte=audit_start_date - relativedelta(years=12)
     )
     
     total_passed_blood_pressure = calculate_kpis.calculate_kpi_28_blood_pressure().patient_querysets["passed"].filter(

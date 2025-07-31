@@ -164,39 +164,6 @@ def test_user_with_unexpected_view_preference(
 
 @pytest.mark.django_db
 @override_settings(SECURE_SSL_REDIRECT=False)
-def test_rcpch_audit_team_can_see_all_patients(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client,
-):
-    gosh_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=GOSH_PZ_CODE
-    ).first()
-
-    ah_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
-    ).first()
-
-    rcpch_user = NPDAUser.objects.filter(is_rcpch_audit_team_member=True).first()
-
-    gosh_patient = create_submission_with_patient(gosh_user)
-    ah_patient = create_submission_with_patient(ah_user)
-
-    client = login_and_verify_user(client, rcpch_user)
-
-    set_view_preference(client, view_preference=2, pz_code=GOSH_PZ_CODE)
-    patients = get_patient_list(client)
-
-    assert len(patients) == 2
-
-    pks = [patient.pk for patient in patients]
-    assert gosh_patient.pk in pks
-    assert ah_patient.pk in pks
-
-
-@pytest.mark.django_db
-@override_settings(SECURE_SSL_REDIRECT=False)
 def test_users_can_only_edit_patients_from_their_own_pdu(
     seed_groups_fixture,
     seed_users_fixture,

@@ -3,16 +3,14 @@ from django.core.exceptions import ValidationError
 from django.conf import settings
 
 from .audit_period import AuditPeriod
+from .paediatric_diabetes_unit import PaediatricDiabetesUnit
 
 
 class SubmissionManager(models.Manager):
-    def get_submission_for_request(self, request, audit_period=None):
-        pz_code = request.session.get("pz_code")
-        effective_audit_period = audit_period or AuditPeriod.objects.get_audit_period_for_request(request)
-
+    def get_submission_for_request(self, pdu, audit_period):
         return self.filter(
-            audit_period=effective_audit_period,
-            paediatric_diabetes_unit__pz_code=pz_code,
+            audit_period=audit_period,
+            paediatric_diabetes_unit=pdu,
             submission_active=True
         ).first()
 
@@ -73,6 +71,27 @@ class Submission(models.Model):
     errors = models.JSONField(
         "Errors",
         help_text="Errors that have been found in the uploaded CSV file",
+        null=True,
+        blank=True,
+    )
+
+    total_unique_patients = models.IntegerField(
+        "Total unique patients",
+        help_text="Total number of unique patients in this submission",
+        null=True,
+        blank=True,
+    )
+
+    visit_counts_per_patient = models.JSONField(
+        "Visit counts per patient",
+        help_text="Counts of visits per patient in this submission",
+        null=True,
+        blank=True,
+    )
+
+    total_unique_visits = models.IntegerField(
+        "Total unique visits",
+        help_text="Total number of unique visits in this submission",
         null=True,
         blank=True,
     )

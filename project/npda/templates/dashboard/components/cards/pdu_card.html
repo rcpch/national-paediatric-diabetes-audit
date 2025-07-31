@@ -6,12 +6,8 @@
 {% block card_body %}
   <!-- PZ Name -->
   <p class="flex justify-center tooltip text-center mt-2 text-lg"
-     data-tip="Lead Organisation Name">
-    {% if pdu_object.parent_name %}
-      {{ pdu_object.parent_name }}
-    {% else %}
-      Royal College of Paediatrics and Child Health
-    {% endif %}
+     data-tip="PDU Name">
+    {{ pdu_object.lead_organisation_name }}
     ({{ pdu_object.pz_code }})
   </p>
   <!-- Divider with Text "Trust" -->

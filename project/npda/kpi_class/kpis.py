@@ -61,6 +61,7 @@ class CalculateKPIS:
         self,
         calculation_date: date = None,
         return_pt_querysets: bool = False,
+        is_jersey: bool = False,
     ):
         """Calculates KPIs for given pz_code
 
@@ -103,6 +104,8 @@ class CalculateKPIS:
 
         # Sets the KPI attribute names map
         self.kpi_name_registry = kpi_registry
+
+        self.is_jersey = is_jersey
 
     def set_patients_for_calculation(
         self,
@@ -1025,7 +1028,13 @@ class CalculateKPIS:
                 paediatric_diabetes_units__date_leaving_service__range=(
                     self.AUDIT_DATE_RANGE
                 )
-            )
+            ),
+            # Transitioned to adult diabetes service
+            Q(
+                paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[0][
+                    0
+                ]
+            ),
         )
 
         # Count eligible patients
@@ -3493,7 +3502,11 @@ class CalculateKPIS:
         """
 
         # Calculate median HBa1c for each patient
-        visit_value_cols = ["patient__pk", "hba1c", "patient__nhs_number"]
+        if self.is_jersey:
+            # Jersey patients have unique_reference_number instead of nhs_number
+            visit_value_cols = ["patient__pk", "hba1c", "patient__unique_reference_number"]
+        else:
+            visit_value_cols = ["patient__pk", "hba1c", "patient__nhs_number"]
         # Retrieve all visits with valid HbA1c values
         valid_visits = Visit.objects.filter(
             visit_date__range=self.AUDIT_DATE_RANGE,
@@ -3505,17 +3518,27 @@ class CalculateKPIS:
         # calculate_median method
         # We're doing this in Python instead of Django ORM because median
         # aggregation gets complicated
-        hba1c_values_by_patient = defaultdict(
-            lambda: {"hb1ac_values": [], "nhs_number": ""}
-        )
+        if self.is_jersey:
+            hba1c_values_by_patient = defaultdict(
+                lambda: {"hb1ac_values": [], "unique_reference_number": ""}
+            )
+        else:
+            hba1c_values_by_patient = defaultdict(
+                lambda: {"hb1ac_values": [], "nhs_number": ""}
+            )
         
         for visit in valid_visits:
             hba1c_values_by_patient[visit["patient__pk"]]["hb1ac_values"].append(
                 visit["hba1c"]
             )
-            hba1c_values_by_patient[visit["patient__pk"]]["nhs_number"] = visit[
-                "patient__nhs_number"
-            ]
+            if self.is_jersey:
+                hba1c_values_by_patient[visit["patient__pk"]]["unique_reference_number"] = visit[
+                    "patient__unique_reference_number"
+                ]
+            else: 
+                hba1c_values_by_patient[visit["patient__pk"]]["nhs_number"] = visit[
+                    "patient__nhs_number"
+                ]
 
         # Now calculate the median for each patient
         for patient_id, values in hba1c_values_by_patient.items():
@@ -4200,10 +4223,12 @@ class CalculateKPIS:
             self.kpi_1_total_eligible,
         )
 
-    def _get_total_kpi_2_eligible_pts_base_query_set_and_total_count(
+    def get_total_kpi_2_eligible_pts_base_query_set_and_total_count(
         self,
     ) -> Tuple[QuerySet[Patient], int]:
         """Enables reuse of the base query set for KPI 2
+
+        Also used in the Care At Diagnosis tab in the patient report.
 
         If running calculation methods in order, this attribute will be set in calculate_kpi_2_total_new_diagnoses().
 

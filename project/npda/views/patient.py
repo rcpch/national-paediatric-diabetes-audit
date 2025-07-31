@@ -142,24 +142,17 @@ class PatientListView(
             if combined_q:  # Check if any search terms were provided
                 filtered_patients &= combined_q  # Apply the combined OR query
 
-        # filter patients to the view preference of the user
-        if not self.request.user.viewing_data_nationally():
-            # PDU view
-            filtered_patients &= Q(
-                submissions__paediatric_diabetes_unit__pz_code=pz_code,
-                submissions__paediatric_diabetes_unit__active=True
-            )
+        filtered_patients &= Q(
+            submissions__paediatric_diabetes_unit__pz_code=pz_code,
+            submissions__paediatric_diabetes_unit__active=True
+        )
 
         patient_queryset = patient_queryset.filter(filtered_patients)
 
         a_year_ago = timezone.now() - timezone.timedelta(days=365)
 
         this_audit_year_visits = visit_falls_within_audit_period_Q_object(
-            audit_start_date=date(
-                year=int(self.request.session.get("selected_audit_year")),
-                month=4,
-                day=1,
-            ),
+            audit_start_date=audit_period.start_date,
             prepend_query_path="visit",
         )
 
@@ -196,27 +189,23 @@ class PatientListView(
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        pz_code = self.request.session.get("pz_code")
-        selected_audit_year = self.request.session.get(
-            "selected_audit_year"
-        )  # this is the year that that audit period starts in
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
 
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code) if pz_code else None
+        pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(self.request)
         context["pdu"] = pdu
 
         submission = None
         submission_error_count = 0
 
-        if pz_code and selected_audit_year:
-            submission = Submission.objects.get_submission_for_request(self.request)
+        submission = Submission.objects.get_submission_for_request(pdu, audit_period)
 
-            if submission and submission.errors:
-                submission_errors = json.loads(submission.errors)
+        if submission and submission.errors:
+            submission_errors = json.loads(submission.errors)
 
-                error_count = 0
-                for errors_for_visit in submission_errors.values():
-                    for errors_for_field in errors_for_visit.values():
-                        submission_error_count += len(errors_for_field)
+            error_count = 0
+            for errors_for_visit in submission_errors.values():
+                for errors_for_field in errors_for_visit.values():
+                    submission_error_count += len(errors_for_field)
 
         context["submission"] = submission
         context["submission_valid_count"] = (
@@ -224,15 +213,15 @@ class PatientListView(
         )
         context["submission_error_count"] = submission_error_count
 
-        context["pz_code"] = pz_code
-        context["selected_audit_year"] = selected_audit_year or "None"
+        context["pz_code"] = pdu.pz_code
+        context["audit_period"] = audit_period
         context["pdu_choices"] = (
             organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
                 requesting_user=self.request.user,
                 user_instance=self.request.user,
             )
         )
-        context["chosen_pdu"] = pz_code
+        context["chosen_pdu"] = pdu.pz_code
         context["current_page"] = self.request.GET.get("page", 1)
         context["sort_by"] = self.get_sort_by()
 
@@ -323,10 +312,8 @@ class PatientCreateView(
         AuditPeriod = apps.get_model("npda", "AuditPeriod")
         pz_code = self.request.session.get("pz_code")
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-        audit_year = self.request.session.get("selected_audit_year")
         kwargs["paediatric_diabetes_unit"] = pdu
         kwargs["audit_period"] = AuditPeriod.objects.get_audit_period_for_request(self.request)
-        kwargs["audit_year"] = audit_year
         # Get override_postcode from POST data if available
         if self.request.method in ('POST', 'PUT'):
             kwargs['override_postcode'] = self.request.POST.get('override_postcode', 'false') == 'true'
@@ -337,11 +324,7 @@ class PatientCreateView(
         pz_code = self.request.session.get("pz_code")
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
         context = super().get_context_data(**kwargs)
-        title = f"Add New Child to {pdu.parent_name}  ({pdu.pz_code})"
-        if (
-            pdu.parent_name is not None
-        ):  # if the PDU has a parent, include the parent name in the title
-            title = f"Add New Child to  {pdu.parent_name} ({pz_code})"
+        title = f"Add New Child to {pdu.lead_organisation_name}  ({pdu.pz_code})"
         context["title"] = title
         context["button_title"] = "Create New Child Patient Record"
         context["form_method"] = "create"
@@ -471,11 +454,7 @@ class PatientUpdateView(
         pdu = PaediatricDiabetesUnit.objects.get(
             pz_code=transfer.paediatric_diabetes_unit.pz_code
         )
-        title = f"Edit Child Details in {pdu.parent_name}  ({transfer.paediatric_diabetes_unit.pz_code})"
-        if (
-            transfer.paediatric_diabetes_unit.parent_name is not None
-        ):  # if the PDU has a parent, include the parent name in the title
-            title = f"Add New Child to {transfer.paediatric_diabetes_unit.parent_name} ({transfer.paediatric_diabetes_unit.pz_code})"
+        title = f"Edit Child Details in {pdu.lead_organisation_name}  ({transfer.paediatric_diabetes_unit.pz_code})"
         context["title"] = title
         context["button_title"] = "Save Changes"
         context["form_method"] = "update"
@@ -525,10 +504,8 @@ class PatientUpdateView(
         AuditPeriod = apps.get_model("npda", "AuditPeriod")
         pz_code = self.request.session.get("pz_code")
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-        audit_year = self.request.session.get("selected_audit_year")
         kwargs["paediatric_diabetes_unit"] = pdu
         kwargs["audit_period"] = AuditPeriod.objects.get_audit_period_for_request(self.request)
-        kwargs["audit_year"] = audit_year
         # Get override_postcode from POST data if available
         if self.request.method in ('POST', 'PUT'):
             kwargs['override_postcode'] = self.request.POST.get('override_postcode', 'false') == 'true'

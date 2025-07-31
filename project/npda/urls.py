@@ -10,6 +10,7 @@ from project.npda.views import (
     VisitCreateView,
     VisitDeleteView,
     VisitUpdateView,
+    npdauser_pdu_update
 )
 
 from .views import *
@@ -96,9 +97,9 @@ urlpatterns = [
         name="npdauser-update",
     ),
     path(
-        "npda_users/<int:pk>/delete/",
-        view=NPDAUserDeleteView.as_view(),
-        name="npdauser-delete",
+        "npda_users/<int:pk>/pdu_update",
+        view=npdauser_pdu_update,
+        name="npdauser-pdu-update",
     ),
     # Authentication -> NOTE: 2FA is implemented in project-level URLS with tf_urls
     path("captcha/", include("captcha.urls")),

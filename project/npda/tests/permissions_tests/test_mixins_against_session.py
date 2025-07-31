@@ -20,7 +20,7 @@ from project.npda.forms.patient_form import PatientForm
 from project.npda.forms.visit_form import VisitForm
 from project.npda.models import NPDAUser, Patient, Transfer, AuditPeriod
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
-from project.npda.tests.utils import login_and_verify_user
+from project.npda.tests.utils import login_and_verify_user, create_submission
 from project.npda.tests.UserDataClasses import test_user_audit_centre_editor_data
 from project.npda.tests.factories.visit_factory import VisitFactory, COMPLETED_VISIT
 from project.npda.tests.factories.patient_factory import (
@@ -227,8 +227,13 @@ class TestQuestionnaireView:
         """
         Test that users who do have questionnaire permission can save a visit through the questionnaire view.
         """
-        # Create a patient
         patient = PatientFactory()
+
+        sub = create_submission(
+            audit_start_date=date.today(),
+            pz_code=ALDER_HEY_PZ_CODE,
+        )
+        patient.submissions.add(sub)
 
         form = VisitForm(data=COMPLETED_VISIT, initial={"patient": patient})
 
