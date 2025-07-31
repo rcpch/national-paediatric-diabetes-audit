@@ -97,7 +97,7 @@ urlpatterns = [
         name="npdauser-update",
     ),
     path(
-        "npda_users/<int:pk>/pdu_update",
+        "npda_users/<int:pk>/pdu_update/",
         view=npdauser_pdu_update,
         name="npdauser-pdu-update",
     ),

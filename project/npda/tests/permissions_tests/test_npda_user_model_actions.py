@@ -508,7 +508,7 @@ def test_coordinators_cannot_activate_or_inactivate_users_outside_of_their_pdu(
 
     url = reverse("npdauser-update", kwargs={"pk": gosh_coordinator.pk})
 
-    response = client.post(url, data={action:'true'})
+    response = client.post(url, data={action:'true'}, follow=True)
 
     assert response.status_code == HTTPStatus.FORBIDDEN
     gosh_coordinator.refresh_from_db()
@@ -1244,6 +1244,7 @@ def test_coordinators_can_edit_users_with_multiple_employers_even_if_in_same_pdu
     assert response.status_code == HTTPStatus.OK
     
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 @pytest.mark.parametrize("action", ["deactivate", "activate"])
 def test_coordinators_cannot_activate_or_deactivate_users_with_multiple_employers_even_if_in_same_pdu(
     client: Client,
@@ -1287,9 +1288,16 @@ def test_coordinators_cannot_activate_or_deactivate_users_with_multiple_employer
     assert test_user_multiple_employers.organisation_employers.count() > 1, (
         f"User {test_user_multiple_employers.first_name} ({test_user_multiple_employers.pz_code}) should have multiple employers"
     )
+    assert test_coordinator.has_perm("npda.delete_npdauser") is True, (
+        f"User {test_coordinator.first_name} ({test_coordinator.pz_code}) should be able to delete user {test_user_multiple_employers.first_name} ({test_user_multiple_employers.pz_code})"
+    )
 
     # Login user
     client = login_and_verify_user(client, test_coordinator)
+
+    assert test_coordinator.is_authenticated, (
+        f"User {test_coordinator.first_name} ({test_coordinator.pz_code}) should be able to log in"
+    )
 
     # Make a POST request to the user update url
     url = reverse("npdauser-update", kwargs={"pk": test_user_multiple_employers.pk})
@@ -1304,6 +1312,7 @@ def test_coordinators_cannot_activate_or_deactivate_users_with_multiple_employer
     )
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 @pytest.mark.parametrize("initial_active, expected_active, action_label", [
     (True, False, "deactivate"),
     (False, True, "activate"),
@@ -1373,6 +1382,7 @@ def test_rcpch_audit_team_and_superusers_can_toggle_is_active_for_users_with_mul
     )
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 @pytest.mark.parametrize("action", ["deactivate", "activate"])
 def test_coordinators_cannot_activate_or_deactivate_themselves(
     client: Client,

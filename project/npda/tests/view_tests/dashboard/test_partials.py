@@ -4,6 +4,7 @@ from decimal import Decimal
 from http import HTTPStatus
 
 # Python imports
+from django.test import override_settings
 import pytest
 
 # 3rd party imports
@@ -29,6 +30,7 @@ from dateutil.relativedelta import relativedelta
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1156
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_count_of_patients_transitioning_to_adult_care_does_not_include_other_transfers(
     seed_groups_fixture,
     seed_users_fixture,
