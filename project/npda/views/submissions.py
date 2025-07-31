@@ -82,7 +82,7 @@ class SubmissionsListView(
             pz_code=self.request.session.get("pz_code"),
         )
         audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
-        if self.request.user.viewing_data_nationally():
+        if self.request.user.is_rcpch_audit_team_member:
             base_queryset = self.model.objects.filter(
                 audit_period=audit_period
             ).all()
@@ -147,7 +147,7 @@ class SubmissionsListView(
                 visit_count=Count("visit"),
             )
         
-        if self.request.user.viewing_data_nationally():
+        if self.request.user.is_rcpch_audit_team_member:
             selected_audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
             # Start with ALL active PDUs, not just those with submissions
             chart_data = PaediatricDiabetesUnit.objects.filter(

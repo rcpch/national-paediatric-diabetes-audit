@@ -86,16 +86,16 @@ class NPDAUserListView(
         Apply ordering
         """
         queryset = super().get_queryset()
-        pz_code = self.request.session.get("pz_code")
 
-        if self.request.user.viewing_data_nationally():
+        if self.request.user.is_rcpch_audit_team_member:
             return (
                 queryset.order_by("-is_active", "surname")
             )
 
-        return (
-            queryset.filter(organisation_employers__pz_code=pz_code).order_by("-is_active", "surname")
-        )
+        # Distinct required to remove duplicates that come from the __in query
+        return queryset.filter(
+            organisation_employers__in= self.request.user.organisation_employers.all()
+        ).order_by("-is_active", "surname").distinct()
 
     def get_context_data(self, **kwargs):
         context = super(NPDAUserListView, self).get_context_data(**kwargs)

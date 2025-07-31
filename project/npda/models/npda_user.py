@@ -188,6 +188,7 @@ class NPDAUser(AbstractUser, PermissionsMixin):
         # must be affiliated with an organisation
         default=False
     )
+    # DEPRECATED: https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1083
     view_preference = models.SmallIntegerField(
         choices=VIEW_PREFERENCES,
         default=0,  # Organisation level is default
@@ -266,9 +267,6 @@ class NPDAUser(AbstractUser, PermissionsMixin):
 
     def get_all_employer_organisations(self):
         return self.organisation_employers.all()
-
-    def viewing_data_nationally(self):
-        return self.is_rcpch_audit_team_member and self.view_preference == 2
     
     def user_roles(self):
         roles = []

@@ -1,3 +1,4 @@
+# DEPRECATED: https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1083
 VIEW_PREFERENCES = (
     (0, "organisation"),
     (1, "trust"),
