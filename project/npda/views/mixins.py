@@ -233,12 +233,12 @@ class PDUPermissionMixin(AccessMixin):
             return self.get_queryset().model
         return None
 
-    def check_patient_permissions(self, user, pk):
+    def check_patient_permissions(self, pdu, audit_period, user, pk):
         patient = get_object_or_404(Patient, pk=pk)
         transfer = Transfer.objects.get(patient=patient)
 
         if not transfer.paediatric_diabetes_unit in user.organisation_employers.all():
-            raise PermissionDenied(f"User {user} does not have permission to view patient for PDU {self.pdu.pz_code} in audit period {self.audit_period.slug}")
+            raise PermissionDenied(f"User {user} does not have permission to view patient for PDU {pdu.pz_code} in audit period {audit_period.slug}")
 
     def dispatch(self, request, *args, **kwargs):
         # Check if the user is authenticated
@@ -254,11 +254,11 @@ class PDUPermissionMixin(AccessMixin):
             match model:
                 # PDU level permission checked in the request helpers above. This is to prevent access to models by guessing their pk.
                 case "Patient" if "pk" in self.kwargs:
-                    self.check_patient_permissions(request.user, self.kwargs["pk"])
+                    self.check_patient_permissions(pdu, audit_period, request.user, self.kwargs["pk"])
 
                 case "Visit":
-                    self.check_patient_permissions(request.user, self.kwargs["patient_id"])
-            
+                    self.check_patient_permissions(pdu, audit_period, request.user, self.kwargs["patient_id"])
+
                 # PDU level permission checked in the request helpers above. This is to prevent access to models by guessing their pk.
                 case "NPDAUser" if "pk" in self.kwargs:
                     requested_user = get_object_or_404(NPDAUser, pk=self.kwargs['pk'])
