@@ -117,10 +117,6 @@ class SubmissionsListView(
         Add data to the context.
         Includes the patient data for the active submission and the csv summary data.
         """
-        if self.request.session.get("pz_code") == "PZ248":
-            is_jersey = True
-        else:
-            is_jersey = False
         context = super().get_context_data(**kwargs)
         context["pz_code"] = self.request.session.get("pz_code")
         audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
@@ -329,7 +325,7 @@ async def upload_csv(request, audit_period, pdu):
         # We are eventually storing the CSV file as a BinaryField so have to hold it in memory
         user_csv_bytes = user_csv.read()
 
-        pz_code = request.session.get("pz_code")
+        pz_code = pdu.pz_code
         is_jersey = pz_code == "PZ248"
     
         # check to see if the CSV is valid - cannot accept CSVs with no header. All other header errors are non-lethal but are reported back to the user
@@ -341,7 +337,7 @@ async def upload_csv(request, audit_period, pdu):
                 message=f"Invalid CSV format: {e}",
             )
             return redirect("pdu-upload-csv",
-                pz_code=pdu.pz_code,
+                pz_code=pz_code,
                 audit_period=audit_period.slug
             )
 

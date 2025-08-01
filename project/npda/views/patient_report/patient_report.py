@@ -901,11 +901,7 @@ class PatientReportView(
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # Jersey
-        if self.request.session.get("pz_code") == "PZ248":
-            context["is_jersey"] = True
-        else:
-            context["is_jersey"] = False
+        context["is_jersey"] = self.pdu.pz_code == "PZ248"
 
         # Add table categories to the context
         context["table_categories"] = TableCategories.choices()
