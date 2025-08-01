@@ -390,8 +390,8 @@ class NPDAUserUpdateView(
             )
             return redirect(redirect_url)
 
-        elif "deactivate" in request.POST:
-            # Deactivation pathway - toggle the is_active field of the user. A user can only be deactivated if they are not a superuser
+        elif "activate" in request.POST or "deactivate" in request.POST:
+            # A user can only be deactivated if they are not a superuser.
             # That of course can happen but for now we will only do this in the admin interface.
             npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
 
@@ -412,7 +412,7 @@ class NPDAUserUpdateView(
             if self.user_in_exactly_the_same_pdus_as_requesting_user() or is_admin:
                 success_message = f"{npda_user.email} deactivated successfully."
                 
-                if npda_user.is_active is False:
+                if "activate" in request.POST:
                     success_message = f"{npda_user.email} successfully reactivated."
                     npda_user.is_active = True
                 else:
@@ -421,13 +421,13 @@ class NPDAUserUpdateView(
                 
                 npda_user.save()
 
-                if npda_user.is_active is False:
-                    logger.warning("User %s deactivated %s",
+                if "activate" in request.POST:
+                    logger.info("User %s reactivated %s",
                         request.user.email,
                         npda_user.email
                     )
                 else:
-                    logger.info("User %s reactivated %s",
+                    logger.warning("User %s deactivated %s",
                         request.user.email,
                         npda_user.email
                     )
