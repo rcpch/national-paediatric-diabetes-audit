@@ -3,12 +3,10 @@ import json
 import logging
 from datetime import date
 
-from dateutil.relativedelta import relativedelta
 from django.apps import apps
 from django.contrib import messages
 from django.shortcuts import render
 
-from project import constants
 from project.npda.general_functions.audit_period import audit_period_for_audit_year
 from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
 from project.npda.kpi_class.kpis import CalculateKPIS
@@ -21,48 +19,6 @@ from project.npda.views.decorators import login_and_otp_required
 
 # LOGGING
 logger = logging.getLogger(__name__)
-
-
-# 🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
-# 🚨 TODO SHOULD BE REMOVED, JUST DURING DEV  🚨
-# 🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
-@login_and_otp_required()
-def temp_set_eligible_kpi_7(request):
-    """Temporary util to set some seeded patients attrs manually
-
-    KPI7
-        to be eligible for kpi 7 (T1DM diagnosed
-        during the audit period) which is denominator for kpis 41-43.
-
-        This is because the default behaviour of the `PatientFactory` .build method (used in the
-        csv seeder) is to choose a random diabetes_diagnosis between the pt's DoB and audit_start_date.
-
-    """
-    if not request.user.is_superuser:
-        logger.error("User %s tried to run temp util to set KPI 7", request.user)
-        raise PermissionError("Only superusers can run this util")
-
-    from django.http import HttpResponse
-
-    _ = 10
-    logger.error(f"🔥 Setting {_} patients to be eligible for KPI 7")
-    to_set_kpi_7_eligible = Patient.objects.filter(
-        diabetes_type=constants.diabetes_types.DIABETES_TYPES[0][0]
-    )[:_]
-    for pt in to_set_kpi_7_eligible:
-        pt.diagnosis_date = CalculateKPIS().audit_start_date + relativedelta(months=4)
-        pt.save()
-        logger.warning(f"Succesfully set {pt} to be eligible for KPI 7")
-
-    return HttpResponse(
-        f"Set {_} patients to be eligible for KPI 7: {''.join([f'<p>{pt.nhs_number}</p>' for pt in to_set_kpi_7_eligible])}",
-        status=200,
-    )
-
-
-# 🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
-# 🚨 TODO SHOULD BE REMOVED, JUST DURING DEV  🚨
-# 🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
 
 
 @login_and_otp_required()
