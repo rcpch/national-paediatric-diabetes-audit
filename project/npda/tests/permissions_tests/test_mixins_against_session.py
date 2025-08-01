@@ -233,7 +233,9 @@ class TestQuestionnaireView:
         """
         Test that users who do have questionnaire permission can save a visit through the questionnaire view.
         """
-        patient = PatientFactory()
+        patient = PatientFactory(
+            transfer__paediatric_diabetes_unit__pz_code=ALDER_HEY_PZ_CODE
+        )
 
         sub = create_submission(
             audit_start_date=date.today(),
