@@ -30,7 +30,7 @@ def current_audit_period_slug(request):
 
 
 def session_data(request):
-    # Permission checking done in @check_data_permissions, CheckPDUListMixin or CheckPDUInstanceMixin
+    # Permission checking done in @check_data_permissions or PDUPermissionMixin
     # We are fine to trust it here as this is for rendering purposes
     pz_code = current_pz_code(request)
     audit_period_slug = current_audit_period_slug(request)

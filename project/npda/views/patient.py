@@ -44,8 +44,6 @@ from ..forms.patient_form import PatientForm
 from .mixins import (
     CheckCanCompleteQuestionnaireMixin,
     CheckCurrentAuditYearMixin,
-    CheckPDUInstanceMixin,
-    CheckPDUListMixin,
     LoginAndOTPRequiredMixin,
     PDUPermissionMixin
 )

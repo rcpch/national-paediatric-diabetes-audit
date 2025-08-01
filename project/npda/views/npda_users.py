@@ -45,7 +45,7 @@ from ..general_functions import (
     group_for_role,
     organisations_adapter,
 )
-from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
+from .mixins import LoginAndOTPRequiredMixin
 from .mixins import LoginAndOTPRequiredMixin
 from ...constants import RCPCH_AUDIT_TEAM, AUDIT_CENTRE_READER, AUDIT_CENTRE_EDITOR
 from ..signals import get_client_ip
@@ -73,7 +73,7 @@ NPDAUser list and NPDAUser creation, deletion and update
 
 
 class NPDAUserListView(
-    LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, FilterView
+    LoginAndOTPRequiredMixin, PermissionRequiredMixin, FilterView
 ):
     permission_required = "npda.view_npdauser"
     permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
@@ -240,7 +240,6 @@ class NPDAUserCreateView(
 
 class NPDAUserUpdateView(
     LoginAndOTPRequiredMixin,
-    CheckPDUInstanceMixin,
     PermissionRequiredMixin,
     SuccessMessageMixin,
     UpdateView,
