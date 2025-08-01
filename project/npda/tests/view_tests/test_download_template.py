@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 def test_both_jersey_and_england_template_download_works(
     seed_groups_fixture,
     seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
 ):
     """Test that the template download works for both Jersey and England and Wales"""
@@ -49,7 +50,11 @@ def test_both_jersey_and_england_template_download_works(
 
     for user in [user_england, user_jersey]:
         login_and_verify_user(client, user)
-        response = client.get(reverse("download_template"))
+
+        pz_code = user.organisation_employers.first().pz_code
+        url = reverse("pdu-download-template", kwargs={ "pz_code": pz_code, "audit_period": "2024-2025" })
+
+        response = client.get(url)
         assert response.status_code == HTTPStatus.OK
 
         if user.first_name == "jersey_user":
