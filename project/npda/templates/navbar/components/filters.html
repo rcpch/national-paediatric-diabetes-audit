@@ -6,7 +6,7 @@
     <div class="modal-box">
       <div id="global_audit_year"
            class="join-item items-stretch flex-grow basis-1/5">
-        {% include 'partials/audit_year_select.html' with audit_years=request.session.audit_years selected_audit_year=request.session.selected_audit_year hx_target='#global_audit_year' %}
+        {% include 'partials/audit_year_select.html' with audit_years=request.session.audit_years selected_audit_year=selected_audit_year hx_target='#global_audit_year' %}
       </div>
       <div id="global_view_preference"
            class="join-item items-stretch flex-grow  basis-2/4">
