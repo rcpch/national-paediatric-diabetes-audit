@@ -175,9 +175,19 @@ dashboard_urlpatterns = [
         name="dashboard",
     ),
     path(
+        f"{data_prefix}/dashboard",
+        view=dashboard.dashboard,
+        name="pdu-dashboard",
+    ),
+    path(
         "get_metric_scatter_plot",
         view=partials.get_metric_scatter_plot,
         name="get_metric_scatter_plot",
+    ),
+    path(
+        f"{data_prefix}/get_metric_scatter_plot",
+        view=partials.get_metric_scatter_plot,
+        name="pdu-get-metric-scatter-plot",
     ),
     path(
         "get_map_chart_partial",
@@ -185,9 +195,19 @@ dashboard_urlpatterns = [
         name="get_map_chart_partial",
     ),
     path(
+        f"{data_prefix}/get_map_chart_partial",
+        view=partials.get_map_chart_partial,
+        name="pdu-get-map-chart-partial",
+    ),
+    path(
         "get_new_diagnoses_partial",
         view=partials.get_new_diagnoses_partial,
         name="get_new_diagnoses_partial",
+    ),
+    path(
+        f"{data_prefix}/get_new_diagnoses_partial",
+        view=partials.get_new_diagnoses_partial,
+        name="pdu-get-new-diagnoses-partial",
     ),
     path(
         "get_new_admissions_partial",
@@ -195,9 +215,19 @@ dashboard_urlpatterns = [
         name="get_new_admissions_partial",
     ),
     path(
+        f"{data_prefix}/get_new_admissions_partial",
+        view=partials.get_new_admissions_partial,
+        name="pdu-get-new-admissions-partial",
+    ),
+    path(
         "get_transitioned_to_adult_service_partial",
         view=partials.get_transitioned_to_adult_service_partial,
         name="get_transitioned_to_adult_service_partial",
+    ),
+    path(
+        f"{data_prefix}/get_transitioned_to_adult_service_partial",
+        view=partials.get_transitioned_to_adult_service_partial,
+        name="pdu-get-transitioned-to-adult-service-partial",
     ),
     path(
         "get_moved_out_of_area_partial",
@@ -205,9 +235,19 @@ dashboard_urlpatterns = [
         name="get_moved_out_of_area_partial",
     ),
     path(
+        f"{data_prefix}/get_moved_out_of_area_partial",
+        view=partials.get_moved_out_of_area_partial,
+        name="pdu-get-moved-out-of-area-partial",
+    ),
+    path(
         "get_n_on_hcl_partial",
         view=partials.get_n_on_hcl_partial,
         name="get_n_on_hcl_partial",
+    ),
+    path(
+        f"{data_prefix}/get_n_on_hcl_partial",
+        view=partials.get_n_on_hcl_partial,
+        name="pdu-get-n-on-hcl-partial",
     ),
     path(
         "get_pump_partial",
@@ -215,24 +255,49 @@ dashboard_urlpatterns = [
         name="get_pump_partial",
     ),
     path(
+        f"{data_prefix}/get_pump_partial",
+        view=partials.get_pump_partial,
+        name="pdu-get-pump-partial",
+    ),
+    path(
         "get_cgm_partial",
         view=partials.get_cgm_partial,
         name="get_cgm_partial",
     ),
-	path(
+    path(
+        f"{data_prefix}/get_cgm_partial",
+        view=partials.get_cgm_partial,
+        name="pdu-get-cgm-partial",
+    ),
+    path(
         "patient_ages",
         view=patient_ages,
         name="patient_ages",
+    ),
+    path(
+        f"{data_prefix}/patient_ages",
+        view=patient_ages,
+        name="pdu-patient-ages",
     ),
     path(
         "all_patient_charts",
         view=all_patient_charts,
         name="all_patient_charts",
     ),
-	path(
+    path(
+        f"{data_prefix}/all_patient_charts",
+        view=all_patient_charts,
+        name="pdu-all-patient-charts",
+    ),
+    path(
         "patient_measurements",
         view=patient_measurements,
         name="patient_measurements",
+    ),
+    path(
+        f"{data_prefix}/patient_measurements",
+        view=patient_measurements,
+        name="pdu-patient-measurements",
     ),
 ]
 
