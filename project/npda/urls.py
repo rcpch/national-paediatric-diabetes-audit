@@ -12,7 +12,6 @@ from project.npda.views import (
     VisitUpdateView,
     npdauser_pdu_update
 )
-from project.npda.views.dashboard.dashboard import temp_set_eligible_kpi_7
 
 from .views import *
 from .views.dashboard import dashboard, partials
