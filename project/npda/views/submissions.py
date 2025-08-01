@@ -418,7 +418,7 @@ def upload_csv_in_progress(request, audit_period, pdu):
 
     seconds_since_submission = (datetime.now(timezone.utc) - last_submission.submission_date).seconds
 
-    timeout = seconds_since_submission > 15
+    timeout = seconds_since_submission > 120
     
     total_patients = last_submission.total_unique_patients
     total_rows = last_submission.total_unique_visits
