@@ -75,7 +75,10 @@ def test_count_of_patients_transitioning_to_adult_care_does_not_include_other_tr
     )
     submission.patients.add(patient)
 
-    response = client.get(reverse("get_transitioned_to_adult_service_partial"))
+    response = client.get(reverse("pdu-get-transitioned-to-adult-service-partial", kwargs={
+        "audit_period": audit_period.slug,
+        "pz_code": ALDER_HEY_PZ_CODE
+    }))
     assert response.status_code == HTTPStatus.OK
 
     assert response.context["number"] == 0

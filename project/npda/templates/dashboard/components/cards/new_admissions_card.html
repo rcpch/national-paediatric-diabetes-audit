@@ -7,7 +7,7 @@
           data-tip="Total number of patients with diabetes admitted to hospital for any reason this audit year"><i class="fa-solid fa-chart-line"></i></span>
 {% endblock %}
 {% block card_content %}
-    <div hx-get="{% data_url 'get-new-admissions-partial' %}"
+    <div hx-get="{% data_url 'pdu-get-new-admissions-partial' %}"
          hx-trigger="load"
          hx-swap="innerHTML"
          _="on htmx:afterSwap remove #loading-spinner-new-admissions-card">
