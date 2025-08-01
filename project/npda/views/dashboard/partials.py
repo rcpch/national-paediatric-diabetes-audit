@@ -33,13 +33,12 @@ DEFAULT_CHART_HTML_HEIGHT = "18rem"
 
 
 @login_and_otp_required()
-def get_map_chart_partial(request):
+@check_data_permissions()
+def get_map_chart_partial(request, audit_period, pdu):
 
     if not request.htmx:
         return HttpResponseBadRequest("This view is only accessible via HTMX")
 
-    pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(request)
-    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
     submission = Submission.objects.get_submission_for_request(pdu, audit_period)
 
     if not submission:
