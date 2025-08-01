@@ -105,8 +105,6 @@ class TestQuestionnaireView:
         session = self.client.session
         session["can_upload_csv"] = False
         session["can_complete_questionnaire"] = True
-        session["pz_code"] = ALDER_HEY_PZ_CODE
-        session["selected_audit_year"] = self.audit_period.audit_year()
         session.save()
 
     def test_users_with_correct_permissions_can_save_patient(self):
