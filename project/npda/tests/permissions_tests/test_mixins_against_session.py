@@ -233,7 +233,9 @@ class TestQuestionnaireView:
         """
         Test that users who do have questionnaire permission can save a visit through the questionnaire view.
         """
-        patient = PatientFactory()
+        patient = PatientFactory(
+            transfer__paediatric_diabetes_unit__pz_code=ALDER_HEY_PZ_CODE
+        )
 
         sub = create_submission(
             audit_start_date=date.today(),
@@ -244,7 +246,7 @@ class TestQuestionnaireView:
         form = VisitForm(data=COMPLETED_VISIT, initial={"patient": patient})
 
         # url
-        url = reverse("visit-create", kwargs={"patient_id": patient.pk})
+        url = reverse("pdu-visit-create", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "patient_id": patient.pk})
 
         # Post the patient data
         response = self.client.post(url, form.data)
@@ -269,7 +271,7 @@ class TestQuestionnaireView:
         session.save()
 
         # url
-        url = reverse("visit-create", kwargs={"patient_id": patient.pk})
+        url = reverse("pdu-visit-create", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "patient_id": patient.pk})
 
         # Post the patient data
         response = self.client.post(url, form.data)
@@ -318,7 +320,9 @@ class TestQuestionnaireView:
         session["can_complete_questionnaire"] = False
         session.save()
 
-        url = reverse("visit-update", kwargs={
+        url = reverse("pdu-visit-update", kwargs={
+            "audit_period": self.audit_period.slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
             "patient_id": patient.pk,
             "pk": visit.pk
         })

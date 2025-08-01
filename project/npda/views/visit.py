@@ -10,9 +10,9 @@ from django.contrib.messages.views import SuccessMessageMixin
 from django.forms import BaseModelForm
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse, reverse_lazy
 from django.views.generic import ListView
 from django.views.generic.edit import CreateView, DeleteView, UpdateView
+from django.urls import reverse
 
 # RCPCH imports
 from ..forms.visit_form import VisitForm
@@ -25,9 +25,8 @@ from ..models import Patient, Transfer, Visit, AuditPeriod
 from .mixins import (
     CheckCanCompleteQuestionnaireMixin,
     CheckCurrentAuditYearMixin,
-    CheckPDUInstanceMixin,
-    CheckPDUListMixin,
     LoginAndOTPRequiredMixin,
+    PDUPermissionMixin
 )
 
 # Third party imports
@@ -35,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 class PatientVisitsListView(
-    LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, ListView
+    LoginAndOTPRequiredMixin, PDUPermissionMixin, PermissionRequiredMixin, ListView
 ):
     """
     The PatientVisitsListView class.
@@ -56,7 +55,7 @@ class PatientVisitsListView(
         patient_id = self.kwargs.get("patient_id")
         context = super(PatientVisitsListView, self).get_context_data(**kwargs)
         patient = Patient.objects.get(pk=patient_id)
-        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
+        audit_period = self.audit_period
         submission = patient.submissions.filter(
             submission_active=True,
             audit_period=audit_period,
@@ -91,6 +90,7 @@ class VisitCreateView(
     LoginAndOTPRequiredMixin,
     PermissionRequiredMixin,
     SuccessMessageMixin,
+    PDUPermissionMixin,
     CheckCurrentAuditYearMixin,
     CheckCanCompleteQuestionnaireMixin,
     CreateView,
@@ -120,7 +120,7 @@ class VisitCreateView(
             self.request, messages.SUCCESS, "New visit added successfully"
         )
         return reverse(
-            "patient_visits", kwargs={"patient_id": self.kwargs["patient_id"]}
+            "pdu-patient-visits", kwargs={"patient_id": self.kwargs["patient_id"]}
         )
     
     def get_form_kwargs(self):
@@ -175,7 +175,7 @@ class VisitCreateView(
 
 class VisitUpdateView(
     LoginAndOTPRequiredMixin,
-    CheckPDUInstanceMixin,
+    PDUPermissionMixin,
     PermissionRequiredMixin,
     CheckCurrentAuditYearMixin,
     CheckCanCompleteQuestionnaireMixin,
@@ -205,8 +205,8 @@ class VisitUpdateView(
         messages.add_message(
             self.request, messages.SUCCESS, "Visit edited successfully"
         )
-        return reverse(
-            "patient_visits", kwargs={"patient_id": self.kwargs["patient_id"]}
+        return self.data_reverse(
+            "pdu-patient-visits", kwargs={"patient_id": self.kwargs["patient_id"]}
         )
 
     def get_initial(self):
@@ -220,12 +220,12 @@ class VisitUpdateView(
         # Get override_postcode from POST data if available
         if self.request.method in ('POST', 'PUT'):
             kwargs['override_height_weight'] = self.request.POST.get('override_height_weight', 'false') == 'true'
-            kwargs['audit_period'] = AuditPeriod.objects.get_audit_period_for_request(self.request)
+            kwargs['audit_period'] = self.audit_period
         return kwargs
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
         if "delete" in self.request.POST:
-            return redirect(reverse("visit-delete", kwargs={"pk": self.kwargs["pk"]}))
+            return redirect(self.data_reverse("pdu-visit-delete", kwargs={"pk": self.kwargs["pk"]}))
         visit = form.save(commit=True)
         visit.errors = None
         visit.is_valid = True
@@ -235,7 +235,7 @@ class VisitUpdateView(
             self.request, messages.SUCCESS, "Visit edited successfully"
         )
         return HttpResponseRedirect(
-            redirect_to=reverse("patient_visits", kwargs=context)
+            redirect_to=self.data_reverse("pdu-patient-visits", kwargs=context)
         )
     
     def form_invalid(self, form):
@@ -263,7 +263,7 @@ class VisitUpdateView(
 
 class VisitDeleteView(
     LoginAndOTPRequiredMixin,
-    CheckPDUInstanceMixin,
+    PDUPermissionMixin,
     PermissionRequiredMixin,
     SuccessMessageMixin,
     CheckCurrentAuditYearMixin,
@@ -273,22 +273,21 @@ class VisitDeleteView(
     permission_required = "npda.delete_visit"
     permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
     model = Visit
-    success_url = reverse_lazy("patient_visits")
     success_message = "Visit removed successfully"
 
     def get_success_url(self):
         messages.add_message(
             self.request, messages.SUCCESS, "Visit edited successfully"
         )
-        return reverse(
-            "patient_visits", kwargs={"patient_id": self.kwargs["patient_id"]}
+        return self.data_reverse(
+            "pdu-patient-visits", kwargs={"patient_id": self.kwargs["patient_id"]}
         )
 
     def post(self, request, *args, **kwargs):
         if "cancel" in request.POST:
             return redirect(
-                reverse(
-                    "visit-update",
+                self.data_reverse(
+                    "pdu-visit-update",
                     kwargs={
                         "pk": self.kwargs["pk"],
                         "patient_id": self.kwargs["patient_id"],

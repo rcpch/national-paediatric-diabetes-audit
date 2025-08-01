@@ -95,9 +95,19 @@ urlpatterns = [
         name="patient_visits",
     ),
     path(
+        f"{data_prefix}/patient/<int:patient_id>/visits",
+        view=PatientVisitsListView.as_view(),
+        name="pdu-patient-visits",
+    ),
+    path(
         "patient/<int:patient_id>/visits/create",
         view=VisitCreateView.as_view(),
         name="visit-create",
+    ),
+    path(
+        f"{data_prefix}/patient/<int:patient_id>/visits/create",
+        view=VisitCreateView.as_view(),
+        name="pdu-visit-create",
     ),
     path(
         "patient/<int:patient_id>/visits/<int:pk>/update",
@@ -105,9 +115,19 @@ urlpatterns = [
         name="visit-update",
     ),
     path(
+        f"{data_prefix}/patient/<int:patient_id>/visits/<int:pk>/update",
+        view=VisitUpdateView.as_view(),
+        name="pdu-visit-update",
+    ),
+    path(
         "patient/<int:patient_id>/visits/<int:pk>/delete",
         view=VisitDeleteView.as_view(),
         name="visit-delete",
+    ),
+    path(
+        f"{data_prefix}/patient/<int:patient_id>/visits/<int:pk>/delete",
+        view=VisitDeleteView.as_view(),
+        name="pdu-visit-delete",
     ),
     # NPDAUser views
     path("npda_users", view=NPDAUserListView.as_view(), name="npda_users"),
