@@ -18,6 +18,7 @@ from django.db.models.functions import Concat, ExtractMonth, ExtractYear
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.views.generic import ListView
+from django.urls import reverse
 
 
 # Third party imports
@@ -311,7 +312,10 @@ class SubmissionsListView(
 async def upload_csv(request, audit_period, pdu):
     if request.session.get("can_upload_csv") is False:
         # If the user does not have permission to upload csvs, redirect them to the submissions page
-        return redirect("dashboard")
+        return redirect(reverse("pdu-dashboard", kwargs={
+            "audit_period": audit_period.slug,
+            "pz_code": pdu.pz_code,
+        }))
 
     if request.method == "POST":
         has_perm = await sync_to_async(request.user.has_perm)("npda.can_submit_csv")

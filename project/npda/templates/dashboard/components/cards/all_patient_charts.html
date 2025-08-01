@@ -1,9 +1,10 @@
 {% extends 'dashboard/components/bases/base_landscape_card.html' %}
+{% load npda_tags %}
 {% block card_title %}
   All Patients
 {% endblock card_title %}
 {% block card_body %}
-  <div hx-get="{% url 'all_patient_charts' %}"
+  <div hx-get="{% data_url 'pdu-all-patient-charts' %}"
        hx-trigger="load"
        hx-swap="innerHTML"
        hx-target="#all_patient_charts"
