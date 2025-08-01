@@ -61,6 +61,11 @@ urlpatterns = [
         view=PatientListView.as_view(),
         name="patients",
     ),
+    path(
+        f"{data_prefix}/patients",
+        view=PatientListView.as_view(),
+        name="pdu-patients",
+    ),
     path("patient/add/", PatientCreateView.as_view(), name="patient-add"),
     path(
         "patient/<int:pk>/update",
