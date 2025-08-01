@@ -320,7 +320,9 @@ class TestQuestionnaireView:
         session["can_complete_questionnaire"] = False
         session.save()
 
-        url = reverse("visit-update", kwargs={
+        url = reverse("pdu-visit-update", kwargs={
+            "audit_period": self.audit_period.slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
             "patient_id": patient.pk,
             "pk": visit.pk
         })
