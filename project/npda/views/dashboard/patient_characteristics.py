@@ -29,11 +29,12 @@ from project.constants.colors import (
 )
 from project.constants import HBA1C_FORMATS
 from project.npda.models import Visit, AuditPeriod, PaediatricDiabetesUnit
-from project.npda.views.decorators import login_and_otp_required
+from project.npda.views.decorators import login_and_otp_required, check_data_permissions
 
 
 @login_and_otp_required()
-def patient_ages(request):
+@check_data_permissions()
+def patient_ages(request, audit_period, pdu):
     """
     This function is used to generate the patient ages table
     """
@@ -116,9 +117,6 @@ def patient_ages(request):
         "not_known": 0,
         "not_specified": 0,
     }
-
-    pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(request)
-    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
 
     number_of_patients = 0
 
@@ -212,12 +210,11 @@ def patient_ages(request):
 
 
 @login_and_otp_required()
-def all_patient_charts(request):
+@check_data_permissions()
+def all_patient_charts(request, audit_period, pdu):
     """
     This function is used to generate all the patient characteristics charts
     """
-    pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(request)
-    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
 
     imd_counts = {
         "1 (most deprived)": 0,
