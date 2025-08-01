@@ -89,7 +89,7 @@ def test_generate_csv_upload_to_view(
         )
 
     # Send POST request with CSV file
-    url = reverse("upload_csv")
+    url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
     response = client.post(url, {"csv_upload": csv_file})
 
     # Assert the response to ensure no error
@@ -130,7 +130,7 @@ def test_coordinator_cannot_upload_csv_to_closed_audit_year(
     )
 
     # Send POST request with CSV file
-    url = reverse("upload_csv")
+    url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": audit_period.slug})
     response = client.post(url, {"csv_upload": csv_file})
 
     # Assert the response to ensure no error

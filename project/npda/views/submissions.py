@@ -24,7 +24,7 @@ from django.views.generic import ListView
 import pandas as pd
 import plotly.graph_objects as go
 
-from project.npda.views.decorators import login_and_otp_required
+from project.npda.views.decorators import login_and_otp_required, check_data_permissions
 
 # RCPCH imports
 from project.constants.colors import RCPCH_LIGHT_BLUE
@@ -307,7 +307,8 @@ class SubmissionsListView(
 
 
 @login_and_otp_required()
-async def upload_csv(request):
+@check_data_permissions()
+async def upload_csv(request, audit_period, pdu):
     if request.session.get("can_upload_csv") is False:
         # If the user does not have permission to upload csvs, redirect them to the submissions page
         return redirect("dashboard")
@@ -326,9 +327,6 @@ async def upload_csv(request):
 
         pz_code = request.session.get("pz_code")
         is_jersey = pz_code == "PZ248"
-
-        # TODO MRB: check pdu is active and I'm not a superuser?
-        pdu = await PaediatricDiabetesUnit.objects.aget(pz_code=pz_code)
     
         # check to see if the CSV is valid - cannot accept CSVs with no header. All other header errors are non-lethal but are reported back to the user
         try:
@@ -338,7 +336,10 @@ async def upload_csv(request):
                 request=request,
                 message=f"Invalid CSV format: {e}",
             )
-            return redirect("upload_csv")
+            return redirect("pdu-upload-csv",
+                pz_code=pdu.pz_code,
+                audit_period=audit_period.slug
+            )
 
         missing_columns = parsed_csv.missing_columns
         if not parsed_csv.identifier_column:
@@ -361,7 +362,10 @@ async def upload_csv(request):
                 request=request,
                 message="CSV file must use NHS number as the identifier column unless uploading for Jersey"
             )
-            return redirect("upload_csv")
+            return redirect("pdu-upload-csv",
+                pz_code=pdu.pz_code,
+                audit_period=audit_period.slug
+            )
         
         #  the same must be true for the Jersey upload
         if parsed_csv.identifier_column == "NHS Number" and is_jersey:
@@ -369,9 +373,10 @@ async def upload_csv(request):
                 request=request,
                 message="CSV file must use Unique Reference Number as the identifier column unless uploading for Jersey"
             )
-            return redirect("upload_csv")
-
-        audit_period = await sync_to_async(AuditPeriod.objects.get_audit_period_for_request)(request)
+            return redirect("pdu-upload-csv",
+                pz_code=pdu.pz_code,
+                audit_period=audit_period.slug
+            )
 
         if not audit_period.is_open and not (request.user.is_superuser or request.user.is_rcpch_audit_team_member):
             raise PermissionDenied(f"Upload is closed for {audit_period}.")
@@ -395,18 +400,19 @@ async def upload_csv(request):
 
         await sync_to_async(save_csv_uploading_user_to_visitactivity)(request=request)
         
-        return redirect("upload-csv-in-progress")
+        return redirect("pdu-upload-csv-in-progress",
+            pz_code=pdu.pz_code,
+            audit_period=audit_period.slug
+        )
 
     context = {"employers": OrganisationEmployer.objects.filter(npda_user=request.user)}
     return render(request, "upload_csv/file_upload.html", context=context)
 
 @login_and_otp_required()
-def upload_csv_in_progress(request):
-    pz_code = request.session.get("pz_code")
-    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
-
+@check_data_permissions()
+def upload_csv_in_progress(request, audit_period, pdu):
     last_submission = Submission.objects.filter(
-        paediatric_diabetes_unit__pz_code=pz_code,
+        paediatric_diabetes_unit=pdu,
         audit_period=audit_period
     ).order_by("-submission_date").first()
 
