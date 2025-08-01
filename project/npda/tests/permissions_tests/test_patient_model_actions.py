@@ -116,6 +116,36 @@ def test_users_only_see_patients_from_their_pdu_using_data_url(
 
 
 @pytest.mark.django_db
+def test_users_cannot_see_patients_from_other_pdu_using_data_url(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+):
+    """Except for RCPCH_AUDIT_TEAM, users should only see patients from their own PDU."""
+
+    gosh_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=GOSH_PZ_CODE
+    ).first()
+
+    ah_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
+    ).first()
+
+    gosh_patient = create_submission_with_patient(gosh_user)
+    ah_patient = create_submission_with_patient(ah_user)
+
+    client = login_and_verify_user(client, ah_user)
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    url = reverse("pdu-patients", kwargs={ "audit_period": audit_period.slug, "pz_code": GOSH_PZ_CODE })
+
+    response = client.get(url)
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert "context_data" not in response
+
+
+@pytest.mark.django_db
 def test_rcpch_audit_team_can_see_patients_from_all_pdus(
     seed_groups_fixture,
     seed_users_fixture,
