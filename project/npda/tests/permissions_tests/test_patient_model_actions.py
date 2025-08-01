@@ -42,15 +42,6 @@ def create_submission_with_patient(user):
     return patient
 
 
-def get_patient_list(client):
-    url = reverse("patients")
-    response = client.get(url)
-
-    assert response.status_code == HTTPStatus.OK
-
-    return response.context_data["object_list"]
-
-
 def set_view_preference(client, view_preference, pz_code):
     url = reverse("view_preference")
     params = {"view_preference": view_preference, "pz_code_select_name": pz_code}
@@ -60,7 +51,7 @@ def set_view_preference(client, view_preference, pz_code):
 
 
 @pytest.mark.django_db
-def test_users_can_only_see_patients_from_their_pdu(
+def test_users_only_see_patients_from_their_pdu_using_session_url(
     seed_groups_fixture,
     seed_users_fixture,
     seed_audit_periods_fixture,
@@ -80,7 +71,45 @@ def test_users_can_only_see_patients_from_their_pdu(
     ah_patient = create_submission_with_patient(ah_user)
 
     client = login_and_verify_user(client, ah_user)
-    patients = get_patient_list(client)
+    response = client.get(reverse("patients"))
+
+    assert response.status_code == HTTPStatus.OK
+
+    patients = response.context_data["object_list"]
+
+    assert len(patients) == 1
+    assert patients.first().pk == ah_patient.pk
+
+
+@pytest.mark.django_db
+def test_users_only_see_patients_from_their_pdu_using_data_url(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+):
+    """Except for RCPCH_AUDIT_TEAM, users should only see patients from their own PDU."""
+
+    gosh_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=GOSH_PZ_CODE
+    ).first()
+
+    ah_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
+    ).first()
+
+    gosh_patient = create_submission_with_patient(gosh_user)
+    ah_patient = create_submission_with_patient(ah_user)
+
+    client = login_and_verify_user(client, ah_user)
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    url = reverse("pdu-patients", kwargs={ "audit_period": audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE })
+
+    response = client.get(url)
+
+    assert response.status_code == HTTPStatus.OK
+
+    patients = response.context_data["object_list"]
 
     assert len(patients) == 1
     assert patients.first().pk == ah_patient.pk
@@ -110,14 +139,22 @@ def test_rcpch_audit_team_can_see_patients_from_all_pdus(
 
     # GOSH
     set_view_preference(client, view_preference=1, pz_code=GOSH_PZ_CODE)
-    patients = get_patient_list(client)
+
+    response = client.get(reverse("patients"))
+    assert response.status_code == HTTPStatus.OK
+
+    patients = response.context_data["object_list"]
 
     assert len(patients) == 1
     assert patients.first().pk == gosh_patient.pk
 
     # Alder Hey
     set_view_preference(client, view_preference=1, pz_code=ALDER_HEY_PZ_CODE)
-    patients = get_patient_list(client)
+    
+    response = client.get(reverse("patients"))
+    assert response.status_code == HTTPStatus.OK
+
+    patients = response.context_data["object_list"]
 
     assert len(patients) == 1
     assert patients.first().pk == ah_patient.pk
@@ -152,7 +189,10 @@ def test_user_with_unexpected_view_preference(
     gosh_user.save()
 
     # Triple check we can still only see our own patients
-    patients = get_patient_list(client)
+    response = client.get(reverse("patients"))
+    assert response.status_code == HTTPStatus.OK
+
+    patients = response.context_data["object_list"]
 
     assert len(patients) == 1
     assert patients.first().pk == gosh_patient.pk
