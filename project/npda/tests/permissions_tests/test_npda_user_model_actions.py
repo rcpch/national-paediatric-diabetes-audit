@@ -294,7 +294,7 @@ def test_reader_cannot_upload_csv(
     session.save()
 
     # upload the CSV file by posting to  'home' view
-    url = reverse("upload_csv")
+    url = url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
     with open(file, "rb") as f:
         response = client.post(
             url,

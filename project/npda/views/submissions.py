@@ -336,7 +336,10 @@ async def upload_csv(request, audit_period, pdu):
                 request=request,
                 message=f"Invalid CSV format: {e}",
             )
-            return redirect("upload_csv")
+            return redirect("pdu-upload-csv",
+                pz_code=pdu.pz_code,
+                audit_period=audit_period.slug
+            )
 
         missing_columns = parsed_csv.missing_columns
         if not parsed_csv.identifier_column:
@@ -359,7 +362,10 @@ async def upload_csv(request, audit_period, pdu):
                 request=request,
                 message="CSV file must use NHS number as the identifier column unless uploading for Jersey"
             )
-            return redirect("upload_csv")
+            return redirect("pdu-upload-csv",
+                pz_code=pdu.pz_code,
+                audit_period=audit_period.slug
+            )
         
         #  the same must be true for the Jersey upload
         if parsed_csv.identifier_column == "NHS Number" and is_jersey:
@@ -367,7 +373,10 @@ async def upload_csv(request, audit_period, pdu):
                 request=request,
                 message="CSV file must use Unique Reference Number as the identifier column unless uploading for Jersey"
             )
-            return redirect("upload_csv")
+            return redirect("pdu-upload-csv",
+                pz_code=pdu.pz_code,
+                audit_period=audit_period.slug
+            )
 
         if not audit_period.is_open and not (request.user.is_superuser or request.user.is_rcpch_audit_team_member):
             raise PermissionDenied(f"Upload is closed for {audit_period}.")
