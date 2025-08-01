@@ -43,7 +43,7 @@
                                       <i class="fa-exclamation fa-stack-1x fa-inverse fas"></i>
                                     </span>
                                   {% endif %}
-                                  <a href="{% url 'visit-update' patient.pk visit.visit.pk %}#{{ item.anchor }}">
+                                  <a href="{% data_url 'pdu-visit-update' patient_id=patient.pk pk=visit.visit.pk %}#{{ item.anchor }}">
                                     {{ item.name }}
                                   </a>
                                 </div>
@@ -54,7 +54,7 @@
                       </td>
                       <td>
                         {% if perms.npda.change_visit %}
-                          <a href="{% url 'visit-update' patient.pk visit.visit.pk %}"
+                          <a href="{% data_url 'pdu-visit-update' patient_id=patient.pk pk=visit.visit.pk %}"
                              class="text-rcpch_pink flex justify-end items-center px-2">
                             <span>Visit Details</span>
                             <svg class="text-rcpch_pink w-8 h-8"
