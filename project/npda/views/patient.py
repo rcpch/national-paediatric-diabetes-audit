@@ -282,6 +282,7 @@ class PatientCreateView(
     PermissionRequiredMixin,
     SuccessMessageMixin,
     PDUPermissionMixin,
+    CheckCurrentAuditYearMixin,
     CheckCanCompleteQuestionnaireMixin,
     CreateView,
 ):
@@ -404,6 +405,7 @@ class PatientCreateView(
 class PatientUpdateView(
     LoginAndOTPRequiredMixin,
     PDUPermissionMixin,
+    CheckCurrentAuditYearMixin,
     PermissionRequiredMixin,
     SuccessMessageMixin,
     CheckCanCompleteQuestionnaireMixin,
@@ -486,6 +488,7 @@ class PatientUpdateView(
 class PatientDeleteView(
     LoginAndOTPRequiredMixin,
     PDUPermissionMixin,
+    CheckCurrentAuditYearMixin,
     PermissionRequiredMixin,
     SuccessMessageMixin,
     CheckCanCompleteQuestionnaireMixin,
