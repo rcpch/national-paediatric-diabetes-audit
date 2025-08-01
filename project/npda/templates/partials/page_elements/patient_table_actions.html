@@ -17,7 +17,7 @@
                    placeholder="Enter a unique NPDA ID or {% nhs_number_vs_urn pdu.pz_code %}. To search for several separate them with a comma..."
                    id="search-input"
                    name="search-input"
-                   hx-get="{% url 'patients' %}"
+                   hx-get="{% data_url 'pdu-patients' %}"
                    hx-trigger="keyup changed delay:500ms"
                    hx-target="#patient_table"
                    hx-swap="innerHTML"
@@ -33,7 +33,7 @@
                     hx-target="#patient_table"
                     hx-trigger="click"
                     hx-indicator="#search_spinner"
-                    hx-get="{% url 'patients' %}"
+                    hx-get="{% data_url 'pdu-patients' %}"
                     hx-disabled-elt="this">
                 <span class="md:hidden text-white">Search patients</span>
                 <i class="fa-solid fa-magnifying-glass text-white"></i>

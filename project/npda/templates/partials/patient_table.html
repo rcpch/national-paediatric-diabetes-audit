@@ -1,6 +1,6 @@
 {% load static %}
 {% load npda_tags %}
-{% url 'patients' as patients_url %}
+{% data_url 'pdu-patients' as patients_url %}
 {% if page_obj %}
   {% include 'partials/page_elements/search_input_badges.html' with search_input_list=search_input_list %}
   <div class="w-full overflow-x-scroll">
