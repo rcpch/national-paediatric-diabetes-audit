@@ -45,7 +45,7 @@ from ..general_functions import (
     group_for_role,
     organisations_adapter,
 )
-from .mixins import CheckPDUInstanceMixin, CheckPDUListMixin, LoginAndOTPRequiredMixin
+from .mixins import LoginAndOTPRequiredMixin
 from .mixins import LoginAndOTPRequiredMixin
 from ...constants import RCPCH_AUDIT_TEAM, AUDIT_CENTRE_READER, AUDIT_CENTRE_EDITOR
 from ..signals import get_client_ip
@@ -73,7 +73,7 @@ NPDAUser list and NPDAUser creation, deletion and update
 
 
 class NPDAUserListView(
-    LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, FilterView
+    LoginAndOTPRequiredMixin, PermissionRequiredMixin, FilterView
 ):
     permission_required = "npda.view_npdauser"
     permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
@@ -240,7 +240,6 @@ class NPDAUserCreateView(
 
 class NPDAUserUpdateView(
     LoginAndOTPRequiredMixin,
-    CheckPDUInstanceMixin,
     PermissionRequiredMixin,
     SuccessMessageMixin,
     UpdateView,
@@ -257,14 +256,18 @@ class NPDAUserUpdateView(
     success_message = "NPDA User record updated successfully"
     success_url = reverse_lazy("npda_users")
 
-    def get_restricted_fields(self):
+    def user_in_exactly_the_same_pdus_as_requesting_user(self):
         my_pz_codes = set(self.request.user.organisation_employers.values_list("pz_code", flat=True))
         their_pz_codes = set(self.get_object().organisation_employers.values_list("pz_code", flat=True))
 
+        return my_pz_codes == their_pz_codes
+
+
+    def get_restricted_fields(self):
         # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1159
         # A coordinator can only change the role or email of a user if they share exactly the same PDU assignments
         # This prevents a coordinator accessing other PDUs by changing the email to one they control and doing a password reset
-        if my_pz_codes == their_pz_codes or self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member:
+        if self.user_in_exactly_the_same_pdus_as_requesting_user() or self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member:
             return []
         
         return ["role", "email"]
@@ -387,23 +390,58 @@ class NPDAUserUpdateView(
             )
             return redirect(redirect_url)
 
-        elif "deactivate" in request.POST:
-            # Deactivation pathway - toggle the is_active field of the user. A user can only be deactivated if they are not a superuser
+        elif "activate" in request.POST or "deactivate" in request.POST:
+            # A user can only be deactivated if they are not a superuser.
             # That of course can happen but for now we will only do this in the admin interface.
             npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
-            success_message = f"{npda_user.email} deactivated successfully."
+
+            if npda_user == request.user:
+                logger.warning("User %s is trying to activate/deactivate themselves", request.user)
+                raise PermissionDenied()
             
-            if npda_user.is_active is False:
-                success_message = f"{npda_user.email} successfully reactivated."
-                npda_user.is_active = True
+            is_admin = self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member
+
+            if not request.user.has_perm("npda.delete_npdauser") and not is_admin:
+                logger.warning(
+                    "User %s is trying to activate/deactivate user %s but does not have delete permission",
+                    request.user.email,
+                    npda_user.email
+                )
+                raise PermissionDenied()
+
+            if self.user_in_exactly_the_same_pdus_as_requesting_user() or is_admin:
+                success_message = f"{npda_user.email} deactivated successfully."
+                
+                if "activate" in request.POST:
+                    success_message = f"{npda_user.email} successfully reactivated."
+                    npda_user.is_active = True
+                else:
+                    success_message = f"{npda_user.email} successfully deactivated."
+                    npda_user.is_active = False
+                
+                npda_user.save()
+
+                if "activate" in request.POST:
+                    logger.info("User %s reactivated %s",
+                        request.user.email,
+                        npda_user.email
+                    )
+                else:
+                    logger.warning("User %s deactivated %s",
+                        request.user.email,
+                        npda_user.email
+                    )
+
+                messages.success(
+                    request,
+                    success_message
+                )
+                return redirect(reverse("npda_users"))
             else:
-                npda_user.is_active = False
-            npda_user.save()
-            messages.success(
-                request,
-                success_message
-            )
-            return redirect(reverse("npda_users"))
+                logger.warning("User %s is trying to activate/deactivate %s who is not in exactly the same PDUs as themselves",
+                               request.user.email,
+                               npda_user.email)
+                raise PermissionDenied()
 
         elif "reset-two-factor" in request.POST:
             if request.user.is_superuser or request.user.is_rcpch_audit_team_member:

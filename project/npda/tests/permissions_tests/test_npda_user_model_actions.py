@@ -461,7 +461,7 @@ def test_coordinators_cannot_create_audit_team_members(
 
 
 # These tests pass already before fixing https://github.com/rcpch/national-paediatric-diabetes-audit/issues/906
-# as handled by CheckPDUInstanceMixin but leaving them in for completeness sake.
+# as handled by the mixins but leaving them in for completeness sake.
 @pytest.mark.django_db
 @pytest.mark.parametrize("action", ["deactivate", "activate"])
 def test_coordinators_cannot_activate_or_inactivate_users_outside_of_their_pdu(
@@ -1321,15 +1321,20 @@ def test_rcpch_audit_team_and_superusers_can_toggle_is_active_for_users_with_mul
     # Login as audit team member
     client = login_and_verify_user(client, audit_team_member)
 
-    # POST to update user (always send 'deactivate', as per UI logic)
+    # POST to update user
     url = reverse("npdauser-update", kwargs={"pk": user.pk})
-    response = client.post(url, data={
+    
+    data = {
         'deactivate': 'true',
         'first_name': user.first_name,
         'surname': user.surname,
         'email': user.email,
         'role': user.role,
-    })
+    }
+
+    data[action_label] = 'true'
+
+    response = client.post(url, data)
 
     # Should not be forbidden
     assert response.status_code != HTTPStatus.FORBIDDEN, (

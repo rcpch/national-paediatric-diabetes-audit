@@ -191,7 +191,11 @@
             action="{% url 'npdauser-update' npda_user.pk %}"
             style="display: none">
         {% csrf_token %}
-        <input type="hidden" name="deactivate" value="true">
+        {% if npda_user.is_active %}
+          <input type="hidden" name="deactivate" value="true">
+        {% else %}
+          <input type="hidden" name="activate" value="true">
+        {% endif %}
       </form>
     {% endif %}
   </div>
