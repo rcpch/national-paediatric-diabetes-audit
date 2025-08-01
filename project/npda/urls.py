@@ -242,10 +242,20 @@ patient_report_urlpatterns = [
         view=patient_report.PatientReportView.as_view(),
         name="patient_report",
     ),
+    path(
+        f"{data_prefix}/patient_report",
+        view=patient_report.PatientReportView.as_view(),
+        name="pdu-patient-report",
+    ),
 	path(
         "patient_table_partial",
         view=patient_report.PatientReportView.as_view(),
         name="patient_table_partial",
+    ),
+    path(
+        f"{data_prefix}/patient_table_partial",
+        view=patient_report.PatientReportView.as_view(),
+        name="pdu-patient-table-partial",
     ),
 ]
 
