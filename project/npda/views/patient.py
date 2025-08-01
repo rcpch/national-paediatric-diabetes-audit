@@ -47,6 +47,7 @@ from .mixins import (
     CheckPDUInstanceMixin,
     CheckPDUListMixin,
     LoginAndOTPRequiredMixin,
+    PDUPermissionMixin
 )
 from ..general_functions.session import refresh_session_filters
 
@@ -55,7 +56,7 @@ logger = logging.getLogger(__name__)
 
 class PatientListView(
     LoginAndOTPRequiredMixin,
-    CheckPDUListMixin,
+    PDUPermissionMixin,
     PermissionRequiredMixin,
     ListView,
 ):
@@ -98,30 +99,23 @@ class PatientListView(
     def get_queryset(self):
         patient_queryset = super().get_queryset()
 
-        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-
-        # apply filters and annotations to the queryset
-        pz_code = self.request.session.get("pz_code")
-        paediatric_diabetes_unit = PaediatricDiabetesUnit.objects.filter(
-            pz_code=pz_code
-        ).first()
-        if paediatric_diabetes_unit.lead_organisation_geocoordinates is None:
+        if self.pdu.lead_organisation_geocoordinates is None:
             # we cannot make an API call for each patient  every time we load the page,
             # so we only do it if the geocoordinates are missing
             # This should have been done when the PDU was created
             paediatric_diabetes_unit_lead_organisation = fetch_organisation_by_ods_code(
-                ods_code=paediatric_diabetes_unit.lead_organisation_ods_code
+                ods_code=self.pdu.lead_organisation_ods_code
             )
-            paediatric_diabetes_unit.lead_organisation_geocoordinates = Point(
+            self.pdu.lead_organisation_geocoordinates = Point(
                 paediatric_diabetes_unit_lead_organisation["longitude"],
                 paediatric_diabetes_unit_lead_organisation["latitude"],
                 srid=4326,
             )
-            paediatric_diabetes_unit.save()
-        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
+            self.pdu.save()
+        
         filtered_patients = Q(
             submissions__submission_active=True,
-            submissions__audit_period=audit_period
+            submissions__audit_period=self.audit_period
         )
 
         # filter by contents of the search bar
@@ -143,7 +137,7 @@ class PatientListView(
                 filtered_patients &= combined_q  # Apply the combined OR query
 
         filtered_patients &= Q(
-            submissions__paediatric_diabetes_unit__pz_code=pz_code,
+            submissions__paediatric_diabetes_unit__pz_code=self.pdu.pz_code,
             submissions__paediatric_diabetes_unit__active=True
         )
 
@@ -152,7 +146,7 @@ class PatientListView(
         a_year_ago = timezone.now() - timezone.timedelta(days=365)
 
         this_audit_year_visits = visit_falls_within_audit_period_Q_object(
-            audit_start_date=audit_period.start_date,
+            audit_start_date=self.audit_period.start_date,
             prepend_query_path="visit",
         )
 
@@ -169,7 +163,7 @@ class PatientListView(
             most_recent_visit_date=Max("visit__visit_date"),
             distance_from_lead_organisation=Distance(
                 "location_wgs84",
-                paediatric_diabetes_unit.lead_organisation_geocoordinates,
+                self.pdu.lead_organisation_geocoordinates,
             ),
         )
 
@@ -189,15 +183,12 @@ class PatientListView(
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
-
-        pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(self.request)
-        context["pdu"] = pdu
+        context["pdu"] = self.pdu
 
         submission = None
         submission_error_count = 0
 
-        submission = Submission.objects.get_submission_for_request(pdu, audit_period)
+        submission = Submission.objects.get_submission_for_request(self.pdu, self.audit_period)
 
         if submission and submission.errors:
             submission_errors = json.loads(submission.errors)
@@ -213,15 +204,15 @@ class PatientListView(
         )
         context["submission_error_count"] = submission_error_count
 
-        context["pz_code"] = pdu.pz_code
-        context["audit_period"] = audit_period
+        context["pz_code"] = self.pdu.pz_code
+        context["audit_period"] = self.audit_period
         context["pdu_choices"] = (
             organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
                 requesting_user=self.request.user,
                 user_instance=self.request.user,
             )
         )
-        context["chosen_pdu"] = pdu.pz_code
+        context["chosen_pdu"] = self.pdu.pz_code
         context["current_page"] = self.request.GET.get("page", 1)
         context["sort_by"] = self.get_sort_by()
 
