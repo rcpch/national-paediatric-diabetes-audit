@@ -9,24 +9,21 @@ from django.db.models import (
 )
 from django.shortcuts import render
 from project.npda.kpi_class.kpis import CalculateKPIS
-from project.npda.views.dashboard import helpers as hp
-from project.npda.views.decorators import login_and_otp_required
-from project.npda.models import Visit, Submission, AuditPeriod, PaediatricDiabetesUnit
+from project.npda.views.decorators import login_and_otp_required, check_data_permissions
+from project.npda.models import Visit, Submission
 
 
 @login_and_otp_required()
-def patient_measurements(request):
-    pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(request)
+@check_data_permissions()
+def patient_measurements(request, audit_period, pdu):
     pz_code = pdu.pz_code
-
-    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
     calculation_date = audit_period.kpi_calculation_date()
-    
+
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True, is_jersey=pz_code == "PZ248"
     )
 
-    kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
+    kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pdu.pz_code])
 
 
     # {
