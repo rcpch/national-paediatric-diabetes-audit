@@ -67,15 +67,26 @@ urlpatterns = [
         name="pdu-patients",
     ),
     path("patient/add/", PatientCreateView.as_view(), name="patient-add"),
+    path(f"{data_prefix}/patient/add/", PatientCreateView.as_view(), name="pdu-patient-add"),
     path(
         "patient/<int:pk>/update",
         PatientUpdateView.as_view(),
         name="patient-update",
     ),
     path(
+        f"{data_prefix}/patient/<int:pk>/update",
+        PatientUpdateView.as_view(),
+        name="pdu-patient-update",
+    ),
+    path(
         "patient/<int:pk>/delete",
         PatientDeleteView.as_view(),
         name="patient-delete",
+    ),
+    path(
+        f"{data_prefix}/patient/<int:pk>/delete",
+        PatientDeleteView.as_view(),
+        name="pdu-patient-delete",
     ),
     # Visit views
     path(
