@@ -246,7 +246,7 @@ class TestQuestionnaireView:
         form = VisitForm(data=COMPLETED_VISIT, initial={"patient": patient})
 
         # url
-        url = reverse("visit-create", kwargs={"patient_id": patient.pk})
+        url = reverse("pdu-visit-create", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "patient_id": patient.pk})
 
         # Post the patient data
         response = self.client.post(url, form.data)
@@ -271,7 +271,7 @@ class TestQuestionnaireView:
         session.save()
 
         # url
-        url = reverse("visit-create", kwargs={"patient_id": patient.pk})
+        url = reverse("pdu-visit-create", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "patient_id": patient.pk})
 
         # Post the patient data
         response = self.client.post(url, form.data)
