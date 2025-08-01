@@ -294,7 +294,7 @@ class TestQuestionnaireView:
         session["can_complete_questionnaire"] = False
         session.save()
 
-        url = reverse("patient-update", kwargs={"pk": patient.pk})
+        url = reverse("pdu-patient-update", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "pk": patient.pk})
 
         response = self.client.get(url)
         assert response.status_code == 200
