@@ -53,7 +53,13 @@ async def home(request):
     Home page view.
     Only verified users can access this page.
     """
-    context = {}
+    pdu_choices = request.session.get("pdu_choices", [])
+    pdu_choices.sort(key=lambda pdu: pdu[0])
+
+    context = {
+        "pdu_choices": pdu_choices,
+    }
+    
     template = "home.html"
     return render(request=request, template_name=template, context=context)
 
