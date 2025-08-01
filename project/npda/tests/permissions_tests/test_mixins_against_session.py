@@ -117,7 +117,7 @@ class TestQuestionnaireView:
         form = PatientForm(VALID_FIELDS)
 
         # url
-        url = reverse("patient-add")
+        url = reverse("pdu-patient-add", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE})
 
         # Post the patient data
         response = self.client.post(url, form.data)
@@ -141,7 +141,7 @@ class TestQuestionnaireView:
         self.audit_period.save()
 
         # url
-        url = reverse("patient-add")
+        url = reverse("pdu-patient-add", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE})
 
         # Post the patient data
         response = self.client.post(url, form.data)
@@ -168,7 +168,7 @@ class TestQuestionnaireView:
         self.ah_user.save()
 
         # url
-        url = reverse("patient-add")
+        url = reverse("pdu-patient-add", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE})
 
         # Post the patient data
         response = self.client.post(url, form.data)
@@ -191,7 +191,7 @@ class TestQuestionnaireView:
         form = PatientForm(VALID_FIELDS)
 
         # url
-        url = reverse("patient-add")
+        url = reverse("pdu-patient-add", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE})
 
         # Post the patient data
         response = self.client.post(url, form.data)
@@ -219,7 +219,7 @@ class TestQuestionnaireView:
         form = PatientForm(VALID_FIELDS)
 
         # url
-        url = reverse("patient-add")
+        url = reverse("pdu-patient-add", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE})
 
         # Post the patient data
         response = self.client.post(url, form.data)
@@ -294,7 +294,7 @@ class TestQuestionnaireView:
         session["can_complete_questionnaire"] = False
         session.save()
 
-        url = reverse("patient-update", kwargs={"pk": patient.pk})
+        url = reverse("pdu-patient-update", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "pk": patient.pk})
 
         response = self.client.get(url)
         assert response.status_code == 200

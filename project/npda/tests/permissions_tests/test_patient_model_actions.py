@@ -247,7 +247,8 @@ def test_users_can_only_edit_patients_from_their_own_pdu(
 
     client = login_and_verify_user(client, gosh_user)
 
-    url = reverse("patient-update", args=[ah_patient.pk])
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    url = reverse("pdu-patient-update", kwargs={"audit_period": audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "pk": ah_patient.pk})
     response = client.get(url)
 
     assert response.status_code == HTTPStatus.FORBIDDEN
@@ -275,10 +276,12 @@ def test_rcpch_audit_team_can_edit_patients_from_any_pdu(
 
     client = login_and_verify_user(client, rcpch_user)
 
-    gosh_url = reverse("patient-update", args=[gosh_patient.pk])
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+
+    gosh_url = reverse("pdu-patient-update", kwargs={"audit_period": audit_period.slug, "pz_code": GOSH_PZ_CODE, "pk": gosh_patient.pk})
     assert client.get(gosh_url).status_code == HTTPStatus.OK
 
-    ah_url = reverse("patient-update", args=[ah_patient.pk])
+    ah_url = reverse("pdu-patient-update", kwargs={"audit_period": audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "pk": ah_patient.pk})
     assert client.get(ah_url).status_code == HTTPStatus.OK
 
 
