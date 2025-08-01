@@ -63,12 +63,9 @@ def create_session_object(user):
     This is called on login, and is used to filter the data the user can see.
     """
     AuditPeriod = apps.get_model("npda", "AuditPeriod")
-    OrganisationEmployer = apps.get_model("npda", "OrganisationEmployer")
     
-    primary_organisation = OrganisationEmployer.objects.filter(
-        npda_user=user, is_primary_employer=True
-    ).first() # There should only be one primary organisation but if there are multiple, just take the first one
-    pz_code = primary_organisation.paediatric_diabetes_unit.pz_code
+    primary_pdu = user.primary_pdu()
+    pz_code = primary_pdu.pz_code
     pdu_choices = (
         organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
             requesting_user=user, user_instance=None
@@ -83,7 +80,7 @@ def create_session_object(user):
 
     session = {
         "pz_code": pz_code,
-        "parent": primary_organisation.paediatric_diabetes_unit.parent_name,
+        "parent": primary_pdu.parent_name,
         "pdu_choices": list(pdu_choices),
         "selected_audit_year": audit_period.audit_year(),
     } | submission_actions | audit_period_data

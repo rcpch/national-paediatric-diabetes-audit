@@ -36,6 +36,7 @@ from ..models import (
     NPDAUser,
     VisitActivity,
     OrganisationEmployer,
+    AuditPeriod
 )
 from ..forms.npda_user_form import NPDAUserForm, CaptchaAuthenticationForm
 from ..general_functions import (
@@ -692,7 +693,12 @@ class RCPCHLoginView(TwoFactorLoginView):
                 # successful login, get PDU and organisation details from user and store in session
 
                 # Override normal auth flow behaviour, redirect straight to home page
-                return redirect("dashboard")
+                audit_period = AuditPeriod.objects.get_default_audit_period()
+
+                return redirect(reverse("pdu-dashboard", kwargs={
+                    "audit_period": audit_period.slug,
+                    "pz_code": user.primary_pdu().pz_code,
+                }))
 
         # Otherwise, continue with usual workflow
         response = super().post(*args, **kwargs)
@@ -739,5 +745,11 @@ class RCPCHLoginView(TwoFactorLoginView):
                     f"You are now logged in as {user.email}. Welcome to the National Paediatric Diabetes Audit platform! This is your first time logging in ({timezone.localtime(last_logged_in[0].activity_datetime).strftime('%H:%M %p on %A, %d %B %Y')} from {last_logged_in[0].ip_address}).",
                 )
 
-            return redirect(reverse("dashboard"))
+            audit_period = AuditPeriod.objects.get_default_audit_period()
+
+            return redirect(reverse("pdu-dashboard", kwargs={
+                "audit_period": audit_period.slug,
+                "pz_code": user.primary_pdu().pz_code,
+            }))
+        
         return response
