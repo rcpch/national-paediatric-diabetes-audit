@@ -3,47 +3,26 @@ import json
 import logging
 from datetime import date
 
-from django.apps import apps
-from django.contrib import messages
 from django.shortcuts import render
 
 from project.npda.general_functions.audit_period import audit_period_for_audit_year
 from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
 from project.npda.kpi_class.kpis import CalculateKPIS
-from project.npda.models.paediatric_diabetes_unit import (
-    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
-)
-from project.npda.models.patient import Patient
-from project.npda.models.audit_period import AuditPeriod
-from project.npda.views.decorators import login_and_otp_required
+from project.npda.views.decorators import login_and_otp_required, check_data_permissions
 
 # LOGGING
 logger = logging.getLogger(__name__)
 
 
 @login_and_otp_required()
-def dashboard(request):
+@check_data_permissions()
+def dashboard(request, audit_period, pdu):
     """
     Dashboard view for the KPIs.
     """
     template = "dashboard.html"
     if request.htmx:
         template = "dashboard/dashboard_base.html"
-    pz_code = request.session.get("pz_code")
-
-    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
-        "npda", "PaediatricDiabetesUnit"
-    )
-    try:
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-    except PaediatricDiabetesUnit.DoesNotExist:
-        messages.error(
-            request=request,
-            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
-        )
-        return render(request, "dashboard.html")
-
-    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
     
     current_date = date.today()
     calculation_date = audit_period.kpi_calculation_date()
@@ -65,7 +44,7 @@ def dashboard(request):
         calculation_date=calculation_date, return_pt_querysets=True
     )
 
-    kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
+    kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pdu.pz_code])
 
     # From this, gather specific chart data required
 
