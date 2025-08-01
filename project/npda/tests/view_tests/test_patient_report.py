@@ -46,9 +46,18 @@ def test_anonymous_user_cannot_access_patient_report(
     """Anonymous users should not be able to access the patient report."""
 
     for url in patient_report_urlpatterns:
-        response = client.get(reverse(url.name))
+        if url.name.startswith("pdu-"):
+            resolved_url = reverse(url.name, kwargs={
+                "audit_period": "2023-2024",
+                "pz_code": ALDER_HEY_PZ_CODE
+            })
+        else:
+            resolved_url = reverse(url.name)
+
+        response = client.get(resolved_url)
+
         assert response.status_code == HTTPStatus.FOUND
-        assert response.url == reverse("login") + "?next=" + reverse(url.name)
+        assert response.url == reverse("login") + "?next=" + resolved_url
 
 
 @pytest.mark.django_db
@@ -100,7 +109,10 @@ def test_no_duplicate_patients_in_report(
     new_submission.patients.add(*new_pts)
 
     # Get the patient report
-    response = client.get(reverse("patient_report"))
+    response = client.get(reverse("pdu-patient-report", kwargs={
+        "audit_period": audit_period.slug,
+        "pz_code": ALDER_HEY_PZ_CODE
+    }))
     assert response.status_code == HTTPStatus.OK
 
     assert isinstance(response.context["patients"], list)
