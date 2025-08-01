@@ -236,19 +236,17 @@ def get_metric_scatter_plot(request, audit_period, pdu):
 
 
 @login_and_otp_required()
-def get_new_diagnoses_partial(request):
+@check_data_permissions()
+def get_new_diagnoses_partial(request, audit_period, pdu):
     """HTMX view that returns the number of new diagnoses for the current submission"""
 
     # Get new diagnoses this submission
-    pz_code = request.session.get("pz_code")
-
-    calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
 
     calculate_kpis = CalculateKPIS(
-        calculation_date=calculation_date, return_pt_querysets=False
+        calculation_date=audit_period.kpi_calculation_date(), return_pt_querysets=False
     )
 
-    calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+    calculate_kpis.set_patients_for_calculation(pz_codes=[pdu.pz_code])
 
     n_diagnoses_this_year = calculate_kpis.calculate_kpi_2_total_new_diagnoses()
 
