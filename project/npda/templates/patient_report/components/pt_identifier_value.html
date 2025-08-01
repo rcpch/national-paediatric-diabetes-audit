@@ -3,7 +3,7 @@
       data-tip="View patient's visits"
       style="display: inline-flex;
              align-items: center">
-  <a href="{% data_url 'pdu-patient-visits' pk=patient_pk %}"
+  <a href="{% data_url 'pdu-patient-visits' patient_id=patient_pk %}"
      class="w-full h-full flex flex-row items-center">
     {{ patient_identifier }}
     <i class="fa-solid fa-arrow-up-right-from-square text-rcpch_strong_blue ml-1"></i>
