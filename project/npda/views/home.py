@@ -10,7 +10,7 @@ from project.npda.general_functions.csv import csv_header
 from ..general_functions.session import refresh_session_filters
 
 # RCPCH imports
-from .decorators import login_and_otp_required
+from .decorators import login_and_otp_required, check_data_permissions
 
 from project.npda.tasks import test_task
 
@@ -29,12 +29,14 @@ async def home(request):
     return render(request=request, template_name=template, context=context)
 
 
-def download_template(request):
+@login_and_otp_required()
+@check_data_permissions()
+def download_template(request, audit_period, pdu):
     """
     Creates the template csv for users to fill out and upload into NPDA
     """
 
-    is_jersey = request.session.get("pz_code") == "PZ248"
+    is_jersey = pdu.pz_code == "PZ248"
     file = csv_header(is_jersey=is_jersey)
 
     return HttpResponse(
