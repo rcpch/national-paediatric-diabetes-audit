@@ -1321,15 +1321,20 @@ def test_rcpch_audit_team_and_superusers_can_toggle_is_active_for_users_with_mul
     # Login as audit team member
     client = login_and_verify_user(client, audit_team_member)
 
-    # POST to update user (always send 'deactivate', as per UI logic)
+    # POST to update user
     url = reverse("npdauser-update", kwargs={"pk": user.pk})
-    response = client.post(url, data={
+    
+    data = {
         'deactivate': 'true',
         'first_name': user.first_name,
         'surname': user.surname,
         'email': user.email,
         'role': user.role,
-    })
+    }
+
+    data[action_label] = 'true'
+
+    response = client.post(url, data)
 
     # Should not be forbidden
     assert response.status_code != HTTPStatus.FORBIDDEN, (
