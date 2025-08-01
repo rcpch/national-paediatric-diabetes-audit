@@ -119,8 +119,6 @@ def test_coordinator_cannot_upload_csv_to_closed_audit_year(
     session = client.session
     session["can_upload_csv"] = True
     session["can_complete_questionnaire"] = False
-    session["pz_code"] = ALDER_HEY_PZ_CODE
-    session["selected_audit_year"] = audit_period.audit_year()
     session.save()
     
     csv_file = SimpleUploadedFile(

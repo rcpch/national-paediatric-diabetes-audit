@@ -204,13 +204,6 @@ class PatientListView(
 
         context["pz_code"] = self.pdu.pz_code
         context["audit_period"] = self.audit_period
-        context["pdu_choices"] = (
-            organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
-                requesting_user=self.request.user,
-                user_instance=self.request.user,
-            )
-        )
-        context["chosen_pdu"] = self.pdu.pz_code
         context["current_page"] = self.request.GET.get("page", 1)
         context["sort_by"] = self.get_sort_by()
 

@@ -101,14 +101,6 @@ class NPDAUserListView(
     def get_context_data(self, **kwargs):
         context = super(NPDAUserListView, self).get_context_data(**kwargs)
         context["title"] = "NPDA Users"
-        context["pz_code"] = self.request.session.get("pz_code")
-        context["pdu_choices"] = (
-            organisations_adapter.paediatric_diabetes_units_to_populate_select_field(  # This is used to populate the select field in view preference form
-                requesting_user=self.request.user, user_instance=self.request.user
-            )
-        )
-        context["parent"] = self.request.session.get("parent")
-        context["chosen_pdu"] = self.request.session.get("pz_code")
         return context
 
     def get(self, request, *args: str, **kwargs) -> HttpResponse:

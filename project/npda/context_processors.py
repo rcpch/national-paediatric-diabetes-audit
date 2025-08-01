@@ -19,7 +19,7 @@ def current_audit_period_slug(request):
     if request.resolver_match:
         audit_period_slug = request.resolver_match.kwargs.get("audit_period", None)
 
-     # Temporary hack until all pages migrated over to new URL structure
+    # Temporary hack until all pages migrated over to new URL structure
     if not audit_period_slug:
         audit_year = request.session.get("selected_audit_year", None)
 
@@ -27,6 +27,14 @@ def current_audit_period_slug(request):
             audit_period_slug = f"{audit_year}-{audit_year + 1}"
 
     return audit_period_slug
+
+# Temporary hack until switcher removed so you can only change audit period by following links
+def current_audit_year(audit_period_slug):
+    if audit_period_slug:
+        start_year = int(audit_period_slug.split("-")[0])
+        return start_year
+    
+    return None
 
 
 def session_data(request):
@@ -45,6 +53,8 @@ def session_data(request):
         "audit_period_slug": audit_period_slug,
         "parent_name": request.session.get("parent_name", None),
         "audit_years": request.session.get("audit_years", []),
+        # Required for switcher
+        "selected_audit_year": current_audit_year(audit_period_slug),
     }
 
 

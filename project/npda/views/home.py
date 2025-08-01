@@ -101,13 +101,8 @@ def audit_year(request):
 
         return redirect_after_switcher(request)
 
-    context = {
-        "audit_years": request.session.get("audit_years"),
-        "selected_audit_year": request.session.get("selected_audit_year"),
-    }
-
     response = render(
-        request, template_name="partials/audit_year_select.html", context=context
+        request, template_name="partials/audit_year_select.html"
     )
 
     return response
