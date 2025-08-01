@@ -12,6 +12,9 @@ from django.shortcuts import get_object_or_404
 from project.npda.models.npda_user import NPDAUser
 from project.npda.models.patient import Patient
 from project.npda.models.audit_period import AuditPeriod
+from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
+from project.npda.models.transfer import Transfer
+from django.urls import reverse
 
 
 logger = logging.getLogger(__name__)
@@ -54,10 +57,14 @@ class LoginAndOTPRequiredMixin(AccessMixin):
         return super().dispatch(request, *args, **kwargs)
 
 
-class CheckPDUListMixin(AccessMixin):
-    """
-    A mixin that checks whether a user can access a specific list view for a PDU
-    """
+class PDUPermissionMixin(AccessMixin):
+    def data_reverse(self, viewname, kwargs={}):
+        next_kwargs = kwargs | {
+            "audit_period": self.audit_period.slug,
+            "pz_code": self.pdu.pz_code
+        }
+
+        return reverse(viewname, kwargs=next_kwargs)
 
     def get_model(self):
         if hasattr(self, "model") and self.model:
@@ -66,110 +73,42 @@ class CheckPDUListMixin(AccessMixin):
             return self.get_queryset().model
         return None
 
-    def dispatch(self, request, *args, **kwargs):
-        # Check if the user is authenticated
-        if not request.user.is_authenticated:
-            return self.handle_no_permission()
+    def check_patient_permissions(self, pdu, audit_period, user, pk):
+        patient = get_object_or_404(Patient, pk=pk)
+        transfer = Transfer.objects.get(patient=patient)
 
-        model = self.get_model().__name__
-
-        # get PDU assigned to user
-        user_pdus = request.user.organisation_employers.values_list(
-            "pz_code", flat=True
-        )
-
-        # get pdu that user is requesting access of
-        requested_pdu = ""
-        if model == "Visit":
-            requested_patient = get_object_or_404(Patient, pk=self.kwargs["patient_id"])
-            Transfer = apps.get_model("npda", "Transfer")
-            transfer = Transfer.objects.get(patient=requested_patient)
-            requested_pdu = transfer.paediatric_diabetes_unit.pz_code
-
-        elif model == "NPDAUser" or model == "Patient":
-            requested_pdu = request.session.get("pz_code")
-
-        if (
-            request.user.is_superuser
-            or request.user.is_rcpch_audit_team_member
-            or (requested_pdu in user_pdus)
-        ):
-            return super().dispatch(request, *args, **kwargs)
-
-        else:
-            logger.info(
-                "User %s is unverified. Tried accessing %s but only has access to %s",
-                request.user,
-                requested_pdu,
-                user_pdus,
-            )
-            raise PermissionDenied()
-
-
-class CheckPDUInstanceMixin(AccessMixin):
-    """
-    A mixin which checks whether an instance's PDU (be it Patient, NPDAUser, Visit) that is having access attempted matches that of the
-    active user, or the active user is superuser/rcpch audit team
-    """
-
-    def get_model(self):
-        if hasattr(self, "model") and self.model:
-            return self.model
-        if hasattr(self, "get_queryset"):
-            return self.get_queryset().model
-        return None
+        if not transfer.paediatric_diabetes_unit in user.organisation_employers.all():
+            raise PermissionDenied(f"User {user} does not have permission to view patient for PDU {pdu.pz_code} in audit period {audit_period.slug}")
 
     def dispatch(self, request, *args, **kwargs):
         # Check if the user is authenticated
         if not request.user.is_authenticated:
             return self.handle_no_permission()
 
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(request, *args, **kwargs)
+        pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(request, *args, **kwargs)
+
         model = self.get_model().__name__
 
-        Transfer = apps.get_model("npda", "Transfer")
+        if not request.user.is_superuser and not request.user.is_rcpch_audit_team_member:
+            match model:
+                # PDU level permission checked in the request helpers above. This is to prevent access to models by guessing their pk.
+                case "Patient" if "pk" in self.kwargs:
+                    self.check_patient_permissions(pdu, audit_period, request.user, self.kwargs["pk"])
 
-        # get PDUs assigned to user who is trying to access a view
-        user_pdus = [org.pz_code for org in request.user.organisation_employers.all()]
+                case "Visit":
+                    self.check_patient_permissions(pdu, audit_period, request.user, self.kwargs["patient_id"])
 
-        if model == "NPDAUser":
-            requested_user = get_object_or_404(NPDAUser, pk=self.kwargs['pk'])
-            if requested_user.organisation_employers.filter(pz_code=request.session.get('pz_code')).exists():
-                if requested_user.number_of_pdu_memberships() == 1:
-                    # if the user is a member of the requested pdu and there is only one, then we can use that
-                    requested_pdu = requested_user.organisation_employers.all().filter(pz_code=request.session.get('pz_code')).first().pz_code
-                else:
-                    # if the user is a member of multiple PDUs, then we need to check which one they are trying to access
-                    requested_pdu = requested_user.organisation_employers.all().filter(pz_code=request.session.get('pz_code')).first().pz_code
-            else:
-                # the user is not a member of the requested pdu so we just return the pz code of the users primary pdu
-                requested_pdu = requested_user.paediatric_diabetes_units.filter(is_primary_employer=True).first().paediatric_diabetes_unit.pz_code
+                # PDU level permission checked in the request helpers above. This is to prevent access to models by guessing their pk.
+                case "NPDAUser" if "pk" in self.kwargs:
+                    requested_user = get_object_or_404(NPDAUser, pk=self.kwargs['pk'])
+                    if not requested_user.organisation_employers.filter(pz_code=pdu.pz_code).exists():
+                        raise PermissionDenied(f"User {request.user} does not have permission to view {model} for PDU {pdu.pz_code} in audit period {audit_period.slug}")
 
+        self.audit_period = audit_period
+        self.pdu = pdu
 
-        elif model == "Patient":
-            requested_patient = get_object_or_404(Patient, pk=self.kwargs["pk"])
-            transfer = Transfer.objects.get(patient=requested_patient)
-            requested_pdu = transfer.paediatric_diabetes_unit.pz_code
-
-        elif model == "Visit":
-            requested_patient = get_object_or_404(Patient, pk=self.kwargs["patient_id"])
-            transfer = Transfer.objects.get(patient=requested_patient)
-            requested_pdu = transfer.paediatric_diabetes_unit.pz_code
-
-        if (
-            request.user.is_superuser
-            or request.user.is_rcpch_audit_team_member
-            or (requested_pdu in user_pdus)
-        ):
-            return super().dispatch(request, *args, **kwargs)
-
-        else:
-            logger.warning(
-                "User %s is unverified. Tried accessing %s but only has access to %s",
-                request.user,
-                requested_pdu,
-                user_pdus,
-            )
-            raise PermissionDenied()
+        return super().dispatch(request, *args, **kwargs)
 
 
 class CheckCurrentAuditYearMixin(AccessMixin):

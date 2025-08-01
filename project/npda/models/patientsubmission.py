@@ -1,4 +1,3 @@
-from typing import Iterable
 from django.db import models
 from django.db.models import Q
 from django.core.exceptions import ValidationError
@@ -30,22 +29,3 @@ class PatientSubmission(models.Model):
 
     def __str__(self) -> str:
         return f"{self.submission} for {self.patient}"
-
-
-def save(self, *args, **kwargs):
-    # Check for existing submissions for the same patient and audit year
-    if (
-        PatientSubmission.objects.filter(
-            (
-                Q(patient__nhs_number=self.patient.nhs_number)
-                | Q(
-                    patient__unique_reference_number=self.patient.unique_reference_number
-                )
-            ),
-            submission__audit_period=self.submission.audit_period,
-        )
-        .exclude(pk=self.pk)
-        .exists()
-    ):
-        raise ValidationError("A patient can have only one submission per audit year.")
-    super().save(*args, **kwargs)

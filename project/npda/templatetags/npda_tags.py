@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 import itertools
 import logging
 import re
@@ -7,6 +7,7 @@ from django import template, forms
 from django.conf import settings
 from django.contrib.gis.measure import D
 from django.utils.html import conditional_escape, mark_safe
+from django.urls import reverse
 
 from ...constants import (
     # VisitCategories,
@@ -432,12 +433,18 @@ def exclude_admin_user_field(field, user):
     if user.is_superuser:
         return True
     elif user.is_rcpch_staff or user.is_rcpch_audit_team_member:
-        if field.id_for_label in [
-            "id_is_staff",
-            "id_is_rcpch_staff",
-            "id_is_rcpch_audit_team_member",
-        ]:
-            return True
+        if user.is_rcpch_staff:
+            if field.id_for_label in [
+                "id_is_rcpch_staff",
+            ]:
+                return True
+        if user.is_rcpch_audit_team_member:
+            if field.id_for_label in [
+                "id_is_staff"
+                "id_is_rcpch_staff",
+                "id_is_rcpch_audit_team_member",
+            ]:
+                return True
         return False
     if field.id_for_label in [
         "id_is_staff",
@@ -447,7 +454,6 @@ def exclude_admin_user_field(field, user):
     ]:
         return False
     return True
-
 
 @register.filter
 def include_admin_users(user):
@@ -495,3 +501,14 @@ def round_to_1dp(value):
         return f"{float(value):.1f}"
     except (ValueError, TypeError):
         return value
+
+@register.filter
+def plus_days(value, days):
+    return value + timedelta(days=days)
+
+@register.simple_tag(takes_context=True)
+def data_url(context, view_name, *args, **kwargs):
+    return reverse(view_name, kwargs = kwargs | {
+        "pz_code": context.get("pz_code", None),
+        "audit_period": context.get("audit_period_slug", None),
+    })

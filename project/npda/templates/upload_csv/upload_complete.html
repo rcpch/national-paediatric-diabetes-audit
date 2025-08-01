@@ -1,0 +1,50 @@
+{% load npda_tags %}
+<div class="max-w-2xl mx-auto px-6">
+  <h1 class="text-4xl font-bold text-center mb-5 font-montserrat">
+    Upload Complete
+  </h1>
+  {% if timeout %}
+    <div class="mb-10 text-4xl font-bold text-center font-montserrat font-semibold">
+      Upload timed out!
+    </div>
+    <div class="flex justify-center items-center mb-10">
+      <i class="fa-solid fa-bell text-rcpch_orange" style="font-size: 8rem"></i>
+    </div>
+  {% else %}
+    <div class="mb-10 text-4xl font-bold text-center font-montserrat font-semibold">
+      Upload completed successfully!
+    </div>
+    <div class="flex justify-center items-center mb-10">
+      <i class="fa-solid fa-circle-check text-rcpch_light_blue"
+         style="font-size: 8rem"></i>
+    </div>
+  {% endif %}
+  <div class="max-w-lg mx-auto px-12">
+    <div class="text-xl text-left font-montserrat space-y-4 bg-gray-50 p-8 rounded-lg shadow-sm mb-8">
+      {% if timeout %}
+        <p class="text-rcpch_orange">
+          Your upload has taken too long to process, though some data has still been saved. Please try again later or contact the NPDA team for assistance.
+        </p>
+      {% endif %}
+      <p>
+        <b>{{ patients_so_far }}
+          {% if timeout %}(out of {{ total_patients }}){% endif %}
+        </b>
+        patients
+        in <b>{{ visits_so_far }}
+        {% if timeout %}(of total {{ total_rows }}){% endif %}
+      </b> rows have been successfully uploaded, processed and saved in NPDA.
+    </p>
+    <p>
+      Your original CSV has been archived and can be downloaded from the
+      <a href="{% url 'submissions' %}"
+         class="text-rcpch_light_blue underline">Submissions</a>
+      page.
+    </p>
+  </div>
+</div>
+<div class="flex justify-center mt-16">
+  <a class="btn rcpch-light-blue-btn" href="{% data_url 'pdu-patients' %}">
+    View Patients
+  </a>
+</div>

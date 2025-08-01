@@ -1,7 +1,9 @@
 {% load npda_tags %}
 
 <a
-    {% if url_name|slice:4 == "http" %}
+    {% if data_url_name %}
+        href="{% data_url data_url_name %}"
+    {% elif url_name|slice:4 == "http" %}
         href="{{ url_name }}"
     {% else %}
         href="{% url url_name %}"

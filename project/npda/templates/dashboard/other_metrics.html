@@ -1,4 +1,5 @@
 {% csrf_token %}
+{% load npda_tags %}
 <!-- Metrics Dashboard -->
 <div class="grid grid-cols-1 gap-4 h-full">
   <!-- Top Row Metrics -->
@@ -23,7 +24,7 @@
               <i class="fa-solid fa-person-circle-exclamation"></i> No eligible patients.
             </div>
           {% else %}
-            <div hx-get="{% url 'get_metric_scatter_plot' %}"
+            <div hx-get="{% data_url 'pdu-get-metric-scatter-plot' %}"
                  hx-vals='{ "data" : {{ charts.new_diagnoses_per_quarter_value_counts_pct.data }} }'
                  hx-trigger="load"
                  hx-swap="innerHTML"
@@ -38,7 +39,7 @@
                        type="radio"
                        name="scatter_plot_select"
                        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                       hx-post="{% url 'get_metric_scatter_plot' %}"
+                       hx-post="{% data_url 'pdu-get-metric-scatter-plot' %}"
                        hx-swap="innerHTML"
                        hx-target="#scatter-plot"
                        hx-trigger="click"

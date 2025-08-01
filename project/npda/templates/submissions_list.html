@@ -1,6 +1,61 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block content %}
+  {% if request.user.is_rcpch_audit_team_member %}
+    <div class="grid grid-cols-2 gap-6 mb-6">
+      <!-- Chart Column - 50% width -->
+      <div class="col-span-1">
+        <div class="flex flex-col justify-center px-4">
+          <div class="relative">
+            <div id="column_chart" class="w-full mt-5 mx-2">{{ column_chart|safe }}</div>
+          </div>
+        </div>
+      </div>
+      <!-- PDUs Info Column - 50% width -->
+      <div class="col-span-1 mt-10">
+        <div class="flex flex-col px-4 h-full">
+          <div>
+            <div class="stats shadow">
+              <div class="stat">
+                <div class="stat-figure text-secondary">
+                  <svg width="48px"
+                       height="48px"
+                       viewBox="0 0 24 24"
+                       fill="none"
+                       xmlns="http://www.w3.org/2000/svg">
+                    <!-- Rays (higher and swapped) -->
+                    <line x1="12" y1="2" x2="12" y2="10.0" stroke="#e00087" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="4 2" />
+                    <line x1="7.5" y1="2" x2="9" y2="10.0" stroke="#e00087" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="4 2" />
+                    <line x1="16.5" y1="2" x2="15" y2="10.0" stroke="#e00087" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="4 2" />
+                    <!-- Tray -->
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M23 17C23 19.2091 21.2091 21 19 21H5C2.79086 21 1 19.2091 1 17V12.5183C1 12.1784 1.08662 11.8441 1.25169 11.547L5.42849 4.02871C5.78123 3.39378 6.45047 3 7.17681 3H16.8232C17.5495 3 18.2188 3.39378 18.5715 4.02871L22.7483 11.547C22.9134 11.8441 23 12.1784 23 12.5183V17ZM19.5845 11H16C15.6656 11 15.3534 11.1671 15.1679 11.4453L13.4648 14H10.5352L8.83205 11.4453C8.64658 11.1671 8.33435 11 8 11H4.41545L7.47101 5.5H16.529L19.5845 11Z" fill="#e00087" />
+                  </svg>
+                </div>
+                <div class="stat-title">Paediatric Diabetes Units without Submission</div>
+                <div class="stat-value">{{ non_submission_pdus|length }}</div>
+                <div class="stat-desc">{{ audit_period }}</div>
+              </div>
+            </div>
+            {% include 'partials/submission_stats.html' with submission_statistics=submission_statistics %}
+            {% if non_submission_pdus %}
+              <div class="mt-4">
+                <details class="cursor-pointer">
+                  <summary class="text-sm text-gray-600 hover:text-gray-800">
+                    View PDUs without submissions
+                  </summary>
+                  <ul class="mt-2 text-sm text-gray-600 overflow-y-auto">
+                    {% for pz_code, name in non_submission_pdus %}
+                      <li class="py-1">{{ pz_code }} - {{ name }}</li>
+                    {% endfor %}
+                  </ul>
+                </details>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
   <section class="mb-5 container-mx-auto flex items-center justify-center">
     <div class="w-full"
          hx-get="/submissions"
@@ -19,20 +74,4 @@
       </div>
     </div>
   </section>
-  {% if request.user.view_preference == 2 %}
-    <section class="mb-5 container-mx-auto flex items-center justify-center">
-      <div class="w-full"
-           hx-get="/submissions"
-           hx-trigger="submissions from:body"
-           hx-target="#submission_stats"
-           id="submission_stats">
-        <div class="flex flex-col justify-center px-10">
-          <div class="relative">
-            <div id="column_chart" class="w-full mt-5 mx-2">{{ column_chart|safe }}</div>
-          </div>
-          {% include 'partials/submission_stats.html' with submission_statistics=submission_statistics %}
-        </div>
-      </div>
-    </section>
-  {% endif %}
 {% endblock %}

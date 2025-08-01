@@ -14,12 +14,8 @@ from project.npda.general_functions import (
 logger = logging.getLogger(__name__)
 
 
-def get_submission_actions(pz_code, audit_year):
+def get_submission_actions(pz_code, audit_period):
     Submission = apps.get_model("npda", "Submission")
-    AuditPeriod = apps.get_model("npda", "AuditPeriod")
-    audit_period = AuditPeriod.objects.filter(
-        start_date__year=audit_year
-    ).first()  # Ensure the audit period exists for the given year
 
     submission = Submission.objects.filter(
         paediatric_diabetes_unit__pz_code=pz_code,
@@ -67,12 +63,9 @@ def create_session_object(user):
     This is called on login, and is used to filter the data the user can see.
     """
     AuditPeriod = apps.get_model("npda", "AuditPeriod")
-    OrganisationEmployer = apps.get_model("npda", "OrganisationEmployer")
     
-    primary_organisation = OrganisationEmployer.objects.filter(
-        npda_user=user, is_primary_employer=True
-    ).first() # There should only be one primary organisation but if there are multiple, just take the first one
-    pz_code = primary_organisation.paediatric_diabetes_unit.pz_code
+    primary_pdu = user.primary_pdu()
+    pz_code = primary_pdu.pz_code
     pdu_choices = (
         organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
             requesting_user=user, user_instance=None
@@ -82,12 +75,12 @@ def create_session_object(user):
     # This is the year that that audit period starts in
     audit_period = AuditPeriod.objects.get_default_audit_period()
 
-    submission_actions = get_submission_actions(pz_code, audit_period.audit_year())
+    submission_actions = get_submission_actions(pz_code, audit_period)
     audit_period_data = get_audit_period_session_data(audit_period, user)
 
     session = {
         "pz_code": pz_code,
-        "parent": primary_organisation.paediatric_diabetes_unit.parent_name,
+        "parent": primary_pdu.parent_name,
         "pdu_choices": list(pdu_choices),
         "selected_audit_year": audit_period.audit_year(),
     } | submission_actions | audit_period_data
@@ -100,9 +93,6 @@ def refresh_session_filters(request, pz_code=None, audit_year=None, csv_upload=N
 
     PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
     AuditPeriod = apps.get_model("npda", "AuditPeriod")
-
-    can_upload_csv = True
-    can_complete_questionnaire = True
 
     pz_code = pz_code or request.session.get("pz_code")
 
@@ -150,7 +140,7 @@ def refresh_session_filters(request, pz_code=None, audit_year=None, csv_upload=N
             "can_complete_questionnaire": True,
         }
     else:
-        session |= get_submission_actions(pz_code, audit_year)
+        session |= get_submission_actions(pz_code, audit_period)
     
     session |= get_audit_period_session_data(audit_period, request.user)
 

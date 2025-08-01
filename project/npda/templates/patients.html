@@ -13,7 +13,7 @@
         <div class="flex w-full justify-center mt-5 mb-5">
           <div class="alert alert-info w-2/5 text-white" role="alert">
             <i class="fa-solid fa-info"></i>
-            We don't have any data from {{ pdu.parent_name }} ({{ pdu.pz_code }}) for {{ selected_audit_year }}.
+            We don't have any data from {{ pdu.lead_organisation_name }} ({{ pdu.pz_code }}) for {{ audit_period.display_name }}.
             <br />
             Choose from the input methods below. You can't change after you add data.
           </div>
@@ -33,7 +33,7 @@
                 We recommend this method if you already have a system that can export in that format or are building one.
               </p>
               <div class="card-actions justify-end">
-                <a href="{% url 'upload_csv' %}"
+                <a href="{% data_url 'pdu-upload-csv' %}"
                    class="btn btn-info {% if not perms.npda.can_submit_csv %}btn-disabled{% endif %}">Select</a>
               </div>
             </div>
@@ -47,7 +47,7 @@
                 Use this method if you don't have an electronic patient record or you can't export from it in our CSV format.
               </p>
               <div class="card-actions justify-end">
-                <a href="{% url 'patient-add' %}"
+                <a href="{% data_url 'pdu-patient-add' %}"
                    class="btn btn-info {% if not perms.npda.can_submit_csv %}btn-disabled{% endif %}">Select</a>
               </div>
             </div>

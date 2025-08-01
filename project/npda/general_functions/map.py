@@ -2,6 +2,7 @@
 import logging
 import json
 import os
+from functools import cache
 
 # django imports
 from django.conf import settings
@@ -50,26 +51,25 @@ logger = logging.getLogger(__name__)
 Functions to return scatter plot of children by postcode
 """
 
+@cache
+def load_gdf(file):
+    file_path = os.path.join(
+        settings.BASE_DIR,
+        "project",
+        "constants",
+        "English IMD 2019",
+        file,
+    )
 
-def get_children_by_pdu_audit_year(
-    audit_year, paediatric_diabetes_unit, paediatric_diabetes_unit_lead_organisation
-):
+    gdf = gpd.GeoDataFrame.from_file(file_path)
+    return gdf
+
+
+def get_children_by_pdu_audit_year(submission, paediatric_diabetes_unit_lead_organisation):
     """
     Returns a list of children by postcode for a given audit year and paediatric diabetes unit
     """
     Patient = apps.get_model("npda", "Patient")
-    Submission = apps.get_model("npda", "Submission")
-
-    AuditPeriod = apps.get_model("npda", "AuditPeriod")
-    audit_period = AuditPeriod.objects.filter(
-        start_date__year=audit_year,
-    ).first()
-
-    submission = Submission.objects.filter(
-        audit_period=audit_period,
-        paediatric_diabetes_unit=paediatric_diabetes_unit,
-        submission_active=True,
-    ).first()
 
     if submission is None:
         return Patient.objects.none()
@@ -145,25 +145,9 @@ def generate_distance_from_organisation_scatterplot_figure(
     # # Load the IMD data (there are two files of merged data, one with IMD ranks merged with english LSOA shapes,
     # the other with IMD ranks merged with welsh LSOA shapes)
 
-    welsh_file_path = os.path.join(
-        settings.BASE_DIR,
-        "project",
-        "constants",
-        "English IMD 2019",
-        "merged_lsoa_wales.json",
-    )
-
-    english_file_path = os.path.join(
-        settings.BASE_DIR,
-        "project",
-        "constants",
-        "English IMD 2019",
-        "merged_lsoa_england.json",
-    )
-
     # store each of the files in a separate dataframe - this is needed because in some cases, both datasets are plotted together
-    welsh_gdf = gpd.GeoDataFrame.from_file(welsh_file_path)
-    english_gdf = gpd.GeoDataFrame.from_file(english_file_path)
+    welsh_gdf = load_gdf("merged_lsoa_wales.json")
+    english_gdf = load_gdf("merged_lsoa_england.json")
 
     english_gdf.set_geometry("geometry")
 
@@ -402,14 +386,62 @@ def generate_dataframe_and_aggregated_distance_data_from_cases(filtered_cases):
 
     if not geo_df.empty:
         if "location_wgs84" in geo_df.columns:
-            geo_df["longitude"] = geo_df["location_wgs84"].apply(lambda loc: loc.x)
-            geo_df["latitude"] = geo_df["location_wgs84"].apply(lambda loc: loc.y)
+            # Filter out rows with None or invalid geometry before processing
+            geo_df = geo_df[geo_df['location_wgs84'].notna()]
+            
+            # Additional validation to ensure geometries are valid
+            valid_geometries = []
+            for idx, row in geo_df.iterrows():
+                try:
+                    # Test if we can access x and y coordinates
+                    if row['location_wgs84'] is not None:
+                        _ = row['location_wgs84'].x
+                        _ = row['location_wgs84'].y
+                        valid_geometries.append(idx)
+                except (AttributeError, Exception):
+                    # Skip rows with invalid geometries
+                    continue
+            
+            # Keep only rows with valid geometries
+            geo_df = geo_df.loc[valid_geometries]
+            
+            # Check if we still have data after filtering
+            if geo_df.empty:
+                return {
+                    "max_distance_travelled_km": "~",
+                    "mean_distance_travelled_km": "~",
+                    "median_distance_travelled_km": "~",
+                    "std_distance_travelled_km": "~",
+                    "max_distance_travelled_mi": "~",
+                    "mean_distance_travelled_mi": "~",
+                    "median_distance_travelled_mi": "~",
+                    "std_distance_travelled_mi": "~",
+                }, pd.DataFrame()
+            
+            # Now safely extract coordinates
+            geo_df["longitude"] = geo_df["location_wgs84"].apply(lambda loc: loc.x if loc is not None else None)
+            geo_df["latitude"] = geo_df["location_wgs84"].apply(lambda loc: loc.y if loc is not None else None)
             geo_df["distance_km"] = geo_df["distance_from_lead_organisation"].apply(
-                lambda d: d.km
+                lambda d: d.km if d is not None else 0
             )
             geo_df["distance_mi"] = geo_df["distance_from_lead_organisation"].apply(
-                lambda d: d.mi
+                lambda d: d.mi if d is not None else 0
             )
+
+            # Remove any rows that still have None values after coordinate extraction
+            geo_df = geo_df.dropna(subset=['longitude', 'latitude'])
+            
+            if geo_df.empty:
+                return {
+                    "max_distance_travelled_km": "~",
+                    "mean_distance_travelled_km": "~",
+                    "median_distance_travelled_km": "~",
+                    "std_distance_travelled_km": "~",
+                    "max_distance_travelled_mi": "~",
+                    "mean_distance_travelled_mi": "~",
+                    "median_distance_travelled_mi": "~",
+                    "std_distance_travelled_mi": "~",
+                }, pd.DataFrame()
 
             max_distance_travelled_km = geo_df["distance_km"].max()
             mean_distance_travelled_km = geo_df["distance_km"].mean()
@@ -431,22 +463,26 @@ def generate_dataframe_and_aggregated_distance_data_from_cases(filtered_cases):
                 "median_distance_travelled_mi": f"{median_distance_travelled_mi:.2f}",
                 "std_distance_travelled_mi": f"{std_distance_travelled_mi:.2f}",
             }, geo_df
-    else:
-        geo_df["pk"] = None
-        geo_df["longitude"] = None
-        geo_df["latitude"] = None
-        geo_df["distance_km"] = 0
-        geo_df["distance_mi"] = 0
-        return {
-            "max_distance_travelled_km": f"~",
-            "mean_distance_travelled_km": f"~",
-            "median_distance_travelled_km": f"~",
-            "std_distance_travelled_km": f"~",
-            "max_distance_travelled_mi": f"~",
-            "mean_distance_travelled_mi": f"~",
-            "median_distance_travelled_mi": f"~",
-            "std_distance_travelled_mi": f"~",
-        }, geo_df
+    
+    # Return empty/default values if no valid data
+    empty_df = pd.DataFrame({
+        'pk': [],
+        'longitude': [],
+        'latitude': [],
+        'distance_km': [],
+        'distance_mi': []
+    })
+    
+    return {
+        "max_distance_travelled_km": "~",
+        "mean_distance_travelled_km": "~",
+        "median_distance_travelled_km": "~",
+        "std_distance_travelled_km": "~",
+        "max_distance_travelled_mi": "~",
+        "mean_distance_travelled_mi": "~",
+        "median_distance_travelled_mi": "~",
+        "std_distance_travelled_mi": "~",
+    }, empty_df
 
 
 def generate_geojson_of_imd_and_lsoa_boundaries_for_country(

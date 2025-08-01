@@ -1,16 +1,17 @@
 {% extends "dashboard/components/bases/base_secondary_card.html" %}
+{% load npda_tags %}
 {% block card_title %}
     Closed Loop
     {% include 'common/docs_icon_link_button.html' with rel_url="developer/kpis/hybrid_closed_loop_system" fa_icon_class="fa-solid fa-eye" %}
     <span class="tooltip" data-tip="See patient report">
-        {% url 'patient_report' as base_url %}
+        {% data_url 'pdu-patient-report' as base_url %}
         <a href="{{ base_url }}?category=treatment&sort=treatment_regimen&order=asc">
             <i class="fa-solid fa-arrow-up-right-from-square text-rcpch_pink"></i>
         </a>
     </span>
 {% endblock %}
 {% block card_content %}
-    <div hx-get="{% url 'get_n_on_hcl_partial' %}"
+    <div hx-get="{% data_url 'pdu-get-n-on-hcl-partial' %}"
          hx-trigger="load"
          hx-swap="innerHTML"
          _="on htmx:afterSwap remove #loading-spinner-n-on-hcl-card"></div>

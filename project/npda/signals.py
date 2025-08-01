@@ -203,7 +203,7 @@ def log_user_pdu_assignment(sender, instance, created, **kwargs):
     
     if created:
         # New PDU assignment
-        details = f"User {instance.npda_user.email} assigned to PDU {instance.paediatric_diabetes_unit.pz_code} ({instance.paediatric_diabetes_unit.parent_name}) by {current_user.email if current_user else 'system'}"
+        details = f"User {instance.npda_user.email} assigned to PDU {instance.paediatric_diabetes_unit.pz_code} ({instance.paediatric_diabetes_unit.lead_organisation_name}) by {current_user.email if current_user else 'system'}"
         
         _log_user_activity(
             user=instance.npda_user,
@@ -238,7 +238,7 @@ def log_user_pdu_removal(sender, instance, **kwargs):
     from .logging import get_current_user
     current_user = get_current_user()
     
-    details = f"User {instance.npda_user.email} removed from PDU {instance.paediatric_diabetes_unit.pz_code} ({instance.paediatric_diabetes_unit.parent_name}) by {current_user.email if current_user else 'system'}"
+    details = f"User {instance.npda_user.email} removed from PDU {instance.paediatric_diabetes_unit.pz_code} ({instance.paediatric_diabetes_unit.lead_organisation_name}) by {current_user.email if current_user else 'system'}"
     
     # _log_user_activity(
     #     user=instance.npda_user,
@@ -415,12 +415,13 @@ def _send_admin_notification(user, changes, current_user):
     """
     # send to admins
     try:
-        send_email_to_recipients(
-            recipients=settings.ADMIN_EMAIL_LIST,
-            subject=subject,
-            message=message
-        )
-        logger.info(f"Admin notification sent for user changes: {user.email}")
+        if settings.CHANGE_NOTIFICATION_EMAILS:
+            send_email_to_recipients(
+                recipients=settings.CHANGE_NOTIFICATION_EMAILS,
+                subject=subject,
+                message=message
+            )
+            logger.info(f"Admin notification sent for user changes: {user.email}")
     except Exception as e:
         logger.error(f"Failed to send admin notification for user {user.email}: {e}")
 
@@ -439,12 +440,13 @@ def _send_user_creation_notification(user, current_user):
     
     # Send to audit team members  
     try:
-        send_email_to_recipients(
-            recipients=settings.ADMIN_EMAIL_LIST,
-            subject=subject,
-            message=message
-        )
-        logger.info(f"User creation notification sent for: {user.email}")
+        if settings.CHANGE_NOTIFICATION_EMAILS:
+            send_email_to_recipients(
+                recipients=settings.CHANGE_NOTIFICATION_EMAILS,
+                subject=subject,
+                message=message
+            )
+            logger.info(f"User creation notification sent for: {user.email}")
     except Exception as e:
         logger.error(f"Failed to send user creation notification for {user.email}: {e}")
 
@@ -506,7 +508,7 @@ def _send_pdu_assignment_notification(organisation_employer_instance, current_us
     A user's PDU assignment has been modified:
     
     User: {user.get_full_name()} ({user.email})
-    PDU: {pdu.parent_name} ({pdu.pz_code})
+    PDU: {pdu.lead_organisation_name} ({pdu.pz_code})
     Action: User {action} PDU
     Modified by: {current_user.email if current_user else 'System'}
     
@@ -514,12 +516,13 @@ def _send_pdu_assignment_notification(organisation_employer_instance, current_us
     """
     # Send to audit team members
     try:
-        send_email_to_recipients(
-            recipients=settings.ADMIN_EMAIL_LIST,
-            subject=subject,
-            message=message
-        )
-        logger.info(f"PDU assignment notification sent for user {user.email}")
+        if settings.CHANGE_NOTIFICATION_EMAILS:
+            send_email_to_recipients(
+                recipients=settings.CHANGE_NOTIFICATION_EMAILS,
+                subject=subject,
+                message=message
+            )
+            logger.info(f"PDU assignment notification sent for user {user.email}")
     except Exception as e:
         logger.error(f"Failed to send PDU assignment notification for user {user.email}: {e}")
 
@@ -554,11 +557,12 @@ def _send_user_deletion_notification(user_instance, current_user):
     
     # Send to audit team members
     try:
-        send_email_to_recipients(
-            recipients=settings.ADMIN_EMAIL_LIST,
-            subject=subject,
-            message=message
-        )
-        logger.info(f"User deletion notification sent for: {deletion_data.get('email', 'Unknown')}")
+        if CHANGE_NOTIFICATION_EMAILS:
+            send_email_to_recipients(
+                recipients=settings.CHANGE_NOTIFICATION_EMAILS,
+                subject=subject,
+                message=message
+            )
+            logger.info(f"User deletion notification sent for: {deletion_data.get('email', 'Unknown')}")
     except Exception as e:
         logger.error(f"Failed to send user deletion notification: {e}")

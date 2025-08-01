@@ -16,6 +16,8 @@ There are 5 user types:
 
 The last group has no real implementation at the moment but in time it is hoped families will have accounts and can sanction inclusion of children/young people's data.
 
+Note that users cannot be deleted once created, only inactivated. This prevents them from logging in or gaining access in any way to the platform or its data. By retaining their email and record, an audit trail of their activity while using the platform can be retained.
+
 #### Permissions
 
 ### Reader
@@ -63,9 +65,9 @@ The last group has no real implementation at the moment but in time it is hoped 
 #### NPDAUser model
 
 The NPDAUser model subclasses the AbstractUser
-This has the basic django user functions but has the following extra custome fields
+This has the basic django user functions but has the following extra custom fields
 
-- `is_active`: boolean
+- `is_active`: boolean - not that if this is `False`, the user cannot login, and is automatically logged out if actively in a session: this is default django behaviour.
 - `is_staff`: boolean - this is a django field which defines access to the Django Admin
 - `is_superuser`: boolean - this is a django field which give access to all models, including the admin
 - `is_rcpch_audit_team_member`: boolean - a custom field that defines the user is an RCPCH audit team member
@@ -99,6 +101,7 @@ In addition to the above methods of authentication, a rotating image of numbers 
 For first use, a command line script can be used to import all users from a spreadsheet.
 
 key fields include:
+
 - first_name
 - surname
 - title
@@ -107,6 +110,7 @@ key fields include:
 - pz_code
 
 title can be blank. If provided it must be an integer - one of:
+
 1. Mr
 2. Mrs
 3. Ms
@@ -114,6 +118,7 @@ title can be blank. If provided it must be an integer - one of:
 5. Professor
 
 role cannot be blank. It must be an integer - one of:
+
 1. Coordinator
 2. Editor
 3. Reader
@@ -122,3 +127,20 @@ role cannot be blank. It must be an integer - one of:
 
 from the command line:
 `python manage.py import_users --file path`
+
+#### Logging
+
+Logging settings are in the `logging_settings.py` file and specify what level of logging is required for which event.
+
+In addition to logging, there are also signals set up in `signals.py` which listen for changes to the NPDAUser model, users logging in and out as well as using or setting up 2FA. For more important events, such as changing users, an email step is included.
+
+| Logging Triggers | Email Triggers |
+| --- | --- |
+|  'role' |  'is_superuser' |
+| 'is_active' |  'is_rcpch_audit_team_member' |
+| 'is_rcpch_audit_team_member', |  'is_rcpch_staff' |
+| 'is_rcpch_staff' |  'is_superuser' |
+| 'is_staff' |  'is_staff' |
+| 'email' |  'email |
+| 'first_name' | - |
+| 'surname' |  - |

@@ -10,9 +10,9 @@ from django.contrib.messages.views import SuccessMessageMixin
 from django.forms import BaseModelForm
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse, reverse_lazy
 from django.views.generic import ListView
 from django.views.generic.edit import CreateView, DeleteView, UpdateView
+from django.urls import reverse
 
 # RCPCH imports
 from ..forms.visit_form import VisitForm
@@ -25,9 +25,8 @@ from ..models import Patient, Transfer, Visit, AuditPeriod
 from .mixins import (
     CheckCanCompleteQuestionnaireMixin,
     CheckCurrentAuditYearMixin,
-    CheckPDUInstanceMixin,
-    CheckPDUListMixin,
     LoginAndOTPRequiredMixin,
+    PDUPermissionMixin
 )
 
 # Third party imports
@@ -35,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 class PatientVisitsListView(
-    LoginAndOTPRequiredMixin, CheckPDUListMixin, PermissionRequiredMixin, ListView
+    LoginAndOTPRequiredMixin, PDUPermissionMixin, PermissionRequiredMixin, ListView
 ):
     """
     The PatientVisitsListView class.
@@ -56,12 +55,10 @@ class PatientVisitsListView(
         patient_id = self.kwargs.get("patient_id")
         context = super(PatientVisitsListView, self).get_context_data(**kwargs)
         patient = Patient.objects.get(pk=patient_id)
-        audit_start_date = datetime.date(
-            year=int(self.request.session.get("selected_audit_year")), month=4, day=1
-        )
+        audit_period = self.audit_period
         submission = patient.submissions.filter(
             submission_active=True,
-            audit_year=self.request.session.get("selected_audit_year"),
+            audit_period=audit_period,
         ).first()
         visits = (
             Visit.objects.filter(  # filter visits to those within the audit year
@@ -69,7 +66,7 @@ class PatientVisitsListView(
             )
             .filter(
                 visit_falls_within_audit_period_Q_object(
-                    audit_start_date=audit_start_date, prepend_query_path=None
+                    audit_start_date=audit_period.start_date, prepend_query_path=None
                 )
             )
             .order_by("is_valid", "id")
@@ -84,6 +81,7 @@ class PatientVisitsListView(
         paediatric_diabetes_unit = submission.paediatric_diabetes_unit
 
         context["paediatric_diabetes_unit"] = paediatric_diabetes_unit
+        context["audit_period"] = audit_period
 
         return context
 
@@ -92,6 +90,7 @@ class VisitCreateView(
     LoginAndOTPRequiredMixin,
     PermissionRequiredMixin,
     SuccessMessageMixin,
+    PDUPermissionMixin,
     CheckCurrentAuditYearMixin,
     CheckCanCompleteQuestionnaireMixin,
     CreateView,
@@ -111,57 +110,9 @@ class VisitCreateView(
         context["button_title"] = "Create New Visit"
         context["visit_tabs"] = get_visit_tabs(form=None)
         context["override_height_weight"] = False
-        # Getting the PDU for the patient most of the time will be the same as the selected PDU in session.
-        # However, if the user has selected a different PDU in the session but has come here from a national view
-        # then we can't use that.
-        if self.request.user.view_preference == 2:
-            # we potentially have a choice here if the patient is in multiple PDUs
-            PatientSubmission = apps.get_model("npda", "PatientSubmission")
-            if (
-                PatientSubmission.objects.filter(
-                    patient=patient,
-                    submission__audit_year=self.request.session.get(
-                        "selected_audit_year"
-                    ),
-                    submission__submission_active=True,
-                ).count()
-                > 1
-            ):
-                # this patient has more than one active submission
-                # if the user has selected a PDU in the session, we can use that
-                if PatientSubmission.objects.filter(
-                    patient=patient,
-                    submission__audit_year=self.request.session.get(
-                        "selected_audit_year"
-                    ),
-                    submission__submission_active=True,
-                    submission__paediatric_diabetes_unit=PaediatricDiabetesUnit.objects.get(
-                        pz_code=self.request.session.get("pz_code")
-                    ),
-                ).exists():
-                    context["paediatric_diabetes_unit"] = (
-                        PaediatricDiabetesUnit.objects.get(
-                            pz_code=self.request.session.get("pz_code")
-                        )
-                    )
-                else:
-                    # if we can't use the PDU in the session, we shall have to use the first one
-                    context["paediatric_diabetes_unit"] = (
-                        PatientSubmission.objects.filter(
-                            patient=patient,
-                            submission__audit_year=self.request.session.get(
-                                "selected_audit_year"
-                            ),
-                            submission__submission_active=True,
-                        )
-                        .first()
-                        .submission.paediatric_diabetes_unit
-                    )
-        else:
-            PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
-            context["paediatric_diabetes_unit"] = PaediatricDiabetesUnit.objects.get(
-                pz_code=self.request.session.get("pz_code")
-            )
+
+        context["paediatric_diabetes_unit"] = patient.submissions.first().paediatric_diabetes_unit
+
         return context
 
     def get_success_url(self):
@@ -169,7 +120,7 @@ class VisitCreateView(
             self.request, messages.SUCCESS, "New visit added successfully"
         )
         return reverse(
-            "patient_visits", kwargs={"patient_id": self.kwargs["patient_id"]}
+            "pdu-patient-visits", kwargs={"patient_id": self.kwargs["patient_id"]}
         )
     
     def get_form_kwargs(self):
@@ -224,7 +175,7 @@ class VisitCreateView(
 
 class VisitUpdateView(
     LoginAndOTPRequiredMixin,
-    CheckPDUInstanceMixin,
+    PDUPermissionMixin,
     PermissionRequiredMixin,
     CheckCurrentAuditYearMixin,
     CheckCanCompleteQuestionnaireMixin,
@@ -254,8 +205,8 @@ class VisitUpdateView(
         messages.add_message(
             self.request, messages.SUCCESS, "Visit edited successfully"
         )
-        return reverse(
-            "patient_visits", kwargs={"patient_id": self.kwargs["patient_id"]}
+        return self.data_reverse(
+            "pdu-patient-visits", kwargs={"patient_id": self.kwargs["patient_id"]}
         )
 
     def get_initial(self):
@@ -269,12 +220,12 @@ class VisitUpdateView(
         # Get override_postcode from POST data if available
         if self.request.method in ('POST', 'PUT'):
             kwargs['override_height_weight'] = self.request.POST.get('override_height_weight', 'false') == 'true'
-            kwargs['audit_period'] = AuditPeriod.objects.get_audit_period_for_request(self.request)
+            kwargs['audit_period'] = self.audit_period
         return kwargs
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
         if "delete" in self.request.POST:
-            return redirect(reverse("visit-delete", kwargs={"pk": self.kwargs["pk"]}))
+            return redirect(self.data_reverse("pdu-visit-delete", kwargs={"pk": self.kwargs["pk"]}))
         visit = form.save(commit=True)
         visit.errors = None
         visit.is_valid = True
@@ -284,7 +235,7 @@ class VisitUpdateView(
             self.request, messages.SUCCESS, "Visit edited successfully"
         )
         return HttpResponseRedirect(
-            redirect_to=reverse("patient_visits", kwargs=context)
+            redirect_to=self.data_reverse("pdu-patient-visits", kwargs=context)
         )
     
     def form_invalid(self, form):
@@ -312,7 +263,7 @@ class VisitUpdateView(
 
 class VisitDeleteView(
     LoginAndOTPRequiredMixin,
-    CheckPDUInstanceMixin,
+    PDUPermissionMixin,
     PermissionRequiredMixin,
     SuccessMessageMixin,
     CheckCurrentAuditYearMixin,
@@ -322,22 +273,21 @@ class VisitDeleteView(
     permission_required = "npda.delete_visit"
     permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
     model = Visit
-    success_url = reverse_lazy("patient_visits")
     success_message = "Visit removed successfully"
 
     def get_success_url(self):
         messages.add_message(
             self.request, messages.SUCCESS, "Visit edited successfully"
         )
-        return reverse(
-            "patient_visits", kwargs={"patient_id": self.kwargs["patient_id"]}
+        return self.data_reverse(
+            "pdu-patient-visits", kwargs={"patient_id": self.kwargs["patient_id"]}
         )
 
     def post(self, request, *args, **kwargs):
         if "cancel" in request.POST:
             return redirect(
-                reverse(
-                    "visit-update",
+                self.data_reverse(
+                    "pdu-visit-update",
                     kwargs={
                         "pk": self.kwargs["pk"],
                         "patient_id": self.kwargs["patient_id"],

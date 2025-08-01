@@ -1,4 +1,5 @@
 {% extends 'dashboard/components/bases/base_card.html' %}
+{% load npda_tags %}
 {% block card_title %}
   Patient Measurements
   {% include 'common/docs_icon_link_button.html' with rel_url="developer/kpis/outcomes/#44-mean-hba1c" fa_icon_class="fa-solid fa-eye" %}
@@ -9,7 +10,7 @@
       <i class="fa-solid fa-person-circle-exclamation"></i> No eligible patients.
     </div>
   {% else %}
-    <div hx-get="{% url 'patient_measurements' %}"
+    <div hx-get="{% data_url 'pdu-patient-measurements' %}"
          hx-trigger="load"
          hx-swap="innerHTML"
          hx-target="#patient_measurements"

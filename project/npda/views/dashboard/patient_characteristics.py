@@ -28,12 +28,13 @@ from project.constants.colors import (
     RCPCH_LIGHTEST_GREY,
 )
 from project.constants import HBA1C_FORMATS
-from project.npda.models import Visit, AuditPeriod
-from project.npda.views.decorators import login_and_otp_required
+from project.npda.models import Visit, AuditPeriod, PaediatricDiabetesUnit
+from project.npda.views.decorators import login_and_otp_required, check_data_permissions
 
 
 @login_and_otp_required()
-def patient_ages(request):
+@check_data_permissions()
+def patient_ages(request, audit_period, pdu):
     """
     This function is used to generate the patient ages table
     """
@@ -117,26 +118,12 @@ def patient_ages(request):
         "not_specified": 0,
     }
 
-    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
-
     number_of_patients = 0
 
-    if Submission.objects.filter(
-        audit_year=audit_period.audit_year(),
-        submission_active=True,
-        paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
-        paediatric_diabetes_unit__active=True,
-    ).exists():
-        all_patients_in_this_submission = (
-            Submission.objects.filter(
-                audit_year=audit_period.audit_year(),
-                submission_active=True,
-                paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
-                paediatric_diabetes_unit__active=True,
-            )
-            .get()
-            .patients.all()
-        )
+    current_submission = Submission.objects.get_submission_for_request(pdu, audit_period)
+
+    if current_submission:
+        all_patients_in_this_submission = current_submission.patients.all() 
 
         comparison_date = audit_period.kpi_calculation_date()
 
@@ -223,11 +210,11 @@ def patient_ages(request):
 
 
 @login_and_otp_required()
-def all_patient_charts(request):
+@check_data_permissions()
+def all_patient_charts(request, audit_period, pdu):
     """
     This function is used to generate all the patient characteristics charts
     """
-    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
 
     imd_counts = {
         "1 (most deprived)": 0,
@@ -247,22 +234,10 @@ def all_patient_charts(request):
         "Unknown": 0,
     }
 
-    if Submission.objects.filter(
-        audit_year=audit_period.audit_year(),
-        submission_active=True,
-        paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
-        paediatric_diabetes_unit__active=True,
-    ).exists():
-        all_patients_in_this_submission = (
-            Submission.objects.filter(
-                audit_year=audit_period.audit_year(),
-                submission_active=True,
-                paediatric_diabetes_unit__pz_code=request.session.get("pz_code"),
-                paediatric_diabetes_unit__active=True,
-            )
-            .get()
-            .patients.all()
-        )
+    current_submission = Submission.objects.get_submission_for_request(pdu, audit_period)
+
+    if current_submission:
+        all_patients_in_this_submission = current_submission.patients.all()
 
         for patient in all_patients_in_this_submission.values(
             "pk",

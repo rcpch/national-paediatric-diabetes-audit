@@ -178,7 +178,8 @@ async def csv_upload_sync(
         csv_file_name=None,
         submission_active=True,
         user=user,
-        ip_address=None
+        ip_address=None,
+        new_dataframe= dataframe
     )
 
     return await csv_upload(
@@ -914,10 +915,12 @@ def test_additional_columns_causes_error(
     session['can_upload_csv'] = True
     session.save()
 
+    url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
+
     # Feed file to view
     with open(tmp_csv_path, "rb") as csv_file:
         response = client.post(
-            reverse('upload_csv'),
+            url,
             {
                 'csv_upload': csv_file
             },
@@ -955,9 +958,11 @@ def test_duplicate_columns_causes_error(single_row_valid_df, client, test_rcpch_
         csv = csv.replace("Date of Birth_2", "Date of Birth")
         # Reset the file pointer to the beginning of the file
         csv_file.seek(0)
+    
+        url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
 
         response = client.post(
-            reverse('upload_csv'),
+            url,
             {
                 'csv_upload': csv_file
             },
@@ -989,10 +994,12 @@ def test_missing_columns_causes_error(test_rcpch_user, single_row_valid_df, clie
     session['can_upload_csv'] = True
     session.save()
 
+    url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
+
     # Feed file into view
     with open(tmp_csv_path, "rb") as csv_file:
         response = client.post(
-            reverse('upload_csv'),
+            url,
             {
                 'csv_upload': csv_file
             },
@@ -1055,10 +1062,12 @@ def test_invalid_nhs_number_column_name(single_row_valid_df, client, test_rcpch_
     session['can_upload_csv'] = True
     session.save()
 
+    url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
+
     # Feed file into view
     with open(tmp_csv_path, "rb") as csv_file:
         response = client.post(
-            reverse('upload_csv'),
+            url,
             {
                 'csv_upload': csv_file
             },
@@ -1066,7 +1075,7 @@ def test_invalid_nhs_number_column_name(single_row_valid_df, client, test_rcpch_
         )
 
     assert response.status_code == 302
-    assert response.url == reverse("upload_csv")
+    assert response.url == url
     
     error_messages = list(get_messages(response.wsgi_request))
 
@@ -1200,11 +1209,13 @@ def test_missing_identifier_columns(test_rcpch_user, one_patient_two_visits, cli
     session['can_upload_csv'] = True
     session.save()
 
+    url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
+
     # Feed file into view
     with open(tmp_csv_path, "rb") as csv_file:
 
         response = client.post(
-            reverse('upload_csv'),
+            url,
             {
                 'csv_upload': csv_file
             },
@@ -1212,7 +1223,7 @@ def test_missing_identifier_columns(test_rcpch_user, one_patient_two_visits, cli
         )
 
     assert response.status_code == 302
-    assert response.url == reverse("upload_csv")
+    assert response.url == url
     
     error_messages = list(get_messages(response.wsgi_request))
     assert len(error_messages) == 1
@@ -1238,11 +1249,13 @@ def test_both_identifier_columns_causes_an_error(test_rcpch_user, one_patient_tw
     session['can_upload_csv'] = True
     session.save()
 
+    url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
+
     # Feed file into view
     with open(tmp_csv_path, "rb") as csv_file:
 
         response = client.post(
-            reverse('upload_csv'),
+            url,
             {
                 'csv_upload': csv_file
             },
@@ -1250,7 +1263,7 @@ def test_both_identifier_columns_causes_an_error(test_rcpch_user, one_patient_tw
         )
 
     assert response.status_code == 302
-    assert response.url == reverse("upload_csv")
+    assert response.url == url
     
     error_messages = list(get_messages(response.wsgi_request))
     assert len(error_messages) == 1

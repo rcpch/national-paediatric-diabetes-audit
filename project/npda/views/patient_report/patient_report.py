@@ -31,7 +31,7 @@ from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REAS
 from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.models import Patient, AuditPeriod, Visit
 from project.npda.models.db_functions import Round
-from project.npda.views.mixins import CheckPDUListMixin, LoginAndOTPRequiredMixin
+from project.npda.views.mixins import PDUPermissionMixin, LoginAndOTPRequiredMixin
 from django.db.models import QuerySet
 
 logger = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ class TableCategories(Enum):
 
 class PatientReportView(
     LoginAndOTPRequiredMixin,
-    CheckPDUListMixin,
+    PDUPermissionMixin,
     ListView,
 ):
     # Perms
@@ -147,12 +147,10 @@ class PatientReportView(
         if category not in TableCategories.values():
             raise ValueError(f"Invalid category: {category}")
         self.selected_category = category
-        pz_code = request.session.get("pz_code")
-        calculation_date = AuditPeriod.objects.get_audit_period_for_request(
-            self.request
-        ).kpi_calculation_date()
+        pz_code = self.pdu.pz_code
+        calculation_date = self.audit_period.kpi_calculation_date()
         calculate_kpis = CalculateKPIS(
-            calculation_date=calculation_date, return_pt_querysets=True
+            calculation_date=calculation_date, return_pt_querysets=True, is_jersey=pz_code == "PZ248"
         )
         calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
         patient_identifier = (
@@ -202,9 +200,9 @@ class PatientReportView(
             ).count()
             self.total_eligible_thyroid_screen = complete_year_patients.count()
             
-            # For age-specific checks (12+ years old)
+            # For age-specific checks (12+ years old at start of audit period)
             complete_year_12plus = complete_year_patients.filter(
-                date_of_birth__lte=calculation_date - relativedelta(years=12)
+                date_of_birth__lte=self.audit_period.start_date - relativedelta(years=12)
             )
             
             self.total_passed_blood_pressure = calculate_kpis.calculate_kpi_28_blood_pressure().patient_querysets["passed"].filter(
@@ -223,7 +221,7 @@ class PatientReportView(
             self.total_eligible_foot_exam = complete_year_12plus.count()
             pt_qs = pt_qs.annotate(
                 is_gte_12yo=Q(
-                    date_of_birth__lte=calculation_date - relativedelta(years=12)
+                    date_of_birth__lte=self.audit_period.start_date - relativedelta(years=12)
                 ),
                 passed_hba1c=Case(
                     When(
@@ -396,7 +394,7 @@ class PatientReportView(
                     output_field=BooleanField(),
                 ),
                 is_gte_12yo=Q(
-                    date_of_birth__lte=calculation_date - relativedelta(years=12)
+                    date_of_birth__lte=self.audit_period.start_date - relativedelta(years=12)
                 ),
                 smoking_status=Case(
                     When(
@@ -492,64 +490,52 @@ class PatientReportView(
                 "sick_day_rules_advice",
             )
         elif self.selected_category == TableCategories.CARE_AT_DIAGNOSIS.value:
-            today = date.today()
-            all_t1dm_pts = all_t1dm_pts.filter(
-                Q(diagnosis_date__gte=today - relativedelta(days=90))
-            )
-            all_t1dm_pts_with_complete_year_of_care = (
-                all_t1dm_pts_with_complete_year_of_care.filter(
-                    Q(diagnosis_date__gte=today - relativedelta(days=90))
-                )
-            )
-
-            pt_qs = (
-                pt_qs.filter(Q(diagnosis_date__gte=today - relativedelta(days=90)))
-                .annotate(
-                    coeliac_disease_screening=Case(
-                        When(
-                            Exists(
-                                calculate_kpis.calculate_kpi_41_coeliac_disease_screening()
-                                .patient_querysets["passed"]
-                                .filter(pk=OuterRef("pk"))
-                            ),
-                            then=True,
+            (pt_qs, _) = calculate_kpis.get_total_kpi_2_eligible_pts_base_query_set_and_total_count()
+            pt_qs = pt_qs.annotate(
+                patient_identifier=F(patient_identifier),
+                coeliac_disease_screening=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_41_coeliac_disease_screening()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
                         ),
-                        default=False,
-                        output_field=BooleanField(),
+                        then=True,
                     ),
-                    thyroid_disease_screening=Case(
-                        When(
-                            Exists(
-                                calculate_kpis.calculate_kpi_42_thyroid_disease_screening()
-                                .patient_querysets["passed"]
-                                .filter(pk=OuterRef("pk"))
-                            ),
-                            then=True,
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+                thyroid_disease_screening=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_42_thyroid_disease_screening()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
                         ),
-                        default=False,
-                        output_field=BooleanField(),
+                        then=True,
                     ),
-                    carbohydrate_counting_education=Case(
-                        When(
-                            Exists(
-                                calculate_kpis.calculate_kpi_43_carbohydrate_counting_education()
-                                .patient_querysets["passed"]
-                                .filter(pk=OuterRef("pk"))
-                            ),
-                            then=True,
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+                carbohydrate_counting_education=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_43_carbohydrate_counting_education()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
                         ),
-                        default=False,
-                        output_field=BooleanField(),
+                        then=True,
                     ),
-                )
-                .values(
-                    "pk",
-                    "patient_identifier",
-                    "is_complete_year_of_care",
-                    "coeliac_disease_screening",
-                    "thyroid_disease_screening",
-                    "carbohydrate_counting_education",
-                )
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+            ).values(
+                "pk",
+                "patient_identifier",
+                "diagnosis_date",
+                "coeliac_disease_screening",
+                "thyroid_disease_screening",
+                "carbohydrate_counting_education",
             )
         elif self.selected_category == TableCategories.ADMISSIONS.value:
             pt_qs = (
@@ -874,6 +860,8 @@ class PatientReportView(
         # Sort the queryset based on the selected sort field and order
         if sort_field:
             # Handle sort direction
+            if sort_field == "unique_identifier":
+                sort_field = "unique_reference_number" if pz_code == "PZ248" else "nhs_number"
             if sort_order == "desc":
                 sort_field = f"-{sort_field}"
 
@@ -900,7 +888,12 @@ class PatientReportView(
                 pt_qs = self._calculate_hba1c_values(pt_qs, calculate_kpis)
         else:
             # Default ordering
-            pt_qs = pt_qs.order_by("-is_complete_year_of_care", "nhs_number")
+            order_by = ["-is_complete_year_of_care", patient_identifier]
+
+            if self.selected_category == TableCategories.CARE_AT_DIAGNOSIS.value:
+                order_by = [patient_identifier]
+
+            pt_qs = pt_qs.order_by(*order_by)
             pt_qs = self._calculate_hba1c_values(pt_qs, calculate_kpis)
 
         return pt_qs
@@ -908,11 +901,7 @@ class PatientReportView(
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # Jersey
-        if self.request.session.get("pz_code") == "PZ248":
-            context["is_jersey"] = True
-        else:
-            context["is_jersey"] = False
+        context["is_jersey"] = self.pdu.pz_code == "PZ248"
 
         # Add table categories to the context
         context["table_categories"] = TableCategories.choices()

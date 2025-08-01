@@ -24,9 +24,9 @@ from project.npda.tests.factories.paediatrics_diabetes_unit_factory import (
 from project.constants.user import RCPCH_AUDIT_TEAM
 from project.npda.forms.patient_form import PatientForm
 from project.npda.forms.visit_form import VisitForm
-from project.npda.models import NPDAUser, Visit, Patient, Transfer, AuditPeriod
+from project.npda.models import NPDAUser, Patient, Transfer, AuditPeriod
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
-from project.npda.tests.utils import login_and_verify_user
+from project.npda.tests.utils import login_and_verify_user, create_submission
 from project.npda.tests.UserDataClasses import test_user_audit_centre_editor_data
 from project.npda.general_functions import audit_period
 from project.npda.tests.factories.visit_factory import VisitFactory, COMPLETED_VISIT
@@ -105,8 +105,6 @@ class TestQuestionnaireView:
         session = self.client.session
         session["can_upload_csv"] = False
         session["can_complete_questionnaire"] = True
-        session["pz_code"] = ALDER_HEY_PZ_CODE
-        session["selected_audit_year"] = self.audit_period.audit_year()
         session.save()
 
     def test_users_with_correct_permissions_can_save_patient(self):
@@ -117,7 +115,7 @@ class TestQuestionnaireView:
         form = PatientForm(VALID_FIELDS)
 
         # url
-        url = reverse("patient-add")
+        url = reverse("pdu-patient-add", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE})
 
         # Post the patient data
         response = self.client.post(url, form.data)
@@ -141,7 +139,7 @@ class TestQuestionnaireView:
         self.audit_period.save()
 
         # url
-        url = reverse("patient-add")
+        url = reverse("pdu-patient-add", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE})
 
         # Post the patient data
         response = self.client.post(url, form.data)
@@ -168,7 +166,7 @@ class TestQuestionnaireView:
         self.ah_user.save()
 
         # url
-        url = reverse("patient-add")
+        url = reverse("pdu-patient-add", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE})
 
         # Post the patient data
         response = self.client.post(url, form.data)
@@ -191,7 +189,7 @@ class TestQuestionnaireView:
         form = PatientForm(VALID_FIELDS)
 
         # url
-        url = reverse("patient-add")
+        url = reverse("pdu-patient-add", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE})
 
         # Post the patient data
         response = self.client.post(url, form.data)
@@ -219,7 +217,7 @@ class TestQuestionnaireView:
         form = PatientForm(VALID_FIELDS)
 
         # url
-        url = reverse("patient-add")
+        url = reverse("pdu-patient-add", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE})
 
         # Post the patient data
         response = self.client.post(url, form.data)
@@ -233,13 +231,20 @@ class TestQuestionnaireView:
         """
         Test that users who do have questionnaire permission can save a visit through the questionnaire view.
         """
-        # Create a patient
-        patient = PatientFactory()
+        patient = PatientFactory(
+            transfer__paediatric_diabetes_unit__pz_code=ALDER_HEY_PZ_CODE
+        )
+
+        sub = create_submission(
+            audit_start_date=date.today(),
+            pz_code=ALDER_HEY_PZ_CODE,
+        )
+        patient.submissions.add(sub)
 
         form = VisitForm(data=COMPLETED_VISIT, initial={"patient": patient})
 
         # url
-        url = reverse("visit-create", kwargs={"patient_id": patient.pk})
+        url = reverse("pdu-visit-create", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "patient_id": patient.pk})
 
         # Post the patient data
         response = self.client.post(url, form.data)
@@ -264,7 +269,7 @@ class TestQuestionnaireView:
         session.save()
 
         # url
-        url = reverse("visit-create", kwargs={"patient_id": patient.pk})
+        url = reverse("pdu-visit-create", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "patient_id": patient.pk})
 
         # Post the patient data
         response = self.client.post(url, form.data)
@@ -289,7 +294,7 @@ class TestQuestionnaireView:
         session["can_complete_questionnaire"] = False
         session.save()
 
-        url = reverse("patient-update", kwargs={"pk": patient.pk})
+        url = reverse("pdu-patient-update", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "pk": patient.pk})
 
         response = self.client.get(url)
         assert response.status_code == 200
@@ -313,7 +318,9 @@ class TestQuestionnaireView:
         session["can_complete_questionnaire"] = False
         session.save()
 
-        url = reverse("visit-update", kwargs={
+        url = reverse("pdu-visit-update", kwargs={
+            "audit_period": self.audit_period.slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
             "patient_id": patient.pk,
             "pk": visit.pk
         })

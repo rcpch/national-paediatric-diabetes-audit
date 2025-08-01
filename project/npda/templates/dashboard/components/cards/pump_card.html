@@ -1,15 +1,16 @@
 {% extends "dashboard/components/bases/base_secondary_card.html" %}
+{% load npda_tags %}
 {% block card_title %}
     Pump
     {% include 'common/docs_icon_link_button.html' with rel_url="developer/kpis/treatment_regimen/#15-insulin-pump-including-those-using-a-pump-as-part-of-a-hybrid-closed-loop" fa_icon_class="fa-solid fa-eye" %}
     <span class="tooltip" data-tip="See patient report">
-        {% url 'patient_report' as base_url %}
+        {% data_url 'pdu-patient-report' as base_url %}
         <a href="{{ base_url }}?category=treatment&sort=treatment_regimen&order=desc">
             <i class="fa-solid fa-arrow-up-right-from-square text-rcpch_pink"></i>
         </a>
     {% endblock %}
     {% block card_content %}
-        <div hx-get="{% url 'get_pump_partial' %}"
+        <div hx-get="{% data_url 'pdu-get-pump-partial' %}"
              hx-trigger="load"
              hx-swap="innerHTML"
              _="on htmx:afterSwap remove #loading-spinner-pump-card"></div>
