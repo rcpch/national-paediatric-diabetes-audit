@@ -46,9 +46,18 @@ def test_anonymous_user_cannot_access_patient_report(
     """Anonymous users should not be able to access the patient report."""
 
     for url in patient_report_urlpatterns:
-        response = client.get(reverse(url.name))
+        if url.name.startswith("pdu-"):
+            resolved_url = reverse(url.name, kwargs={
+                "audit_period": "2023-2024",
+                "pz_code": ALDER_HEY_PZ_CODE
+            })
+        else:
+            resolved_url = reverse(url.name)
+
+        response = client.get(resolved_url)
+
         assert response.status_code == HTTPStatus.FOUND
-        assert response.url == reverse("login") + "?next=" + reverse(url.name)
+        assert response.url == reverse("login") + "?next=" + resolved_url
 
 
 @pytest.mark.django_db
@@ -100,7 +109,10 @@ def test_no_duplicate_patients_in_report(
     new_submission.patients.add(*new_pts)
 
     # Get the patient report
-    response = client.get(reverse("patient_report"))
+    response = client.get(reverse("pdu-patient-report", kwargs={
+        "audit_period": audit_period.slug,
+        "pz_code": ALDER_HEY_PZ_CODE
+    }))
     assert response.status_code == HTTPStatus.OK
 
     assert isinstance(response.context["patients"], list)
@@ -185,9 +197,14 @@ def test_outcomes_no_hba1c_measurements(
     )
     submission.patients.add(patient)
 
+    url = reverse("pdu-patient-report", kwargs={
+        "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+        "pz_code": ALDER_HEY_PZ_CODE
+    })
+
     # Get the patient report with outcomes category
     response = client.get(
-        reverse("patient_report") + f"?category={TableCategories.OUTCOMES.value}",
+        url + f"?category={TableCategories.OUTCOMES.value}",
         HTTP_HX_REQUEST="true",
     )
     assert response.status_code == HTTPStatus.OK
@@ -248,9 +265,14 @@ def test_outcomes_single_hba1c_measurement(
     )
     submission.patients.add(patient)
 
+    url = reverse("pdu-patient-report", kwargs={
+        "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+        "pz_code": ALDER_HEY_PZ_CODE
+    })
+
     # Get the patient report with outcomes category
     response = client.get(
-        reverse("patient_report") + f"?category={TableCategories.OUTCOMES.value}",
+        url + f"?category={TableCategories.OUTCOMES.value}",
         HTTP_HX_REQUEST="true",
     )
     assert response.status_code == HTTPStatus.OK
@@ -323,9 +345,14 @@ def test_outcomes_multiple_hba1c_measurements(
     )
     submission.patients.add(patient)
 
+    url = reverse("pdu-patient-report", kwargs={
+        "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+        "pz_code": ALDER_HEY_PZ_CODE
+    })
+
     # Get the patient report with outcomes category
     response = client.get(
-        reverse("patient_report") + f"?category={TableCategories.OUTCOMES.value}",
+        url + f"?category={TableCategories.OUTCOMES.value}",
         HTTP_HX_REQUEST="true",
     )
     assert response.status_code == HTTPStatus.OK
@@ -398,8 +425,13 @@ def test_report_for_patients_turning_12_in_audit_year(
     )
     submission.patients.add(patient)
 
+    url = reverse("pdu-patient-report", kwargs={
+        "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+        "pz_code": ALDER_HEY_PZ_CODE
+    })
+
     response = client.get(
-        reverse("patient_report") + f"?category={TableCategories.HEALTH_CHECKS.value}",
+        url + f"?category={TableCategories.HEALTH_CHECKS.value}",
         HTTP_HX_REQUEST="true",
     )
     assert response.status_code == HTTPStatus.OK
@@ -417,8 +449,13 @@ def test_report_for_patients_turning_12_in_audit_year(
     assert response.context["total_eligible_urinary_albumin"] == 0
     assert response.context["total_eligible_foot_exam"] == 0
 
+    url = reverse("pdu-patient-report", kwargs={
+        "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+        "pz_code": ALDER_HEY_PZ_CODE
+    })
+
     response = client.get(
-        reverse("patient_report") + f"?category={TableCategories.ADDITIONAL_CARE_PROCESSES.value}",
+        url + f"?category={TableCategories.ADDITIONAL_CARE_PROCESSES.value}",
         HTTP_HX_REQUEST="true",
     )
     assert response.status_code == HTTPStatus.OK

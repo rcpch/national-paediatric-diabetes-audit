@@ -31,7 +31,7 @@ from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REAS
 from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.models import Patient, AuditPeriod, Visit
 from project.npda.models.db_functions import Round
-from project.npda.views.mixins import CheckPDUListMixin, LoginAndOTPRequiredMixin
+from project.npda.views.mixins import PDUPermissionMixin, LoginAndOTPRequiredMixin
 from django.db.models import QuerySet
 
 logger = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ class TableCategories(Enum):
 
 class PatientReportView(
     LoginAndOTPRequiredMixin,
-    CheckPDUListMixin,
+    PDUPermissionMixin,
     ListView,
 ):
     # Perms
@@ -147,9 +147,8 @@ class PatientReportView(
         if category not in TableCategories.values():
             raise ValueError(f"Invalid category: {category}")
         self.selected_category = category
-        pz_code = request.session.get("pz_code")
-        audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
-        calculation_date = audit_period.kpi_calculation_date()
+        pz_code = self.pdu.pz_code
+        calculation_date = self.audit_period.kpi_calculation_date()
         calculate_kpis = CalculateKPIS(
             calculation_date=calculation_date, return_pt_querysets=True, is_jersey=pz_code == "PZ248"
         )
@@ -203,7 +202,7 @@ class PatientReportView(
             
             # For age-specific checks (12+ years old at start of audit period)
             complete_year_12plus = complete_year_patients.filter(
-                date_of_birth__lte=audit_period.start_date - relativedelta(years=12)
+                date_of_birth__lte=self.audit_period.start_date - relativedelta(years=12)
             )
             
             self.total_passed_blood_pressure = calculate_kpis.calculate_kpi_28_blood_pressure().patient_querysets["passed"].filter(
@@ -222,7 +221,7 @@ class PatientReportView(
             self.total_eligible_foot_exam = complete_year_12plus.count()
             pt_qs = pt_qs.annotate(
                 is_gte_12yo=Q(
-                    date_of_birth__lte=audit_period.start_date - relativedelta(years=12)
+                    date_of_birth__lte=self.audit_period.start_date - relativedelta(years=12)
                 ),
                 passed_hba1c=Case(
                     When(
@@ -395,7 +394,7 @@ class PatientReportView(
                     output_field=BooleanField(),
                 ),
                 is_gte_12yo=Q(
-                    date_of_birth__lte=audit_period.start_date - relativedelta(years=12)
+                    date_of_birth__lte=self.audit_period.start_date - relativedelta(years=12)
                 ),
                 smoking_status=Case(
                     When(
