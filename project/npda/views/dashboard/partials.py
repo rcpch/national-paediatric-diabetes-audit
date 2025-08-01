@@ -4,8 +4,6 @@ from datetime import date
 
 import plotly.graph_objects as go
 import plotly.io as pio
-from django.apps import apps
-from django.contrib import messages
 
 # Django imports
 from django.http import HttpResponseBadRequest
@@ -24,13 +22,10 @@ from project.npda.general_functions.rcpch_nhs_organisations import (
     fetch_organisation_by_ods_code,
 )
 from project.npda.kpi_class.kpis import CalculateKPIS
-from project.npda.models.paediatric_diabetes_unit import (
-    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
-)
 from project.npda.models.submission import Submission
 from project.npda.models.audit_period import AuditPeriod
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
-from project.npda.views.decorators import login_and_otp_required
+from project.npda.views.decorators import login_and_otp_required, check_data_permissions
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +104,8 @@ def get_map_chart_partial(request):
 
 
 @login_and_otp_required()
-def get_metric_scatter_plot(request):
+@check_data_permissions()
+def get_metric_scatter_plot(request, audit_period, pdu):
     """HTMX view that accepts a GET request with an object of waffle labels and percentages,
     returning a waffle chart rendered.
 
@@ -122,9 +118,9 @@ def get_metric_scatter_plot(request):
 
         if request.method == "POST":
             selected_chart = request.POST["scatter_plot_select"]
-            calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
+            calculation_date = audit_period.kpi_calculation_date()
             data, title, tooltip_text = get_selected_chart_data(
-                selected_chart, calculation_date, request.session.get("pz_code")
+                selected_chart, calculation_date, pdu.pz_code
             )
 
         if request.method == "GET":
