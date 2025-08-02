@@ -64,7 +64,7 @@ def create_session_object(user):
     """
     AuditPeriod = apps.get_model("npda", "AuditPeriod")
     
-    pz_code = user.primary_pdu.pz_code()
+    pz_code = user.primary_pdu().pz_code
     pdu_choices = (
         organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
             requesting_user=user, user_instance=None
