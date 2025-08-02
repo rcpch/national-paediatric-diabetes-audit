@@ -86,8 +86,8 @@ class PDUPermissionMixin(AccessMixin):
         if not request.user.is_authenticated:
             return self.handle_no_permission()
 
-        audit_period = AuditPeriod.objects.get_audit_period_for_request(request, *args, **kwargs)
-        pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(request, *args, **kwargs)
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
+        pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(request)
 
         model = self.get_model().__name__
 
@@ -137,7 +137,7 @@ class CheckCurrentAuditYearMixin(AccessMixin):
 
 
 class QuestionnaireContextMixin(AccessMixin):
-    def get_context_data(self, **kwargs):
+    def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(**kwargs)
 
         audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)

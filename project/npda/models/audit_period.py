@@ -16,20 +16,22 @@ class AuditPeriodManager(models.Manager):
 
         return audit_period
 
-    def get_audit_period_for_request(self, request, *args, **kwargs):
+    def get_audit_period_for_request(self, request):
         can_view_all_data = request.user.is_superuser or request.user.is_rcpch_audit_team_member
 
-        if "audit_period" in kwargs:
+        if request.resolver_match and "audit_period" in request.resolver_match.kwargs:
+            slug = request.resolver_match.kwargs["audit_period"]
+
             try:
-                audit_period = AuditPeriod.objects.get(slug=kwargs["audit_period"])
+                audit_period = AuditPeriod.objects.get(slug=slug)
             except AuditPeriod.DoesNotExist as e:
                 if not can_view_all_data:
-                    raise PermissionDenied(f"Audit period {kwargs['audit_period']} does not exist")
+                    raise PermissionDenied(f"Audit period {slug} does not exist")
 
                 raise e
 
             if not audit_period.is_visible and not can_view_all_data:
-                raise PermissionDenied(f"Audit period {kwargs['audit_period']} is not visible")
+                raise PermissionDenied(f"Audit period {slug} is not visible")
         else:
             selected_audit_year = request.session.get("selected_audit_year", None)
 
