@@ -395,9 +395,6 @@ async def upload_csv(request, audit_period, pdu):
         
         upload_csv_task.delay(new_submission.id)
 
-        # update the session fields - this stores that the user has uploaded a csv and disables the ability to use the questionnaire
-        await sync_to_async(refresh_session_filters)(request, csv_upload=True)
-
         await sync_to_async(save_csv_uploading_user_to_visitactivity)(request=request)
         
         return redirect("pdu-upload-csv-in-progress",
