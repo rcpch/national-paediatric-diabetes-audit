@@ -147,9 +147,8 @@ class CheckCanCompleteQuestionnaireMixin(AccessMixin):
         audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
         pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(self.request)
 
-        submission = Submission.objects.get_submission_for_request(self.request, audit_period, pdu)
+        submission = Submission.objects.get_submission_for_request(pdu, audit_period)
 
-        is_audit_year_open = audit_period and audit_period.is_open
         is_csv_upload = submission and submission.csv_file_name is not None
         is_questionnaire = not is_csv_upload if submission else True
 
@@ -161,19 +160,25 @@ class CheckCanCompleteQuestionnaireMixin(AccessMixin):
             "is_questionnaire": is_questionnaire,
             "can_override_data_upload_rules": can_override_data_upload_rules,
             "data_upload_rules_overridden": data_upload_rules_overridden,
-            "can_use_questionnaire": data_upload_rules_overridden or (is_audit_year_open and is_questionnaire),
+            "can_use_questionnaire": data_upload_rules_overridden or is_questionnaire,
         }
 
     def dispatch(self, request, *args, **kwargs):
-        # Check if the user has the permission to complete the questionnaire
-        if not request.session.get("can_complete_questionnaire"):
-            if request.method == "GET" or request.user.is_superuser or request.user.is_rcpch_audit_team_member:
-                # Allow superusers and RCPCH audit team members to complete the questionnaire
-                return super().dispatch(request, *args, **kwargs)
+        # Overriding data upload rules just applies in the UI
+        if request.user.is_superuser or request.user.is_rcpch_audit_team_member:
+            return super().dispatch(request, *args, **kwargs)
 
-            logger.warning(
-                f"User {request.user} tried to complete the questionnaire without the permission to do so."
-            )
-            raise PermissionDenied()
+        if request.method != "GET":
+            audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
+            pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(self.request)
+
+            submission = Submission.objects.get_submission_for_request(pdu, audit_period)
+            is_questionnaire = not submission.csv_file_name if submission else True
+
+            if not is_questionnaire:
+                logger.warning(
+                    f"User {request.user} tried to complete the questionnaire for a CSV upload submission."
+                )
+                raise PermissionDenied()
 
         return super().dispatch(request, *args, **kwargs)
