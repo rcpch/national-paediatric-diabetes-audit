@@ -51,7 +51,6 @@ def session_data(request):
         # Required for the url-data helper
         "pz_code": pz_code,
         "audit_period_slug": audit_period_slug,
-        "parent_name": request.session.get("parent_name", None),
         "audit_years": request.session.get("audit_years", []),
         # Required for switcher
         "selected_audit_year": current_audit_year(audit_period_slug),
