@@ -404,8 +404,7 @@ async def upload_csv(request, audit_period, pdu):
             audit_period=audit_period.slug
         )
 
-    context = {"employers": OrganisationEmployer.objects.filter(npda_user=request.user)}
-    return render(request, "upload_csv/file_upload.html", context=context)
+    return render(request, "upload_csv/file_upload.html", context={ "pdu": pdu })
 
 @login_and_otp_required()
 @check_data_permissions()
@@ -453,33 +452,6 @@ def upload_csv_in_progress(request, audit_period, pdu):
             
 
     return render(request, "upload_csv/upload_in_progress.html", context=context)
-
-@login_and_otp_required()
-def switch_paediatric_diabetes_unit(request):
-    """
-    Switch the Paediatric Diabetes Unit in the session.
-    This is an HTMX view.
-    """
-    template = "partials/submission_employer_selector.html"
-    error_message = None
-
-    selected_pz_code = request.POST.get("employers")
-    if selected_pz_code == request.session.get("pz_code"):
-        return HttpResponse(status=200)
-
-    try:
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=selected_pz_code)
-    except PaediatricDiabetesUnit.DoesNotExist as error:
-        error_message = f"Error: {error}. Please contact the NPDA team."
-
-    context = {
-        "employers": OrganisationEmployer.objects.filter(npda_user=request.user),
-        "error_message": error_message,
-    }
-    # update the session with the new PDU
-    refresh_session_filters(request, pz_code=selected_pz_code)
-
-    return render(request, template, context=context)
 
 def create_column_chart(pdus_by_latest_submission, selected_audit_period):
     """

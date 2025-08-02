@@ -43,11 +43,6 @@ urlpatterns = [
     path(f"{data_prefix}/upload_csv", view=upload_csv, name="pdu-upload-csv"),
     path("upload_csv_in_progress", view=upload_csv_in_progress, name="upload-csv-in-progress"),
     path(f"{data_prefix}/upload_csv_in_progress", view=upload_csv_in_progress, name="pdu-upload-csv-in-progress"),
-    path(
-        "switch_paediatric_diabetes_unit",
-        view=switch_paediatric_diabetes_unit,
-        name="switch_paediatric_diabetes_unit",
-    ),
     # Submission views
     path(
         "submissions",
