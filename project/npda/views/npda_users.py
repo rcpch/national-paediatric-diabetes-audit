@@ -160,7 +160,7 @@ class NPDAUserCreateView(
     def form_valid(self, form):
         PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
 
-        new_user_pz_code = form.cleaned_data["add_employer"]
+        new_user_pz_code = form.cleaned_data["add_employer"] or self.request.user.primary_pdu().pz_code
 
         my_pz_codes = self.request.user.organisation_employers.values_list("pz_code", flat=True)
 
