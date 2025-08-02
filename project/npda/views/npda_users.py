@@ -155,13 +155,12 @@ class NPDAUserCreateView(
         context["title"] = "Add New NPDA User"
         context["button_title"] = "Add"
         context["form_method"] = "create"
-        context["selected_pdu"] = self.request.session.get("pz_code")
         return context
 
     def form_valid(self, form):
         PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
 
-        new_user_pz_code = form.cleaned_data["add_employer"] or self.request.session.get("pz_code")
+        new_user_pz_code = form.cleaned_data["add_employer"]
 
         my_pz_codes = self.request.user.organisation_employers.values_list("pz_code", flat=True)
 
