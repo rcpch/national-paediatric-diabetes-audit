@@ -1,4 +1,5 @@
 {% csrf_token %}
+{% load npda_tags %}
 <div role="alert" class="alert border-t-1 border-blue-400 shadow-lg mt-5">
   <i class="fa-2xl fa-info-circle fa-solid"></i>
   <div>
@@ -10,18 +11,12 @@
           If this is incorrect, please select the correct employer below.
         </p>
         <form class="filter">
-          {% for employer in employers %}
-            <input class="btn filter-reset"
-                   {% if employer.paediatric_diabetes_unit.pz_code == request.session.pz_code %}checked{% endif %}
-                   hx-post="{% url 'switch_paediatric_diabetes_unit' %}"
-                   hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                   hx-trigger="click"
-                   hx-target="#employer-selector"
-                   hx-swap="innerHTML"
-                   type="radio"
-                   name="employers"
-                   value="{{ employer.paediatric_diabetes_unit.pz_code }}"
-                   aria-label="{{ employer.paediatric_diabetes_unit.lead_organisation_name }} ({{ employer.paediatric_diabetes_unit.pz_code }})" />
+          {% for pdu_choice in request.session.pdu_choices %}
+            {% if pdu_choice.0 != pdu.pz_code %}
+            <a class="btn text-xs" href="{% data_url 'pdu-upload-csv' pz_code=pdu_choice.0 %}">
+              {{ pdu_choice.0 }} ({{ pdu_choice.1 }})
+            </a>
+            {% endif %}
           {% endfor %}
         </form>
       {% endif %}
