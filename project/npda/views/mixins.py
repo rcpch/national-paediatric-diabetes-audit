@@ -14,6 +14,7 @@ from project.npda.models.patient import Patient
 from project.npda.models.audit_period import AuditPeriod
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 from project.npda.models.transfer import Transfer
+from project.npda.models.submission import Submission
 from django.urls import reverse
 
 
@@ -137,32 +138,30 @@ class CheckCurrentAuditYearMixin(AccessMixin):
 
 class CheckCanCompleteQuestionnaireMixin(AccessMixin):
     """
-    A mixin that checks whether the user can complete the questionnaire:
-      - The submission is not a CSV upload (can_complete_questionnaire = True)
-      - The submission is not a CSV upload
-        - and the operation is a GET (the UI has code to display read only)
-        - or you are a superuser or audit team member
-    
+    A mixin that checks whether the user can complete the questionnaire.
     It also returns context data for templates to conditionally render UI based on the type of upload.
     """
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
         audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
+        pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(self.request)
 
-        session_is_audit_year_open = audit_period and audit_period.is_open
-        session_can_upload_csv = self.request.session.get("can_upload_csv", True)
-        session_can_use_questionnaire = self.request.session.get("can_complete_questionnaire", True)
+        submission = Submission.objects.get_submission_for_request(self.request, audit_period, pdu)
+
+        is_audit_year_open = audit_period and audit_period.is_open
+        is_csv_upload = submission and submission.csv_file_name is not None
+        is_questionnaire = not is_csv_upload if submission else True
 
         can_override_data_upload_rules = self.request.user.is_superuser or getattr(self.request.user, "is_rcpch_audit_team_member", False)
         data_upload_rules_overridden = can_override_data_upload_rules and self.request.GET.get("unlock", False)
 
         return context | {
-            "is_csv_upload": session_can_upload_csv,
-            "is_questionnaire": session_can_use_questionnaire,
+            "is_csv_upload": is_csv_upload,
+            "is_questionnaire": is_questionnaire,
             "can_override_data_upload_rules": can_override_data_upload_rules,
             "data_upload_rules_overridden": data_upload_rules_overridden,
-            "can_use_questionnaire": data_upload_rules_overridden or (session_is_audit_year_open and session_can_use_questionnaire),
+            "can_use_questionnaire": data_upload_rules_overridden or (is_audit_year_open and is_questionnaire),
         }
 
     def dispatch(self, request, *args, **kwargs):

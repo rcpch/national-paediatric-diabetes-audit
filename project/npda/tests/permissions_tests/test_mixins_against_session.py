@@ -1,7 +1,3 @@
-"""
-Test that users who do not have the can_upload_csv permission cannot save a patient through the questionnaire view.
-"""
-import dataclasses
 import logging
 from datetime import date
 from decimal import Decimal
@@ -9,7 +5,6 @@ from unittest.mock import Mock, patch
 
 # Django imports
 from django.contrib.sessions.middleware import SessionMiddleware
-from django.utils import timezone
 from django.urls import reverse
 from django.contrib.gis.geos import Point
 
@@ -18,9 +13,6 @@ import pytest
 
 # E12 imports
 from project.npda.tests.factories.patient_factory import PatientFactory, VALID_FIELDS
-from project.npda.tests.factories.paediatrics_diabetes_unit_factory import (
-    PaediatricsDiabetesUnitFactory,
-)
 from project.constants.user import RCPCH_AUDIT_TEAM
 from project.npda.forms.patient_form import PatientForm
 from project.npda.forms.visit_form import VisitForm
@@ -28,7 +20,6 @@ from project.npda.models import NPDAUser, Patient, Transfer, AuditPeriod
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 from project.npda.tests.utils import login_and_verify_user, create_submission
 from project.npda.tests.UserDataClasses import test_user_audit_centre_editor_data
-from project.npda.general_functions import audit_period
 from project.npda.tests.factories.visit_factory import VisitFactory, COMPLETED_VISIT
 from project.npda.tests.factories.patient_factory import (
     VALID_FIELDS,
@@ -94,18 +85,6 @@ class TestQuestionnaireView:
         ).first()
 
         self.client = login_and_verify_user(self.client, self.ah_user)
-
-        # Initialize the session
-        middleware = SessionMiddleware(get_response=lambda request: None)
-        request = self.client.request().wsgi_request
-        middleware.process_request(request)
-        request.session.save()
-
-        # Modify the session
-        session = self.client.session
-        session["can_upload_csv"] = False
-        session["can_complete_questionnaire"] = True
-        session.save()
 
     def test_users_with_correct_permissions_can_save_patient(self):
         """
