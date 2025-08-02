@@ -244,7 +244,7 @@
   <div class="hero-content text-center">
     <div class="max-w-md">
       <h1 class="text-5xl font-bold font-montserrat text-rcpch_light_blue">
-        {% if request.session.can_complete_questionnaire %}
+        {% if can_use_questionnaire %}
           Start your {{ audit_period.display_name }} submission by adding a patient...
         {% else %}
           You have no patients in your submission for {{ audit_period.display_name }}...
@@ -253,7 +253,7 @@
       <i class="fa-solid fa-hand-sparkles text-5xl text-rcpch_light_blue opacity-0 animate-sparkle mt-2"></i>
       {% if perms.npda.add_patient %}
         <div class="py-6">
-          {% if request.session.can_complete_questionnaire %}
+          {% if can_use_questionnaire %}
             <a href="{% data_url 'pdu-patient-add' %}"
                class="btn btn-info h-auto w-full md:w-auto">
               <i class="fa-solid fa-person-circle-plus"></i>

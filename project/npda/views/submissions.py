@@ -306,8 +306,10 @@ class SubmissionsListView(
 @login_and_otp_required()
 @check_data_permissions()
 async def upload_csv(request, audit_period, pdu):
-    if request.session.get("can_upload_csv") is False:
-        # If the user does not have permission to upload csvs, redirect them to the submissions page
+    previous_submission = await sync_to_async(Submission.objects.get_submission_for_request)(pdu, audit_period)
+
+    if previous_submission and not previous_submission.csv_file_name:
+        # PDU is submitting via questionnaire
         return redirect(reverse("pdu-dashboard", kwargs={
             "audit_period": audit_period.slug,
             "pz_code": pdu.pz_code,
@@ -394,9 +396,6 @@ async def upload_csv(request, audit_period, pdu):
         )
         
         upload_csv_task.delay(new_submission.id)
-
-        # update the session fields - this stores that the user has uploaded a csv and disables the ability to use the questionnaire
-        await sync_to_async(refresh_session_filters)(request, csv_upload=True)
 
         await sync_to_async(save_csv_uploading_user_to_visitactivity)(request=request)
         

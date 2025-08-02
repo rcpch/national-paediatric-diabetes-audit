@@ -77,8 +77,8 @@ def login_and_otp_required():
 
 def check_data_permissions():
     def _check_data_permissions(request, *args, **kwargs):
-        audit_period = AuditPeriod.objects.get_audit_period_for_request(request, *args, **kwargs)
-        pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(request, *args, **kwargs)
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
+        pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(request)
 
         return (audit_period, pdu)
 

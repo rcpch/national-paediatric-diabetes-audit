@@ -45,7 +45,8 @@ from .mixins import (
     CheckCanCompleteQuestionnaireMixin,
     CheckCurrentAuditYearMixin,
     LoginAndOTPRequiredMixin,
-    PDUPermissionMixin
+    PDUPermissionMixin,
+    QuestionnaireContextMixin
 )
 from ..general_functions.session import refresh_session_filters
 
@@ -56,6 +57,7 @@ class PatientListView(
     LoginAndOTPRequiredMixin,
     PDUPermissionMixin,
     PermissionRequiredMixin,
+    QuestionnaireContextMixin,
     ListView,
 ):
     permission_required = "npda.view_patient"
@@ -332,63 +334,51 @@ class PatientCreateView(
         return super().form_invalid(form)
 
     def form_valid(self, form: BaseForm) -> HttpResponse:
-        if self.request.session.get("can_complete_questionnaire"):
-            # the Patient record is therefore valid
-            patient = form.save(commit=False)
-            patient.is_valid = True
-            patient.errors = None
-            patient.save()
+        # the Patient record is therefore valid
+        patient = form.save(commit=False)
+        patient.is_valid = True
+        patient.errors = None
+        patient.save()
 
-            Transfer = apps.get_model("npda", "Transfer")
-            if Transfer.objects.filter(patient=patient).exists():
-                # the patient is being transferred from another PDU. Update the previous_pz_code field
-                transfer = Transfer.objects.get(patient=patient)
-                transfer.previous_pz_code = transfer.paediatric_diabetes_unit.pz_code
-                transfer.paediatric_diabetes_unit = self.pdu
-                transfer.date_leaving_service = (
-                    form.cleaned_data.get("date_leaving_service"),
-                )
-                transfer.reason_leaving_service = (
-                    form.cleaned_data.get("reason_leaving_service"),
-                )
-                transfer.save()
-            else:
-                Transfer.objects.create(
-                    paediatric_diabetes_unit=self.pdu,
-                    patient=patient,
-                    date_leaving_service=None,
-                    reason_leaving_service=None,
-                )
-            # add patient to the latest audit year and the logged in user's PDU
-            # the form is initialised with the current audit year
-
-            Submission = apps.get_model("npda", "Submission")
-            audit_period = self.audit_period
-
-            submission, created = Submission.objects.update_or_create(
-                audit_year=audit_period.audit_year(),
-                paediatric_diabetes_unit=self.pdu,
-                submission_active=True,
-                defaults={
-                    "submission_by": NPDAUser.objects.get(pk=self.request.user.pk),
-                    "submission_by": NPDAUser.objects.get(pk=self.request.user.pk),
-                    "submission_date": timezone.now(),
-                    "audit_period": audit_period
-                },
+        Transfer = apps.get_model("npda", "Transfer")
+        if Transfer.objects.filter(patient=patient).exists():
+            # the patient is being transferred from another PDU. Update the previous_pz_code field
+            transfer = Transfer.objects.get(patient=patient)
+            transfer.previous_pz_code = transfer.paediatric_diabetes_unit.pz_code
+            transfer.paediatric_diabetes_unit = self.pdu
+            transfer.date_leaving_service = (
+                form.cleaned_data.get("date_leaving_service"),
             )
-            submission.patients.add(patient)
-            submission.save()
-            # update the session - this stores that the user has used the questionnaire and disables csv upload
-            refresh_session_filters(self.request, questionnaire=True)
-
+            transfer.reason_leaving_service = (
+                form.cleaned_data.get("reason_leaving_service"),
+            )
+            transfer.save()
         else:
-            logger.error(
-                f"User {self.request.user} attempted to add a new patient to the audit, but the submission for {self.request.session['pz_code']} is done through csv upload."
+            Transfer.objects.create(
+                paediatric_diabetes_unit=self.pdu,
+                patient=patient,
+                date_leaving_service=None,
+                reason_leaving_service=None,
             )
-            messages.error(
-                self.request,
-                "The submission for this PDU is done through csv upload and data cannot be added or edited through the questionnaire. If you need to edit the submission directly please contact the NPDA team for assistance.",
-            )
+        # add patient to the latest audit year and the logged in user's PDU
+        # the form is initialised with the current audit year
+
+        Submission = apps.get_model("npda", "Submission")
+        audit_period = self.audit_period
+
+        submission, created = Submission.objects.update_or_create(
+            audit_year=audit_period.audit_year(),
+            paediatric_diabetes_unit=self.pdu,
+            submission_active=True,
+            defaults={
+                "submission_by": NPDAUser.objects.get(pk=self.request.user.pk),
+                "submission_by": NPDAUser.objects.get(pk=self.request.user.pk),
+                "submission_date": timezone.now(),
+                "audit_period": audit_period
+            },
+        )
+        submission.patients.add(patient)
+        submission.save()
 
         return super().form_valid(form)
 

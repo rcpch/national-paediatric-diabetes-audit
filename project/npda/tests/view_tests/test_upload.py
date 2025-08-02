@@ -114,12 +114,6 @@ def test_coordinator_cannot_upload_csv_to_closed_audit_year(
     audit_period = AuditPeriod.objects.get_default_audit_period()
     audit_period.is_open = False
     audit_period.save()
-
-    # Set session to allow user permissions
-    session = client.session
-    session["can_upload_csv"] = True
-    session["can_complete_questionnaire"] = False
-    session.save()
     
     csv_file = SimpleUploadedFile(
         "test_coordinator_cannot_upload_csv_to_closed_audit_year.csv",

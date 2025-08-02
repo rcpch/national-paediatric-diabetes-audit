@@ -6,7 +6,7 @@ from django.test.client import RequestFactory
 from two_factor.utils import default_device
 
 from project.constants.user import VIEW_PREFERENCES
-from project.npda.models import NPDAUser, PaediatricDiabetesUnit, Submission
+from project.npda.models import AuditPeriod, PaediatricDiabetesUnit, Submission
 from project.npda.tests.UserDataClasses import test_user_audit_centre_reader_data
 from project.npda.tests.constants_for_tests import ALDER_HEY_PZ_CODE
 from dateutil.relativedelta import relativedelta
@@ -38,13 +38,21 @@ def login_and_verify_user(client, user):
 
 # Helper function for creating a submission
 def create_submission(
-    audit_start_date: date,
+    audit_start_date_or_audit_period: date | AuditPeriod,
     pz_code: str,
+    csv_file_name: str | None = None,
 ) -> Submission:
     """
 
     We use the provided pz_code to seed auser and use them to create a submission.
     """
+
+    if isinstance(audit_start_date_or_audit_period, AuditPeriod):
+        audit_period = audit_start_date_or_audit_period
+        audit_start_date = audit_period.start_date
+    else:
+        audit_start_date = audit_start_date_or_audit_period
+        audit_period = AuditPeriod.objects.get(start_date=audit_start_date)
 
     npda_user = NPDAUserFactory(
             first_name="test",
@@ -64,7 +72,9 @@ def create_submission(
     return Submission.objects.create(
         paediatric_diabetes_unit=pdu,
         audit_year=audit_start_date.year,
+        audit_period=audit_period,
         submission_date=audit_start_date + relativedelta(days=1),
         submission_by=npda_user,
         submission_active=True,
+        csv_file_name=csv_file_name,
     )

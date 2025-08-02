@@ -26,7 +26,8 @@ from .mixins import (
     CheckCanCompleteQuestionnaireMixin,
     CheckCurrentAuditYearMixin,
     LoginAndOTPRequiredMixin,
-    PDUPermissionMixin
+    PDUPermissionMixin,
+    QuestionnaireContextMixin
 )
 
 # Third party imports
@@ -34,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 
 class PatientVisitsListView(
-    LoginAndOTPRequiredMixin, PDUPermissionMixin, PermissionRequiredMixin, ListView
+    LoginAndOTPRequiredMixin, PDUPermissionMixin, PermissionRequiredMixin, QuestionnaireContextMixin, ListView
 ):
     """
     The PatientVisitsListView class.
