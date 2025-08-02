@@ -4,8 +4,8 @@
   <div>
     <h3 class="font-bold">Important Information</h3>
     <div class="text-xs">
-      You are about to upload data to the NPDA for <strong>{{ request.session.pz_code }} ({{ request.session.parent }})</strong>.
-      {% if employers|length > 1 %}
+      You are about to upload data to the NPDA for <strong>{{ pdu.pz_code }} ({{ pdu.lead_organisation_name }})</strong>.
+      {% if request.session.pdu_choices|length > 1 %}
         <p class="text-xs mt-2 mb-2">
           If this is incorrect, please select the correct employer below.
         </p>
