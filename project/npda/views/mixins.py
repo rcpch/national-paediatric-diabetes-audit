@@ -136,11 +136,7 @@ class CheckCurrentAuditYearMixin(AccessMixin):
         return super().dispatch(request, *args, **kwargs)
 
 
-class CheckCanCompleteQuestionnaireMixin(AccessMixin):
-    """
-    A mixin that checks whether the user can complete the questionnaire.
-    It also returns context data for templates to conditionally render UI based on the type of upload.
-    """
+class QuestionnaireContextMixin(AccessMixin):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
@@ -154,15 +150,17 @@ class CheckCanCompleteQuestionnaireMixin(AccessMixin):
 
         can_override_data_upload_rules = self.request.user.is_superuser or getattr(self.request.user, "is_rcpch_audit_team_member", False)
         data_upload_rules_overridden = can_override_data_upload_rules and self.request.GET.get("unlock", False)
-
+        
         return context | {
             "is_csv_upload": is_csv_upload,
             "is_questionnaire": is_questionnaire,
             "can_override_data_upload_rules": can_override_data_upload_rules,
             "data_upload_rules_overridden": data_upload_rules_overridden,
             "can_use_questionnaire": data_upload_rules_overridden or is_questionnaire,
-        }
+        }  
 
+
+class CheckCanCompleteQuestionnaireMixin(QuestionnaireContextMixin, AccessMixin):
     def dispatch(self, request, *args, **kwargs):
         # Overriding data upload rules just applies in the UI
         if request.user.is_superuser or request.user.is_rcpch_audit_team_member:

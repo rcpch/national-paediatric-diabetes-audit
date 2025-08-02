@@ -159,10 +159,6 @@ class TestQuestionnaireView:
         """
         Test that users who do not have the questionnaire permission cannot save a patient through the questionnaire view.
         """
-        # Modify the session
-        session = self.client.session
-        session["can_complete_questionnaire"] = False
-        session.save()
 
         # Create a patient
         form = PatientForm(VALID_FIELDS)
@@ -183,10 +179,6 @@ class TestQuestionnaireView:
         Test that RCPCH audit users who do not have the questionnaire permission can still save a patient through the questionnaire view.
         (Though this is theoretical as they have the permission by default)
         """
-        # Modify the session
-        session = self.client.session
-        session["can_complete_questionnaire"] = False
-        session.save()
 
         # Give the user the RCPCH audit team group
         self.ah_user.is_rcpch_audit_team_member = True
@@ -242,11 +234,6 @@ class TestQuestionnaireView:
 
         form = VisitForm(data=COMPLETED_VISIT, initial={"patient": patient})
 
-        # Modify the session
-        session = self.client.session
-        session["can_complete_questionnaire"] = False
-        session.save()
-
         # url
         url = reverse("pdu-visit-create", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "patient_id": patient.pk})
 
@@ -269,10 +256,6 @@ class TestQuestionnaireView:
         transfer.paediatric_diabetes_unit = pdu
         transfer.save()
 
-        session = self.client.session
-        session["can_complete_questionnaire"] = False
-        session.save()
-
         url = reverse("pdu-patient-update", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "pk": patient.pk})
 
         response = self.client.get(url)
@@ -292,10 +275,6 @@ class TestQuestionnaireView:
         transfer.save()
 
         visit = VisitFactory(patient=patient)
-
-        session = self.client.session
-        session["can_complete_questionnaire"] = False
-        session.save()
 
         url = reverse("pdu-visit-update", kwargs={
             "audit_period": self.audit_period.slug,

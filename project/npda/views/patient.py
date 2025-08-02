@@ -45,7 +45,8 @@ from .mixins import (
     CheckCanCompleteQuestionnaireMixin,
     CheckCurrentAuditYearMixin,
     LoginAndOTPRequiredMixin,
-    PDUPermissionMixin
+    PDUPermissionMixin,
+    QuestionnaireContextMixin
 )
 from ..general_functions.session import refresh_session_filters
 
@@ -56,6 +57,7 @@ class PatientListView(
     LoginAndOTPRequiredMixin,
     PDUPermissionMixin,
     PermissionRequiredMixin,
+    QuestionnaireContextMixin,
     ListView,
 ):
     permission_required = "npda.view_patient"
