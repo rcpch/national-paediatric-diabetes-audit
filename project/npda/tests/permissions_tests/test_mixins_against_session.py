@@ -86,10 +86,15 @@ class TestQuestionnaireView:
 
         self.client = login_and_verify_user(self.client, self.ah_user)
 
-    def test_users_with_correct_permissions_can_save_patient(self):
+    def test_users_can_use_questionnaire(self):
         """
         Test that users who do not have the can_upload_csv permission cannot save a patient through the questionnaire view.
         """
+        create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+        )
+
         # Create a patient
         form = PatientForm(VALID_FIELDS)
 
@@ -99,7 +104,7 @@ class TestQuestionnaireView:
         # Post the patient data
         response = self.client.post(url, form.data)
 
-        # Check that the patient was not saved
+        # Check that the patient was saved
         assert (
             Patient.objects.filter(nhs_number=form.data["nhs_number"]).exists() is True
         )
@@ -111,6 +116,11 @@ class TestQuestionnaireView:
         """
         Test that users who have the questionnaire permission cannot save a patient in a closed audit year.
         """
+        create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+        )
+
         # Create a patient
         form = PatientForm(VALID_FIELDS)
         
@@ -134,6 +144,11 @@ class TestQuestionnaireView:
         """
         Test that RCPCH audit users who have the questionnaire permission can still save a patient in a closed audit year.
         """
+        create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+        )
+
         # Create a patient
         form = PatientForm(VALID_FIELDS)
 
@@ -159,6 +174,11 @@ class TestQuestionnaireView:
         """
         Test that users who do not have the questionnaire permission cannot save a patient through the questionnaire view.
         """
+        sub = create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+            csv_file_name="test.csv",
+        )
 
         # Create a patient
         form = PatientForm(VALID_FIELDS)
@@ -177,8 +197,12 @@ class TestQuestionnaireView:
     def test_rcpch_users_without_questionnaire_permissions_can_still_save_patient(self):
         """
         Test that RCPCH audit users who do not have the questionnaire permission can still save a patient through the questionnaire view.
-        (Though this is theoretical as they have the permission by default)
         """
+        create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+            csv_file_name="test.csv",
+        )
 
         # Give the user the RCPCH audit team group
         self.ah_user.is_rcpch_audit_team_member = True
@@ -202,12 +226,13 @@ class TestQuestionnaireView:
         """
         Test that users who do have questionnaire permission can save a visit through the questionnaire view.
         """
+
         patient = PatientFactory(
             transfer__paediatric_diabetes_unit__pz_code=ALDER_HEY_PZ_CODE
         )
 
         sub = create_submission(
-            audit_start_date=date.today(),
+            self.audit_period,
             pz_code=ALDER_HEY_PZ_CODE,
         )
         patient.submissions.add(sub)
@@ -229,6 +254,12 @@ class TestQuestionnaireView:
         """
         Test that users who do have questionnaire permission can save a visit through the questionnaire view.
         """
+        create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+            csv_file_name="test.csv",
+        )
+
         # Create a patient
         patient = PatientFactory()
 
@@ -249,12 +280,21 @@ class TestQuestionnaireView:
         """
         assert not self.ah_user.is_rcpch_audit_team_member
 
+        sub = create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+            csv_file_name="test.csv",
+        )
+
         patient = PatientFactory()
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
         
         transfer = Transfer.objects.get(patient=patient)
         transfer.paediatric_diabetes_unit = pdu
         transfer.save()
+
+        sub.patients.add(patient)
+        sub.save()
 
         url = reverse("pdu-patient-update", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "pk": patient.pk})
 
@@ -267,12 +307,21 @@ class TestQuestionnaireView:
         """
         assert not self.ah_user.is_rcpch_audit_team_member
 
+        sub = create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+            csv_file_name="test.csv",
+        )
+
         patient = PatientFactory()
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
         
         transfer = Transfer.objects.get(patient=patient)
         transfer.paediatric_diabetes_unit = pdu
         transfer.save()
+
+        sub.patients.add(patient)
+        sub.save()
 
         visit = VisitFactory(patient=patient)
 
