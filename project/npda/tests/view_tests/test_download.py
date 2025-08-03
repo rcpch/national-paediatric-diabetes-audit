@@ -4,7 +4,7 @@ from django.urls import reverse
 
 from project.npda.models import NPDAUser, Submission
 from project.npda.tests.test_csv_upload import mock_remote_calls
-from project.npda.tests.model_tests.test_submissions import ALDER_HEY_PZ_CODE
+from project.npda.tests.model_tests.test_submissions import ALDER_HEY_PZ_CODE, GOSH_PZ_CODE
 from project.npda.tests.UserDataClasses import test_user_audit_centre_coordinator_data
 from project.npda.tests.utils import login_and_verify_user
 from project.npda.general_functions.csv import csv_parse
@@ -25,23 +25,18 @@ def test_coordinator_can_download_report_for_their_pdu(
     tmp_path,
     valid_df
 ):
-    # Get a user
     ah_coordinator_user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
         role=test_user_audit_centre_coordinator_data.role,
     ).first()
-    client = login_and_verify_user(client, ah_coordinator_user)
 
-    # write back into temp
     tmp_csv_path = tmp_path / "dummy_sheet_test.csv"
     valid_df.to_csv(tmp_csv_path, index=False)
 
-    # Log in user
     client = login_and_verify_user(client, ah_coordinator_user)
 
     upload_url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
 
-    # Send POST request with CSV file
     with open(tmp_csv_path, "rb") as csv_file:
         response = client.post(
             upload_url,
@@ -51,7 +46,6 @@ def test_coordinator_can_download_report_for_their_pdu(
             format='multipart'
         )
 
-    # Assert the response to ensure no error
     assert response.status_code == 302
 
     assert Submission.objects.count() == 1
@@ -83,23 +77,18 @@ def test_coordinator_can_download_original_for_their_pdu(
     tmp_path,
     valid_df
 ):
-    # Get a user
     ah_coordinator_user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
         role=test_user_audit_centre_coordinator_data.role,
     ).first()
-    client = login_and_verify_user(client, ah_coordinator_user)
 
-    # write back into temp
     tmp_csv_path = tmp_path / "dummy_sheet_test.csv"
     valid_df.to_csv(tmp_csv_path, index=False)
 
-    # Log in user
     client = login_and_verify_user(client, ah_coordinator_user)
 
     upload_url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
 
-    # Send POST request with CSV file
     with open(tmp_csv_path, "rb") as csv_file:
         response = client.post(
             upload_url,
@@ -109,7 +98,6 @@ def test_coordinator_can_download_original_for_their_pdu(
             format='multipart'
         )
 
-    # Assert the response to ensure no error
     assert response.status_code == 302
 
     assert Submission.objects.count() == 1
@@ -129,3 +117,117 @@ def test_coordinator_can_download_original_for_their_pdu(
 
     assert response['Content-Disposition'] == f'attachment; filename="dummy_sheet_test.csv"'
     assert response['Content-Type'] == "text/csv"
+
+
+@pytest.mark.django_db
+def test_coordinator_cannot_download_report_for_other_pdu(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    mock_remote_calls,
+    tmp_path,
+    valid_df
+):
+    ah_coordinator_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_coordinator_data.role,
+    ).first()
+
+    gosh_coordinator_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=GOSH_PZ_CODE,
+        role=test_user_audit_centre_coordinator_data.role,
+    ).first()
+
+    tmp_csv_path = tmp_path / "dummy_sheet_test.csv"
+    valid_df.to_csv(tmp_csv_path, index=False)
+
+    client = login_and_verify_user(client, ah_coordinator_user)
+
+    ah_upload_url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
+
+    # Send POST request with CSV file
+    with open(tmp_csv_path, "rb") as csv_file:
+        response = client.post(
+            ah_upload_url,
+            {
+                'csv_upload': csv_file
+            },
+            format='multipart'
+        )
+
+    assert response.status_code == 302
+
+    assert Submission.objects.count() == 1
+
+    sub_id = Submission.objects.first().id
+    download_url = reverse("submissions")
+
+    client = login_and_verify_user(client, gosh_coordinator_user)
+
+    response = client.post(
+        download_url,
+        {
+            'submit-data': "download-report",
+            'audit_id': sub_id,
+        }
+    )
+
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_coordinator_cannot_download_data_for_other_pdu(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    mock_remote_calls,
+    tmp_path,
+    valid_df
+):
+    ah_coordinator_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_coordinator_data.role,
+    ).first()
+
+    gosh_coordinator_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=GOSH_PZ_CODE,
+        role=test_user_audit_centre_coordinator_data.role,
+    ).first()
+
+    tmp_csv_path = tmp_path / "dummy_sheet_test.csv"
+    valid_df.to_csv(tmp_csv_path, index=False)
+
+    client = login_and_verify_user(client, ah_coordinator_user)
+
+    ah_upload_url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
+
+    # Send POST request with CSV file
+    with open(tmp_csv_path, "rb") as csv_file:
+        response = client.post(
+            ah_upload_url,
+            {
+                'csv_upload': csv_file
+            },
+            format='multipart'
+        )
+
+    assert response.status_code == 302
+
+    assert Submission.objects.count() == 1
+
+    sub_id = Submission.objects.first().id
+    download_url = reverse("submissions")
+
+    client = login_and_verify_user(client, gosh_coordinator_user)
+
+    response = client.post(
+        download_url,
+        {
+            'submit-data': "download-data",
+            'audit_id': sub_id,
+        }
+    )
+
+    assert response.status_code == 403
