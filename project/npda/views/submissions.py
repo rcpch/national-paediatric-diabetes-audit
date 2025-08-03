@@ -274,6 +274,10 @@ class SubmissionsListView(
             submission = Submission.objects.filter(
                 pk=request.POST.get("audit_id")
             ).get()
+            if not request.user.is_rcpch_audit_team_member and not submission.paediatric_diabetes_unit in request.user.organisation_employers.all():
+                raise PermissionDenied(
+                    f"User {request.user.email} does not have permission to download data for PDU {submission.paediatric_diabetes_unit.pz_code}.",
+                )
             return download_csv(request, submission.id)
 
         if button_name == "download-report":
@@ -285,6 +289,10 @@ class SubmissionsListView(
             submission = Submission.objects.filter(
                 pk=request.POST.get("audit_id")
             ).get()
+            if not request.user.is_rcpch_audit_team_member and not submission.paediatric_diabetes_unit in request.user.organisation_employers.all():
+                raise PermissionDenied(
+                    f"User {request.user.email} does not have permission to download data for PDU {submission.paediatric_diabetes_unit.pz_code}.",
+                )
             return download_xlsx(request, submission.id)
 
         # POST is not supported for this view
