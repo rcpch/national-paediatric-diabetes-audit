@@ -751,7 +751,7 @@ def test_users_can_download_csv(
     assert response.has_header("Content-Disposition")
     assert "attachment" in response["Content-Disposition"]
     assert "filename" in response["Content-Disposition"]
-    assert response["Content-Type"] == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    assert response["Content-Type"] == "text/csv"
 
 
 @pytest.mark.django_db
