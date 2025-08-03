@@ -16,25 +16,12 @@ def valid_df(dummy_sheets_folder):
 
 
 @pytest.mark.parametrize(
-    "role,action,filename,content_disposition,content_type",
+    "role,action",
     [
-        pytest.param(*list([role] + params)) for params in [
-            [
-                "download-report",
-                "dummy_sheet_test.csv",
-                'attachment; filename="dummy_sheet_test_data_quality_report.xlsx"',
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            ],
-            [
-                "download-data",
-                "dummy_sheet_test.csv",
-                'attachment; filename="dummy_sheet_test.csv"',
-                "text/csv",
-            ]
-        ] for role in [
-            AUDIT_CENTRE_EDITOR,
-            AUDIT_CENTRE_COORDINATOR
-        ]
+        pytest.param(f"{AUDIT_CENTRE_EDITOR}", "download-report"),
+        pytest.param(f"{AUDIT_CENTRE_EDITOR}", "download-data"),
+        pytest.param(f"{AUDIT_CENTRE_COORDINATOR}", "download-report"),
+        pytest.param(f"{AUDIT_CENTRE_COORDINATOR}", "download-data"),
     ]
 )
 @pytest.mark.django_db
@@ -47,17 +34,14 @@ def test_uploaders_can_download_data_for_their_pdu(
     tmp_path,
     valid_df,
     role,
-    action,
-    filename,
-    content_disposition,
-    content_type
+    action
 ):
     ah_coordinator_user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
         role=role,
     ).first()
 
-    tmp_csv_path = tmp_path / filename
+    tmp_csv_path = tmp_path / "dummy_sheet_test.csv"
     valid_df.to_csv(tmp_csv_path, index=False)
 
     client = login_and_verify_user(client, ah_coordinator_user)
@@ -89,9 +73,15 @@ def test_uploaders_can_download_data_for_their_pdu(
     )
 
     assert response.status_code == 200
-
-    assert response['Content-Disposition'] == content_disposition
-    assert response['Content-Type'] == content_type
+    
+    match action:
+        case "download-report":
+            assert response["Content-Type"] == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            assert response["Content-Disposition"] == 'attachment; filename="dummy_sheet_test_data_quality_report.xlsx"'
+            
+        case "download-data":
+            assert response["Content-Type"] == "text/csv"
+            assert response["Content-Disposition"] == 'attachment; filename="dummy_sheet_test.csv"'
 
 
 @pytest.mark.parametrize(
@@ -263,20 +253,10 @@ def test_readers_cannot_download_data_for_any_pdu(
 
 
 @pytest.mark.parametrize(
-    "action,filename,content_disposition,content_type",
+    "action",
     [
-        pytest.param(
-            "download-report",
-            "dummy_sheet_test.csv",
-            'attachment; filename="dummy_sheet_test_data_quality_report.xlsx"',
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        ),
-        pytest.param(
-            "download-data",
-            "dummy_sheet_test.csv",
-            'attachment; filename="dummy_sheet_test.csv"',
-            "text/csv",
-        )
+        pytest.param("download-report"),
+        pytest.param("download-data")
     ]
 )
 @pytest.mark.django_db
@@ -288,17 +268,14 @@ def test_rcpch_audit_team_can_download_data_for_any_pdu(
     mock_remote_calls,
     tmp_path,
     valid_df,
-    action,
-    filename,
-    content_disposition,
-    content_type
+    action
 ):
     ah_coordinator_user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
         role=AUDIT_CENTRE_COORDINATOR,
     ).first()
 
-    tmp_csv_path = tmp_path / filename
+    tmp_csv_path = tmp_path / "dummy_sheet_test.csv"
     valid_df.to_csv(tmp_csv_path, index=False)
 
     client = login_and_verify_user(client, ah_coordinator_user)
@@ -321,7 +298,7 @@ def test_rcpch_audit_team_can_download_data_for_any_pdu(
         role=AUDIT_CENTRE_COORDINATOR,
     ).first()
 
-    tmp_csv_path = tmp_path / filename
+    tmp_csv_path = tmp_path / "dummy_sheet_test.csv"
     valid_df.to_csv(tmp_csv_path, index=False)
 
     client = login_and_verify_user(client, gosh_coordinator_user)
@@ -359,5 +336,11 @@ def test_rcpch_audit_team_can_download_data_for_any_pdu(
 
     assert response.status_code == 200
 
-    assert response['Content-Disposition'] == content_disposition
-    assert response['Content-Type'] == content_type
+    match action:
+        case "download-report":
+            assert response["Content-Type"] == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            assert response["Content-Disposition"] == 'attachment; filename="dummy_sheet_test_data_quality_report.xlsx"'
+
+        case "download-data":
+            assert response["Content-Type"] == "text/csv"
+            assert response["Content-Disposition"] == 'attachment; filename="dummy_sheet_test.csv"'
