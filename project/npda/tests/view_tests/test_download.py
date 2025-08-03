@@ -78,7 +78,7 @@ def test_uploaders_can_download_data_for_their_pdu(
         case "download-report":
             assert response["Content-Type"] == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             assert response["Content-Disposition"] == 'attachment; filename="dummy_sheet_test_data_quality_report.xlsx"'
-            
+
         case "download-data":
             assert response["Content-Type"] == "text/csv"
             assert response["Content-Disposition"] == 'attachment; filename="dummy_sheet_test.csv"'
@@ -319,10 +319,12 @@ def test_rcpch_audit_team_can_download_data_for_any_pdu(
     assert Submission.objects.count() == 2
     sub_id = Submission.objects.first().id
 
-    gosh_coordinator_user = NPDAUser.objects.filter(
+    rcpch_user = NPDAUser.objects.filter(
         organisation_employers__pz_code=GOSH_PZ_CODE,
-        role=AUDIT_CENTRE_COORDINATOR,
+        role=RCPCH_AUDIT_TEAM,
     ).first()
+
+    client = login_and_verify_user(client, rcpch_user)
 
     download_url = reverse("submissions")
 
