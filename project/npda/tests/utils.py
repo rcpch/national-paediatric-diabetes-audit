@@ -41,6 +41,7 @@ def create_submission(
     audit_start_date_or_audit_period: date | AuditPeriod,
     pz_code: str,
     csv_file_name: str | None = None,
+    csv_file: bytes | None = None
 ) -> Submission:
     """
 
@@ -77,4 +78,5 @@ def create_submission(
         submission_by=npda_user,
         submission_active=True,
         csv_file_name=csv_file_name,
+        csv_file=csv_file
     )
