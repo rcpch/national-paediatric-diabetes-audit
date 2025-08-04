@@ -120,7 +120,7 @@ class VisitCreateView(
         messages.add_message(
             self.request, messages.SUCCESS, "New visit added successfully"
         )
-        return reverse(
+        return self.data_reverse(
             "pdu-patient-visits", kwargs={"patient_id": self.kwargs["patient_id"]}
         )
     
