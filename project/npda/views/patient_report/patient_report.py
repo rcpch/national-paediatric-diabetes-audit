@@ -467,7 +467,7 @@ class PatientReportView(
                 sick_day_rules_advice=Case(
                     When(
                         Exists(
-                            calculate_kpis.calculate_kpi_39_influenza_immunisation_recommended()
+                            calculate_kpis.calculate_kpi_40_sick_day_rules_advice()
                             .patient_querysets["passed"]
                             .filter(pk=OuterRef("pk"))
                         ),
