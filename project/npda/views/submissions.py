@@ -79,21 +79,14 @@ class SubmissionsListView(
         """
         Retrieve all submissions for the current PZ code, unless view_preference is set to 2 (national view)
         """
-        PaediatricDiabetesUnit = apps.get_model(
-            app_label="npda", model_name="PaediatricDiabetesUnit"
-        )
-        pdu = PaediatricDiabetesUnit.objects.get(
-            pz_code=self.request.session.get("pz_code"),
-        )
-        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
         if self.request.user.is_rcpch_audit_team_member:
             base_queryset = self.model.objects.filter(
-                audit_period=audit_period
+                audit_period=self.audit_period
             ).all()
         else:
             base_queryset = self.model.objects.filter(
-                paediatric_diabetes_unit=pdu,
-                audit_period=audit_period
+                paediatric_diabetes_unit=self.pdu,
+                audit_period=self.audit_period
             )
 
         final = base_queryset.annotate(
@@ -121,17 +114,14 @@ class SubmissionsListView(
         Includes the patient data for the active submission and the csv summary data.
         """
         context = super().get_context_data(**kwargs)
-        context["pz_code"] = self.request.session.get("pz_code")
-        audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
         Patient = apps.get_model("npda", "Patient")
         context["data"] = None  # data stores csv summary data if a submission exists
         context["column_chart"] = None
         context["submission_statistics"] = None
         requested_active_submission = self.object_list.filter(
             submission_active=True,
-            audit_period=audit_period,
-            paediatric_diabetes_unit__pz_code=self.request.session.get("pz_code"),
-            paediatric_diabetes_unit__active=True,
+            audit_period=self.audit_period,
+            paediatric_diabetes_unit=self.pdu,
         ).first()  # there can be only one of these
         if requested_active_submission:
             if requested_active_submission.errors:
@@ -148,7 +138,7 @@ class SubmissionsListView(
             )
         
         if self.request.user.is_rcpch_audit_team_member:
-            selected_audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
+            selected_audit_period = self.audit_period
             # Start with ALL active PDUs, not just those with submissions
             chart_data = PaediatricDiabetesUnit.objects.filter(
                 active=True
