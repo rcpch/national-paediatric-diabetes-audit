@@ -172,13 +172,13 @@
       {% include 'partials/data_quality_report.html' with data=data submission_errors=submission_errors %}
     {% else %}
       <p class="text-gray-400">
-        No data quality report available for {{ request.session.pz_code }}.
+        No data quality report available for {{ pz_code }}.
       </p>
     {% endif %}
   {% else %}
     <!-- No submissions so far -->
     <p class="text-gray-400">
-      No submissions uploaded yet for {{ request.session.pz_code }}.
+      No submissions uploaded yet for {{ pz_code }}.
     </p>
   {% endif %}
 </div>
