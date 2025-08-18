@@ -30,6 +30,7 @@ from project.npda.general_functions import (
     fetch_organisation_by_ods_code,
     retrieve_quarter_for_date,
     visit_falls_within_audit_period_Q_object,
+    data_breadcrumbs
 )
 from project.npda.models import (
     NPDAUser,
@@ -316,6 +317,10 @@ class PatientCreateView(
         context["button_title"] = "Create New Child Patient Record"
         context["form_method"] = "create"
         context["override_postcode"] = False
+        context["breadcrumbs"] = data_breadcrumbs(self.pdu, self.audit_period, [
+            ("Patient Data", "pdu-patients"),
+            ("Add patient", "pdu-patient-add"),
+        ])
         return context
     
     def form_invalid(self, form):
@@ -426,6 +431,14 @@ class PatientUpdateView(
         context["form_method"] = "update"
         context["patient_id"] = self.kwargs["pk"]
         context["override_postcode"] = False
+        context["breadcrumbs"] = data_breadcrumbs(self.pdu, self.audit_period, [
+            ("Patient Data", "pdu-patients"),
+        ]) + [
+            {
+                "label": patient.unique_reference_number or patient.nhs_number,
+                "url": self.data_reverse("pdu-patient-update", kwargs={"pk": patient.pk})
+            }
+        ]
         return context
 
     def form_valid(self, form: BaseForm) -> HttpResponse:
@@ -491,6 +504,20 @@ class PatientDeleteView(
     model = Patient
     success_message = "Child removed from database"
     success_url = reverse_lazy("patients")
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        patient = self.get_object()
+
+        context["breadcrumbs"] = data_breadcrumbs(self.pdu, self.audit_period, [
+            ("Patient Data", "pdu-patients"),
+        ]) + [
+            {
+                "label": patient.unique_reference_number or patient.nhs_number,
+                "href": self.data_reverse("pdu-patient-update", kwargs={"pk": patient.pk})
+            }
+        ]
+        return context
 
     def get_success_url(self):
         return self.data_reverse("pdu-patients")
