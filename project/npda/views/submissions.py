@@ -37,6 +37,7 @@ from ..general_functions.csv import (
     create_csv_submission,
     gather_unique_patient_and_visit_counts
 )
+from ..general_functions.breadcrumbs import data_breadcrumbs
 from .mixins import (
     LoginAndOTPRequiredMixin,
     PDUPermissionMixin
@@ -411,22 +412,10 @@ async def upload_csv(request, audit_period, pdu):
 
     return render(request, "upload_csv/file_upload.html", context={
         "pdu": pdu,
-        "breadcrumbs": [
-            {
-                "label": "Patient Data",
-                "href": reverse("pdu-patients", kwargs={
-                    "pz_code": pdu.pz_code,
-                    "audit_period": audit_period.slug
-                })
-            },
-            {
-                "label": "Upload CSV",
-                "href": reverse("pdu-upload-csv", kwargs={
-                    "pz_code": pdu.pz_code,
-                    "audit_period": audit_period.slug
-                })
-            }
-        ]
+        "breadcrumbs": data_breadcrumbs(pdu, audit_period, [
+            ("Patient Data", "pdu-patients"),
+            ("Upload CSV", "pdu-upload-csv"),
+        ])
     })
 
 @login_and_otp_required()
@@ -467,22 +456,10 @@ def upload_csv_in_progress(request, audit_period, pdu):
         "patient_progress": patients_so_far / total_patients * 100 if total_patients else 0,
         "upload_complete": upload_complete,
         "timeout": timeout,
-        "breadcrumbs": [
-            {
-                "label": "Patient Data",
-                "href": reverse("pdu-patients", kwargs={
-                    "pz_code": pdu.pz_code,
-                    "audit_period": audit_period.slug
-                })
-            },
-            {
-                "label": "Uploading CSV",
-                "href": reverse("pdu-upload-csv-in-progress", kwargs={
-                    "pz_code": pdu.pz_code,
-                    "audit_period": audit_period.slug
-                })
-            }
-        ]
+        "breadcrumbs": data_breadcrumbs(pdu, audit_period, [
+            ("Patient Data", "pdu-patients"),
+            ("Uploading CSV", "pdu-upload-csv-in-progress"),
+        ])
     }
 
     if request.htmx:
