@@ -20,7 +20,8 @@ from ..general_functions import (
     get_visit_categories,
     get_visit_tabs,
     visit_falls_within_audit_period_Q_object,
-    data_breadcrumbs
+    data_breadcrumbs,
+    patient_breadcrumbs
 )
 from ..models import Patient, Transfer, Visit, AuditPeriod
 from .mixins import (
@@ -85,18 +86,12 @@ class PatientVisitsListView(
         context["paediatric_diabetes_unit"] = paediatric_diabetes_unit
         context["audit_period"] = audit_period
 
-        context["breadcrumbs"] = data_breadcrumbs(self.pdu, self.audit_period, [
-            ("Patient Data", "pdu-patients"),
-        ]) + [
-            {
-                "label": patient.unique_reference_number or patient.nhs_number,
-                "href": self.data_reverse("pdu-patient-update", kwargs={"pk": patient.pk})
-            },
+        context["breadcrumbs"] = patient_breadcrumbs(self.pdu, self.audit_period, patient, [
             {
                 "label": "Visits",
                 "href": self.data_reverse("pdu-patient-visits", kwargs={"patient_id": patient.pk})
             }
-        ]
+        ])
 
         return context
 
@@ -128,13 +123,7 @@ class VisitCreateView(
 
         context["paediatric_diabetes_unit"] = patient.submissions.first().paediatric_diabetes_unit
 
-        context["breadcrumbs"] = data_breadcrumbs(self.pdu, self.audit_period, [
-            ("Patient Data", "pdu-patients"),
-        ]) + [
-            {
-                "label": patient.unique_reference_number or patient.nhs_number,
-                "href": self.data_reverse("pdu-patient-update", kwargs={"pk": patient.pk})
-            },
+        context["breadcrumbs"] = patient_breadcrumbs(self.pdu, self.audit_period, patient, [
             {
                 "label": "Visits",
                 "href": self.data_reverse("pdu-patient-visits", kwargs={"patient_id": patient.pk})
@@ -143,7 +132,7 @@ class VisitCreateView(
                 "label": "Add visit",
                 "href": self.data_reverse("pdu-visit-create", kwargs={"patient_id": patient.pk})
             }
-        ]
+        ])
 
         return context
 
@@ -232,13 +221,7 @@ class VisitUpdateView(
         patient = visit.patient
         context["patient"] = visit.patient
 
-        context["breadcrumbs"] = data_breadcrumbs(self.pdu, self.audit_period, [
-            ("Patient Data", "pdu-patients"),
-        ]) + [
-            {
-                "label": patient.unique_reference_number or patient.nhs_number,
-                "href": self.data_reverse("pdu-patient-update", kwargs={"pk": patient.pk})
-            },
+        context["breadcrumbs"] = patient_breadcrumbs(self.pdu, self.audit_period, patient, [
             {
                 "label": "Visits",
                 "href": self.data_reverse("pdu-patient-visits", kwargs={"patient_id": patient.pk})
@@ -250,7 +233,7 @@ class VisitUpdateView(
                     "pk": visit.pk
                 })
             }
-        ]
+        ])
 
         return context
 
@@ -334,13 +317,7 @@ class VisitDeleteView(
         visit = self.get_object()
         patient = visit.patient
 
-        context["breadcrumbs"] = data_breadcrumbs(self.pdu, self.audit_period, [
-            ("Patient Data", "pdu-patients"),
-        ]) + [
-            {
-                "label": patient.unique_reference_number or patient.nhs_number,
-                "href": self.data_reverse("pdu-patient-update", kwargs={"pk": patient.pk})
-            },
+        context["breadcrumbs"] = patient_breadcrumbs(self.pdu, self.audit_period, patient, [
             {
                 "label": "Visits",
                 "href": self.data_reverse("pdu-patient-visits", kwargs={"patient_id": patient.pk})
@@ -352,7 +329,8 @@ class VisitDeleteView(
                     "pk": visit.pk
                 })
             }
-        ]
+        ])
+        
         return context
 
     def get_success_url(self):
