@@ -1,3 +1,4 @@
+{% load npda_tags %}
 <dialog id="quality_report_modal" class="modal text-black">
   <div class="modal-box">
       <h3 class="text-lg font-bold">Download Data Quality Report</h3>
@@ -5,7 +6,7 @@
         The data quality report contains your original data annotated with errors using our validation rules. It contains personal information and must be stored securely and deleted after use.
       </p>
       <div class="modal-action">
-        <form method="post" action="{% url 'submissions' %}">
+        <form method="post" action="{% data_url 'pdu-submissions' %}">
           {% csrf_token %}
           <input type="hidden" name="audit_id" value="{{ submission.pk }}">
           <button class="btn"

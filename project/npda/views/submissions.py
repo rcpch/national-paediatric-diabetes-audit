@@ -37,7 +37,10 @@ from ..general_functions.csv import (
     create_csv_submission,
     gather_unique_patient_and_visit_counts
 )
-from .mixins import LoginAndOTPRequiredMixin
+from .mixins import (
+    LoginAndOTPRequiredMixin,
+    PDUPermissionMixin
+)
 from ..models import (
     Submission,
     OrganisationEmployer,
@@ -54,7 +57,7 @@ logger = logging.getLogger(__name__)
 
 
 class SubmissionsListView(
-    LoginAndOTPRequiredMixin, ListView, PermissionRequiredMixin
+    LoginAndOTPRequiredMixin, PDUPermissionMixin, PermissionRequiredMixin, ListView
 ):
     """
     The SubmissionsListView class.
