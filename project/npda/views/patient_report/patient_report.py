@@ -28,6 +28,7 @@ from django.db.models import (
 from django.views.generic import ListView
 from project.constants.hba1c_format import HBA1C_FORMATS
 from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
+from project.constants.diabetes_types import DIABETES_TYPES
 from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.models import Patient, AuditPeriod, Visit
 from project.npda.models.db_functions import Round
@@ -467,7 +468,7 @@ class PatientReportView(
                 sick_day_rules_advice=Case(
                     When(
                         Exists(
-                            calculate_kpis.calculate_kpi_39_influenza_immunisation_recommended()
+                            calculate_kpis.calculate_kpi_40_sick_day_rules_advice()
                             .patient_querysets["passed"]
                             .filter(pk=OuterRef("pk"))
                         ),
@@ -490,7 +491,12 @@ class PatientReportView(
                 "sick_day_rules_advice",
             )
         elif self.selected_category == TableCategories.CARE_AT_DIAGNOSIS.value:
-            (pt_qs, _) = calculate_kpis.get_total_kpi_2_eligible_pts_base_query_set_and_total_count()
+            pt_qs = calculate_kpis.calculate_kpi_2_total_new_diagnoses().patient_querysets[
+                "eligible"
+            ]
+            pt_qs = pt_qs.filter(
+                diabetes_type=DIABETES_TYPES[0][0]  # T1DM
+            )
             pt_qs = pt_qs.annotate(
                 patient_identifier=F(patient_identifier),
                 coeliac_disease_screening=Case(

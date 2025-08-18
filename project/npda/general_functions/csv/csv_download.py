@@ -38,6 +38,6 @@ def download_xlsx(request, submission_id):
 
     xlsx_file = write_errors_to_xlsx(errors or {}, submission.csv_file)
 
-    response = HttpResponse(xlsx_file, content_type="text/csv")
+    response = HttpResponse(xlsx_file, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     response["Content-Disposition"] = f'attachment; filename="{xlsx_file_name}"'
     return response

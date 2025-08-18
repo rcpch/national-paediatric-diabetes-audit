@@ -1,7 +1,3 @@
-"""
-Test that users who do not have the can_upload_csv permission cannot save a patient through the questionnaire view.
-"""
-import dataclasses
 import logging
 from datetime import date
 from decimal import Decimal
@@ -9,7 +5,6 @@ from unittest.mock import Mock, patch
 
 # Django imports
 from django.contrib.sessions.middleware import SessionMiddleware
-from django.utils import timezone
 from django.urls import reverse
 from django.contrib.gis.geos import Point
 
@@ -18,9 +13,6 @@ import pytest
 
 # E12 imports
 from project.npda.tests.factories.patient_factory import PatientFactory, VALID_FIELDS
-from project.npda.tests.factories.paediatrics_diabetes_unit_factory import (
-    PaediatricsDiabetesUnitFactory,
-)
 from project.constants.user import RCPCH_AUDIT_TEAM
 from project.npda.forms.patient_form import PatientForm
 from project.npda.forms.visit_form import VisitForm
@@ -28,7 +20,6 @@ from project.npda.models import NPDAUser, Patient, Transfer, AuditPeriod
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 from project.npda.tests.utils import login_and_verify_user, create_submission
 from project.npda.tests.UserDataClasses import test_user_audit_centre_editor_data
-from project.npda.general_functions import audit_period
 from project.npda.tests.factories.visit_factory import VisitFactory, COMPLETED_VISIT
 from project.npda.tests.factories.patient_factory import (
     VALID_FIELDS,
@@ -95,22 +86,15 @@ class TestQuestionnaireView:
 
         self.client = login_and_verify_user(self.client, self.ah_user)
 
-        # Initialize the session
-        middleware = SessionMiddleware(get_response=lambda request: None)
-        request = self.client.request().wsgi_request
-        middleware.process_request(request)
-        request.session.save()
-
-        # Modify the session
-        session = self.client.session
-        session["can_upload_csv"] = False
-        session["can_complete_questionnaire"] = True
-        session.save()
-
-    def test_users_with_correct_permissions_can_save_patient(self):
+    def test_users_can_use_questionnaire(self):
         """
         Test that users who do not have the can_upload_csv permission cannot save a patient through the questionnaire view.
         """
+        create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+        )
+
         # Create a patient
         form = PatientForm(VALID_FIELDS)
 
@@ -120,7 +104,7 @@ class TestQuestionnaireView:
         # Post the patient data
         response = self.client.post(url, form.data)
 
-        # Check that the patient was not saved
+        # Check that the patient was saved
         assert (
             Patient.objects.filter(nhs_number=form.data["nhs_number"]).exists() is True
         )
@@ -132,6 +116,11 @@ class TestQuestionnaireView:
         """
         Test that users who have the questionnaire permission cannot save a patient in a closed audit year.
         """
+        create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+        )
+
         # Create a patient
         form = PatientForm(VALID_FIELDS)
         
@@ -155,6 +144,11 @@ class TestQuestionnaireView:
         """
         Test that RCPCH audit users who have the questionnaire permission can still save a patient in a closed audit year.
         """
+        create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+        )
+
         # Create a patient
         form = PatientForm(VALID_FIELDS)
 
@@ -180,10 +174,11 @@ class TestQuestionnaireView:
         """
         Test that users who do not have the questionnaire permission cannot save a patient through the questionnaire view.
         """
-        # Modify the session
-        session = self.client.session
-        session["can_complete_questionnaire"] = False
-        session.save()
+        sub = create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+            csv_file_name="test.csv",
+        )
 
         # Create a patient
         form = PatientForm(VALID_FIELDS)
@@ -202,12 +197,12 @@ class TestQuestionnaireView:
     def test_rcpch_users_without_questionnaire_permissions_can_still_save_patient(self):
         """
         Test that RCPCH audit users who do not have the questionnaire permission can still save a patient through the questionnaire view.
-        (Though this is theoretical as they have the permission by default)
         """
-        # Modify the session
-        session = self.client.session
-        session["can_complete_questionnaire"] = False
-        session.save()
+        create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+            csv_file_name="test.csv",
+        )
 
         # Give the user the RCPCH audit team group
         self.ah_user.is_rcpch_audit_team_member = True
@@ -231,12 +226,13 @@ class TestQuestionnaireView:
         """
         Test that users who do have questionnaire permission can save a visit through the questionnaire view.
         """
+
         patient = PatientFactory(
             transfer__paediatric_diabetes_unit__pz_code=ALDER_HEY_PZ_CODE
         )
 
         sub = create_submission(
-            audit_start_date=date.today(),
+            self.audit_period,
             pz_code=ALDER_HEY_PZ_CODE,
         )
         patient.submissions.add(sub)
@@ -258,15 +254,16 @@ class TestQuestionnaireView:
         """
         Test that users who do have questionnaire permission can save a visit through the questionnaire view.
         """
+        create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+            csv_file_name="test.csv",
+        )
+
         # Create a patient
         patient = PatientFactory()
 
         form = VisitForm(data=COMPLETED_VISIT, initial={"patient": patient})
-
-        # Modify the session
-        session = self.client.session
-        session["can_complete_questionnaire"] = False
-        session.save()
 
         # url
         url = reverse("pdu-visit-create", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "patient_id": patient.pk})
@@ -283,6 +280,12 @@ class TestQuestionnaireView:
         """
         assert not self.ah_user.is_rcpch_audit_team_member
 
+        sub = create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+            csv_file_name="test.csv",
+        )
+
         patient = PatientFactory()
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
         
@@ -290,9 +293,8 @@ class TestQuestionnaireView:
         transfer.paediatric_diabetes_unit = pdu
         transfer.save()
 
-        session = self.client.session
-        session["can_complete_questionnaire"] = False
-        session.save()
+        sub.patients.add(patient)
+        sub.save()
 
         url = reverse("pdu-patient-update", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "pk": patient.pk})
 
@@ -305,6 +307,12 @@ class TestQuestionnaireView:
         """
         assert not self.ah_user.is_rcpch_audit_team_member
 
+        sub = create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+            csv_file_name="test.csv",
+        )
+
         patient = PatientFactory()
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
         
@@ -312,11 +320,10 @@ class TestQuestionnaireView:
         transfer.paediatric_diabetes_unit = pdu
         transfer.save()
 
-        visit = VisitFactory(patient=patient)
+        sub.patients.add(patient)
+        sub.save()
 
-        session = self.client.session
-        session["can_complete_questionnaire"] = False
-        session.save()
+        visit = VisitFactory(patient=patient)
 
         url = reverse("pdu-visit-update", kwargs={
             "audit_period": self.audit_period.slug,

@@ -40,7 +40,7 @@
             </button>
         </label>
     </label>
-    {% if request.session.can_complete_questionnaire %}
+    {% if can_use_questionnaire %}
         <div class="pl-1 pr-1">
             <ul class="menu menu-horizontal">
                 <li>
@@ -51,7 +51,7 @@
                     </a>
                 </li>
                 <li>
-                    <a href="{% url 'submissions' %}"
+                    <a href="{% data_url 'pdu-submissions' %}"
                        class="btn btn-info h-auto w-full md:w-auto {% if not perms.npda.view_submission %}btn-disabled{% endif %}">
                         <i class="fa-solid fa-timeline"></i>
                         View submission history
@@ -106,7 +106,7 @@
                             </li>
                         {% endif %}
                         <li>
-                            <a href="{% url 'submissions' %}">
+                            <a href="{% data_url 'pdu-submissions' %}">
                                 <i class="fa-solid fa-timeline"></i>
                                 View upload history
                             </a>

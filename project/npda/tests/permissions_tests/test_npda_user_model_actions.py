@@ -251,12 +251,6 @@ def test_reader_cannot_upload_csv(
     
     file = dummy_sheets_folder / "dummy_sheet_test.csv"
 
-    # Set session to allow user permissions
-    session = client.session
-    session["can_upload_csv"] = True
-    session["can_complete_questionnaire"] = False
-    session.save()
-
     # upload the CSV file by posting to  'home' view
     url = url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
     with open(file, "rb") as f:
@@ -876,7 +870,7 @@ def test_users_can_download_report(
     assert response.has_header("Content-Disposition")
     assert "attachment" in response["Content-Disposition"]
     assert "filename" in response["Content-Disposition"]
-    assert response["Content-Type"] == "text/csv"
+    assert response["Content-Type"] == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
 @pytest.mark.django_db

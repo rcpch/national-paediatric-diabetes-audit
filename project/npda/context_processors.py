@@ -44,14 +44,9 @@ def session_data(request):
     audit_period_slug = current_audit_period_slug(request)
 
     return {
-        "can_complete_questionnaire": request.session.get(
-            "can_complete_questionnaire", False
-        ),
-        "can_upload_csv": request.session.get("can_upload_csv", False),
         # Required for the url-data helper
         "pz_code": pz_code,
         "audit_period_slug": audit_period_slug,
-        "parent_name": request.session.get("parent_name", None),
         "audit_years": request.session.get("audit_years", []),
         # Required for switcher
         "selected_audit_year": current_audit_year(audit_period_slug),

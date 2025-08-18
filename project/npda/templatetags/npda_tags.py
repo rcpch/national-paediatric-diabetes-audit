@@ -508,7 +508,7 @@ def plus_days(value, days):
 
 @register.simple_tag(takes_context=True)
 def data_url(context, view_name, *args, **kwargs):
-    return reverse(view_name, kwargs = kwargs | {
+    return reverse(view_name, kwargs = ({
         "pz_code": context.get("pz_code", None),
         "audit_period": context.get("audit_period_slug", None),
-    })
+    } | kwargs))

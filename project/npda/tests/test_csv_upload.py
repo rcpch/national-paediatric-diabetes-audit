@@ -911,9 +911,6 @@ def test_additional_columns_causes_error(
 
     # Log in user
     client = login_and_verify_user(client, test_rcpch_user)
-    session = client.session
-    session['can_upload_csv'] = True
-    session.save()
 
     url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
 
@@ -946,9 +943,6 @@ def test_duplicate_columns_causes_error(single_row_valid_df, client, test_rcpch_
 
     # Log in user
     client = login_and_verify_user(client, test_rcpch_user)
-    session = client.session
-    session['can_upload_csv'] = True
-    session.save()
 
     # Feed file and re-duplicate columns to the CSV
     with open(tmp_csv_path, "r") as csv_file:
@@ -990,9 +984,6 @@ def test_missing_columns_causes_error(test_rcpch_user, single_row_valid_df, clie
 
     # Log in user
     client = login_and_verify_user(client, test_rcpch_user)
-    session = client.session
-    session['can_upload_csv'] = True
-    session.save()
 
     url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
 
@@ -1058,9 +1049,6 @@ def test_invalid_nhs_number_column_name(single_row_valid_df, client, test_rcpch_
     
     # Log in user
     client = login_and_verify_user(client, test_rcpch_user)
-    session = client.session
-    session['can_upload_csv'] = True
-    session.save()
 
     url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
 
@@ -1205,9 +1193,6 @@ def test_missing_identifier_columns(test_rcpch_user, one_patient_two_visits, cli
 
     # Log in user
     client = login_and_verify_user(client, test_rcpch_user)
-    session = client.session
-    session['can_upload_csv'] = True
-    session.save()
 
     url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
 
@@ -1245,9 +1230,6 @@ def test_both_identifier_columns_causes_an_error(test_rcpch_user, one_patient_tw
 
     # Log in user
     client = login_and_verify_user(client, test_rcpch_user)
-    session = client.session
-    session['can_upload_csv'] = True
-    session.save()
 
     url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
 

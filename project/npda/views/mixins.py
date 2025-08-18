@@ -14,6 +14,7 @@ from project.npda.models.patient import Patient
 from project.npda.models.audit_period import AuditPeriod
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 from project.npda.models.transfer import Transfer
+from project.npda.models.submission import Submission
 from django.urls import reverse
 
 
@@ -85,8 +86,8 @@ class PDUPermissionMixin(AccessMixin):
         if not request.user.is_authenticated:
             return self.handle_no_permission()
 
-        audit_period = AuditPeriod.objects.get_audit_period_for_request(request, *args, **kwargs)
-        pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(request, *args, **kwargs)
+        audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
+        pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(request)
 
         model = self.get_model().__name__
 
@@ -135,46 +136,47 @@ class CheckCurrentAuditYearMixin(AccessMixin):
         return super().dispatch(request, *args, **kwargs)
 
 
-class CheckCanCompleteQuestionnaireMixin(AccessMixin):
-    """
-    A mixin that checks whether the user can complete the questionnaire:
-      - The submission is not a CSV upload (can_complete_questionnaire = True)
-      - The submission is not a CSV upload
-        - and the operation is a GET (the UI has code to display read only)
-        - or you are a superuser or audit team member
-    
-    It also returns context data for templates to conditionally render UI based on the type of upload.
-    """
-    def get_context_data(self, **kwargs):
+class QuestionnaireContextMixin(AccessMixin):
+    def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(**kwargs)
 
         audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
+        pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(self.request)
 
-        session_is_audit_year_open = audit_period and audit_period.is_open
-        session_can_upload_csv = self.request.session.get("can_upload_csv", True)
-        session_can_use_questionnaire = self.request.session.get("can_complete_questionnaire", True)
+        submission = Submission.objects.get_submission_for_request(pdu, audit_period)
+
+        is_csv_upload = submission and submission.csv_file_name is not None
+        is_questionnaire = not is_csv_upload if submission else True
 
         can_override_data_upload_rules = self.request.user.is_superuser or getattr(self.request.user, "is_rcpch_audit_team_member", False)
         data_upload_rules_overridden = can_override_data_upload_rules and self.request.GET.get("unlock", False)
-
+        
         return context | {
-            "is_csv_upload": session_can_upload_csv,
-            "is_questionnaire": session_can_use_questionnaire,
+            "is_csv_upload": is_csv_upload,
+            "is_questionnaire": is_questionnaire,
             "can_override_data_upload_rules": can_override_data_upload_rules,
             "data_upload_rules_overridden": data_upload_rules_overridden,
-            "can_use_questionnaire": data_upload_rules_overridden or (session_is_audit_year_open and session_can_use_questionnaire),
-        }
+            "can_use_questionnaire": data_upload_rules_overridden or is_questionnaire,
+        }  
 
+
+class CheckCanCompleteQuestionnaireMixin(QuestionnaireContextMixin, AccessMixin):
     def dispatch(self, request, *args, **kwargs):
-        # Check if the user has the permission to complete the questionnaire
-        if not request.session.get("can_complete_questionnaire"):
-            if request.method == "GET" or request.user.is_superuser or request.user.is_rcpch_audit_team_member:
-                # Allow superusers and RCPCH audit team members to complete the questionnaire
-                return super().dispatch(request, *args, **kwargs)
+        # Overriding data upload rules just applies in the UI
+        if request.user.is_superuser or request.user.is_rcpch_audit_team_member:
+            return super().dispatch(request, *args, **kwargs)
 
-            logger.warning(
-                f"User {request.user} tried to complete the questionnaire without the permission to do so."
-            )
-            raise PermissionDenied()
+        if request.method != "GET":
+            audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
+            pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(self.request)
+
+            submission = Submission.objects.get_submission_for_request(pdu, audit_period)
+            is_questionnaire = not submission.csv_file_name if submission else True
+
+            if not is_questionnaire:
+                logger.warning(
+                    f"User {request.user} tried to complete the questionnaire for a CSV upload submission."
+                )
+                raise PermissionDenied()
 
         return super().dispatch(request, *args, **kwargs)
