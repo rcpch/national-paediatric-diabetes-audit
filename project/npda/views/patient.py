@@ -185,6 +185,13 @@ class PatientListView(
 
         context["pdu"] = self.pdu
 
+        context["breadcrumbs"] = [
+            {
+                "label": "Patient Data",
+                "href": self.data_reverse("pdu-patients")
+            }
+        ]
+
         submission = None
         submission_error_count = 0
 

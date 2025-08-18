@@ -44,19 +44,40 @@
     </a>
   </div>
   {% comment %} NAV ITEMS {% endcomment %}
-  <div class="navbar-center hidden lg:flex">
-    <ul class="menu menu-horizontal px-1">
-      {% include 'navbar/components/nav_links.html' %}
-    </ul>
-    {% if instance_label %}
-          <p class="badge badge-md badge-warning">
-            {{instance_label}}
-          </p>
-        {% endif %}
-  </div>
+  {% if breadcrumbs and user.is_rcpch_audit_team_member or user.is_superuser %}
+    <div class="navbar-center breadcrumbs text-m">
+      <ul>
+        <li>
+          <a href="{% url 'new-home' audit_period=audit_period_slug %}">{{audit_period_slug}}</a>
+        </li>
+        <li>
+          <a href="{% data_url 'pdu-dashboard' %}">{{pz_code}}</a>
+        </li>
+        {% for breadcrumb in breadcrumbs %}
+          <li>
+            <a href="{{ breadcrumb.href }}">{{ breadcrumb.label }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% else %}
+    <div class="navbar-center hidden lg:flex">
+      <ul class="menu menu-horizontal px-1">
+        {% include 'navbar/components/nav_links.html' %}
+      </ul>
+    </div>
+  {% endif %}
   {% comment %} RIGHT {% endcomment %}
   <div class="navbar-end h-full">
-    {% include 'navbar/components/filters.html' %}
+    {% if user.is_rcpch_audit_team_member or user.is_superuser %}
+      {% if instance_label %}
+        <p class="badge badge-md badge-warning mr-6">
+          {{instance_label}}
+        </p>
+      {% endif %}
+    {% else %}
+      {% include 'navbar/components/filters.html' %}
+    {% endif %}
     {% include 'navbar/components/avatar_dropdown.html' %}
   </div>
 </div>
