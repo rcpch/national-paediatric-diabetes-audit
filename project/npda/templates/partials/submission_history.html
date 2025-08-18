@@ -20,7 +20,7 @@
              value="on"
              {% if toggle_inactive_submissions == "on" %}checked="checked"{% endif %}
              hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-             hx-post="{% url 'submissions' %}"
+             hx-post="{% data_url 'pdu-submissions' %}"
              hx-include="this"
              hx-target="#submissions_table" />
       <label class="label cursor-pointer">Show inactive submissions</label>
@@ -92,7 +92,7 @@
                   {% endif %}
                   <td class="flex flex-row flex-wrap justify-start items-stretch gap-2 xl:flex-nowrap">
                     <form method="post"
-                          action="{% url 'submissions' %}"
+                          action="{% data_url 'pdu-submissions' %}"
                           class="join grow xl:max-w-max">
                       {% csrf_token %}
                       <input type="hidden" name="audit_id" value="{{ submission.pk }}">
@@ -172,13 +172,13 @@
       {% include 'partials/data_quality_report.html' with data=data submission_errors=submission_errors %}
     {% else %}
       <p class="text-gray-400">
-        No data quality report available for {{ request.session.pz_code }}.
+        No data quality report available for {{ pz_code }}.
       </p>
     {% endif %}
   {% else %}
     <!-- No submissions so far -->
     <p class="text-gray-400">
-      No submissions uploaded yet for {{ request.session.pz_code }}.
+      No submissions uploaded yet for {{ pz_code }}.
     </p>
   {% endif %}
 </div>

@@ -49,6 +49,11 @@ urlpatterns = [
         view=SubmissionsListView.as_view(),
         name="submissions",
     ),
+    path(
+        f"{data_prefix}/submissions",
+        view=SubmissionsListView.as_view(),
+        name="pdu-submissions",
+    ),
     # Patient views
     path(
         "patients",
