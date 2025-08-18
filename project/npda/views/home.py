@@ -1,5 +1,6 @@
 # Python imports
 from asgiref.sync import sync_to_async
+from urllib.parse import urlparse
 import logging
 
 # Django imports
@@ -10,12 +11,40 @@ from project.npda.general_functions.csv import csv_header
 from ..general_functions.session import refresh_session_filters
 
 # RCPCH imports
-from .decorators import login_and_otp_required
+from .decorators import login_and_otp_required, check_data_permissions
 
 from project.npda.tasks import test_task
+from project.npda.models.audit_period import AuditPeriod
+from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 
 # Logging
 logger = logging.getLogger(__name__)
+
+# Temporary hack until everything is referenced by data url and we can remove this endpoint
+def redirect_after_switcher(request):
+    if request.htmx and request.htmx.current_url:
+        path = urlparse(request.htmx.current_url).path
+
+        if path.startswith("/period/"):
+            audit_period = AuditPeriod.objects.get(
+                start_date__year=request.session.get("selected_audit_year")
+            )
+            
+            pz_code = request.session.get("pz_code", None)
+
+            data_prefix = f"period/{audit_period.slug}/pdu/{pz_code}"
+
+            rest_of_path = "/".join(path.split("/")[5:])
+
+            return HttpResponse(
+                status=204,
+                headers={
+                    "HX-Redirect": f"/{data_prefix}/{rest_of_path}",
+                }
+            )
+
+    # Reload the page to apply the new view preference
+    return HttpResponse(status=204, headers={"HX-Refresh": "true"})
 
 
 @login_and_otp_required()
@@ -29,12 +58,14 @@ async def home(request):
     return render(request=request, template_name=template, context=context)
 
 
-def download_template(request):
+@login_and_otp_required()
+@check_data_permissions()
+def download_template(request, audit_period, pdu):
     """
     Creates the template csv for users to fill out and upload into NPDA
     """
 
-    is_jersey = request.session.get("pz_code") == "PZ248"
+    is_jersey = pdu.pz_code == "PZ248"
     file = csv_header(is_jersey=is_jersey)
 
     return HttpResponse(
@@ -49,14 +80,12 @@ def view_preference(request):
     """
     HTMX callback from the button press in the view_preference.html template.
     """
-
     selected_pz_code = request.POST.get("pz_code_select_name", None)
 
     # includes a validation step
     refresh_session_filters(request, pz_code=selected_pz_code)
 
-    # Reload the page to apply the new view preference
-    return HttpResponse(status=204, headers={"HX-Refresh": "true"})
+    return redirect_after_switcher(request)
 
 
 @login_and_otp_required()
@@ -70,16 +99,10 @@ def audit_year(request):
 
         refresh_session_filters(request, audit_year=audit_year)
 
-        # Reload the page to apply the new view preference
-        return HttpResponse(status=204, headers={"HX-Refresh": "true"})
-
-    context = {
-        "audit_years": request.session.get("audit_years"),
-        "selected_audit_year": request.session.get("selected_audit_year"),
-    }
+        return redirect_after_switcher(request)
 
     response = render(
-        request, template_name="partials/audit_year_select.html", context=context
+        request, template_name="partials/audit_year_select.html"
     )
 
     return response

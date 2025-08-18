@@ -4223,12 +4223,10 @@ class CalculateKPIS:
             self.kpi_1_total_eligible,
         )
 
-    def get_total_kpi_2_eligible_pts_base_query_set_and_total_count(
+    def _get_total_kpi_2_eligible_pts_base_query_set_and_total_count(
         self,
     ) -> Tuple[QuerySet[Patient], int]:
         """Enables reuse of the base query set for KPI 2
-
-        Also used in the Care At Diagnosis tab in the patient report.
 
         If running calculation methods in order, this attribute will be set in calculate_kpi_2_total_new_diagnoses().
 

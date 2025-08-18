@@ -4,8 +4,6 @@ from datetime import date
 
 import plotly.graph_objects as go
 import plotly.io as pio
-from django.apps import apps
-from django.contrib import messages
 
 # Django imports
 from django.http import HttpResponseBadRequest
@@ -24,13 +22,10 @@ from project.npda.general_functions.rcpch_nhs_organisations import (
     fetch_organisation_by_ods_code,
 )
 from project.npda.kpi_class.kpis import CalculateKPIS
-from project.npda.models.paediatric_diabetes_unit import (
-    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
-)
 from project.npda.models.submission import Submission
 from project.npda.models.audit_period import AuditPeriod
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
-from project.npda.views.decorators import login_and_otp_required
+from project.npda.views.decorators import login_and_otp_required, check_data_permissions
 
 logger = logging.getLogger(__name__)
 
@@ -38,13 +33,12 @@ DEFAULT_CHART_HTML_HEIGHT = "18rem"
 
 
 @login_and_otp_required()
-def get_map_chart_partial(request):
+@check_data_permissions()
+def get_map_chart_partial(request, audit_period, pdu):
 
     if not request.htmx:
         return HttpResponseBadRequest("This view is only accessible via HTMX")
 
-    pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(request)
-    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
     submission = Submission.objects.get_submission_for_request(pdu, audit_period)
 
     if not submission:
@@ -109,7 +103,8 @@ def get_map_chart_partial(request):
 
 
 @login_and_otp_required()
-def get_metric_scatter_plot(request):
+@check_data_permissions()
+def get_metric_scatter_plot(request, audit_period, pdu):
     """HTMX view that accepts a GET request with an object of waffle labels and percentages,
     returning a waffle chart rendered.
 
@@ -122,9 +117,9 @@ def get_metric_scatter_plot(request):
 
         if request.method == "POST":
             selected_chart = request.POST["scatter_plot_select"]
-            calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
+            calculation_date = audit_period.kpi_calculation_date()
             data, title, tooltip_text = get_selected_chart_data(
-                selected_chart, calculation_date, request.session.get("pz_code")
+                selected_chart, calculation_date, pdu.pz_code
             )
 
         if request.method == "GET":
@@ -241,19 +236,17 @@ def get_metric_scatter_plot(request):
 
 
 @login_and_otp_required()
-def get_new_diagnoses_partial(request):
+@check_data_permissions()
+def get_new_diagnoses_partial(request, audit_period, pdu):
     """HTMX view that returns the number of new diagnoses for the current submission"""
 
     # Get new diagnoses this submission
-    pz_code = request.session.get("pz_code")
-
-    calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
 
     calculate_kpis = CalculateKPIS(
-        calculation_date=calculation_date, return_pt_querysets=False
+        calculation_date=audit_period.kpi_calculation_date(), return_pt_querysets=False
     )
 
-    calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+    calculate_kpis.set_patients_for_calculation(pz_codes=[pdu.pz_code])
 
     n_diagnoses_this_year = calculate_kpis.calculate_kpi_2_total_new_diagnoses()
 
@@ -271,20 +264,17 @@ def get_new_diagnoses_partial(request):
 
 
 @login_and_otp_required()
-def get_new_admissions_partial(request):
+@check_data_permissions()
+def get_new_admissions_partial(request, audit_period, pdu):
     """HTMX view that returns the number of new admissions for the current month"""
 
     # Get new admissions this month
 
-    pz_code = request.session.get("pz_code")
-
-    calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
-
     calculate_kpis = CalculateKPIS(
-        calculation_date=calculation_date, return_pt_querysets=False
+        calculation_date=audit_period.kpi_calculation_date(), return_pt_querysets=False
     )
 
-    calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+    calculate_kpis.set_patients_for_calculation(pz_codes=[pdu.pz_code])
 
     n_admissions_this_month = (
         calculate_kpis.calculate_kpi_46_number_of_admissions().total_passed
@@ -300,18 +290,15 @@ def get_new_admissions_partial(request):
 
 
 @login_and_otp_required()
-def get_transitioned_to_adult_service_partial(request):
+@check_data_permissions()
+def get_transitioned_to_adult_service_partial(request, audit_period, pdu):
     """HTMX view that returns the number of patients who have been transitioned to the adult service"""
 
-    pz_code = request.session.get("pz_code")
-
-    calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
-
     calculate_kpis = CalculateKPIS(
-        calculation_date=calculation_date, return_pt_querysets=True
+        calculation_date=audit_period.kpi_calculation_date(), return_pt_querysets=True
     )
 
-    calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+    calculate_kpis.set_patients_for_calculation(pz_codes=[pdu.pz_code])
 
     n_transitioned_to_adult_service = (
         calculate_kpis.calculate_total_service_transitions_to_adults().total_eligible  # this will return None if there are no eligible patients
@@ -331,18 +318,15 @@ def get_transitioned_to_adult_service_partial(request):
 
 
 @login_and_otp_required()
-def get_moved_out_of_area_partial(request):
+@check_data_permissions()
+def get_moved_out_of_area_partial(request, audit_period, pdu):
     """HTMX view that returns the number of patients who have been moved out of area"""
 
-    pz_code = request.session.get("pz_code")
-
-    calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
-
     calculate_kpis = CalculateKPIS(
-        calculation_date=calculation_date, return_pt_querysets=True
+        calculation_date=audit_period.kpi_calculation_date(), return_pt_querysets=True
     )
 
-    calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+    calculate_kpis.set_patients_for_calculation(pz_codes=[pdu.pz_code])
 
     n_moved_out_of_area = (
         calculate_kpis.get_number_of_moved_out_of_area_this_audit_year()
@@ -358,18 +342,15 @@ def get_moved_out_of_area_partial(request):
 
 
 @login_and_otp_required()
-def get_n_on_hcl_partial(request):
+@check_data_permissions()
+def get_n_on_hcl_partial(request, audit_period, pdu):
     """HTMX view that returns the number of patients who are on HCL"""
 
-    pz_code = request.session.get("pz_code")
-
-    calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
-
     calculate_kpis = CalculateKPIS(
-        calculation_date=calculation_date, return_pt_querysets=True
+        calculation_date=audit_period.kpi_calculation_date(), return_pt_querysets=True
     )
 
-    calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+    calculate_kpis.set_patients_for_calculation(pz_codes=[pdu.pz_code])
 
     hcl_use_kpi_result = calculate_kpis.calculate_kpi_24_hybrid_closed_loop_system()
 
@@ -397,18 +378,15 @@ def get_n_on_hcl_partial(request):
 
 
 @login_and_otp_required()
-def get_pump_partial(request):
+@check_data_permissions()
+def get_pump_partial(request, audit_period, pdu):
     """HTMX view that returns the number of patients who are on pump"""
 
-    pz_code = request.session.get("pz_code")
-
-    calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
-
     calculate_kpis = CalculateKPIS(
-        calculation_date=calculation_date, return_pt_querysets=True
+        calculation_date=audit_period.kpi_calculation_date(), return_pt_querysets=True
     )
 
-    calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+    calculate_kpis.set_patients_for_calculation(pz_codes=[pdu.pz_code])
 
     pump_kpi_result = calculate_kpis.calculate_kpi_15_insulin_pump()
 
@@ -433,18 +411,15 @@ def get_pump_partial(request):
 
 
 @login_and_otp_required()
-def get_cgm_partial(request):
+@check_data_permissions()
+def get_cgm_partial(request, audit_period, pdu):
     """HTMX view that returns the number of patients who are on CGM"""
 
-    pz_code = request.session.get("pz_code")
-
-    calculation_date = AuditPeriod.objects.get_audit_period_for_request(request).kpi_calculation_date()
-
     calculate_kpis = CalculateKPIS(
-        calculation_date=calculation_date, return_pt_querysets=True
+        calculation_date=audit_period.kpi_calculation_date(), return_pt_querysets=True
     )
 
-    calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+    calculate_kpis.set_patients_for_calculation(pz_codes=[pdu.pz_code])
 
     cgm_kpi_result = calculate_kpis.calculate_kpi_22_real_time_cgm_with_alarms()
 

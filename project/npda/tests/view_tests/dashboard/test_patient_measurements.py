@@ -74,7 +74,10 @@ def test_measurements_for_patients_turning_12_in_audit_year(
     )
     submission.patients.add(patient)
 
-    response = client.get(reverse("patient_measurements"))
+    response = client.get(reverse("pdu-patient-measurements", kwargs={
+        "audit_period": audit_period.slug,
+        "pz_code": ALDER_HEY_PZ_CODE
+    }))
     assert response.status_code == HTTPStatus.OK
 
     assert response.context["total_eligible_blood_pressure"] == 0

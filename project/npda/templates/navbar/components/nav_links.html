@@ -1,13 +1,13 @@
 {% load npda_tags %}
 {% if user.is_authenticated %}
   <li class="">
-    {% include "navbar/components/nav_link.html" with url_name="dashboard" nav_text="Unit Report" %}
+    {% include "navbar/components/nav_link.html" with data_url_name="pdu-dashboard" nav_text="Unit Report" %}
   </li>
   <li class="">
-    {% include "navbar/components/nav_link.html" with url_name="patient_report" nav_text="Patient Report" %}
+    {% include "navbar/components/nav_link.html" with data_url_name="pdu-patient-report" nav_text="Patient Report" %}
   </li>
   <li class="">
-    {% include "navbar/components/nav_link.html" with url_name="patients" nav_text="Patient Data" %}
+    {% include "navbar/components/nav_link.html" with data_url_name="pdu-patients" nav_text="Patient Data" %}
   </li>
 {% endif %}
 <li>

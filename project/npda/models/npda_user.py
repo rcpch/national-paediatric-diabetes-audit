@@ -297,6 +297,14 @@ class NPDAUser(AbstractUser, PermissionsMixin):
         readable_names = [READABLE_GROUPNAMES.get(group, group) for group in group_keys]
         return ", ".join(readable_names)
 
+    def primary_pdu(self):
+        OrganisationEmployer = apps.get_model("npda", "OrganisationEmployer")
+
+        # There should only be one primary organisation
+        return OrganisationEmployer.objects.get(
+            npda_user=self, is_primary_employer=True
+        ).paediatric_diabetes_unit
+
     def __unicode__(self):
         return self.email
 

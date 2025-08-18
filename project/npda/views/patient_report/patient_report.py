@@ -28,10 +28,11 @@ from django.db.models import (
 from django.views.generic import ListView
 from project.constants.hba1c_format import HBA1C_FORMATS
 from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
+from project.constants.diabetes_types import DIABETES_TYPES
 from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.models import Patient, AuditPeriod, Visit
 from project.npda.models.db_functions import Round
-from project.npda.views.mixins import CheckPDUListMixin, LoginAndOTPRequiredMixin
+from project.npda.views.mixins import PDUPermissionMixin, LoginAndOTPRequiredMixin
 from django.db.models import QuerySet
 
 logger = logging.getLogger(__name__)
@@ -68,7 +69,7 @@ class TableCategories(Enum):
 
 class PatientReportView(
     LoginAndOTPRequiredMixin,
-    CheckPDUListMixin,
+    PDUPermissionMixin,
     ListView,
 ):
     # Perms
@@ -147,9 +148,8 @@ class PatientReportView(
         if category not in TableCategories.values():
             raise ValueError(f"Invalid category: {category}")
         self.selected_category = category
-        pz_code = request.session.get("pz_code")
-        audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
-        calculation_date = audit_period.kpi_calculation_date()
+        pz_code = self.pdu.pz_code
+        calculation_date = self.audit_period.kpi_calculation_date()
         calculate_kpis = CalculateKPIS(
             calculation_date=calculation_date, return_pt_querysets=True, is_jersey=pz_code == "PZ248"
         )
@@ -203,7 +203,7 @@ class PatientReportView(
             
             # For age-specific checks (12+ years old at start of audit period)
             complete_year_12plus = complete_year_patients.filter(
-                date_of_birth__lte=audit_period.start_date - relativedelta(years=12)
+                date_of_birth__lte=self.audit_period.start_date - relativedelta(years=12)
             )
             
             self.total_passed_blood_pressure = calculate_kpis.calculate_kpi_28_blood_pressure().patient_querysets["passed"].filter(
@@ -222,7 +222,7 @@ class PatientReportView(
             self.total_eligible_foot_exam = complete_year_12plus.count()
             pt_qs = pt_qs.annotate(
                 is_gte_12yo=Q(
-                    date_of_birth__lte=audit_period.start_date - relativedelta(years=12)
+                    date_of_birth__lte=self.audit_period.start_date - relativedelta(years=12)
                 ),
                 passed_hba1c=Case(
                     When(
@@ -395,7 +395,7 @@ class PatientReportView(
                     output_field=BooleanField(),
                 ),
                 is_gte_12yo=Q(
-                    date_of_birth__lte=audit_period.start_date - relativedelta(years=12)
+                    date_of_birth__lte=self.audit_period.start_date - relativedelta(years=12)
                 ),
                 smoking_status=Case(
                     When(
@@ -468,7 +468,7 @@ class PatientReportView(
                 sick_day_rules_advice=Case(
                     When(
                         Exists(
-                            calculate_kpis.calculate_kpi_39_influenza_immunisation_recommended()
+                            calculate_kpis.calculate_kpi_40_sick_day_rules_advice()
                             .patient_querysets["passed"]
                             .filter(pk=OuterRef("pk"))
                         ),
@@ -491,7 +491,12 @@ class PatientReportView(
                 "sick_day_rules_advice",
             )
         elif self.selected_category == TableCategories.CARE_AT_DIAGNOSIS.value:
-            (pt_qs, _) = calculate_kpis.get_total_kpi_2_eligible_pts_base_query_set_and_total_count()
+            pt_qs = calculate_kpis.calculate_kpi_2_total_new_diagnoses().patient_querysets[
+                "eligible"
+            ]
+            pt_qs = pt_qs.filter(
+                diabetes_type=DIABETES_TYPES[0][0]  # T1DM
+            )
             pt_qs = pt_qs.annotate(
                 patient_identifier=F(patient_identifier),
                 coeliac_disease_screening=Case(
@@ -902,11 +907,7 @@ class PatientReportView(
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # Jersey
-        if self.request.session.get("pz_code") == "PZ248":
-            context["is_jersey"] = True
-        else:
-            context["is_jersey"] = False
+        context["is_jersey"] = self.pdu.pz_code == "PZ248"
 
         # Add table categories to the context
         context["table_categories"] = TableCategories.choices()

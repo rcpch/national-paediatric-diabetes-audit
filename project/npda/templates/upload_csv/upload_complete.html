@@ -1,3 +1,4 @@
+{% load npda_tags %}
 <div class="max-w-2xl mx-auto px-6">
   <h1 class="text-4xl font-bold text-center mb-5 font-montserrat">
     Upload Complete
@@ -43,7 +44,7 @@
   </div>
 </div>
 <div class="flex justify-center mt-16">
-  <a class="btn rcpch-light-blue-btn" href="{% url 'patients' %}">
+  <a class="btn rcpch-light-blue-btn" href="{% data_url 'pdu-patients' %}">
     View Patients
   </a>
 </div>

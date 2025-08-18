@@ -1,4 +1,5 @@
 {% extends "dashboard/components/bases/base_secondary_card.html" %}
+{% load npda_tags %}
 
 {% block card_title %}
     CGM
@@ -8,7 +9,7 @@
 {% block card_content %}
 
 <div
-hx-get="{% url 'get_cgm_partial' %}"
+hx-get="{% data_url 'pdu-get-cgm-partial' %}"
 hx-trigger="load" hx-swap="innerHTML"
 _="on htmx:afterSwap remove #loading-spinner-cgm-card"></div>
 

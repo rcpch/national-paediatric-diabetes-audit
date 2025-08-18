@@ -14,32 +14,6 @@ from project.npda.general_functions import (
 logger = logging.getLogger(__name__)
 
 
-def get_submission_actions(pz_code, audit_period):
-    Submission = apps.get_model("npda", "Submission")
-
-    submission = Submission.objects.filter(
-        paediatric_diabetes_unit__pz_code=pz_code,
-        submission_active=True,
-        audit_period=audit_period,
-    ).first()
-
-    can_complete_questionnaire = True
-    can_upload_csv = True
-
-    if submission:
-        if submission.csv_file:
-            can_upload_csv = True
-            can_complete_questionnaire = False
-        else:
-            can_upload_csv = False
-            can_complete_questionnaire = True
-
-    return {
-        "can_upload_csv": can_upload_csv,
-        "can_complete_questionnaire": can_complete_questionnaire,
-    }
-
-
 def get_audit_period_session_data(audit_period, user):
     AuditPeriod = apps.get_model("npda", "AuditPeriod")
     audit_years = []
@@ -63,12 +37,8 @@ def create_session_object(user):
     This is called on login, and is used to filter the data the user can see.
     """
     AuditPeriod = apps.get_model("npda", "AuditPeriod")
-    OrganisationEmployer = apps.get_model("npda", "OrganisationEmployer")
     
-    primary_organisation = OrganisationEmployer.objects.filter(
-        npda_user=user, is_primary_employer=True
-    ).first() # There should only be one primary organisation but if there are multiple, just take the first one
-    pz_code = primary_organisation.paediatric_diabetes_unit.pz_code
+    pz_code = user.primary_pdu().pz_code
     pdu_choices = (
         organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
             requesting_user=user, user_instance=None
@@ -78,23 +48,20 @@ def create_session_object(user):
     # This is the year that that audit period starts in
     audit_period = AuditPeriod.objects.get_default_audit_period()
 
-    submission_actions = get_submission_actions(pz_code, audit_period)
     audit_period_data = get_audit_period_session_data(audit_period, user)
 
     session = {
         "pz_code": pz_code,
-        "parent": primary_organisation.paediatric_diabetes_unit.parent_name,
         "pdu_choices": list(pdu_choices),
         "selected_audit_year": audit_period.audit_year(),
-    } | submission_actions | audit_period_data
+    } | audit_period_data
 
     return session
 
 
-def refresh_session_filters(request, pz_code=None, audit_year=None, csv_upload=None, questionnaire=None):
+def refresh_session_filters(request, pz_code=None, audit_year=None):
     session = {}
 
-    PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
     AuditPeriod = apps.get_model("npda", "AuditPeriod")
 
     pz_code = pz_code or request.session.get("pz_code")
@@ -122,28 +89,11 @@ def refresh_session_filters(request, pz_code=None, audit_year=None, csv_upload=N
             raise PermissionDenied()
 
         session["pz_code"] = pz_code
-        session["parent"] = PaediatricDiabetesUnit.objects.get(
-            pz_code=pz_code,
-            active=True
-        ).parent_name
         session["pdu_choices"] = list(
             organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
                 requesting_user=user, user_instance=None
             )
         )
-
-    if csv_upload:
-        session |= {
-            "can_upload_csv": True,
-            "can_complete_questionnaire": False,
-        }
-    elif questionnaire:
-        session |= {
-            "can_upload_csv": False,
-            "can_complete_questionnaire": True,
-        }
-    else:
-        session |= get_submission_actions(pz_code, audit_period)
     
     session |= get_audit_period_session_data(audit_period, request.user)
 

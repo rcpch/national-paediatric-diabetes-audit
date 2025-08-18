@@ -33,7 +33,7 @@
                 We recommend this method if you already have a system that can export in that format or are building one.
               </p>
               <div class="card-actions justify-end">
-                <a href="{% url 'upload_csv' %}"
+                <a href="{% data_url 'pdu-upload-csv' %}"
                    class="btn btn-info {% if not perms.npda.can_submit_csv %}btn-disabled{% endif %}">Select</a>
               </div>
             </div>
@@ -47,7 +47,7 @@
                 Use this method if you don't have an electronic patient record or you can't export from it in our CSV format.
               </p>
               <div class="card-actions justify-end">
-                <a href="{% url 'patient-add' %}"
+                <a href="{% data_url 'pdu-patient-add' %}"
                    class="btn btn-info {% if not perms.npda.can_submit_csv %}btn-disabled{% endif %}">Select</a>
               </div>
             </div>

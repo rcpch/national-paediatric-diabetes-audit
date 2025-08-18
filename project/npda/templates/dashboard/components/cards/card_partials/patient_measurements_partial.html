@@ -47,7 +47,7 @@
     </table>
   </div>
   <!-- Data Quality Stats -->
-  <a href="{% url 'patients' %}"
+  <a href="{% data_url 'pdu-patients' %}"
      class="tooltip"
      data-tip="Click here to view all patients and review any data quality issues">
     <div class="flex flex-row justify-between text-center justify-center mb-4">
@@ -70,7 +70,7 @@
     </div>
   </a>
   <!-- Health Checks Stats -->
-  <a href="{% url 'patient_report' %}"
+  <a href="{% data_url 'pdu-patient-report' %}"
      class="tooltip block"
      data-tip="Click here to view health check total counts for all patients with T1 diabetes in this submission">
     <!-- Health Checks Title -->

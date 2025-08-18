@@ -3,91 +3,26 @@ import json
 import logging
 from datetime import date
 
-from dateutil.relativedelta import relativedelta
-from django.apps import apps
-from django.contrib import messages
 from django.shortcuts import render
 
-from project import constants
 from project.npda.general_functions.audit_period import audit_period_for_audit_year
 from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
 from project.npda.kpi_class.kpis import CalculateKPIS
-from project.npda.models.paediatric_diabetes_unit import (
-    PaediatricDiabetesUnit as PaediatricDiabetesUnitClass,
-)
-from project.npda.models.patient import Patient
-from project.npda.models.audit_period import AuditPeriod
-from project.npda.views.decorators import login_and_otp_required
+from project.npda.views.decorators import login_and_otp_required, check_data_permissions
 
 # LOGGING
 logger = logging.getLogger(__name__)
 
 
-# 🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
-# 🚨 TODO SHOULD BE REMOVED, JUST DURING DEV  🚨
-# 🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
 @login_and_otp_required()
-def temp_set_eligible_kpi_7(request):
-    """Temporary util to set some seeded patients attrs manually
-
-    KPI7
-        to be eligible for kpi 7 (T1DM diagnosed
-        during the audit period) which is denominator for kpis 41-43.
-
-        This is because the default behaviour of the `PatientFactory` .build method (used in the
-        csv seeder) is to choose a random diabetes_diagnosis between the pt's DoB and audit_start_date.
-
-    """
-    if not request.user.is_superuser:
-        logger.error("User %s tried to run temp util to set KPI 7", request.user)
-        raise PermissionError("Only superusers can run this util")
-
-    from django.http import HttpResponse
-
-    _ = 10
-    logger.error(f"🔥 Setting {_} patients to be eligible for KPI 7")
-    to_set_kpi_7_eligible = Patient.objects.filter(
-        diabetes_type=constants.diabetes_types.DIABETES_TYPES[0][0]
-    )[:_]
-    for pt in to_set_kpi_7_eligible:
-        pt.diagnosis_date = CalculateKPIS().audit_start_date + relativedelta(months=4)
-        pt.save()
-        logger.warning(f"Succesfully set {pt} to be eligible for KPI 7")
-
-    return HttpResponse(
-        f"Set {_} patients to be eligible for KPI 7: {''.join([f'<p>{pt.nhs_number}</p>' for pt in to_set_kpi_7_eligible])}",
-        status=200,
-    )
-
-
-# 🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
-# 🚨 TODO SHOULD BE REMOVED, JUST DURING DEV  🚨
-# 🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
-
-
-@login_and_otp_required()
-def dashboard(request):
+@check_data_permissions()
+def dashboard(request, audit_period, pdu):
     """
     Dashboard view for the KPIs.
     """
     template = "dashboard.html"
     if request.htmx:
         template = "dashboard/dashboard_base.html"
-    pz_code = request.session.get("pz_code")
-
-    PaediatricDiabetesUnit: PaediatricDiabetesUnitClass = apps.get_model(
-        "npda", "PaediatricDiabetesUnit"
-    )
-    try:
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-    except PaediatricDiabetesUnit.DoesNotExist:
-        messages.error(
-            request=request,
-            message=f"Paediatric Diabetes Unit with PZ code {pz_code} does not exist",
-        )
-        return render(request, "dashboard.html")
-
-    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
     
     current_date = date.today()
     calculation_date = audit_period.kpi_calculation_date()
@@ -109,7 +44,7 @@ def dashboard(request):
         calculation_date=calculation_date, return_pt_querysets=True
     )
 
-    kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pz_code])
+    kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pdu.pz_code])
 
     # From this, gather specific chart data required
 

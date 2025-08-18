@@ -33,7 +33,7 @@ def test_auto_logout_django_auto_logout(
     client = login_and_verify_user(client, user)
 
     # Try accessing authenticated page
-    response = client.get(reverse("dashboard"))
+    response = client.get(reverse("home"))
     assert response.status_code == HTTPStatus.OK, "User unable to access home"
 
     # Simulate session expiry with freezegun
@@ -43,7 +43,7 @@ def test_auto_logout_django_auto_logout(
         + timedelta(milliseconds=1)
     )
     with freeze_time(future_time):
-        response = client.get(reverse("dashboard"))
+        response = client.get(reverse("home"))
 
     assert (
         response.status_code == HTTPStatus.FOUND
@@ -53,7 +53,7 @@ def test_auto_logout_django_auto_logout(
     ), f"User not redirected to login page ({reverse('two_factor:setup')}), instead to {response.url=}"
 
     # Finally try to access a protected page, now as an anon user
-    response = client.get(reverse("dashboard"))
+    response = client.get(reverse("home"))
     assert (
         response.status_code == HTTPStatus.FOUND
     ), f"Anon user tried accessing protected page after autologout, did not receive 302 response; {response.status_code=}"

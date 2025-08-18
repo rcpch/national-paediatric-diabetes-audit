@@ -18,13 +18,14 @@ from django.db.models.functions import Concat, ExtractMonth, ExtractYear
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.views.generic import ListView
+from django.urls import reverse
 
 
 # Third party imports
 import pandas as pd
 import plotly.graph_objects as go
 
-from project.npda.views.decorators import login_and_otp_required
+from project.npda.views.decorators import login_and_otp_required, check_data_permissions
 
 # RCPCH imports
 from project.constants.colors import RCPCH_LIGHT_BLUE
@@ -116,10 +117,6 @@ class SubmissionsListView(
         Add data to the context.
         Includes the patient data for the active submission and the csv summary data.
         """
-        if self.request.session.get("pz_code") == "PZ248":
-            is_jersey = True
-        else:
-            is_jersey = False
         context = super().get_context_data(**kwargs)
         context["pz_code"] = self.request.session.get("pz_code")
         audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
@@ -277,7 +274,13 @@ class SubmissionsListView(
             submission = Submission.objects.filter(
                 pk=request.POST.get("audit_id")
             ).get()
-            return download_csv(request, submission.id)
+            if request.user.is_rcpch_audit_team_member or submission.paediatric_diabetes_unit in request.user.organisation_employers.all():
+                return download_csv(request, submission.id)
+            else:
+                raise PermissionDenied(
+                    f"User {request.user.email} does not have permission to download data for PDU {submission.paediatric_diabetes_unit.pz_code}.",
+                )
+            
 
         if button_name == "download-report":
             # check if the user has permission to download submissions
@@ -288,7 +291,13 @@ class SubmissionsListView(
             submission = Submission.objects.filter(
                 pk=request.POST.get("audit_id")
             ).get()
-            return download_xlsx(request, submission.id)
+            if request.user.is_rcpch_audit_team_member or submission.paediatric_diabetes_unit in request.user.organisation_employers.all():
+                return download_xlsx(request, submission.id)
+            else:
+                raise PermissionDenied(
+                    f"User {request.user.email} does not have permission to download data for PDU {submission.paediatric_diabetes_unit.pz_code}.",
+                )
+            
 
         # POST is not supported for this view
         # Must therefore return the queryset as an obect_list and context
@@ -307,10 +316,16 @@ class SubmissionsListView(
 
 
 @login_and_otp_required()
-async def upload_csv(request):
-    if request.session.get("can_upload_csv") is False:
-        # If the user does not have permission to upload csvs, redirect them to the submissions page
-        return redirect("dashboard")
+@check_data_permissions()
+async def upload_csv(request, audit_period, pdu):
+    previous_submission = await sync_to_async(Submission.objects.get_submission_for_request)(pdu, audit_period)
+
+    if previous_submission and not previous_submission.csv_file_name:
+        # PDU is submitting via questionnaire
+        return redirect(reverse("pdu-dashboard", kwargs={
+            "audit_period": audit_period.slug,
+            "pz_code": pdu.pz_code,
+        }))
 
     if request.method == "POST":
         has_perm = await sync_to_async(request.user.has_perm)("npda.can_submit_csv")
@@ -324,11 +339,8 @@ async def upload_csv(request):
         # We are eventually storing the CSV file as a BinaryField so have to hold it in memory
         user_csv_bytes = user_csv.read()
 
-        pz_code = request.session.get("pz_code")
+        pz_code = pdu.pz_code
         is_jersey = pz_code == "PZ248"
-
-        # TODO MRB: check pdu is active and I'm not a superuser?
-        pdu = await PaediatricDiabetesUnit.objects.aget(pz_code=pz_code)
     
         # check to see if the CSV is valid - cannot accept CSVs with no header. All other header errors are non-lethal but are reported back to the user
         try:
@@ -338,7 +350,10 @@ async def upload_csv(request):
                 request=request,
                 message=f"Invalid CSV format: {e}",
             )
-            return redirect("upload_csv")
+            return redirect("pdu-upload-csv",
+                pz_code=pz_code,
+                audit_period=audit_period.slug
+            )
 
         missing_columns = parsed_csv.missing_columns
         if not parsed_csv.identifier_column:
@@ -361,7 +376,10 @@ async def upload_csv(request):
                 request=request,
                 message="CSV file must use NHS number as the identifier column unless uploading for Jersey"
             )
-            return redirect("upload_csv")
+            return redirect("pdu-upload-csv",
+                pz_code=pdu.pz_code,
+                audit_period=audit_period.slug
+            )
         
         #  the same must be true for the Jersey upload
         if parsed_csv.identifier_column == "NHS Number" and is_jersey:
@@ -369,9 +387,10 @@ async def upload_csv(request):
                 request=request,
                 message="CSV file must use Unique Reference Number as the identifier column unless uploading for Jersey"
             )
-            return redirect("upload_csv")
-
-        audit_period = await sync_to_async(AuditPeriod.objects.get_audit_period_for_request)(request)
+            return redirect("pdu-upload-csv",
+                pz_code=pdu.pz_code,
+                audit_period=audit_period.slug
+            )
 
         if not audit_period.is_open and not (request.user.is_superuser or request.user.is_rcpch_audit_team_member):
             raise PermissionDenied(f"Upload is closed for {audit_period}.")
@@ -390,29 +409,26 @@ async def upload_csv(request):
         
         upload_csv_task.delay(new_submission.id)
 
-        # update the session fields - this stores that the user has uploaded a csv and disables the ability to use the questionnaire
-        await sync_to_async(refresh_session_filters)(request, csv_upload=True)
-
         await sync_to_async(save_csv_uploading_user_to_visitactivity)(request=request)
         
-        return redirect("upload-csv-in-progress")
+        return redirect("pdu-upload-csv-in-progress",
+            pz_code=pdu.pz_code,
+            audit_period=audit_period.slug
+        )
 
-    context = {"employers": OrganisationEmployer.objects.filter(npda_user=request.user)}
-    return render(request, "upload_csv/file_upload.html", context=context)
+    return render(request, "upload_csv/file_upload.html", context={ "pdu": pdu })
 
 @login_and_otp_required()
-def upload_csv_in_progress(request):
-    pz_code = request.session.get("pz_code")
-    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
-
+@check_data_permissions()
+def upload_csv_in_progress(request, audit_period, pdu):
     last_submission = Submission.objects.filter(
-        paediatric_diabetes_unit__pz_code=pz_code,
+        paediatric_diabetes_unit=pdu,
         audit_period=audit_period
     ).order_by("-submission_date").first()
 
     seconds_since_submission = (datetime.now(timezone.utc) - last_submission.submission_date).seconds
 
-    timeout = seconds_since_submission > 15
+    timeout = seconds_since_submission > 120
     
     total_patients = last_submission.total_unique_patients
     total_rows = last_submission.total_unique_visits
@@ -448,33 +464,6 @@ def upload_csv_in_progress(request):
             
 
     return render(request, "upload_csv/upload_in_progress.html", context=context)
-
-@login_and_otp_required()
-def switch_paediatric_diabetes_unit(request):
-    """
-    Switch the Paediatric Diabetes Unit in the session.
-    This is an HTMX view.
-    """
-    template = "partials/submission_employer_selector.html"
-    error_message = None
-
-    selected_pz_code = request.POST.get("employers")
-    if selected_pz_code == request.session.get("pz_code"):
-        return HttpResponse(status=200)
-
-    try:
-        pdu = PaediatricDiabetesUnit.objects.get(pz_code=selected_pz_code)
-    except PaediatricDiabetesUnit.DoesNotExist as error:
-        error_message = f"Error: {error}. Please contact the NPDA team."
-
-    context = {
-        "employers": OrganisationEmployer.objects.filter(npda_user=request.user),
-        "error_message": error_message,
-    }
-    # update the session with the new PDU
-    refresh_session_filters(request, pz_code=selected_pz_code)
-
-    return render(request, template, context=context)
 
 def create_column_chart(pdus_by_latest_submission, selected_audit_period):
     """

@@ -261,16 +261,8 @@ def test_reader_cannot_upload_csv(
     
     file = dummy_sheets_folder / "dummy_sheet_test.csv"
 
-    # Set session to allow user permissions
-    session = client.session
-    session["can_upload_csv"] = True
-    session["can_complete_questionnaire"] = False
-    session["pz_code"] = ALDER_HEY_PZ_CODE
-    # session["selected_audit_year"] = audit_period.audit_year()
-    session.save()
-
     # upload the CSV file by posting to  'home' view
-    url = reverse("upload_csv")
+    url = url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
     with open(file, "rb") as f:
         response = client.post(
             url,
@@ -477,7 +469,7 @@ def test_coordinators_cannot_create_audit_team_members(
 
 
 # These tests pass already before fixing https://github.com/rcpch/national-paediatric-diabetes-audit/issues/906
-# as handled by CheckPDUInstanceMixin but leaving them in for completeness sake.
+# as handled by the mixins but leaving them in for completeness sake.
 @pytest.mark.django_db
 @pytest.mark.parametrize("action", ["deactivate", "activate"])
 def test_coordinators_cannot_activate_or_inactivate_users_outside_of_their_pdu(
@@ -902,7 +894,7 @@ def test_users_can_download_report(
     assert response.has_header("Content-Disposition")
     assert "attachment" in response["Content-Disposition"]
     assert "filename" in response["Content-Disposition"]
-    assert response["Content-Type"] == "text/csv"
+    assert response["Content-Type"] == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
 @pytest.mark.django_db
@@ -1360,15 +1352,20 @@ def test_rcpch_audit_team_and_superusers_can_toggle_is_active_for_users_with_mul
     # Login as audit team member
     client = login_and_verify_user(client, audit_team_member)
 
-    # POST to update user (always send 'deactivate', as per UI logic)
+    # POST to update user
     url = reverse("npdauser-update", kwargs={"pk": user.pk})
-    response = client.post(url, data={
+    
+    data = {
         'deactivate': 'true',
         'first_name': user.first_name,
         'surname': user.surname,
         'email': user.email,
         'role': user.role,
-    })
+    }
+
+    data[action_label] = 'true'
+
+    response = client.post(url, data)
 
     # Should not be forbidden
     assert response.status_code != HTTPStatus.FORBIDDEN, (
