@@ -1,6 +1,5 @@
 from django.shortcuts import render
-
-from django.core.exceptions import SuspiciousOperation
+from django.http import JsonResponse
 
 
 def error_400(request, exception):
@@ -18,6 +17,13 @@ def error_403(request, exception):
 
 
 def error_404(request, exception):
+    # For API requests, return JSON response
+    if request.path.startswith('/api/'):
+        return JsonResponse({
+            'detail': 'Not found',
+            'error_code': 'NOT_FOUND'
+        }, status=404)
+    # For web requests, render the 404 template
     context = {}
     return render(
         request=request, template_name="errors/404.html", context=context, status=404
@@ -25,6 +31,13 @@ def error_404(request, exception):
 
 
 def error_500(request):
+    # For API requests, return JSON response
+    if request.path.startswith('/api/'):
+        return JsonResponse({
+            'detail': 'Internal server error',
+            'error_code': 'INTERNAL_ERROR'
+        }, status=500)
+    # For web requests, render the 500 template
     context = {}
     return render(
         request=request, template_name="errors/500.html", context=context, status=500

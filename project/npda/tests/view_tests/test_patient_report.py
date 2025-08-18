@@ -6,7 +6,8 @@ from http import HTTPStatus
 
 # Python imports
 import pytest
-from django.db.models import Count
+from django.test import override_settings
+from django.apps import apps
 
 # 3rd party imports
 from django.urls import reverse
@@ -21,7 +22,6 @@ from project.npda.general_functions.data_generator_extended import (
 # E12 imports
 from project.npda.models import NPDAUser
 from project.npda.models.audit_period import AuditPeriod
-from project.npda.models.patient import Patient
 from project.npda.models.submission import Submission
 from project.npda.tests.constants_for_tests import ALDER_HEY_PZ_CODE
 from project.npda.tests.factories import (
@@ -39,7 +39,7 @@ from dateutil.relativedelta import relativedelta
 
 logger = logging.getLogger(__name__)
 
-
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_anonymous_user_cannot_access_patient_report(
     client,
 ):
@@ -61,6 +61,7 @@ def test_anonymous_user_cannot_access_patient_report(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_no_duplicate_patients_in_report(
     seed_groups_fixture,
     seed_users_fixture,
@@ -140,6 +141,8 @@ def _create_outcomes_test_setup(client):
     audit_period.is_open = True
     audit_period.save()
 
+    Patient = apps.get_model("npda", "Patient")
+
     # Clear existing patients
     Patient.objects.all().delete()
 
@@ -157,6 +160,7 @@ def _create_outcomes_test_setup(client):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_outcomes_no_hba1c_measurements(
     seed_groups_fixture,
     seed_users_fixture,
@@ -225,6 +229,7 @@ def test_outcomes_no_hba1c_measurements(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_outcomes_single_hba1c_measurement(
     seed_groups_fixture,
     seed_users_fixture,
@@ -295,6 +300,7 @@ def test_outcomes_single_hba1c_measurement(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_outcomes_multiple_hba1c_measurements(
     seed_groups_fixture,
     seed_users_fixture,
@@ -381,6 +387,7 @@ def test_outcomes_multiple_hba1c_measurements(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_report_for_patients_turning_12_in_audit_year(
     seed_groups_fixture,
     seed_users_fixture,

@@ -21,8 +21,10 @@ def periodically_update_azure_pg_password_file():
 class NpdaConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "project.npda"
+    label = "npda"
 
     def ready(self) -> None:
+        import project.npda.models
         import project.npda.signals
 
         periodically_update_azure_pg_password_file()

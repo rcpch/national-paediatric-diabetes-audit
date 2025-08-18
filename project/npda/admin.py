@@ -1,8 +1,8 @@
-from django.apps import apps
 from django.contrib import admin
 from django.conf import settings
 from two_factor.admin import AdminSiteOTPRequiredMixin
 
+# Import all models in the same order as they are declared in your models/__init__.py (if possible)
 from .models import (
     NPDAUser,
     OrganisationEmployer,
@@ -14,6 +14,7 @@ from .models import (
     PaediatricDiabetesUnit,
     AuditPeriod
 )
+
 from django.contrib.sessions.models import Session
 
 class NPDAAdminSite(AdminSiteOTPRequiredMixin, admin.AdminSite):
@@ -143,6 +144,18 @@ class SessionAdmin(admin.ModelAdmin):
     organisation_choices.short_description = "Organisation Choices"
     pdu_choices.short_description = "PDU Choices"
 
+# @admin.register(PDUAccessTokenProfile)
+# class PDUAccessTokenProfileAdmin(admin.ModelAdmin):
+#     search_fields = (
+#         "access_token__token",
+#         "paediatric_diabetes_unit__pz_code",
+#         "paediatric_diabetes_unit__parent_name",
+#         "description__icontains",
+#         "contact_email__icontains",
+#         "contact_name__icontains",
+#         "access_level__icontains",
+#         "is_active",
+    # )
 
 admin.site.site_header = "RCPCH National Paediatric Diabetes Audit Admin"
 admin.site.site_title = "RCPCH National Paediatric Diabetes Audit Admin"

@@ -1,6 +1,7 @@
 import os
 
 import pytest
+from django.test import override_settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.urls import reverse
@@ -14,6 +15,7 @@ from project.npda.tests.utils import login_and_verify_user
 from project.npda.tests.test_csv_upload import mock_remote_calls
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_generate_csv_upload_to_view(
     seed_groups_fixture,
     seed_users_fixture,
@@ -97,6 +99,7 @@ def test_generate_csv_upload_to_view(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_coordinator_cannot_upload_csv_to_closed_audit_year(
     seed_groups_fixture,
     seed_users_fixture,

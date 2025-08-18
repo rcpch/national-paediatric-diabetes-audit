@@ -29,7 +29,7 @@ app.conf.update(
     }
 )
 
-app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
+app.autodiscover_tasks()
 
 @setup_logging.connect
 def setup_celery_logging(*args, **kwargs):

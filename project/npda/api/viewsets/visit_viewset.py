@@ -1,0 +1,538 @@
+# Python imports
+import logging
+
+# Django imports
+from django.apps import apps
+from django.http import Http404
+from django.db import transaction
+from django.utils import timezone
+
+# Django REST Framework imports
+from rest_framework import viewsets, status
+from rest_framework.response import Response
+from rest_framework.exceptions import PermissionDenied
+
+# Third-party imports
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
+
+# Local imports
+from project.npda.api.permissions import TokenHasPatientScopeAndPDUAccess
+from project.npda.api.authentication_class import PDUScopedOAuth2Authentication
+from project.npda.models import Visit, Patient, AuditPeriod, Transfer, Submission, NPDAUser, PaediatricDiabetesUnit
+from project.npda.api.serializers.visit_serializer import VisitSerializer
+from project.npda.general_functions import get_audit_period_for_date
+from project.npda.api.response_metadata import NPDAResponseMixin
+
+logger = logging.getLogger(__name__)
+
+class VisitViewSet(NPDAResponseMixin, viewsets.ModelViewSet):
+    """
+    ViewSet for viewing and editing Visit instances nested under patients.
+    
+    This ViewSet provides CRUD operations for Visit records that belong to specific patients.
+    All visits are accessed via /patients/{patient_id}/visits/ endpoints.
+    Validation is handled by the VisitSerializer which delegates to VisitForm.
+    The queryset is filtered based on the user's permissions and PDU access.
+
+    Requires OAuth2 authentication with appropriate scopes:
+    - GET: 'patient:read' scope
+    - POST/PUT/PATCH: 'patient:write' scope
+    
+    For OAuth2 tokens with PDU profiles, data is automatically scoped to the token's PDU.
+    Visits are only accessible for patients within the user's assigned PDUs.
+    """
+    serializer_class = VisitSerializer
+    filter_backends = [DjangoFilterBackend]
+    authentication_classes = [PDUScopedOAuth2Authentication]
+    permission_classes = [TokenHasPatientScopeAndPDUAccess]
+    
+    # Allow read and write operations, but no delete
+    http_method_names = ['get', 'post', 'put', 'patch', 'options', 'head']
+    raise_exception_on_empty = True  # Raise 404 if no visits found for patient
+    required_scopes = ['patient:read', 'patient:write']  # Default scopes for read/write operations
+
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        if self.action in ['list', 'retrieve']:
+            # Read operations - require read scope
+            permission_classes = [TokenHasPatientScopeAndPDUAccess]
+            self.required_scopes = ['patient:read']
+        else:
+            # Write operations - require write scope
+            permission_classes = [TokenHasPatientScopeAndPDUAccess]
+            self.required_scopes = ['patient:write']
+        
+        return [permission() for permission in permission_classes]
+
+    def get_patient(self):
+        """
+        Get the patient from the URL parameters for the current active submission.
+        One patient can be in multiple submissions, but we only need the one for this request.
+        Access control is handled by the permission class, so this just does lookup.
+        """
+        patient_pk = self.kwargs.get('patient_pk')
+        if not patient_pk:
+            raise Http404("No patient identifier provided")
+        
+        pdu = self.get_pdu_for_request()
+        token_scopes = self.request.auth.scope.split() if hasattr(self.request.auth, 'scope') else []
+        current_audit_dates = get_audit_period_for_date(timezone.now())
+        audit_period = AuditPeriod.objects.filter(
+            start_date = current_audit_dates[0],
+            end_date = current_audit_dates[1],
+            is_open=True,
+            is_visible=True,
+        ).first()
+
+        if Submission.objects.filter(
+            submission_active=True,
+            patients__nhs_number=patient_pk,
+            audit_period=audit_period
+        ).exists():
+            active_submission_for_this_patient = Submission.objects.filter(
+            submission_active=True,
+            patients__nhs_number=patient_pk,
+            audit_period=audit_period
+        )
+        elif Submission.objects.filter(
+            submission_active=True,
+            patients__unique_reference_number=patient_pk,
+            audit_period=audit_period
+        ).exists():
+            active_submission_for_this_patient = Submission.objects.filter(
+            submission_active=True,
+            patients__unique_reference_number=patient_pk,
+            audit_period=audit_period
+        )
+        else:
+            logger.warning(f"❌ No active submission found for patient {patient_pk}")
+            raise Http404(f"No active submission found for patient with identifier '{patient_pk}'")
+
+        if active_submission_for_this_patient.first().paediatric_diabetes_unit != pdu and  'admin:cross-pdu' not in token_scopes:
+            logger.debug(f"✅ Active submission found for patient {patient_pk} in PDU {pdu.pz_code}")
+            raise PermissionDenied(
+                f"Patient not accessible within your PDU scope"
+            )
+        
+        try:
+            # Find patient based on PDU context
+            if pdu and pdu.pz_code == 'PZ248':  # Jersey PDU code
+                patient = active_submission_for_this_patient.first().patients.all().filter(unique_reference_number=patient_pk).get()
+            else:
+                patient = active_submission_for_this_patient.first().patients.all().filter(nhs_number=patient_pk).get()
+            
+            # Permission class already validated access - no need to recheck PDU scoping
+            logger.debug(f"✅ Patient {patient_pk} found for API access")
+            return patient
+            
+        except Patient.DoesNotExist:
+            logger.warning(f"❌ Patient not found for identifier: {patient_pk}")
+            raise Http404(f"Patient with identifier '{patient_pk}' not found")
+        
+        except Patient.MultipleObjectsReturned:
+            logger.error(f"❌ Multiple patients found for identifier: {patient_pk}")
+            raise Http404(f"Multiple patients found for identifier '{patient_pk}'")
+
+    def get_queryset(self):
+        """
+        Return visits for the specified patient in the current active submission.
+        Permission class handles all PDU scoping.
+        """
+        patient_pk = self.kwargs.get('patient_pk')
+        if not patient_pk:
+            return Visit.objects.none()
+        
+        try:
+            # Simple patient lookup - permission class will handle PDU scoping
+            patient = self.get_patient()
+            return Visit.objects.filter(patient=patient).order_by('-visit_date', '-id')
+        except Patient.DoesNotExist:
+            return Visit.objects.none()
+    
+    def get_pdu_for_request(self):
+        """
+        Get the PDU for the current request based on authentication method.
+        
+        Returns:
+            PaediatricDiabetesUnit: The PDU to use for this request
+        """
+        if hasattr(self.request.auth, 'pdu_profile') and self.request.auth.pdu_profile:
+            return self.request.auth.pdu_profile.paediatric_diabetes_unit 
+        
+        return None
+    
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='patient_pk',
+                type=str,
+            )
+        ],
+        responses={
+            200: VisitSerializer(many=True),
+            404: OpenApiResponse(description='Not Found'),
+            400: OpenApiResponse(description='Bad Request'),
+            500: OpenApiResponse(description='Internal Server Error')
+        },
+        operation_id='list_visits',
+        summary='List Visits for Patient',
+        description='Retrieve a list of visits for the specified patient. The patient is identified by the `patient_pk` URL parameter. This endpoint supports pagination and filtering.',
+        tags=['Visits']
+    )
+    def list(self, request, *args, **kwargs):
+        """
+        Return a list of visits for the specified patient.
+        """
+        patient = self.get_patient()
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        # Log the request for audit purposes
+        patient_identifier = patient.nhs_number or patient.unique_reference_number or f"ID {patient.id}"
+        pdu = self.get_pdu_for_request()
+        logger.info(f"📋 Visit list requested for patient {patient_identifier} by {pdu}")
+        
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            response_data = self.get_paginated_response(serializer.data)
+            # Add metadata to paginated response
+            if hasattr(response_data, 'data'):
+                return self.create_npda_response(
+                    data=response_data.data,
+                    status=status.HTTP_200_OK,
+                    advisory_message=f"Retrieved {len(page)} visits for patient {patient_identifier} from {queryset.count()} total{pdu_info}",
+                    advisory_type='info'
+                )
+            return response_data
+        
+        serializer = self.get_serializer(queryset, many=True)
+
+        return self.create_npda_response(
+            data=serializer.data,
+            status=status.HTTP_200_OK,
+            advisory_message=f"Retrieved {len(serializer.data)} visits for patient {patient_identifier} from {pdu}",
+            advisory_type='info'
+        )
+    
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='patient_pk',
+                type=str,
+            )
+        ],
+        responses={
+            200: VisitSerializer,
+            404: OpenApiResponse(description='Not Found'),
+            400: OpenApiResponse(description='Bad Request'),
+            500: OpenApiResponse(description='Internal Server Error')
+        },
+        operation_id='retrieve_visit',
+        summary='Retrieve Visit for Patient',
+        description='Retrieve a specific visit record for the specified patient. The patient is identified by the `patient_pk` URL parameter.',
+        tags=['Visits']
+    )
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Return a specific visit for the specified patient.
+        """
+        patient = self.get_patient()
+        instance = self.get_object()
+        pdu = self.get_pdu_for_request()
+        pdu_info = f" for PDU {pdu.pz_code}" if pdu else ""
+        patient_identifier = patient.nhs_number or patient.unique_reference_number or f"ID {patient.id}"
+        
+        logger.info(f"🔍 Visit {instance.id} retrieved for patient {patient_identifier} {pdu_info}")
+        
+        serializer = self.get_serializer(instance)
+        return self.create_npda_response(
+            data=serializer.data,
+            status=status.HTTP_200_OK,
+            advisory_message=f"Visit {instance.id} details for patient {patient_identifier}",
+            advisory_type='info'
+        )
+    
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='patient_pk',
+                type=str,
+            )
+        ],
+        request=VisitSerializer,
+        responses={
+            201: VisitSerializer,
+            400: OpenApiResponse(description='Bad Request'),
+            403: OpenApiResponse(description='Forbidden'),
+            404: OpenApiResponse(description='Not Found'),
+            500: OpenApiResponse(description='Internal Server Error')
+        },
+        operation_id='create_visit',
+        summary='Create Visit for Patient',
+        description='Create a new visit record for the specified patient. The patient is identified by the `patient_pk` URL parameter.',
+        tags=['Visits']
+    )
+    def create(self, request, *args, **kwargs):
+        """
+        Create a new visit record for the specified patient.
+        The patient identifier from the URL is automatically used.
+        """
+        patient = self.get_patient()  # This validates PDU access
+        
+        pdu = self.get_pdu_for_request()
+        if not pdu:
+            return Response(
+                {"detail": "No PDU context available for this request"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        patient_identifier = patient.nhs_number or patient.unique_reference_number or f"ID {patient.id}"
+        logger.info(f"📝 Creating visit for patient {patient_identifier} in PDU {pdu.pz_code}")
+        
+        with transaction.atomic():
+            serializer = self.get_serializer(data=request.data)
+            if serializer.is_valid(raise_exception=True):
+                # Call perform_create which will handle saving with patient
+                visit = self.perform_create(serializer)
+                
+                logger.info(f"✅ Visit created successfully for patient {patient_identifier}")
+                
+                return self.create_npda_response(
+                    data=serializer.data,
+                    status=status.HTTP_201_CREATED,
+                    advisory_message=f"Visit created for patient {patient_identifier}",
+                    advisory_type='info'
+                )
+
+    def perform_create(self, serializer):
+        """
+        Save the visit record with all required validations.
+        The serializer handles patient assignment and VisitForm validation.
+        """
+        paediatric_diabetes_unit = self.get_pdu_for_request()
+        
+        if not paediatric_diabetes_unit:
+            raise ValueError("No PDU context available for visit creation")
+        
+        try:
+            # Don't pass patient - it's already in serializer context
+            visit = serializer.save()
+            
+            # Log successful creation with patient context
+            patient_identifier = visit.patient.nhs_number or visit.patient.unique_reference_number or f"ID {visit.patient.id}"
+            logger.info(f"✅ Visit {visit.id} successfully created for patient {patient_identifier} "
+                    f"via OAuth2 for PDU {paediatric_diabetes_unit.pz_code}")
+            
+            return visit
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to create visit: {str(e)}")
+            raise ValueError(f"Failed to create visit record: {str(e)}")
+    
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='patient_pk',
+                type=str,
+            )
+        ],
+        request=VisitSerializer,
+        responses={
+            200: VisitSerializer,
+            400: OpenApiResponse(description='Bad Request'),
+            403: OpenApiResponse(description='Forbidden'),
+            404: OpenApiResponse(description='Not Found'),
+            500: OpenApiResponse(description='Internal Server Error')
+        },
+        operation_id='update_visit',
+        summary='Update Visit for Patient',
+        description='Update an existing visit record for the specified patient. The patient is identified by the `patient_pk` URL parameter.',
+        tags=['Visits']
+    )
+    def update(self, request, *args, **kwargs):
+        """
+        Handle PUT requests for full visit record updates.
+        """
+        patient = self.get_patient()
+        pdu = self.get_pdu_for_request()
+        patient_identifier = patient.nhs_number or patient.unique_reference_number or f"ID {patient.id}"
+        logger.info(f"🔄 PUT request for visit update for patient {patient_identifier} by{pdu}")
+        return self._perform_update(request, partial=False, method="PUT", *args, **kwargs)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='patient_pk',
+                type=str,
+            )
+        ],
+        request=VisitSerializer,
+        responses={
+            200: VisitSerializer,
+            400: OpenApiResponse(description='Bad Request'),
+            404: OpenApiResponse(description='Not Found'),
+            500: OpenApiResponse(description='Internal Server Error')
+        },
+        operation_id='partial_update_visit',
+        summary='Partial Update Visit for Patient',
+        description='Partially update an existing visit record for the specified patient. The patient is identified by the `patient_pk` URL parameter.',
+        tags=['Visits']
+    )
+    def partial_update(self, request, *args, **kwargs):
+        """
+        Handle PATCH requests for partial visit record updates.
+        """
+        patient = self.get_patient()
+        pdu = self.get_pdu_for_request()
+        patient_identifier = patient.nhs_number or patient.unique_reference_number or f"ID {patient.id}"
+        logger.info(f"🔄 PATCH request for visit update for patient {patient_identifier} by {pdu}")
+        return self._perform_update(request, partial=True, method="PATCH", *args, **kwargs)
+
+    def _perform_update(self, request, partial=False, method="UPDATE", *args, **kwargs):
+        """
+        Internal method to handle both full and partial updates with comprehensive logging.
+        """
+        patient = self.get_patient()
+        instance = self.get_object()
+        patient_identifier = patient.nhs_number or patient.unique_reference_number or f"ID {patient.id}"
+        pdu = self.get_pdu_for_request()
+        
+        logger.info(f"🔄 {method} update attempt for visit {instance.id} (patient {patient_identifier}) by {pdu}")
+        
+        # Log the fields being updated (for audit purposes)
+        updated_fields = list(request.data.keys()) if hasattr(request, 'data') else []
+        logger.info(f"🔄 {method} updating fields: {updated_fields} for visit {instance.id}")
+        
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        if not serializer.is_valid():
+            logger.warning(f"❌ {method} validation failed for visit {instance.id}: {serializer.errors}")
+            return self.create_npda_response(
+                data=serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST,
+                advisory_message=f"Visit data validation failed for {method.lower()} update",
+                advisory_type='warning'
+            )
+        
+        try:
+            with transaction.atomic():
+                self.perform_update(serializer)
+                
+                # Log successful update
+                logger.info(f"✅ {method} update successful for visit {instance.id} (patient {patient_identifier})")
+            
+            # Create advisory message with helpful details
+            field_count = len(updated_fields)
+            advisory_message = f"Visit for patient {patient_identifier} updated via {method}"
+            if field_count > 0:
+                advisory_message += f" ({field_count} field{'s' if field_count != 1 else ''} modified)"
+            
+            return self.create_npda_response(
+                data=serializer.data,
+                status=status.HTTP_200_OK,
+                advisory_message=advisory_message,
+                advisory_type='info'
+            )
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to {method} update visit {instance.id}: {str(e)}")
+            return self.create_npda_response(
+                data={"detail": f"Failed to {method.lower()} update visit record"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                advisory_message=f"{method} update operation failed - please try again",
+                advisory_type='warning'
+            )
+    
+    def perform_update(self, serializer):
+        """
+        Save the updated visit record with all required validations.
+        The serializer handles patient validation and VisitForm validation.
+        """
+        try:
+            # The serializer's update() method handles all the form validation
+            visit = serializer.save()
+            
+            # Log successful update with patient context
+            patient_identifier = visit.patient.nhs_number or visit.patient.unique_reference_number or f"ID {visit.patient.id}"
+            logger.debug(f"✅ Visit {visit.id} successfully updated for patient {patient_identifier}")
+            
+            return visit
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to update visit: {str(e)}")
+            raise ValueError(f"Failed to update visit record: {str(e)}")
+    
+    def get_serializer_context(self):
+        """
+        Provide context needed for form validation in the serializer.
+        """
+        context = super().get_serializer_context()
+        
+        # Add PDU context
+        pdu = self.get_pdu_for_request()
+        if pdu:
+            context['paediatric_diabetes_unit'] = pdu
+        
+        try:
+            # Add patient context
+            patient = self.get_patient()
+            context['patient'] = patient
+        except Exception as e:
+            logger.error(f"Error retrieving patient for serializer context: {str(e)}")
+        
+        # Add audit period context
+        try:
+            from project.npda.models import AuditPeriod
+            active_audit_dates = get_audit_period_for_date(timezone.now())
+            audit_period = AuditPeriod.objects.filter(
+                start_date__year=active_audit_dates[0].year,
+                end_date__year=active_audit_dates[1].year,
+            ).first()
+            
+            if audit_period:
+                context['audit_period'] = audit_period
+            else:
+                # Log the issue but don't fail the serializer context creation
+                logger.warning("No active audit period found for serializer context")
+                
+        except Exception as e:
+            logger.error(f"Error getting audit period for serializer context: {str(e)}")
+        
+        return context
+    
+    def get_object(self):
+        """
+        Override to lookup visit by ID within the patient's visits.
+        """
+        queryset = self.get_queryset()  # Already filtered to patient's visits
+        lookup_value = self.kwargs.get('pk')  # Visit ID
+        
+        if not lookup_value:
+            raise Http404("No visit identifier provided")
+        
+        try:
+            visit = queryset.get(id=lookup_value)
+            return visit
+            
+        except Visit.DoesNotExist:
+            patient = self.get_patient()
+            patient_identifier = patient.nhs_number or patient.unique_reference_number or f"ID {patient.id}"
+            logger.warning(f"❌ Visit not found for ID: {lookup_value} for patient {patient_identifier}")
+            raise Http404(f"Visit with ID '{lookup_value}' not found for patient {patient_identifier}")
+        
+        except Visit.MultipleObjectsReturned:
+            logger.error(f"❌ Multiple visits found for ID: {lookup_value}")
+            raise Http404(f"Multiple visits found for ID '{lookup_value}' - this should not happen")
+    
+    # DESTRUCTIVE ACTIONS ARE DISABLED
+    def destroy(self, request, *args, **kwargs):
+        """
+        Delete operations are not supported for visits.
+        Use the web interface for visit management.
+        """
+        return Response(
+            {"detail": "Delete operations are not supported for visits. Use the web interface for visit management."},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED
+        )

@@ -334,4 +334,3 @@ class TestQuestionnaireView:
 
         response = self.client.get(url)
         assert response.status_code == 200
-

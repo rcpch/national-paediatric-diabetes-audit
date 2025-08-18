@@ -419,6 +419,8 @@ class PatientUpdateView(
         context["form_method"] = "update"
         context["patient_id"] = self.kwargs["pk"]
         context["override_postcode"] = False
+        context["audit_year"] = self.request.session.get("selected_audit_year")
+        context["audit_period"] = AuditPeriod.objects.get_audit_period_for_request(self.request)
         return context
 
     def form_valid(self, form: BaseForm) -> HttpResponse:
@@ -462,6 +464,8 @@ class PatientUpdateView(
         # Get override_postcode from POST data if available
         if self.request.method in ('POST', 'PUT'):
             kwargs['override_postcode'] = self.request.POST.get('override_postcode', 'false') == 'true'
+            kwargs["audit_year"] = self.request.session.get("selected_audit_year")
+            kwargs["audit_period"] = AuditPeriod.objects.get_audit_period_for_request(self.request)
         return kwargs
     
 

@@ -1,8 +1,13 @@
+# Django imports
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
-from django.views.generic import TemplateView
+
+# Third-party imports
 from two_factor.urls import urlpatterns as tf_urls
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+
+# Local imports
 from .npda.views.npda_users import RCPCHLoginView
 from .npda.views import *
 
@@ -24,4 +29,8 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("", include(tf_urls)),
     path("", include("project.npda.urls")),
+    path("api/v1/", include("project.npda.api.urls", namespace="api")),
+    path("api/v1/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("api/v1/schema/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="redoc"),
+    path('o/', include('oauth2_provider.urls', namespace='oauth2_provider')), # OAuth2 endpoints
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

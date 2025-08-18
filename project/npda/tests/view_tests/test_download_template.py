@@ -5,6 +5,7 @@ from http import HTTPStatus
 
 # Python imports
 import pytest
+from django.test import override_settings
 # 3rd party imports
 from django.urls import reverse
 
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_both_jersey_and_england_template_download_works(
     seed_groups_fixture,
     seed_users_fixture,

@@ -37,12 +37,6 @@ logger = logging.getLogger(__name__)
 # register factories to be used across test directory
 
 # factory object becomes lowercase-underscore form of the class name
-register(PatientFactory)  # => patient_factory
-register(VisitFactory)  # => patient_visit_factory
-register(NPDAUserFactory)  # => npdauser_factory
-register(OrganisationEmployerFactory)  # => npdauser_factory
-register(PaediatricsDiabetesUnitFactory)  # => npdauser_factory
-register(TransferFactory)  # => npdauser_factory
 
 
 @pytest.fixture
@@ -65,3 +59,10 @@ def test_pz_codes_fixture():
 @pytest.fixture(scope="function")
 def test_pz_codes_function_fixture():
     return ["PZ196", "PZ074", "PZ248"]  # GOSH  # Alder Hey  # Jersey
+
+register(PatientFactory)  # => patient_factory
+register(VisitFactory)  # => patient_visit_factory
+register(NPDAUserFactory)  # => npdauser_factory
+register(OrganisationEmployerFactory)  # => npdauser_factory
+register(PaediatricsDiabetesUnitFactory)  # => npdauser_factory
+register(TransferFactory)  # => npdauser_factory

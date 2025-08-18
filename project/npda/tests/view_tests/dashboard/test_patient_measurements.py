@@ -4,6 +4,7 @@ from decimal import Decimal
 from http import HTTPStatus
 
 # Python imports
+from django.test import override_settings
 import pytest
 
 # 3rd party imports
@@ -28,6 +29,7 @@ from dateutil.relativedelta import relativedelta
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_measurements_for_patients_turning_12_in_audit_year(
     seed_groups_fixture,
     seed_users_fixture,

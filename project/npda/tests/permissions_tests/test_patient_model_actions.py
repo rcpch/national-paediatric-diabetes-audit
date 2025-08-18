@@ -1,405 +1,336 @@
-import pytest
+import logging
+from datetime import date
+from decimal import Decimal
+from unittest.mock import Mock, patch
 
 # Django imports
-from django.apps import apps
+from django.contrib.sessions.middleware import SessionMiddleware
 from django.urls import reverse
-from django.utils import timezone
-from django.utils.timezone import make_aware
-from http import HTTPStatus
+from django.contrib.gis.geos import Point
 
-# RCPCH imports
+# 3rd party imports
+import pytest
+
+# E12 imports
+from project.npda.tests.factories.patient_factory import PatientFactory, VALID_FIELDS
 from project.constants.user import RCPCH_AUDIT_TEAM
-from project.npda.models import Patient, Submission, NPDAUser, AuditPeriod
-from project.npda.general_functions import get_audit_period_for_date
-from project.npda.tests.utils import login_and_verify_user
-from project.npda.tests.factories.patient_factory import PatientFactory
-from project.npda.tests.factories.visit_factory import VisitFactory
+from project.npda.forms.patient_form import PatientForm
+from project.npda.forms.visit_form import VisitForm
+from project.npda.models import NPDAUser, Patient, Transfer, AuditPeriod
+from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
+from project.npda.tests.utils import login_and_verify_user, create_submission
+from project.npda.tests.UserDataClasses import test_user_audit_centre_editor_data
+from project.npda.tests.factories.visit_factory import VisitFactory, COMPLETED_VISIT
+from project.npda.tests.factories.patient_factory import (
+    VALID_FIELDS,
+    INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE
+)
+from project.npda.forms.external_patient_validators import (
+    PatientExternalValidationResult,
+)
+from project.npda.forms.external_visit_validators import (
+    VisitExternalValidationResult,
+    CentileAndSDS,
+)
 
+logger = logging.getLogger(__name__)
 
-GOSH_PZ_CODE = "PZ196"
 ALDER_HEY_PZ_CODE = "PZ074"
+GOSH_PZ_CODE = "PZ196"
 
 
-def create_submission_with_patient(user):
-    audit_period = AuditPeriod.objects.get_default_audit_period()
+MOCK_PATIENT_EXTERNAL_VALIDATION_RESULT = PatientExternalValidationResult(
+    postcode=VALID_FIELDS["postcode"],
+    gp_practice_ods_code=VALID_FIELDS["gp_practice_ods_code"],
+    gp_practice_postcode=None,
+    index_of_multiple_deprivation_quintile=INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
+    location_bng=Point(100, -100),
+    location_wgs84=Point(200, -200),
+)
 
-    submission = Submission.objects.create(
-        audit_year=audit_period.audit_year(),
-        audit_period=audit_period,
-        submission_date=f"{audit_period.audit_year()}-04-01T00:00:00Z",
-        submission_active=True,
-        submission_by=user,
-        paediatric_diabetes_unit=user.organisation_employers.first(),
-    )
-    Transfer = apps.get_model("npda.Transfer")
-    patient = PatientFactory()
-    # Update the transfer to match the user's PDU
-    Transfer.objects.filter(patient=patient).update(
-        paediatric_diabetes_unit=user.organisation_employers.first()
-    )
-    submission.patients.add(patient)
-
-    return patient
-
-
-def set_view_preference(client, view_preference, pz_code):
-    url = reverse("view_preference")
-    params = {"view_preference": view_preference, "pz_code_select_name": pz_code}
-
-    response = client.post(url, params, headers={"HX-Request": "true"})
-    assert response.status_code == HTTPStatus.NO_CONTENT
-
+MOCK_VISIT_EXTERNAL_VALIDATION_RESULT = VisitExternalValidationResult(
+    height_result=CentileAndSDS(centile=Decimal(0.5), sds=Decimal(0.5)),
+    weight_result=CentileAndSDS(centile=Decimal(0.5), sds=Decimal(0.5)),
+    bmi=Decimal(0.5),
+    bmi_result=CentileAndSDS(centile=Decimal(0.5), sds=Decimal(0.5)),
+)
 
 @pytest.mark.django_db
-def test_users_only_see_patients_from_their_pdu_using_session_url(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client,
-):
-    """Except for RCPCH_AUDIT_TEAM, users should only see patients from their own PDU."""
+class TestQuestionnaireView:
+    # We don't want to call remote services in unit tests
+    @pytest.fixture(autouse=True)
+    def mock_remote_calls(self):
+        with patch(
+            "project.npda.forms.patient_form.validate_patient_sync",
+            Mock(return_value=MOCK_PATIENT_EXTERNAL_VALIDATION_RESULT),
+        ):
+            with patch(
+            "project.npda.forms.visit_form.validate_visit_sync",
+                Mock(return_value=MOCK_VISIT_EXTERNAL_VALIDATION_RESULT),
+            ):
+                yield None
 
-    gosh_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=GOSH_PZ_CODE
-    ).first()
+    @pytest.fixture(autouse=True)
+    def setup(
+        self, seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+    ):
+        self.client = client
 
-    ah_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
-    ).first()
+        self.audit_period = AuditPeriod.objects.get_default_audit_period()
 
-    gosh_patient = create_submission_with_patient(gosh_user)
-    ah_patient = create_submission_with_patient(ah_user)
+        # Get a user with the correct permissions
+        self.ah_user = NPDAUser.objects.filter(
+            organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+            groups__name=test_user_audit_centre_editor_data.group_name,
+        ).first()
 
-    client = login_and_verify_user(client, ah_user)
-    response = client.get(reverse("patients"))
+        self.client = login_and_verify_user(self.client, self.ah_user)
 
-    assert response.status_code == HTTPStatus.OK
+    def test_users_can_use_questionnaire(self):
+        """
+        Test that users who do not have the can_upload_csv permission cannot save a patient through the questionnaire view.
+        """
+        create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+        )
 
-    patients = response.context_data["object_list"]
+        # Create a patient
+        form = PatientForm(VALID_FIELDS)
 
-    assert len(patients) == 1
-    assert patients.first().pk == ah_patient.pk
+        # url
+        url = reverse("pdu-patient-add", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE})
 
+        # Post the patient data
+        response = self.client.post(url, form.data)
 
-@pytest.mark.django_db
-def test_users_only_see_patients_from_their_pdu_using_data_url(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client,
-):
-    """Except for RCPCH_AUDIT_TEAM, users should only see patients from their own PDU."""
+        # Check that the patient was saved
+        assert (
+            Patient.objects.filter(nhs_number=form.data["nhs_number"]).exists() is True
+        )
+        assert response.status_code == 302  # Redirects to the patient list page
 
-    gosh_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=GOSH_PZ_CODE
-    ).first()
+    def test_users_with_correct_permissions_cannot_save_patient_in_closed_audit_year(
+        self,
+    ):
+        """
+        Test that users who have the questionnaire permission cannot save a patient in a closed audit year.
+        """
+        create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+        )
 
-    ah_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
-    ).first()
+        # Create a patient
+        form = PatientForm(VALID_FIELDS)
+        
+        self.audit_period.is_open = False
+        self.audit_period.save()
 
-    gosh_patient = create_submission_with_patient(gosh_user)
-    ah_patient = create_submission_with_patient(ah_user)
+        # url
+        url = reverse("pdu-patient-add", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE})
 
-    client = login_and_verify_user(client, ah_user)
-    audit_period = AuditPeriod.objects.get_default_audit_period()
-    url = reverse("pdu-patients", kwargs={ "audit_period": audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE })
+        # Post the patient data
+        response = self.client.post(url, form.data)
 
-    response = client.get(url)
+        assert response.status_code == 403
+        assert (
+            Patient.objects.filter(nhs_number=form.data["nhs_number"]).exists() is False
+        )
 
-    assert response.status_code == HTTPStatus.OK
+    def test_rcpch_users_with_correct_permissions_can_still_save_patient_in_closed_audit_year(
+        self,
+    ):
+        """
+        Test that RCPCH audit users who have the questionnaire permission can still save a patient in a closed audit year.
+        """
+        create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+        )
 
-    patients = response.context_data["object_list"]
+        # Create a patient
+        form = PatientForm(VALID_FIELDS)
 
-    assert len(patients) == 1
-    assert patients.first().pk == ah_patient.pk
+        self.audit_period.is_open = False
+        self.audit_period.save()
 
+        # Give the user the RCPCH audit team group
+        self.ah_user.is_rcpch_audit_team_member = True
+        self.ah_user.save()
 
-@pytest.mark.django_db
-def test_users_cannot_see_patients_from_other_pdu_using_data_url(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client,
-):
-    """Except for RCPCH_AUDIT_TEAM, users should only see patients from their own PDU."""
+        # url
+        url = reverse("pdu-patient-add", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE})
 
-    gosh_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=GOSH_PZ_CODE
-    ).first()
+        # Post the patient data
+        response = self.client.post(url, form.data)
 
-    ah_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
-    ).first()
+        assert response.status_code == 302  # Redirects to the patient list page
+        assert (
+            Patient.objects.filter(nhs_number=form.data["nhs_number"]).exists() is True
+        )
 
-    gosh_patient = create_submission_with_patient(gosh_user)
-    ah_patient = create_submission_with_patient(ah_user)
+    def test_users_without_questionnaire_permissions_cannot_save_patient(self):
+        """
+        Test that users who do not have the questionnaire permission cannot save a patient through the questionnaire view.
+        """
+        sub = create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+            csv_file_name="test.csv",
+        )
 
-    client = login_and_verify_user(client, ah_user)
-    audit_period = AuditPeriod.objects.get_default_audit_period()
-    url = reverse("pdu-patients", kwargs={ "audit_period": audit_period.slug, "pz_code": GOSH_PZ_CODE })
+        # Create a patient
+        form = PatientForm(VALID_FIELDS)
 
-    response = client.get(url)
+        # url
+        url = reverse("pdu-patient-add", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE})
 
-    assert response.status_code == HTTPStatus.FORBIDDEN
-    assert "context_data" not in response
+        # Post the patient data
+        response = self.client.post(url, form.data)
 
+        assert response.status_code == 403
+        assert (
+            Patient.objects.filter(nhs_number=form.data["nhs_number"]).exists() is False
+        )
 
-@pytest.mark.django_db
-def test_rcpch_audit_team_can_see_patients_from_all_pdus(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client,
-):
-    gosh_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=GOSH_PZ_CODE
-    ).first()
+    def test_rcpch_users_without_questionnaire_permissions_can_still_save_patient(self):
+        """
+        Test that RCPCH audit users who do not have the questionnaire permission can still save a patient through the questionnaire view.
+        """
+        create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+            csv_file_name="test.csv",
+        )
 
-    ah_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
-    ).first()
+        # Give the user the RCPCH audit team group
+        self.ah_user.is_rcpch_audit_team_member = True
+        self.ah_user.save()
 
-    rcpch_user = NPDAUser.objects.filter(is_rcpch_audit_team_member=True).first()
+        # Create a patient
+        form = PatientForm(VALID_FIELDS)
 
-    gosh_patient = create_submission_with_patient(gosh_user)
-    ah_patient = create_submission_with_patient(ah_user)
+        # url
+        url = reverse("pdu-patient-add", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE})
 
-    client = login_and_verify_user(client, rcpch_user)
+        # Post the patient data
+        response = self.client.post(url, form.data)
 
-    # GOSH
-    set_view_preference(client, view_preference=1, pz_code=GOSH_PZ_CODE)
+        assert response.status_code == 302
+        assert (
+            Patient.objects.filter(nhs_number=form.data["nhs_number"]).exists() is True
+        )
 
-    response = client.get(reverse("patients"))
-    assert response.status_code == HTTPStatus.OK
+    def test_users_with_correct_permissions_can_save_visit(self):
+        """
+        Test that users who do have questionnaire permission can save a visit through the questionnaire view.
+        """
 
-    patients = response.context_data["object_list"]
+        patient = PatientFactory(
+            transfer__paediatric_diabetes_unit__pz_code=ALDER_HEY_PZ_CODE
+        )
 
-    assert len(patients) == 1
-    assert patients.first().pk == gosh_patient.pk
+        sub = create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+        )
+        patient.submissions.add(sub)
 
-    # Alder Hey
-    set_view_preference(client, view_preference=1, pz_code=ALDER_HEY_PZ_CODE)
+        form = VisitForm(data=COMPLETED_VISIT, initial={"patient": patient})
+
+        # url
+        url = reverse("pdu-visit-create", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "patient_id": patient.pk})
+
+        # Post the patient data
+        response = self.client.post(url, form.data)
+
+        # Cannot check that the visit was saved as a visit is created in the VisitForm instance
+        assert response.status_code == 200
+
+    def test_users_with_correct_permissions_without_questionnaire_permission_cannot_save_visit(
+        self,
+    ):
+        """
+        Test that users who do have questionnaire permission can save a visit through the questionnaire view.
+        """
+        create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+            csv_file_name="test.csv",
+        )
+
+        # Create a patient
+        patient = PatientFactory()
+
+        form = VisitForm(data=COMPLETED_VISIT, initial={"patient": patient})
+
+        # url
+        url = reverse("pdu-visit-create", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "patient_id": patient.pk})
+
+        # Post the patient data
+        response = self.client.post(url, form.data)
+
+        assert response.status_code == 403
+        # Cannot check if the visit was not saved as a visit is created in the VisitForm instance
+
+    def test_csv_uploaders_can_view_patient(self):
+        """
+        They can't edit the patient but can view them (the UI displays read only)
+        """
+        assert not self.ah_user.is_rcpch_audit_team_member
+
+        sub = create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+            csv_file_name="test.csv",
+        )
+
+        patient = PatientFactory()
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
+        
+        transfer = Transfer.objects.get(patient=patient)
+        transfer.paediatric_diabetes_unit = pdu
+        transfer.save()
+
+        sub.patients.add(patient)
+        sub.save()
+
+        url = reverse("pdu-patient-update", kwargs={"audit_period": self.audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "pk": patient.pk})
+
+        response = self.client.get(url)
+        assert response.status_code == 200
     
-    response = client.get(reverse("patients"))
-    assert response.status_code == HTTPStatus.OK
+    def test_csv_uploaders_can_view_visit(self):
+        """
+        They can't edit the visit but can view it (the UI displays read only)
+        """
+        assert not self.ah_user.is_rcpch_audit_team_member
 
-    patients = response.context_data["object_list"]
+        sub = create_submission(
+            self.audit_period,
+            pz_code=ALDER_HEY_PZ_CODE,
+            csv_file_name="test.csv",
+        )
 
-    assert len(patients) == 1
-    assert patients.first().pk == ah_patient.pk
+        patient = PatientFactory()
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
+        
+        transfer = Transfer.objects.get(patient=patient)
+        transfer.paediatric_diabetes_unit = pdu
+        transfer.save()
 
+        sub.patients.add(patient)
+        sub.save()
 
-@pytest.mark.django_db
-def test_user_with_unexpected_view_preference(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client,
-):
-    gosh_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=GOSH_PZ_CODE
-    ).first()
+        visit = VisitFactory(patient=patient)
 
-    ah_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
-    ).first()
+        url = reverse("pdu-visit-update", kwargs={
+            "audit_period": self.audit_period.slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+            "patient_id": patient.pk,
+            "pk": visit.pk
+        })
 
-    rcpch_user = NPDAUser.objects.filter(is_rcpch_audit_team_member=True).first()
-
-    gosh_patient = create_submission_with_patient(gosh_user)
-    ah_patient = create_submission_with_patient(ah_user)
-
-    client = login_and_verify_user(client, gosh_user)
-
-    # We test that you can't change your view preference to something unexpected in
-    #   test_npda_user_list_view_users_cannot_set_their_view_preference_to_anything_they_want
-    # but for safety's sake we test the behaviour again here
-    gosh_user.view_preference = 999
-    gosh_user.save()
-
-    # Triple check we can still only see our own patients
-    response = client.get(reverse("patients"))
-    assert response.status_code == HTTPStatus.OK
-
-    patients = response.context_data["object_list"]
-
-    assert len(patients) == 1
-    assert patients.first().pk == gosh_patient.pk
-
-
-@pytest.mark.django_db
-def test_users_can_only_edit_patients_from_their_own_pdu(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client,
-):
-    gosh_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=GOSH_PZ_CODE
-    ).first()
-
-    ah_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
-    ).first()
-
-    ah_patient = create_submission_with_patient(ah_user)
-
-    client = login_and_verify_user(client, gosh_user)
-
-    audit_period = AuditPeriod.objects.get_default_audit_period()
-    url = reverse("pdu-patient-update", kwargs={"audit_period": audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "pk": ah_patient.pk})
-    response = client.get(url)
-
-    assert response.status_code == HTTPStatus.FORBIDDEN
-
-
-@pytest.mark.django_db
-def test_rcpch_audit_team_can_edit_patients_from_any_pdu(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client,
-):
-    gosh_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=GOSH_PZ_CODE
-    ).first()
-
-    ah_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
-    ).first()
-
-    rcpch_user = NPDAUser.objects.filter(is_rcpch_audit_team_member=True).first()
-
-    gosh_patient = create_submission_with_patient(gosh_user)
-    ah_patient = create_submission_with_patient(ah_user)
-
-    client = login_and_verify_user(client, rcpch_user)
-
-    audit_period = AuditPeriod.objects.get_default_audit_period()
-
-    gosh_url = reverse("pdu-patient-update", kwargs={"audit_period": audit_period.slug, "pz_code": GOSH_PZ_CODE, "pk": gosh_patient.pk})
-    assert client.get(gosh_url).status_code == HTTPStatus.OK
-
-    ah_url = reverse("pdu-patient-update", kwargs={"audit_period": audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "pk": ah_patient.pk})
-    assert client.get(ah_url).status_code == HTTPStatus.OK
-
-
-@pytest.mark.django_db
-def test_users_can_only_see_patient_visits_from_their_own_pdu(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client,
-):
-    gosh_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=GOSH_PZ_CODE
-    ).first()
-
-    ah_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
-    ).first()
-
-    ah_patient = create_submission_with_patient(ah_user)
-
-    client = login_and_verify_user(client, gosh_user)
-
-    audit_period = AuditPeriod.objects.get_default_audit_period()
-    url = reverse("pdu-patient-visits", kwargs={"audit_period": audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "patient_id": ah_patient.pk})
-
-    response = client.get(url)
-
-    assert response.status_code == HTTPStatus.FORBIDDEN
-
-
-@pytest.mark.django_db
-def test_rcpch_audit_team_can_see_visits_from_all_pdus(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client,
-):
-    gosh_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=GOSH_PZ_CODE
-    ).first()
-
-    ah_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
-    ).first()
-
-    rcpch_user = NPDAUser.objects.filter(is_rcpch_audit_team_member=True).first()
-
-    gosh_patient = create_submission_with_patient(gosh_user)
-    ah_patient = create_submission_with_patient(ah_user)
-
-    client = login_and_verify_user(client, rcpch_user)
-
-    audit_period = AuditPeriod.objects.get_default_audit_period()
-    gosh_url = reverse("pdu-patient-visits", kwargs={"audit_period": audit_period.slug, "pz_code": GOSH_PZ_CODE, "patient_id": gosh_patient.pk})
-
-    assert client.get(gosh_url).status_code == HTTPStatus.OK
-
-    ah_url = reverse("pdu-patient-visits", kwargs={"audit_period": audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "patient_id": ah_patient.pk})
-    assert client.get(ah_url).status_code == HTTPStatus.OK
-
-
-@pytest.mark.django_db
-def test_users_can_only_edit_patient_visits_from_their_own_pdu(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client,
-):
-    gosh_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=GOSH_PZ_CODE
-    ).first()
-
-    ah_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
-    ).first()
-
-    ah_patient = create_submission_with_patient(ah_user)
-    ah_visit = VisitFactory(patient=ah_patient)
-
-    client = login_and_verify_user(client, gosh_user)
-
-    audit_period = AuditPeriod.objects.get_default_audit_period()
-
-    url = reverse("pdu-visit-update", kwargs={"audit_period": audit_period.slug, "pz_code": GOSH_PZ_CODE, "patient_id": ah_patient.pk, "pk": ah_visit.pk})
-    response = client.get(url)
-
-    assert response.status_code == HTTPStatus.FORBIDDEN
-
-
-@pytest.mark.django_db
-def test_rcpch_audit_team_can_edit_visits_from_all_pdus(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client,
-):
-    gosh_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=GOSH_PZ_CODE
-    ).first()
-
-    ah_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
-    ).first()
-
-    rcpch_user = NPDAUser.objects.filter(is_rcpch_audit_team_member=True).first()
-
-    gosh_patient = create_submission_with_patient(gosh_user)
-    gosh_visit = VisitFactory(patient=gosh_patient)
-
-    ah_patient = create_submission_with_patient(ah_user)
-    ah_visit = VisitFactory(patient=ah_patient)
-
-    client = login_and_verify_user(client, rcpch_user)
-
-    audit_period = AuditPeriod.objects.get_default_audit_period()
-
-    gosh_url = reverse("pdu-visit-update", kwargs={"audit_period": audit_period.slug, "pz_code": GOSH_PZ_CODE, "patient_id": gosh_patient.pk, "pk": gosh_visit.pk})
-    assert client.get(gosh_url).status_code == HTTPStatus.OK
-
-    ah_url = reverse("pdu-visit-update", kwargs={"audit_period": audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE, "patient_id": ah_patient.pk, "pk": ah_visit.pk})
-    assert client.get(ah_url).status_code == HTTPStatus.OK
+        response = self.client.get(url)
+        assert response.status_code == 200

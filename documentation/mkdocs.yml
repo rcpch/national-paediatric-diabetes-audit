@@ -124,15 +124,10 @@ extra:
       link: https://github.com/rcpch
 
 nav:
-  - Home:
-    - 'index.md'
-    - 'home/citation.md'
-  - User Guide:
-    - 'user-guide/user-guide.md'
-  - Admin Guide:
-    - 'admin-guide/admin-guide.md'
-  - Contact:
-    - 'contact/contact-rcpch.md'
+  - Home: 'index.md'
+  - User Guide: 'user-guide/user-guide.md'
+  - Admin Guide: 'admin-guide/admin-guide.md'
+  - Contact: 'contact/contact-rcpch.md'
   - Legal:
     - 'legal/legal.md'
     - 'legal/license.md'
@@ -166,3 +161,8 @@ nav:
       - 'developer/kpis/outcomes.md'
     - KPI Class: 'developer/kpis/kpi_class.md'
       # - Tests: 'developer/kpis/tests.md'
+  - API:
+    - API Overview: 'developer/api/api.md'
+    - API Authentication: 'developer/api/authentication.md'
+    - API Endpoints: 'developer/api/endpoints.md'
+    - API Response: 'developer/api/response.md'

@@ -19,11 +19,12 @@ from http import HTTPStatus
 
 # Python imports
 import pytest
+from django.test import override_settings
 
 # 3rd party imports
 from django.apps import apps
 from django.test import Client
-from django.urls import reverse
+from django.urls import reverse, resolve
 from django.utils import timezone
 
 from project.constants.user import (
@@ -75,6 +76,7 @@ def check_all_users_in_pdu(user, users, pz_code):
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_npda_user_list_view_users_can_only_see_users_from_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
@@ -97,15 +99,19 @@ def test_npda_user_list_view_users_can_only_see_users_from_their_pdu(
     client = login_and_verify_user(client, ah_user)
 
     url = reverse("npda_users")
-    response = client.get(url)
-
+    
+    # Make the request and debug the response
+    response = client.get(url, follow=False)
+    # Temporarily use follow=True to see if that works
+    
+    # For now, use the followed response to continue the test
     assert response.status_code == HTTPStatus.OK
-
     users = response.context_data["object_list"]
     check_all_users_in_pdu(ah_user, users, ALDER_HEY_PZ_CODE)
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_npda_user_list_view_rcpch_audit_team_can_view_all_users(
     seed_groups_fixture,
     seed_users_fixture,
@@ -148,6 +154,7 @@ def test_npda_user_list_view_rcpch_audit_team_can_view_all_users(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_npda_user_list_view_users_cannot_switch_outside_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
@@ -175,7 +182,8 @@ def test_npda_user_list_view_users_cannot_switch_outside_their_pdu(
     check_all_users_in_pdu(ah_user, users, ALDER_HEY_PZ_CODE)
 
 
-@pytest.mark.django_db  # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/189
+@pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)  # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/189
 def test_npda_user_list_view_normal_users_cannot_set_their_view_preference_to_national(
     seed_groups_fixture,
     seed_users_fixture,
@@ -202,6 +210,7 @@ def test_npda_user_list_view_normal_users_cannot_set_their_view_preference_to_na
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_editor_can_upload_csv(
     seed_groups_fixture,
     seed_users_fixture,
@@ -234,6 +243,7 @@ def test_editor_can_upload_csv(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_reader_cannot_upload_csv(
     seed_groups_fixture,
     seed_users_fixture,
@@ -265,6 +275,7 @@ def test_reader_cannot_upload_csv(
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/906
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_coordinators_cannot_change_their_role(
     seed_groups_fixture,
     seed_users_fixture,
@@ -294,6 +305,7 @@ def test_coordinators_cannot_change_their_role(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_coordinators_cannot_change_their_employer_htmx(
     seed_groups_fixture,
     seed_users_fixture,
@@ -329,6 +341,7 @@ def test_coordinators_cannot_change_their_employer_htmx(
 
 # Not actually used in the UI but possible to construct manually
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_coordinators_cannot_change_their_employer_post(
     seed_groups_fixture,
     seed_users_fixture,
@@ -352,6 +365,7 @@ def test_coordinators_cannot_change_their_employer_post(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_coordinators_cannot_create_users_outside_of_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
@@ -385,6 +399,7 @@ def test_coordinators_cannot_create_users_outside_of_their_pdu(
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/911
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_audit_team_can_create_users_outside_of_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
@@ -422,6 +437,7 @@ def test_audit_team_can_create_users_outside_of_their_pdu(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_coordinators_cannot_create_audit_team_members(
     seed_groups_fixture,
     seed_users_fixture,
@@ -484,7 +500,7 @@ def test_coordinators_cannot_activate_or_inactivate_users_outside_of_their_pdu(
 
     url = reverse("npdauser-update", kwargs={"pk": gosh_coordinator.pk})
 
-    response = client.post(url, data={action:'true'})
+    response = client.post(url, data={action:'true'}, follow=True)
 
     assert response.status_code == HTTPStatus.FORBIDDEN
     gosh_coordinator.refresh_from_db()
@@ -493,6 +509,7 @@ def test_coordinators_cannot_activate_or_inactivate_users_outside_of_their_pdu(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_coordinators_cannot_add_employers_outside_of_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
@@ -528,6 +545,7 @@ def test_coordinators_cannot_add_employers_outside_of_their_pdu(
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/911
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_audit_team_can_add_employers_outside_of_their_pdu(
     seed_groups_fixture,
     seed_users_fixture,
@@ -651,6 +669,7 @@ def test_coordinators_cannot_create_users_with_superuser_flags(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 @pytest.mark.parametrize(
     "user_flag",
     [
@@ -683,13 +702,16 @@ def test_coordinators_cannot_create_users_with_django_admin_flags(
 
     data[user_flag] = "on"
 
-    client.post(url, data)
+    response = client.post(url, data)
+
+    print(f"Checking user flag {user_flag} {response.status_code}")
 
     user = NPDAUser.objects.get(email="bob@bobertson.com")
     assert getattr(user, user_flag) is False
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 @pytest.mark.parametrize(
     "user_data",
     [
@@ -755,6 +777,7 @@ def test_users_can_download_csv(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_reader_cannot_download_csv(
     client,
     seed_groups_fixture,
@@ -807,6 +830,7 @@ def test_reader_cannot_download_csv(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 @pytest.mark.parametrize(
     "user_data",
     [
@@ -874,6 +898,7 @@ def test_users_can_download_report(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_rcpch_audit_team_can_delete_submission(
     client,
     seed_groups_fixture,
@@ -928,6 +953,7 @@ def test_rcpch_audit_team_can_delete_submission(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 @pytest.mark.parametrize(
     "user_data",
     [
@@ -992,6 +1018,7 @@ def test_non_rcpch_audit_team_cannot_delete_submission(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_users_cant_see_user_logs_for_different_pdus_users(
     client: Client,
     seed_groups_fixture,
@@ -1023,6 +1050,7 @@ def test_users_cant_see_user_logs_for_different_pdus_users(
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_editors_and_readers_can_only_view_their_own_logs(
     client: Client,
     seed_groups_fixture,
@@ -1130,6 +1158,7 @@ def test_editors_and_readers_can_only_view_their_own_logs(
             )
     
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_coordinators_can_see_users_with_multiple_employers_if_in_same_pdu(
     client: Client,
     seed_groups_fixture,
@@ -1168,6 +1197,7 @@ def test_coordinators_can_see_users_with_multiple_employers_if_in_same_pdu(
     assert response.status_code == HTTPStatus.OK
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_coordinators_can_edit_users_with_multiple_employers_even_if_in_same_pdu(
     client: Client,
     seed_groups_fixture,
@@ -1206,6 +1236,7 @@ def test_coordinators_can_edit_users_with_multiple_employers_even_if_in_same_pdu
     assert response.status_code == HTTPStatus.OK
     
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 @pytest.mark.parametrize("action", ["deactivate", "activate"])
 def test_coordinators_cannot_activate_or_deactivate_users_with_multiple_employers_even_if_in_same_pdu(
     client: Client,
@@ -1249,9 +1280,16 @@ def test_coordinators_cannot_activate_or_deactivate_users_with_multiple_employer
     assert test_user_multiple_employers.organisation_employers.count() > 1, (
         f"User {test_user_multiple_employers.first_name} ({test_user_multiple_employers.pz_code}) should have multiple employers"
     )
+    assert test_coordinator.has_perm("npda.delete_npdauser") is True, (
+        f"User {test_coordinator.first_name} ({test_coordinator.pz_code}) should be able to delete user {test_user_multiple_employers.first_name} ({test_user_multiple_employers.pz_code})"
+    )
 
     # Login user
     client = login_and_verify_user(client, test_coordinator)
+
+    assert test_coordinator.is_authenticated, (
+        f"User {test_coordinator.first_name} ({test_coordinator.pz_code}) should be able to log in"
+    )
 
     # Make a POST request to the user update url
     url = reverse("npdauser-update", kwargs={"pk": test_user_multiple_employers.pk})
@@ -1266,6 +1304,7 @@ def test_coordinators_cannot_activate_or_deactivate_users_with_multiple_employer
     )
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 @pytest.mark.parametrize("initial_active, expected_active, action_label", [
     (True, False, "deactivate"),
     (False, True, "activate"),
@@ -1340,6 +1379,7 @@ def test_rcpch_audit_team_and_superusers_can_toggle_is_active_for_users_with_mul
     )
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 @pytest.mark.parametrize("action", ["deactivate", "activate"])
 def test_coordinators_cannot_activate_or_deactivate_themselves(
     client: Client,
@@ -1368,6 +1408,7 @@ def test_coordinators_cannot_activate_or_deactivate_themselves(
     assert test_coordinator.is_active == True  # Should remain active
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_coordinators_can_view_user_logs_with_multiple_employers_if_in_the_same_pdu(
     client: Client,
     seed_groups_fixture,
@@ -1407,6 +1448,7 @@ def test_coordinators_can_view_user_logs_with_multiple_employers_if_in_the_same_
     assert response.status_code == HTTPStatus.OK
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_coordinators_with_multiple_employers_can_view_user_logs_with_multiple_employers_if_in_the_same_pdu(
     client: Client,
     seed_groups_fixture,
@@ -1451,6 +1493,7 @@ def test_coordinators_with_multiple_employers_can_view_user_logs_with_multiple_e
     assert response.status_code == HTTPStatus.OK
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_coordinators_with_multiple_employers_cannot_view_user_logs_with_multiple_employers_if_no_common_pdu(
     client: Client,
     seed_groups_fixture,
@@ -1496,6 +1539,7 @@ def test_coordinators_with_multiple_employers_cannot_view_user_logs_with_multipl
     assert response.status_code == HTTPStatus.FORBIDDEN
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_user_creation_has_a_timestamp_and_user(
     client: Client,
     seed_groups_fixture,
@@ -1541,6 +1585,7 @@ def test_user_creation_has_a_timestamp_and_user(
     ).exists(), "VisitActivity should have been created for user creation"
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_user_update_has_a_timestamp_and_user(
     client: Client,
     seed_groups_fixture,

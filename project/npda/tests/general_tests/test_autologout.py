@@ -4,6 +4,7 @@ from http import HTTPStatus
 
 # Python imports
 import pytest
+from django.test import override_settings
 from django.conf import settings
 
 # 3rd party imports
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.django_db
+@override_settings(SECURE_SSL_REDIRECT=False)
 def test_auto_logout_django_auto_logout(
     seed_groups_fixture,
     seed_users_fixture,

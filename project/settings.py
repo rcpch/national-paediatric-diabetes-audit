@@ -14,14 +14,20 @@ from datetime import timedelta
 from pathlib import Path
 import os
 import logging
+import sys
 
 from dotenv import load_dotenv
 
 #  django imports
 from django.core.management.utils import get_random_secret_key
 
+
+from .constants import (
+    ETHNICITIES, DIABETES_TYPES, SEX_TYPE, YES_NO_UNKNOWN,)
+
 # Has to be before logging_settings as that reads ENABLE_REQUEST_LOGGING
 load_dotenv("envs/.env")
+
 
 # RCPCH imports
 from .logging_settings import (
@@ -120,7 +126,9 @@ INSTALLED_APPS = [
     "django.contrib.humanize",
     "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
-    # "django.forms",
+    # third party
+    "django_filters",
+    "drf_spectacular",
     # django htmx
     "django_htmx",
     # 2fa
@@ -128,13 +136,16 @@ INSTALLED_APPS = [
     "django_otp.plugins.otp_static",
     "django_otp.plugins.otp_totp",
     "django_otp.plugins.otp_email",
+    "rest_framework",
     "two_factor.plugins.email",
     "two_factor",
     "two_factor.plugins.phonenumber",  # we don't use phones currently but required for app to work
     "captcha",
     "citext",
     # application
-    "project.npda",
+    "project.npda.apps.NpdaConfig",
+    # oauth2 - after npda
+    'oauth2_provider',
 ]
 
 MIDDLEWARE = [
@@ -333,7 +344,66 @@ STORAGES = {
     },
 }
 
+REST_FRAMEWORK = {
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'project.npda.api.authentication_class.PDUScopedOAuth2Authentication',  # Custom authentication class for API
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+       'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+OAUTH2_PROVIDER = {
+    'SCOPES': {
+        'patient:read': 'Read patient and visit data',
+        'patient:write': 'Write patient and visit data',
+        'admin:cross-pdu': 'Admin access across all PDUs',  # Add this
+    },
+    'ACCESS_TOKEN_EXPIRE_SECONDS': 86400 * 7, # 7 days in seconds
+    'ALWAYS_RETURN_BASIC_ERRORS': True,  # Always return basic errors for security
+     'ALLOWED_GRANT_TYPES': ('authorization_code', 'client_credentials'),
+     'OAUTH2_PROVIDER_GRANT_MODEL': 'oauth2_provider.models.Grant',
+}
+# Global settings for Django OAuth Toolkit (using default models)
+OAUTH2_PROVIDER_ACCESS_TOKEN_MODEL = 'oauth2_provider.AccessToken'
+OAUTH2_PROVIDER_ID_TOKEN_MODEL = 'oauth2_provider.IDToken'
+OAUTH2_PROVIDER_APPLICATION_MODEL = 'oauth2_provider.Application'
+OAUTH2_PROVIDER_REFRESH_TOKEN_MODEL = 'oauth2_provider.RefreshToken'
 
+# Add to settings.py
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'oauth2_provider': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+    },
+}
+
+SECURE_SSL_REDIRECT = True
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "National Paediatric Diabetes Audit API",
+    "DESCRIPTION": "API for the National Paediatric Diabetes Audit",
+    # 'OAUTH2_SCOPES':["patient:read", "patient:write", "admin:cross-pdu"],
+    "SWAGGER_UI_FAVICON_HREF": f"{STATICFILES_DIRS[0]}/favicon.ico",
+    "SERVE AUTHENTICATION": True,  # Enable authentication in the schema view
+    "ENUM_NAME_OVERRIDES": {
+        "PsychologicalAdditionalSupportStatusEnum": YES_NO_UNKNOWN,
+    }
+}
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
