@@ -180,6 +180,15 @@ class SubmissionsListView(
             context["audit_period"] = selected_audit_period
             context["submission_statistics"] = submission_stats(selected_audit_period)
 
+        context["breadcrumbs"] = data_breadcrumbs(
+            self.pdu,
+            self.audit_period,
+            [
+                ("Patient Data", "pdu-patients"),
+                ("Submissions", "pdu-submissions"),
+            ]
+        )
+
         return context
 
     def get(self, request, *args, **kwargs):
