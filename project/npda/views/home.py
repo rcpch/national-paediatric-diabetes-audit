@@ -65,6 +65,29 @@ async def home(request):
 
 
 @login_and_otp_required()
+def new_home(request, audit_period):
+    pdu_choices = request.session.get("pdu_choices", [])
+    pdu_choices.sort(key=lambda pdu: pdu[0])
+
+    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
+    audit_periods = list(AuditPeriod.objects.all())
+
+    if not request.user.is_rcpch_audit_team_member and not request.user.is_superuser:
+        audit_periods = [p for p in audit_periods if p.is_visible]
+    
+    for p in audit_periods:
+        p.selected = p.slug == audit_period.slug
+
+    context = {
+        "pdu_choices": pdu_choices,
+        "audit_periods": audit_periods,
+    }
+
+    template = "new-home.html"
+    return render(request=request, template_name=template, context=context)
+
+
+@login_and_otp_required()
 @check_data_permissions()
 def download_template(request, audit_period, pdu):
     """

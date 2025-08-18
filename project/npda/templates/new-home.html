@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load static %}
+{% load npda_tags %}
+{% block content %}
+  <div class="text-center my-4">
+    <ul class="menu menu-horizontal bg-base-200 rounded-box">
+      {% for audit_period in audit_periods %}
+        <li>
+          <a href="{% url 'new-home' audit_period=audit_period.slug %}" class="{% if audit_period.selected %}active{% endif %}">
+            {{audit_period.display_name}}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+  <div class="text-center my-4">
+    <h1 class="text-xl">Select your paediatric diabetes unit</h1>
+  </div>
+  <div class="flex flex-row flex-wrap justify-center gap-4 p-4">
+    {% for pdu in pdu_choices %}
+      <div class="card bg-base-100 w-96 shadow-xl">
+        <div class="card-body">
+          <h2 class="card-title">{{pdu.0}}</h2>
+          <p>{{pdu.1}}</p>
+          <div class="card-actions justify-end">
+            <div>
+              <a class="btn btn-primary" href="{% url 'pdu-patients' audit_period=audit_period_slug pz_code=pdu.0 %}">
+                Upload data
+              </a>
+            </div>
+            <div>
+              <a class="btn btn-info" href="{% url 'pdu-dashboard' audit_period=audit_period_slug pz_code=pdu.0 %}">
+                Unit Report
+              </a>
+              <a class="btn btn-info" href="{% url 'pdu-patient-report' audit_period=audit_period_slug pz_code=pdu.0 %}">
+                Patient Report
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endblock %}

@@ -25,7 +25,7 @@
         {% include 'navbar/components/nav_links.html' %}
       </ul>
     </div>
-    <a class="btn btn-ghost text-xl h-full" href="{% url 'home' %}">
+    <a class="btn btn-ghost text-xl h-full" href="{% if user.is_rcpch_audit_team_member %}{% url 'new-home' audit_period=audit_period_slug %}{% else %}{% url 'home' %}{% endif %}">
       {% comment %} DESKTOP {% endcomment %}
       <span class="hidden lg:flex lg:gap-6 lg:items-center">
         <img class="h-12"
