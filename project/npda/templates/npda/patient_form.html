@@ -3,9 +3,11 @@
 {% block content %}
   <div class="w-full max-w-3xl mx-auto bg-white font-montserrat border-rcpch_light_blue border-solid border-4 border-t-0">
     {% include 'partials/page_elements/data_rules_banner.html' %}
-    <div class="text-center bg-rcpch_strong_blue text-white py-5 px-5 border-solid border-4 border-rcpch_strong_blue mt-5">
-      <strong>{{ title }}</strong>
-    </div>
+    {% if title %}
+      <div class="text-center bg-rcpch_strong_blue text-white py-5 px-5 border-solid border-4 border-rcpch_strong_blue mt-5">
+        <strong>{{ title }}</strong>
+      </div>
+    {% endif %}
     <form id="update-form" method="post" action="" class="mt-5 mb-5 px-5">
       {% csrf_token %}
       {% for field in form %}
@@ -105,24 +107,39 @@
           {% endfor %}
         </div>
       </div>
-      <div class="flex justify-end  join">
-        <a role="button"
-           class="btn rcpch-light-blue-btn"
-           href='{% data_url 'pdu-patients' %}'>Back to list</a>
-        <button type="submit"
-                value="submit"
-                name="action"
-                class="btn rcpch-light-blue-btn {% if not perms.npda.change_patient or not can_use_questionnaire %}opacity-40 pointer-events-none{% endif %}">
-          {{ button_title }}
-        </button>
-        {% if form_method == 'update' and perms.npda.delete_patient %}
+      <div class="flex justify-between join">
+        <div>
+          {% if patient_id %}
+            <a
+              class="btn rcpch-light-blue-btn"
+              href='{% data_url 'pdu-patient-visits' patient_id=patient_id %}'>
+              {% if is_csv_upload and not is_questionnaire %}
+                View visits
+              {% else %}
+                Add or edit visits
+              {% endif %}
+            </a>
+          {% endif %}
+          <a role="button"
+            class="btn rcpch-light-blue-btn"
+            href='{% data_url 'pdu-patients' %}'>Back to list</a>
+        </div>
+        <div>
           <button type="submit"
-                  value="delete"
-                  name="delete"
-                  class="btn rcpch-danger-btn {% if not perms.npda.change_patient or not can_use_questionnaire %}opacity-40 pointer-events-none{% endif %}">
-            Delete
+                  value="submit"
+                  name="action"
+                  class="btn rcpch-light-blue-btn {% if not perms.npda.change_patient or not can_use_questionnaire %}opacity-40 pointer-events-none{% endif %}">
+            {{ button_title }}
           </button>
-        {% endif %}
+          {% if form_method == 'update' and perms.npda.delete_patient %}
+            <button type="submit"
+                    value="delete"
+                    name="delete"
+                    class="btn rcpch-danger-btn {% if not perms.npda.change_patient or not can_use_questionnaire %}opacity-40 pointer-events-none{% endif %}">
+              Delete
+            </button>
+          {% endif %}
+        </div>
       </div>
       <input type="hidden"
              name="override_postcode"

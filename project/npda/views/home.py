@@ -55,8 +55,39 @@ async def home(request):
     Home page view.
     Only verified users can access this page.
     """
-    context = {}
+    pdu_choices = request.session.get("pdu_choices", [])
+    pdu_choices.sort(key=lambda pdu: pdu[0])
+
+    context = {
+        "pdu_choices": pdu_choices,
+    }
+    
     template = "home.html"
+    return render(request=request, template_name=template, context=context)
+
+
+@login_and_otp_required()
+def new_home(request, audit_period):
+    pdu_choices = request.session.get("pdu_choices", [])
+
+    # Put the test PZ999 at the top of the list otherwise it's hard to find!
+    pdu_choices.sort(key=lambda pdu: "" if pdu[0] == "PZ999" else pdu[0])
+
+    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
+    audit_periods = list(AuditPeriod.objects.all())
+
+    if not request.user.is_rcpch_audit_team_member and not request.user.is_superuser:
+        audit_periods = [p for p in audit_periods if p.is_visible]
+    
+    for p in audit_periods:
+        p.selected = p.slug == audit_period.slug
+
+    context = {
+        "pdu_choices": pdu_choices,
+        "audit_periods": audit_periods,
+    }
+
+    template = "new-home.html"
     return render(request=request, template_name=template, context=context)
 
 

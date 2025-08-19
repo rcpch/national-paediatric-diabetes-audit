@@ -28,7 +28,7 @@
         {% include 'navbar/components/nav_links.html' %}
       </ul>
     </div>
-    <a class="btn btn-ghost text-xl h-full" href="{% url 'home' %}">
+    <a class="btn btn-ghost text-xl h-full" href="{% if 'new_navigation' in request.session.feature_flags %}{% url 'new-home' audit_period=audit_period_slug %}{% else %}{% url 'home' %}{% endif %}">
       {% comment %} DESKTOP {% endcomment %}
       <span class="hidden lg:flex lg:gap-6 lg:items-center">
         <img class="h-12"
@@ -47,19 +47,49 @@
     </a>
   </div>
   {% comment %} NAV ITEMS {% endcomment %}
-  <div class="navbar-center hidden lg:flex">
-    <ul class="menu menu-horizontal px-1">
-      {% include 'navbar/components/nav_links.html' %}
-    </ul>
-    {% if instance_label %}
-          <p class="badge badge-md badge-warning">
+  {% if 'new_navigation' in request.session.feature_flags %}
+    {% if breadcrumbs %}
+      <div class="navbar-center breadcrumbs text-m">
+        <ul>
+          <li>
+            <a href="{% url 'new-home' audit_period=audit_period_slug %}">{{audit_period_slug}}</a>
+          </li>
+          <li>
+            <a href="{% data_url 'pdu-dashboard' %}">{{pz_code}}</a>
+          </li>
+          {% for breadcrumb in breadcrumbs %}
+            <li>
+              <a href="{{ breadcrumb.href }}">{{ breadcrumb.label }}</a>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="navbar-center hidden lg:flex">
+      <ul class="menu menu-horizontal px-1">
+        {% include 'navbar/components/nav_links.html' %}
+      </ul>
+      {% if 'new_navigation' not in request.session.feature_flags %}
+        {% if instance_label %}
+          <p class="badge badge-md badge-warning mr-6">
             {{instance_label}}
           </p>
         {% endif %}
-  </div>
+      {% endif %}
+    </div>
+  {% endif %}
   {% comment %} RIGHT {% endcomment %}
   <div class="navbar-end h-full">
-    {% include 'navbar/components/filters.html' %}
+    {% if 'new_navigation' in request.session.feature_flags %}
+      {% if instance_label %}
+        <p class="badge badge-md badge-warning mr-6">
+          {{instance_label}}
+        </p>
+      {% endif %}
+    {% else %}
+      {% include 'navbar/components/filters.html' %}
+    {% endif %}
     {% include 'navbar/components/avatar_dropdown.html' %}
   </div>
 </div>

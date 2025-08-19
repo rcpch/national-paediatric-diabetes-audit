@@ -30,6 +30,8 @@ from project.npda.general_functions import (
     fetch_organisation_by_ods_code,
     retrieve_quarter_for_date,
     visit_falls_within_audit_period_Q_object,
+    data_breadcrumbs,
+    patient_breadcrumbs
 )
 from project.npda.models import (
     NPDAUser,
@@ -185,6 +187,13 @@ class PatientListView(
 
         context["pdu"] = self.pdu
 
+        context["breadcrumbs"] = [
+            {
+                "label": "Patient Data",
+                "href": self.data_reverse("pdu-patients")
+            }
+        ]
+
         submission = None
         submission_error_count = 0
 
@@ -309,6 +318,10 @@ class PatientCreateView(
         context["button_title"] = "Create New Child Patient Record"
         context["form_method"] = "create"
         context["override_postcode"] = False
+        context["breadcrumbs"] = data_breadcrumbs(self.pdu, self.audit_period, [
+            ("Patient Data", "pdu-patients"),
+            ("Add patient", "pdu-patient-add"),
+        ])
         return context
     
     def form_invalid(self, form):
@@ -413,12 +426,16 @@ class PatientUpdateView(
         patient = get_object_or_404(Patient, pk=self.kwargs["pk"])
         transfer = Transfer.objects.get(patient=patient)
         context = super().get_context_data(**kwargs)
-        title = f"Edit Child Details in {self.pdu.lead_organisation_name}  ({transfer.paediatric_diabetes_unit.pz_code})"
-        context["title"] = title
+        if "new_navigation" not in self.request.session.get("feature_flags", []):
+            title = f"Edit Child Details in {self.pdu.lead_organisation_name}  ({transfer.paediatric_diabetes_unit.pz_code})"
+            context["title"] = title
+        else:
+            context["title"] = "Edit Child Details"
         context["button_title"] = "Save Changes"
         context["form_method"] = "update"
         context["patient_id"] = self.kwargs["pk"]
         context["override_postcode"] = False
+        context["breadcrumbs"] = patient_breadcrumbs(self.pdu, self.audit_period, patient, [])
         return context
 
     def form_valid(self, form: BaseForm) -> HttpResponse:
@@ -484,6 +501,14 @@ class PatientDeleteView(
     model = Patient
     success_message = "Child removed from database"
     success_url = reverse_lazy("patients")
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        patient = self.get_object()
+
+        context["breadcrumbs"] = patient_breadcrumbs(self.pdu, self.audit_period, patient, [])
+        
+        return context
 
     def get_success_url(self):
         return self.data_reverse("pdu-patients")

@@ -20,6 +20,8 @@ from ..general_functions import (
     get_visit_categories,
     get_visit_tabs,
     visit_falls_within_audit_period_Q_object,
+    data_breadcrumbs,
+    patient_breadcrumbs
 )
 from ..models import Patient, Transfer, Visit, AuditPeriod
 from .mixins import (
@@ -84,6 +86,13 @@ class PatientVisitsListView(
         context["paediatric_diabetes_unit"] = paediatric_diabetes_unit
         context["audit_period"] = audit_period
 
+        context["breadcrumbs"] = patient_breadcrumbs(self.pdu, self.audit_period, patient, [
+            {
+                "label": "Visits",
+                "href": self.data_reverse("pdu-patient-visits", kwargs={"patient_id": patient.pk})
+            }
+        ])
+
         return context
 
 
@@ -106,13 +115,25 @@ class VisitCreateView(
         context["patient_id"] = self.kwargs["patient_id"]
         patient = Patient.objects.get(pk=self.kwargs["patient_id"])
         context["patient"] = patient
-        context["title"] = "Add New Visit"
+        if "new_navigation" not in self.request.session.get("feature_flags", []):
+            context["title"] = "Add New Visit"
         context["form_method"] = "create"
         context["button_title"] = "Create New Visit"
         context["visit_tabs"] = get_visit_tabs(form=None)
         context["override_height_weight"] = False
 
         context["paediatric_diabetes_unit"] = patient.submissions.first().paediatric_diabetes_unit
+
+        context["breadcrumbs"] = patient_breadcrumbs(self.pdu, self.audit_period, patient, [
+            {
+                "label": "Visits",
+                "href": self.data_reverse("pdu-patient-visits", kwargs={"patient_id": patient.pk})
+            },
+            {
+                "label": "Add visit",
+                "href": self.data_reverse("pdu-visit-create", kwargs={"patient_id": patient.pk})
+            }
+        ])
 
         return context
 
@@ -192,13 +213,29 @@ class VisitUpdateView(
         context["patient_id"] = self.kwargs["patient_id"]
         context["nhs_number"] = context["form"].patient.nhs_number
         context["visit_id"] = self.kwargs["pk"]
-        context["title"] = "Edit/Update Visit Details"
+        if "new_navigation" not in self.request.session.get("feature_flags", []):
+            context["title"] = "Edit/Update Visit Details"
         context["button_title"] = "Save Changes"
         context["form_method"] = "update"
         context["visit_tabs"] = get_visit_tabs(form=context["form"])
         visit = Visit.objects.get(pk=self.kwargs["pk"])
 
+        patient = visit.patient
         context["patient"] = visit.patient
+
+        context["breadcrumbs"] = patient_breadcrumbs(self.pdu, self.audit_period, patient, [
+            {
+                "label": "Visits",
+                "href": self.data_reverse("pdu-patient-visits", kwargs={"patient_id": patient.pk})
+            },
+            {
+                "label": visit.visit_date,
+                "href": self.data_reverse("pdu-visit-update", kwargs={
+                    "patient_id": patient.pk,
+                    "pk": visit.pk
+                })
+            }
+        ])
 
         return context
 
@@ -275,6 +312,28 @@ class VisitDeleteView(
     permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
     model = Visit
     success_message = "Visit removed successfully"
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+
+        visit = self.get_object()
+        patient = visit.patient
+
+        context["breadcrumbs"] = patient_breadcrumbs(self.pdu, self.audit_period, patient, [
+            {
+                "label": "Visits",
+                "href": self.data_reverse("pdu-patient-visits", kwargs={"patient_id": patient.pk})
+            },
+            {
+                "label": visit.visit_date,
+                "href": self.data_reverse("pdu-visit-update", kwargs={
+                    "patient_id": patient.pk,
+                    "pk": visit.pk
+                })
+            }
+        ])
+        
+        return context
 
     def get_success_url(self):
         messages.add_message(

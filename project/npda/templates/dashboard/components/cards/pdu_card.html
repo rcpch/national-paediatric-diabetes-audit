@@ -1,5 +1,6 @@
 {% extends 'dashboard/components/bases/base_card.html' %}
 {% load static %}
+{% load npda_tags %}
 {% block card_title %}
   {{ pdu_object.pz_code }}
 {% endblock card_title %}
@@ -36,4 +37,12 @@
            width="25%">
     </div>
   {% endif %}
+  <div class="mt-3 flex flex-col">
+    <a class="btn bg-rcpch_pink text-white m-1" href="{% data_url 'pdu-patients' %}">
+      Patient data
+    </a>
+    <a class="btn btn-info m-1" href="{% data_url 'pdu-patient-report' %}">
+      Patient Report
+    </a>
+  </div>
 {% endblock %}

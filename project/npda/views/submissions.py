@@ -37,6 +37,7 @@ from ..general_functions.csv import (
     create_csv_submission,
     gather_unique_patient_and_visit_counts
 )
+from ..general_functions.breadcrumbs import data_breadcrumbs
 from .mixins import (
     LoginAndOTPRequiredMixin,
     PDUPermissionMixin
@@ -178,6 +179,15 @@ class SubmissionsListView(
             )
             context["audit_period"] = selected_audit_period
             context["submission_statistics"] = submission_stats(selected_audit_period)
+
+        context["breadcrumbs"] = data_breadcrumbs(
+            self.pdu,
+            self.audit_period,
+            [
+                ("Patient Data", "pdu-patients"),
+                ("Submissions", "pdu-submissions"),
+            ]
+        )
 
         return context
 
@@ -409,7 +419,13 @@ async def upload_csv(request, audit_period, pdu):
             audit_period=audit_period.slug
         )
 
-    return render(request, "upload_csv/file_upload.html", context={ "pdu": pdu })
+    return render(request, "upload_csv/file_upload.html", context={
+        "pdu": pdu,
+        "breadcrumbs": data_breadcrumbs(pdu, audit_period, [
+            ("Patient Data", "pdu-patients"),
+            ("Upload CSV", "pdu-upload-csv"),
+        ])
+    })
 
 @login_and_otp_required()
 @check_data_permissions()
@@ -449,6 +465,10 @@ def upload_csv_in_progress(request, audit_period, pdu):
         "patient_progress": patients_so_far / total_patients * 100 if total_patients else 0,
         "upload_complete": upload_complete,
         "timeout": timeout,
+        "breadcrumbs": data_breadcrumbs(pdu, audit_period, [
+            ("Patient Data", "pdu-patients"),
+            ("Uploading CSV", "pdu-upload-csv-in-progress"),
+        ])
     }
 
     if request.htmx:

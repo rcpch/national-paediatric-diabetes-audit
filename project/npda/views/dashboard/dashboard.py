@@ -5,8 +5,8 @@ from datetime import date
 
 from django.shortcuts import render
 
-from project.npda.general_functions.audit_period import audit_period_for_audit_year
 from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
+from project.npda.general_functions.breadcrumbs import data_breadcrumbs
 from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.views.decorators import login_and_otp_required, check_data_permissions
 
@@ -73,6 +73,9 @@ def dashboard(request, audit_period, pdu):
         # TODO: this should be an enum but we're currently not doing benchmarking so can update
         # at that point
         "aggregation_level": "pdu",
+        "breadcrumbs": data_breadcrumbs(pdu, audit_period, [
+            ("Unit Report", "pdu-dashboard")
+        ])
     }
 
     return render(request, template_name=template, context=context)
