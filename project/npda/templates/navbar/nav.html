@@ -3,6 +3,9 @@
   <div class="admin-data">
     DEVELOPER INFO - branch: <a href="https://github.com/rcpch/national-paediatric-diabetes-audit/tree/{{active_git_branch}}" target="_blank" class="text-rcpch_red font-bold">{{ active_git_branch }}</a>,
     commit: <a href="https://github.com/rcpch/national-paediatric-diabetes-audit/commit/{{latest_git_commit}}" target="_blank" class="text-rcpch_red font-bold">{{ latest_git_commit | truncatechars:7 }}</a>,
+    {% if request.session.feature_flags %}
+      feature flags: {{request.session.feature_flags}},
+    {% endif %}
     current user: {{ user.email }}
   </div>
 {% endif %}
