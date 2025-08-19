@@ -115,7 +115,8 @@ class VisitCreateView(
         context["patient_id"] = self.kwargs["patient_id"]
         patient = Patient.objects.get(pk=self.kwargs["patient_id"])
         context["patient"] = patient
-        context["title"] = "Add New Visit"
+        if not self.request.user.is_rcpch_audit_team_member and not self.request.user.is_superuser:
+            context["title"] = "Add New Visit"
         context["form_method"] = "create"
         context["button_title"] = "Create New Visit"
         context["visit_tabs"] = get_visit_tabs(form=None)
@@ -212,7 +213,8 @@ class VisitUpdateView(
         context["patient_id"] = self.kwargs["patient_id"]
         context["nhs_number"] = context["form"].patient.nhs_number
         context["visit_id"] = self.kwargs["pk"]
-        context["title"] = "Edit/Update Visit Details"
+        if not self.request.user.is_rcpch_audit_team_member and not self.request.user.is_superuser:
+            context["title"] = "Edit/Update Visit Details"
         context["button_title"] = "Save Changes"
         context["form_method"] = "update"
         context["visit_tabs"] = get_visit_tabs(form=context["form"])

@@ -426,8 +426,9 @@ class PatientUpdateView(
         patient = get_object_or_404(Patient, pk=self.kwargs["pk"])
         transfer = Transfer.objects.get(patient=patient)
         context = super().get_context_data(**kwargs)
-        title = f"Edit Child Details in {self.pdu.lead_organisation_name}  ({transfer.paediatric_diabetes_unit.pz_code})"
-        context["title"] = title
+        if not self.request.user.is_rcpch_audit_team_member and not self.request.user.is_superuser:
+            title = f"Edit Child Details in {self.pdu.lead_organisation_name}  ({transfer.paediatric_diabetes_unit.pz_code})"
+            context["title"] = title
         context["button_title"] = "Save Changes"
         context["form_method"] = "update"
         context["patient_id"] = self.kwargs["pk"]
