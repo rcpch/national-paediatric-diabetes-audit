@@ -70,6 +70,13 @@
       <ul class="menu menu-horizontal px-1">
         {% include 'navbar/components/nav_links.html' %}
       </ul>
+      {% if 'new_navigation' not in request.session.feature_flags %}
+        {% if instance_label %}
+          <p class="badge badge-md badge-warning mr-6">
+            {{instance_label}}
+          </p>
+        {% endif %}
+      {% endif %}
     </div>
   {% endif %}
   {% comment %} RIGHT {% endcomment %}
