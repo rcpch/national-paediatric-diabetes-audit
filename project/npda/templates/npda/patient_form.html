@@ -107,24 +107,39 @@
           {% endfor %}
         </div>
       </div>
-      <div class="flex justify-end  join">
-        <a role="button"
-           class="btn rcpch-light-blue-btn"
-           href='{% data_url 'pdu-patients' %}'>Back to list</a>
-        <button type="submit"
-                value="submit"
-                name="action"
-                class="btn rcpch-light-blue-btn {% if not perms.npda.change_patient or not can_use_questionnaire %}opacity-40 pointer-events-none{% endif %}">
-          {{ button_title }}
-        </button>
-        {% if form_method == 'update' and perms.npda.delete_patient %}
+      <div class="flex justify-between join">
+        <div>
+          {% if patient_id %}
+            <a
+              class="btn rcpch-light-blue-btn"
+              href='{% data_url 'pdu-patient-visits' patient_id=patient_id %}'>
+              {% if is_csv_upload and not is_questionnaire %}
+                View visits
+              {% else %}
+                Add or edit visits
+              {% endif %}
+            </a>
+          {% endif %}
+          <a role="button"
+            class="btn rcpch-light-blue-btn"
+            href='{% data_url 'pdu-patients' %}'>Back to list</a>
+        </div>
+        <div>
           <button type="submit"
-                  value="delete"
-                  name="delete"
-                  class="btn rcpch-danger-btn {% if not perms.npda.change_patient or not can_use_questionnaire %}opacity-40 pointer-events-none{% endif %}">
-            Delete
+                  value="submit"
+                  name="action"
+                  class="btn rcpch-light-blue-btn {% if not perms.npda.change_patient or not can_use_questionnaire %}opacity-40 pointer-events-none{% endif %}">
+            {{ button_title }}
           </button>
-        {% endif %}
+          {% if form_method == 'update' and perms.npda.delete_patient %}
+            <button type="submit"
+                    value="delete"
+                    name="delete"
+                    class="btn rcpch-danger-btn {% if not perms.npda.change_patient or not can_use_questionnaire %}opacity-40 pointer-events-none{% endif %}">
+              Delete
+            </button>
+          {% endif %}
+        </div>
       </div>
       <input type="hidden"
              name="override_postcode"
