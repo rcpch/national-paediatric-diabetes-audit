@@ -426,7 +426,7 @@ class PatientUpdateView(
         patient = get_object_or_404(Patient, pk=self.kwargs["pk"])
         transfer = Transfer.objects.get(patient=patient)
         context = super().get_context_data(**kwargs)
-        if not self.request.user.is_rcpch_audit_team_member and not self.request.user.is_superuser:
+        if "new_navigation" not in self.request.session.get("feature_flags", []):
             title = f"Edit Child Details in {self.pdu.lead_organisation_name}  ({transfer.paediatric_diabetes_unit.pz_code})"
             context["title"] = title
         context["button_title"] = "Save Changes"

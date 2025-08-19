@@ -28,7 +28,7 @@
         {% include 'navbar/components/nav_links.html' %}
       </ul>
     </div>
-    <a class="btn btn-ghost text-xl h-full" href="{% if user.is_rcpch_audit_team_member %}{% url 'new-home' audit_period=audit_period_slug %}{% else %}{% url 'home' %}{% endif %}">
+    <a class="btn btn-ghost text-xl h-full" href="{% if 'new_navigation' in request.session.feature_flags %}{% url 'new-home' audit_period=audit_period_slug %}{% else %}{% url 'home' %}{% endif %}">
       {% comment %} DESKTOP {% endcomment %}
       <span class="hidden lg:flex lg:gap-6 lg:items-center">
         <img class="h-12"
@@ -47,7 +47,7 @@
     </a>
   </div>
   {% comment %} NAV ITEMS {% endcomment %}
-  {% if user.is_rcpch_audit_team_member or user.is_superuser %}
+  {% if 'new_navigation' in request.session.feature_flags %}
     {% if breadcrumbs %}
       <div class="navbar-center breadcrumbs text-m">
         <ul>
@@ -74,7 +74,7 @@
   {% endif %}
   {% comment %} RIGHT {% endcomment %}
   <div class="navbar-end h-full">
-    {% if user.is_rcpch_audit_team_member or user.is_superuser %}
+    {% if 'new_navigation' in request.session.feature_flags %}
       {% if instance_label %}
         <p class="badge badge-md badge-warning mr-6">
           {{instance_label}}
