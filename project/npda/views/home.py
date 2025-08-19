@@ -67,7 +67,9 @@ async def home(request):
 @login_and_otp_required()
 def new_home(request, audit_period):
     pdu_choices = request.session.get("pdu_choices", [])
-    pdu_choices.sort(key=lambda pdu: pdu[0])
+
+    # Put the test PZ999 at the top of the list otherwise it's hard to find!
+    pdu_choices.sort(key=lambda pdu: "" if pdu[0] == "PZ999" else pdu[0])
 
     audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
     audit_periods = list(AuditPeriod.objects.all())
