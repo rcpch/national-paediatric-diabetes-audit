@@ -1,4 +1,4 @@
-<form hx-post hx-trigger="change">
+<form hx-post hx-trigger="change" hx-swap="outerHTML">
     {% csrf_token %}
     {% for flag in feature_flags %}
     <div class="form-control w-full max-w-xs mx-auto my-2">
