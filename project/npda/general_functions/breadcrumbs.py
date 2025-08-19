@@ -20,7 +20,7 @@ def patient_breadcrumbs(pdu, audit_period, patient, entries):
     ]) + [
         {
             "label": patient.unique_reference_number or format_nhs_number(patient.nhs_number),
-            "url": reverse("pdu-patient-update", kwargs={
+            "href": reverse("pdu-patient-update", kwargs={
                 "pz_code": pdu.pz_code,
                 "audit_period": audit_period.slug,
                 "pk": patient.pk
