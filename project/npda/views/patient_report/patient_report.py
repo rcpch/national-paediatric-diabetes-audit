@@ -29,6 +29,7 @@ from django.views.generic import ListView
 from project.constants.hba1c_format import HBA1C_FORMATS
 from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
 from project.constants.diabetes_types import DIABETES_TYPES
+from project.npda.general_functions.breadcrumbs import data_breadcrumbs
 from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.models import Patient, AuditPeriod, Visit
 from project.npda.models.db_functions import Round
@@ -944,6 +945,10 @@ class PatientReportView(
                 "smoking_status": "Not required as less than 12 years old",
                 "smoking_cessation_referral": "Not required as less than 12 years old",
             }
+
+        context["breadcrumbs"] = data_breadcrumbs(self.pdu, self.audit_period, [
+            ("Patient Report", "pdu-patient-report")
+        ])
 
         return context
 
