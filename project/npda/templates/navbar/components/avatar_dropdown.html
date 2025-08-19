@@ -26,6 +26,9 @@
       <li>
         <a href="{% url 'npda_users' %}"><i class="fa-solid fa-users"></i>Manage Users</a>
       </li>
+      <li>
+        <a href="{% url 'feature-flags' %}"><i class="fa-solid fa-wand-magic-sparkles"></i>Feature Previews</a>
+      </li>
       {% if user.is_superuser %}
         <li>
           <a href="{% url 'admin:index' %}"><i class="fa-solid fa-toolbox"></i>Django Admin</a>

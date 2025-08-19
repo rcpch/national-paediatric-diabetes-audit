@@ -4,9 +4,11 @@ from urllib.parse import urlparse
 import logging
 
 # Django imports
+from django.conf import settings
 from django.shortcuts import render
 from django.http import HttpResponse
 
+from project.constants.feature_flags import FEATURE_FLAGS
 from project.npda.general_functions.csv import csv_header
 from ..general_functions.session import refresh_session_filters
 
@@ -113,3 +115,24 @@ def celery_test_task(request):
     test_task.delay()
 
     return HttpResponse(status=204)
+
+
+@login_and_otp_required()
+def feature_flags(request):
+    """
+    View to manage feature flags.
+    """
+    flags = []
+
+    for flag, details in FEATURE_FLAGS.items():
+        flags.append({
+            "id": flag,
+            "description": details["description"],
+            "enabled": False
+        })
+
+    context = {
+        "feature_flags": flags,
+        "feedback_email": settings.SITE_CONTACT_EMAIL
+    }
+    return render(request=request, template_name="feature_flags.html", context=context)
