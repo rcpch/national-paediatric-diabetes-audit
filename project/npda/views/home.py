@@ -4,9 +4,11 @@ from urllib.parse import urlparse
 import logging
 
 # Django imports
+from django.conf import settings
 from django.shortcuts import render
 from django.http import HttpResponse
 
+from project.constants.feature_flags import FEATURE_FLAGS
 from project.npda.general_functions.csv import csv_header
 from ..general_functions.session import refresh_session_filters
 
@@ -113,3 +115,35 @@ def celery_test_task(request):
     test_task.delay()
 
     return HttpResponse(status=204)
+
+
+@login_and_otp_required()
+def feature_flags(request):
+    user_flags = request.session.get("feature_flags", [])
+
+    if request.POST:
+        for flag in FEATURE_FLAGS:
+            if flag in request.POST and request.POST[flag] == "on":
+                user_flags.append(flag)
+            else:
+                user_flags.remove(flag)
+
+        request.session.update({"feature_flags": user_flags})
+
+    all_flags = []
+
+    for flag, details in FEATURE_FLAGS.items():
+        all_flags.append({
+            "id": flag,
+            "description": details["description"],
+            "enabled": flag in user_flags
+        })
+
+    context = {
+        "feature_flags": all_flags,
+        "feedback_email": settings.SITE_CONTACT_EMAIL
+    }
+
+    template_name = "partials/feature_flag_form.html" if request.htmx else "feature_flags.html"
+
+    return render(request=request, template_name=template_name, context=context)

@@ -20,3 +20,4 @@ from .user import *
 from .visit_categories import *
 from .yes_no_unknown import *
 from .organisations_objects import *
+from .feature_flags import *

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load npda_tags %}
+{% block content %}
+  <div class="w-full max-w-3xl mx-auto bg-white font-montserrat border-rcpch_light_blue border-solid border-4 border-t-0">
+    <h1 class="text-center bg-rcpch_strong_blue text-white font-bold py-5 px-5 border-solid border-4 border-rcpch_strong_blue mt-5">
+      Feature Previews
+    </h1>
+    <div class="p-5">
+      <h3 class="font-bold">
+        We're always working on new things for the NPDA platform!
+      </h3>
+      <p>
+        You can try them out with these controls. You might encounter bugs and things might not work as expected.
+        You can always come back to this page to turn them off again.
+      </p>
+      <p>
+        The previews reset every time you are logged out so you will have to come back to this page to enable them again.
+        Please send us feedback at <a href="mailto:{{feedback_email}}">{{feedback_email}}</a>.
+      </p>
+    </div>
+    {% include "partials/feature_flag_form.html" %}
+  </div>
+{% endblock %}
