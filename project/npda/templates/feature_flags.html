@@ -19,18 +19,6 @@
         Please send us feedback at <a href="mailto:{{feedback_email}}">{{feedback_email}}</a>.
       </p>
     </div>
-    <form>
-      {% for flag in feature_flags %}
-        <div class="form-control w-full max-w-xs mx-auto my-2">
-          <label class="label cursor-pointer">
-            <div class="label-text flex flex-col p-3">
-              <strong>{{ flag.id }}</strong>
-              <em>{{ flag.description }}</em>
-            </div>
-            <input type="checkbox" class="toggle toggle-primary" {% if flag.enabled %}checked{% endif %}>
-          </label>
-        </div>
-      {% endfor %}
-    </form>
+    {% include "partials/feature_flag_form.html" %}
   </div>
 {% endblock %}

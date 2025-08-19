@@ -135,4 +135,7 @@ def feature_flags(request):
         "feature_flags": flags,
         "feedback_email": settings.SITE_CONTACT_EMAIL
     }
-    return render(request=request, template_name="feature_flags.html", context=context)
+
+    template_name = "partials/feature_flag_form.html" if request.htmx else "feature_flags.html"
+
+    return render(request=request, template_name=template_name, context=context)

@@ -1,0 +1,14 @@
+<form hx-post hx-trigger="change">
+    {% csrf_token %}
+    {% for flag in feature_flags %}
+    <div class="form-control w-full max-w-xs mx-auto my-2">
+        <label class="label cursor-pointer">
+        <div class="label-text flex flex-col p-3">
+            <strong>{{ flag.id }}</strong>
+            <em>{{ flag.description }}</em>
+        </div>
+        <input name="{{flag.id}}" type="checkbox" class="toggle toggle-primary" {% if flag.enabled %}checked{% endif %}>
+        </label>
+    </div>
+    {% endfor %}
+</form>
