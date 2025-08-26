@@ -399,31 +399,18 @@ class Command(BaseCommand):
 
         # Start csv logic
 
-        # First initialise FakePatientCreator object
-        if postcode_outcode:
-            fake_patient_creator = FakePatientCreator(
-                audit_start_date=audit_start_date,
-                audit_end_date=audit_end_date,
-                postcode_outcode=postcode_outcode
-            )
+        fake_patient_creator = FakePatientCreator(
+            audit_start_date=audit_start_date,
+            audit_end_date=audit_end_date,
+            # either postcode or postcode_outcode
+            postcode=postcode,
+            postcode_outcode=postcode_outcode
+        )
 
-            new_pts = fake_patient_creator.build_fake_patients(
-                n=n_pts_to_seed,
-                age_range=age_range,
-                postcode_outcode=postcode_outcode,
-            )
-        else:
-            fake_patient_creator = FakePatientCreator(
-                audit_start_date=audit_start_date,
-                audit_end_date=audit_end_date,
-                postcode=postcode
-            )
-
-            new_pts = fake_patient_creator.build_fake_patients(
-                n=n_pts_to_seed,
-                age_range=age_range,
-                postcode_outcode=postcode_outcode,
-            )
+        new_pts = fake_patient_creator.build_fake_patients(
+            n=n_pts_to_seed,
+            age_range=age_range,
+        )
 
         # For each pt, add visits
         new_visits = fake_patient_creator.build_fake_visits(

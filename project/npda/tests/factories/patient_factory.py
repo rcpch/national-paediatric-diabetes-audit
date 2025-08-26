@@ -123,28 +123,11 @@ class PatientFactory(factory.django.DjangoModelFactory):
         model = Patient
         skip_postgeneration_save = True
 
-    postcode = VALID_FIELDS["postcode"]
     gp_practice_ods_code = VALID_FIELDS["gp_practice_ods_code"]
 
     diabetes_type = DIABETES_TYPES[0][0]
     sex = factory.lazy_attribute(lambda x: random.choice([sex.value for sex in Sex]))
     ethnicity = factory.lazy_attribute(lambda x: random.choice(ETHNICITIES)[0])
-
-    @classmethod
-    def create(cls, **kwargs):
-        # here you'll only have the kwargs that were entered manually
-
-        print(f"!! create: {str(kwargs)}")
-
-        return super(PatientFactory, cls).create(**kwargs)
-
-    @classmethod
-    def build(cls, **kwargs):
-        # here you'll only have the kwargs that were entered manually
-
-        print(f"!! build: {str(kwargs)}")
-
-        return super(PatientFactory, cls).build(**kwargs)
 
     @factory.lazy_attribute
     def nhs_number(self):
@@ -202,6 +185,11 @@ class PatientFactory(factory.django.DjangoModelFactory):
             start_date=self.date_of_birth, end_date=self.audit_start_date
         )
 
+    @classmethod
+    def _adjust_kwargs(cls, **kwargs):
+        # TODO MRB: apply postcode_outcode
+        return kwargs
+
     # Once a Patient is created, we must create a Transfer object
     transfer = factory.RelatedFactory(TransferFactory, factory_related_name="patient")
 
@@ -220,3 +208,9 @@ class PatientFactory(factory.django.DjangoModelFactory):
             1
         ]  # Default audit_end_date; can be overridden
         age_range = AgeRange.AGE_11_15  # Default age range
+        
+        # Fixed postcode
+        postcode = VALID_FIELDS["postcode"]
+
+        # Random postcode under given outcode
+        postcode_outcode = None
