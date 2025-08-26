@@ -18,7 +18,7 @@ from project.npda.general_functions.audit_period import get_audit_period_for_dat
 from project.npda.general_functions.random_date import get_random_date
 from project.npda.models import Patient
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.general_functions.validate_postcode import ValidatedPostcode
+from project.npda.general_functions.validate_postcode import ValidatedPostcode, random_postcode_under_outcode_sync
 from .transfer_factory import TransferFactory
 from project.constants import (
     ETHNICITIES,
@@ -187,7 +187,11 @@ class PatientFactory(factory.django.DjangoModelFactory):
 
     @classmethod
     def _adjust_kwargs(cls, **kwargs):
-        # TODO MRB: apply postcode_outcode
+        # Can't define a lazy attribute called postcode because we need to support existing tests
+        # that pass postcode= in kwargs. So use this (documented!) hook from Factory Boy instead.
+        if "postcode_outcode" in kwargs:
+            kwargs["postcode"] = random_postcode_under_outcode_sync(kwargs["postcode_outcode"])
+
         return kwargs
 
     # Once a Patient is created, we must create a Transfer object
