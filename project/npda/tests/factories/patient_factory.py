@@ -18,7 +18,7 @@ from project.npda.general_functions.audit_period import get_audit_period_for_dat
 from project.npda.general_functions.random_date import get_random_date
 from project.npda.models import Patient
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.general_functions.validate_postcode import ValidatedPostcode
+from project.npda.general_functions.validate_postcode import ValidatedPostcode, random_postcode_under_outcode_sync
 from .transfer_factory import TransferFactory
 from project.constants import (
     ETHNICITIES,
@@ -123,7 +123,6 @@ class PatientFactory(factory.django.DjangoModelFactory):
         model = Patient
         skip_postgeneration_save = True
 
-    postcode = VALID_FIELDS["postcode"]
     gp_practice_ods_code = VALID_FIELDS["gp_practice_ods_code"]
 
     diabetes_type = DIABETES_TYPES[0][0]
@@ -185,6 +184,13 @@ class PatientFactory(factory.django.DjangoModelFactory):
         return get_random_date(
             start_date=self.date_of_birth, end_date=self.audit_start_date
         )
+    
+    @factory.lazy_attribute
+    def postcode(self):
+        if self.postcode_outcode:
+            return random_postcode_under_outcode_sync(self.postcode_outcode).normalised_postcode
+
+        return VALID_FIELDS["postcode"]
 
     # Once a Patient is created, we must create a Transfer object
     transfer = factory.RelatedFactory(TransferFactory, factory_related_name="patient")
@@ -204,3 +210,6 @@ class PatientFactory(factory.django.DjangoModelFactory):
             1
         ]  # Default audit_end_date; can be overridden
         age_range = AgeRange.AGE_11_15  # Default age range
+
+        # Random postcode under given outcode
+        postcode_outcode = None

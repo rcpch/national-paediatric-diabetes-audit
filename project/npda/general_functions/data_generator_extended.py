@@ -75,13 +75,22 @@ class FakePatientCreator:
         VisitType.DIETICIAN,
     ]
 
-    def __init__(self, audit_start_date: date, audit_end_date: date):
+    def __init__(
+        self,
+        audit_start_date: date,
+        audit_end_date: date,
+        postcode: str | None = None,
+        postcode_outcode: str | None = None,
+    ):
         """Uses audit dates to determine the audit period for the fake patient(s)."""
 
         self.audit_start_date, self.audit_end_date = (
             audit_start_date,
             audit_end_date,
         )
+
+        self.postcode = postcode
+        self.postcode_outcode = postcode_outcode
 
     def build_fake_patients(
         self,
@@ -92,9 +101,14 @@ class FakePatientCreator:
         """Returns list of `n` fake patients, that are NOT yet stored to db.
 
         Can additionally pass in any kwargs to the PatientFactory e.g.
-        `postcode="123". Values not explicity passed in will be set to defaults
+        `gp_practice_ods_code="SE13 5PJ". Values not explicity passed in will be set to defaults
         defined in the PatientFactory.
         """
+        if self.postcode_outcode and not "postcode" in patient_kwargs:
+            patient_kwargs['postcode_outcode'] = self.postcode_outcode
+        elif self.postcode and not "postcode" in patient_kwargs:
+            patient_kwargs['postcode'] = self.postcode
+
         new_pts = PatientFactory.build_batch(
             size=n,
             age_range=age_range,

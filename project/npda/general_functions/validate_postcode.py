@@ -1,6 +1,6 @@
 # python
 import logging
-import requests
+from asgiref.sync import async_to_sync
 from dataclasses import dataclass
 
 # django
@@ -36,18 +36,26 @@ class ValidatedPostcode:
 
 
 async def lookup_postcode(postcode: str, async_client: httpx.AsyncClient) -> ValidatedPostcode | None:
-    return await call_postcode_api("postcodes", postcode, async_client)
+    response = await make_postcode_api_request(f"postcodes/{postcode}", async_client)
+    return handle_postcode_api_response(response)
 
 async def lookup_terminated_postcode(postcode: str, async_client: httpx.AsyncClient) -> ValidatedPostcode | None:
-    return await call_postcode_api("terminated_postcodes", postcode, async_client)
+    response = await make_postcode_api_request(f"terminated_postcodes/{postcode}", async_client)
+    return handle_postcode_api_response(response)
 
-async def call_postcode_api(endpoint: str, postcode: str, async_client: httpx.AsyncClient) -> ValidatedPostcode | None:
-    response = await async_client.get(
-        url=f"{settings.POSTCODES_IO_API_URL}/{endpoint}/{postcode}",
+def random_postcode_under_outcode_sync(outcode: str) -> ValidatedPostcode | None:
+    with httpx.Client() as client:
+        response = make_postcode_api_request(f"random/postcodes?outcode={outcode}", client)
+        return handle_postcode_api_response(response)
+
+def make_postcode_api_request(path: str, client: httpx.Client | httpx.AsyncClient) -> httpx.Response:
+    return client.get(
+        url=f"{settings.POSTCODES_IO_API_URL}/{path}",
         headers={"Ocp-Apim-Subscription-Key": settings.POSTCODES_IO_API_KEY},
         timeout=10,  # times out after 10 seconds
     )
 
+def handle_postcode_api_response(response: httpx.Response) -> ValidatedPostcode | None:
     if response.status_code == 404:
         return None
 
