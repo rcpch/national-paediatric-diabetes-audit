@@ -75,7 +75,7 @@ class FakePatientCreator:
         VisitType.DIETICIAN,
     ]
 
-    def __init__(self, audit_start_date: date, audit_end_date: date):
+    def __init__(self, audit_start_date: date, audit_end_date: date, postcode_outcode: str | None = None):
         """Uses audit dates to determine the audit period for the fake patient(s)."""
 
         self.audit_start_date, self.audit_end_date = (

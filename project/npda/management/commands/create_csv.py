@@ -264,13 +264,6 @@ class Command(BaseCommand):
             choices=["0_4", "5_10", "11_15", "16_19", "20_25"],
             help="Age range for patients to be seeded.",
         )
-        parser.add_argument(
-            "--imd",
-            type=int,
-            help="Requested IMD value used to assign a postcode.",
-            default=1,
-            choices=[1, 2, 3, 4, 5],
-        )
 
         # Mutually exclusive group for --build and --coalesce
         mutex_group = parser.add_mutually_exclusive_group(required=True)
@@ -284,6 +277,21 @@ class Command(BaseCommand):
             action="store_true",
             help="Coalesces build csv files.",
         )
+
+        mutex_group = parser.add_mutually_exclusive_group()
+        mutex_group.add_argument(
+            "--imd",
+            type=int,
+            help="Requested IMD value used to assign a postcode.",
+            choices=[1, 2, 3, 4, 5],
+        )
+        mutex_group.add_argument(
+            "--postcode_outcode",
+            type=str,
+            help="Use random postcodes with the given outcode (eg W1A for W1A 1AA)"
+        )
+
+
 
     def handle(self, *args, **options):
 
@@ -312,6 +320,7 @@ class Command(BaseCommand):
         age_range = parsed_values["age_range"]
         imd = parsed_values["imd"]
         postcode = parsed_values["postcode"]
+        postcode_outcode = parsed_values["postcode_outcode"]
         pdu = parsed_values["pz_code"]
         output_path = parsed_values["output_path"]
         build_flag = parsed_values["build_flag"]
@@ -338,9 +347,10 @@ class Command(BaseCommand):
             ["HbA1c Target Range", hba1c_target.name],
             ["Age Range", f"{age_range.name}"],
             ["IMD Value", imd],
-            ["Postcode", postcode],
+            ["Postcode Outcode" if postcode_outcode else "Postcode", postcode or postcode_outcode],
             ["PZ Code", pdu],
         ]
+
         self.print_info("-" * 45)
         for item in seeding_info:
             self.print_info(f"{CYAN}{item[0]:<30}{RESET} {item[1]}")
@@ -365,6 +375,7 @@ class Command(BaseCommand):
             output_path,
             build_flag,
             postcode,
+            postcode_outcode
         )
         self.print_success(f"✨ CSV generated successfully at {self.csv_name}.\n")
         if build_flag:
@@ -383,15 +394,24 @@ class Command(BaseCommand):
         output_path,
         build_flag,
         postcode,
+        postcode_outcode
     ):
 
         # Start csv logic
 
         # First initialise FakePatientCreator object
-        fake_patient_creator = FakePatientCreator(
-            audit_start_date=audit_start_date,
-            audit_end_date=audit_end_date,
-        )
+        if postcode_outcode:
+            fake_patient_creator = FakePatientCreator(
+                audit_start_date=audit_start_date,
+                audit_end_date=audit_end_date,
+                postcode_outcode=postcode_outcode
+            )
+        else:
+            fake_patient_creator = FakePatientCreator(
+                audit_start_date=audit_start_date,
+                audit_end_date=audit_end_date,
+                postcode=postcode
+            )
 
         # Build pt stubs
         new_pts = fake_patient_creator.build_fake_patients(
@@ -666,11 +686,20 @@ class Command(BaseCommand):
         # age range
         age_range = age_range_map[options["age_range"]]
 
-        # imds
         imd = options["imd"]
-        if not (postcode := IMD_POSTCODE_MAP.get(imd)):
-            self.print_error(f"Invalid IMD value: {imd}")
-            return
+        postcode_outcode = options["postcode_outcode"]
+
+        if imd:
+            postcode = IMD_POSTCODE_MAP.get(imd)
+
+            if not postcode:
+                self.print_error(f"Invalid IMD value: {imd}")
+                return
+        elif postcode_outcode:
+            postcode = None
+        else:
+            imd = 1
+            postcode = IMD_POSTCODE_MAP[1] 
 
         # pdu
         pz_code = options["pz_code"]
@@ -694,6 +723,7 @@ class Command(BaseCommand):
             "age_range": age_range,
             "imd": imd,
             "postcode": postcode,
+            "postcode_outcode": postcode_outcode,
             "build_flag": build_flag,
         }
 
