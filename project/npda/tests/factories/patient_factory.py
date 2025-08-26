@@ -184,15 +184,13 @@ class PatientFactory(factory.django.DjangoModelFactory):
         return get_random_date(
             start_date=self.date_of_birth, end_date=self.audit_start_date
         )
+    
+    @factory.lazy_attribute
+    def postcode(self):
+        if self.postcode_outcode:
+            return random_postcode_under_outcode_sync(self.postcode_outcode).normalised_postcode
 
-    @classmethod
-    def _adjust_kwargs(cls, **kwargs):
-        # Can't define a lazy attribute called postcode because we need to support existing tests
-        # that pass postcode= in kwargs. So use this (documented!) hook from Factory Boy instead.
-        if "postcode_outcode" in kwargs:
-            kwargs["postcode"] = random_postcode_under_outcode_sync(kwargs["postcode_outcode"])
-
-        return kwargs
+        return VALID_FIELDS["postcode"]
 
     # Once a Patient is created, we must create a Transfer object
     transfer = factory.RelatedFactory(TransferFactory, factory_related_name="patient")
@@ -212,9 +210,6 @@ class PatientFactory(factory.django.DjangoModelFactory):
             1
         ]  # Default audit_end_date; can be overridden
         age_range = AgeRange.AGE_11_15  # Default age range
-        
-        # Fixed postcode
-        postcode = VALID_FIELDS["postcode"]
 
         # Random postcode under given outcode
         postcode_outcode = None
