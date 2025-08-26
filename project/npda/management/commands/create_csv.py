@@ -406,6 +406,12 @@ class Command(BaseCommand):
                 audit_end_date=audit_end_date,
                 postcode_outcode=postcode_outcode
             )
+
+            new_pts = fake_patient_creator.build_fake_patients(
+                n=n_pts_to_seed,
+                age_range=age_range,
+                postcode_outcode=postcode_outcode,
+            )
         else:
             fake_patient_creator = FakePatientCreator(
                 audit_start_date=audit_start_date,
@@ -413,12 +419,11 @@ class Command(BaseCommand):
                 postcode=postcode
             )
 
-        # Build pt stubs
-        new_pts = fake_patient_creator.build_fake_patients(
-            n=n_pts_to_seed,
-            age_range=age_range,
-            postcode=postcode,
-        )
+            new_pts = fake_patient_creator.build_fake_patients(
+                n=n_pts_to_seed,
+                age_range=age_range,
+                postcode_outcode=postcode_outcode,
+            )
 
         # For each pt, add visits
         new_visits = fake_patient_creator.build_fake_visits(

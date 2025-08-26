@@ -130,6 +130,22 @@ class PatientFactory(factory.django.DjangoModelFactory):
     sex = factory.lazy_attribute(lambda x: random.choice([sex.value for sex in Sex]))
     ethnicity = factory.lazy_attribute(lambda x: random.choice(ETHNICITIES)[0])
 
+    @classmethod
+    def create(cls, **kwargs):
+        # here you'll only have the kwargs that were entered manually
+
+        print(f"!! create: {str(kwargs)}")
+
+        return super(PatientFactory, cls).create(**kwargs)
+
+    @classmethod
+    def build(cls, **kwargs):
+        # here you'll only have the kwargs that were entered manually
+
+        print(f"!! build: {str(kwargs)}")
+
+        return super(PatientFactory, cls).build(**kwargs)
+
     @factory.lazy_attribute
     def nhs_number(self):
         """Returns a unique NHS number which has not been used in the db yet."""
