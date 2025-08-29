@@ -179,6 +179,7 @@ TEMPLATES = [
                 "project.npda.build_info.get_build_info",
                 "project.npda.context_processors.session_data",
                 "project.npda.context_processors.context_from_settings",
+                "project.npda.context_processors.banner",
                 # Autologout
                 "django_auto_logout.context_processors.auto_logout_client",
             ],

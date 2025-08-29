@@ -47,7 +47,9 @@
     {% block nav %}
       {% include 'navbar/nav.html' %}
     {% endblock %}
-    {% comment %} {% include 'partials/closing_down_sale.html' %} NOTE leaving this here as banners maybe needed in future {% endcomment %}
+    {% if banner %}
+      {% include 'partial/banner.html' with html=banner.html %}
+    {% endif %}
     {% block content %}{% endblock %}
     {% include 'footer.html' %}
     {% block toasts %}
