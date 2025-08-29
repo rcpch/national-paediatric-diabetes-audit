@@ -50,16 +50,6 @@ def login_and_otp_required():
 
     def decorator(view):
         @wraps(view)
-        async def async_login_and_otp_required(request, *args, **kwargs):
-            async_check_otp = sync_to_async(check_otp)
-
-            if await async_check_otp(view, request):
-                response = await view(request, *args, **kwargs)
-                return response
-            else:
-                return redirect("two_factor:setup")
-
-        @wraps(view)
         def sync_login_and_otp_required(request, *args, **kwargs):
             if check_otp(view, request):
                 return view(request, *args, **kwargs)
@@ -68,10 +58,7 @@ def login_and_otp_required():
 
         login_required(view)
 
-        if asyncio.iscoroutinefunction(view):
-            return async_login_and_otp_required
-        else:
-            return sync_login_and_otp_required
+        return sync_login_and_otp_required
 
     return decorator
 
@@ -83,20 +70,6 @@ def check_data_permissions():
         return (audit_period, pdu)
 
     def decorator(view):
-        @wraps(view)
-        async def async_check_data_permissions(request, *args, **kwargs):
-            (audit_period, pdu) = await sync_to_async(_check_data_permissions)(request, *args, **kwargs)
-
-            next_kwargs = kwargs | {
-                "audit_period": audit_period,
-                "pdu": pdu
-            }
-
-            if "pz_code" in next_kwargs:
-                del next_kwargs["pz_code"]
-
-            return await view(request, *args, **next_kwargs)
-
         @wraps(view)
         def sync_check_data_permissions(request, *args, **kwargs):
             (audit_period, pdu) = _check_data_permissions(request, *args, **kwargs)
@@ -111,9 +84,6 @@ def check_data_permissions():
 
             return view(request, *args, **next_kwargs)
 
-        if asyncio.iscoroutinefunction(view):
-            return async_check_data_permissions
-        else:
-            return sync_check_data_permissions
+        return sync_check_data_permissions
 
     return decorator

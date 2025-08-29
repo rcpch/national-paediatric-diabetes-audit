@@ -162,16 +162,15 @@ def test_rcpch_user(seed_groups_fixture, seed_users_fixture, seed_audit_periods_
 
 # The database is not rolled back if we used the built in async support for pytest
 # https://github.com/pytest-dev/pytest-asyncio/issues/226
-@async_to_sync
-async def csv_upload_sync(
+def csv_upload_sync(
     user, dataframe, pdu=None, errors_to_return=None, _audit_period=None
 ):
-    audit_period = _audit_period if _audit_period else await AuditPeriod.objects.afirst()
+    audit_period = _audit_period if _audit_period else AuditPeriod.objects.first()
 
     if not pdu:
-        pdu = await PaediatricDiabetesUnit.objects.aget(pz_code=ALDER_HEY_PZ_CODE)
+        pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
 
-    new_submission = await create_csv_submission(
+    new_submission = create_csv_submission(
         pdu=pdu,
         audit_period=audit_period,
         csv_file_bytes=None,
@@ -182,7 +181,7 @@ async def csv_upload_sync(
         new_dataframe= dataframe
     )
 
-    return await csv_upload(
+    return async_to_sync(csv_upload)(
         dataframe,
         errors_to_return=(
             collections.defaultdict(lambda: collections.defaultdict(list))
