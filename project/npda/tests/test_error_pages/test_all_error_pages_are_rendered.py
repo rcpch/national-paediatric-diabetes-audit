@@ -1,9 +1,9 @@
-from django.test import SimpleTestCase, override_settings
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 
 @override_settings(ROOT_URLCONF="project.urls")
-class CustomErrorHandlerTests(SimpleTestCase):
+class CustomErrorHandlerTests(TestCase):
     def test_error_400(self):
         response = self.client.get("/nonexistent-url/", follow=True)
         self.assertEqual(response.status_code, 404)

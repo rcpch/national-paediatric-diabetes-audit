@@ -1,6 +1,9 @@
+import re
 from datetime import datetime
 from django.conf import settings
+from django.core.cache import cache
 from project.npda.models.audit_period import AuditPeriod
+from project.npda.models.banner import Banner
 
 def current_pz_code(request):
     pz_code = None
@@ -58,3 +61,29 @@ def context_from_settings(request):
         "site_contact_email": settings.SITE_CONTACT_EMAIL,
         "instance_label": settings.INSTANCE_LABEL
     }
+
+
+def load_and_cache_banners():
+    banners = cache.get("banner")
+
+    if not banners:
+        banners = Banner.objects.all()
+        cache.set("banner", banners, timeout=10)
+    
+    return banners
+
+
+def banner(request):
+    banners = load_and_cache_banners()
+
+    for banner in banners:
+        url_matcher = re.compile(banner.url_matcher)
+
+        if url_matcher.match(request.path) and not banner.disabled:
+            if banner.user_role_to_target and request.user:
+                if request.user.role == banner.user_role_to_target or request.user.is_rcpch_audit_team_member:
+                    return { "banner": banner }
+            elif not banner.user_role_to_target:
+                return { "banner": banner }
+
+    return {}
