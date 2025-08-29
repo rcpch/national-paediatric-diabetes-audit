@@ -1,5 +1,4 @@
 # Python imports
-from asgiref.sync import sync_to_async
 from urllib.parse import urlparse
 import logging
 

@@ -34,7 +34,6 @@ def upload_csv_task(submission_id):
     )
 
     csv_upload_sync = async_to_sync(csv_upload)
-    tidy_up_old_submissions_sync = async_to_sync(tidy_up_old_submissions)
 
     csv_upload_sync(
         dataframe=parsed_csv.df,
@@ -47,7 +46,7 @@ def upload_csv_task(submission_id):
     submission.submission_active = True
     submission.save()
 
-    tidy_up_old_submissions_sync(
+    tidy_up_old_submissions(
         pdu=submission.paediatric_diabetes_unit,
         new_submission=submission,
     )

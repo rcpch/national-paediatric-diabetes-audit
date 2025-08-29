@@ -43,21 +43,21 @@ from project.npda.models import (
     VisitActivity
 )
 
-async def create_csv_submission(pdu, audit_period, csv_file_bytes, csv_file_name, submission_active, user=None, ip_address=None, new_dataframe=None):
-    old_submission = await Submission.objects.filter(
+def create_csv_submission(pdu, audit_period, csv_file_bytes, csv_file_name, submission_active, user=None, ip_address=None, new_dataframe=None):
+    old_submission = Submission.objects.filter(
         paediatric_diabetes_unit=pdu,
         audit_period=audit_period,
         submission_active=True,
-    ).afirst()
+    ).first()
 
     if old_submission:
         old_submission.submission_active = False
-        await old_submission.asave()
-    
+        old_submission.save()
+
     # Gather unique patient and visit counts and update the submission
     patient_count, visit_per_patient_count, total_rows = gather_unique_patient_and_visit_counts(dataframe=new_dataframe, is_jersey=pdu.pz_code == "PZ248")
-    
-    submission = await Submission.objects.acreate(
+
+    submission = Submission.objects.create(
         submission_date=timezone.now(),
         submission_by=user,
         paediatric_diabetes_unit=pdu,
@@ -72,7 +72,7 @@ async def create_csv_submission(pdu, audit_period, csv_file_bytes, csv_file_name
     )
     
     if user:
-        await VisitActivity.objects.acreate(
+        VisitActivity.objects.create(
             activity=8,
             ip_address=ip_address,
             npdauser=user,
@@ -81,19 +81,19 @@ async def create_csv_submission(pdu, audit_period, csv_file_bytes, csv_file_name
     return submission
 
 
-async def tidy_up_old_submissions(pdu, new_submission):
+def tidy_up_old_submissions(pdu, new_submission):
     all_submissions = Submission.objects.filter(
         paediatric_diabetes_unit=pdu,
         audit_year=new_submission.audit_year, # compatibility
         audit_period=new_submission.audit_period,
     )
 
-    async for submission in all_submissions:
+    for submission in all_submissions:
         if submission.id != new_submission.id:
-            await Patient.objects.filter(submissions=submission).adelete()
+            Patient.objects.filter(submissions=submission).delete()
 
             submission.submission_active = False
-            await submission.asave()
+            submission.save()
 
 
 async def csv_upload(
