@@ -50,7 +50,7 @@ def redirect_after_switcher(request):
 
 
 @login_and_otp_required()
-async def home(request):
+def home(request):
     """
     Home page view.
     Only verified users can access this page.
