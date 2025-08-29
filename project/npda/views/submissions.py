@@ -6,8 +6,6 @@ import logging
 import io
 import itertools
 
-from asgiref.sync import sync_to_async
-
 # Django imports
 from django.apps import apps
 from django.contrib import messages
@@ -320,8 +318,8 @@ class SubmissionsListView(
 
 @login_and_otp_required()
 @check_data_permissions()
-async def upload_csv(request, audit_period, pdu):
-    previous_submission = await sync_to_async(Submission.objects.get_submission_for_request)(pdu, audit_period)
+def upload_csv(request, audit_period, pdu):
+    previous_submission = Submission.objects.get_submission_for_request(pdu, audit_period)
 
     if previous_submission and not previous_submission.csv_file_name:
         # PDU is submitting via questionnaire
@@ -331,7 +329,7 @@ async def upload_csv(request, audit_period, pdu):
         }))
 
     if request.method == "POST":
-        has_perm = await sync_to_async(request.user.has_perm)("npda.can_submit_csv")
+        has_perm = request.user.has_perm("npda.can_submit_csv")
         if not has_perm:
             raise PermissionDenied("You do not have permission to upload CSV files.")
         
@@ -398,7 +396,7 @@ async def upload_csv(request, audit_period, pdu):
         if not audit_period.is_open and not (request.user.is_superuser or request.user.is_rcpch_audit_team_member):
             raise PermissionDenied(f"Upload is closed for {audit_period}.")
 
-        new_submission = await create_csv_submission(
+        new_submission = create_csv_submission(
             pdu=pdu,
             audit_period=audit_period,
             csv_file_bytes=user_csv_bytes,
@@ -412,7 +410,7 @@ async def upload_csv(request, audit_period, pdu):
         
         upload_csv_task.delay(new_submission.id)
 
-        await sync_to_async(save_csv_uploading_user_to_visitactivity)(request=request)
+        save_csv_uploading_user_to_visitactivity(request=request)
         
         return redirect("pdu-upload-csv-in-progress",
             pz_code=pdu.pz_code,

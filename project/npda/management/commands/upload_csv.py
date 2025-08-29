@@ -90,7 +90,7 @@ class Command(BaseCommand):
             start_date__year=audit_year
         ).first()
 
-        submission = async_to_sync(create_csv_submission)(
+        submission = create_csv_submission(
             pdu=pdu,
             audit_year=audit_year, # compatibility
             audit_period=audit_period,
@@ -106,7 +106,7 @@ class Command(BaseCommand):
             submission=submission
         )
 
-        async_to_sync(tidy_up_old_submissions)(
+        tidy_up_old_submissions(
             pdu=pdu,
             new_submission=submission
         )

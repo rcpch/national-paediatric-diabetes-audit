@@ -1,5 +1,4 @@
 # Python imports
-from asgiref.sync import sync_to_async
 from urllib.parse import urlparse
 import logging
 
@@ -50,7 +49,7 @@ def redirect_after_switcher(request):
 
 
 @login_and_otp_required()
-async def home(request):
+def home(request):
     """
     Home page view.
     Only verified users can access this page.
