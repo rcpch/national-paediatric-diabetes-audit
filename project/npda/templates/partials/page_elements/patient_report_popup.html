@@ -1,0 +1,23 @@
+{% load npda_tags %}
+<dialog id="patient_report_modal" class="modal text-black">
+  <div class="modal-box">
+      <h3 class="text-lg font-bold">Download Patient Report</h3>
+      <p class="py-4">
+        The patient report contains patient personal information and must be stored securely and deleted after use.
+      </p>
+      <div class="modal-action">
+        <form
+          method="post"
+          action="{% data_url 'pdu-patient-report-download' %}"
+          hx-disable>
+          {% csrf_token %}
+          <button class="btn"
+            name="submit-data"
+            type="submit"
+            onclick="patient_report_modal.close()">
+              Download
+          </button>
+        </form>
+      </div>
+  </div>
+</dialog>

@@ -323,6 +323,11 @@ patient_report_urlpatterns = [
         view=patient_report.PatientReportView.as_view(),
         name="pdu-patient-table-partial",
     ),
+    path(
+        f"{data_prefix}/patient_report/download",
+        view=patient_report.download_patient_report,
+        name="pdu-patient-report-download"
+    )
 ]
 
 # Collate all URL patterns

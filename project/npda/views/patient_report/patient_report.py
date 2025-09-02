@@ -1,10 +1,13 @@
 import logging
+import io
+
 from collections import defaultdict
 from datetime import date, timedelta
 from decimal import Decimal
 from enum import Enum
 
 from dateutil.relativedelta import relativedelta
+import pandas as pd
 from django.db.models import (
     BooleanField,
     Case,
@@ -25,6 +28,7 @@ from django.db.models import (
 )
 
 # Django imports
+from django.http import HttpResponse
 from django.views.generic import ListView
 from project.constants.hba1c_format import HBA1C_FORMATS
 from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
@@ -33,6 +37,7 @@ from project.npda.general_functions.breadcrumbs import data_breadcrumbs
 from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.models import Patient, AuditPeriod, Visit
 from project.npda.models.db_functions import Round
+from project.npda.views.decorators import check_data_permissions, login_and_otp_required
 from project.npda.views.mixins import PDUPermissionMixin, LoginAndOTPRequiredMixin
 from django.db.models import QuerySet
 
@@ -974,3 +979,22 @@ class PatientReportView(
                 return ["patient_report/health_checks_table_partial.html"]
 
         return ["patient_report/patient_report.html"]
+
+
+@login_and_otp_required()
+@check_data_permissions()
+def download_patient_report(request, audit_period, pdu):
+    contents = io.BytesIO()
+    df = pd.DataFrame(data={'test': [1]})
+
+    with pd.ExcelWriter(contents, engine="openpyxl") as writer:
+        df.to_excel(writer, sheet_name="test", index=False)
+
+    filename = f"{pdu.pz_code}-{audit_period.slug}-patient-report.xlsx"
+
+    return HttpResponse(
+        contents.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"'
+        })
