@@ -177,7 +177,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "project.npda.build_info.get_build_info",
-                "project.npda.context_processors.session_data",
+                "project.npda.context_processors.context_from_request",
                 "project.npda.context_processors.context_from_settings",
                 "project.npda.context_processors.banner",
                 # Autologout

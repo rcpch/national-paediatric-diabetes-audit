@@ -24,10 +24,10 @@
         <li>
           <select title="Select audit year"
             _="on change go to url `$my.value`" >
-          {% for audit_year in request.session.audit_years %}
-            <option value="{% url 'new-home' audit_period=audit_year.slug %}"
-              {% if selected_audit_year|stringformat:"s" == audit_year.year|stringformat:"s" %} selected {% endif %}>
-              April {{ audit_year.year }} - March {{ audit_year.year|add:'1' }}
+          {% for audit_period in audit_period_choices %}
+            <option value="{% url 'new-home' audit_period=audit_period.slug %}"
+              {% if audit_period_slug == audit_period.slug %} selected {% endif %}>
+              {{audit_period.display_name}}
             </option>
           {% endfor %}
           </select>

@@ -10,24 +10,6 @@ from project.npda.general_functions import get_client_ip
 logger = logging.getLogger(__name__)
 
 
-def get_audit_period_session_data(audit_period, user):
-    AuditPeriod = apps.get_model("npda", "AuditPeriod")
-    audit_years = []
-
-    for audit_period in AuditPeriod.objects.order_by("start_date").all():
-        if audit_period.is_visible or user.is_rcpch_audit_team_member or user.is_superuser:
-            audit_years.append(
-                {
-                    "year": audit_period.audit_year(),
-                    "slug": audit_period.slug
-                }
-            )
-    
-    return {
-        "audit_years": audit_years
-    }
-
-
 def create_session_object(user):
     """
     Create a session object for the user, based on their permissions.
@@ -40,14 +22,10 @@ def create_session_object(user):
     # This is the year that that audit period starts in
     audit_period = AuditPeriod.objects.get_default_audit_period()
 
-    audit_period_data = get_audit_period_session_data(audit_period, user)
-
-    session = {
+    return {
         "pz_code": pz_code,
         "selected_audit_year": audit_period.audit_year(),
-    } | audit_period_data
-
-    return session
+    }
 
 
 def refresh_session_filters(request, pz_code=None, audit_year=None):
@@ -59,11 +37,12 @@ def refresh_session_filters(request, pz_code=None, audit_year=None):
 
     audit_year = audit_year or request.session.get("selected_audit_year")
 
+    # Check it's a real audit period
     audit_period = AuditPeriod.objects.get(
         start_date__year=audit_year
     )
 
-    session["selected_audit_year"] = audit_year
+    session["selected_audit_year"] = audit_period.audit_year()
 
     if pz_code:
         user = request.user
@@ -80,8 +59,6 @@ def refresh_session_filters(request, pz_code=None, audit_year=None):
             raise PermissionDenied()
 
         session["pz_code"] = pz_code
-    
-    session |= get_audit_period_session_data(audit_period, request.user)
 
     request.session.update(session)
     request.session.modified = True
