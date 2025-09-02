@@ -82,14 +82,18 @@
   {% comment %} RIGHT {% endcomment %}
   <div class="navbar-end h-full">
     {% if 'new_navigation' in request.session.feature_flags %}
+      <a href="{% docs_url %}/user-guide/user-guide/" class="text-xs font-montserrat font-semibold text-gray-700 text-gray-400 hover:text-rcpch_light_blue hover:bg-transparent hover:underline underline-offset-8 mr-6">
+        User Guide
+      </a>
       {% if instance_label %}
         <p class="badge badge-md badge-warning mr-6">
           {{instance_label}}
         </p>
       {% endif %}
+      {% include 'navbar/components/avatar_dropdown.html' %}
     {% else %}
       {% include 'navbar/components/filters.html' %}
+      {% include 'navbar/components/avatar_dropdown.html' %}
     {% endif %}
-    {% include 'navbar/components/avatar_dropdown.html' %}
   </div>
 </div>
