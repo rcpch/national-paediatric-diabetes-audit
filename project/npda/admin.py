@@ -121,8 +121,6 @@ class SessionAdmin(admin.ModelAdmin):
         "session_key",
         "user_id",
         "pz_code",
-        "organisation_choices",
-        "pdu_choices",
         "expire_date",
     ]
 
@@ -138,16 +136,8 @@ class SessionAdmin(admin.ModelAdmin):
     def pz_code(self, obj):
         return self.session_data(obj).get("pz_code", "N/A")
 
-    def organisation_choices(self, obj):
-        return self.session_data(obj).get("organisation_choices", "N/A")
-
-    def pdu_choices(self, obj):
-        return self.session_data(obj).get("pdu_choices", "N/A")
-
     user_id.short_description = "User ID"
     pz_code.short_description = "PZ Code"
-    organisation_choices.short_description = "Organisation Choices"
-    pdu_choices.short_description = "PDU Choices"
 
 
 admin.site.site_header = "RCPCH National Paediatric Diabetes Audit Admin"

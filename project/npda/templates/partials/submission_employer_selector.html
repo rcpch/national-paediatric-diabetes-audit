@@ -6,12 +6,12 @@
     <h3 class="font-bold">Important Information</h3>
     <div class="text-xs">
       You are about to upload data to the NPDA for <strong>{{ pdu.pz_code }} ({{ pdu.lead_organisation_name }})</strong>.
-      {% if not request.user.is_rcpch_audit_team_member and request.session.pdu_choices|length > 1 %}
+      {% if not request.user.is_rcpch_audit_team_member and pdu_choices|length > 1 %}
         <p class="text-xs mt-2 mb-2">
           If this is incorrect, please select the correct employer below.
         </p>
         <form class="filter">
-          {% for pdu_choice in request.session.pdu_choices %}
+          {% for pdu_choice in pdu_choices %}
             {% if pdu_choice.0 != pdu.pz_code %}
             <a class="btn text-xs" href="{% data_url 'pdu-upload-csv' pz_code=pdu_choice.0 %}">
               {{ pdu_choice.0 }} ({{ pdu_choice.1 }})

@@ -9,6 +9,7 @@ from django.http import HttpResponse
 
 from project.constants.feature_flags import FEATURE_FLAGS
 from project.npda.general_functions.csv import csv_header
+from project.npda.general_functions.organisations_adapter import paediatric_diabetes_units_to_populate_select_field
 from ..general_functions.session import refresh_session_filters
 
 # RCPCH imports
@@ -54,20 +55,13 @@ def home(request):
     Home page view.
     Only verified users can access this page.
     """
-    pdu_choices = request.session.get("pdu_choices", [])
-    pdu_choices.sort(key=lambda pdu: pdu[0])
-
-    context = {
-        "pdu_choices": pdu_choices,
-    }
-    
     template = "home.html"
-    return render(request=request, template_name=template, context=context)
+    return render(request=request, template_name=template, context={})
 
 
 @login_and_otp_required()
 def new_home(request, audit_period):
-    pdu_choices = request.session.get("pdu_choices", [])
+    pdu_choices = paediatric_diabetes_units_to_populate_select_field(request.user)
 
     # Put the test PZ999 at the top of the list otherwise it's hard to find!
     pdu_choices.sort(key=lambda pdu: "" if pdu[0] == "PZ999" else pdu[0])

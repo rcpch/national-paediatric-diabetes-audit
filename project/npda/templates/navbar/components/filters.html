@@ -10,7 +10,7 @@
       </div>
       <div id="global_view_preference"
            class="join-item items-stretch flex-grow  basis-2/4">
-        {% include 'partials/view_preference.html' with view_preference=request.user.view_preference pdu_choices=request.session.pdu_choices chosen_pdu=pz_code hx_target='#global_view_preference' %}
+        {% include 'partials/view_preference.html' with view_preference=request.user.view_preference chosen_pdu=pz_code hx_target='#global_view_preference' %}
       </div>
       <div class="modal-action">
         <form method="dialog">

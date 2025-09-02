@@ -1,6 +1,7 @@
 import re
 from django.conf import settings
 from django.core.cache import cache
+from project.npda.general_functions.organisations_adapter import paediatric_diabetes_units_to_populate_select_field
 from project.npda.models.banner import Banner
 from project.npda.views.npda_users import get_user_home_page
 
@@ -45,6 +46,7 @@ def session_data(request):
     pz_code = current_pz_code(request)
     audit_period_slug = current_audit_period_slug(request)
     user_home_page = get_user_home_page(audit_period_slug, request.user)
+    pdu_choices = paediatric_diabetes_units_to_populate_select_field(request.user) if request.user.is_authenticated else []
 
     return {
         # Required for the url-data helper
@@ -53,7 +55,8 @@ def session_data(request):
         "audit_years": request.session.get("audit_years", []),
         # Required for switcher
         "selected_audit_year": current_audit_year(audit_period_slug),
-        "user_home_page": user_home_page
+        "user_home_page": user_home_page,
+        "pdu_choices": pdu_choices
     }
 
 
