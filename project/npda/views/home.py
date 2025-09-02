@@ -84,6 +84,7 @@ def new_home(request, audit_period):
     context = {
         "pdu_choices": pdu_choices,
         "audit_periods": audit_periods,
+        "selected_audit_period_display_name": audit_period.display_name
     }
 
     template = "new-home.html"

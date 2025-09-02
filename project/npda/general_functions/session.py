@@ -22,7 +22,8 @@ def get_audit_period_session_data(audit_period, user):
         if audit_period.is_visible or user.is_rcpch_audit_team_member or user.is_superuser:
             audit_years.append(
                 {
-                    "year": audit_period.audit_year()
+                    "year": audit_period.audit_year(),
+                    "slug": audit_period.slug
                 }
             )
     

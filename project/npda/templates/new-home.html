@@ -3,18 +3,11 @@
 {% load npda_tags %}
 {% block content %}
   <div class="text-center my-4">
-    <ul class="menu menu-horizontal bg-base-200 rounded-box">
-      {% for audit_period in audit_periods %}
-        <li>
-          <a href="{% url 'new-home' audit_period=audit_period.slug %}" class="{% if audit_period.selected %}active{% endif %}">
-            {{audit_period.display_name}}
-          </a>
-        </li>
-      {% endfor %}
-    </ul>
-  </div>
-  <div class="text-center my-4">
-    <h1 class="text-xl">Select your paediatric diabetes unit</h1>
+    <h1 class="text-xl">
+      {{selected_audit_period_display_name}}
+      <br />
+      Select your paediatric diabetes unit
+    </h1>
   </div>
   <div class="flex flex-row flex-wrap justify-center gap-4 p-4">
     {% for pdu in pdu_choices %}
