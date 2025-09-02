@@ -131,7 +131,9 @@ def calculate_hba1c_values(pt_qs: QuerySet[Patient], calculate_kpis: CalculateKP
     return pt_qs
 
 
-def calculate_queryset(pz_code: str, calculation_date: date, audit_period: AuditPeriod, selected_category: str) -> QuerySet[Patient]:
+def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_category: str) -> QuerySet[Patient]:
+    calculation_date = audit_period.kpi_calculation_date()
+
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True, is_jersey=pz_code == "PZ248"
     )
@@ -834,11 +836,9 @@ class PatientReportView(
             raise ValueError(f"Invalid category: {category}")
         self.selected_category = category
         pz_code = self.pdu.pz_code
-        calculation_date = self.audit_period.kpi_calculation_date()
 
         pt_qs, calculate_kpis, patient_identifier = calculate_queryset(
             pz_code,
-            calculation_date,
             self.audit_period,
             category
         )
@@ -990,7 +990,14 @@ def download_patient_report(request, audit_period, pdu):
     df = pd.DataFrame(data={'test': [1]})
 
     with pd.ExcelWriter(contents, engine="openpyxl") as writer:
-        df.to_excel(writer, sheet_name="test", index=False)
+        for category in TableCategories:
+            pt_qs, calculate_kpis, patient_identifier = calculate_queryset(
+                pz_code=pdu.pz_code,
+                audit_period=audit_period,
+                selected_category=category.value,
+            )
+            print(pt_qs)
+            df.to_excel(writer, sheet_name=category.value, index=False)
 
     filename = f"{pdu.pz_code}-{audit_period.slug}-patient-report.xlsx"
 
