@@ -3,6 +3,7 @@ from django.conf import settings
 from django.core.cache import cache
 from project.npda.general_functions.organisations_adapter import paediatric_diabetes_units_to_populate_select_field
 from project.npda.models.banner import Banner
+from project.npda.models.audit_period import AuditPeriod
 from project.npda.views.npda_users import get_user_home_page
 
 def current_pz_code(request):
@@ -31,31 +32,36 @@ def current_audit_period_slug(request):
 
     return audit_period_slug
 
-# Temporary hack until switcher removed so you can only change audit period by following links
-def current_audit_year(audit_period_slug):
-    if audit_period_slug:
-        start_year = int(audit_period_slug.split("-")[0])
-        return start_year
+
+def get_audit_periods_user_can_see(user):
+    audit_periods = []
+
+    for audit_period in AuditPeriod.objects.order_by("start_date").all():
+        if audit_period.is_visible or user.is_rcpch_audit_team_member or user.is_superuser:
+            audit_periods.append(audit_period)
     
-    return None
+    return audit_periods
 
 
-def session_data(request):
+def context_from_request(request):
     # Permission checking done in @check_data_permissions or PDUPermissionMixin
     # We are fine to trust it here as this is for rendering purposes
     pz_code = current_pz_code(request)
     audit_period_slug = current_audit_period_slug(request)
+
     user_home_page = get_user_home_page(audit_period_slug, request.user)
+
     pdu_choices = paediatric_diabetes_units_to_populate_select_field(request.user) if request.user.is_authenticated else []
+    audit_period_choices = get_audit_periods_user_can_see(request.user) if request.user.is_authenticated else []
 
     return {
         # Required for the url-data helper
         "pz_code": pz_code,
         "audit_period_slug": audit_period_slug,
-        "audit_years": request.session.get("audit_years", []),
-        # Required for switcher
-        "selected_audit_year": current_audit_year(audit_period_slug),
+        # Require for the nav
         "user_home_page": user_home_page,
+        # Required for switcher
+        "audit_period_choices": audit_period_choices,
         "pdu_choices": pdu_choices
     }
 

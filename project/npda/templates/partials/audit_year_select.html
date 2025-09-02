@@ -15,10 +15,11 @@
           hx-trigger="change"
           hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
           hx-include="[name='audit_year_select_name']">
-    {% for audit_year in audit_years %}
-      <option value="{{ audit_year.year|stringformat:'s' }}"
-              {% if selected_audit_year|stringformat:"s" == audit_year.year|stringformat:"s" %} selected {% endif %}>
-        April {{ audit_year.year }} - March {{ audit_year.year|add:'1' }}
+    {% for audit_period in audit_period_choices %}
+      {% comment %}the value must be year for compat with old code. TODO MRB: can remove once we remove the old switcher{% endcomment %}
+      <option value="{{ audit_period.audit_year|stringformat:'s' }}"
+              {% if audit_period_slug == audit_period.slug %} selected {% endif %}>
+        {{audit_period.display_name}}
       </option>
     {% endfor %}
   </select>
