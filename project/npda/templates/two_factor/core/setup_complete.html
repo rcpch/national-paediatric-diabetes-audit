@@ -15,8 +15,8 @@
     </p>
     {% if request.user %}
       <p>
-        <a href="{% url 'home' %}"
-           class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 mt-5 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">{% trans "Go to CSV Upload " %}</a>
+        <a href="{{ user_home_page }}"
+           class="bg-rcpch_light_blue text-white font-semibold hover:text-white py-2.5 px-3 mt-5 border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue">{% trans "Get started" %}</a>
       </p>
     {% endif %}
   </div>
