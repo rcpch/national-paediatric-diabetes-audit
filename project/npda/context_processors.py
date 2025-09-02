@@ -1,9 +1,8 @@
 import re
-from datetime import datetime
 from django.conf import settings
 from django.core.cache import cache
-from project.npda.models.audit_period import AuditPeriod
 from project.npda.models.banner import Banner
+from project.npda.views.npda_users import get_user_home_page
 
 def current_pz_code(request):
     pz_code = None
@@ -45,6 +44,7 @@ def session_data(request):
     # We are fine to trust it here as this is for rendering purposes
     pz_code = current_pz_code(request)
     audit_period_slug = current_audit_period_slug(request)
+    user_home_page = get_user_home_page(audit_period_slug, request.user)
 
     return {
         # Required for the url-data helper
@@ -53,6 +53,7 @@ def session_data(request):
         "audit_years": request.session.get("audit_years", []),
         # Required for switcher
         "selected_audit_year": current_audit_year(audit_period_slug),
+        "user_home_page": user_home_page
     }
 
 

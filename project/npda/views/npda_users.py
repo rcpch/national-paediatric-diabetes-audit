@@ -66,6 +66,17 @@ def _unicode_ci_compare(s1, s2):
         == unicodedata.normalize("NFKC", s2).casefold()
     )
 
+def get_user_home_page(audit_period_slug, user):
+    if not user.is_authenticated:
+        return reverse("home")
+
+    if user.is_superuser or user.is_rcpch_audit_team_member or user.paediatric_diabetes_units.count() > 1:
+        return reverse("new-home", kwargs={"audit_period": audit_period_slug})
+    
+    return reverse("pdu-dashboard", kwargs={
+        "audit_period": audit_period_slug,
+        "pz_code": user.primary_pdu().pz_code,
+    })
 
 """
 NPDAUser list and NPDAUser creation, deletion and update
@@ -109,7 +120,8 @@ class NPDAUserListView(
         if request.htmx:
             # filter the npdausers to only those in the same organisation as the user
             # trigger a GET request from the patient table to update the list of npdausers
-            # by calling the get_queryset method again with the new ods_code/pz_code stored in session
+            # by calling the get_queryset method again with the new ods_code/p
+            # z_code stored in session
 
             return render(
                 request,
@@ -724,10 +736,7 @@ class RCPCHLoginView(TwoFactorLoginView):
                 # Override normal auth flow behaviour, redirect straight to home page
                 audit_period = AuditPeriod.objects.get_default_audit_period()
 
-                return redirect(reverse("pdu-dashboard", kwargs={
-                    "audit_period": audit_period.slug,
-                    "pz_code": user.primary_pdu().pz_code,
-                }))
+                return redirect(get_user_home_page(audit_period.slug, user))
 
         # Otherwise, continue with usual workflow
         response = super().post(*args, **kwargs)
@@ -776,9 +785,6 @@ class RCPCHLoginView(TwoFactorLoginView):
 
             audit_period = AuditPeriod.objects.get_default_audit_period()
 
-            return redirect(reverse("pdu-dashboard", kwargs={
-                "audit_period": audit_period.slug,
-                "pz_code": user.primary_pdu().pz_code,
-            }))
+            return redirect(get_user_home_page(audit_period.slug, user))
         
         return response
