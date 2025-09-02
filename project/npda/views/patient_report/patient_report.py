@@ -72,6 +72,64 @@ class TableCategories(Enum):
     def default(cls):
         return cls.HEALTH_CHECKS.value
 
+def calculate_hba1c_values(pt_qs: QuerySet[Patient], calculate_kpis: CalculateKPIS):
+    """Helper function to calculate HbA1c values for a queryset."""
+    patient_ids = set(pt_qs.values_list("pk", flat=True))
+
+    valid_visits_with_hba1c = (
+        calculate_kpis._get_valid_visits_for_kpi_44_and_45(
+            Patient.objects.filter(pk__in=patient_ids)
+        )
+        .annotate(
+            hba1c_mmol_mol=Case(
+                When(
+                    Q(hba1c_format=HBA1C_FORMATS[0][0]),
+                    then=F("hba1c"),
+                ),
+                When(
+                    Q(hba1c_format=HBA1C_FORMATS[1][0]),
+                    then=(F("hba1c") - Round(Decimal("2.152")))
+                    / Decimal("0.09148"),
+                ),
+                default=None,
+                output_field=DecimalField(max_digits=5, decimal_places=2),
+            )
+        )
+        .values("hba1c_mmol_mol", "patient__pk")
+        .filter(hba1c_mmol_mol__isnull=False)
+    )
+    hba1c_values_by_patient = defaultdict(list)
+    for visit in valid_visits_with_hba1c:
+        hba1c_values_by_patient[visit["patient__pk"]].append(
+            visit["hba1c_mmol_mol"]
+        )
+    for patient in pt_qs:
+        hba1c_values = hba1c_values_by_patient.get(patient["pk"], [])
+        if hba1c_values:
+            mean_hba1c_mmol_mol = calculate_kpis.calculate_mean(hba1c_values)
+            median_hba1c_mmol_mol = calculate_kpis.calculate_median(hba1c_values)
+            patient["kpi_44_mean_hba1c"] = round(mean_hba1c_mmol_mol)
+            patient["kpi_45_median_hba1c"] = round(median_hba1c_mmol_mol)
+            patient["mean_hba1c_pct"] = round(
+                (0.09148 * mean_hba1c_mmol_mol) + 2.152
+                if mean_hba1c_mmol_mol > 0 and mean_hba1c_mmol_mol is not None
+                else None,
+                1,
+            )
+            patient["median_hba1c_pct"] = round(
+                (0.09148 * median_hba1c_mmol_mol) + 2.152
+                if median_hba1c_mmol_mol > 0 and median_hba1c_mmol_mol is not None
+                else None,
+                1,
+            )
+        else:
+            patient["kpi_44_mean_hba1c"] = None
+            patient["kpi_45_median_hba1c"] = None
+            patient["mean_hba1c_pct"] = None
+            patient["median_hba1c_pct"] = None
+    
+    return pt_qs
+
 
 class PatientReportView(
     LoginAndOTPRequiredMixin,
@@ -86,65 +144,6 @@ class PatientReportView(
     template_name = "patient_report/patient_report.html"
     context_object_name = "patients"
     paginate_by = 50
-
-    def _calculate_hba1c_values(
-        self, pt_qs: QuerySet[Patient], calculate_kpis: CalculateKPIS
-    ):
-        """Helper function to calculate HbA1c values for a queryset."""
-        patient_ids = set(pt_qs.values_list("pk", flat=True))
-
-        valid_visits_with_hba1c = (
-            calculate_kpis._get_valid_visits_for_kpi_44_and_45(
-                Patient.objects.filter(pk__in=patient_ids)
-            )
-            .annotate(
-                hba1c_mmol_mol=Case(
-                    When(
-                        Q(hba1c_format=HBA1C_FORMATS[0][0]),
-                        then=F("hba1c"),
-                    ),
-                    When(
-                        Q(hba1c_format=HBA1C_FORMATS[1][0]),
-                        then=(F("hba1c") - Round(Decimal("2.152")))
-                        / Decimal("0.09148"),
-                    ),
-                    default=None,
-                    output_field=DecimalField(max_digits=5, decimal_places=2),
-                )
-            )
-            .values("hba1c_mmol_mol", "patient__pk")
-            .filter(hba1c_mmol_mol__isnull=False)
-        )
-        hba1c_values_by_patient = defaultdict(list)
-        for visit in valid_visits_with_hba1c:
-            hba1c_values_by_patient[visit["patient__pk"]].append(
-                visit["hba1c_mmol_mol"]
-            )
-        for patient in pt_qs:
-            hba1c_values = hba1c_values_by_patient.get(patient["pk"], [])
-            if hba1c_values:
-                mean_hba1c_mmol_mol = calculate_kpis.calculate_mean(hba1c_values)
-                median_hba1c_mmol_mol = calculate_kpis.calculate_median(hba1c_values)
-                patient["kpi_44_mean_hba1c"] = round(mean_hba1c_mmol_mol)
-                patient["kpi_45_median_hba1c"] = round(median_hba1c_mmol_mol)
-                patient["mean_hba1c_pct"] = round(
-                    (0.09148 * mean_hba1c_mmol_mol) + 2.152
-                    if mean_hba1c_mmol_mol > 0 and mean_hba1c_mmol_mol is not None
-                    else None,
-                    1,
-                )
-                patient["median_hba1c_pct"] = round(
-                    (0.09148 * median_hba1c_mmol_mol) + 2.152
-                    if median_hba1c_mmol_mol > 0 and median_hba1c_mmol_mol is not None
-                    else None,
-                    1,
-                )
-            else:
-                patient["kpi_44_mean_hba1c"] = None
-                patient["kpi_45_median_hba1c"] = None
-                patient["mean_hba1c_pct"] = None
-                patient["median_hba1c_pct"] = None
-        return pt_qs
 
     def get_queryset(self):
         request = self.request
@@ -600,7 +599,7 @@ class PatientReportView(
                     "number_of_dka_admissions",
                 )
             )
-            pt_qs = self._calculate_hba1c_values(pt_qs, calculate_kpis)
+            pt_qs = calculate_hba1c_values(pt_qs, calculate_kpis)
 
         elif self.selected_category == TableCategories.OUTCOMES.value:
             # get ALL patients for current submission
@@ -885,7 +884,7 @@ class PatientReportView(
                 reverse = sort_order == "desc"
                 field_name = sort_field.replace("-", "")
                 # Calculate HbA1c values
-                pt_qs = self._calculate_hba1c_values(pt_qs, calculate_kpis)
+                pt_qs = calculate_hba1c_values(pt_qs, calculate_kpis)
                 
                 pt_qs = sorted(
                     pt_qs,
@@ -897,7 +896,7 @@ class PatientReportView(
                 )
             else:
                 pt_qs = pt_qs.order_by(sort_field)
-                pt_qs = self._calculate_hba1c_values(pt_qs, calculate_kpis)
+                pt_qs = calculate_hba1c_values(pt_qs, calculate_kpis)
         else:
             # Default ordering
             order_by = ["-is_complete_year_of_care", patient_identifier]
@@ -906,7 +905,7 @@ class PatientReportView(
                 order_by = [patient_identifier]
 
             pt_qs = pt_qs.order_by(*order_by)
-            pt_qs = self._calculate_hba1c_values(pt_qs, calculate_kpis)
+            pt_qs = calculate_hba1c_values(pt_qs, calculate_kpis)
 
         return pt_qs
 
