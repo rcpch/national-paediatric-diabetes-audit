@@ -987,16 +987,24 @@ class PatientReportView(
 @check_data_permissions()
 def download_patient_report(request, audit_period, pdu):
     contents = io.BytesIO()
-    df = pd.DataFrame(data={'test': [1]})
 
     with pd.ExcelWriter(contents, engine="openpyxl") as writer:
         for category in TableCategories:
-            pt_qs, calculate_kpis, patient_identifier = calculate_queryset(
+            pt_qs, _, patient_identifier = calculate_queryset(
                 pz_code=pdu.pz_code,
                 audit_period=audit_period,
                 selected_category=category.value,
             )
-            print(pt_qs)
+            
+            patient_identifiers = []
+
+            for row in pt_qs:
+                patient_identifiers.append(row["patient_identifier"])
+
+            data = {}
+            data[patient_identifier] = patient_identifiers
+
+            df = pd.DataFrame(data=data)
             df.to_excel(writer, sheet_name=category.value, index=False)
 
     filename = f"{pdu.pz_code}-{audit_period.slug}-patient-report.xlsx"
