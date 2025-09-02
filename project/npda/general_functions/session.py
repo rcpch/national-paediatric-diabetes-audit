@@ -1,4 +1,3 @@
-from asgiref.sync import sync_to_async
 import logging
 
 from django.apps import apps
@@ -6,10 +5,7 @@ from django.core.exceptions import PermissionDenied
 from django.utils import timezone
 
 # NPDA Imports
-from project.npda.general_functions import (
-    organisations_adapter,
-    get_client_ip,
-)
+from project.npda.general_functions import get_client_ip
 
 logger = logging.getLogger(__name__)
 
@@ -40,11 +36,6 @@ def create_session_object(user):
     AuditPeriod = apps.get_model("npda", "AuditPeriod")
     
     pz_code = user.primary_pdu().pz_code
-    pdu_choices = (
-        organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
-            requesting_user=user, user_instance=None
-        )
-    )
 
     # This is the year that that audit period starts in
     audit_period = AuditPeriod.objects.get_default_audit_period()
@@ -53,7 +44,6 @@ def create_session_object(user):
 
     session = {
         "pz_code": pz_code,
-        "pdu_choices": list(pdu_choices),
         "selected_audit_year": audit_period.audit_year(),
     } | audit_period_data
 
@@ -90,11 +80,6 @@ def refresh_session_filters(request, pz_code=None, audit_year=None):
             raise PermissionDenied()
 
         session["pz_code"] = pz_code
-        session["pdu_choices"] = list(
-            organisations_adapter.paediatric_diabetes_units_to_populate_select_field(
-                requesting_user=user, user_instance=None
-            )
-        )
     
     session |= get_audit_period_session_data(audit_period, request.user)
 
