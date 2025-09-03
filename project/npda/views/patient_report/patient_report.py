@@ -1050,8 +1050,16 @@ def download_patient_report(request, audit_period, pdu):
                             data[field].append(measure_status(row[field]))
                     
                     case TableCategories.CARE_AT_DIAGNOSIS:
-                        # TODO MRB: why does the dummy sheet not have any patients diagnosed in the audit year?
-                        pass
+                        data["diagnosis_date"].append(row["diagnosis_date"])
+
+                        fields = [
+                            "coeliac_disease_screening",
+                            "thyroid_disease_screening",
+                            "carbohydrate_counting_education"
+                        ]
+
+                        for field in fields:
+                            data[field].append(measure_status(row[field]))
 
                     case TableCategories.ADMISSIONS:
                         data["complete_year_of_care"].append(row["is_complete_year_of_care"])
