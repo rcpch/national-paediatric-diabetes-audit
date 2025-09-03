@@ -2,7 +2,7 @@
 """
 
 # standard imports
-from datetime import date, timedelta
+from datetime import date, datetime
 from enum import Enum
 import logging
 import random
@@ -180,9 +180,9 @@ class PatientFactory(factory.django.DjangoModelFactory):
 
     @factory.lazy_attribute
     def diagnosis_date(self):
-        """Set diagnosis_date between date_of_birth and audit start date."""
+        """Set diagnosis_date between date_of_birth and audit end date."""
         return get_random_date(
-            start_date=self.date_of_birth, end_date=self.audit_start_date
+            start_date=self.date_of_birth, end_date=min(self.audit_end_date, datetime.now().date())
         )
     
     @factory.lazy_attribute
