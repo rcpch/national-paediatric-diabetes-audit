@@ -722,7 +722,6 @@ class RCPCHLoginView(TwoFactorLoginView):
         # In local development, override the token workflow, just sign in
         # the user without 2FA token
         if settings.DEBUG:
-
             user = authenticate(
                 self.request,
                 username=self.request.POST.get("auth-username"),
@@ -730,60 +729,46 @@ class RCPCHLoginView(TwoFactorLoginView):
             )
             if user is not None:
                 login(self.request, user)
-                # successful login, get PDU and organisation details from user and store in session
 
-                # Override normal auth flow behaviour, redirect straight to home page
-                audit_period = AuditPeriod.objects.get_default_audit_period()
-
-                return redirect(get_user_home_page(audit_period.slug, user))
+                # Override normal auth flow behaviour, redirect straight away
+                response = HttpResponseRedirect(self.get_success_url())
+                return self._done(response, user)
 
         # Otherwise, continue with usual workflow
         response = super().post(*args, **kwargs)
         return self.delete_cookies_from_response(response)
 
-    # Override successful login redirect to org summary page
-    def done(self, form_list, **kwargs):
-        # this will not be called if debug=True
-        response = super().done(form_list)
-        response_url = getattr(response, "url")
+    def _done(self, response, user):
+        # time since last set password
+        delta = timezone.now() - user.password_last_set
+        # if user has not renewed password in last 90 days, redirect to login page
+        password_reset_date = user.password_last_set + timezone.timedelta(days=90)
+        if user.is_active and (password_reset_date <= timezone.now()):
+            messages.add_message(
+                self.request,
+                messages.ERROR,
+                f"Your password has expired. Please reset it.",
+            )
+            return redirect(reverse("password_reset"))
 
-        # redirect to home page
-        login_redirect_url = reverse(settings.LOGIN_REDIRECT_URL)
-
-        # Successful 2FA and login
-        if response_url == login_redirect_url:
-            user = self.get_user()
-
-            # time since last set password
-            delta = timezone.now() - user.password_last_set
-            # if user has not renewed password in last 90 days, redirect to login page
-            password_reset_date = user.password_last_set + timezone.timedelta(days=90)
-            if user.is_active and (password_reset_date <= timezone.now()):
-                messages.add_message(
-                    self.request,
-                    messages.ERROR,
-                    f"Your password has expired. Please reset it.",
-                )
-                return redirect(reverse("password_reset"))
-
-            last_logged_in = VisitActivity.objects.filter(
-                activity=1, npdauser=user
-            ).order_by("-activity_datetime")[:2]
-            if last_logged_in.count() > 1:
-                messages.add_message(
-                    self.request,
-                    messages.INFO,
-                    f"You are now logged in as {user.email}. You last logged in at {timezone.localtime(last_logged_in[1].activity_datetime).strftime('%H:%M %p on %A, %d %B %Y')} from {last_logged_in[1].ip_address}.\nYou have {90-delta.days} days remaining until your password needs resetting.",
-                )
-            else:
-                messages.add_message(
-                    self.request,
-                    messages.INFO,
-                    f"You are now logged in as {user.email}. Welcome to the National Paediatric Diabetes Audit platform! This is your first time logging in ({timezone.localtime(last_logged_in[0].activity_datetime).strftime('%H:%M %p on %A, %d %B %Y')} from {last_logged_in[0].ip_address}).",
-                )
-
-            audit_period = AuditPeriod.objects.get_default_audit_period()
-
-            return redirect(get_user_home_page(audit_period.slug, user))
+        last_logged_in = VisitActivity.objects.filter(
+            activity=1, npdauser=user
+        ).order_by("-activity_datetime")[:2]
+        if last_logged_in.count() > 1:
+            messages.add_message(
+                self.request,
+                messages.INFO,
+                f"You are now logged in as {user.email}. You last logged in at {timezone.localtime(last_logged_in[1].activity_datetime).strftime('%H:%M %p on %A, %d %B %Y')} from {last_logged_in[1].ip_address}.\nYou have {90-delta.days} days remaining until your password needs resetting.",
+            )
+        else:
+            messages.add_message(
+                self.request,
+                messages.INFO,
+                f"You are now logged in as {user.email}. Welcome to the National Paediatric Diabetes Audit platform! This is your first time logging in ({timezone.localtime(last_logged_in[0].activity_datetime).strftime('%H:%M %p on %A, %d %B %Y')} from {last_logged_in[0].ip_address}).",
+            )
         
         return response
+
+    def done(self, form_list, **kwargs):
+        response = super().done(form_list)
+        return self._done(response, self.get_user())
