@@ -983,6 +983,15 @@ class PatientReportView(
         return ["patient_report/patient_report.html"]
 
 
+def measure_status(complete: bool | None) -> str: 
+    match complete:
+        case True:
+            return "COMPLETE"
+        case False:
+            return "INCOMPLETE"
+        case None:
+            return "NA"
+
 @login_and_otp_required()
 @check_data_permissions()
 def download_patient_report(request, audit_period, pdu):
@@ -996,13 +1005,31 @@ def download_patient_report(request, audit_period, pdu):
                 selected_category=category.value,
             )
             
-            patient_identifiers = []
+            data = defaultdict(list)
 
             for row in pt_qs:
-                patient_identifiers.append(row["patient_identifier"])
+                data[patient_identifier].append(row["patient_identifier"])
 
-            data = {}
-            data[patient_identifier] = patient_identifiers
+                match category:
+                    case TableCategories.HEALTH_CHECKS:
+                        data["complete_year_of_care"].append(row["is_complete_year_of_care"])
+                        data["gte_12yo_at_start_of_audit_year"].append(row["is_gte_12yo"])
+
+                        data["passed_yearly_checks"].append(row["num_passed"])
+                        data["total_yearly_checks"].append(row["num_total"])
+
+                        fields = [
+                            "hba1c",
+                            "bmi",
+                            "thyroid_screen",
+                            "blood_pressure",
+                            "urinary_albumin",
+                            "foot_exam",
+                            "retinal_screening"
+                        ]
+
+                        for field in fields:
+                            data[field].append(measure_status(row[f"passed_{field}"]))
 
             df = pd.DataFrame(data=data)
             df.to_excel(writer, sheet_name=category.value, index=False)
