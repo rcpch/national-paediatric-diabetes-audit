@@ -1048,6 +1048,22 @@ def download_patient_report(request, audit_period, pdu):
 
                         for field in fields:
                             data[field].append(measure_status(row[field]))
+                    
+                    case TableCategories.CARE_AT_DIAGNOSIS:
+                        # TODO MRB: why does the dummy sheet not have any patients diagnosed in the audit year?
+                        pass
+
+                    case TableCategories.ADMISSIONS:
+                        data["complete_year_of_care"].append(row["is_complete_year_of_care"])
+
+                        data["mean_hba1c_mmolmol"].append(row["kpi_44_mean_hba1c"])
+                        data["mean_hba1c_pct"].append(row["mean_hba1c_pct"])
+
+                        data["median_hba1c_mmolmol"].append(row["kpi_45_median_hba1c"])
+                        data["median_hba1c_pct"].append(row["median_hba1c_pct"])
+
+                        for field in ["number_of_admissions", "number_of_dka_admissions"]:
+                            data[field].append(row[field])
 
             df = pd.DataFrame(data=data)
             df.to_excel(writer, sheet_name=category.value, index=False)
