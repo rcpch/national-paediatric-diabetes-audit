@@ -2,8 +2,6 @@ from functools import wraps
 from django.shortcuts import redirect
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from asgiref.sync import sync_to_async
-import asyncio
 import logging
 
 from ..models import AuditPeriod, PaediatricDiabetesUnit
@@ -56,9 +54,7 @@ def login_and_otp_required():
             else:
                 return redirect("two_factor:setup")
 
-        login_required(view)
-
-        return sync_login_and_otp_required
+        return login_required(sync_login_and_otp_required)
 
     return decorator
 

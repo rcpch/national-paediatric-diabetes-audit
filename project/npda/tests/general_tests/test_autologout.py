@@ -46,15 +46,11 @@ def test_auto_logout_django_auto_logout(
     assert (
         response.status_code == HTTPStatus.FOUND
     ), f"User not redirected after expected auto-logout; {response.status_code=}"
-    assert response.url == reverse(
-        "two_factor:setup"
-    ), f"User not redirected to login page ({reverse('two_factor:setup')}), instead to {response.url=}"
+    assert response.url.startswith(reverse("login")), f"User not redirected to login page ({reverse('login')}), instead to {response.url=}"
 
     # Finally try to access a protected page, now as an anon user
     response = client.get(reverse("home"))
     assert (
         response.status_code == HTTPStatus.FOUND
     ), f"Anon user tried accessing protected page after autologout, did not receive 302 response; {response.status_code=}"
-    assert response.url == reverse(
-        "two_factor:setup"
-    ), f"User not redirected to login page ({reverse('two_factor:setup')}), instead to {response.url=}"
+    assert response.url.startswith(reverse("login")), f"User not redirected to login page ({reverse('two_factor:setup')}), instead to {response.url=}"
