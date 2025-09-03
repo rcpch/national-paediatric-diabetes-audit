@@ -1064,6 +1064,27 @@ def download_patient_report(request, audit_period, pdu):
 
                         for field in ["number_of_admissions", "number_of_dka_admissions"]:
                             data[field].append(row[field])
+                    
+                    case TableCategories.TREATMENT:
+                        for field in ["treatment_regimen", "glucose_monitoring", "hcl"]:
+                            data[field].append(row[field])
+                    
+                    case TableCategories.OUTCOMES:
+                        data["complete_year_of_care"].append(row["is_complete_year_of_care"])
+
+                        fields = [
+                            "latest_hba1c_mmol_mol",
+                            "latest_hba1c_pct",
+                            "previous_to_latest_hba1c_mmol_mol",
+                            "previous_to_latest_hba1c_pct",
+                            "hba1c_delta",
+                            "latest_hba1c_date",
+                            "previous_to_latest_hba1c_date",
+                            "days_delta_between_latest_and_previous_hba1c"
+                        ]
+
+                        for field in fields:
+                            data[field].append(row[field])
 
             df = pd.DataFrame(data=data)
             df.to_excel(writer, sheet_name=category.value, index=False)
