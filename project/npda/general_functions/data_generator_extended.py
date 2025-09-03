@@ -505,8 +505,8 @@ class FakePatientCreator:
             height_weight_observation_date: date
         """
         height_weight_observations = {
-            AgeRange.AGE_0_4: (50, 110, 10, 20),
-            AgeRange.AGE_5_10: (110, 150, 20, 40),
+            AgeRange.AGE_0_4: (60, 100, 10, 20),
+            AgeRange.AGE_5_10: (100, 150, 20, 40),
             AgeRange.AGE_11_15: (150, 170, 40, 70),
             AgeRange.AGE_16_19: (170, 190, 60, 90),
             AgeRange.AGE_20_25: (170, 190, 60, 90),
