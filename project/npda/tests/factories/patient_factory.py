@@ -106,11 +106,10 @@ class Sex(Enum):
     """
     Enum class to represent sexes for children
     """
-
-    NOT_KNOWN = SEX_TYPE[0][0]
-    MALE = SEX_TYPE[1][0]
-    FEMALE = SEX_TYPE[2][0]
-    NOT_SPEC = SEX_TYPE[3][0]
+    MALE = SEX_TYPE[0][0]
+    FEMALE = SEX_TYPE[1][0]
+    # Removed not known and unspecified just to make demo files map clearer
+    # Patients not specified as male or female are omitted from the reports
 
 
 class PatientFactory(factory.django.DjangoModelFactory):
