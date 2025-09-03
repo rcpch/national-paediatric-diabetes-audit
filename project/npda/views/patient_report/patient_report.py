@@ -2,7 +2,7 @@ import logging
 import io
 
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 
@@ -1052,7 +1052,8 @@ def download_patient_report(request, audit_period, pdu):
             df = pd.DataFrame(data=data)
             df.to_excel(writer, sheet_name=category.value, index=False)
 
-    filename = f"{pdu.pz_code}-{audit_period.slug}-patient-report.xlsx"
+    timestamp = datetime.now().strftime("%y%m%d-%H%M")
+    filename = f"{pdu.pz_code}-{audit_period.slug}-patient-report-{timestamp}.xlsx"
 
     return HttpResponse(
         contents.getvalue(),
