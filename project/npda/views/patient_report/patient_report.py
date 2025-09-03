@@ -428,6 +428,7 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
             "pk",
             "patient_identifier",
             "is_complete_year_of_care",
+            "is_gte_12yo",
             "hba1c_4plus",
             "psychological_assessment",
             "smoking_status",
@@ -1030,6 +1031,23 @@ def download_patient_report(request, audit_period, pdu):
 
                         for field in fields:
                             data[field].append(measure_status(row[f"passed_{field}"]))
+
+                    case TableCategories.ADDITIONAL_CARE_PROCESSES:
+                        data["complete_year_of_care"].append(row["is_complete_year_of_care"])
+                        data["gte_12yo_at_start_of_audit_year"].append(row["is_gte_12yo"])
+
+                        fields = [
+                            "psychological_assessment",
+                            "smoking_status",
+                            "smoking_cessation_referral",
+                            "additional_dietetic_appt_offered",
+                            "pts_attending_additional_dietetic_appt",
+                            "influenza_immunisation_recommended",
+                            "sick_day_rules_advice"
+                        ]
+
+                        for field in fields:
+                            data[field].append(measure_status(row[field]))
 
             df = pd.DataFrame(data=data)
             df.to_excel(writer, sheet_name=category.value, index=False)
