@@ -158,7 +158,7 @@ class FakePatientCreator:
                     if patient.diagnosis_date >= period[0] and patient.diagnosis_date < period[1]:
                         start = max(patient.diagnosis_date, period[0])
                         usable_visit_periods.append((start, period[1]))
-            
+
                 visit_periods = usable_visit_periods
 
             visit_period_ix = 0

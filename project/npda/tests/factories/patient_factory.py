@@ -180,9 +180,10 @@ class PatientFactory(factory.django.DjangoModelFactory):
     @factory.lazy_attribute
     def diagnosis_date(self):
         """Set diagnosis_date between date_of_birth and audit end date."""
-        return get_random_date(
-            start_date=self.date_of_birth, end_date=min(self.audit_end_date, datetime.now().date())
+        ret = get_random_date(
+            start_date=self.date_of_birth, end_date=self.latest_diagnosis_date or self.audit_start_date
         )
+        return ret
     
     @factory.lazy_attribute
     def postcode(self):
@@ -208,6 +209,11 @@ class PatientFactory(factory.django.DjangoModelFactory):
         audit_end_date = get_audit_period_for_date(TODAY)[
             1
         ]  # Default audit_end_date; can be overridden
+        
+        # Opt in to generating patients diagnosed in audit year
+        # Can't reference audit_end_date as a default in case overridden
+        latest_diagnosis_date = None
+
         age_range = AgeRange.AGE_11_15  # Default age range
 
         # Random postcode under given outcode
