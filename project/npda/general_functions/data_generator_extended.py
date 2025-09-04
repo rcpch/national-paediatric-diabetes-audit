@@ -146,61 +146,48 @@ class FakePatientCreator:
         visits = []
         # Each patient is assigned n visits, defined by `visit_types`
         for patient in patients:
-
-            # Need to evenly batch inputted visits into 4 buckets, 1 for
-            # each quarter
-            total_visits = len(visit_types)
-            n_visits_per_quarter = total_visits // 4
-
-            # Store visits per quarter, where visits_batched_by_quarter[i]
-            # stores the visits in the ith(+1) quarter i.e.
-            # visits_batched_by_quarter[2] has Q3 visits
-            if total_visits < 4:
-                visits_batched_by_quarter = [[v] for v in visit_types]
-            else:
-                visits_batched_by_quarter = [
-                    # q1
-                    visit_types[0:n_visits_per_quarter],
-                    # q2
-                    visit_types[n_visits_per_quarter : n_visits_per_quarter * 2],
-                    # q3
-                    visit_types[n_visits_per_quarter * 2 : n_visits_per_quarter * 3],
-                    # q4 - all remaining
-                    visit_types[n_visits_per_quarter * 3 :],
-                ]
-
-            # Get dates for quarters
-            audit_quarters = get_quarters_for_audit_period(
+            visit_periods = get_quarters_for_audit_period(
                 self.audit_start_date, self.audit_end_date
             )
 
-            for q, visits_in_q in enumerate(visits_batched_by_quarter):
+            if patient.diagnosis_date > self.audit_start_date:
+                usable_visit_periods = []
 
-                # For this quarter, get date bounds
-                quarter_start_date, quarter_end_date = audit_quarters[q]
+                for period in visit_periods:
+                    # patient.diagnosis_date >= period.start_date and patient.diagnosis_date < period.end_date
+                    if patient.diagnosis_date >= period[0] and patient.diagnosis_date < period[1]:
+                        start = max(patient.diagnosis_date, period[0])
+                        usable_visit_periods.append((start, period[1]))
 
-                # For each visit, randomly assign a date within quarter
-                for visit_type in visits_in_q:
-                    visit_date = get_random_date(quarter_start_date, quarter_end_date)
+                visit_periods = usable_visit_periods
 
-                    # Get the correct kwarg measurements for the visit type
-                    # These will be fed into this VisitFactory's.build() call
-                    measurements = self.get_measures_for_visit_type(
-                        visit_type=visit_type,
-                        age_range=age_range,
-                        visit_date=visit_date,
-                        diabetes_type=patient.diabetes_type,
-                        hba1_target_range=hb1ac_target_range,
-                    )
+            visit_period_ix = 0
 
-                    # Build the Visit instance
-                    visit = VisitFactory.build(
-                        patient=patient,
-                        visit_date=visit_date,
-                        **measurements,
-                        **visit_kwargs,
-                    )
-                    visits.append(visit)
+            for visit_type in visit_types:
+                visit_period = visit_periods[visit_period_ix]
+                visit_date = get_random_date(visit_period[0], visit_period[1])
+
+                # Get the correct kwarg measurements for the visit type
+                # These will be fed into this VisitFactory's.build() call
+                measurements = self.get_measures_for_visit_type(
+                    visit_type=visit_type,
+                    age_range=age_range,
+                    visit_date=visit_date,
+                    diabetes_type=patient.diabetes_type,
+                    hba1_target_range=hb1ac_target_range,
+                )
+
+                # Build the Visit instance
+                visit = VisitFactory.build(
+                    patient=patient,
+                    visit_date=visit_date,
+                    **measurements,
+                    **visit_kwargs,
+                )
+                visits.append(visit)
+
+                visit_period_ix = (visit_period_ix + 1) % len(visit_periods)
+                    
         return visits
 
     def create_and_save_fake_patients(
@@ -505,8 +492,8 @@ class FakePatientCreator:
             height_weight_observation_date: date
         """
         height_weight_observations = {
-            AgeRange.AGE_0_4: (50, 110, 10, 20),
-            AgeRange.AGE_5_10: (110, 150, 20, 40),
+            AgeRange.AGE_0_4: (70, 100, 10, 20),
+            AgeRange.AGE_5_10: (100, 150, 20, 40),
             AgeRange.AGE_11_15: (150, 170, 40, 70),
             AgeRange.AGE_16_19: (170, 190, 60, 90),
             AgeRange.AGE_20_25: (170, 190, 60, 90),

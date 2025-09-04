@@ -410,6 +410,7 @@ class Command(BaseCommand):
         new_pts = fake_patient_creator.build_fake_patients(
             n=n_pts_to_seed,
             age_range=age_range,
+            latest_diagnosis_date=audit_end_date
         )
 
         # For each pt, add visits
@@ -417,7 +418,7 @@ class Command(BaseCommand):
             patients=new_pts,
             age_range=age_range,
             hb1ac_target_range=hba1c_target,
-            visit_types=visit_types,
+            visit_types=visit_types
         )
 
         # `CSV_HEADINGS` is a tuple for csv headings and model fields

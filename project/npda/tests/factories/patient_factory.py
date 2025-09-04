@@ -2,7 +2,7 @@
 """
 
 # standard imports
-from datetime import date, timedelta
+from datetime import date, datetime
 from enum import Enum
 import logging
 import random
@@ -106,11 +106,10 @@ class Sex(Enum):
     """
     Enum class to represent sexes for children
     """
-
-    NOT_KNOWN = SEX_TYPE[0][0]
-    MALE = SEX_TYPE[1][0]
-    FEMALE = SEX_TYPE[2][0]
-    NOT_SPEC = SEX_TYPE[3][0]
+    MALE = SEX_TYPE[0][0]
+    FEMALE = SEX_TYPE[1][0]
+    # Removed not known and unspecified just to make demo files map clearer
+    # Patients not specified as male or female are omitted from the reports
 
 
 class PatientFactory(factory.django.DjangoModelFactory):
@@ -180,10 +179,11 @@ class PatientFactory(factory.django.DjangoModelFactory):
 
     @factory.lazy_attribute
     def diagnosis_date(self):
-        """Set diagnosis_date between date_of_birth and audit start date."""
-        return get_random_date(
-            start_date=self.date_of_birth, end_date=self.audit_start_date
+        """Set diagnosis_date between date_of_birth and audit end date."""
+        ret = get_random_date(
+            start_date=self.date_of_birth, end_date=self.latest_diagnosis_date or self.audit_start_date
         )
+        return ret
     
     @factory.lazy_attribute
     def postcode(self):
@@ -209,6 +209,11 @@ class PatientFactory(factory.django.DjangoModelFactory):
         audit_end_date = get_audit_period_for_date(TODAY)[
             1
         ]  # Default audit_end_date; can be overridden
+        
+        # Opt in to generating patients diagnosed in audit year
+        # Can't reference audit_end_date as a default in case overridden
+        latest_diagnosis_date = None
+
         age_range = AgeRange.AGE_11_15  # Default age range
 
         # Random postcode under given outcode
