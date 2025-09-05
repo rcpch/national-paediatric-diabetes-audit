@@ -102,7 +102,7 @@ def test_count_of_patients_transitioning_to_adult_care_includes_patients_without
     user, _ = setup(audit_period, patient_args={
         "diagnosis_date": audit_period.start_date - relativedelta(days=2), # complete year of care
         "transfer__date_leaving_service": audit_period.start_date + relativedelta(days=2),
-        "transfer__reason_leaving_service": LEAVE_PDU_REASONS[1][0] # Moved out of area
+        "transfer__reason_leaving_service": LEAVE_PDU_REASONS[0][0] # Transitioned to adult diabetes service
     })
 
     # Deliberately no visit (to cover https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1203)
@@ -129,6 +129,34 @@ def test_new_diagnoses_includes_patients_without_visits(
 
     user, _ = setup(audit_period, patient_args={
         "diagnosis_date": audit_period.start_date + relativedelta(days=2), # incomplete year of care
+    })
+
+    # Deliberately no visit (to cover https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1203)
+
+    client = login_and_verify_user(client, user)
+
+    response = client.get(reverse("pdu-get-new-diagnoses-partial", kwargs={
+        "audit_period": audit_period.slug,
+        "pz_code": ALDER_HEY_PZ_CODE
+    }))
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.context["number"] == 1
+
+
+@pytest.mark.django_db
+def test_moved_out_of_area_includes_patients_without_visits(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client
+):
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+
+    user, _ = setup(audit_period, patient_args={
+        "diagnosis_date": audit_period.start_date + relativedelta(days=2), # incomplete year of care
+        "transfer__date_leaving_service": audit_period.start_date + relativedelta(days=2),
+        "transfer__reason_leaving_service": LEAVE_PDU_REASONS[1][0] # Moved out of area
     })
 
     # Deliberately no visit (to cover https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1203)
