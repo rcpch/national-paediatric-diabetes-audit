@@ -44,6 +44,7 @@ def setup(audit_period, patient_args):
 
     submission = Submission.objects.create(
         paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_period=audit_period,
         audit_year=audit_period.start_date.year,
         submission_date=audit_period.start_date,
         submission_by=user,
