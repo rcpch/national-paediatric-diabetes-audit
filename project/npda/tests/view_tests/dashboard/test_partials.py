@@ -155,7 +155,7 @@ def test_moved_out_of_area_includes_patients_without_visits(
     audit_period = AuditPeriod.objects.get_default_audit_period()
 
     user, _ = setup(audit_period, patient_args={
-        "diagnosis_date": audit_period.start_date + relativedelta(days=2), # incomplete year of care
+        "diagnosis_date": audit_period.start_date - relativedelta(days=2), # complete year of care
         "transfer__date_leaving_service": audit_period.start_date + relativedelta(days=2),
         "transfer__reason_leaving_service": LEAVE_PDU_REASONS[1][0] # Moved out of area
     })
@@ -164,7 +164,7 @@ def test_moved_out_of_area_includes_patients_without_visits(
 
     client = login_and_verify_user(client, user)
 
-    response = client.get(reverse("pdu-get-new-diagnoses-partial", kwargs={
+    response = client.get(reverse("pdu-get-moved-out-of-area-partial", kwargs={
         "audit_period": audit_period.slug,
         "pz_code": ALDER_HEY_PZ_CODE
     }))
