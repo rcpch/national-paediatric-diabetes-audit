@@ -12,6 +12,7 @@ from django.http import HttpResponseBadRequest
 from django.shortcuts import render
 
 import project.constants.colors as colors
+from project.constants.leave_pdu_reasons import LEAVE_PDU_REASONS
 from project.npda.general_functions.audit_period import audit_period_for_audit_year
 from project.npda.general_functions.map import (
     generate_dataframe_and_aggregated_distance_data_from_cases,
@@ -240,18 +241,11 @@ def get_metric_scatter_plot(request, audit_period, pdu):
 def get_new_diagnoses_partial(request, audit_period, pdu):
     """HTMX view that returns the number of new diagnoses for the current submission"""
 
-    # Get new diagnoses this submission
-
-    calculate_kpis = CalculateKPIS(
-        calculation_date=audit_period.kpi_calculation_date(), return_pt_querysets=False
-    )
-
-    calculate_kpis.set_patients_for_calculation(pz_codes=[pdu.pz_code])
-
-    n_diagnoses_this_year = calculate_kpis.calculate_kpi_2_total_new_diagnoses()
+    sub = Submission.objects.get_submission_for_request(pdu, audit_period)
+    count = sub.patients.filter(diagnosis_date__gte=audit_period.start_date).count()
 
     context = {
-        "number": n_diagnoses_this_year.total_eligible,
+        "number": count,
         "units": "patients",
         "description": "New diagnoses this audit year",
     }
@@ -294,18 +288,11 @@ def get_new_admissions_partial(request, audit_period, pdu):
 def get_transitioned_to_adult_service_partial(request, audit_period, pdu):
     """HTMX view that returns the number of patients who have been transitioned to the adult service"""
 
-    calculate_kpis = CalculateKPIS(
-        calculation_date=audit_period.kpi_calculation_date(), return_pt_querysets=True
-    )
-
-    calculate_kpis.set_patients_for_calculation(pz_codes=[pdu.pz_code])
-
-    n_transitioned_to_adult_service = (
-        calculate_kpis.calculate_total_service_transitions_to_adults().total_eligible  # this will return None if there are no eligible patients
-    )
+    sub = Submission.objects.get_submission_for_request(pdu, audit_period)
+    count = sub.patients.filter(paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[0][0]).count()
 
     context = {
-        "number": n_transitioned_to_adult_service,
+        "number": count,
         "units": "children",
         "description": "Number of children transitioned to adult services this audit year",
     }
@@ -322,17 +309,10 @@ def get_transitioned_to_adult_service_partial(request, audit_period, pdu):
 def get_moved_out_of_area_partial(request, audit_period, pdu):
     """HTMX view that returns the number of patients who have been moved out of area"""
 
-    calculate_kpis = CalculateKPIS(
-        calculation_date=audit_period.kpi_calculation_date(), return_pt_querysets=True
-    )
+    sub = Submission.objects.get_submission_for_request(pdu, audit_period)
+    count = sub.patients.filter(paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[1][0]).count()
 
-    calculate_kpis.set_patients_for_calculation(pz_codes=[pdu.pz_code])
-
-    n_moved_out_of_area = (
-        calculate_kpis.get_number_of_moved_out_of_area_this_audit_year()
-    )
-
-    context = {"number": n_moved_out_of_area, "units": "children"}
+    context = {"number": count, "units": "children"}
 
     return render(
         request,
