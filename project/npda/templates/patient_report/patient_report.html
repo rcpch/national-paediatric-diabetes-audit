@@ -6,6 +6,8 @@
     <!-- SELECT TABS & TABLE -->
     <div class="p-4" hx-boost="true">
       <h1 class="text-2xl font-bold mb-4">Patient Report</h1>
+      <!-- Pop up which shows data protection guidance for report -->
+      {% include 'partials/page_elements/patient_report_popup.html' %}
       <div id="table-area" hx-swap="innerHTML" class="w-full">
         {% comment %} Just the default table, htmx views swap this out {% endcomment %}
         {% if selected_category == "treatment" %}
