@@ -738,6 +738,13 @@ class RCPCHLoginView(TwoFactorLoginView):
         response = super().post(*args, **kwargs)
         return self.delete_cookies_from_response(response)
 
+    def get_success_url(self):
+        if self.request.user:
+            audit_period = AuditPeriod.objects.get_default_audit_period()
+            return get_user_home_page(audit_period.slug, self.request.user)
+        
+        return reverse(settings.LOGIN_REDIRECT_URL)
+
     def _done(self, response, user):
         # time since last set password
         delta = timezone.now() - user.password_last_set

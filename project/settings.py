@@ -239,7 +239,7 @@ AUTHENTICATION_BACKENDS = ("django.contrib.auth.backends.ModelBackend",)  # this
 
 AUTH_USER_MODEL = "npda.NPDAUser"
 LOGIN_URL = "two_factor:login"  # change LOGIN_URL to the 2fa one
-LOGIN_REDIRECT_URL = "home" # not used in practice, see npda_users/get_user_home_page
+LOGIN_REDIRECT_URL = "home" # not used in practice, see RCPCHLoginView.get_success_url
 LOGOUT_REDIRECT_URL = "two_factor:login"
 
 AUTH_PASSWORD_VALIDATORS = [
