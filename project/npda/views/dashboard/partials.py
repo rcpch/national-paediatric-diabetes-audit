@@ -242,7 +242,11 @@ def get_new_diagnoses_partial(request, audit_period, pdu):
     """HTMX view that returns the number of new diagnoses for the current submission"""
 
     sub = Submission.objects.get_submission_for_request(pdu, audit_period)
-    count = sub.patients.filter(diagnosis_date__gte=audit_period.start_date).count()
+
+    if sub:
+        count = sub.patients.filter(diagnosis_date__gte=audit_period.start_date).count()
+    else:
+        count = 0
 
     context = {
         "number": count,
@@ -289,7 +293,11 @@ def get_transitioned_to_adult_service_partial(request, audit_period, pdu):
     """HTMX view that returns the number of patients who have been transitioned to the adult service"""
 
     sub = Submission.objects.get_submission_for_request(pdu, audit_period)
-    count = sub.patients.filter(paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[0][0]).count()
+
+    if sub:
+        count = sub.patients.filter(paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[0][0]).count()
+    else:
+        count = 0
 
     context = {
         "number": count,
@@ -310,7 +318,11 @@ def get_moved_out_of_area_partial(request, audit_period, pdu):
     """HTMX view that returns the number of patients who have been moved out of area"""
 
     sub = Submission.objects.get_submission_for_request(pdu, audit_period)
-    count = sub.patients.filter(paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[1][0]).count()
+
+    if sub:
+        count = sub.patients.filter(paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[1][0]).count()
+    else:
+        count = 0
 
     context = {"number": count, "units": "children"}
 
