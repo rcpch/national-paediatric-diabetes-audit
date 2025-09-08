@@ -171,3 +171,37 @@ def test_moved_out_of_area_includes_patients_without_visits(
 
     assert response.status_code == HTTPStatus.OK
     assert response.context["number"] == 1
+
+
+@pytest.mark.parametrize(
+    "route",
+    [
+        pytest.param("pdu-get-new-diagnoses-partial"),
+        pytest.param("pdu-get-transitioned-to-adult-service-partial"),
+        pytest.param("pdu-get-moved-out-of-area-partial"),
+    ],
+)
+@pytest.mark.django_db
+def test_partials_before_submission(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    route
+):
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+
+    client = login_and_verify_user(client, user)
+
+    response = client.get(reverse(route, kwargs={
+        "audit_period": audit_period.slug,
+        "pz_code": ALDER_HEY_PZ_CODE
+    }))
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.context["number"] == 0
