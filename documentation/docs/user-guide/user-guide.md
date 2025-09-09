@@ -200,11 +200,15 @@ After you have entered all the relevant information click the ‘Save’ button 
 
 ## Page 7 - Unit Report/Patient Report
 
-At the top of the main page, once you have logged in, you will see two tabs: ‘***Unit Report***’ and ‘***Patient Report***’. Clicking on these will provide access to different levels of reporting.
+You can access the unit report by clicking the NPDA logo at the top of each page:
+
+![Home page link](../_assets/_images/user-guide/05-homepage-link.png)
+
+Users in multiple PDUs can click the "Unit Report" link for the PDU they want to access:
+
+![Unit report link for users with multiple PDUs](../_assets/_images/user-guide/06-unit-switcher-unit-report.png)
 
 ### Unit Report
-
-![image](https://github.com/user-attachments/assets/1ec54dc7-ea40-47ac-bbba-4ef7891d63f1)
 
 The Unit Report tab provides an overview of the patient data you have entered, including:
 - Quarterly submission deadlines,
@@ -215,10 +219,6 @@ The Unit Report tab provides an overview of the patient data you have entered, i
 - HbA1c,
 - Glucose monitoring,
 - and other key metrics relevant to your unit. 
-
-If you work at multiple PDUs, you can select your PDU by clicking ‘Filters’ at the top right of the window. 
-
-![image](https://github.com/user-attachments/assets/199fadaf-c6de-4bf5-83c2-7645edf6b1e8)
 
 Please note that the graphs within this tab display unvalidated and uncleaned data, meaning figures may differ from those published in the Quarterly Reporting Dashboard and the NPDA annual reporting.
 The unit report is intended to give you a quick view of your unit’s data
@@ -236,7 +236,7 @@ The Unit Report tab contains various interactive charts that provide detailed in
 
 ### Patient Report
 
-![image](https://github.com/user-attachments/assets/b06cf147-cc5a-41e1-beaf-2cfa00e8fea5)
+![Patient report link](../_assets/_images/user-guide/07-unit-report-patient-report.png)
 
 Clicking on the Patient Report tab will display a list of patients identified by their NHS number, along with five separate tabs at the top of the report: 
 - Health Checks,
