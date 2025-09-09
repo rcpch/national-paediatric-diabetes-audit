@@ -11,7 +11,7 @@ Lead Clinicians from NHS paediatric units must contact the NPDA team to create t
 
 If you are a lead clinician and already have an account on the NPDA data capture system, you can create new accounts for team members at your unit by navigating to the top right-hand corner of the window, where you will see your first initial.
 
-![image](https://github.com/user-attachments/assets/579b11fe-56eb-465d-b3b7-6c20eb7e4242)
+![Link to manage users](../_assets/_images/user-guide/01-manage-users-link.png)
 
 Clicking on this will open a drop-down menu containing the option "Manage Users." Selecting this will display a list of all current users at your unit. Below this list, you will find the "Add NPDA User" button. Clicking on this will allow you to fill in the relevant details to register a new user on the NPDA data capture system. 
 
@@ -47,27 +47,27 @@ You will then be given two options for 2FA: ***Token Generator*** or ***Email.**
 Once you have completed the two-factor authentication setup, you will be able to access the NPDA data capture system.
 If you need to change which two-factor authentication process you’d like to use, you’ll need to do this when you have logged into your account. To change it, go to the initial in the top right corner of the home page, click on the two-factor authentication option on the drop-down menu. From here you will be able to reset the process and choose with one you prefer. 
 
-![image](https://github.com/user-attachments/assets/06f3321b-f364-45b8-8e3e-d75e9cb4f1bc)
+![Link to manage users](../_assets/_images/user-guide/02-two-factor-authentication.png)
 
 ### Reset password
 
 If you have forgotten your password, click ‘Reset Password’ or go to https://npda.rcpch.ac.uk/account/password-reset/ and a link to create a new password will be sent to your email address, and this will remain active for 72 hours.
 
-![image](https://github.com/user-attachments/assets/4e1798bf-8ad3-4eda-9f0a-180e05905589)
+![Reset password button](https://github.com/user-attachments/assets/4e1798bf-8ad3-4eda-9f0a-180e05905589)
 
 ## Submitting Data
 
-When you get to the home page of the NPDA data capture system, you will see 4 options at the top of the webpage: Unit Report, Patient Report, Patient Data, and User Guide. To submit data please click on the ***Patient Data*** tab. 
+To submit data once logged in, click on the **Patient Data** link:
 
-![image](https://github.com/user-attachments/assets/81955693-4b1c-4d14-b0c9-43227fcdf694)
+![Patient data button](../_assets/_images/user-guide/03-unit-report.png)
 
-If you work at more than one PDU, you can select your PDU by clicking ‘Filter’ at the top right of the window.
+If you work at more than one PDU, you can click the link for the PDU you want to submit:
 
-![image](https://github.com/user-attachments/assets/d38caa50-38e2-455d-bd7f-5f1fc526277f)
+![Patient data button](../_assets/_images/user-guide/04-unit-switcher.png)
 
 If this is the first time your unit is submitting data in the audit year, you will be presented two options: ***Upload CSV file*** or ***Patient Questionnaire***.
 
-![image](https://github.com/user-attachments/assets/a37f8526-f3f0-427a-a4e6-b337715a7478)
+![Buttons to select either upload CSV file or use patient questionnaire](https://github.com/user-attachments/assets/a37f8526-f3f0-427a-a4e6-b337715a7478)
 
 Once you have selected a method of data entry, you will only be able to enter data via that method for the remainder of the audit year. You will not be able to enter data via both CSV and questionnaire in the same audit year. 
 If you need to change your data entry method, please contact the NPDA team.
@@ -119,19 +119,19 @@ Once you have selected your data entry method for the audit year, you will be di
 
 ***Option 2*** allows you to select a CSV file from your device and submit data. Please ensure that your data has been thoroughly checked and finalised before submission. If the file does not match the correct format or template, it will be rejected
 
-![image](https://github.com/user-attachments/assets/c097e8d0-c40b-4636-873e-f2fb0099835f)
+![Upload CSV button](https://github.com/user-attachments/assets/c097e8d0-c40b-4636-873e-f2fb0099835f)
 
 If the CSV file is in the correct format and successfully uploads you will be directed to a new webpage displaying all submitted patient records.
 
 Any patient records identified issues will be highlighted with a red exclamation mark. By hovering over the exclamation mark, a pop-up box will appear, detailing the specific issue with that patient’s submission. Users should review these flagged entries and make any necessary corrections before finalising their data. It should be noted that the data has successfully submitted at this point, however, there may be issues that impact the quality of the submission. 
 
-![image](https://github.com/user-attachments/assets/7edf9f90-7864-4cfd-8437-cc74531152df)
+![Table showing uploaded patients](https://github.com/user-attachments/assets/7edf9f90-7864-4cfd-8437-cc74531152df)
 
 You can view all errors in your data file by downloading the data quality report.
 
 ### Data Quality Report
 
-![image](https://github.com/user-attachments/assets/538585c5-92ee-4316-a68e-a2771fa6d4b4)
+![Button to download data quality report](https://github.com/user-attachments/assets/538585c5-92ee-4316-a68e-a2771fa6d4b4)
 
 After uploading your data via CSV, you can download a ***Data Quality Report*** to validate and check your data. This can be done by selecting the Download Data Quality Report option in the top right corner of the webpage (see screenshot below).
 
@@ -145,15 +145,15 @@ Any cells containing errors or invalid data will be highlighted with a small com
 
 Navigate to the ***Patient Data*** view and select ***Add Patient***.
 
-![image](https://github.com/user-attachments/assets/3076bb4f-f1fe-400a-be1f-553f230498b8)
+![Add patient button](https://github.com/user-attachments/assets/3076bb4f-f1fe-400a-be1f-553f230498b8)
 
 This form will ask you to complete all the necessary information to add a new patient to your NPDA submission.
 
-![image](https://github.com/user-attachments/assets/69ba99b2-d27f-482c-abeb-8d6ae6478782)
+![Form to submit patient data](https://github.com/user-attachments/assets/69ba99b2-d27f-482c-abeb-8d6ae6478782)
 
 After successfully entering a patient onto the NPDA data capture system, you will be directed to a new screen displaying a list of all patients you have entered.
 
-![image](https://github.com/user-attachments/assets/3c936499-ecde-436f-a635-c5d6e22ad9da)
+![Table showing patients](https://github.com/user-attachments/assets/3c936499-ecde-436f-a635-c5d6e22ad9da)
 
 ### Edit Patient Details
 
@@ -165,11 +165,11 @@ From this list, you can add visits for each patient. On the right-hand side of e
 
 After you’ve clicked on the Create New Visit button, you will be then greeted with the New Visit webform.
 
-![image](https://github.com/user-attachments/assets/be6c8239-1646-4cfb-8b2d-88172cdf44c3)
+![Create new visit button](https://github.com/user-attachments/assets/be6c8239-1646-4cfb-8b2d-88172cdf44c3)
 
 From here you will see the Visit/Appointment date at the top of the page. A valid date will need to be entered to create a fully visit. After this you can see 3 tabs below the visit date, these are: Routine Measurements, Annual Review and Inpatient Entry. 
 
-![image](https://github.com/user-attachments/assets/8e49fd85-6961-479c-b3e5-de43abbf332e)
+![Tabs in the form to submit visit data](https://github.com/user-attachments/assets/8e49fd85-6961-479c-b3e5-de43abbf332e)
 
 The Routine Measurements tab is broken down by the following sections:
 - Measurements
@@ -196,15 +196,19 @@ The final tab, Inpatient Entry, contains the following metric
 
 After you have entered all the relevant information click the ‘Save’ button at the bottom of the page.
 
-![image](https://github.com/user-attachments/assets/8d6481cc-f9e1-4686-8d28-bdc208221863)
+![Save, cancel and delete buttons for a visit](https://github.com/user-attachments/assets/8d6481cc-f9e1-4686-8d28-bdc208221863)
 
 ## Page 7 - Unit Report/Patient Report
 
-At the top of the main page, once you have logged in, you will see two tabs: ‘***Unit Report***’ and ‘***Patient Report***’. Clicking on these will provide access to different levels of reporting.
+You can access the unit report by clicking the NPDA logo at the top of each page:
+
+![Home page link](../_assets/_images/user-guide/05-homepage-link.png)
+
+Users in multiple PDUs can click the "Unit Report" link for the PDU they want to access:
+
+![Unit report link for users with multiple PDUs](../_assets/_images/user-guide/06-unit-switcher-unit-report.png)
 
 ### Unit Report
-
-![image](https://github.com/user-attachments/assets/1ec54dc7-ea40-47ac-bbba-4ef7891d63f1)
 
 The Unit Report tab provides an overview of the patient data you have entered, including:
 - Quarterly submission deadlines,
@@ -215,10 +219,6 @@ The Unit Report tab provides an overview of the patient data you have entered, i
 - HbA1c,
 - Glucose monitoring,
 - and other key metrics relevant to your unit. 
-
-If you work at multiple PDUs, you can select your PDU by clicking ‘Filters’ at the top right of the window. 
-
-![image](https://github.com/user-attachments/assets/199fadaf-c6de-4bf5-83c2-7645edf6b1e8)
 
 Please note that the graphs within this tab display unvalidated and uncleaned data, meaning figures may differ from those published in the Quarterly Reporting Dashboard and the NPDA annual reporting.
 The unit report is intended to give you a quick view of your unit’s data
@@ -236,7 +236,7 @@ The Unit Report tab contains various interactive charts that provide detailed in
 
 ### Patient Report
 
-![image](https://github.com/user-attachments/assets/b06cf147-cc5a-41e1-beaf-2cfa00e8fea5)
+![Patient report link](../_assets/_images/user-guide/07-unit-report-patient-report.png)
 
 Clicking on the Patient Report tab will display a list of patients identified by their NHS number, along with five separate tabs at the top of the report: 
 - Health Checks,
