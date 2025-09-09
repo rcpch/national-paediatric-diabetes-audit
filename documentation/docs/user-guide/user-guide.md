@@ -67,7 +67,7 @@ If you work at more than one PDU, you can click the link for the PDU you want to
 
 If this is the first time your unit is submitting data in the audit year, you will be presented two options: ***Upload CSV file*** or ***Patient Questionnaire***.
 
-![image](https://github.com/user-attachments/assets/a37f8526-f3f0-427a-a4e6-b337715a7478)
+![Buttons to select either upload CSV file or use patient questionnaire](https://github.com/user-attachments/assets/a37f8526-f3f0-427a-a4e6-b337715a7478)
 
 Once you have selected a method of data entry, you will only be able to enter data via that method for the remainder of the audit year. You will not be able to enter data via both CSV and questionnaire in the same audit year. 
 If you need to change your data entry method, please contact the NPDA team.
@@ -119,19 +119,19 @@ Once you have selected your data entry method for the audit year, you will be di
 
 ***Option 2*** allows you to select a CSV file from your device and submit data. Please ensure that your data has been thoroughly checked and finalised before submission. If the file does not match the correct format or template, it will be rejected
 
-![image](https://github.com/user-attachments/assets/c097e8d0-c40b-4636-873e-f2fb0099835f)
+![Upload CSV button](https://github.com/user-attachments/assets/c097e8d0-c40b-4636-873e-f2fb0099835f)
 
 If the CSV file is in the correct format and successfully uploads you will be directed to a new webpage displaying all submitted patient records.
 
 Any patient records identified issues will be highlighted with a red exclamation mark. By hovering over the exclamation mark, a pop-up box will appear, detailing the specific issue with that patient’s submission. Users should review these flagged entries and make any necessary corrections before finalising their data. It should be noted that the data has successfully submitted at this point, however, there may be issues that impact the quality of the submission. 
 
-![image](https://github.com/user-attachments/assets/7edf9f90-7864-4cfd-8437-cc74531152df)
+![Table showing uploaded patients](https://github.com/user-attachments/assets/7edf9f90-7864-4cfd-8437-cc74531152df)
 
 You can view all errors in your data file by downloading the data quality report.
 
 ### Data Quality Report
 
-![image](https://github.com/user-attachments/assets/538585c5-92ee-4316-a68e-a2771fa6d4b4)
+![Button to download data quality report](https://github.com/user-attachments/assets/538585c5-92ee-4316-a68e-a2771fa6d4b4)
 
 After uploading your data via CSV, you can download a ***Data Quality Report*** to validate and check your data. This can be done by selecting the Download Data Quality Report option in the top right corner of the webpage (see screenshot below).
 
@@ -145,15 +145,15 @@ Any cells containing errors or invalid data will be highlighted with a small com
 
 Navigate to the ***Patient Data*** view and select ***Add Patient***.
 
-![image](https://github.com/user-attachments/assets/3076bb4f-f1fe-400a-be1f-553f230498b8)
+![Add patient button](https://github.com/user-attachments/assets/3076bb4f-f1fe-400a-be1f-553f230498b8)
 
 This form will ask you to complete all the necessary information to add a new patient to your NPDA submission.
 
-![image](https://github.com/user-attachments/assets/69ba99b2-d27f-482c-abeb-8d6ae6478782)
+![Form to submit patient data](https://github.com/user-attachments/assets/69ba99b2-d27f-482c-abeb-8d6ae6478782)
 
 After successfully entering a patient onto the NPDA data capture system, you will be directed to a new screen displaying a list of all patients you have entered.
 
-![image](https://github.com/user-attachments/assets/3c936499-ecde-436f-a635-c5d6e22ad9da)
+![Table showing patients](https://github.com/user-attachments/assets/3c936499-ecde-436f-a635-c5d6e22ad9da)
 
 ### Edit Patient Details
 
@@ -165,11 +165,11 @@ From this list, you can add visits for each patient. On the right-hand side of e
 
 After you’ve clicked on the Create New Visit button, you will be then greeted with the New Visit webform.
 
-![image](https://github.com/user-attachments/assets/be6c8239-1646-4cfb-8b2d-88172cdf44c3)
+![Create new visit button](https://github.com/user-attachments/assets/be6c8239-1646-4cfb-8b2d-88172cdf44c3)
 
 From here you will see the Visit/Appointment date at the top of the page. A valid date will need to be entered to create a fully visit. After this you can see 3 tabs below the visit date, these are: Routine Measurements, Annual Review and Inpatient Entry. 
 
-![image](https://github.com/user-attachments/assets/8e49fd85-6961-479c-b3e5-de43abbf332e)
+![Tabs in the form to submit visit data](https://github.com/user-attachments/assets/8e49fd85-6961-479c-b3e5-de43abbf332e)
 
 The Routine Measurements tab is broken down by the following sections:
 - Measurements
@@ -196,7 +196,7 @@ The final tab, Inpatient Entry, contains the following metric
 
 After you have entered all the relevant information click the ‘Save’ button at the bottom of the page.
 
-![image](https://github.com/user-attachments/assets/8d6481cc-f9e1-4686-8d28-bdc208221863)
+![Save, cancel and delete buttons for a visit](https://github.com/user-attachments/assets/8d6481cc-f9e1-4686-8d28-bdc208221863)
 
 ## Page 7 - Unit Report/Patient Report
 
