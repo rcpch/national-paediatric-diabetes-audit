@@ -53,17 +53,17 @@ If you need to change which two-factor authentication process you’d like to us
 
 If you have forgotten your password, click ‘Reset Password’ or go to https://npda.rcpch.ac.uk/account/password-reset/ and a link to create a new password will be sent to your email address, and this will remain active for 72 hours.
 
-![image](https://github.com/user-attachments/assets/4e1798bf-8ad3-4eda-9f0a-180e05905589)
+![Reset password button](https://github.com/user-attachments/assets/4e1798bf-8ad3-4eda-9f0a-180e05905589)
 
 ## Submitting Data
 
-When you get to the home page of the NPDA data capture system, you will see 4 options at the top of the webpage: Unit Report, Patient Report, Patient Data, and User Guide. To submit data please click on the ***Patient Data*** tab. 
+To submit data once logged in, click on the **Patient Data** link:
 
-![image](https://github.com/user-attachments/assets/81955693-4b1c-4d14-b0c9-43227fcdf694)
+![Patient data button](../_assets/_images/user-guide/03-unit-report.png)
 
-If you work at more than one PDU, you can select your PDU by clicking ‘Filter’ at the top right of the window.
+If you work at more than one PDU, you can click the link for the PDU you want to submit:
 
-![image](https://github.com/user-attachments/assets/d38caa50-38e2-455d-bd7f-5f1fc526277f)
+![Patient data button](../_assets/_images/user-guide/04-unit-switcher.png)
 
 If this is the first time your unit is submitting data in the audit year, you will be presented two options: ***Upload CSV file*** or ***Patient Questionnaire***.
 
