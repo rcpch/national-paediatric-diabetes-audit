@@ -11,7 +11,7 @@ Lead Clinicians from NHS paediatric units must contact the NPDA team to create t
 
 If you are a lead clinician and already have an account on the NPDA data capture system, you can create new accounts for team members at your unit by navigating to the top right-hand corner of the window, where you will see your first initial.
 
-![image](https://github.com/user-attachments/assets/579b11fe-56eb-465d-b3b7-6c20eb7e4242)
+![Link to manage users](../_assets/_images/user-guide/01-manage-users-link.png)
 
 Clicking on this will open a drop-down menu containing the option "Manage Users." Selecting this will display a list of all current users at your unit. Below this list, you will find the "Add NPDA User" button. Clicking on this will allow you to fill in the relevant details to register a new user on the NPDA data capture system. 
 
@@ -47,7 +47,7 @@ You will then be given two options for 2FA: ***Token Generator*** or ***Email.**
 Once you have completed the two-factor authentication setup, you will be able to access the NPDA data capture system.
 If you need to change which two-factor authentication process you’d like to use, you’ll need to do this when you have logged into your account. To change it, go to the initial in the top right corner of the home page, click on the two-factor authentication option on the drop-down menu. From here you will be able to reset the process and choose with one you prefer. 
 
-![image](https://github.com/user-attachments/assets/06f3321b-f364-45b8-8e3e-d75e9cb4f1bc)
+![Link to manage users](../_assets/_images/user-guide/02-two-factor-authentication.png)
 
 ### Reset password
 
