@@ -566,7 +566,7 @@ class FakePatientCreator:
             treatment = random.choice(TREATMENT_TYPES[0:6])[0]  # MDI or pump options
         else:
             treatment = random.choice(
-                [1, 2, 4, 5, 7, 8, 9]
+                [1, 2, 4, 5, 7, 8]
             )  # insulin or non-insulin options compatible with type 2 diabetes
 
         if diabetes_type == 1 and treatment in [3, 6]:
