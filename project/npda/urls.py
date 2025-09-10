@@ -25,7 +25,7 @@ from .views.dashboard.patient_characteristics import (
 data_prefix = "period/<str:audit_period>/pdu/<str:pz_code>"
 
 urlpatterns = [
-    path("", view=home, name="home"),
+    path("", view=index, name="index"),
     path("home", view=home, name="home"),
     path("period/<str:audit_period>", view=new_home, name="new-home"),
     path(
