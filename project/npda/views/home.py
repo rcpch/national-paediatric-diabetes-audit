@@ -4,12 +4,13 @@ import logging
 
 # Django imports
 from django.conf import settings
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.http import HttpResponse
 
 from project.constants.feature_flags import FEATURE_FLAGS
 from project.npda.general_functions.csv import csv_header
 from project.npda.general_functions.organisations_adapter import paediatric_diabetes_units_to_populate_select_field
+from project.npda.views.npda_users import get_user_home_page
 from ..general_functions.session import refresh_session_filters
 
 # RCPCH imports
@@ -57,6 +58,13 @@ def home(request):
     """
     template = "home.html"
     return render(request=request, template_name=template, context={})
+
+
+@login_and_otp_required()
+def index(request):
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    url = get_user_home_page(audit_period.slug, request.user)
+    return redirect(url)
 
 
 @login_and_otp_required()
