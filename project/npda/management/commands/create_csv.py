@@ -332,6 +332,7 @@ class Command(BaseCommand):
             n_pts_to_seed,
             age_range,
             hba1c_target,
+            diabetes_types,
             pdu,
             visits,
             visit_types,
@@ -351,6 +352,7 @@ class Command(BaseCommand):
         n_pts_to_seed,
         age_range,
         hba1c_target,
+        diabetes_types,
         pdu,
         visits,
         visit_types,
@@ -373,7 +375,8 @@ class Command(BaseCommand):
         new_pts = fake_patient_creator.build_fake_patients(
             n=n_pts_to_seed,
             age_range=age_range,
-            latest_diagnosis_date=audit_end_date
+            latest_diagnosis_date=audit_end_date,
+            diabetes_types=diabetes_types
         )
 
         # For each pt, add visits
