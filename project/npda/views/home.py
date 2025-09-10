@@ -144,16 +144,11 @@ def celery_test_task(request):
 
 @login_and_otp_required()
 def feature_flags(request):
-    user_flags = request.session.get("feature_flags", [])
-
     if request.POST:
-        for flag in FEATURE_FLAGS:
-            if flag in request.POST and request.POST[flag] == "on":
-                user_flags.append(flag)
-            else:
-                user_flags.remove(flag)
-
+        user_flags = [flag for flag in FEATURE_FLAGS if flag in request.POST and request.POST[flag] == "on"]
         request.session.update({"feature_flags": user_flags})
+    else:
+        user_flags = request.session.get("feature_flags", [])
 
     all_flags = []
 
