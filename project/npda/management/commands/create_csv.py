@@ -77,58 +77,6 @@ Example use:
     && python manage.py create_csv \
        --coalesce
 
-
-    Options:
-
-    --pts (int, required):
-        The number of pts to seed for this csv file. (NOTE: resulting rows will be pts * visits)
-
-    --visits (str, required):
-        A string encoding the VisitTypes each patient should have. Use
-        visit type abbreviations. Can use whitespace (ignored)
-        (e.g., "CDCD DHPC ACDC CDCD").
-        Each patient will have associated Visits in the sequence provided,
-        evenly spread throughout the audit year's quarters, randomly within
-        each quarter.
-
-        Visit type options:
-            - C (CLINIC)
-            - A (ANNUAL_REVIEW)
-            - D (DIETICIAN)
-            - P (PSYCHOLOGY)
-            - H (HOSPITAL_ADMISSION)
-
-    --hb_target (str, required):
-        Character setting for HbA1c target range per visit:
-            - T (TARGET)
-            - A (ABOVE)
-            - W (WELL_ABOVE)
-    
-    --pz_code (str, required):
-        String for PZ code of the Paediatric Diabetes Unit.
-        Defaults to 'PZ999' for England. Pass 'PZ248' for Jersey.
-
-    --age_range (str, optional):
-        The possible age range for the patients to be seeded.
-        Defaults to 11_15.
-            - 0_4
-            - 5_10
-            - 11_15
-            - 16_19
-            - 20_25
-    
-    --imd (int, optional):
-        The IMD value used to assign a postcode. Defaults to 1.
-        Must be one of 1, 2, 3, 4, 5.
-
-    --submission_date (str, optional):
-        The submission date in YYYY-MM-DD format. Defaults to today. This
-        date is used to set the audit period's start and end dates, and visit
-        values e.g. diabetes diagnosis date.
-
-    --output_path (str, optional):
-        Path to save the csv. Defaults to `project/npda/dummy_sheets/local_generated_data`.
-
 Implementation notes:
 
     We can use the `FakePatientCreator`'s `.build()` methods to generate Python object stubs of Patients and Visits. We then use pandas to concatenate these values into the csv.
@@ -157,6 +105,7 @@ from project.constants.csv_headings import (
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
 )
+from project.constants.diabetes_types import DIABETES_TYPES
 from project.npda.general_functions.audit_period import get_audit_period_for_date
 from project.npda.general_functions.data_generator_extended import (
     AgeRange,
@@ -241,6 +190,11 @@ class Command(BaseCommand):
             help="HBA1C Target range for visit seeding.",
         )
         parser.add_argument(
+            "--diabetes_types",
+            type=str,
+            help="Diabetes types to use for seeding (can be multiple e.g., 'T1 T2'). Defaults to T1. (CFRD, MODY, OTHER, UNKNOWN not yet supported)",
+        )
+        parser.add_argument(
             "--pz_code",
             type=str,
             default="PZ999",
@@ -314,6 +268,7 @@ class Command(BaseCommand):
         audit_end_date = parsed_values["audit_end_date"]
         n_pts_to_seed = parsed_values["n_pts_to_seed"]
         hba1c_target = parsed_values["hba1c_target"]
+        diabetes_types = parsed_values["diabetes_types"]
         visits = parsed_values["visits"]
         visit_types = parsed_values["visit_types"]
         submission_date = parsed_values["submission_date"]
@@ -339,12 +294,20 @@ class Command(BaseCommand):
         for item in build_info:
             self.print_info(f"{CYAN}{item[0]:<30}{RESET} {item[1]}")
 
+        diabetes_type_strs = []
+        for dt in diabetes_types:
+            for code, description in DIABETES_TYPES:
+                if dt == code:
+                    diabetes_type_strs.append(description)
+                    break
+
         # Seeding information table
         seeding_info = [
             ["Number of Patients to Seed", n_pts_to_seed],
             ["Number of Visits per Patient", len(visit_types)],
             ["Total Rows in Resulting CSV", n_pts_to_seed * len(visit_types)],
             ["HbA1c Target Range", hba1c_target.name],
+            ["Diabetes Types", ", ".join(diabetes_type_strs)],
             ["Age Range", f"{age_range.name}"],
             ["IMD Value", imd],
             ["Postcode Outcode" if postcode_outcode else "Postcode", postcode or postcode_outcode],
@@ -676,6 +639,26 @@ class Command(BaseCommand):
         # hba1c target
         hba1c_target = hb_target_map[options["hb_target"]]
 
+        if options.get("diabetes_types"):
+            diabetes_type_strs = options["diabetes_types"].upper().split(" ")
+
+            invalid_diabetes_type_strs = [dt for dt in diabetes_type_strs if dt not in {"T1", "T2"}]
+            if invalid_diabetes_type_strs:
+                self.print_error(
+                    f"Invalid diabetes_types provided. Must be one of 'T1', 'T2'. Invalid values: {', '.join(invalid_diabetes_type_strs)}"
+                )
+                return
+        
+            diabetes_types = []
+
+            if "T1" in diabetes_type_strs:
+                diabetes_types.append(DIABETES_TYPES[0][0])
+            
+            if "T2" in diabetes_type_strs:
+                diabetes_types.append(DIABETES_TYPES[1][0])
+        else:
+            diabetes_types = [DIABETES_TYPES[0][0]] # T1 default
+
         # age range
         age_range = age_range_map[options["age_range"]]
 
@@ -708,6 +691,7 @@ class Command(BaseCommand):
             "audit_start_date": audit_start_date,
             "audit_end_date": audit_end_date,
             "hba1c_target": hba1c_target,
+            "diabetes_types": diabetes_types,
             "pz_code": pz_code,
             "visits": visits,
             "visit_types": visit_types,
