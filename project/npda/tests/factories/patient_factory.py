@@ -124,7 +124,7 @@ class PatientFactory(factory.django.DjangoModelFactory):
 
     gp_practice_ods_code = VALID_FIELDS["gp_practice_ods_code"]
 
-    diabetes_type = DIABETES_TYPES[0][0]
+    diabetes_type = factory.lazy_attribute(lambda x: random.choice(x.diabetes_types))
     sex = factory.lazy_attribute(lambda x: random.choice([sex.value for sex in Sex]))
     ethnicity = factory.lazy_attribute(lambda x: random.choice(ETHNICITIES)[0])
 
@@ -215,6 +215,8 @@ class PatientFactory(factory.django.DjangoModelFactory):
         latest_diagnosis_date = None
 
         age_range = AgeRange.AGE_11_15  # Default age range
+
+        diabetes_types = [DIABETES_TYPES[0][0]]  # Default T1
 
         # Random postcode under given outcode
         postcode_outcode = None
