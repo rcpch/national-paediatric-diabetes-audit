@@ -99,15 +99,21 @@ class NPDAUserListView(
         """
         queryset = super().get_queryset()
 
-        if self.request.user.is_rcpch_audit_team_member:
-            return (
-                queryset.order_by("-is_active", "surname")
+        if not self.request.user.is_rcpch_audit_team_member:
+            queryset = queryset.filter(
+                organisation_employers__in= self.request.user.organisation_employers.all()
             )
 
-        # Distinct required to remove duplicates that come from the __in query
-        return queryset.filter(
-            organisation_employers__in= self.request.user.organisation_employers.all()
-        ).order_by("-is_active", "surname").distinct()
+        if "hide_users_other_than_test" in self.request.session.get("feature_flags", []):
+            queryset = queryset.filter(email__icontains="test")
+
+        queryset = queryset.order_by("-is_active", "surname")
+
+        if self.request.user.is_rcpch_audit_team_member:
+            # Distinct required to remove duplicates that come from the __in query
+            queryset = queryset.distinct()
+        
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super(NPDAUserListView, self).get_context_data(**kwargs)

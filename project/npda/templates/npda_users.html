@@ -40,6 +40,14 @@
         </label>
       </div>
     </form>
+    {% if 'hide_users_other_than_test' in request.session.feature_flags %}
+      <div class="alert alert-info mt-2 mb-2">
+        <i class="fa-solid fa-person-circle-exclamation"></i>
+        <div>
+          Hiding all users that don't have "test" in their email for demo purposes
+        </div>
+      </div>
+    {% endif %}
     <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
       <div class="inline-block min-w-full py-2 sm:px-6 lg:px-8">
         <div class="relative overflow-x-auto" id="npda_user_table">
