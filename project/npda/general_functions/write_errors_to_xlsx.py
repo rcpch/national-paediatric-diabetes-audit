@@ -1,22 +1,16 @@
 # import types
-from collections import defaultdict
-from typing import Any, Dict, List, Union
 import io
-
-from openpyxl.worksheet.worksheet import Worksheet
-
-# import models
-from ..models.submission import Submission
 
 # import functions
 from project.npda.general_functions.csv.csv_parse import csv_parse
 
 # import third-party libaries
 import pandas as pd
-from json import loads as json_loads
 from openpyxl import Workbook, load_workbook
-from openpyxl.styles import PatternFill, Font
 from openpyxl.comments import Comment
+from openpyxl.styles import PatternFill, Font, Alignment
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.worksheet import Worksheet
 
 # import csv mappings
 from ...constants.csv_headings import csv_definition_for
@@ -99,6 +93,11 @@ def write_errors_to_xlsx(
         wb["Errors - Overview"],
     ]
 
+     # Auto-size columns to widest word (max 30 chars) and enable wrapping
+    for sheet_name in ["Uploaded data (raw)", "Uploaded data (comments)", "Errors - Overview"]:
+        set_column_widths_and_wrapping(wb[sheet_name], max_width=30)
+
+
     # Save the styled sheet.
     xlsx_file = io.BytesIO()
     wb.save(xlsx_file)
@@ -115,6 +114,32 @@ def find_column_index_by_name(column_name: str, ws: Worksheet) -> int | None:
             column_index = col[0].column  # Get the column index
             break
     return column_index
+
+def set_column_widths_and_wrapping(ws: Worksheet, max_width: int = 50) -> None:
+    """
+    Sets each column width to the length of the widest word found in that column,
+    capped at max_width. Enables wrap text for all populated cells so longer content wraps.
+    """
+    # Compute width by widest word (header included)
+    for col_idx in range(1, ws.max_column + 1):
+        max_word_len = 0
+        for row_idx in range(1, ws.max_row + 1):
+            cell = ws.cell(row=row_idx, column=col_idx)
+            val = cell.value
+            if val is None:
+                continue
+            s = str(val).replace("\n", " ")
+            words = s.split()
+            if words:
+                max_word_len = max(max_word_len, max(len(w) for w in words))
+        width = min(max_word_len if max_word_len > 0 else 10, max_width)
+        ws.column_dimensions[get_column_letter(col_idx)].width = width
+
+    # Enable wrapping for all populated cells
+    for row in ws.iter_rows(min_row=1, max_row=ws.max_row, max_col=ws.max_column):
+        for cell in row:
+            if cell.value is not None:
+                cell.alignment = Alignment(wrapText=True)
 
 
 def flatten_errors(
