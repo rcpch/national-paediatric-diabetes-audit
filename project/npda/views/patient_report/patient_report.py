@@ -300,7 +300,7 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
                 default=0,
                 output_field=IntegerField(),
             ),
-        ).values(
+        ).order_by("-is_complete_year_of_care", "-passed_hba1c", "-passed_bmi", "-passed_thyroid_screen", "-passed_blood_pressure", "-passed_urinary_albumin", "-passed_foot_exam", "patient_identifier").values(
             "pk",
             "patient_identifier",
             "is_gte_12yo",
@@ -424,7 +424,7 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
                 default=False,
                 output_field=BooleanField(),
             ),
-        ).values(
+        ).order_by("-is_complete_year_of_care", "-hba1c_4plus", "-psychological_assessment", "-smoking_status", "-smoking_cessation_referral", "-additional_dietetic_appt_offered", "-pts_attending_additional_dietetic_appt", "-influenza_immunisation_recommended", "-sick_day_rules_advice", "patient_identifier").values(
             "pk",
             "patient_identifier",
             "is_complete_year_of_care",
@@ -483,7 +483,7 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
                 default=False,
                 output_field=BooleanField(),
             ),
-        ).values(
+        ).order_by("-coeliac_disease_screening", "-thyroid_disease_screening", "-carbohydrate_counting_education", "patient_identifier").values(
             "pk",
             "patient_identifier",
             "diagnosis_date",
