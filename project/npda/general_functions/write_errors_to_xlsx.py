@@ -11,6 +11,7 @@ from openpyxl.comments import Comment
 from openpyxl.styles import PatternFill, Font, Alignment
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
+from pandas.api.types import is_datetime64_any_dtype
 
 # import csv mappings
 from ...constants.csv_headings import csv_definition_for
@@ -36,6 +37,9 @@ def write_errors_to_xlsx(
     )
 
     df = parsed_csv.df
+
+    # Convert datetime columns to date (strip time)
+    df = strip_time_in_dataframe(df)
 
     # Write an xlsx of the original data.
     df.to_excel(xlsx_file, sheet_name="Uploaded data (raw)", index=False)
@@ -141,6 +145,16 @@ def set_column_widths_and_wrapping(ws: Worksheet, max_width: int = 50) -> None:
             if cell.value is not None:
                 cell.alignment = Alignment(wrapText=True)
 
+def strip_time_in_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Convert any datetime64 columns to date (removing time component).
+    """
+    df = df.copy()
+    for col in df.columns:
+        if is_datetime64_any_dtype(df[col]):
+            # For true date-only cells in Excel, convert to Python date objects:
+            df[col] = pd.to_datetime(df[col]).dt.date
+    return df
 
 def flatten_errors(
     #  {row_number: {field_name: [error_messages]}}
