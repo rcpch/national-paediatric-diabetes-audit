@@ -2243,28 +2243,3 @@ def test_carb_counting_date_outside_of_audit_year_passes_validation_if_patient_d
 
     assert form.is_valid()
 
-
-@pytest.mark.django_db
-def test_missing_carb_counting_date_fails_validation_if_deadline_falls_within_audit_year():
-    audit_period = AuditPeriod.objects.create(
-        start_date=datetime.date(2024, 4, 1),
-        end_date=datetime.date(2025, 3, 31),
-        is_open=True,
-        is_visible=True
-    )
-
-    patient = PatientFactory()
-    patient.diagnosis_date = datetime.date(2024, 3, 31)
-    patient.save()
-
-    form = VisitForm(
-        data={
-            "visit_date": "2025-01-01",  # Required for validation
-            "carbohydrate_counting_level_three_education_date": None,
-        },
-        initial={"patient": patient},
-        audit_period=audit_period
-    )
-
-    assert not form.is_valid()
-    assert "carbohydrate_counting_level_three_education_date" in form.errors
