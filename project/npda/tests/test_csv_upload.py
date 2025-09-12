@@ -4113,7 +4113,7 @@ def test_visit_form_dates_outside_of_audit_period(test_user, single_row_valid_df
         coeliac_screen_date
         psychological_screening_assessment_date
         smoking_cessation_referral_date
-        carbohydrate_counting_level_three_education_date
+        carbohydrate_counting_level_three_education_date NOT INCLUDED (https://github.com/rcpch/national-paediatric-diabetes-audit/pull/1237)
         dietician_additional_appointment_date
         flu_immunisation_recommended_date
         sick_day_rules_training_date
@@ -4134,7 +4134,8 @@ def test_visit_form_dates_outside_of_audit_period(test_user, single_row_valid_df
     for date_field in ALL_VISIT_DATES:
         single_row_valid_df.loc[0, date_field] = "01/01/2020"
     
-    # REMOVE the hospital discharge date as this is not included in the test
+    # Remove the dates not included in the test
+    ALL_VISIT_DATES.remove(("carbohydrate_counting_level_three_education_date", "Date of Level 3 carbohydrate counting education received"))
     ALL_VISIT_DATES.remove(("hospital_discharge_date", "Discharge date (Hospital provider spell)"))
 
     assert Visit.objects.count() == 0, "Expected no visits to be created before the test"
