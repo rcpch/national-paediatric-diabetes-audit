@@ -624,6 +624,9 @@ class VisitForm(forms.ModelForm):
 
     def clean_carbohydrate_counting_level_three_education_date(self):
         data = self.cleaned_data["carbohydrate_counting_level_three_education_date"]
+
+        # Don't pass audit_period - carb counting is required within 14 days of diagnosis
+        # so can fall outside of the outside of the audit period
         valid, error = validate_date(
             date_under_examination_field_name="carbohydrate_counting_level_three_education_date",
             date_under_examination_label_name="Date of Level 3 carbohydrate counting education received",
@@ -631,8 +634,8 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
-            audit_period=self.audit_period,
         )
+
         if valid == False:
             raise ValidationError(error)
 

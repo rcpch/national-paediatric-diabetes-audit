@@ -2217,3 +2217,29 @@ def test_visit_form_dates_outside_of_audit_period(test_case_index, test_data):
     # Verify that visit_date is always in errors (since all test cases have dates outside audit period)
     assert "visit_date" in form.errors, f"Test case {i+1} ({tested_field}): visit_date should be in form errors"
     assert tested_field in form.errors, f"Test case {i+1} ({tested_field}): {tested_field} should be in form errors"
+
+
+@pytest.mark.django_db
+def test_carb_counting_date_outside_of_audit_year_passes_validation_if_patient_diagnosed_before_audit_year():
+    audit_period = AuditPeriod.objects.create(
+        start_date=datetime.date(2024, 4, 1),
+        end_date=datetime.date(2025, 3, 31),
+        is_open=True,
+        is_visible=True
+    )
+
+    patient = PatientFactory()
+    patient.diagnosis_date = datetime.date(2023, 1, 1)
+    patient.save()
+
+    form = VisitForm(
+        data={
+            "visit_date": "2025-01-01",  # Required for validation
+            "carbohydrate_counting_level_three_education_date": "2024-01-01",
+        },
+        initial={"patient": patient},
+        audit_period=audit_period
+    )
+
+    assert form.is_valid()
+
