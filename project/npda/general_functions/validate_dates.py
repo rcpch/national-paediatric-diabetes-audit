@@ -6,7 +6,7 @@ def validate_date(
     date_under_examination_label_name,
     date_under_examination,
     date_of_birth,
-    date_of_diagnosis,
+    date_of_diagnosis=None,
     date_of_death=None,
     audit_period=None
 ):

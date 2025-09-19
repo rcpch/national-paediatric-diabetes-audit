@@ -565,12 +565,15 @@ class VisitForm(forms.ModelForm):
             date_under_examination_label_name="Observation Date: Thyroid Function",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
+
         if valid == False:
             raise ValidationError(error)
+
+        if data and self.patient.diagnosis_date and data < self.patient.diagnosis_date - timedelta(days=90):
+            raise ValidationError("Expected thyroid function date within 90 days before diagnosis.")
 
         return self.cleaned_data["thyroid_function_date"]
 
@@ -581,12 +584,15 @@ class VisitForm(forms.ModelForm):
             date_under_examination_label_name="Observation Date: Coeliac Disease Screening",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
+
         if valid == False:
             raise ValidationError(error)
+        
+        if data and self.patient.diagnosis_date and data < self.patient.diagnosis_date - timedelta(days=90):
+            raise ValidationError("Expected coeliac screen date within 90 days before diagnosis.")
 
         return self.cleaned_data["coeliac_screen_date"]
 

@@ -2253,6 +2253,7 @@ def test_thyroid_and_coeliac_dates_within_90_days_before_diagnosis_pass_validati
     form = VisitForm(
         data={
             "visit_date": "2026-02-01",  # Required for validation
+            "thyroid_treatment_status": 1,  # Required if thyroid function date provided
             "thyroid_function_date": "2025-12-7",  # 56 days before diagnosis
             "coeliac_screen_date": "2025-12-12",  # 51 days before diagnosis
         },
@@ -2273,6 +2274,7 @@ def test_thyroid_and_coeliac_dates_earlier_Than_90_days_before_diagnosis_fail_va
     form = VisitForm(
         data={
             "visit_date": "2026-02-01",  # Required for validation
+            "thyroid_treatment_status": 1,  # Required if thyroid function date provided
             "thyroid_function_date": "2025-10-04",  # 120 days before diagnosis
             "coeliac_screen_date": "2025-09-20",  # 134 days before diagnosis
         },
