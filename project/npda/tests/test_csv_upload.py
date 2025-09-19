@@ -4144,3 +4144,34 @@ def test_visit_form_dates_outside_of_audit_period(test_user, single_row_valid_df
     for date_field in ALL_VISIT_DATES:
         assert date_field[0] in errors[0], f"Expected {date_field} to be in errors, but got {errors}"
     assert Visit.objects.count() == 1, "Expected the visit still to be created even though visit date outside of audit period"
+
+
+@pytest.mark.django_db
+def test_thyroid_and_coeliac_dates_within_90_days_before_diagnosis_pass_validation(test_user, single_row_valid_df):
+    diagnosis_date = VALID_FIELDS["diagnosis_date"]
+
+    coeliac_screening_date = diagnosis_date - datetime.timedelta(days=56)
+    single_row_valid_df.loc[0, "Observation Date: Coeliac Disease Screening"] = coeliac_screening_date
+
+    thyroid_function_date = diagnosis_date - datetime.timedelta(days=89)
+    single_row_valid_df.loc[0, "Observation Date: Thyroid Function"] = thyroid_function_date
+
+    errors = csv_upload_sync(test_user, single_row_valid_df)
+
+    assert len(errors) == 0, f"Should not have any errors but got: {errors}"
+
+
+@pytest.mark.django_db
+def test_thyroid_and_coeliac_dates_earlire_than_90_days_before_diagnosis_fail_validation(test_user, single_row_valid_df):
+    diagnosis_date = VALID_FIELDS["diagnosis_date"]
+
+    coeliac_screening_date = diagnosis_date - datetime.timedelta(days=56)
+    single_row_valid_df.loc[0, "Observation Date: Coeliac Disease Screening"] = coeliac_screening_date
+
+    thyroid_function_date = diagnosis_date - datetime.timedelta(days=89)
+    single_row_valid_df.loc[0, "Observation Date: Thyroid Function"] = thyroid_function_date
+
+    errors = csv_upload_sync(test_user, single_row_valid_df)
+
+    assert "coeliac_screen_date" in errors[0]
+    assert "thyroid_function_date" in errors[0]
