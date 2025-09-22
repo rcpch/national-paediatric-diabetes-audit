@@ -2243,3 +2243,44 @@ def test_carb_counting_date_outside_of_audit_year_passes_validation_if_patient_d
 
     assert form.is_valid()
 
+
+@pytest.mark.django_db
+def test_thyroid_and_coeliac_dates_within_90_days_before_diagnosis_pass_validation():
+    patient = PatientFactory()
+    patient.diagnosis_date = datetime.date(2026, 1, 10)
+    patient.save()
+
+    form = VisitForm(
+        data={
+            "visit_date": "2026-02-01",  # Required for validation
+            "thyroid_treatment_status": 1,  # Required if thyroid function date provided
+            "thyroid_function_date": "2025-12-7",  # 56 days before diagnosis
+            "coeliac_screen_date": "2025-12-12",  # 51 days before diagnosis
+        },
+        initial={"patient": patient},
+    )
+
+    assert form.is_valid(), f"Expected form to be valid but got errors: {form.errors}"
+    assert "thyroid_function_date" not in form.errors
+    assert "coeliac_screen_date" not in form.errors
+
+
+@pytest.mark.django_db
+def test_thyroid_and_coeliac_dates_earlier_Than_90_days_before_diagnosis_fail_validation():
+    patient = PatientFactory()
+    patient.diagnosis_date = datetime.date(2026, 1, 10)
+    patient.save()
+
+    form = VisitForm(
+        data={
+            "visit_date": "2026-02-01",  # Required for validation
+            "thyroid_treatment_status": 1,  # Required if thyroid function date provided
+            "thyroid_function_date": "2025-10-04",  # 120 days before diagnosis
+            "coeliac_screen_date": "2025-09-20",  # 134 days before diagnosis
+        },
+        initial={"patient": patient},
+    )
+
+    assert not form.is_valid()
+    assert "thyroid_function_date" in form.errors
+    assert "coeliac_screen_date" in form.errors
