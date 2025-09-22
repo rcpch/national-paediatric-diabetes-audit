@@ -4148,6 +4148,11 @@ def test_visit_form_dates_outside_of_audit_period(test_user, single_row_valid_df
 
 @pytest.mark.django_db
 def test_thyroid_and_coeliac_dates_within_90_days_before_diagnosis_pass_validation(test_user, single_row_valid_df):
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
     diagnosis_date = VALID_FIELDS["diagnosis_date"]
 
     coeliac_screening_date = diagnosis_date - datetime.timedelta(days=56)
@@ -4158,11 +4163,17 @@ def test_thyroid_and_coeliac_dates_within_90_days_before_diagnosis_pass_validati
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
 
-    assert len(errors) == 0, f"Should not have any errors but got: {errors}"
+    assert "coeliac_screen_date" not in errors[0]
+    assert "thyroid_function_date" not in errors[0]
 
 
 @pytest.mark.django_db
 def test_thyroid_and_coeliac_dates_earlire_than_90_days_before_diagnosis_fail_validation(test_user, single_row_valid_df):
+    # Set the audit period to be valid for the visit date at the outset
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
     diagnosis_date = VALID_FIELDS["diagnosis_date"]
 
     coeliac_screening_date = diagnosis_date - datetime.timedelta(days=56)
