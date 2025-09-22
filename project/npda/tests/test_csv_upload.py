@@ -4153,7 +4153,8 @@ def test_thyroid_and_coeliac_dates_within_90_days_before_diagnosis_pass_validati
     audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
-    diagnosis_date = VALID_FIELDS["diagnosis_date"]
+    diagnosis_date = audit_period.start_date + datetime.timedelta(days=100)
+    single_row_valid_df.loc[0, "Date of Diabetes Diagnosis"] = diagnosis_date
 
     coeliac_screening_date = diagnosis_date - datetime.timedelta(days=56)
     single_row_valid_df.loc[0, "Observation Date: Coeliac Disease Screening"] = coeliac_screening_date
@@ -4161,28 +4162,29 @@ def test_thyroid_and_coeliac_dates_within_90_days_before_diagnosis_pass_validati
     thyroid_function_date = diagnosis_date - datetime.timedelta(days=89)
     single_row_valid_df.loc[0, "Observation Date: Thyroid Function"] = thyroid_function_date
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "coeliac_screen_date" not in errors[0]
     assert "thyroid_function_date" not in errors[0]
 
 
 @pytest.mark.django_db
-def test_thyroid_and_coeliac_dates_earlire_than_90_days_before_diagnosis_fail_validation(test_user, single_row_valid_df):
+def test_thyroid_and_coeliac_dates_earlier_than_90_days_before_diagnosis_fail_validation(test_user, single_row_valid_df):
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
     audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
-    diagnosis_date = VALID_FIELDS["diagnosis_date"]
+    diagnosis_date = audit_period.start_date + datetime.timedelta(days=100)
+    single_row_valid_df.loc[0, "Date of Diabetes Diagnosis"] = diagnosis_date
 
-    coeliac_screening_date = diagnosis_date - datetime.timedelta(days=56)
+    coeliac_screening_date = diagnosis_date - datetime.timedelta(days=91)
     single_row_valid_df.loc[0, "Observation Date: Coeliac Disease Screening"] = coeliac_screening_date
 
-    thyroid_function_date = diagnosis_date - datetime.timedelta(days=89)
+    thyroid_function_date = diagnosis_date - datetime.timedelta(days=100)
     single_row_valid_df.loc[0, "Observation Date: Thyroid Function"] = thyroid_function_date
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "coeliac_screen_date" in errors[0]
     assert "thyroid_function_date" in errors[0]
