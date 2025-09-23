@@ -34,7 +34,7 @@ from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.constants.hba1c_format import HBA1C_FORMATS
-from project.npda.views.patient_report.patient_report import TableCategories
+from project.npda.views.patient_report.patient_report import TableCategories, PATIENT_REPORT_PAGE_SIZE
 from dateutil.relativedelta import relativedelta
 
 logger = logging.getLogger(__name__)
@@ -658,3 +658,82 @@ def test_non_type_1_patients_do_not_appear_in_care_at_diagnosis(
     assert response.status_code == HTTPStatus.OK
 
     assert len(response.context["patients"]) == 0
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1199
+@pytest.mark.django_db
+def test_healthcheck_totals_in_patient_report_include_patients_from_all_pages(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client
+):
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    date_of_birth = audit_period.start_date - relativedelta(years=14)
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+
+    # Fill up the first page with patients that pass hba1c
+    for i in range(PATIENT_REPORT_PAGE_SIZE):
+        patient = PatientFactory(
+            nhs_number=f"100000000{i}",
+            diabetes_type=DIABETES_TYPES[0][0],  # T1DM
+            date_of_birth=date_of_birth,
+            diagnosis_date=audit_period.start_date - relativedelta(days=2), # complete year of care
+        )
+
+        VisitFactory(
+            patient=patient,
+            visit_date=audit_period.start_date + relativedelta(days=10),
+            hba1c=60,  # 60 mmol/mol
+            hba1c_format=HBA1C_FORMATS[0][0],  # mmol/mol format
+            hba1c_date=audit_period.start_date + relativedelta(days=10),
+        )
+
+        submission.patients.add(patient)
+    
+    # Add a patient that won't pass hba1c but will appear on the second page
+    patient = PatientFactory(
+        nhs_number="2000000000",
+        diabetes_type=DIABETES_TYPES[1][0],  # T2DM
+        date_of_birth=date_of_birth,
+        diagnosis_date=audit_period.start_date - relativedelta(days=2), # complete year of care
+    )
+
+    # Need a visit in the audit period to be eligible
+    VisitFactory(
+        patient=patient,
+        visit_date=audit_period.start_date + relativedelta(days=10)
+    )
+
+    submission.patients.add(patient)
+
+    url = reverse("pdu-patient-report", kwargs={
+        "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+        "pz_code": ALDER_HEY_PZ_CODE
+    })
+
+    response = client.get(
+        url + f"?category={TableCategories.HEALTH_CHECKS.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    assert response.context["total_passed_hba1c"] == 50
+    assert response.context["total_eligible_hba1c"] == 51
