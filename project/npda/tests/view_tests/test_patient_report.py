@@ -658,3 +658,133 @@ def test_non_type_1_patients_do_not_appear_in_care_at_diagnosis(
     assert response.status_code == HTTPStatus.OK
 
     assert len(response.context["patients"]) == 0
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1242
+@pytest.mark.django_db
+def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_hba1c_healthcheck(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client
+):
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    date_of_birth = audit_period.start_date - relativedelta(years=14)
+
+    patient = PatientFactory(
+        nhs_number="4444444444",
+        diabetes_type=DIABETES_TYPES[0][0],  # T1DM
+        date_of_birth=date_of_birth,
+        diagnosis_date=audit_period.start_date + relativedelta(days=2), # diagnosed within the audit year
+    )
+
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        hba1c=50,  # 50 mmol/mol
+        hba1c_format=HBA1C_FORMATS[0][0],  # mmol/mol format
+        hba1c_date=visit_date,
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(patient)
+
+    url = reverse("pdu-patient-report", kwargs={
+        "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+        "pz_code": ALDER_HEY_PZ_CODE
+    })
+
+    response = client.get(
+        url + f"?category={TableCategories.HEALTH_CHECKS.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    assert len(response.context["patients"]) == 1
+
+    patient = response.context["patients"][0]
+    
+    assert patient["patient_identifier"] == "4444444444"
+    assert patient["passed_hba1c"] is True
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1242
+@pytest.mark.django_db
+def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_influenza_immunisation_recommended(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client
+):
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    date_of_birth = audit_period.start_date - relativedelta(years=14)
+
+    patient = PatientFactory(
+        nhs_number="4444444444",
+        diabetes_type=DIABETES_TYPES[0][0],  # T1DM
+        date_of_birth=date_of_birth,
+        diagnosis_date=audit_period.start_date + relativedelta(days=2), # diagnosed within the audit year
+    )
+
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        flu_immunisation_recommended_date=visit_date,
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(patient)
+
+    url = reverse("pdu-patient-report", kwargs={
+        "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+        "pz_code": ALDER_HEY_PZ_CODE
+    })
+
+    response = client.get(
+        url + f"?category={TableCategories.ADDITIONAL_CARE_PROCESSES.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    assert len(response.context["patients"]) == 1
+
+    patient = response.context["patients"][0]
+    
+    assert patient["patient_identifier"] == "4444444444"
+    assert patient["influenza_immunisation_recommended"] is True
