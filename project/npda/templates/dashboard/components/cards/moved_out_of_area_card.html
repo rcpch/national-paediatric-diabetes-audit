@@ -2,7 +2,8 @@
 {% load npda_tags %}
 {% block card_title %}
     Moved Out of Area
-    {% include 'common/docs_icon_link_button.html' with rel_url="developer/kpis/patient_characteristics/#calculation_7" fa_icon_class="fa-solid fa-eye" %}
+    <span class="text-rcpch_pink tooltip"
+          data-tip="Total number of patients with any type of diabetes that moved out of area this audit year"><i class="fa-solid fa-chart-line"></i></span>
 {% endblock %}
 {% block card_content %}
     <div hx-get="{% data_url 'pdu-get-moved-out-of-area-partial' %}"
