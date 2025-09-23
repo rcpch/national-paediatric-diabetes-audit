@@ -74,7 +74,7 @@ NHS_SPINE_SERVICES_URL = os.getenv("NHS_SPINE_SERVICES_URL")
 POSTCODES_IO_API_URL = os.getenv("POSTCODES_IO_API_URL")
 POSTCODES_IO_API_KEY = os.getenv("POSTCODES_IO_API_KEY")
 
-DOCS_URL = os.getenv("DOCS_URL", "/docs/index.html")
+DOCS_URL = os.getenv("DOCS_URL", "/docs/")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False") == "True"
