@@ -842,8 +842,6 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
     return pt_qs, calculate_kpis, patient_identifier
 
 
-PATIENT_REPORT_PAGE_SIZE = 50
-
 class PatientReportView(
     LoginAndOTPRequiredMixin,
     PDUPermissionMixin,
@@ -856,7 +854,7 @@ class PatientReportView(
     model = Patient
     template_name = "patient_report/patient_report.html"
     context_object_name = "patients"
-    paginate_by = PATIENT_REPORT_PAGE_SIZE
+    paginate_by = 50
 
     def get_queryset(self):
         request = self.request
