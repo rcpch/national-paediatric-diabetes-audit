@@ -2114,6 +2114,7 @@ class CalculateKPIS:
 
     def calculate_kpi_25_hba1c(
         self,
+        denominatorFn = None
     ) -> KPIResult:
         """
         Calculates KPI 25: HbA1c (%)
@@ -2123,9 +2124,9 @@ class CalculateKPIS:
 
         Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
         """
-        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = (
-            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
-        )
+        effectiveDenominatorFn = denominatorFn or self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count
+
+        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = effectiveDenominatorFn()
 
         eligible_patients = kpi_5_total_eligible_query_set
         total_eligible = total_eligible_kpi_5
@@ -2156,6 +2157,7 @@ class CalculateKPIS:
 
     def calculate_kpi_26_bmi(
         self,
+        denominatorFn = None
     ) -> KPIResult:
         """
         Calculates KPI 26: BMI (%)
@@ -2164,9 +2166,9 @@ class CalculateKPIS:
 
         Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
         """
-        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = (
-            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
-        )
+        effectiveDenominatorFn = denominatorFn or self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count
+
+        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = effectiveDenominatorFn()
 
         eligible_patients = kpi_5_total_eligible_query_set
         total_eligible = total_eligible_kpi_5
@@ -2199,6 +2201,7 @@ class CalculateKPIS:
 
     def calculate_kpi_27_thyroid_screen(
         self,
+        denominatorFn = None
     ) -> KPIResult:
         """
         Calculates KPI 27: Thyroid Screen (%)
@@ -2207,9 +2210,9 @@ class CalculateKPIS:
 
         Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
         """
-        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = (
-            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
-        )
+        effectiveDenominatorFn = denominatorFn or self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count
+
+        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = effectiveDenominatorFn()
 
         eligible_patients = kpi_5_total_eligible_query_set
         total_eligible = total_eligible_kpi_5
@@ -2240,6 +2243,7 @@ class CalculateKPIS:
 
     def calculate_kpi_28_blood_pressure(
         self,
+        denominatorFn = None
     ) -> KPIResult:
         """
         Calculates KPI 28: Blood Pressure (%)
@@ -2250,9 +2254,9 @@ class CalculateKPIS:
 
         # NOTE: Does not need a valid diastolic measurement
         """
-        kpi_6_total_eligible_query_set, total_eligible_kpi_6 = (
-            self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count()
-        )
+        effectiveDenominatorFn = denominatorFn or self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count
+
+        kpi_6_total_eligible_query_set, total_eligible_kpi_6 = effectiveDenominatorFn()
 
         eligible_patients = kpi_6_total_eligible_query_set
         total_eligible = total_eligible_kpi_6
@@ -2284,6 +2288,7 @@ class CalculateKPIS:
 
     def calculate_kpi_29_urinary_albumin(
         self,
+        denominatorFn = None
     ) -> KPIResult:
         """
         Calculates KPI 29: Urinary Albumin (%)
@@ -2292,9 +2297,9 @@ class CalculateKPIS:
 
         Denominator: Number of patients with Type 1 diabetes aged 12+ with a complete year of care in audit period (measure 6)
         """
-        kpi_6_total_eligible_query_set, total_eligible_kpi_6 = (
-            self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count()
-        )
+        effectiveDenominatorFn = denominatorFn or self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count
+
+        kpi_6_total_eligible_query_set, total_eligible_kpi_6 = effectiveDenominatorFn()
 
         eligible_patients = kpi_6_total_eligible_query_set
         total_eligible = total_eligible_kpi_6
@@ -2327,6 +2332,7 @@ class CalculateKPIS:
 
     def calculate_kpi_30_retinal_screening(
         self,
+        denominatorFn = None
     ) -> KPIResult:
         """
         Calculates KPI 30: Retinal Screening (%)
@@ -2335,9 +2341,9 @@ class CalculateKPIS:
 
         Denominator: Number of patients with Type 1 diabetes aged 12+ with a complete year of care in audit period (measure 6)
         """
-        kpi_6_total_eligible_query_set, total_eligible_kpi_6 = (
-            self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count()
-        )
+        effectiveDenominatorFn = denominatorFn or self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count
+
+        kpi_6_total_eligible_query_set, total_eligible_kpi_6 = effectiveDenominatorFn()
 
         eligible_patients = kpi_6_total_eligible_query_set
         total_eligible = total_eligible_kpi_6
@@ -2374,6 +2380,7 @@ class CalculateKPIS:
 
     def calculate_kpi_31_foot_examination(
         self,
+        denominatorFn = None
     ) -> KPIResult:
         """
         Calculates KPI 31: Foot Examination (%)
@@ -2382,9 +2389,9 @@ class CalculateKPIS:
 
         Denominator: Number of patients with Type 1 diabetes aged 12+ with a complete year of care in audit period (measure 6)
         """
-        kpi_6_total_eligible_query_set, total_eligible_kpi_6 = (
-            self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count()
-        )
+        effectiveDenominatorFn = denominatorFn or self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count
+
+        kpi_6_total_eligible_query_set, total_eligible_kpi_6 = effectiveDenominatorFn()
 
         eligible_patients = kpi_6_total_eligible_query_set
         total_eligible = total_eligible_kpi_6
@@ -2856,6 +2863,7 @@ class CalculateKPIS:
 
     def calculate_kpi_33_hba1c_4plus(
         self,
+        denominatorFn = None
     ) -> KPIResult:
         """
         Calculates KPI 33: HbA1c 4+ (%)
@@ -2864,9 +2872,9 @@ class CalculateKPIS:
 
         Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
         """
-        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = (
-            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
-        )
+        effectiveDenominatorFn = denominatorFn or self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count
+
+        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = effectiveDenominatorFn()
 
         eligible_patients = kpi_5_total_eligible_query_set
         total_eligible = total_eligible_kpi_5
@@ -2908,6 +2916,7 @@ class CalculateKPIS:
 
     def calculate_kpi_34_psychological_assessment(
         self,
+        denominatorFn = None
     ) -> KPIResult:
         """
         Calculates KPI 34: Psychological assessment (%)
@@ -2916,9 +2925,9 @@ class CalculateKPIS:
 
         Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
         """
-        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = (
-            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
-        )
+        effectiveDenominatorFn = denominatorFn or self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count
+
+        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = effectiveDenominatorFn()
 
         eligible_patients = kpi_5_total_eligible_query_set
         total_eligible = total_eligible_kpi_5
@@ -2959,6 +2968,7 @@ class CalculateKPIS:
 
     def calculate_kpi_35_smoking_status_screened(
         self,
+        denominatorFn = None
     ) -> KPIResult:
         """
         Calculates KPI 35: Smoking status screened (%)
@@ -2967,9 +2977,9 @@ class CalculateKPIS:
 
         Denominator: Number of patients with Type 1 diabetes aged 12+ with a complete year of care in audit period (measure 6)
         """
-        kpi_6_total_eligible_query_set, total_eligible_kpi_6 = (
-            self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count()
-        )
+        effectiveDenominatorFn = denominatorFn or self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count
+
+        kpi_6_total_eligible_query_set, total_eligible_kpi_6 = effectiveDenominatorFn()
 
         eligible_patients = kpi_6_total_eligible_query_set
         total_eligible = total_eligible_kpi_6
@@ -3016,6 +3026,7 @@ class CalculateKPIS:
 
     def calculate_kpi_36_referral_to_smoking_cessation_service(
         self,
+        denominatorFn = None
     ) -> KPIResult:
         """
         Calculates KPI 36: Referral to smoking cessation service (%)
@@ -3024,9 +3035,9 @@ class CalculateKPIS:
 
         Denominator: Number of patients with Type 1 diabetes aged 12+ with a complete year of care in audit period (measure 6)
         """
-        kpi_6_total_eligible_query_set, total_eligible_kpi_6 = (
-            self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count()
-        )
+        effectiveDenominatorFn = denominatorFn or self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count
+
+        kpi_6_total_eligible_query_set, total_eligible_kpi_6 = effectiveDenominatorFn()
 
         eligible_patients = kpi_6_total_eligible_query_set
         total_eligible = total_eligible_kpi_6
@@ -3066,6 +3077,7 @@ class CalculateKPIS:
 
     def calculate_kpi_37_additional_dietetic_appointment_offered(
         self,
+        denominatorFn = None
     ) -> KPIResult:
         """
         Calculates KPI 37: Additional dietetic appointment offered (%)
@@ -3074,9 +3086,9 @@ class CalculateKPIS:
 
         Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
         """
-        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = (
-            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
-        )
+        effectiveDenominatorFn = denominatorFn or self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count
+
+        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = effectiveDenominatorFn()
 
         eligible_patients = kpi_5_total_eligible_query_set
         total_eligible = total_eligible_kpi_5
@@ -3115,6 +3127,7 @@ class CalculateKPIS:
 
     def calculate_kpi_38_patients_attending_additional_dietetic_appointment(
         self,
+        denominatorFn = None
     ) -> KPIResult:
         """
         Calculates KPI 38: Patients attending additional dietetic appointment (%)
@@ -3123,9 +3136,9 @@ class CalculateKPIS:
 
         Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
         """
-        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = (
-            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
-        )
+        effectiveDenominatorFn = denominatorFn or self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count
+
+        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = effectiveDenominatorFn()
 
         eligible_patients = kpi_5_total_eligible_query_set
         total_eligible = total_eligible_kpi_5
@@ -3167,6 +3180,7 @@ class CalculateKPIS:
 
     def calculate_kpi_39_influenza_immunisation_recommended(
         self,
+        denominatorFn = None
     ) -> KPIResult:
         """
         Calculates KPI 39: Influenza immunisation recommended (%)
@@ -3175,9 +3189,9 @@ class CalculateKPIS:
 
         Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
         """
-        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = (
-            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
-        )
+        effectiveDenominatorFn = denominatorFn or self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count
+
+        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = effectiveDenominatorFn()
 
         eligible_patients = kpi_5_total_eligible_query_set
         total_eligible = total_eligible_kpi_5

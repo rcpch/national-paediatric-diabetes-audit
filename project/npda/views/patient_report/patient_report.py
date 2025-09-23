@@ -174,7 +174,9 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
             passed_hba1c=Case(
                 When(
                     Exists(
-                        calculate_kpis.calculate_kpi_25_hba1c()
+                        calculate_kpis.calculate_kpi_25_hba1c(
+                            denominatorFn=calculate_kpis._get_kpi_3_eligible_pts_base_query_set_and_total_count
+                        )
                         .patient_querysets["passed"]
                         .filter(pk=OuterRef("pk"))
                     ),
@@ -186,7 +188,9 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
             passed_bmi=Case(
                 When(
                     Exists(
-                        calculate_kpis.calculate_kpi_26_bmi()
+                        calculate_kpis.calculate_kpi_26_bmi(
+                            denominatorFn=calculate_kpis._get_kpi_3_eligible_pts_base_query_set_and_total_count
+                        )
                         .patient_querysets["passed"]
                         .filter(pk=OuterRef("pk"))
                     ),
@@ -198,7 +202,9 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
             passed_thyroid_screen=Case(
                 When(
                     Exists(
-                        calculate_kpis.calculate_kpi_27_thyroid_screen()
+                        calculate_kpis.calculate_kpi_27_thyroid_screen(
+                            denominatorFn=calculate_kpis._get_kpi_3_eligible_pts_base_query_set_and_total_count
+                        )
                         .patient_querysets["passed"]
                         .filter(pk=OuterRef("pk"))
                     ),
@@ -210,7 +216,9 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
             passed_blood_pressure=Case(
                 When(
                     Exists(
-                        calculate_kpis.calculate_kpi_28_blood_pressure()
+                        calculate_kpis.calculate_kpi_28_blood_pressure(
+                            denominatorFn=calculate_kpis._get_kpi_3_eligible_pts_base_query_set_and_total_count
+                        )
                         .patient_querysets["passed"]
                         .filter(pk=OuterRef("pk"))
                     ),
@@ -226,7 +234,9 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
             passed_urinary_albumin=Case(
                 When(
                     Exists(
-                        calculate_kpis.calculate_kpi_29_urinary_albumin()
+                        calculate_kpis.calculate_kpi_29_urinary_albumin(
+                            denominatorFn=calculate_kpis._get_kpi_3_eligible_pts_base_query_set_and_total_count
+                        )
                         .patient_querysets["passed"]
                         .filter(pk=OuterRef("pk"))
                     ),
@@ -242,7 +252,9 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
             passed_retinal_screening=Case(
                 When(
                     Exists(
-                        calculate_kpis.calculate_kpi_30_retinal_screening()
+                        calculate_kpis.calculate_kpi_30_retinal_screening(
+                            denominatorFn=calculate_kpis._get_kpi_3_eligible_pts_base_query_set_and_total_count
+                        )
                         .patient_querysets["passed"]
                         .filter(pk=OuterRef("pk"))
                     ),
@@ -258,7 +270,9 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
             passed_foot_exam=Case(
                 When(
                     Exists(
-                        calculate_kpis.calculate_kpi_31_foot_examination()
+                        calculate_kpis.calculate_kpi_31_foot_examination(
+                            denominatorFn=calculate_kpis._get_kpi_3_eligible_pts_base_query_set_and_total_count
+                        )
                         .patient_querysets["passed"]
                         .filter(pk=OuterRef("pk"))
                     ),
@@ -320,7 +334,9 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
             hba1c_4plus=Case(
                 When(
                     Exists(
-                        calculate_kpis.calculate_kpi_33_hba1c_4plus()
+                        calculate_kpis.calculate_kpi_33_hba1c_4plus(
+                            denominatorFn=calculate_kpis._get_kpi_3_eligible_pts_base_query_set_and_total_count
+                        )
                         .patient_querysets["passed"]
                         .filter(pk=OuterRef("pk"))
                     ),
@@ -332,7 +348,9 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
             psychological_assessment=Case(
                 When(
                     Exists(
-                        calculate_kpis.calculate_kpi_34_psychological_assessment()
+                        calculate_kpis.calculate_kpi_34_psychological_assessment(
+                            denominatorFn=calculate_kpis._get_kpi_3_eligible_pts_base_query_set_and_total_count
+                        )
                         .patient_querysets["passed"]
                         .filter(pk=OuterRef("pk"))
                     ),
@@ -347,7 +365,9 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
             smoking_status=Case(
                 When(
                     Exists(
-                        calculate_kpis.calculate_kpi_35_smoking_status_screened()
+                        calculate_kpis.calculate_kpi_35_smoking_status_screened(
+                            denominatorFn=calculate_kpis._get_kpi_3_eligible_pts_base_query_set_and_total_count
+                        )
                         .patient_querysets["passed"]
                         .filter(pk=OuterRef("pk"))
                     ),
@@ -363,7 +383,9 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
             smoking_cessation_referral=Case(
                 When(
                     Exists(
-                        calculate_kpis.calculate_kpi_36_referral_to_smoking_cessation_service()
+                        calculate_kpis.calculate_kpi_36_referral_to_smoking_cessation_service(
+                            denominatorFn=calculate_kpis._get_kpi_3_eligible_pts_base_query_set_and_total_count
+                        )
                         .patient_querysets["passed"]
                         .filter(pk=OuterRef("pk"))
                     ),
@@ -379,7 +401,9 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
             additional_dietetic_appt_offered=Case(
                 When(
                     Exists(
-                        calculate_kpis.calculate_kpi_37_additional_dietetic_appointment_offered()
+                        calculate_kpis.calculate_kpi_37_additional_dietetic_appointment_offered(
+                            denominatorFn=calculate_kpis._get_kpi_3_eligible_pts_base_query_set_and_total_count
+                        )
                         .patient_querysets["passed"]
                         .filter(pk=OuterRef("pk"))
                     ),
@@ -391,7 +415,9 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
             pts_attending_additional_dietetic_appt=Case(
                 When(
                     Exists(
-                        calculate_kpis.calculate_kpi_38_patients_attending_additional_dietetic_appointment()
+                        calculate_kpis.calculate_kpi_38_patients_attending_additional_dietetic_appointment(
+                            denominatorFn=calculate_kpis._get_kpi_3_eligible_pts_base_query_set_and_total_count
+                        )
                         .patient_querysets["passed"]
                         .filter(pk=OuterRef("pk"))
                     ),
@@ -403,7 +429,9 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
             influenza_immunisation_recommended=Case(
                 When(
                     Exists(
-                        calculate_kpis.calculate_kpi_39_influenza_immunisation_recommended()
+                        calculate_kpis.calculate_kpi_39_influenza_immunisation_recommended(
+                            denominatorFn=calculate_kpis._get_kpi_3_eligible_pts_base_query_set_and_total_count
+                        )
                         .patient_querysets["passed"]
                         .filter(pk=OuterRef("pk"))
                     ),
@@ -814,6 +842,8 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
     return pt_qs, calculate_kpis, patient_identifier
 
 
+PATIENT_REPORT_PAGE_SIZE = 50
+
 class PatientReportView(
     LoginAndOTPRequiredMixin,
     PDUPermissionMixin,
@@ -826,7 +856,7 @@ class PatientReportView(
     model = Patient
     template_name = "patient_report/patient_report.html"
     context_object_name = "patients"
-    paginate_by = 50
+    paginate_by = PATIENT_REPORT_PAGE_SIZE
 
     def get_queryset(self):
         request = self.request
