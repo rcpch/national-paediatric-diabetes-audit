@@ -567,7 +567,7 @@ class CalculateKPIS:
             patient_querysets=patient_querysets,
         )
 
-    def _get_kpi_3_eligible_pts_base_query_set_and_total_count(
+    def _get_kpi_3_total_t1dm_eligible_pts_base_query_set_and_total_count(
         self,
     ) -> Tuple[QuerySet, int]:
         """
@@ -732,7 +732,7 @@ class CalculateKPIS:
         """
 
         base_eligible_patients, total_eligible = (
-            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
+            self._get_total_kpi_5_total_t1dm_complete_year_eligible_pts_base_query_set_and_total_count()
         )
 
         # Gte 12yo
@@ -1509,7 +1509,7 @@ class CalculateKPIS:
 
         # Denominator
         total_kpi_3_eligible_pts_base_query_set, _ = (
-            self._get_kpi_3_eligible_pts_base_query_set_and_total_count()
+            self._get_kpi_3_total_t1dm_eligible_pts_base_query_set_and_total_count()
         )
 
         total_eligible_kpi_t1dm = total_kpi_3_eligible_pts_base_query_set.count()
@@ -1659,7 +1659,7 @@ class CalculateKPIS:
         Denominator: Total number of eligible patients with type 1 diabetes (measure 3)
         """
         eligible_patients, total_eligible = (
-            self._get_kpi_3_eligible_pts_base_query_set_and_total_count()
+            self._get_kpi_3_total_t1dm_eligible_pts_base_query_set_and_total_count()
         )
         total_ineligible = self.total_patients_count - total_eligible
 
@@ -1855,7 +1855,7 @@ class CalculateKPIS:
         Denominator: Total number of eligible patients with Type 1 diabetes (measure 3)
         """
         eligible_patients, total_eligible = (
-            self._get_kpi_3_eligible_pts_base_query_set_and_total_count()
+            self._get_kpi_3_total_t1dm_eligible_pts_base_query_set_and_total_count()
         )
         total_ineligible = self.total_patients_count - total_eligible
 
@@ -1901,7 +1901,7 @@ class CalculateKPIS:
         Denominator: Number of eligible patients whose most recent entry (based on visit date) for blood glucose monitoring (item 22) is 4 = Real time continuous glucose monitor with alarms
         """
         eligible_patients, total_eligible = (
-            self._get_kpi_3_eligible_pts_base_query_set_and_total_count()
+            self._get_kpi_3_total_t1dm_eligible_pts_base_query_set_and_total_count()
         )
 
         total_ineligible = self.total_patients_count - total_eligible
@@ -1956,7 +1956,7 @@ class CalculateKPIS:
         """
         # Denominator
         total_kpi_3_eligible_pts_base_query_set, _ = (
-            self._get_kpi_3_eligible_pts_base_query_set_and_total_count()
+            self._get_kpi_3_total_t1dm_eligible_pts_base_query_set_and_total_count()
         )
 
         
@@ -2114,17 +2114,17 @@ class CalculateKPIS:
 
     def calculate_kpi_25_hba1c(self):
         return self._calculate_kpi_25_hba1c(
-            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count
+            denominator=self._get_total_kpi_5_total_t1dm_complete_year_eligible_pts_base_query_set_and_total_count
         )
 
     def calculate_kpi_25_hba1c_for_patient_report_table(self):
         return self._calculate_kpi_25_hba1c(
-            self._get_kpi_3_eligible_pts_base_query_set_and_total_count
+            denominator=self._get_kpi_3_total_t1dm_eligible_pts_base_query_set_and_total_count
         )
 
     def _calculate_kpi_25_hba1c(
         self,
-        denominator_fn
+        denominator
     ) -> KPIResult:
         """
         Calculates KPI 25: HbA1c (%)
@@ -2134,10 +2134,7 @@ class CalculateKPIS:
 
         Denominator: Number of patients with Type 1 diabetes with a complete year of care in the audit period (measure 5)
         """
-        kpi_5_total_eligible_query_set, total_eligible_kpi_5 = denominator_fn()
-
-        eligible_patients = kpi_5_total_eligible_query_set
-        total_eligible = total_eligible_kpi_5
+        eligible_patients, total_eligible = denominator()
         total_ineligible = self.total_patients_count - total_eligible
 
         # Find patients with at least one valid entry for HbA1c value (item 17) with an observation date (item 19) within the audit period
@@ -2165,12 +2162,12 @@ class CalculateKPIS:
 
     def calculate_kpi_26_bmi(self) -> KPIResult:
         return self._calculate_kpi_26_bmi(
-            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count
+            denominator=self._get_total_kpi_5_total_t1dm_complete_year_eligible_pts_base_query_set_and_total_count
         )
 
     def calculate_kpi_26_bmi_for_patient_report_table(self) -> KPIResult:
         return self._calculate_kpi_26_bmi(
-            self._get_kpi_3_eligible_pts_base_query_set_and_total_count
+            denominator=self._get_kpi_3_total_t1dm_eligible_pts_base_query_set_and_total_count
         )
 
     def _calculate_kpi_26_bmi(
@@ -2214,12 +2211,12 @@ class CalculateKPIS:
 
     def calculate_kpi_27_thyroid_screen(self) -> KPIResult:
         return self._calculate_kpi_27_thyroid_screen(
-            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count
+            denominator=self._get_total_kpi_5_total_t1dm_complete_year_eligible_pts_base_query_set_and_total_count
         )
 
     def calculate_kpi_27_thyroid_screen_for_patient_report_table(self) -> KPIResult:
         return self._calculate_kpi_27_thyroid_screen(
-            self._get_kpi_3_eligible_pts_base_query_set_and_total_count
+            denominator=self._get_kpi_3_total_t1dm_eligible_pts_base_query_set_and_total_count
         )
 
     def _calculate_kpi_27_thyroid_screen(
@@ -2261,12 +2258,12 @@ class CalculateKPIS:
 
     def calculate_kpi_28_blood_pressure(self) -> KPIResult:
         return self._calculate_kpi_28_blood_pressure(
-            self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count
+            denominator=self._get_total_kpi_6_total_t1dm_complete_year_gte_12yo_eligible_pts_base_query_set_and_total_count
         )
 
     def calculate_kpi_28_blood_pressure_for_patient_report_table(self) -> KPIResult:
         return self._calculate_kpi_28_blood_pressure(
-            self._get_kpi_3_eligible_pts_base_query_set_and_total_count
+            denominator=self._get_kpi_3_total_t1dm_eligible_pts_base_query_set_and_total_count
         )
 
     def _calculate_kpi_28_blood_pressure(
@@ -2311,12 +2308,12 @@ class CalculateKPIS:
 
     def calculate_kpi_29_urinary_albumin(self) -> KPIResult:
         return self._calculate_kpi_29_urinary_albumin(
-            self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count
+            denominator=self._get_total_kpi_6_total_t1dm_complete_year_gte_12yo_eligible_pts_base_query_set_and_total_count
         )
 
     def calculate_kpi_29_urinary_albumin_for_patient_report_table(self) -> KPIResult:
         return self._calculate_kpi_29_urinary_albumin(
-            self._get_kpi_3_eligible_pts_base_query_set_and_total_count
+            denominator=self._get_kpi_3_total_t1dm_eligible_pts_base_query_set_and_total_count
         )
 
     def _calculate_kpi_29_urinary_albumin(
@@ -2360,12 +2357,12 @@ class CalculateKPIS:
 
     def calculate_kpi_30_retinal_screening(self) -> KPIResult:
         return self._calculate_kpi_30_retinal_screening(
-            self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count
+            denominator=self._get_total_kpi_6_total_t1dm_complete_year_gte_12yo_eligible_pts_base_query_set_and_total_count
         )
 
     def calculate_kpi_30_retinal_screening_for_patient_report_table(self) -> KPIResult:
         return self._calculate_kpi_30_retinal_screening(
-            self._get_kpi_3_eligible_pts_base_query_set_and_total_count
+            denominator=self._get_kpi_3_total_t1dm_eligible_pts_base_query_set_and_total_count
         )
 
     def _calculate_kpi_30_retinal_screening(
@@ -2413,12 +2410,12 @@ class CalculateKPIS:
 
     def calculate_kpi_31_foot_examination(self) -> KPIResult:
         return self._calculate_kpi_31_foot_examination(
-            self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count
+            denominator=self._get_total_kpi_6_total_t1dm_complete_year_gte_12yo_eligible_pts_base_query_set_and_total_count
         )
 
     def calculate_kpi_31_foot_examination_for_patient_report_table(self) -> KPIResult:
         return self._calculate_kpi_31_foot_examination(
-            self._get_kpi_3_eligible_pts_base_query_set_and_total_count
+            denominator=self._get_kpi_3_total_t1dm_eligible_pts_base_query_set_and_total_count
         )
 
     def _calculate_kpi_31_foot_examination(
@@ -2488,7 +2485,7 @@ class CalculateKPIS:
         # Get the eligible patients
         base_eligible_query_set, base_total_eligible = (
             # Pts with T1DM and a complete year of care
-            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
+            self._get_total_kpi_5_total_t1dm_complete_year_eligible_pts_base_query_set_and_total_count()
         )
         total_ineligible = self.total_patients_count - base_total_eligible
 
@@ -2873,7 +2870,7 @@ class CalculateKPIS:
             return self.eligible_pts_lt_12yo
 
         base_eligible_query_set, _ = (
-            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
+            self._get_total_kpi_5_total_t1dm_complete_year_eligible_pts_base_query_set_and_total_count()
         )
 
         self.eligible_patients_lt_12yo = base_eligible_query_set.filter(
@@ -2890,7 +2887,7 @@ class CalculateKPIS:
             return self.eligible_patients_gte_12yo
 
         base_eligible_query_set, _ = (
-            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count()
+            self._get_total_kpi_5_total_t1dm_complete_year_eligible_pts_base_query_set_and_total_count()
         )
 
         self.eligible_patients_gte_12yo = base_eligible_query_set.filter(
@@ -2901,12 +2898,12 @@ class CalculateKPIS:
 
     def calculate_kpi_33_hba1c_4plus(self) -> KPIResult:
         return self._calculate_kpi_33_hba1c_4plus(
-            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count
+            self._get_total_kpi_5_total_t1dm_complete_year_eligible_pts_base_query_set_and_total_count
         )
 
     def calculate_kpi_33_hba1c_4plus_for_patient_report_table(self) -> KPIResult:
         return self._calculate_kpi_33_hba1c_4plus(
-            self._get_kpi_3_eligible_pts_base_query_set_and_total_count
+            self._get_kpi_3_total_t1dm_eligible_pts_base_query_set_and_total_count
         )
 
     def _calculate_kpi_33_hba1c_4plus(
@@ -2959,12 +2956,12 @@ class CalculateKPIS:
 
     def calculate_kpi_34_psychological_assessment(self) -> KPIResult:
         return self._calculate_kpi_34_psychological_assessment(
-            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count
+            self._get_total_kpi_5_total_t1dm_complete_year_eligible_pts_base_query_set_and_total_count
         )
 
     def calculate_kpi_34_psychological_assessment_for_patient_report_table(self) -> KPIResult:
         return self._calculate_kpi_34_psychological_assessment(
-            self._get_kpi_3_eligible_pts_base_query_set_and_total_count
+            self._get_kpi_3_total_t1dm_eligible_pts_base_query_set_and_total_count
         )
 
     def _calculate_kpi_34_psychological_assessment(
@@ -3016,12 +3013,12 @@ class CalculateKPIS:
 
     def calculate_kpi_35_smoking_status_screened(self) -> KPIResult:
         return self._calculate_kpi_35_smoking_status_screened(
-            self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count
+            self._get_total_kpi_6_total_t1dm_complete_year_gte_12yo_eligible_pts_base_query_set_and_total_count
         )
 
     def calculate_kpi_35_smoking_status_screened_for_patient_report_table(self) -> KPIResult:
         return self._calculate_kpi_35_smoking_status_screened(
-            self._get_kpi_3_eligible_pts_base_query_set_and_total_count
+            self._get_kpi_3_total_t1dm_eligible_pts_base_query_set_and_total_count
         )
 
     def _calculate_kpi_35_smoking_status_screened(
@@ -3079,12 +3076,12 @@ class CalculateKPIS:
 
     def calculate_kpi_36_referral_to_smoking_cessation_service(self) -> KPIResult:
         return self._calculate_kpi_36_referral_to_smoking_cessation_service(
-            self._get_total_kpi_6_eligible_pts_base_query_set_and_total_count
+            self._get_total_kpi_6_total_t1dm_complete_year_gte_12yo_eligible_pts_base_query_set_and_total_count
         )
 
     def calculate_kpi_36_referral_to_smoking_cessation_service_for_patient_report_table(self) -> KPIResult:
         return self._calculate_kpi_36_referral_to_smoking_cessation_service(
-            self._get_kpi_3_eligible_pts_base_query_set_and_total_count
+            self._get_kpi_3_total_t1dm_eligible_pts_base_query_set_and_total_count
         )
 
     def _calculate_kpi_36_referral_to_smoking_cessation_service(
@@ -3135,12 +3132,12 @@ class CalculateKPIS:
 
     def calculate_kpi_37_additional_dietetic_appointment_offered(self) -> KPIResult:
         return self._calculate_kpi_37_additional_dietetic_appointment_offered(
-            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count
+            self._get_total_kpi_5_total_t1dm_complete_year_eligible_pts_base_query_set_and_total_count
         )
 
     def calculate_kpi_37_additional_dietetic_appointment_offered_for_patient_report_table(self) -> KPIResult:
         return self._calculate_kpi_37_additional_dietetic_appointment_offered(
-            self._get_kpi_3_eligible_pts_base_query_set_and_total_count
+            self._get_kpi_3_total_t1dm_eligible_pts_base_query_set_and_total_count
         )
 
     def _calculate_kpi_37_additional_dietetic_appointment_offered(
@@ -3193,12 +3190,12 @@ class CalculateKPIS:
 
     def calculate_kpi_38_patients_attending_additional_dietetic_appointment(self) -> KPIResult:
         return self._calculate_kpi_38_patients_attending_additional_dietetic_appointment(
-            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count
+            self._get_total_kpi_5_total_t1dm_complete_year_eligible_pts_base_query_set_and_total_count
         )
 
     def calculate_kpi_38_patients_attending_additional_dietetic_appointment_for_patient_report_table(self) -> KPIResult:
         return self._calculate_kpi_38_patients_attending_additional_dietetic_appointment(
-            self._get_kpi_3_eligible_pts_base_query_set_and_total_count
+            self._get_kpi_3_total_t1dm_eligible_pts_base_query_set_and_total_count
         )
 
     def _calculate_kpi_38_patients_attending_additional_dietetic_appointment(
@@ -3254,12 +3251,12 @@ class CalculateKPIS:
 
     def calculate_kpi_39_influenza_immunisation_recommended(self) -> KPIResult:
         return self._calculate_kpi_39_influenza_immunisation_recommended(
-            self._get_total_kpi_5_eligible_pts_base_query_set_and_total_count
+            self._get_total_kpi_5_total_t1dm_complete_year_eligible_pts_base_query_set_and_total_count
         )
 
     def calculate_kpi_39_influenza_immunisation_recommended_for_patient_report_table(self) -> KPIResult:
         return self._calculate_kpi_39_influenza_immunisation_recommended(
-            self._get_kpi_3_eligible_pts_base_query_set_and_total_count
+            self._get_kpi_3_total_t1dm_eligible_pts_base_query_set_and_total_count
         )
 
     def _calculate_kpi_39_influenza_immunisation_recommended(
@@ -3481,7 +3478,7 @@ class CalculateKPIS:
         # Eligible patients are measure 7 with
         # diagnosis date < (AUDIT_END_DATE - 14 days)
         base_eligible_patients, _ = (
-            self._get_kpi_3_eligible_pts_base_query_set_and_total_count()
+            self._get_kpi_3_total_t1dm_eligible_pts_base_query_set_and_total_count()
         )
         eligible_patients = base_eligible_patients.filter(
             diagnosis_date__lt=self.audit_end_date - relativedelta(days=14)
@@ -4341,7 +4338,7 @@ class CalculateKPIS:
             self.kpi_2_total_eligible,
         )
 
-    def _get_total_kpi_5_eligible_pts_base_query_set_and_total_count(
+    def _get_total_kpi_5_total_t1dm_complete_year_eligible_pts_base_query_set_and_total_count(
         self,
     ) -> Tuple[QuerySet, int]:
         """Enables reuse of the base query set for KPI 5
@@ -4363,7 +4360,7 @@ class CalculateKPIS:
             self.kpi_5_total_eligible,
         )
 
-    def _get_total_kpi_6_eligible_pts_base_query_set_and_total_count(
+    def _get_total_kpi_6_total_t1dm_complete_year_gte_12yo_eligible_pts_base_query_set_and_total_count(
         self,
     ) -> Tuple[QuerySet, int]:
         """Enables reuse of the base query set for KPI 6
@@ -4428,7 +4425,7 @@ class CalculateKPIS:
 
         # First get new T1DM diagnoses pts
         base_query_set, _ = (
-            self._get_kpi_3_eligible_pts_base_query_set_and_total_count()
+            self._get_kpi_3_total_t1dm_eligible_pts_base_query_set_and_total_count()
         )
 
         # Filter for those diagnoses at least 90 days before audit end date
