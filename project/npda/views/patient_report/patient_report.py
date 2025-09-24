@@ -909,50 +909,71 @@ class PatientReportView(
                 "foot_exam": "Not required as less than 12 years old",
                 "retinal_screening": "Not required as less than 12 years old",
             }
-            
-            # Pre-calculate totals for the health checks from the base queryset before adding category-specific annotations
-            complete_year_patients = self.object_list.filter(is_complete_year_of_care=True)
-            
-            # Calculate totals using the KPI methods directly
-            context["total_passed_hba1c"] = self.calculate_kpis.calculate_kpi_25_hba1c().patient_querysets["passed"].filter(
-                pk__in=complete_year_patients.values_list("pk", flat=True)
-            ).count()
-            context["total_eligible_hba1c"] = complete_year_patients.count()
-            
-            context["total_passed_bmi"] = self.calculate_kpis.calculate_kpi_26_bmi().patient_querysets["passed"].filter(
-                pk__in=complete_year_patients.values_list("pk", flat=True)
-            ).count()
-            context["total_eligible_bmi"] = complete_year_patients.count()
-            
-            context["total_passed_thyroid_screen"] = self.calculate_kpis.calculate_kpi_27_thyroid_screen().patient_querysets["passed"].filter(
-                pk__in=complete_year_patients.values_list("pk", flat=True)
-            ).count()
-            context["total_eligible_thyroid_screen"] = complete_year_patients.count()
-            
+
+            def get_patient_ids_and_count(**kwargs):
+                patient_queryset = self.object_list.filter(**kwargs)
+                return patient_queryset.values_list("pk", flat=True), patient_queryset.count()
+
+            def add_kpi_total(context, kpi_name, kpi_result, patient_ids, patient_count):
+                context[f"total_passed_{kpi_name}"] = kpi_result.patient_querysets["passed"].filter(pk__in=patient_ids).count()
+                context[f"total_eligible_{kpi_name}"] = patient_count
+
+            complete_year = get_patient_ids_and_count(
+                is_complete_year_of_care=True
+            )
+
             # For age-specific checks (12+ years old at start of audit period)
-            complete_year_12plus = complete_year_patients.filter(
+            complete_year_12plus = get_patient_ids_and_count(
+                is_complete_year_of_care=True,
                 date_of_birth__lte=self.audit_period.start_date - relativedelta(years=12)
             )
-            
-            context["total_passed_blood_pressure"] = self.calculate_kpis.calculate_kpi_28_blood_pressure().patient_querysets["passed"].filter(
-                pk__in=complete_year_12plus.values_list("pk", flat=True)
-            ).count()
-            context["total_eligible_blood_pressure"] = complete_year_12plus.count()
-            
-            context["total_passed_urinary_albumin"] = self.calculate_kpis.calculate_kpi_29_urinary_albumin().patient_querysets["passed"].filter(
-                pk__in=complete_year_12plus.values_list("pk", flat=True)
-            ).count()
-            context["total_eligible_urinary_albumin"] = complete_year_12plus.count()
-            
-            context["total_passed_foot_exam"] = self.calculate_kpis.calculate_kpi_31_foot_examination().patient_querysets["passed"].filter(
-                pk__in=complete_year_12plus.values_list("pk", flat=True)
-            ).count()
-            context["total_eligible_foot_exam"] = complete_year_12plus.count()
+
+            for kpi_name, kpi_result, (patient_ids, patient_count) in [
+                ("hba1c", self.calculate_kpis.calculate_kpi_25_hba1c(), complete_year),
+                ("bmi", self.calculate_kpis.calculate_kpi_26_bmi(), complete_year),
+                ("thyroid_screen", self.calculate_kpis.calculate_kpi_27_thyroid_screen(), complete_year),
+                ("blood_pressure", self.calculate_kpis.calculate_kpi_28_blood_pressure(), complete_year_12plus),
+                ("urinary_albumin", self.calculate_kpis.calculate_kpi_29_urinary_albumin(), complete_year_12plus),
+                ("foot_exam", self.calculate_kpis.calculate_kpi_31_foot_examination(), complete_year_12plus),
+                ("retinal_screening", self.calculate_kpis.calculate_kpi_30_retinal_screening(), complete_year),
+            ]:
+                add_kpi_total(context, kpi_name, kpi_result, patient_ids, patient_count)
+        
         elif self.selected_category == TableCategories.ADDITIONAL_CARE_PROCESSES.value:
             context["ineligible_reasons"] = {
                 "smoking_status": "Not required as less than 12 years old",
                 "smoking_cessation_referral": "Not required as less than 12 years old",
             }
+
+            def get_patient_ids_and_count(**kwargs):
+                patient_queryset = self.object_list.filter(**kwargs)
+                return patient_queryset.values_list("pk", flat=True), patient_queryset.count()
+
+            def add_kpi_total(context, kpi_name, kpi_result, patient_ids, patient_count):
+                context[f"total_passed_{kpi_name}"] = kpi_result.patient_querysets["passed"].filter(pk__in=patient_ids).count()
+                context[f"total_eligible_{kpi_name}"] = patient_count
+
+            complete_year = get_patient_ids_and_count(
+                is_complete_year_of_care=True
+            )
+
+            # For age-specific checks (12+ years old at start of audit period)
+            complete_year_12plus = get_patient_ids_and_count(
+                is_complete_year_of_care=True,
+                date_of_birth__lte=self.audit_period.start_date - relativedelta(years=12)
+            )
+
+            for kpi_name, kpi_result, (patient_ids, patient_count) in [
+                ("hba1c_4plus", self.calculate_kpis.calculate_kpi_33_hba1c_4plus(), complete_year),
+                ("psychological_assessment", self.calculate_kpis.calculate_kpi_34_psychological_assessment(), complete_year),
+                ("additional_dietetic_appt_offered", self.calculate_kpis.calculate_kpi_37_additional_dietetic_appointment_offered(), complete_year),
+                ("pts_attending_additional_dietetic_appt", self.calculate_kpis.calculate_kpi_38_patients_attending_additional_dietetic_appointment(), complete_year),
+                ("influenza_immunisation_recommended", self.calculate_kpis.calculate_kpi_39_influenza_immunisation_recommended(), complete_year),
+                ("sick_day_rules_advice", self.calculate_kpis.calculate_kpi_40_sick_day_rules_advice(), complete_year),
+                ("smoking_status", self.calculate_kpis.calculate_kpi_35_smoking_status_screened(), complete_year_12plus),
+                ("smoking_cessation_referral", self.calculate_kpis.calculate_kpi_36_referral_to_smoking_cessation_service(), complete_year_12plus),
+            ]:
+                add_kpi_total(context, kpi_name, kpi_result, patient_ids, patient_count)
 
         context["breadcrumbs"] = data_breadcrumbs(self.pdu, self.audit_period, [
             ("Patient Report", "pdu-patient-report")

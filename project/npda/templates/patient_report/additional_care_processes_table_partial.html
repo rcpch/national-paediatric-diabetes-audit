@@ -1,4 +1,5 @@
 {% extends "patient_report/base_table.html" %}
+{% load npda_tags %}
 {% block description_box %}
   {% include "patient_report/description_box.html" with description="These additional care processes are recommended by NICE for children and young people <i><b>with T1DM</b></i> of all ages, with the exception of smoking status and referral to smoking cessation services, which apply only to young people aged 12 y and above." proportion="with T1DM" %}
 {% endblock %}
@@ -25,7 +26,7 @@
     </div>
   </th>
   <th class="whitespace-normal break-words">
-    HBA1C 4+
+    HBA1C 4+ ({{ total_passed_hba1c_4plus|percentage:total_eligible_hba1c_4plus }} complete)
     <div class="block">
       <span hx-get="?category=additional_care_processes&sort=hba1c_4plus&order=desc"
             hx-target="#table-area"
@@ -42,7 +43,7 @@
     </div>
   </th>
   <th class="whitespace-normal break-words">
-    Psychological assessment
+    Psychological assessment ({{ total_passed_psychological_assessment|percentage:total_eligible_psychological_assessment }} complete)
     <div class="block">
       <span hx-get="?category=additional_care_processes&sort=psychological_assessment&order=desc"
             hx-target="#table-area"
@@ -59,7 +60,7 @@
     </div>
   </th>
   <th class="whitespace-normal break-words">
-    Smoking status screened
+    Smoking status screened ({{ total_passed_smoking_status|percentage:total_eligible_smoking_status }} complete)
     <div class="block">
       <span hx-get="?category=additional_care_processes&sort=smoking_status&order=desc"
             hx-target="#table-area"
@@ -76,7 +77,7 @@
     </div>
   </th>
   <th class="whitespace-normal break-words">
-    Referral to smoking cessation service
+    Referral to smoking cessation service ({{ total_passed_smoking_cessation_referral|percentage:total_eligible_smoking_cessation_referral }} complete)
     <div class="block">
       <span hx-get="?category=additional_care_processes&sort=smoking_cessation_referral&order=desc"
             hx-target="#table-area"
@@ -93,7 +94,7 @@
     </div>
   </th>
   <th class="whitespace-normal break-words">
-    Additional dietetic appointment offered
+    Additional dietetic appointment offered ({{ total_passed_additional_dietetic_appt_offered|percentage:total_eligible_additional_dietetic_appt_offered }} complete)
     <div class="block">
       <span hx-get="?category=additional_care_processes&sort=additional_dietetic_appt_offered&order=desc"
             hx-target="#table-area"
@@ -110,7 +111,7 @@
     </div>
   </th>
   <th class="whitespace-normal break-words">
-    Patients attending additional dietetic appointment
+    Patients attending additional dietetic appointment ({{ total_passed_pts_attending_additional_dietetic_appt|percentage:total_eligible_pts_attending_additional_dietetic_appt }} complete)
     <div class="block">
       <span hx-get="?category=additional_care_processes&sort=pts_attending_additional_dietetic_appt&order=desc"
             hx-target="#table-area"
@@ -127,7 +128,7 @@
     </div>
   </th>
   <th class="whitespace-normal break-words">
-    Influenza immunisation recommended
+    Influenza immunisation recommended ({{ total_passed_influenza_immunisation_recommended|percentage:total_eligible_influenza_immunisation_recommended }} complete)
     <div class="block">
       <span hx-get="?category=additional_care_processes&sort=influenza_immunisation_recommended&order=desc"
             hx-target="#table-area"
@@ -144,7 +145,7 @@
     </div>
   </th>
   <th class="whitespace-normal break-words">
-    Sick day rules advice
+    Sick day rules advice ({{ total_passed_sick_day_rules_advice|percentage:total_eligible_sick_day_rules_advice }} complete)
     <div class="block">
       <span hx-get="?category=additional_care_processes&sort=sick_day_rules_advice&order=desc"
             hx-target="#table-area"
