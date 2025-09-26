@@ -2,9 +2,11 @@
 {% include "patient_report/menu_tab_buttons.html" with selected_category=selected_category %}
 <!-- Description box -->
 {% block description_box %}{% endblock %}
+<!-- Pagination -->
+{% include "patient_report/paginator.html" %}
 <!-- Patient table -->
-<div class="table-container h-[60vh] overflow-y-auto">
-  <table class="table w-full text-center">
+<div class="table-container overflow-y-auto">
+  <table class="table w-full text-center mt-5">
     <thead class="sticky top-0 z-10">
       <tr class="bg-rcpch_dark_blue text-white">
         {% block table_headers %}{% endblock %}
@@ -15,5 +17,5 @@
     </tbody>
   </table>
 </div>
-<!-- Pagination -->
+<!-- Pagination (again!) -->
 {% include "patient_report/paginator.html" %}

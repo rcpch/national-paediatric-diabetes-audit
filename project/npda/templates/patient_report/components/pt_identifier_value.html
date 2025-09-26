@@ -5,7 +5,7 @@
              align-items: center">
   <a href="{% data_url 'pdu-patient-visits' patient_id=patient_pk %}"
      class="w-full h-full flex flex-row items-center">
-    {{ patient_identifier }}
+    <span class="text-lg">{{ patient_identifier }}</span>
     <i class="fa-solid fa-arrow-up-right-from-square text-rcpch_strong_blue ml-1"></i>
   </a>
   {% if not is_complete_year_of_care %}
@@ -17,8 +17,8 @@
     </span>
   {% endif %}
   {% if pz_code == 'PZ248' %}
-    {% include 'partials/page_elements/copy_button.html' with value=patient.unique_reference_number tooltip="Copy Unique Reference Number" button_class="ml-1" %}
+    {% include 'partials/page_elements/copy_button.html' with value=patient.unique_reference_number tooltip="Copy Unique Reference Number" button_class="ml-2" size="xs" %}
   {% else %}
-    {% include 'partials/page_elements/copy_button.html' with value=patient.nhs_number tooltip="Copy NHS Number" button_class="ml-1" %}
+    {% include 'partials/page_elements/copy_button.html' with value=patient.nhs_number tooltip="Copy NHS Number" button_class="ml-2" size="xs" %}
   {% endif %}
 </span>
