@@ -235,3 +235,38 @@ def test_performance_check_for_fake_patient_creator(
         for patients, time_taken in time_results.items():
             print(f"| {patients:<23} | {time_taken:<16.2f} |")
         print("+-------------------------+------------------+")
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1248
+@pytest.mark.django_db
+def test_finding_usable_visit_period_for_all_diagnoses_dates_within_audit_year():
+    # Set necessary attributes to calibrate all dates
+    DATE_IN_AUDIT = date(2024, 4, 1)
+    audit_start_date, audit_end_date = get_audit_period_for_date(DATE_IN_AUDIT)
+
+    fake_patient_creator = FakePatientCreator(
+        audit_start_date=audit_start_date,
+        audit_end_date=audit_end_date,
+    )
+
+    diagnosis_date = audit_start_date
+
+    try:
+        while diagnosis_date <= audit_end_date:
+            diagnosis_date += timedelta(days=1)
+
+            print(f"!! diagnosis_date = {diagnosis_date}")
+
+            [patient] = fake_patient_creator.build_fake_patients(
+                n=1,
+                age_range=AgeRange.AGE_0_4,
+                diagnosis_date=diagnosis_date,    
+            )
+
+            fake_patient_creator.build_fake_visits(
+                patients=[patient],
+                visit_types=[VisitType.CLINIC],
+                hb1ac_target_range=HbA1cTargetRange.WELL_ABOVE,
+                age_range=AgeRange.AGE_0_4,
+            )
+    except Exception as err:
+        pytest.fail(f"Failed to create visit for diagnosis date {diagnosis_date}: {err}")
