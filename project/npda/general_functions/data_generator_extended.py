@@ -154,8 +154,9 @@ class FakePatientCreator:
                 usable_visit_periods = []
 
                 for period in visit_periods:
-                    # patient.diagnosis_date >= period.start_date and patient.diagnosis_date < period.end_date
-                    if patient.diagnosis_date >= period[0] and patient.diagnosis_date < period[1]:
+                    # patient.diagnosis_date >= period.start_date and patient.diagnosis_date <= period.end_date
+                    # NB dates are inclusive! (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1248)
+                    if patient.diagnosis_date >= period[0] and patient.diagnosis_date <= period[1]:
                         start = max(patient.diagnosis_date, period[0])
                         usable_visit_periods.append((start, period[1]))
 
@@ -165,7 +166,8 @@ class FakePatientCreator:
 
             for visit_type in visit_types:
                 visit_period = visit_periods[visit_period_ix]
-                visit_date = get_random_date(visit_period[0], visit_period[1])
+                # get_random_date is exclusive of end date (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1248)
+                visit_date = get_random_date(visit_period[0], visit_period[1] + timedelta(days=1))
 
                 # Get the correct kwarg measurements for the visit type
                 # These will be fed into this VisitFactory's.build() call
