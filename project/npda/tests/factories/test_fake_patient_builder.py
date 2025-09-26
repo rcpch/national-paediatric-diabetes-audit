@@ -252,10 +252,6 @@ def test_finding_usable_visit_period_for_all_diagnoses_dates_within_audit_year()
 
     try:
         while diagnosis_date <= audit_end_date:
-            diagnosis_date += timedelta(days=1)
-
-            print(f"!! diagnosis_date = {diagnosis_date}")
-
             [patient] = fake_patient_creator.build_fake_patients(
                 n=1,
                 age_range=AgeRange.AGE_0_4,
@@ -268,5 +264,7 @@ def test_finding_usable_visit_period_for_all_diagnoses_dates_within_audit_year()
                 hb1ac_target_range=HbA1cTargetRange.WELL_ABOVE,
                 age_range=AgeRange.AGE_0_4,
             )
+
+            diagnosis_date += timedelta(days=1)
     except Exception as err:
         pytest.fail(f"Failed to create visit for diagnosis date {diagnosis_date}: {err}")
