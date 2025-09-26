@@ -1,9 +1,9 @@
 {% if result is True %}
 {% comment %} PASS {% endcomment %}
-  <i class="fa-solid fa-circle-check text-success text-2xl"></i>
+  <i class="fa-solid fa-circle-check text-success text-xl"></i>
 {% elif result is False %}
 {% comment %} FAIL {% endcomment %}
-<i class="fa-solid fa-circle-exclamation text-error text-2xl"></i>
+<i class="fa-solid fa-circle-exclamation text-error text-xl"></i>
 {% else %}
 {% comment %} INELIGIBLE {% endcomment %}
   <div class="tooltip tooltip-bottom" data-tip="
@@ -13,6 +13,6 @@
     Not required
   {% endif %}
    ">
-    <i class="fa-solid fa-ban text-muted text-2xl"></i>
+    <i class="fa-solid fa-ban text-muted text-xl"></i>
   </div>
 {% endif %}
