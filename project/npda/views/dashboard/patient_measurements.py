@@ -23,7 +23,7 @@ def patient_measurements(request, audit_period, pdu):
         calculation_date=calculation_date, return_pt_querysets=True, is_jersey=pz_code == "PZ248"
     )
 
-    kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pdu.pz_code])
+    calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
 
 
     # {
