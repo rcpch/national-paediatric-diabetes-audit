@@ -1,7 +1,6 @@
 # Python imports
-import json
 import logging
-from datetime import date
+from datetime import datetime, date
 
 from django.shortcuts import render
 
@@ -25,6 +24,8 @@ def dashboard(request, audit_period, pdu):
         template = "dashboard/dashboard_base.html"
     
     current_date = date.today()
+    current_datetime = datetime.now()
+
     calculation_date = audit_period.kpi_calculation_date()
 
     if audit_period.start_date > current_date:
@@ -40,36 +41,14 @@ def dashboard(request, audit_period, pdu):
         current_quarter = retrieve_quarter_for_date(current_date)
         days_remaining_until_audit_end_date = (audit_period.end_date - current_date).days
 
-    calculate_kpis = CalculateKPIS(
-        calculation_date=calculation_date, return_pt_querysets=True
-    )
-
-    kpi_calculations_object = calculate_kpis.calculate_kpis_for_pdus(pz_codes=[pdu.pz_code])
-
-    # From this, gather specific chart data required
-
-    # new diagnoses
-    new_diagnosis_per_quarter_value_counts_pct = (
-        calculate_kpis.calculate_kpi_2_total_new_diagnoses_stratified_by_quarter()
-    )
-
     context = {
         "scatter_plot_select_list": _scatter_plot_select_list("new_diagnoses"),
         "pdu_object": pdu,
-        # "pdu_lead_organisation": pdu_lead_organisation,
-        "kpi_calculations_object": kpi_calculations_object,
         "current_date": calculation_date,
+        "current_datetime": current_datetime,
         "current_quarter": current_quarter,
+        "audit_period": audit_period,
         "days_remaining_until_audit_end_date": days_remaining_until_audit_end_date,
-        "charts": {
-            "new_diagnoses_per_quarter_value_counts_pct": {
-                "no_eligible_patients": kpi_calculations_object[
-                    "calculated_kpi_values"
-                ]["kpi_1_total_eligible"]["total_eligible"]
-                == 0,
-                "data": json.dumps(new_diagnosis_per_quarter_value_counts_pct),
-            }
-        },
         # TODO: this should be an enum but we're currently not doing benchmarking so can update
         # at that point
         "aggregation_level": "pdu",
