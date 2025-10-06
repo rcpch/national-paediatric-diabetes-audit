@@ -22,6 +22,7 @@ for item in tf_urls:
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path('silk/', include('silk.urls', namespace='silk')),
     path("", include(tf_urls)),
     path("", include("project.npda.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
