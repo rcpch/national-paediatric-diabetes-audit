@@ -1,5 +1,6 @@
 # Python imports
 import logging
+import json
 from datetime import datetime, date
 
 from django.shortcuts import render
@@ -40,6 +41,21 @@ def dashboard(request, audit_period, pdu):
         # Current audit period
         current_quarter = retrieve_quarter_for_date(current_date)
         days_remaining_until_audit_end_date = (audit_period.end_date - current_date).days
+    
+    calculate_kpis = CalculateKPIS(
+        calculation_date=calculation_date, return_pt_querysets=True
+    )
+
+    calculate_kpis.set_patients_for_calculation(pz_codes=[pdu.pz_code])
+
+    no_eligible_patients = calculate_kpis.calculate_kpi_1_total_eligible()
+
+    # From this, gather specific chart data required
+
+    # new diagnoses
+    new_diagnosis_per_quarter_value_counts_pct = (
+        calculate_kpis.calculate_kpi_2_total_new_diagnoses_stratified_by_quarter()
+    )
 
     context = {
         "scatter_plot_select_list": _scatter_plot_select_list("new_diagnoses"),
@@ -49,6 +65,12 @@ def dashboard(request, audit_period, pdu):
         "current_quarter": current_quarter,
         "audit_period": audit_period,
         "days_remaining_until_audit_end_date": days_remaining_until_audit_end_date,
+        "charts": {
+            "new_diagnoses_per_quarter_value_counts_pct": {
+                "no_eligible_patients": no_eligible_patients == 0,
+                "data": json.dumps(new_diagnosis_per_quarter_value_counts_pct),
+            }
+        },
         # TODO: this should be an enum but we're currently not doing benchmarking so can update
         # at that point
         "aggregation_level": "pdu",
