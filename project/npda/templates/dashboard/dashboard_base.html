@@ -6,7 +6,7 @@
      hx-swap="innerHTML">
   <div class="my-6">
     <p class="text-center text-gray-500 mt-2">
-      Calculated at {{ kpi_calculations_object.calculation_datetime }}
+      Calculated at {{ current_datetime }}
     </p>
     <p class="text-center">This data has not been validated by the NPDA team.</p>
   </div>
@@ -18,7 +18,7 @@
     </div>
     <div class="col-span-12 xl:col-span-3">
       <!-- Audit Details Card -->
-      {% include 'dashboard/components/cards/audit_details_card.html' with kpi_calculations_object=kpi_calculations_object current_quarter=current_quarter current_date=current_date days_remaining_until_audit_end_date=days_remaining_until_audit_end_date %}
+      {% include 'dashboard/components/cards/audit_details_card.html' with audit_period=audit_period current_quarter=current_quarter current_date=current_date days_remaining_until_audit_end_date=days_remaining_until_audit_end_date %}
     </div>
     <div class="col-span-12 xl:col-span-6">
       <!-- Patient Measurements Card -->
