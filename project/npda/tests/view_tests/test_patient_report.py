@@ -41,6 +41,7 @@ from dateutil.relativedelta import relativedelta
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.django_db
 def test_anonymous_user_cannot_access_patient_report(
     client,
 ):
