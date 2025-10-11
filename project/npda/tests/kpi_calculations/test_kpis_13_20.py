@@ -205,3 +205,71 @@ def test_kpi_13_passes_when_latest_visit_has_treatment_1(AUDIT_START_DATE):
     assert result.total_eligible == 1
     assert result.total_passed == 1
     assert result.total_failed == 0
+
+
+@pytest.mark.django_db
+def test_kpi_14_passes_when_latest_visit_has_treatment_2(AUDIT_START_DATE):
+    """KPI 14 should pass if the most recent visit in the audit period has treatment=2,
+    even if earlier visits had other treatment types.
+
+    Numerator: most recent entry (by visit date) has treatment regimen = 2 (four or more injections/day).
+    Denominator: KPI 1 eligible patients (restricted here to a single eligible patient).
+    """
+    first_visit_date = AUDIT_START_DATE + relativedelta(days=2)
+
+    # Initial visit with a different treatment
+    patient = PatientFactory(
+        visit__visit_date=first_visit_date,
+        date_of_birth=AUDIT_START_DATE - relativedelta(years=10),
+        visit__treatment=1,
+    )
+
+    # More recent visit within the audit period with treatment=2
+    latest_visit_date = first_visit_date + relativedelta(months=3)
+    VisitFactory(
+        patient=patient,
+        visit_date=latest_visit_date,
+        treatment=2,
+    )
+
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    calc_kpis.set_patients_for_calculation(Patient.objects.filter(pk__in=[patient.pk]))
+
+    result = calc_kpis.calculate_kpi_14_four_or_more_injections_per_day()
+    assert result.total_eligible == 1
+    assert result.total_passed == 1
+    assert result.total_failed == 0
+
+
+@pytest.mark.django_db
+def test_kpi_15_passes_when_latest_visit_has_treatment_3(AUDIT_START_DATE):
+    """KPI 15 should pass if the most recent visit in the audit period records treatment=3 (pump),
+    even if an earlier visit used a different treatment.
+
+    Numerator: latest (by visit date) visit has treatment in {3, 6}.
+    Denominator: KPI 1 eligible patients (restricted here to a single patient).
+    """
+    first_visit_date = AUDIT_START_DATE + relativedelta(days=2)
+
+    # Earlier visit with a different treatment
+    patient = PatientFactory(
+        visit__visit_date=first_visit_date,
+        date_of_birth=AUDIT_START_DATE - relativedelta(years=10),
+        visit__treatment=2,
+    )
+
+    # Later visit with treatment=3 (pump)
+    latest_visit_date = first_visit_date + relativedelta(months=2)
+    VisitFactory(
+        patient=patient,
+        visit_date=latest_visit_date,
+        treatment=3,
+    )
+
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    calc_kpis.set_patients_for_calculation(Patient.objects.filter(pk__in=[patient.pk]))
+
+    result = calc_kpis.calculate_kpi_15_insulin_pump()
+    assert result.total_eligible == 1
+    assert result.total_passed == 1
+    assert result.total_failed == 0
