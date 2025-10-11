@@ -1375,10 +1375,12 @@ class CalculateKPIS:
 
         total_ineligible = self.total_patients_count - total_eligible
 
-        # Define the subquery to find the latest visit
+        # Define the subquery to find the latest visit where treatment = 1
         latest_visit_subquery = (
             Visit.objects.filter(
                 patient=OuterRef("pk"),
+                treatment=1,  # One-three injections/day
+                visit_date__range=[self.audit_start_date, self.audit_end_date],
             )
             .order_by("-visit_date")
             .values("pk")[:1]
