@@ -1,14 +1,20 @@
-{% if result is True %}
+{% if result is True or result == "True" %}
 {% comment %} PASS {% endcomment %}
   <i class="fa-solid fa-circle-check text-success text-xl"></i>
-{% elif result is False %}
+{% elif result is False or result == "False" %}
 {% comment %} FAIL {% endcomment %}
 <i class="fa-solid fa-circle-exclamation text-error text-xl"></i>
 {% else %}
 {% comment %} INELIGIBLE {% endcomment %}
   <div class="tooltip tooltip-bottom" data-tip="
   {% if ineligible_reason %}
-    {{ ineligible_reason }}
+    {% if result == "non_smoker_no_referral" %}
+      {{ ineligible_reason.non_smoker_no_referral }}
+    {% elif result == "under_12" %}
+      {{ ineligible_reason.under_12 }}
+    {% else %}
+      {{ ineligible_reason }}
+    {% endif %}
   {% else %}
     Not required
   {% endif %}
