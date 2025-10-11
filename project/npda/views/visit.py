@@ -58,15 +58,23 @@ class PatientVisitsListView(
     model = Visit
     template_name = "visits.html"
 
-    def get_context_data(self, **kwargs):
-        patient_id = self.kwargs.get("patient_id")
-        context = super(PatientVisitsListView, self).get_context_data(**kwargs)
-        patient = Patient.objects.get(pk=patient_id)
+    def dispatch(self, request, *args, **kwargs):
+        # Pull context from URL instead of defaulting to "current"
+        self.audit_period_slug = kwargs.get("audit_period")
+        self.pz_code = kwargs.get("pz_code")
+        self.audit_period = get_object_or_404(AuditPeriod, slug=self.audit_period_slug)
+        return super().dispatch(request, *args, **kwargs)
 
-        audit_period = self.audit_period
+    def get_context_data(self, **kwargs):
+        context = super(PatientVisitsListView, self).get_context_data(**kwargs)
+        context["audit_period"] = self.audit_period
+        context["pz_code"] = self.pz_code
+        context["patient_id"] = self.kwargs["patient_id"]
+        patient = get_object_or_404(Patient, pk=context["patient_id"])
+
         submission = patient.submissions.filter(
             submission_active=True,
-            audit_period=audit_period,
+            audit_period=self.audit_period,
         ).first()
         visits = (
             Visit.objects.filter(  # filter visits to those within the audit year
@@ -74,7 +82,8 @@ class PatientVisitsListView(
             )
             .filter(
                 visit_falls_within_audit_period_Q_object(
-                    audit_start_date=audit_period.start_date, prepend_query_path=None
+                    audit_start_date=self.audit_period.start_date,
+                    prepend_query_path=None,
                 )
             )
             .order_by("is_valid", "id")
@@ -86,10 +95,10 @@ class PatientVisitsListView(
         context["visits"] = calculated_visits
         context["patient"] = patient
         context["submission"] = submission
-        paediatric_diabetes_unit = submission.paediatric_diabetes_unit
-
+        paediatric_diabetes_unit = getattr(
+            submission, "paediatric_diabetes_unit", getattr(self, "pdu", None)
+        )
         context["paediatric_diabetes_unit"] = paediatric_diabetes_unit
-        context["audit_period"] = audit_period
 
         context["breadcrumbs"] = patient_breadcrumbs(
             self.pdu,

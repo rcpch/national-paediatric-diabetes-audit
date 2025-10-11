@@ -963,6 +963,8 @@ class PatientReportView(
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        context["audit_period"] = self.audit_period.slug
+        context["pz_code"] = self.pdu.pz_code
         context["is_jersey"] = self.pdu.pz_code == "PZ248"
 
         # Add table categories to the context
