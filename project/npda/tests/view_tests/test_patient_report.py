@@ -879,7 +879,7 @@ def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_hba1c_he
 
 
 @pytest.mark.django_db
-def test_patient_under_12yo_can_still_show_as_passing_smoking_status_screened(
+def test_patient_under_12yo_should_show_as_ineligible_for_smoking_status_screened(
     seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
 ):
     user = NPDAUser.objects.filter(
@@ -938,7 +938,7 @@ def test_patient_under_12yo_can_still_show_as_passing_smoking_status_screened(
     patient = response.context["patients"][0]
 
     assert patient["patient_identifier"] == "4444444444"
-    assert patient["smoking_status"] is True
+    assert patient["smoking_status"] is None
 
 
 @pytest.mark.django_db
