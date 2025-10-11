@@ -1546,6 +1546,8 @@ class CalculateKPIS:
         latest_visit_subquery = (
             Visit.objects.filter(
                 patient=OuterRef("pk"),
+                treatment__isnull=False,
+                visit_date__range=[self.audit_start_date, self.audit_end_date],
             )
             .order_by("-visit_date")
             .values("pk")[:1]
@@ -1592,7 +1594,11 @@ class CalculateKPIS:
 
         # Define the subquery to find the latest visit
         latest_visit_subquery = (
-            Visit.objects.filter(patient=OuterRef("pk"))
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                treatment__isnull=False,
+                visit_date__range=[self.audit_start_date, self.audit_end_date],
+            )
             .order_by("-visit_date")
             .values("pk")[:1]
         )
@@ -1640,6 +1646,8 @@ class CalculateKPIS:
         latest_visit_subquery = (
             Visit.objects.filter(
                 patient=OuterRef("pk"),
+                treatment__isnull=False,
+                visit_date__range=[self.audit_start_date, self.audit_end_date],
             )
             .order_by("-visit_date")
             .values("pk")[:1]
@@ -1688,6 +1696,8 @@ class CalculateKPIS:
         latest_visit_subquery = (
             Visit.objects.filter(
                 patient=OuterRef("pk"),
+                treatment__isnull=False,
+                visit_date__range=[self.audit_start_date, self.audit_end_date],
             )
             .order_by("-visit_date")
             .values("pk")[:1]
@@ -1736,6 +1746,8 @@ class CalculateKPIS:
         latest_visit_subquery = (
             Visit.objects.filter(
                 patient=OuterRef("pk"),
+                treatment__isnull=False,
+                visit_date__range=[self.audit_start_date, self.audit_end_date],
             )
             .order_by("-visit_date")
             .values("pk")[:1]

@@ -273,3 +273,163 @@ def test_kpi_15_passes_when_latest_visit_has_treatment_3(AUDIT_START_DATE):
     assert result.total_eligible == 1
     assert result.total_passed == 1
     assert result.total_failed == 0
+
+
+@pytest.mark.django_db
+def test_kpi_16_passes_when_latest_visit_has_treatment_4(AUDIT_START_DATE):
+    """KPI 16 should pass if the most recent visit in the audit period has treatment=4
+    (1–3 injections/day plus other blood glucose-lowering medication),
+    even if an earlier visit used a different treatment.
+
+    Numerator: latest visit has treatment=4.
+    Denominator: KPI 1 eligible patients (restricted to a single patient).
+    """
+    first_visit_date = AUDIT_START_DATE + relativedelta(days=2)
+
+    # Earlier visit with a different treatment
+    patient = PatientFactory(
+        visit__visit_date=first_visit_date,
+        date_of_birth=AUDIT_START_DATE - relativedelta(years=10),
+        visit__treatment=2,
+    )
+
+    # Later visit with treatment=4
+    latest_visit_date = first_visit_date + relativedelta(months=1)
+    VisitFactory(
+        patient=patient,
+        visit_date=latest_visit_date,
+        treatment=4,
+    )
+
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    calc_kpis.set_patients_for_calculation(Patient.objects.filter(pk__in=[patient.pk]))
+
+    result = calc_kpis.calculate_kpi_16_one_to_three_injections_plus_other_medication()
+    assert result.total_eligible == 1
+    assert result.total_passed == 1
+    assert result.total_failed == 0
+
+
+@pytest.mark.django_db
+def test_kpi_17_passes_when_latest_visit_has_treatment_5(AUDIT_START_DATE):
+    """KPI 17 should pass if the most recent visit in the audit period has treatment=5
+    (4+ injections/day plus other blood glucose-lowering medication),
+    even if an earlier visit used a different treatment.
+
+    Numerator: latest visit has treatment=5.
+    Denominator: KPI 1 eligible patients (restricted to a single patient).
+    """
+    first_visit_date = AUDIT_START_DATE + relativedelta(days=2)
+
+    # Earlier visit with a different treatment
+    patient = PatientFactory(
+        visit__visit_date=first_visit_date,
+        date_of_birth=AUDIT_START_DATE - relativedelta(years=10),
+        visit__treatment=1,
+    )
+
+    # Later visit with treatment=5
+    latest_visit_date = first_visit_date + relativedelta(months=2)
+    VisitFactory(
+        patient=patient,
+        visit_date=latest_visit_date,
+        treatment=5,
+    )
+
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    calc_kpis.set_patients_for_calculation(Patient.objects.filter(pk__in=[patient.pk]))
+
+    result = calc_kpis.calculate_kpi_17_four_or_more_injections_plus_other_medication()
+    assert result.total_eligible == 1
+    assert result.total_passed == 1
+    assert result.total_failed == 0
+
+
+@pytest.mark.django_db
+def test_kpi_18_passes_when_latest_visit_has_treatment_6(AUDIT_START_DATE):
+    """KPI 18 should pass if the most recent visit has treatment=6 (pump + other medication),
+    even if earlier visits used a different treatment.
+
+    Denominator: all T1DM patients (KPI 3 base). We restrict the set to a single patient here.
+    """
+    first_visit_date = AUDIT_START_DATE + relativedelta(days=2)
+
+    patient = PatientFactory(
+        visit__visit_date=first_visit_date,
+        date_of_birth=AUDIT_START_DATE - relativedelta(years=10),
+        diabetes_type=1,  # ensure T1DM
+        visit__treatment=2,
+    )
+
+    latest_visit_date = first_visit_date + relativedelta(months=1)
+    VisitFactory(
+        patient=patient,
+        visit_date=latest_visit_date,
+        treatment=6,
+    )
+
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    calc_kpis.set_patients_for_calculation(Patient.objects.filter(pk__in=[patient.pk]))
+
+    result = calc_kpis.calculate_kpi_18_insulin_pump_plus_other_medication()
+    assert result.total_eligible == 1
+    assert result.total_passed == 1
+    assert result.total_failed == 0
+
+
+@pytest.mark.django_db
+def test_kpi_19_passes_when_latest_visit_has_treatment_7(AUDIT_START_DATE):
+    """KPI 19 should pass if the most recent visit has treatment=7 (dietary management alone),
+    even if earlier visits used a different treatment.
+    """
+    first_visit_date = AUDIT_START_DATE + relativedelta(days=2)
+
+    patient = PatientFactory(
+        visit__visit_date=first_visit_date,
+        date_of_birth=AUDIT_START_DATE - relativedelta(years=10),
+        visit__treatment=2,
+    )
+
+    latest_visit_date = first_visit_date + relativedelta(months=1)
+    VisitFactory(
+        patient=patient,
+        visit_date=latest_visit_date,
+        treatment=7,
+    )
+
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    calc_kpis.set_patients_for_calculation(Patient.objects.filter(pk__in=[patient.pk]))
+
+    result = calc_kpis.calculate_kpi_19_dietary_management_alone()
+    assert result.total_eligible == 1
+    assert result.total_passed == 1
+    assert result.total_failed == 0
+
+
+@pytest.mark.django_db
+def test_kpi_20_passes_when_latest_visit_has_treatment_8(AUDIT_START_DATE):
+    """KPI 20 should pass if the most recent visit has treatment=8 (dietary management + other medication),
+    even if earlier visits used a different treatment.
+    """
+    first_visit_date = AUDIT_START_DATE + relativedelta(days=2)
+
+    patient = PatientFactory(
+        visit__visit_date=first_visit_date,
+        date_of_birth=AUDIT_START_DATE - relativedelta(years=10),
+        visit__treatment=2,
+    )
+
+    latest_visit_date = first_visit_date + relativedelta(months=1)
+    VisitFactory(
+        patient=patient,
+        visit_date=latest_visit_date,
+        treatment=8,
+    )
+
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    calc_kpis.set_patients_for_calculation(Patient.objects.filter(pk__in=[patient.pk]))
+
+    result = calc_kpis.calculate_kpi_20_dietary_management_plus_other_medication()
+    assert result.total_eligible == 1
+    assert result.total_passed == 1
+    assert result.total_failed == 0
