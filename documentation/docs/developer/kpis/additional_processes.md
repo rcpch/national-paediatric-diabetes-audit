@@ -42,7 +42,7 @@
 
 **Numerator**: Number of eligible patients with an entry for Date of Smoking Cessation Referral (item 41) within the audit period
 
-**Denominator**: Number of patients with Type 1 diabetes aged 12+ with a complete year of care in the audit period (measure 6)
+**Denominator**: Number of patients with Type 1 diabetes aged 12+ with a complete year of care in the audit period (measure 6) who screen as smokers
 
 **Data Items**: 41
 

@@ -27,7 +27,7 @@ from project.npda.models.submission import Submission
 from project.npda.tests.constants_for_tests import ALDER_HEY_PZ_CODE
 from project.npda.tests.factories import (
     test_user_rcpch_audit_team_data,
-    test_user_audit_centre_editor_data
+    test_user_audit_centre_editor_data,
 )
 from project.npda.tests.utils import login_and_verify_user
 from project.npda.urls import patient_report_urlpatterns
@@ -49,10 +49,10 @@ def test_anonymous_user_cannot_access_patient_report(
 
     for url in patient_report_urlpatterns:
         if url.name.startswith("pdu-"):
-            resolved_url = reverse(url.name, kwargs={
-                "audit_period": "2023-2024",
-                "pz_code": ALDER_HEY_PZ_CODE
-            })
+            resolved_url = reverse(
+                url.name,
+                kwargs={"audit_period": "2023-2024", "pz_code": ALDER_HEY_PZ_CODE},
+            )
         else:
             resolved_url = reverse(url.name)
 
@@ -111,10 +111,12 @@ def test_no_duplicate_patients_in_report(
     new_submission.patients.add(*new_pts)
 
     # Get the patient report
-    response = client.get(reverse("pdu-patient-report", kwargs={
-        "audit_period": audit_period.slug,
-        "pz_code": ALDER_HEY_PZ_CODE
-    }))
+    response = client.get(
+        reverse(
+            "pdu-patient-report",
+            kwargs={"audit_period": audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE},
+        )
+    )
     assert response.status_code == HTTPStatus.OK
 
     assert isinstance(response.context["patients"], list)
@@ -199,10 +201,13 @@ def test_outcomes_no_hba1c_measurements(
     )
     submission.patients.add(patient)
 
-    url = reverse("pdu-patient-report", kwargs={
-        "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
-        "pz_code": ALDER_HEY_PZ_CODE
-    })
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
 
     # Get the patient report with outcomes category
     response = client.get(
@@ -267,10 +272,13 @@ def test_outcomes_single_hba1c_measurement(
     )
     submission.patients.add(patient)
 
-    url = reverse("pdu-patient-report", kwargs={
-        "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
-        "pz_code": ALDER_HEY_PZ_CODE
-    })
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
 
     # Get the patient report with outcomes category
     response = client.get(
@@ -347,10 +355,13 @@ def test_outcomes_multiple_hba1c_measurements(
     )
     submission.patients.add(patient)
 
-    url = reverse("pdu-patient-report", kwargs={
-        "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
-        "pz_code": ALDER_HEY_PZ_CODE
-    })
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
 
     # Get the patient report with outcomes category
     response = client.get(
@@ -384,10 +395,7 @@ def test_outcomes_multiple_hba1c_measurements(
 
 @pytest.mark.django_db
 def test_report_for_patients_turning_12_in_audit_year(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -406,7 +414,8 @@ def test_report_for_patients_turning_12_in_audit_year(
         nhs_number="4444444444",
         diabetes_type=DIABETES_TYPES[0][0],  # T1DM
         date_of_birth=date_of_birth,
-        diagnosis_date=audit_period.start_date - relativedelta(days=2), # complete year of care
+        diagnosis_date=audit_period.start_date
+        - relativedelta(days=2),  # complete year of care
     )
 
     # Need a visit in the audit period to be eligible
@@ -427,10 +436,13 @@ def test_report_for_patients_turning_12_in_audit_year(
     )
     submission.patients.add(patient)
 
-    url = reverse("pdu-patient-report", kwargs={
-        "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
-        "pz_code": ALDER_HEY_PZ_CODE
-    })
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
 
     response = client.get(
         url + f"?category={TableCategories.HEALTH_CHECKS.value}",
@@ -451,10 +463,13 @@ def test_report_for_patients_turning_12_in_audit_year(
     assert response.context["total_eligible_urinary_albumin"] == 0
     assert response.context["total_eligible_foot_exam"] == 0
 
-    url = reverse("pdu-patient-report", kwargs={
-        "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
-        "pz_code": ALDER_HEY_PZ_CODE
-    })
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
 
     response = client.get(
         url + f"?category={TableCategories.ADDITIONAL_CARE_PROCESSES.value}",
@@ -468,16 +483,13 @@ def test_report_for_patients_turning_12_in_audit_year(
 
     assert patient["patient_identifier"] == "4444444444"
     assert patient["smoking_status"] is None
-    assert patient["smoking_cessation_referral"] is None
+    assert patient["smoking_cessation_referral"] == "under_12"
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1197
 @pytest.mark.django_db
 def test_report_for_sick_day_rules(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -496,7 +508,8 @@ def test_report_for_sick_day_rules(
         nhs_number="4444444444",
         diabetes_type=DIABETES_TYPES[0][0],  # T1DM
         date_of_birth=date_of_birth,
-        diagnosis_date=audit_period.start_date - relativedelta(days=2), # complete year of care
+        diagnosis_date=audit_period.start_date
+        - relativedelta(days=2),  # complete year of care
     )
 
     visit_date = audit_period.start_date + relativedelta(days=10)
@@ -516,10 +529,13 @@ def test_report_for_sick_day_rules(
     )
     submission.patients.add(patient)
 
-    url = reverse("pdu-patient-report", kwargs={
-        "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
-        "pz_code": ALDER_HEY_PZ_CODE
-    })
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
 
     response = client.get(
         url + f"?category={TableCategories.ADDITIONAL_CARE_PROCESSES.value}",
@@ -538,10 +554,7 @@ def test_report_for_sick_day_rules(
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1199
 @pytest.mark.django_db
 def test_care_at_diagnosis_for_type_1_patient(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -560,7 +573,8 @@ def test_care_at_diagnosis_for_type_1_patient(
         nhs_number="4444444444",
         diabetes_type=DIABETES_TYPES[0][0],  # T1DM
         date_of_birth=date_of_birth,
-        diagnosis_date=audit_period.start_date + relativedelta(days=2), # diagnosed within the audit year
+        diagnosis_date=audit_period.start_date
+        + relativedelta(days=2),  # diagnosed within the audit year
     )
 
     visit_date = audit_period.start_date + relativedelta(days=10)
@@ -580,10 +594,13 @@ def test_care_at_diagnosis_for_type_1_patient(
     )
     submission.patients.add(patient)
 
-    url = reverse("pdu-patient-report", kwargs={
-        "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
-        "pz_code": ALDER_HEY_PZ_CODE
-    })
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
 
     response = client.get(
         url + f"?category={TableCategories.CARE_AT_DIAGNOSIS.value}",
@@ -606,10 +623,7 @@ def test_care_at_diagnosis_for_type_1_patient(
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1199
 @pytest.mark.django_db
 def test_non_type_1_patients_do_not_appear_in_care_at_diagnosis(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -628,7 +642,8 @@ def test_non_type_1_patients_do_not_appear_in_care_at_diagnosis(
         nhs_number="4444444444",
         diabetes_type=DIABETES_TYPES[1][0],  # T2DM
         date_of_birth=date_of_birth,
-        diagnosis_date=audit_period.start_date + relativedelta(days=2), # diagnosed within the audit year
+        diagnosis_date=audit_period.start_date
+        + relativedelta(days=2),  # diagnosed within the audit year
     )
 
     visit_date = audit_period.start_date + relativedelta(days=10)
@@ -648,10 +663,13 @@ def test_non_type_1_patients_do_not_appear_in_care_at_diagnosis(
     )
     submission.patients.add(patient)
 
-    url = reverse("pdu-patient-report", kwargs={
-        "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
-        "pz_code": ALDER_HEY_PZ_CODE
-    })
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
 
     response = client.get(
         url + f"?category={TableCategories.CARE_AT_DIAGNOSIS.value}",
@@ -665,10 +683,7 @@ def test_non_type_1_patients_do_not_appear_in_care_at_diagnosis(
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1242
 @pytest.mark.django_db
 def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_hba1c_healthcheck(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -687,7 +702,8 @@ def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_hba1c_he
         nhs_number="4444444444",
         diabetes_type=DIABETES_TYPES[0][0],  # T1DM
         date_of_birth=date_of_birth,
-        diagnosis_date=audit_period.start_date + relativedelta(days=2), # diagnosed within the audit year
+        diagnosis_date=audit_period.start_date
+        + relativedelta(days=2),  # diagnosed within the audit year
     )
 
     visit_date = audit_period.start_date + relativedelta(days=10)
@@ -709,10 +725,13 @@ def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_hba1c_he
     )
     submission.patients.add(patient)
 
-    url = reverse("pdu-patient-report", kwargs={
-        "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
-        "pz_code": ALDER_HEY_PZ_CODE
-    })
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
 
     response = client.get(
         url + f"?category={TableCategories.HEALTH_CHECKS.value}",
@@ -723,7 +742,7 @@ def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_hba1c_he
     assert len(response.context["patients"]) == 1
 
     patient = response.context["patients"][0]
-    
+
     assert patient["patient_identifier"] == "4444444444"
     assert patient["passed_hba1c"] is True
 
@@ -731,10 +750,7 @@ def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_hba1c_he
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1242
 @pytest.mark.django_db
 def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_influenza_immunisation_recommended(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -753,7 +769,8 @@ def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_influenz
         nhs_number="4444444444",
         diabetes_type=DIABETES_TYPES[0][0],  # T1DM
         date_of_birth=date_of_birth,
-        diagnosis_date=audit_period.start_date + relativedelta(days=2), # diagnosed within the audit year
+        diagnosis_date=audit_period.start_date
+        + relativedelta(days=2),  # diagnosed within the audit year
     )
 
     visit_date = audit_period.start_date + relativedelta(days=10)
@@ -773,10 +790,13 @@ def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_influenz
     )
     submission.patients.add(patient)
 
-    url = reverse("pdu-patient-report", kwargs={
-        "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
-        "pz_code": ALDER_HEY_PZ_CODE
-    })
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
 
     response = client.get(
         url + f"?category={TableCategories.ADDITIONAL_CARE_PROCESSES.value}",
@@ -787,17 +807,14 @@ def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_influenz
     assert len(response.context["patients"]) == 1
 
     patient = response.context["patients"][0]
-    
+
     assert patient["patient_identifier"] == "4444444444"
     assert patient["influenza_immunisation_recommended"] is True
 
 
 @pytest.mark.django_db
 def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_hba1c_healthcheck(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -816,7 +833,8 @@ def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_hba1c_he
         nhs_number="4444444444",
         diabetes_type=DIABETES_TYPES[0][0],  # T1DM
         date_of_birth=date_of_birth,
-        diagnosis_date=audit_period.start_date + relativedelta(days=2), # diagnosed within the audit year
+        diagnosis_date=audit_period.start_date
+        + relativedelta(days=2),  # diagnosed within the audit year
     )
 
     visit_date = audit_period.start_date + relativedelta(days=10)
@@ -838,10 +856,13 @@ def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_hba1c_he
     )
     submission.patients.add(patient)
 
-    url = reverse("pdu-patient-report", kwargs={
-        "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
-        "pz_code": ALDER_HEY_PZ_CODE
-    })
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
 
     response = client.get(
         url + f"?category={TableCategories.HEALTH_CHECKS.value}",
@@ -852,17 +873,14 @@ def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_hba1c_he
     assert len(response.context["patients"]) == 1
 
     patient = response.context["patients"][0]
-    
+
     assert patient["patient_identifier"] == "4444444444"
     assert patient["passed_hba1c"] is True
 
 
 @pytest.mark.django_db
-def test_patient_under_12yo_can_still_show_as_passing_smoking_status_screened(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client
+def test_patient_under_12yo_should_show_as_ineligible_for_smoking_status_screened(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -889,7 +907,7 @@ def test_patient_under_12yo_can_still_show_as_passing_smoking_status_screened(
     VisitFactory(
         patient=patient,
         visit_date=visit_date,
-        smoking_status=SMOKING_STATUS[0][0], # non smoker
+        smoking_status=SMOKING_STATUS[0][0],  # non smoker
     )
 
     submission = Submission.objects.create(
@@ -901,10 +919,13 @@ def test_patient_under_12yo_can_still_show_as_passing_smoking_status_screened(
     )
     submission.patients.add(patient)
 
-    url = reverse("pdu-patient-report", kwargs={
-        "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
-        "pz_code": ALDER_HEY_PZ_CODE
-    })
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
 
     response = client.get(
         url + f"?category={TableCategories.ADDITIONAL_CARE_PROCESSES.value}",
@@ -915,6 +936,71 @@ def test_patient_under_12yo_can_still_show_as_passing_smoking_status_screened(
     assert len(response.context["patients"]) == 1
 
     patient = response.context["patients"][0]
-    
+
+    assert patient["patient_identifier"] == "4444444444"
+    assert patient["smoking_status"] is None
+
+
+@pytest.mark.django_db
+def test_patient_over_12yo_non_smoker_should_not_be_eligible_for_smoking_cessation_referral(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    date_of_birth = audit_period.start_date - relativedelta(years=14)
+
+    patient = PatientFactory(
+        nhs_number="4444444444",
+        diabetes_type=DIABETES_TYPES[0][0],  # T1DM
+        date_of_birth=date_of_birth,
+        diagnosis_date=audit_period.start_date - relativedelta(days=2),
+    )
+
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        smoking_status=SMOKING_STATUS[0][0],  # non smoker
+        smoking_cessation_referral_date=None,
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(patient)
+
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
+
+    response = client.get(
+        url + f"?category={TableCategories.ADDITIONAL_CARE_PROCESSES.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    assert len(response.context["patients"]) == 1
+
+    patient = response.context["patients"][0]
+
     assert patient["patient_identifier"] == "4444444444"
     assert patient["smoking_status"] is True
+    assert patient["smoking_cessation_referral"] == "non_smoker_no_referral"

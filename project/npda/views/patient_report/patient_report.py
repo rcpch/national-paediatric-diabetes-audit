@@ -72,6 +72,7 @@ class TableCategories(Enum):
     def default(cls):
         return cls.HEALTH_CHECKS.value
 
+
 def calculate_hba1c_values(pt_qs: QuerySet[Patient], calculate_kpis: CalculateKPIS):
     """Helper function to calculate HbA1c values for a queryset."""
     patient_ids = set(pt_qs.values_list("pk", flat=True))
@@ -88,8 +89,7 @@ def calculate_hba1c_values(pt_qs: QuerySet[Patient], calculate_kpis: CalculateKP
                 ),
                 When(
                     Q(hba1c_format=HBA1C_FORMATS[1][0]),
-                    then=(F("hba1c") - Round(Decimal("2.152")))
-                    / Decimal("0.09148"),
+                    then=(F("hba1c") - Round(Decimal("2.152"))) / Decimal("0.09148"),
                 ),
                 default=None,
                 output_field=DecimalField(max_digits=5, decimal_places=2),
@@ -100,9 +100,7 @@ def calculate_hba1c_values(pt_qs: QuerySet[Patient], calculate_kpis: CalculateKP
     )
     hba1c_values_by_patient = defaultdict(list)
     for visit in valid_visits_with_hba1c:
-        hba1c_values_by_patient[visit["patient__pk"]].append(
-            visit["hba1c_mmol_mol"]
-        )
+        hba1c_values_by_patient[visit["patient__pk"]].append(visit["hba1c_mmol_mol"])
     for patient in pt_qs:
         hba1c_values = hba1c_values_by_patient.get(patient["pk"], [])
         if hba1c_values:
@@ -127,15 +125,19 @@ def calculate_hba1c_values(pt_qs: QuerySet[Patient], calculate_kpis: CalculateKP
             patient["kpi_45_median_hba1c"] = None
             patient["mean_hba1c_pct"] = None
             patient["median_hba1c_pct"] = None
-    
+
     return pt_qs
 
 
-def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_category: str) -> QuerySet[Patient]:
+def calculate_queryset(
+    pz_code: str, audit_period: AuditPeriod, selected_category: str
+) -> QuerySet[Patient]:
     calculation_date = audit_period.kpi_calculation_date()
 
     calculate_kpis = CalculateKPIS(
-        calculation_date=calculation_date, return_pt_querysets=True, is_jersey=pz_code == "PZ248"
+        calculation_date=calculation_date,
+        return_pt_querysets=True,
+        is_jersey=pz_code == "PZ248",
     )
     calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
     patient_identifier = (
@@ -155,288 +157,350 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
         is_complete_year_of_care=Case(
             When(
                 Exists(
-                    all_t1dm_pts_with_complete_year_of_care.filter(
-                        pk=OuterRef("pk")
-                    )
+                    all_t1dm_pts_with_complete_year_of_care.filter(pk=OuterRef("pk"))
                 ),
                 then=True,
             ),
             default=False,
             output_field=BooleanField(),
         )
-    ) 
-        
-    if selected_category == TableCategories.HEALTH_CHECKS.value:    
-        pt_qs = pt_qs.annotate(
-            is_gte_12yo=Q(
-                date_of_birth__lte=audit_period.start_date - relativedelta(years=12)
-            ),
-            passed_hba1c=Case(
-                When(
-                    Exists(
-                        calculate_kpis.calculate_kpi_25_hba1c_for_patient_report_table()
-                        .patient_querysets["passed"]
-                        .filter(pk=OuterRef("pk"))
-                    ),
-                    then=True,
+    )
+
+    if selected_category == TableCategories.HEALTH_CHECKS.value:
+        pt_qs = (
+            pt_qs.annotate(
+                is_gte_12yo=Q(
+                    date_of_birth__lte=audit_period.start_date - relativedelta(years=12)
                 ),
-                default=False,
-                output_field=BooleanField(),
-            ),
-            passed_bmi=Case(
-                When(
-                    Exists(
-                        calculate_kpis.calculate_kpi_26_bmi_for_patient_report_table()
-                        .patient_querysets["passed"]
-                        .filter(pk=OuterRef("pk"))
+                passed_hba1c=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_25_hba1c_for_patient_report_table()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
                     ),
-                    then=True,
-                ),
-                default=False,
-                output_field=BooleanField(),
-            ),
-            passed_thyroid_screen=Case(
-                When(
-                    Exists(
-                        calculate_kpis.calculate_kpi_27_thyroid_screen_for_patient_report_table()
-                        .patient_querysets["passed"]
-                        .filter(pk=OuterRef("pk"))
-                    ),
-                    then=True,
-                ),
-                default=False,
-                output_field=BooleanField(),
-            ),
-            passed_blood_pressure=Case(
-                When(
-                    Exists(
-                        calculate_kpis.calculate_kpi_28_blood_pressure_for_patient_report_table()
-                        .patient_querysets["passed"]
-                        .filter(pk=OuterRef("pk"))
-                    ),
-                    then=True,
-                ),
-                default=Case(
-                    When(is_gte_12yo=True, then=False),
-                    default=None,
+                    default=False,
                     output_field=BooleanField(),
                 ),
-                output_field=BooleanField(),
-            ),
-            passed_urinary_albumin=Case(
-                When(
-                    Exists(
-                        calculate_kpis.calculate_kpi_29_urinary_albumin_for_patient_report_table()
-                        .patient_querysets["passed"]
-                        .filter(pk=OuterRef("pk"))
+                passed_bmi=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_26_bmi_for_patient_report_table()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
                     ),
-                    then=True,
-                ),
-                default=Case(
-                    When(is_gte_12yo=True, then=False),
-                    default=None,
+                    default=False,
                     output_field=BooleanField(),
                 ),
-                output_field=BooleanField(),
-            ),
-            passed_retinal_screening=Case(
-                When(
-                    Exists(
-                        calculate_kpis.calculate_kpi_30_retinal_screening_for_patient_report_table()
-                        .patient_querysets["passed"]
-                        .filter(pk=OuterRef("pk"))
+                passed_thyroid_screen=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_27_thyroid_screen_for_patient_report_table()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
                     ),
-                    then=True,
-                ),
-                default=Case(
-                    When(is_gte_12yo=True, then=False),
-                    default=None,
+                    default=False,
                     output_field=BooleanField(),
                 ),
-                output_field=BooleanField(),
-            ),
-            passed_foot_exam=Case(
-                When(
-                    Exists(
-                        calculate_kpis.calculate_kpi_31_foot_examination_for_patient_report_table()
-                        .patient_querysets["passed"]
-                        .filter(pk=OuterRef("pk"))
+                passed_blood_pressure=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_28_blood_pressure_for_patient_report_table()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
                     ),
-                    then=True,
-                ),
-                default=Case(
-                    When(is_gte_12yo=True, then=False),
-                    default=None,
+                    default=Case(
+                        When(is_gte_12yo=True, then=False),
+                        default=None,
+                        output_field=BooleanField(),
+                    ),
                     output_field=BooleanField(),
                 ),
-                output_field=BooleanField(),
-            ),
-            num_passed=Case(
-                When(
-                    is_gte_12yo=True,
-                    then=(
-                        Case(When(passed_hba1c=True, then=1), default=0)
-                        + Case(When(passed_bmi=True, then=1), default=0)
-                        + Case(When(passed_thyroid_screen=True, then=1), default=0)
-                        + Case(When(passed_blood_pressure=True, then=1), default=0)
-                        + Case(When(passed_urinary_albumin=True, then=1), default=0)
-                        + Case(When(passed_foot_exam=True, then=1), default=0)
+                passed_urinary_albumin=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_29_urinary_albumin_for_patient_report_table()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
                     ),
-                ),
-                When(
-                    is_gte_12yo=False,
-                    then=(
-                        Case(When(passed_hba1c=True, then=1), default=0)
-                        + Case(When(passed_bmi=True, then=1), default=0)
-                        + Case(When(passed_thyroid_screen=True, then=1), default=0)
+                    default=Case(
+                        When(is_gte_12yo=True, then=False),
+                        default=None,
+                        output_field=BooleanField(),
                     ),
+                    output_field=BooleanField(),
                 ),
-                default=0,
-                output_field=IntegerField(),
-            ),
-            num_total=Case(
-                When(is_gte_12yo=True, then=6),
-                When(is_gte_12yo=False, then=3),
-                default=0,
-                output_field=IntegerField(),
-            ),
-        ).order_by("-is_complete_year_of_care", "-passed_hba1c", "-passed_bmi", "-passed_thyroid_screen", "-passed_blood_pressure", "-passed_urinary_albumin", "-passed_foot_exam", "patient_identifier").values(
-            "pk",
-            "patient_identifier",
-            "is_gte_12yo",
-            "is_complete_year_of_care",
-            "passed_hba1c",
-            "passed_bmi",
-            "passed_thyroid_screen",
-            "passed_blood_pressure",
-            "passed_urinary_albumin",
-            "passed_foot_exam",
-            "num_passed",
-            "num_total",
-            "passed_retinal_screening",
+                passed_retinal_screening=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_30_retinal_screening_for_patient_report_table()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
+                    ),
+                    default=Case(
+                        When(is_gte_12yo=True, then=False),
+                        default=None,
+                        output_field=BooleanField(),
+                    ),
+                    output_field=BooleanField(),
+                ),
+                passed_foot_exam=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_31_foot_examination_for_patient_report_table()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
+                    ),
+                    default=Case(
+                        When(is_gte_12yo=True, then=False),
+                        default=None,
+                        output_field=BooleanField(),
+                    ),
+                    output_field=BooleanField(),
+                ),
+                num_passed=Case(
+                    When(
+                        is_gte_12yo=True,
+                        then=(
+                            Case(When(passed_hba1c=True, then=1), default=0)
+                            + Case(When(passed_bmi=True, then=1), default=0)
+                            + Case(When(passed_thyroid_screen=True, then=1), default=0)
+                            + Case(When(passed_blood_pressure=True, then=1), default=0)
+                            + Case(When(passed_urinary_albumin=True, then=1), default=0)
+                            + Case(When(passed_foot_exam=True, then=1), default=0)
+                        ),
+                    ),
+                    When(
+                        is_gte_12yo=False,
+                        then=(
+                            Case(When(passed_hba1c=True, then=1), default=0)
+                            + Case(When(passed_bmi=True, then=1), default=0)
+                            + Case(When(passed_thyroid_screen=True, then=1), default=0)
+                        ),
+                    ),
+                    default=0,
+                    output_field=IntegerField(),
+                ),
+                num_total=Case(
+                    When(is_gte_12yo=True, then=6),
+                    When(is_gte_12yo=False, then=3),
+                    default=0,
+                    output_field=IntegerField(),
+                ),
+            )
+            .order_by(
+                "-is_complete_year_of_care",
+                "-passed_hba1c",
+                "-passed_bmi",
+                "-passed_thyroid_screen",
+                "-passed_blood_pressure",
+                "-passed_urinary_albumin",
+                "-passed_foot_exam",
+                "patient_identifier",
+            )
+            .values(
+                "pk",
+                "patient_identifier",
+                "is_gte_12yo",
+                "is_complete_year_of_care",
+                "passed_hba1c",
+                "passed_bmi",
+                "passed_thyroid_screen",
+                "passed_blood_pressure",
+                "passed_urinary_albumin",
+                "passed_foot_exam",
+                "num_passed",
+                "num_total",
+                "passed_retinal_screening",
+            )
         )
     elif selected_category == TableCategories.ADDITIONAL_CARE_PROCESSES.value:
-        pt_qs = pt_qs.annotate(
-            hba1c_4plus=Case(
-                When(
-                    Exists(
-                        calculate_kpis.calculate_kpi_33_hba1c_4plus_for_patient_report_table()
-                        .patient_querysets["passed"]
-                        .filter(pk=OuterRef("pk"))
+        pt_qs = (
+            pt_qs.annotate(
+                hba1c_4plus=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_33_hba1c_4plus_for_patient_report_table()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
                     ),
-                    then=True,
-                ),
-                default=False,
-                output_field=BooleanField(),
-            ),
-            psychological_assessment=Case(
-                When(
-                    Exists(
-                        calculate_kpis.calculate_kpi_34_psychological_assessment_for_patient_report_table()
-                        .patient_querysets["passed"]
-                        .filter(pk=OuterRef("pk"))
-                    ),
-                    then=True,
-                ),
-                default=False,
-                output_field=BooleanField(),
-            ),
-            is_gte_12yo=Q(
-                date_of_birth__lte=audit_period.start_date - relativedelta(years=12)
-            ),
-            smoking_status=Case(
-                When(
-                    Exists(
-                        calculate_kpis.calculate_kpi_35_smoking_status_screened_for_patient_report_table()
-                        .patient_querysets["passed"]
-                        .filter(pk=OuterRef("pk"))
-                    ),
-                    then=True,
-                ),
-                default=Case(
-                    When(is_gte_12yo=True, then=False),
-                    default=None,
+                    default=False,
                     output_field=BooleanField(),
                 ),
-                output_field=BooleanField(),
-            ),
-            smoking_cessation_referral=Case(
-                When(
-                    Exists(
-                        calculate_kpis.calculate_kpi_36_referral_to_smoking_cessation_service_for_patient_report_table()
-                        .patient_querysets["passed"]
-                        .filter(pk=OuterRef("pk"))
+                psychological_assessment=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_34_psychological_assessment_for_patient_report_table()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
                     ),
-                    then=True,
-                ),
-                default=Case(
-                    When(is_gte_12yo=True, then=False),
-                    default=None,
+                    default=False,
                     output_field=BooleanField(),
                 ),
-                output_field=BooleanField(),
-            ),
-            additional_dietetic_appt_offered=Case(
-                When(
-                    Exists(
-                        calculate_kpis.calculate_kpi_37_additional_dietetic_appointment_offered_for_patient_report_table()
-                        .patient_querysets["passed"]
-                        .filter(pk=OuterRef("pk"))
-                    ),
-                    then=True,
+                is_gte_12yo=Q(
+                    date_of_birth__lte=audit_period.start_date - relativedelta(years=12)
                 ),
-                default=False,
-                output_field=BooleanField(),
-            ),
-            pts_attending_additional_dietetic_appt=Case(
-                When(
-                    Exists(
-                        calculate_kpis.calculate_kpi_38_patients_attending_additional_dietetic_appointment_for_patient_report_table()
-                        .patient_querysets["passed"]
-                        .filter(pk=OuterRef("pk"))
+                smoking_status=Case(
+                    When(
+                        Q(visit__smoking_status__in=[1, 2])  # smoker
+                        & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE)
+                        & Q(
+                            date_of_birth__lte=audit_period.start_date
+                            - relativedelta(years=12)
+                        ),
+                        then=True,
                     ),
-                    then=True,
-                ),
-                default=False,
-                output_field=BooleanField(),
-            ),
-            influenza_immunisation_recommended=Case(
-                When(
-                    Exists(
-                        calculate_kpis.calculate_kpi_39_influenza_immunisation_recommended_for_patient_report_table()
-                        .patient_querysets["passed"]
-                        .filter(pk=OuterRef("pk"))
+                    When(
+                        Q(visit__smoking_status=99)  # not known
+                        & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE)
+                        & Q(
+                            date_of_birth__lte=audit_period.start_date
+                            - relativedelta(years=12)
+                        ),
+                        then=False,
                     ),
-                    then=True,
-                ),
-                default=False,
-                output_field=BooleanField(),
-            ),
-            sick_day_rules_advice=Case(
-                When(
-                    Exists(
-                        calculate_kpis.calculate_kpi_40_sick_day_rules_advice()
-                        .patient_querysets["passed"]
-                        .filter(pk=OuterRef("pk"))
+                    When(
+                        Q(
+                            date_of_birth__gt=audit_period.start_date
+                            - relativedelta(years=12)
+                        ),
+                        then=None,
                     ),
-                    then=True,
+                    default=Case(
+                        When(is_gte_12yo=True, then=False),
+                        default=None,
+                        output_field=BooleanField(),
+                    ),
+                    output_field=BooleanField(),
                 ),
-                default=False,
-                output_field=BooleanField(),
-            ),
-        ).order_by("-is_complete_year_of_care", "-hba1c_4plus", "-psychological_assessment", "-smoking_status", "-smoking_cessation_referral", "-additional_dietetic_appt_offered", "-pts_attending_additional_dietetic_appt", "-influenza_immunisation_recommended", "-sick_day_rules_advice", "patient_identifier").values(
-            "pk",
-            "patient_identifier",
-            "is_complete_year_of_care",
-            "is_gte_12yo",
-            "hba1c_4plus",
-            "psychological_assessment",
-            "smoking_status",
-            "smoking_cessation_referral",
-            "additional_dietetic_appt_offered",
-            "pts_attending_additional_dietetic_appt",
-            "influenza_immunisation_recommended",
-            "sick_day_rules_advice",
+                smoking_cessation_referral=Case(
+                    When(  # Smoker with referral over 12 years old during audit period
+                        Q(visit__smoking_status=2)  # smoker
+                        & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE)
+                        & Q(visit__smoking_cessation_referral_date__isnull=False)
+                        & Q(
+                            date_of_birth__lte=audit_period.start_date
+                            - relativedelta(years=12)
+                        ),
+                        then=Value("True"),
+                    ),
+                    When(  # Non-smoker during audit period over 12 years old no referral needed
+                        Q(visit__smoking_status=1)  # non-smoker
+                        & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE)
+                        & Q(
+                            date_of_birth__lte=audit_period.start_date
+                            - relativedelta(years=12)
+                        )
+                        & Q(visit__smoking_cessation_referral_date__isnull=True),
+                        then=Value("non_smoker_no_referral"),
+                    ),
+                    When(  # Under 12 years old no eligible
+                        Q(
+                            date_of_birth__gt=audit_period.start_date
+                            - relativedelta(years=12)
+                        ),
+                        then=Value("under_12"),
+                    ),
+                    default=Case(
+                        When(is_gte_12yo=True, then=Value("False")),
+                        default=None,
+                        output_field=CharField(),
+                    ),
+                    output_field=CharField(),
+                ),
+                additional_dietetic_appt_offered=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_37_additional_dietetic_appointment_offered_for_patient_report_table()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
+                    ),
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+                pts_attending_additional_dietetic_appt=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_38_patients_attending_additional_dietetic_appointment_for_patient_report_table()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
+                    ),
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+                influenza_immunisation_recommended=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_39_influenza_immunisation_recommended_for_patient_report_table()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
+                    ),
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+                sick_day_rules_advice=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_40_sick_day_rules_advice()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
+                    ),
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+            )
+            .order_by(
+                "-is_complete_year_of_care",
+                "-hba1c_4plus",
+                "-psychological_assessment",
+                "-smoking_status",
+                "-smoking_cessation_referral",
+                "-additional_dietetic_appt_offered",
+                "-pts_attending_additional_dietetic_appt",
+                "-influenza_immunisation_recommended",
+                "-sick_day_rules_advice",
+                "patient_identifier",
+            )
+            .values(
+                "pk",
+                "patient_identifier",
+                "is_complete_year_of_care",
+                "is_gte_12yo",
+                "hba1c_4plus",
+                "psychological_assessment",
+                "smoking_status",
+                "smoking_cessation_referral",
+                "additional_dietetic_appt_offered",
+                "pts_attending_additional_dietetic_appt",
+                "influenza_immunisation_recommended",
+                "sick_day_rules_advice",
+            )
         )
     elif selected_category == TableCategories.CARE_AT_DIAGNOSIS.value:
         pt_qs = calculate_kpis.calculate_kpi_2_total_new_diagnoses().patient_querysets[
@@ -445,51 +509,60 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
         pt_qs = pt_qs.filter(
             diabetes_type=DIABETES_TYPES[0][0]  # T1DM
         )
-        pt_qs = pt_qs.annotate(
-            patient_identifier=F(patient_identifier),
-            coeliac_disease_screening=Case(
-                When(
-                    Exists(
-                        calculate_kpis.calculate_kpi_41_coeliac_disease_screening()
-                        .patient_querysets["passed"]
-                        .filter(pk=OuterRef("pk"))
+        pt_qs = (
+            pt_qs.annotate(
+                patient_identifier=F(patient_identifier),
+                coeliac_disease_screening=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_41_coeliac_disease_screening()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
                     ),
-                    then=True,
+                    default=False,
+                    output_field=BooleanField(),
                 ),
-                default=False,
-                output_field=BooleanField(),
-            ),
-            thyroid_disease_screening=Case(
-                When(
-                    Exists(
-                        calculate_kpis.calculate_kpi_42_thyroid_disease_screening()
-                        .patient_querysets["passed"]
-                        .filter(pk=OuterRef("pk"))
+                thyroid_disease_screening=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_42_thyroid_disease_screening()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
                     ),
-                    then=True,
+                    default=False,
+                    output_field=BooleanField(),
                 ),
-                default=False,
-                output_field=BooleanField(),
-            ),
-            carbohydrate_counting_education=Case(
-                When(
-                    Exists(
-                        calculate_kpis.calculate_kpi_43_carbohydrate_counting_education()
-                        .patient_querysets["passed"]
-                        .filter(pk=OuterRef("pk"))
+                carbohydrate_counting_education=Case(
+                    When(
+                        Exists(
+                            calculate_kpis.calculate_kpi_43_carbohydrate_counting_education()
+                            .patient_querysets["passed"]
+                            .filter(pk=OuterRef("pk"))
+                        ),
+                        then=True,
                     ),
-                    then=True,
+                    default=False,
+                    output_field=BooleanField(),
                 ),
-                default=False,
-                output_field=BooleanField(),
-            ),
-        ).order_by("-coeliac_disease_screening", "-thyroid_disease_screening", "-carbohydrate_counting_education", "patient_identifier").values(
-            "pk",
-            "patient_identifier",
-            "diagnosis_date",
-            "coeliac_disease_screening",
-            "thyroid_disease_screening",
-            "carbohydrate_counting_education",
+            )
+            .order_by(
+                "-coeliac_disease_screening",
+                "-thyroid_disease_screening",
+                "-carbohydrate_counting_education",
+                "patient_identifier",
+            )
+            .values(
+                "pk",
+                "patient_identifier",
+                "diagnosis_date",
+                "coeliac_disease_screening",
+                "thyroid_disease_screening",
+                "carbohydrate_counting_education",
+            )
         )
     elif selected_category == TableCategories.ADMISSIONS.value:
         pt_qs = (
@@ -523,17 +596,15 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
                         )
                     )
                     & Q(
-                        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[
-                            1
-                        ][0]
+                        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[1][
+                            0
+                        ]
                     )
                     & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE),
                     distinct=True,
                 ),
             )
-            .filter(
-                Q(number_of_admissions__gt=0) | Q(number_of_dka_admissions__gt=0)
-            )
+            .filter(Q(number_of_admissions__gt=0) | Q(number_of_dka_admissions__gt=0))
             .values(
                 "pk",
                 "patient_identifier",
@@ -583,16 +654,18 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
                 ),
                 days_delta_between_latest_and_previous_hba1c=Case(
                     When(
-                        Q(latest_hba1c_date__isnull=False) & Q(previous_to_latest_hba1c_date__isnull=False),
+                        Q(latest_hba1c_date__isnull=False)
+                        & Q(previous_to_latest_hba1c_date__isnull=False),
                         then=Func(
                             ExpressionWrapper(
-                                F("latest_hba1c_date") - F("previous_to_latest_hba1c_date"),
-                                output_field=DurationField()
+                                F("latest_hba1c_date")
+                                - F("previous_to_latest_hba1c_date"),
+                                output_field=DurationField(),
                             ),
-                            function='EXTRACT',
+                            function="EXTRACT",
                             template="EXTRACT(DAY FROM %(expressions)s)",
-                            output_field=IntegerField()
-                        )
+                            output_field=IntegerField(),
+                        ),
                     ),
                     default=None,
                     output_field=IntegerField(),
@@ -660,8 +733,7 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
                         Q(previous_to_latest_hba1c_mmol_mol__isnull=False)
                         & Q(previous_to_latest_hba1c_mmol_mol__gt=0),
                         then=(
-                            Decimal("0.09148")
-                            * F("previous_to_latest_hba1c_mmol_mol")
+                            Decimal("0.09148") * F("previous_to_latest_hba1c_mmol_mol")
                         )
                         + Decimal("2.152"),
                     ),
@@ -810,7 +882,7 @@ def calculate_queryset(pz_code: str, audit_period: AuditPeriod, selected_categor
             "glucose_monitoring",
             "hcl",
         )
-    
+
     return pt_qs, calculate_kpis, patient_identifier
 
 
@@ -839,9 +911,7 @@ class PatientReportView(
         pz_code = self.pdu.pz_code
 
         pt_qs, calculate_kpis, patient_identifier = calculate_queryset(
-            pz_code,
-            self.audit_period,
-            category
+            pz_code, self.audit_period, category
         )
 
         # Save to use later in get_context_data
@@ -851,7 +921,9 @@ class PatientReportView(
         if sort_field:
             # Handle sort direction
             if sort_field == "unique_identifier":
-                sort_field = "unique_reference_number" if pz_code == "PZ248" else "nhs_number"
+                sort_field = (
+                    "unique_reference_number" if pz_code == "PZ248" else "nhs_number"
+                )
             if sort_order == "desc":
                 sort_field = f"-{sort_field}"
 
@@ -864,11 +936,11 @@ class PatientReportView(
                 field_name = sort_field.replace("-", "")
                 # Calculate HbA1c values
                 pt_qs = calculate_hba1c_values(pt_qs, calculate_kpis)
-                
+
                 pt_qs = sorted(
                     pt_qs,
                     key=lambda p: (
-                        p.get(field_name) is None, 
+                        p.get(field_name) is None,
                         p.get(field_name) or 0,
                     ),
                     reverse=reverse,
@@ -891,6 +963,8 @@ class PatientReportView(
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        context["audit_period"] = self.audit_period.slug
+        context["pz_code"] = self.pdu.pz_code
         context["is_jersey"] = self.pdu.pz_code == "PZ248"
 
         # Add table categories to the context
@@ -912,72 +986,141 @@ class PatientReportView(
 
             def get_patient_ids_and_count(**kwargs):
                 patient_queryset = self.object_list.filter(**kwargs)
-                return patient_queryset.values_list("pk", flat=True), patient_queryset.count()
+                return patient_queryset.values_list(
+                    "pk", flat=True
+                ), patient_queryset.count()
 
-            def add_kpi_total(context, kpi_name, kpi_result, patient_ids, patient_count):
-                context[f"total_passed_{kpi_name}"] = kpi_result.patient_querysets["passed"].filter(pk__in=patient_ids).count()
+            def add_kpi_total(
+                context, kpi_name, kpi_result, patient_ids, patient_count
+            ):
+                context[f"total_passed_{kpi_name}"] = (
+                    kpi_result.patient_querysets["passed"]
+                    .filter(pk__in=patient_ids)
+                    .count()
+                )
                 context[f"total_eligible_{kpi_name}"] = patient_count
 
-            complete_year = get_patient_ids_and_count(
-                is_complete_year_of_care=True
-            )
+            complete_year = get_patient_ids_and_count(is_complete_year_of_care=True)
 
             # For age-specific checks (12+ years old at start of audit period)
             complete_year_12plus = get_patient_ids_and_count(
                 is_complete_year_of_care=True,
-                date_of_birth__lte=self.audit_period.start_date - relativedelta(years=12)
+                date_of_birth__lte=self.audit_period.start_date
+                - relativedelta(years=12),
             )
 
             for kpi_name, kpi_result, (patient_ids, patient_count) in [
                 ("hba1c", self.calculate_kpis.calculate_kpi_25_hba1c(), complete_year),
                 ("bmi", self.calculate_kpis.calculate_kpi_26_bmi(), complete_year),
-                ("thyroid_screen", self.calculate_kpis.calculate_kpi_27_thyroid_screen(), complete_year),
-                ("blood_pressure", self.calculate_kpis.calculate_kpi_28_blood_pressure(), complete_year_12plus),
-                ("urinary_albumin", self.calculate_kpis.calculate_kpi_29_urinary_albumin(), complete_year_12plus),
-                ("foot_exam", self.calculate_kpis.calculate_kpi_31_foot_examination(), complete_year_12plus),
-                ("retinal_screening", self.calculate_kpis.calculate_kpi_30_retinal_screening(), complete_year),
+                (
+                    "thyroid_screen",
+                    self.calculate_kpis.calculate_kpi_27_thyroid_screen(),
+                    complete_year,
+                ),
+                (
+                    "blood_pressure",
+                    self.calculate_kpis.calculate_kpi_28_blood_pressure(),
+                    complete_year_12plus,
+                ),
+                (
+                    "urinary_albumin",
+                    self.calculate_kpis.calculate_kpi_29_urinary_albumin(),
+                    complete_year_12plus,
+                ),
+                (
+                    "foot_exam",
+                    self.calculate_kpis.calculate_kpi_31_foot_examination(),
+                    complete_year_12plus,
+                ),
+                (
+                    "retinal_screening",
+                    self.calculate_kpis.calculate_kpi_30_retinal_screening(),
+                    complete_year,
+                ),
             ]:
                 add_kpi_total(context, kpi_name, kpi_result, patient_ids, patient_count)
-        
+
         elif self.selected_category == TableCategories.ADDITIONAL_CARE_PROCESSES.value:
             context["ineligible_reasons"] = {
                 "smoking_status": "Not required as less than 12 years old",
-                "smoking_cessation_referral": "Not required as less than 12 years old",
+                "smoking_cessation_referral": {
+                    "under_12": "Not required as less than 12 years old",
+                    "non_smoker_no_referral": "Not required as non-smoker",
+                },
             }
 
             def get_patient_ids_and_count(**kwargs):
                 patient_queryset = self.object_list.filter(**kwargs)
-                return patient_queryset.values_list("pk", flat=True), patient_queryset.count()
+                return patient_queryset.values_list(
+                    "pk", flat=True
+                ), patient_queryset.count()
 
-            def add_kpi_total(context, kpi_name, kpi_result, patient_ids, patient_count):
-                context[f"total_passed_{kpi_name}"] = kpi_result.patient_querysets["passed"].filter(pk__in=patient_ids).count()
+            def add_kpi_total(
+                context, kpi_name, kpi_result, patient_ids, patient_count
+            ):
+                context[f"total_passed_{kpi_name}"] = (
+                    kpi_result.patient_querysets["passed"]
+                    .filter(pk__in=patient_ids)
+                    .count()
+                )
                 context[f"total_eligible_{kpi_name}"] = patient_count
 
-            complete_year = get_patient_ids_and_count(
-                is_complete_year_of_care=True
-            )
+            complete_year = get_patient_ids_and_count(is_complete_year_of_care=True)
 
             # For age-specific checks (12+ years old at start of audit period)
             complete_year_12plus = get_patient_ids_and_count(
                 is_complete_year_of_care=True,
-                date_of_birth__lte=self.audit_period.start_date - relativedelta(years=12)
+                date_of_birth__lte=self.audit_period.start_date
+                - relativedelta(years=12),
             )
 
             for kpi_name, kpi_result, (patient_ids, patient_count) in [
-                ("hba1c_4plus", self.calculate_kpis.calculate_kpi_33_hba1c_4plus(), complete_year),
-                ("psychological_assessment", self.calculate_kpis.calculate_kpi_34_psychological_assessment(), complete_year),
-                ("additional_dietetic_appt_offered", self.calculate_kpis.calculate_kpi_37_additional_dietetic_appointment_offered(), complete_year),
-                ("pts_attending_additional_dietetic_appt", self.calculate_kpis.calculate_kpi_38_patients_attending_additional_dietetic_appointment(), complete_year),
-                ("influenza_immunisation_recommended", self.calculate_kpis.calculate_kpi_39_influenza_immunisation_recommended(), complete_year),
-                ("sick_day_rules_advice", self.calculate_kpis.calculate_kpi_40_sick_day_rules_advice(), complete_year),
-                ("smoking_status", self.calculate_kpis.calculate_kpi_35_smoking_status_screened(), complete_year_12plus),
-                ("smoking_cessation_referral", self.calculate_kpis.calculate_kpi_36_referral_to_smoking_cessation_service(), complete_year_12plus),
+                (
+                    "hba1c_4plus",
+                    self.calculate_kpis.calculate_kpi_33_hba1c_4plus(),
+                    complete_year,
+                ),
+                (
+                    "psychological_assessment",
+                    self.calculate_kpis.calculate_kpi_34_psychological_assessment(),
+                    complete_year,
+                ),
+                (
+                    "additional_dietetic_appt_offered",
+                    self.calculate_kpis.calculate_kpi_37_additional_dietetic_appointment_offered(),
+                    complete_year,
+                ),
+                (
+                    "pts_attending_additional_dietetic_appt",
+                    self.calculate_kpis.calculate_kpi_38_patients_attending_additional_dietetic_appointment(),
+                    complete_year,
+                ),
+                (
+                    "influenza_immunisation_recommended",
+                    self.calculate_kpis.calculate_kpi_39_influenza_immunisation_recommended(),
+                    complete_year,
+                ),
+                (
+                    "sick_day_rules_advice",
+                    self.calculate_kpis.calculate_kpi_40_sick_day_rules_advice(),
+                    complete_year,
+                ),
+                (
+                    "smoking_status",
+                    self.calculate_kpis.calculate_kpi_35_smoking_status_screened(),
+                    complete_year_12plus,
+                ),
+                (
+                    "smoking_cessation_referral",
+                    self.calculate_kpis.calculate_kpi_36_referral_to_smoking_cessation_service(),
+                    complete_year_12plus,
+                ),
             ]:
                 add_kpi_total(context, kpi_name, kpi_result, patient_ids, patient_count)
 
-        context["breadcrumbs"] = data_breadcrumbs(self.pdu, self.audit_period, [
-            ("Patient Report", "pdu-patient-report")
-        ])
+        context["breadcrumbs"] = data_breadcrumbs(
+            self.pdu, self.audit_period, [("Patient Report", "pdu-patient-report")]
+        )
 
         return context
 
@@ -1005,7 +1148,7 @@ class PatientReportView(
         return ["patient_report/patient_report.html"]
 
 
-def measure_status(complete: bool | None) -> str: 
+def measure_status(complete: bool | None) -> str:
     match complete:
         case True:
             return "COMPLETE"
@@ -1013,6 +1156,7 @@ def measure_status(complete: bool | None) -> str:
             return "INCOMPLETE"
         case None:
             return "NA"
+
 
 @login_and_otp_required()
 @check_data_permissions()
@@ -1026,7 +1170,7 @@ def download_patient_report(request, audit_period, pdu):
                 audit_period=audit_period,
                 selected_category=category.value,
             )
-            
+
             data = defaultdict(list)
 
             for row in pt_qs:
@@ -1034,8 +1178,12 @@ def download_patient_report(request, audit_period, pdu):
 
                 match category:
                     case TableCategories.HEALTH_CHECKS:
-                        data["complete_year_of_care"].append(row["is_complete_year_of_care"])
-                        data["gte_12yo_at_start_of_audit_year"].append(row["is_gte_12yo"])
+                        data["complete_year_of_care"].append(
+                            row["is_complete_year_of_care"]
+                        )
+                        data["gte_12yo_at_start_of_audit_year"].append(
+                            row["is_gte_12yo"]
+                        )
 
                         data["passed_yearly_checks"].append(row["num_passed"])
                         data["total_yearly_checks"].append(row["num_total"])
@@ -1047,15 +1195,19 @@ def download_patient_report(request, audit_period, pdu):
                             "blood_pressure",
                             "urinary_albumin",
                             "foot_exam",
-                            "retinal_screening"
+                            "retinal_screening",
                         ]
 
                         for field in fields:
                             data[field].append(measure_status(row[f"passed_{field}"]))
 
                     case TableCategories.ADDITIONAL_CARE_PROCESSES:
-                        data["complete_year_of_care"].append(row["is_complete_year_of_care"])
-                        data["gte_12yo_at_start_of_audit_year"].append(row["is_gte_12yo"])
+                        data["complete_year_of_care"].append(
+                            row["is_complete_year_of_care"]
+                        )
+                        data["gte_12yo_at_start_of_audit_year"].append(
+                            row["is_gte_12yo"]
+                        )
 
                         fields = [
                             "psychological_assessment",
@@ -1064,26 +1216,28 @@ def download_patient_report(request, audit_period, pdu):
                             "additional_dietetic_appt_offered",
                             "pts_attending_additional_dietetic_appt",
                             "influenza_immunisation_recommended",
-                            "sick_day_rules_advice"
+                            "sick_day_rules_advice",
                         ]
 
                         for field in fields:
                             data[field].append(measure_status(row[field]))
-                    
+
                     case TableCategories.CARE_AT_DIAGNOSIS:
                         data["diagnosis_date"].append(row["diagnosis_date"])
 
                         fields = [
                             "coeliac_disease_screening",
                             "thyroid_disease_screening",
-                            "carbohydrate_counting_education"
+                            "carbohydrate_counting_education",
                         ]
 
                         for field in fields:
                             data[field].append(measure_status(row[field]))
 
                     case TableCategories.ADMISSIONS:
-                        data["complete_year_of_care"].append(row["is_complete_year_of_care"])
+                        data["complete_year_of_care"].append(
+                            row["is_complete_year_of_care"]
+                        )
 
                         data["mean_hba1c_mmolmol"].append(row["kpi_44_mean_hba1c"])
                         data["mean_hba1c_pct"].append(row["mean_hba1c_pct"])
@@ -1091,15 +1245,20 @@ def download_patient_report(request, audit_period, pdu):
                         data["median_hba1c_mmolmol"].append(row["kpi_45_median_hba1c"])
                         data["median_hba1c_pct"].append(row["median_hba1c_pct"])
 
-                        for field in ["number_of_admissions", "number_of_dka_admissions"]:
+                        for field in [
+                            "number_of_admissions",
+                            "number_of_dka_admissions",
+                        ]:
                             data[field].append(row[field])
-                    
+
                     case TableCategories.TREATMENT:
                         for field in ["treatment_regimen", "glucose_monitoring", "hcl"]:
                             data[field].append(row[field])
-                    
+
                     case TableCategories.OUTCOMES:
-                        data["complete_year_of_care"].append(row["is_complete_year_of_care"])
+                        data["complete_year_of_care"].append(
+                            row["is_complete_year_of_care"]
+                        )
 
                         fields = [
                             "latest_hba1c_mmol_mol",
@@ -1109,7 +1268,7 @@ def download_patient_report(request, audit_period, pdu):
                             "hba1c_delta",
                             "latest_hba1c_date",
                             "previous_to_latest_hba1c_date",
-                            "days_delta_between_latest_and_previous_hba1c"
+                            "days_delta_between_latest_and_previous_hba1c",
                         ]
 
                         for field in fields:
@@ -1124,6 +1283,5 @@ def download_patient_report(request, audit_period, pdu):
     return HttpResponse(
         contents.getvalue(),
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={
-            "Content-Disposition": f'attachment; filename="{filename}"'
-        })
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

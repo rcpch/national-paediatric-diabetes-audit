@@ -30,8 +30,10 @@ from project.npda.tests.factories import (
     dummy_sheets_folder,
     dummy_sheet_csv,
     dummy_sheet_csv_jersey,
-    dummy_sheet_csv_old_headers
+    dummy_sheet_csv_old_headers,
 )
+
+from project.npda.models import AuditPeriod
 
 logger = logging.getLogger(__name__)
 # register factories to be used across test directory
@@ -65,3 +67,15 @@ def test_pz_codes_fixture():
 @pytest.fixture(scope="function")
 def test_pz_codes_function_fixture():
     return ["PZ196", "PZ074", "PZ248"]  # GOSH  # Alder Hey  # Jersey
+
+
+@pytest.fixture(autouse=True)
+def ensure_audit_period(db, AUDIT_START_DATE, AUDIT_END_DATE):
+    """Ensure an AuditPeriod exists for each test."""
+    AuditPeriod.objects.get_or_create(
+        start_date=AUDIT_START_DATE,
+        end_date=AUDIT_END_DATE,
+        is_open=True,
+        is_visible=True,
+        slug=f"{AUDIT_START_DATE.year}-{AUDIT_END_DATE.year}",
+    )
