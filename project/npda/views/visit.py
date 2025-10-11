@@ -21,7 +21,7 @@ from ..general_functions import (
     get_visit_tabs,
     visit_falls_within_audit_period_Q_object,
     data_breadcrumbs,
-    patient_breadcrumbs
+    patient_breadcrumbs,
 )
 from ..models import Patient, Transfer, Visit, AuditPeriod
 from .mixins import (
@@ -29,7 +29,7 @@ from .mixins import (
     CheckCurrentAuditYearMixin,
     LoginAndOTPRequiredMixin,
     PDUPermissionMixin,
-    QuestionnaireContextMixin
+    QuestionnaireContextMixin,
 )
 
 # Third party imports
@@ -37,7 +37,11 @@ logger = logging.getLogger(__name__)
 
 
 class PatientVisitsListView(
-    LoginAndOTPRequiredMixin, PDUPermissionMixin, PermissionRequiredMixin, QuestionnaireContextMixin, ListView
+    LoginAndOTPRequiredMixin,
+    PDUPermissionMixin,
+    PermissionRequiredMixin,
+    QuestionnaireContextMixin,
+    ListView,
 ):
     """
     The PatientVisitsListView class.
@@ -58,6 +62,7 @@ class PatientVisitsListView(
         patient_id = self.kwargs.get("patient_id")
         context = super(PatientVisitsListView, self).get_context_data(**kwargs)
         patient = Patient.objects.get(pk=patient_id)
+
         audit_period = self.audit_period
         submission = patient.submissions.filter(
             submission_active=True,
@@ -86,12 +91,19 @@ class PatientVisitsListView(
         context["paediatric_diabetes_unit"] = paediatric_diabetes_unit
         context["audit_period"] = audit_period
 
-        context["breadcrumbs"] = patient_breadcrumbs(self.pdu, self.audit_period, patient, [
-            {
-                "label": "Visits",
-                "href": self.data_reverse("pdu-patient-visits", kwargs={"patient_id": patient.pk})
-            }
-        ])
+        context["breadcrumbs"] = patient_breadcrumbs(
+            self.pdu,
+            self.audit_period,
+            patient,
+            [
+                {
+                    "label": "Visits",
+                    "href": self.data_reverse(
+                        "pdu-patient-visits", kwargs={"patient_id": patient.pk}
+                    ),
+                }
+            ],
+        )
 
         return context
 
@@ -122,18 +134,29 @@ class VisitCreateView(
         context["visit_tabs"] = get_visit_tabs(form=None)
         context["override_height_weight"] = False
 
-        context["paediatric_diabetes_unit"] = patient.submissions.first().paediatric_diabetes_unit
+        context["paediatric_diabetes_unit"] = (
+            patient.submissions.first().paediatric_diabetes_unit
+        )
 
-        context["breadcrumbs"] = patient_breadcrumbs(self.pdu, self.audit_period, patient, [
-            {
-                "label": "Visits",
-                "href": self.data_reverse("pdu-patient-visits", kwargs={"patient_id": patient.pk})
-            },
-            {
-                "label": "Add visit",
-                "href": self.data_reverse("pdu-visit-create", kwargs={"patient_id": patient.pk})
-            }
-        ])
+        context["breadcrumbs"] = patient_breadcrumbs(
+            self.pdu,
+            self.audit_period,
+            patient,
+            [
+                {
+                    "label": "Visits",
+                    "href": self.data_reverse(
+                        "pdu-patient-visits", kwargs={"patient_id": patient.pk}
+                    ),
+                },
+                {
+                    "label": "Add visit",
+                    "href": self.data_reverse(
+                        "pdu-visit-create", kwargs={"patient_id": patient.pk}
+                    ),
+                },
+            ],
+        )
 
         return context
 
@@ -144,13 +167,17 @@ class VisitCreateView(
         return self.data_reverse(
             "pdu-patient-visits", kwargs={"patient_id": self.kwargs["patient_id"]}
         )
-    
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         # Get override_postcode from POST data if available
-        if self.request.method in ('POST', 'PUT'):
-            kwargs['override_height_weight'] = self.request.POST.get('override_height_weight', 'false') == 'true'
-            kwargs['audit_period'] = AuditPeriod.objects.get_audit_period_for_request(self.request)
+        if self.request.method in ("POST", "PUT"):
+            kwargs["override_height_weight"] = (
+                self.request.POST.get("override_height_weight", "false") == "true"
+            )
+            kwargs["audit_period"] = AuditPeriod.objects.get_audit_period_for_request(
+                self.request
+            )
         return kwargs
 
     def get_initial(self):
@@ -169,7 +196,7 @@ class VisitCreateView(
 
         super(VisitCreateView, self).form_valid(form)
         return HttpResponseRedirect(self.get_success_url())
-    
+
     def form_invalid(self, form):
         context = self.get_context_data()
         if "height" in form.errors or "weight" in form.errors:
@@ -182,8 +209,8 @@ class VisitCreateView(
                 )
                 form.postcode = form.cleaned_data["override_height_weight"]
             else:
-                context['button_title'] = "Save Measurements Anyway"
-                context['override_height_weight'] = True
+                context["button_title"] = "Save Measurements Anyway"
+                context["override_height_weight"] = True
                 messages.error(
                     self.request,
                     "The measurement(s) you have entered are invalid. Please check the values entered and try again.",
@@ -191,8 +218,6 @@ class VisitCreateView(
                 form.override_height_weight = True
             return self.render_to_response(context)
         return super().form_invalid(form)
-
-
 
 
 class VisitUpdateView(
@@ -223,19 +248,26 @@ class VisitUpdateView(
         patient = visit.patient
         context["patient"] = visit.patient
 
-        context["breadcrumbs"] = patient_breadcrumbs(self.pdu, self.audit_period, patient, [
-            {
-                "label": "Visits",
-                "href": self.data_reverse("pdu-patient-visits", kwargs={"patient_id": patient.pk})
-            },
-            {
-                "label": visit.visit_date,
-                "href": self.data_reverse("pdu-visit-update", kwargs={
-                    "patient_id": patient.pk,
-                    "pk": visit.pk
-                })
-            }
-        ])
+        context["breadcrumbs"] = patient_breadcrumbs(
+            self.pdu,
+            self.audit_period,
+            patient,
+            [
+                {
+                    "label": "Visits",
+                    "href": self.data_reverse(
+                        "pdu-patient-visits", kwargs={"patient_id": patient.pk}
+                    ),
+                },
+                {
+                    "label": visit.visit_date,
+                    "href": self.data_reverse(
+                        "pdu-visit-update",
+                        kwargs={"patient_id": patient.pk, "pk": visit.pk},
+                    ),
+                },
+            ],
+        )
 
         return context
 
@@ -252,18 +284,22 @@ class VisitUpdateView(
         patient = Patient.objects.get(pk=self.kwargs["patient_id"])
         initial["patient"] = patient
         return initial
-    
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         # Get override_postcode from POST data if available
-        if self.request.method in ('POST', 'PUT'):
-            kwargs['override_height_weight'] = self.request.POST.get('override_height_weight', 'false') == 'true'
-            kwargs['audit_period'] = self.audit_period
+        if self.request.method in ("POST", "PUT"):
+            kwargs["override_height_weight"] = (
+                self.request.POST.get("override_height_weight", "false") == "true"
+            )
+            kwargs["audit_period"] = self.audit_period
         return kwargs
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
         if "delete" in self.request.POST:
-            return redirect(self.data_reverse("pdu-visit-delete", kwargs={"pk": self.kwargs["pk"]}))
+            return redirect(
+                self.data_reverse("pdu-visit-delete", kwargs={"pk": self.kwargs["pk"]})
+            )
         visit = form.save(commit=True)
         visit.errors = None
         visit.is_valid = True
@@ -275,7 +311,7 @@ class VisitUpdateView(
         return HttpResponseRedirect(
             redirect_to=self.data_reverse("pdu-patient-visits", kwargs=context)
         )
-    
+
     def form_invalid(self, form):
         context = self.get_context_data()
         if "height" in form.errors or "weight" in form.errors:
@@ -288,8 +324,8 @@ class VisitUpdateView(
                 )
                 form.postcode = form.cleaned_data["override_height_weight"]
             else:
-                context['button_title'] = "Save Measurements Anyway"
-                context['override_height_weight'] = True
+                context["button_title"] = "Save Measurements Anyway"
+                context["override_height_weight"] = True
                 messages.error(
                     self.request,
                     "The measurement(s) you have entered are invalid. Please check the values entered and try again.",
@@ -319,20 +355,27 @@ class VisitDeleteView(
         visit = self.get_object()
         patient = visit.patient
 
-        context["breadcrumbs"] = patient_breadcrumbs(self.pdu, self.audit_period, patient, [
-            {
-                "label": "Visits",
-                "href": self.data_reverse("pdu-patient-visits", kwargs={"patient_id": patient.pk})
-            },
-            {
-                "label": visit.visit_date,
-                "href": self.data_reverse("pdu-visit-update", kwargs={
-                    "patient_id": patient.pk,
-                    "pk": visit.pk
-                })
-            }
-        ])
-        
+        context["breadcrumbs"] = patient_breadcrumbs(
+            self.pdu,
+            self.audit_period,
+            patient,
+            [
+                {
+                    "label": "Visits",
+                    "href": self.data_reverse(
+                        "pdu-patient-visits", kwargs={"patient_id": patient.pk}
+                    ),
+                },
+                {
+                    "label": visit.visit_date,
+                    "href": self.data_reverse(
+                        "pdu-visit-update",
+                        kwargs={"patient_id": patient.pk, "pk": visit.pk},
+                    ),
+                },
+            ],
+        )
+
         return context
 
     def get_success_url(self):

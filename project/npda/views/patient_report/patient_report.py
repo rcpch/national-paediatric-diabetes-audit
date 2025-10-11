@@ -360,12 +360,29 @@ def calculate_queryset(
                 ),
                 smoking_status=Case(
                     When(
-                        Exists(
-                            calculate_kpis.calculate_kpi_35_smoking_status_screened_for_patient_report_table()
-                            .patient_querysets["passed"]
-                            .filter(pk=OuterRef("pk"))
+                        Q(visit__smoking_status__in=[1, 2])  # smoker
+                        & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE)
+                        & Q(
+                            date_of_birth__lte=audit_period.start_date
+                            - relativedelta(years=12)
                         ),
                         then=True,
+                    ),
+                    When(
+                        Q(visit__smoking_status=99)  # not known
+                        & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE)
+                        & Q(
+                            date_of_birth__lte=audit_period.start_date
+                            - relativedelta(years=12)
+                        ),
+                        then=False,
+                    ),
+                    When(
+                        Q(
+                            date_of_birth__gt=audit_period.start_date
+                            - relativedelta(years=12)
+                        ),
+                        then=None,
                     ),
                     default=Case(
                         When(is_gte_12yo=True, then=False),
