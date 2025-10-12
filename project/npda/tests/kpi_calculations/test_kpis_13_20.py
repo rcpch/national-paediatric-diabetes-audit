@@ -9,8 +9,9 @@ from project.npda.models import Patient
 from project.npda.tests import utils
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.tests.kpi_calculations.test_calculate_kpis import \
-    assert_kpi_result_equal
+from project.npda.tests.kpi_calculations.test_calculate_kpis import (
+    assert_kpi_result_equal,
+)
 
 # Set up test params for kpis 13-20, as they all have the same denominator
 # and the only thing being changed is value for visit__treatment
@@ -37,7 +38,9 @@ for treatment_type in TREATMENT_TYPES[:-1]:
 
 @pytest.mark.parametrize(("treatment", "expected_result"), TX_TYPE_PARAMS)
 @pytest.mark.django_db
-def test_kpi_calculations_13_to_20(AUDIT_START_DATE, treatment: int, expected_result: KPIResult):
+def test_kpi_calculations_13_to_20(
+    AUDIT_START_DATE, treatment: int, expected_result: KPIResult
+):
     """Tests that KPIS13-20 are calculated correctly.
 
     Numerator: Number of eligible patients whose most recent entry (based on visit date) for treatment regimen (item 20) is `treatment` (int 1-9)
@@ -121,17 +124,19 @@ def test_kpi_15_correct_if_last_visit_does_not_contain_treatment(AUDIT_START_DAT
     patient1 = PatientFactory(
         visit__visit_date=first_visit_date,
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
-        visit__treatment=3
+        visit__treatment=3,
     )
 
     patient2 = PatientFactory(
         visit__visit_date=first_visit_date,
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 8),
-        visit__treatment=3
+        visit__treatment=3,
     )
 
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
-    calc_kpis.set_patients_for_calculation(Patient.objects.filter(pk__in=[patient1.pk, patient2.pk]))
+    calc_kpis.set_patients_for_calculation(
+        Patient.objects.filter(pk__in=[patient1.pk, patient2.pk])
+    )
 
     result = calc_kpis.calculate_kpi_15_insulin_pump()
     assert result.total_passed == 2
@@ -157,7 +162,7 @@ def test_kpi_15_correct_if_treatment_is_pump_plus_medication(AUDIT_START_DATE):
     patient = PatientFactory(
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
-        visit__treatment=6
+        visit__treatment=6,
     )
 
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
@@ -165,3 +170,266 @@ def test_kpi_15_correct_if_treatment_is_pump_plus_medication(AUDIT_START_DATE):
 
     result = calc_kpis.calculate_kpi_15_insulin_pump()
     assert result.total_passed == 1
+
+
+@pytest.mark.django_db
+def test_kpi_13_passes_when_latest_visit_has_treatment_1(AUDIT_START_DATE):
+    """KPI 13 should pass if the most recent visit in the audit period has treatment=1,
+    even if earlier visits had other treatment types.
+
+    Numerator: most recent entry (by visit date) has treatment regimen = 1 (one–three injections/day).
+    Denominator: KPI 1 eligible patients (we restrict to a single eligible patient here).
+    """
+    first_visit_date = AUDIT_START_DATE + relativedelta(days=2)
+
+    # Create a patient with an initial visit that uses a different treatment
+    patient = PatientFactory(
+        visit__visit_date=first_visit_date,
+        date_of_birth=AUDIT_START_DATE - relativedelta(years=10),
+        visit__treatment=2,  # older visit with a different treatment
+    )
+
+    # Add a more recent visit within the audit period with treatment=1
+    second_visit_date = first_visit_date + relativedelta(months=3)
+    VisitFactory(
+        patient=patient,
+        visit_date=second_visit_date,
+        treatment=1,
+    )
+
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    # Limit calculation to this single patient
+    calc_kpis.set_patients_for_calculation(Patient.objects.filter(pk__in=[patient.pk]))
+
+    result = calc_kpis.calculate_kpi_13_one_to_three_injections_per_day()
+    assert result.total_eligible == 1
+    assert result.total_passed == 1
+    assert result.total_failed == 0
+
+
+@pytest.mark.django_db
+def test_kpi_14_passes_when_latest_visit_has_treatment_2(AUDIT_START_DATE):
+    """KPI 14 should pass if the most recent visit in the audit period has treatment=2,
+    even if earlier visits had other treatment types.
+
+    Numerator: most recent entry (by visit date) has treatment regimen = 2 (four or more injections/day).
+    Denominator: KPI 1 eligible patients (restricted here to a single eligible patient).
+    """
+    first_visit_date = AUDIT_START_DATE + relativedelta(days=2)
+
+    # Initial visit with a different treatment
+    patient = PatientFactory(
+        visit__visit_date=first_visit_date,
+        date_of_birth=AUDIT_START_DATE - relativedelta(years=10),
+        visit__treatment=1,
+    )
+
+    # More recent visit within the audit period with treatment=2
+    latest_visit_date = first_visit_date + relativedelta(months=3)
+    VisitFactory(
+        patient=patient,
+        visit_date=latest_visit_date,
+        treatment=2,
+    )
+
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    calc_kpis.set_patients_for_calculation(Patient.objects.filter(pk__in=[patient.pk]))
+
+    result = calc_kpis.calculate_kpi_14_four_or_more_injections_per_day()
+    assert result.total_eligible == 1
+    assert result.total_passed == 1
+    assert result.total_failed == 0
+
+
+@pytest.mark.django_db
+def test_kpi_15_passes_when_latest_visit_has_treatment_3(AUDIT_START_DATE):
+    """KPI 15 should pass if the most recent visit in the audit period records treatment=3 (pump),
+    even if an earlier visit used a different treatment.
+
+    Numerator: latest (by visit date) visit has treatment in {3, 6}.
+    Denominator: KPI 1 eligible patients (restricted here to a single patient).
+    """
+    first_visit_date = AUDIT_START_DATE + relativedelta(days=2)
+
+    # Earlier visit with a different treatment
+    patient = PatientFactory(
+        visit__visit_date=first_visit_date,
+        date_of_birth=AUDIT_START_DATE - relativedelta(years=10),
+        visit__treatment=2,
+    )
+
+    # Later visit with treatment=3 (pump)
+    latest_visit_date = first_visit_date + relativedelta(months=2)
+    VisitFactory(
+        patient=patient,
+        visit_date=latest_visit_date,
+        treatment=3,
+    )
+
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    calc_kpis.set_patients_for_calculation(Patient.objects.filter(pk__in=[patient.pk]))
+
+    result = calc_kpis.calculate_kpi_15_insulin_pump()
+    assert result.total_eligible == 1
+    assert result.total_passed == 1
+    assert result.total_failed == 0
+
+
+@pytest.mark.django_db
+def test_kpi_16_passes_when_latest_visit_has_treatment_4(AUDIT_START_DATE):
+    """KPI 16 should pass if the most recent visit in the audit period has treatment=4
+    (1–3 injections/day plus other blood glucose-lowering medication),
+    even if an earlier visit used a different treatment.
+
+    Numerator: latest visit has treatment=4.
+    Denominator: KPI 1 eligible patients (restricted to a single patient).
+    """
+    first_visit_date = AUDIT_START_DATE + relativedelta(days=2)
+
+    # Earlier visit with a different treatment
+    patient = PatientFactory(
+        visit__visit_date=first_visit_date,
+        date_of_birth=AUDIT_START_DATE - relativedelta(years=10),
+        visit__treatment=2,
+    )
+
+    # Later visit with treatment=4
+    latest_visit_date = first_visit_date + relativedelta(months=1)
+    VisitFactory(
+        patient=patient,
+        visit_date=latest_visit_date,
+        treatment=4,
+    )
+
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    calc_kpis.set_patients_for_calculation(Patient.objects.filter(pk__in=[patient.pk]))
+
+    result = calc_kpis.calculate_kpi_16_one_to_three_injections_plus_other_medication()
+    assert result.total_eligible == 1
+    assert result.total_passed == 1
+    assert result.total_failed == 0
+
+
+@pytest.mark.django_db
+def test_kpi_17_passes_when_latest_visit_has_treatment_5(AUDIT_START_DATE):
+    """KPI 17 should pass if the most recent visit in the audit period has treatment=5
+    (4+ injections/day plus other blood glucose-lowering medication),
+    even if an earlier visit used a different treatment.
+
+    Numerator: latest visit has treatment=5.
+    Denominator: KPI 1 eligible patients (restricted to a single patient).
+    """
+    first_visit_date = AUDIT_START_DATE + relativedelta(days=2)
+
+    # Earlier visit with a different treatment
+    patient = PatientFactory(
+        visit__visit_date=first_visit_date,
+        date_of_birth=AUDIT_START_DATE - relativedelta(years=10),
+        visit__treatment=1,
+    )
+
+    # Later visit with treatment=5
+    latest_visit_date = first_visit_date + relativedelta(months=2)
+    VisitFactory(
+        patient=patient,
+        visit_date=latest_visit_date,
+        treatment=5,
+    )
+
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    calc_kpis.set_patients_for_calculation(Patient.objects.filter(pk__in=[patient.pk]))
+
+    result = calc_kpis.calculate_kpi_17_four_or_more_injections_plus_other_medication()
+    assert result.total_eligible == 1
+    assert result.total_passed == 1
+    assert result.total_failed == 0
+
+
+@pytest.mark.django_db
+def test_kpi_18_passes_when_latest_visit_has_treatment_6(AUDIT_START_DATE):
+    """KPI 18 should pass if the most recent visit has treatment=6 (pump + other medication),
+    even if earlier visits used a different treatment.
+
+    Denominator: all T1DM patients (KPI 3 base). We restrict the set to a single patient here.
+    """
+    first_visit_date = AUDIT_START_DATE + relativedelta(days=2)
+
+    patient = PatientFactory(
+        visit__visit_date=first_visit_date,
+        date_of_birth=AUDIT_START_DATE - relativedelta(years=10),
+        diabetes_type=1,  # ensure T1DM
+        visit__treatment=2,
+    )
+
+    latest_visit_date = first_visit_date + relativedelta(months=1)
+    VisitFactory(
+        patient=patient,
+        visit_date=latest_visit_date,
+        treatment=6,
+    )
+
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    calc_kpis.set_patients_for_calculation(Patient.objects.filter(pk__in=[patient.pk]))
+
+    result = calc_kpis.calculate_kpi_18_insulin_pump_plus_other_medication()
+    assert result.total_eligible == 1
+    assert result.total_passed == 1
+    assert result.total_failed == 0
+
+
+@pytest.mark.django_db
+def test_kpi_19_passes_when_latest_visit_has_treatment_7(AUDIT_START_DATE):
+    """KPI 19 should pass if the most recent visit has treatment=7 (dietary management alone),
+    even if earlier visits used a different treatment.
+    """
+    first_visit_date = AUDIT_START_DATE + relativedelta(days=2)
+
+    patient = PatientFactory(
+        visit__visit_date=first_visit_date,
+        date_of_birth=AUDIT_START_DATE - relativedelta(years=10),
+        visit__treatment=2,
+    )
+
+    latest_visit_date = first_visit_date + relativedelta(months=1)
+    VisitFactory(
+        patient=patient,
+        visit_date=latest_visit_date,
+        treatment=7,
+    )
+
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    calc_kpis.set_patients_for_calculation(Patient.objects.filter(pk__in=[patient.pk]))
+
+    result = calc_kpis.calculate_kpi_19_dietary_management_alone()
+    assert result.total_eligible == 1
+    assert result.total_passed == 1
+    assert result.total_failed == 0
+
+
+@pytest.mark.django_db
+def test_kpi_20_passes_when_latest_visit_has_treatment_8(AUDIT_START_DATE):
+    """KPI 20 should pass if the most recent visit has treatment=8 (dietary management + other medication),
+    even if earlier visits used a different treatment.
+    """
+    first_visit_date = AUDIT_START_DATE + relativedelta(days=2)
+
+    patient = PatientFactory(
+        visit__visit_date=first_visit_date,
+        date_of_birth=AUDIT_START_DATE - relativedelta(years=10),
+        visit__treatment=2,
+    )
+
+    latest_visit_date = first_visit_date + relativedelta(months=1)
+    VisitFactory(
+        patient=patient,
+        visit_date=latest_visit_date,
+        treatment=8,
+    )
+
+    calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
+    calc_kpis.set_patients_for_calculation(Patient.objects.filter(pk__in=[patient.pk]))
+
+    result = calc_kpis.calculate_kpi_20_dietary_management_plus_other_medication()
+    assert result.total_eligible == 1
+    assert result.total_passed == 1
+    assert result.total_failed == 0
