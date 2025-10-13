@@ -130,16 +130,8 @@ def calculate_hba1c_values(pt_qs: QuerySet[Patient], calculate_kpis: CalculateKP
 
 
 def calculate_queryset(
-    pz_code: str, audit_period: AuditPeriod, selected_category: str
+    calculate_kpis: CalculateKPIS, pz_code: str, audit_period: AuditPeriod, selected_category: str
 ) -> QuerySet[Patient]:
-    calculation_date = audit_period.kpi_calculation_date()
-
-    calculate_kpis = CalculateKPIS(
-        calculation_date=calculation_date,
-        return_pt_querysets=True,
-        is_jersey=pz_code == "PZ248",
-    )
-    calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
     patient_identifier = (
         "nhs_number" if pz_code != "PZ248" else "unique_reference_number"
     )
@@ -910,8 +902,15 @@ class PatientReportView(
         self.selected_category = category
         pz_code = self.pdu.pz_code
 
+        calculate_kpis = CalculateKPIS(
+            calculation_date=self.audit_period.kpi_calculation_date(),
+            return_pt_querysets=True,
+            is_jersey=pz_code == "PZ248",
+        )
+        calculate_kpis.set_patients_for_calculation(pz_codes=[pz_code])
+
         pt_qs, calculate_kpis, patient_identifier = calculate_queryset(
-            pz_code, self.audit_period, category
+            calculate_kpis, pz_code, self.audit_period, category
         )
 
         # Save to use later in get_context_data
@@ -1163,9 +1162,17 @@ def measure_status(complete: bool | None) -> str:
 def download_patient_report(request, audit_period, pdu):
     contents = io.BytesIO()
 
+    calculate_kpis = CalculateKPIS(
+        calculation_date=audit_period.kpi_calculation_date(),
+        return_pt_querysets=True,
+        is_jersey=pdu.pz_code == "PZ248",
+    )
+    calculate_kpis.set_patients_for_calculation(pz_codes=[pdu.pz_code])
+
     with pd.ExcelWriter(contents, engine="openpyxl") as writer:
         for category in TableCategories:
             pt_qs, _, patient_identifier = calculate_queryset(
+                calculate_kpis,
                 pz_code=pdu.pz_code,
                 audit_period=audit_period,
                 selected_category=category.value,
