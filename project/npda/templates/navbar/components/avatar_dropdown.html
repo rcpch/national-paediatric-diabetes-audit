@@ -19,20 +19,18 @@
       <p class="text-center">
         Hello, <span class="font-mono">{{ user.get_full_name }}!</span>
       </p>
-      {% if 'new_navigation' in request.session.feature_flags %}
-        <hr class="my-2" />
-        <li>
-          <select title="Select audit year"
-            _="on change go to url `$my.value`" >
-          {% for audit_period in audit_period_choices %}
-            <option value="{% url 'new-home' audit_period=audit_period.slug %}"
-              {% if audit_period_slug == audit_period.slug %} selected {% endif %}>
-              {{audit_period.display_name}}
-            </option>
-          {% endfor %}
-          </select>
-        </li>
-      {% endif %}
+      <hr class="my-2" />
+      <li>
+        <select title="Select audit year"
+          _="on change go to url `$my.value`" >
+        {% for audit_period in audit_period_choices %}
+          <option value="{% url 'new-home' audit_period=audit_period.slug %}"
+            {% if audit_period_slug == audit_period.slug %} selected {% endif %}>
+            {{audit_period.display_name}}
+          </option>
+        {% endfor %}
+        </select>
+      </li>
       <hr class="my-2" />
       <li>
         <a href="{% url 'two_factor:profile' %}"><i class="fa-solid fa-shield"></i>Two Factor Authentication</a>

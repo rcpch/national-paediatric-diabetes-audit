@@ -28,7 +28,7 @@
         {% include 'navbar/components/nav_links.html' %}
       </ul>
     </div>
-    <a class="btn btn-ghost text-xl h-full" href="{% if 'new_navigation' in request.session.feature_flags %}{{ user_home_page }}{% else %}{% url 'home' %}{% endif %}">
+    <a class="btn btn-ghost text-xl h-full" href="{{ user_home_page }}">
       {% comment %} DESKTOP {% endcomment %}
       <span class="hidden lg:flex lg:gap-6 lg:items-center">
         <img class="h-12"
@@ -47,53 +47,33 @@
     </a>
   </div>
   {% comment %} NAV ITEMS {% endcomment %}
-  {% if 'new_navigation' in request.session.feature_flags %}
-    {% if breadcrumbs %}
-      <div class="navbar-center breadcrumbs text-m">
-        <ul>
+  {% if breadcrumbs %}
+    <div class="navbar-center breadcrumbs text-m">
+      <ul>
+        <li>
+          <a href="{% url 'new-home' audit_period=audit_period_slug %}">{{audit_period_slug}}</a>
+        </li>
+        <li>
+          <a href="{% data_url 'pdu-dashboard' %}">{{pz_code}}</a>
+        </li>
+        {% for breadcrumb in breadcrumbs %}
           <li>
-            <a href="{% url 'new-home' audit_period=audit_period_slug %}">{{audit_period_slug}}</a>
+            <a href="{{ breadcrumb.href }}">{{ breadcrumb.label }}</a>
           </li>
-          <li>
-            <a href="{% data_url 'pdu-dashboard' %}">{{pz_code}}</a>
-          </li>
-          {% for breadcrumb in breadcrumbs %}
-            <li>
-              <a href="{{ breadcrumb.href }}">{{ breadcrumb.label }}</a>
-            </li>
-          {% endfor %}
-        </ul>
-      </div>
-    {% endif %}
-  {% else %}
-    <div class="navbar-center hidden lg:flex">
-      <ul class="menu menu-horizontal px-1">
-        {% include 'navbar/components/nav_links.html' %}
+        {% endfor %}
       </ul>
-      {% if 'new_navigation' not in request.session.feature_flags %}
-        {% if instance_label %}
-          <p class="badge badge-md badge-warning mr-6">
-            {{instance_label}}
-          </p>
-        {% endif %}
-      {% endif %}
     </div>
   {% endif %}
   {% comment %} RIGHT {% endcomment %}
   <div class="navbar-end h-full">
-    {% if 'new_navigation' in request.session.feature_flags %}
-      <a href="{% docs_url %}/user-guide/user-guide/" class="text-xs font-montserrat font-semibold text-gray-700 text-gray-400 hover:text-rcpch_light_blue hover:bg-transparent hover:underline underline-offset-8 mr-6">
-        User Guide
-      </a>
-      {% if instance_label %}
-        <p class="badge badge-md badge-warning mr-6">
-          {{instance_label}}
-        </p>
-      {% endif %}
-      {% include 'navbar/components/avatar_dropdown.html' %}
-    {% else %}
-      {% include 'navbar/components/filters.html' %}
-      {% include 'navbar/components/avatar_dropdown.html' %}
+    <a href="{% docs_url %}/user-guide/user-guide/" class="text-xs font-montserrat font-semibold text-gray-700 text-gray-400 hover:text-rcpch_light_blue hover:bg-transparent hover:underline underline-offset-8 mr-6">
+      User Guide
+    </a>
+    {% if instance_label %}
+      <p class="badge badge-md badge-warning mr-6">
+        {{instance_label}}
+      </p>
     {% endif %}
+    {% include 'navbar/components/avatar_dropdown.html' %}
   </div>
 </div>
