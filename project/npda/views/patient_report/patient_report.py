@@ -1265,7 +1265,6 @@ def download_patient_report(request, audit_period, pdu):
                             "latest_hba1c_pct",
                             "previous_to_latest_hba1c_mmol_mol",
                             "previous_to_latest_hba1c_pct",
-                            "hba1c_delta",
                             "latest_hba1c_date",
                             "previous_to_latest_hba1c_date",
                             "days_delta_between_latest_and_previous_hba1c",
@@ -1273,6 +1272,8 @@ def download_patient_report(request, audit_period, pdu):
 
                         for field in fields:
                             data[field].append(row[field])
+                        
+                        data["hba1c_percent_change"].append(row["hba1c_delta"])
 
             df = pd.DataFrame(data=data)
             df.to_excel(writer, sheet_name=category.value, index=False)
