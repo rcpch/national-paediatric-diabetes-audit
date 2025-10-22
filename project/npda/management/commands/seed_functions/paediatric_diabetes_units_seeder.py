@@ -9,6 +9,24 @@ from project.npda.general_functions import fetch_organisation_by_ods_code
 
 logger = logging.getLogger(__name__)
 
+RCPCH_TESTING_PDUS = {
+    "PZ999": "ROYAL COLLEGE OF PAEDIATRICS AND CHILD HEALTH",  # RCPCH Internal Testing
+    "PZ998": "EXTERNAL TESTING",  # (eg pen test, NPDA network managers)
+    "PZ997": "AUTOMATED TESTING",
+}
+
+def add_geocoordinates(pdu):
+    if pdu.lead_organisation_geocoordinates is None:
+        geocoordinates = fetch_organisation_by_ods_code(
+            ods_code=pdu.lead_organisation_ods_code
+        )
+        pdu.lead_organisation_geocoordinates = Point(
+            x=geocoordinates["longitude"],
+        y=geocoordinates["latitude"],
+        srid=4326,
+    )
+    pdu.save()
+    logger.info(f"Geocoordinates for {pdu.lead_organisation_name} updated")
 
 def paediatric_diabetes_units_seeder():
     """
@@ -28,6 +46,11 @@ def paediatric_diabetes_units_seeder():
     pdus = get_all_pz_codes_with_their_trust_and_primary_organisation()
 
     for pdu in pdus:
+        pz_code = pdu.get("pz_code")
+
+        if pz_code in RCPCH_TESTING_PDUS:
+            continue
+
         try:
             parent_ods_code = (pdu.get("parent") or {}).get("ods_code")
             parent_name = (pdu.get("parent") or {}).get("name")
@@ -40,38 +63,31 @@ def paediatric_diabetes_units_seeder():
             last_updated = pdu.get("last_updated") or None
             active = pdu.get("active") or None
 
-            is_rcpch = pdu["pz_code"] == "PZ999"
-
-            if not lead_organisation_ods_code and not is_rcpch:
+            if not lead_organisation_ods_code:
                 logger.warning(
-                    f"Primary organisation ODS code not found for PDU: {pdu['pz_code']}"
+                    f"Primary organisation ODS code not found for PDU: {pz_code}"
                 )
                 continue
-            if not parent_ods_code and not is_rcpch:
+            if not parent_ods_code :
                 logger.warning(
-                    f"Parent ODS code not found for PDU: {pdu['pz_code']}"
+                    f"Parent ODS code not found for PDU: {pz_code}"
                 )
                 continue
-            if not parent_name and not is_rcpch:
-                logger.warning(f"Parent name not found for PDU: {pdu['pz_code']}")
+            if not parent_name:
+                logger.warning(f"Parent name not found for PDU: {pz_code}")
                 continue
-            if not network_name and not is_rcpch:
+            if not network_name:
                 logger.warning(
-                    f"Network name not found for PDU: {pdu['pz_code']}"
+                    f"Network name not found for PDU: {pz_code}"
                 )
                 continue
-            if not network_code and not is_rcpch:
+            if not network_code:
                 logger.warning(
-                    f"Network code not found for PDU: {pdu['pz_code']}"
+                    f"Network code not found for PDU: {pz_code}"
                 )
                 continue
-            if not lead_organisation_ods_code and not is_rcpch:
-                logger.warning(
-                    f"Lead organisation ODS code not found for PDU: {pdu['pz_code']}"
-                )
-                continue
-            if not pdu["pz_code"]:
-                logger.warning(f"PZ code not found for PDU: {pdu['pz_code']}")
+            if not pz_code:
+                logger.warning(f"PZ code not found for PDU: {pz_code}")
                 continue
             if active is not None and active is True:
                 default ={
@@ -90,25 +106,29 @@ def paediatric_diabetes_units_seeder():
                     "last_updated": last_updated,
                 }
             new_pdu, created = PaediatricDiabetesUnit.objects.update_or_create(
-                pz_code=pdu["pz_code"],
+                pz_code=pz_code,
                 defaults=default,
             )
-            if is_rcpch:
-                new_pdu.parent_ods_code = "PZ999"
-                new_pdu.parent = "Royal College of Paediatrics and Child Health"
-                new_pdu.save()
+
+            add_geocoordinates(new_pdu)
         except DatabaseError as e:
             logger.error(f"Error creating PaediatricDiabetesUnit: {e}")
             continue
 
-        if new_pdu.lead_organisation_geocoordinates is None:
-            geocoordinates = fetch_organisation_by_ods_code(
-                ods_code=new_pdu.lead_organisation_ods_code
+    for (pz_code, name) in RCPCH_TESTING_PDUS.items():
+        try:
+            pdu, created = PaediatricDiabetesUnit.objects.update_or_create(
+                pz_code=pz_code,
+                defaults={
+                    "lead_organisation_ods_code": "8HV48",
+                    "lead_organisation_name": name,
+                    "parent_ods_code": "PZ999",
+                    "parent_name": "Royal College of Paediatrics and Child Health",
+                    "active": True,
+                },
             )
-            new_pdu.lead_organisation_geocoordinates = Point(
-                x=geocoordinates["longitude"],
-                y=geocoordinates["latitude"],
-                srid=4326,
-            )
-            new_pdu.save()
-            logger.info(f"Geocoordinates for {new_pdu.lead_organisation_name} updated")
+
+            add_geocoordinates(pdu)
+        except DatabaseError as e:
+            logger.error(f"Error creating testing PaediatricDiabetesUnit: {e}")
+            continue
