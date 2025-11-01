@@ -713,15 +713,34 @@ def test_decs_value_none_form_fails_validation():
 
 
 @pytest.mark.django_db
-def test_decs_date_none_form_fails_validation():
+def test_decs_normal_result_without_date_passes_validation():
     """
-    Test that a missing DECS date is invalid
+    Test that Normal retinal screening result without a date is valid (new KPI logic)
     """
     patient = PatientFactory()
 
     form = VisitForm(
         data={
+            "visit_date": "2026-01-01",  # Required for validation
             "retinal_screening_result": 1,  # Normal
+            "retinal_screening_observation_date": None,
+        },
+        initial={"patient": patient},
+    )
+    # Trigger the cleaners
+    assert form.is_valid(), f"Form should be valid for Normal result without date but got {form.errors}"
+
+
+@pytest.mark.django_db
+def test_decs_abnormal_result_without_date_fails_validation():
+    """
+    Test that Abnormal retinal screening result without a date is invalid
+    """
+    patient = PatientFactory()
+
+    form = VisitForm(
+        data={
+            "retinal_screening_result": 2,  # Abnormal
             "retinal_screening_observation_date": None,
         },
         initial={"patient": patient},
@@ -729,7 +748,7 @@ def test_decs_date_none_form_fails_validation():
     # Trigger the cleaners
     assert (
         form.is_valid() == False
-    ), f"No retinal screening date offered but test passed"
+    ), f"Abnormal retinal screening result without date should fail validation"
 
 
 """
