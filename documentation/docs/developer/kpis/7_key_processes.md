@@ -68,7 +68,7 @@
 
 ### Calculation
 
-**Numerator**: Number of eligible patients with at least one entry for Retinal Screening Result (item 28) that is either 1 = Normal or 2 = Abnormal AND the observation date (item 27) is within the audit period
+**Numerator**: Number of eligible patients with at least one entry for Retinal Screening Result (item 28) that is either 1 = Normal or 2 = Abnormal AND the observation date (item 27) is within the audit period OR Retinal Screening Result (item 28) is Normal but no observation date (item 27) recorded.
 
 **Denominator**: Number of patients with Type 1 diabetes aged 12+ with a complete year of care in the audit period (measure 6)
 

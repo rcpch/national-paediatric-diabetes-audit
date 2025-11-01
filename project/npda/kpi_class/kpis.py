@@ -2355,8 +2355,7 @@ class CalculateKPIS:
             )
             | Q(
                 Q(visit__retinal_screening_result=RETINAL_SCREENING_RESULTS[0][0])
-                &
-                Q(visit__retinal_screening_observation_date__isnull=True)
+                & Q(visit__retinal_screening_observation_date__isnull=True)
             )
         )
 
