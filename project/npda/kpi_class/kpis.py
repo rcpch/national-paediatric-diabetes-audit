@@ -2329,6 +2329,7 @@ class CalculateKPIS:
         Calculates KPI 30: Retinal Screening (%)
 
         Numerator: Number of eligible patients with at least one entry for Retinal Screening Result (item 28) is either 1 = Normal or 2 = Abnormal AND the observation date (item 27) is within the audit period
+        OR Retinal Screening Result (item 28) is Normal and no observation date (item 27) recorded.
 
         Denominator: Number of patients with Type 1 diabetes aged 12+ with a complete year of care in audit period (measure 6)
         """
@@ -2338,13 +2339,25 @@ class CalculateKPIS:
         # Find patients with at least one for Retinal Screening Result (item 28) is either 1 = Normal or 2 = Abnormal AND the observation date (item 27) is within the audit period
         total_passed_query_set = eligible_patients.filter(
             Q(
-                visit__retinal_screening_result__in=[
-                    RETINAL_SCREENING_RESULTS[0][0],
-                    RETINAL_SCREENING_RESULTS[1][0],
-                ]
-            ),
-            # Within audit period
-            Q(visit__retinal_screening_observation_date__range=(self.AUDIT_DATE_RANGE)),
+                Q(
+                    visit__retinal_screening_result__in=[
+                        RETINAL_SCREENING_RESULTS[0][0],
+                        RETINAL_SCREENING_RESULTS[1][0],
+                    ]
+                )
+                &
+                # Within audit period
+                Q(
+                    visit__retinal_screening_observation_date__range=(
+                        self.AUDIT_DATE_RANGE
+                    )
+                )
+            )
+            | Q(
+                Q(visit__retinal_screening_result=RETINAL_SCREENING_RESULTS[0][0])
+                &
+                Q(visit__retinal_screening_observation_date__isnull=True)
+            )
         )
 
         total_passed = total_passed_query_set.count()

@@ -5,15 +5,15 @@ from dateutil.relativedelta import relativedelta
 
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.constants.hba1c_format import HBA1C_FORMATS
-from project.constants.retinal_screening_results import \
-    RETINAL_SCREENING_RESULTS
+from project.constants.retinal_screening_results import RETINAL_SCREENING_RESULTS
 from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
 from project.npda.tests import utils
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.tests.kpi_calculations.test_calculate_kpis import \
-    assert_kpi_result_equal
+from project.npda.tests.kpi_calculations.test_calculate_kpis import (
+    assert_kpi_result_equal,
+)
 
 
 @pytest.mark.django_db
@@ -531,9 +531,7 @@ def test_kpi_calculation_28(AUDIT_START_DATE):
     # Create a submission (BEFORE calculating KPIs)
     submission = utils.create_submission(
         AUDIT_START_DATE,
-        pz_code=ineligible_patient_diag_within_audit_period
-        .paediatric_diabetes_units.first()
-        .paediatric_diabetes_unit.pz_code,
+        pz_code=ineligible_patient_diag_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
     )
     submission.patients.add(*Patient.objects.all())
 
@@ -663,9 +661,7 @@ def test_kpi_calculation_29(AUDIT_START_DATE):
     # Create a submission (BEFORE calculating KPIs)
     submission = utils.create_submission(
         AUDIT_START_DATE,
-        pz_code=ineligible_patient_diag_within_audit_period
-        .paediatric_diabetes_units.first()
-        .paediatric_diabetes_unit.pz_code,
+        pz_code=ineligible_patient_diag_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
     )
     submission.patients.add(*Patient.objects.all())
 
@@ -696,10 +692,11 @@ def test_kpi_calculation_29(AUDIT_START_DATE):
 
 
 @pytest.mark.django_db
-def test_kpi_calculation_30(AUDIT_START_DATE):
+def test_kpi_calculation_30(seed_groups_fixture, seed_users_fixture, AUDIT_START_DATE):
     """Tests that KPI30 is calculated correctly.
 
     Numerator: Number of eligible patients with at least one entry for Retinal Screening Result (item 28) is either 1 = Normal or 2 = Abnormal AND the observation date (item 27) is within the audit period
+    OR Retinal Screening Result (item 28) is Normal but no observation date (item 27) recorded.
 
     Denominator: Number of patients with Type 1 diabetes aged 12+ with a complete year of care in audit period (measure 6)
     """
@@ -746,6 +743,15 @@ def test_kpi_calculation_30(AUDIT_START_DATE):
         visit__retinal_screening_result=RETINAL_SCREENING_RESULTS[1][0],
         visit__retinal_screening_observation_date=AUDIT_START_DATE
         + relativedelta(days=32),
+    )
+    # Passing patient with Normal result but no date (new option)
+    passing_patient_normal_result_no_date = PatientFactory(
+        postcode="passing_patient_normal_result_no_date",
+        # KPI6 eligible
+        **eligible_criteria,
+        # Normal result but no observation date
+        visit__retinal_screening_result=RETINAL_SCREENING_RESULTS[0][0],
+        visit__retinal_screening_observation_date=None,
     )
 
     # Failing patients
@@ -807,9 +813,7 @@ def test_kpi_calculation_30(AUDIT_START_DATE):
     # Create a submission (BEFORE calculating KPIs)
     submission = utils.create_submission(
         AUDIT_START_DATE,
-        pz_code=ineligible_patient_diag_within_audit_period
-        .paediatric_diabetes_units.first()
-        .paediatric_diabetes_unit.pz_code,
+        pz_code=ineligible_patient_diag_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
     )
     submission.patients.add(*Patient.objects.all())
 
@@ -821,9 +825,9 @@ def test_kpi_calculation_30(AUDIT_START_DATE):
         ]
     )
 
-    EXPECTED_TOTAL_ELIGIBLE = 5
+    EXPECTED_TOTAL_ELIGIBLE = 6
     EXPECTED_TOTAL_INELIGIBLE = 3
-    EXPECTED_TOTAL_PASSED = 2
+    EXPECTED_TOTAL_PASSED = 3
     EXPECTED_TOTAL_FAILED = 3
 
     EXPECTED_KPIRESULT = KPIResult(
@@ -938,9 +942,7 @@ def test_kpi_calculation_31(AUDIT_START_DATE):
     # Create a submission (BEFORE calculating KPIs)
     submission = utils.create_submission(
         AUDIT_START_DATE,
-        pz_code=ineligible_patient_diag_within_audit_period
-        .paediatric_diabetes_units.first()
-        .paediatric_diabetes_unit.pz_code,
+        pz_code=ineligible_patient_diag_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
     )
     submission.patients.add(*Patient.objects.all())
 
@@ -1146,9 +1148,7 @@ def test_kpi_calculation_32_1(AUDIT_START_DATE):
     # Create a submission (BEFORE calculating KPIs)
     submission = utils.create_submission(
         AUDIT_START_DATE,
-        pz_code=ineligible_patient_diag_within_audit_period
-        .paediatric_diabetes_units.first()
-        .paediatric_diabetes_unit.pz_code,
+        pz_code=ineligible_patient_diag_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
     )
     submission.patients.add(*Patient.objects.all())
 
@@ -1159,7 +1159,6 @@ def test_kpi_calculation_32_1(AUDIT_START_DATE):
             ineligible_patient_diag_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code
         ]
     )
-
 
     EXPECTED_TOTAL_ELIGIBLE = 18  # (2*3) + (2*6)
     EXPECTED_TOTAL_INELIGIBLE = 5
@@ -1327,9 +1326,7 @@ def test_kpi_calculation_32_2(AUDIT_START_DATE):
     # Create a submission (BEFORE calculating KPIs)
     submission = utils.create_submission(
         AUDIT_START_DATE,
-        pz_code=ineligible_patient_diag_within_audit_period
-        .paediatric_diabetes_units.first()
-        .paediatric_diabetes_unit.pz_code,
+        pz_code=ineligible_patient_diag_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
     )
     submission.patients.add(*Patient.objects.all())
 
@@ -1357,6 +1354,7 @@ def test_kpi_calculation_32_2(AUDIT_START_DATE):
         expected=EXPECTED_KPIRESULT,
         actual=calc_kpis.calculate_kpi_32_2_health_check_lt_12yo(),
     )
+
 
 @pytest.mark.django_db
 def test_kpi_calculation_32_3(AUDIT_START_DATE):
@@ -1542,9 +1540,7 @@ def test_kpi_calculation_32_3(AUDIT_START_DATE):
     # Create a submission (BEFORE calculating KPIs)
     submission = utils.create_submission(
         AUDIT_START_DATE,
-        pz_code=ineligible_patient_diag_within_audit_period
-        .paediatric_diabetes_units.first()
-        .paediatric_diabetes_unit.pz_code,
+        pz_code=ineligible_patient_diag_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code,
     )
     submission.patients.add(*Patient.objects.all())
 
@@ -1572,4 +1568,3 @@ def test_kpi_calculation_32_3(AUDIT_START_DATE):
         expected=EXPECTED_KPIRESULT,
         actual=calc_kpis.calculate_kpi_32_3_health_check_gte_12yo(),
     )
-
