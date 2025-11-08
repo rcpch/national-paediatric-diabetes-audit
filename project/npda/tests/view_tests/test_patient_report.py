@@ -1004,3 +1004,294 @@ def test_patient_over_12yo_non_smoker_should_not_be_eligible_for_smoking_cessati
     assert patient["patient_identifier"] == "4444444444"
     assert patient["smoking_status"] is True
     assert patient["smoking_cessation_referral"] == "non_smoker_no_referral"
+
+
+# Retinal screening tests
+
+
+@pytest.mark.django_db
+def test_retinal_screening_under_12yo_shows_ineligible(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    Test that patients under 12 years old show as ineligible for retinal screening.
+    Result should be None regardless of whether data exists.
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    # Patient is 10 years old - under 12
+    date_of_birth = audit_period.start_date - relativedelta(years=10)
+
+    patient = PatientFactory(
+        nhs_number="5555555555",
+        diabetes_type=DIABETES_TYPES[0][0],  # T1DM
+        date_of_birth=date_of_birth,
+        diagnosis_date=audit_period.start_date - relativedelta(days=365),
+    )
+
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    # Create visit WITH retinal screening data
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        retinal_screening_result=1,  # Has screening result
+        retinal_screening_observation_date=visit_date,
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(patient)
+
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": audit_period.slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
+
+    response = client.get(
+        url + f"?category={TableCategories.HEALTH_CHECKS.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    patients = response.context["patients"]
+    assert len(patients) == 1
+
+    patient_data = patients[0]
+    assert patient_data["patient_identifier"] == "5555555555"
+    assert patient_data["is_gte_12yo"] is False
+    # Should be None (ineligible) even though data exists
+    assert patient_data["passed_retinal_screening"] is None
+
+
+@pytest.mark.django_db
+def test_retinal_screening_over_12yo_with_data_passes(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    Test that patients 12+ years old with valid retinal screening data show as passed.
+    Result should be True.
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    # Patient is 14 years old - over 12
+    date_of_birth = audit_period.start_date - relativedelta(years=14)
+
+    patient = PatientFactory(
+        nhs_number="6666666666",
+        diabetes_type=DIABETES_TYPES[0][0],  # T1DM
+        date_of_birth=date_of_birth,
+        diagnosis_date=audit_period.start_date - relativedelta(days=365),
+    )
+
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    # Create visit WITH retinal screening data
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        retinal_screening_result=1,  # Valid screening result
+        retinal_screening_observation_date=visit_date,
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(patient)
+
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": audit_period.slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
+
+    response = client.get(
+        url + f"?category={TableCategories.HEALTH_CHECKS.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    patients = response.context["patients"]
+    assert len(patients) == 1
+
+    patient_data = patients[0]
+    assert patient_data["patient_identifier"] == "6666666666"
+    assert patient_data["is_gte_12yo"] is True
+    # Should pass because they are 12+ with valid data
+    assert patient_data["passed_retinal_screening"] is True
+
+
+@pytest.mark.django_db
+def test_retinal_screening_over_12yo_with_data_fails(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    Test that patients 12+ years old who are eligible but don't pass show as failed.
+    Result should be False.
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    # Patient is 13 years old - over 12
+    date_of_birth = audit_period.start_date - relativedelta(years=13)
+
+    patient = PatientFactory(
+        nhs_number="7777777777",
+        diabetes_type=DIABETES_TYPES[0][0],  # T1DM
+        date_of_birth=date_of_birth,
+        diagnosis_date=audit_period.start_date - relativedelta(days=365),
+    )
+
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    # Create visit WITHOUT valid retinal screening (or with invalid result)
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        retinal_screening_result=None,  # No valid screening
+        retinal_screening_observation_date=visit_date,  # But has a date (eligible)
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(patient)
+
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": audit_period.slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
+
+    response = client.get(
+        url + f"?category={TableCategories.HEALTH_CHECKS.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    patients = response.context["patients"]
+    assert len(patients) == 1
+
+    patient_data = patients[0]
+    assert patient_data["patient_identifier"] == "7777777777"
+    assert patient_data["is_gte_12yo"] is True
+    # Should fail because they are eligible but don't pass
+    assert patient_data["passed_retinal_screening"] is False
+
+
+@pytest.mark.django_db
+def test_retinal_screening_over_12yo_without_data_shows_blank(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    Test that patients 12+ years old with NO retinal screening data show as blank.
+    Result should be None (but different meaning than under 12).
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    # Patient is 15 years old - over 12
+    date_of_birth = audit_period.start_date - relativedelta(years=15)
+
+    patient = PatientFactory(
+        nhs_number="8888888888",
+        diabetes_type=DIABETES_TYPES[0][0],  # T1DM
+        date_of_birth=date_of_birth,
+        diagnosis_date=audit_period.start_date - relativedelta(days=365),
+    )
+
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    # Create visit WITHOUT any retinal screening data
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        retinal_screening_result=None,
+        retinal_screening_observation_date=None,  # No data at all
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(patient)
+
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": audit_period.slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
+
+    response = client.get(
+        url + f"?category={TableCategories.HEALTH_CHECKS.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    patients = response.context["patients"]
+    assert len(patients) == 1
+
+    patient_data = patients[0]
+    assert patient_data["patient_identifier"] == "8888888888"
+    assert patient_data["is_gte_12yo"] is True
+    # Should be None (no data available) - template will show blank, not ineligible icon
+    assert patient_data["passed_retinal_screening"] is None

@@ -2319,11 +2319,6 @@ class CalculateKPIS:
             denominator=self._get_total_kpi_6_total_t1dm_complete_year_gte_12yo_pts_and_count
         )
 
-    def calculate_kpi_30_retinal_screening_for_patient_report_table(self) -> KPIResult:
-        return self._calculate_kpi_30_retinal_screening(
-            denominator=self._get_kpi_3_total_t1dm_pts_and_count
-        )
-
     def _calculate_kpi_30_retinal_screening(self, denominator) -> KPIResult:
         """
         Calculates KPI 30: Retinal Screening (%)
