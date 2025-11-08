@@ -241,19 +241,36 @@ def calculate_queryset(
                     output_field=BooleanField(),
                 ),
                 passed_retinal_screening=Case(
+                    # First: Patient passed (≥12yo with valid screening)
                     When(
                         Exists(
-                            calculate_kpis.calculate_kpi_30_retinal_screening_for_patient_report_table()
+                            calculate_kpis.calculate_kpi_30_retinal_screening()
                             .patient_querysets["passed"]
                             .filter(pk=OuterRef("pk"))
                         ),
                         then=True,
                     ),
-                    default=Case(
-                        When(is_gte_12yo=True, then=False),
-                        default=None,
-                        output_field=BooleanField(),
+                    # Second: Patient is under 12 (ineligible by age)
+                    When(
+                        ~Q(is_gte_12yo=True),
+                        then=None,
                     ),
+                    # Third: Patient is ≥12 but has NO retinal screening data at all
+                    When(
+                        Q(is_gte_12yo=True)
+                        & ~Exists(
+                            Visit.objects.filter(
+                                patient=OuterRef("pk"),
+                                visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
+                            ).filter(
+                                Q(retinal_screening_result__isnull=False)
+                                | Q(retinal_screening_observation_date__isnull=False)
+                            )
+                        ),
+                        then=None,
+                    ),
+                    # Default: Patient is ≥12, has some retinal data, but didn't pass
+                    default=False,
                     output_field=BooleanField(),
                 ),
                 passed_foot_exam=Case(
@@ -1272,7 +1289,7 @@ def download_patient_report(request, audit_period, pdu):
 
                         for field in fields:
                             data[field].append(row[field])
-                        
+
                         data["hba1c_percent_change"].append(row["hba1c_delta"])
 
             df = pd.DataFrame(data=data)
