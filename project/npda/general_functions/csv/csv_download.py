@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404
 
 from ..write_errors_to_xlsx import write_errors_to_xlsx
 from ....constants.csv_headings import CSV_HEADING_OBJECTS, UNIQUE_IDENTIFIER_JERSEY, UNIQUE_IDENTIFIER_ENGLAND
+from ....npda.models.visit import Visit
 
 
 def download_csv_file(request, submission_id):
@@ -60,6 +61,31 @@ def export_as_csv(request, submission):
 
     header = [row["heading"] for row in HEADINGS_LIST]
     writer.writerow(header)
+
+    visits = Visit.objects.filter(patient__in=submission.patients.all()).select_related("patient").prefetch_related("patient__paediatric_diabetes_units")
+
+    for visit in visits:
+        row = []
+        transfer = visit.patient.paediatric_diabetes_units.filter(paediatric_diabetes_unit__pz_code=pz_code).first()
+
+        for row_heading in HEADINGS_LIST:
+            heading = row_heading["heading"]
+            model = row_heading.get("model")
+            field_name = row_heading.get("model_field")
+
+            match (heading, model):
+                case ("PDU Number", _):
+                    row.append(submission.paediatric_diabetes_unit.pz_code)
+                case (_, "Visit"):
+                    row.append(getattr(visit, field_name))
+                case (_, "Patient"):
+                    row.append(getattr(visit.patient, field_name))
+                case (_, "Transfer"):
+                    row.append(getattr(transfer, field_name))
+                case _:
+                    raise Exception(f"Unknown model: {model}")
+        
+        writer.writerow(row)
 
     filename = f"{submission.paediatric_diabetes_unit.pz_code}-{submission.audit_period.display_name()}.csv"
 
