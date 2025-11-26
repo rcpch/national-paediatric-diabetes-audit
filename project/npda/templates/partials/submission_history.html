@@ -90,33 +90,29 @@
                       {{ submission.paediatric_diabetes_unit.pz_code }} ({{ submission.paediatric_diabetes_unit.lead_organisation_name }})
                     </td>
                   {% endif %}
+                  <!-- Pop up which shows data protection guidance for quality report download -->
+                  {% include 'partials/page_elements/quality_report_popup.html' %}
+                  <!-- Pop up which shows data protection guidance for original data download -->
+                  {% include 'partials/page_elements/original_data_popup.html' %}
                   <td class="flex flex-row flex-wrap justify-start items-stretch gap-2 xl:flex-nowrap">
-                    <form method="post"
-                          action="{% data_url 'pdu-submissions' %}"
-                          class="join grow xl:max-w-max">
-                      {% csrf_token %}
-                      <input type="hidden" name="audit_id" value="{{ submission.pk }}">
-                      {% if submission.submission_active %}
-                        <!-- data quality report only visible for PDU view -->
-                        {% if submission.csv_file_name and perms.npda.can_download_csv %}
-                          <div class="join join-vertical grow items-center lg:join-horizontal">
-                            <div class="h-full flex grow items-center px-2 text-white bg-gray-400">
-                              <i class="fa-download fas mr-1"></i> Download:
-                            </div>
-                            <div class="h-full flex items-center p-1 text-white bg-gray-400">
-                              <button name="submit-data"
-                                      value="download-report"
-                                      type="submit"
-                                      class="btn bg-rcpch_light_blue btn-sm join-item h-auto px-2 py-1 mr-2 font-semibold text-white rounded-none hover:bg-rcpch_pink hover:text-white"
-                                      onclick="quality_report_modal.showModal()">
-                                <div class="tooltip tooltip-bottom"
-                                     data-tip="Download a spreadsheet (.xlsx) that shows your uploaded data with validation comments">
-                                  <i class="fa-file-excel fa-solid"></i> Quality Report
-                                </div>
-                              </button>
-                              <!-- Pop up which shows data protection guidance for quality report download -->
-                              {% include 'partials/page_elements/quality_report_popup.html' %}
-                            {% endif %}
+                    {% if submission.submission_active %}
+                      <!-- data quality report only visible for PDU view -->
+                      {% if submission.csv_file_name and perms.npda.can_download_csv %}
+                        <div class="join join-vertical grow items-center lg:join-horizontal">
+                          <div class="h-full flex grow items-center px-2 text-white bg-gray-400">
+                            <i class="fa-download fas mr-1"></i> Download:
+                          </div>
+                          <div class="h-full flex items-center p-1 text-white bg-gray-400">
+                            <button name="submit-data"
+                                    value="download-report"
+                                    type="submit"
+                                    class="btn bg-rcpch_light_blue btn-sm join-item h-auto px-2 py-1 mr-2 font-semibold text-white rounded-none hover:bg-rcpch_pink hover:text-white"
+                                    onclick="quality_report_modal.showModal()">
+                              <div class="tooltip tooltip-bottom"
+                                    data-tip="Download a spreadsheet (.xlsx) that shows your uploaded data with validation comments">
+                                <i class="fa-file-excel fa-solid"></i> Quality Report
+                              </div>
+                            </button>
                             {% if perms.npda.can_download_csv %}
                               <button name="submit-data"
                                       value="download-data"
@@ -124,33 +120,50 @@
                                       class="btn bg-rcpch_light_blue btn-sm join-item h-auto px-2 py-1 font-semibold text-white rounded-none hover:bg-rcpch_pink hover:text-white"
                                       onclick="original_data_modal.showModal()">
                                 <div class="tooltip tooltip-bottom"
-                                     data-tip="Download a copy of the uploaded .CSV file">
+                                    data-tip="Download a copy of the uploaded .CSV file">
                                   <i class="fa-file-csv fa-solid"></i>
                                   Raw Data
                                 </div>
                               </button>
                             {% endif %}
-                            <!-- Pop up which shows data protection guidance for original data download -->
-                            {% include 'partials/page_elements/original_data_popup.html' %}
-                          </div>
                         </div>
                       {% else %}
-                        {% if perms.npda.delete_submission %}
-                          {% comment %}only those with permission can see this button{% endcomment %}
+                        {% if perms.npda.can_download_csv %}
+                          <button name="submit-data"
+                                  value="download-data"
+                                  type="submit"
+                                  class="btn bg-rcpch_light_blue btn-sm join-item h-auto px-2 py-1 font-semibold text-white rounded-none hover:bg-rcpch_pink hover:text-white"
+                                  onclick="original_data_modal.showModal()">
+                            <div class="tooltip tooltip-bottom"
+                                data-tip="Download a copy of data as CSV">
+                              <i class="fa-file-csv fa-solid"></i>
+                              Export as CSV
+                            </div>
+                          </button>
+                        {% endif %}
+                      {% endif %}
+                    {% else %}
+                      {% if perms.npda.delete_submission %}
+                        {% comment %}only those with permission can see this button{% endcomment %}
+                        <form method="post"
+                                action="{% data_url 'pdu-submissions' %}"
+                                class="join grow xl:max-w-max">
+                            {% csrf_token %}
+                          <input type="hidden" name="audit_id" value="{{ submission.pk }}">
                           <button name="submit-data"
                                   value="delete-data"
                                   type="submit"
                                   class="join-item bg-rcpch_red text-white font-semibold hover:text-white py-1 px-2 border border-rcpch_red hover:bg-rcpch_red_dark_tint hover:border-rcpch_red_dark_tint btn-sm rounded-none {% if submission.submission_active %}opacity-50 cursor-not-allowed{% endif %}  h-auto">
                             Delete {% comment %} only inactive submissions can be deleted {% endcomment %}
                           </button>
-                        {% endif %}
+                        </form>
                       {% endif %}
-                    </form>
+                    {% endif %}
                     {% if submission.submission_active %}
                       <a href="{% data_url 'pdu-patients' %}"
-                         class="bg-rcpch_light_blue border-[6px] border-rcpch_light_blue btn-sm w-full h-auto grow px-2 py-1 font-semibold text-center text-white rounded-none hover:bg-rcpch_pink hover:border-rcpch_pink hover:text-white xl:max-w-max">
+                          class="bg-rcpch_light_blue border-[6px] border-rcpch_light_blue btn-sm w-full h-auto grow px-2 py-1 font-semibold text-center text-white rounded-none hover:bg-rcpch_pink hover:border-rcpch_pink hover:text-white xl:max-w-max">
                         <div class="tooltip tooltip-left"
-                             data-tip="View submission details, including the patients uploaded.">
+                              data-tip="View submission details, including the patients uploaded.">
                           View Submission <i class="fa-eye fa-solid"></i>
                         </div>
                       </a>
