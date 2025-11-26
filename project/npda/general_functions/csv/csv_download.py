@@ -1,13 +1,16 @@
 import json
+import csv
+from io import StringIO
 
 from django.apps import apps
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 
 from ..write_errors_to_xlsx import write_errors_to_xlsx
+from ....constants.csv_headings import CSV_HEADING_OBJECTS, UNIQUE_IDENTIFIER_JERSEY, UNIQUE_IDENTIFIER_ENGLAND
 
 
-def download_csv(request, submission_id):
+def download_csv_file(request, submission_id):
     """
     Download a CSV file.
     """
@@ -40,4 +43,27 @@ def download_xlsx(request, submission_id):
 
     response = HttpResponse(xlsx_file, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     response["Content-Disposition"] = f'attachment; filename="{xlsx_file_name}"'
+    return response
+
+
+def export_as_csv(request, submission):
+    out = StringIO()
+    writer = csv.writer(out, delimiter=",")
+
+    pz_code = submission.paediatric_diabetes_unit.pz_code
+    is_jersey = pz_code == "PZ248"
+
+    if is_jersey:
+        HEADINGS_LIST = UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
+    else:
+        HEADINGS_LIST = UNIQUE_IDENTIFIER_ENGLAND + CSV_HEADING_OBJECTS
+
+    header = [row["heading"] for row in HEADINGS_LIST]
+    writer.writerow(header)
+
+    filename = f"{submission.paediatric_diabetes_unit.pz_code}-{submission.audit_period.display_name()}.csv"
+
+    response = HttpResponse(out.getvalue(), content_type="text/csv")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
     return response

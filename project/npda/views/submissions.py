@@ -29,8 +29,9 @@ from project.npda.views.decorators import login_and_otp_required, check_data_per
 from project.constants.colors import RCPCH_LIGHT_BLUE
 from ..general_functions.session import refresh_session_filters, save_csv_uploading_user_to_visitactivity
 from ..general_functions.csv import (
-    download_csv,
+    download_csv_file,
     download_xlsx,
+    export_as_csv,
     csv_parse,
     create_csv_submission,
     gather_unique_patient_and_visit_counts
@@ -276,7 +277,10 @@ class SubmissionsListView(
                 pk=request.POST.get("audit_id")
             ).get()
             if request.user.is_rcpch_audit_team_member or submission.paediatric_diabetes_unit in request.user.organisation_employers.all():
-                return download_csv(request, submission.id)
+                if submission.csv_file_name:
+                    return download_csv_file(request, submission.id)
+                else:
+                    return export_as_csv(request, submission)
             else:
                 raise PermissionDenied(
                     f"User {request.user.email} does not have permission to download data for PDU {submission.paediatric_diabetes_unit.pz_code}.",
