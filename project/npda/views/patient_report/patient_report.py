@@ -25,6 +25,7 @@ from django.db.models import (
     ExpressionWrapper,
     DurationField,
     Func,
+    Value
 )
 
 # Django imports
@@ -377,72 +378,65 @@ def calculate_queryset(
                 ),
                 smoking_status=Case(
                     When(
-                        Q(visit__smoking_status__in=[1, 2])  # smoker
-                        & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE)
-                        & Q(
-                            date_of_birth__lte=audit_period.start_date
-                            - relativedelta(years=12)
+                        Exists(
+                            Visit.objects.filter(
+                                patient=OuterRef("pk"),
+                                smoking_status__in=[1, 2], # non-smoker or smoker recorded
+                            )
                         ),
-                        then=True,
+                        then=True # smoking status screened
                     ),
                     When(
-                        Q(visit__smoking_status=99)  # not known
-                        & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE)
-                        & Q(
-                            date_of_birth__lte=audit_period.start_date
-                            - relativedelta(years=12)
+                        Exists(
+                            Visit.objects.filter(
+                                patient=OuterRef("pk"),
+                                smoking_status=99, # not known recorded
+                            )
                         ),
-                        then=False,
+                        then=False # smoking status not screened
                     ),
                     When(
-                        Q(
-                            date_of_birth__gt=audit_period.start_date
-                            - relativedelta(years=12)
-                        ),
-                        then=None,
-                    ),
-                    default=Case(
-                        When(is_gte_12yo=True, then=False),
-                        default=None,
-                        output_field=BooleanField(),
+                        is_gte_12yo=True,
+                        then=False, # over 12 years old but no smoking status recorded, not screened
                     ),
                     output_field=BooleanField(),
                 ),
-                smoking_cessation_referral=Case(
-                    When(  # Smoker with referral over 12 years old during audit period
-                        Q(visit__smoking_status=2)  # smoker
-                        & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE)
-                        & Q(visit__smoking_cessation_referral_date__isnull=False)
-                        & Q(
-                            date_of_birth__lte=audit_period.start_date
-                            - relativedelta(years=12)
-                        ),
-                        then=Value("True"),
-                    ),
-                    When(  # Non-smoker during audit period over 12 years old no referral needed
-                        Q(visit__smoking_status=1)  # non-smoker
-                        & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE)
-                        & Q(
-                            date_of_birth__lte=audit_period.start_date
-                            - relativedelta(years=12)
-                        )
-                        & Q(visit__smoking_cessation_referral_date__isnull=True),
-                        then=Value("non_smoker_no_referral"),
-                    ),
-                    When(  # Under 12 years old no eligible
-                        Q(
-                            date_of_birth__gt=audit_period.start_date
-                            - relativedelta(years=12)
-                        ),
-                        then=Value("under_12"),
-                    ),
-                    default=Case(
-                        When(is_gte_12yo=True, then=Value("False")),
-                        default=None,
-                        output_field=CharField(),
-                    ),
-                    output_field=CharField(),
-                ),
+                smoking_cessation_referral=Value(False),
+                # smoking_cessation_referral=Case(
+                #     When(  # Smoker with referral over 12 years old during audit period
+                #         Q(visit__smoking_status=2)  # smoker
+                #         & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE)
+                #         & Q(visit__smoking_cessation_referral_date__isnull=False)
+                #         & Q(
+                #             date_of_birth__lte=audit_period.start_date
+                #             - relativedelta(years=12)
+                #         ),
+                #         then=Value("True"),
+                #     ),
+                #     When(  # Non-smoker during audit period over 12 years old no referral needed
+                #         Q(visit__smoking_status=1)  # non-smoker
+                #         & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE)
+                #         & Q(
+                #             date_of_birth__lte=audit_period.start_date
+                #             - relativedelta(years=12)
+                #         )
+                #         & Q(visit__smoking_cessation_referral_date__isnull=True),
+                #         then=Value("non_smoker_no_referral"),
+                #     ),
+                #     When(  # Under 12 years old no eligible
+                #         Q(
+                #             date_of_birth__gt=audit_period.start_date
+                #             - relativedelta(years=12)
+                #         ),
+                #         then=Value("under_12"),
+                #     ),
+                #     default=Case(
+                #         When(is_gte_12yo=True, then=Value("False")),
+                #         default=None,
+                #         output_field=CharField(),
+                #     ),
+                #     output_field=CharField(),
+                # ),
                 additional_dietetic_appt_offered=Case(
                     When(
                         Exists(
