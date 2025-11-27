@@ -1,5 +1,5 @@
 {% load npda_tags %}
-<dialog id="quality_report_modal" class="modal text-black">
+<dialog id="quality_report_modal_{{submission.pk}}" class="modal text-black">
   <div class="modal-box">
       <h3 class="text-lg font-bold">Download Data Quality Report</h3>
       <p class="py-4">
@@ -13,7 +13,7 @@
             name="submit-data"
             value="download-report"
             type="submit"
-            onclick="quality_report_modal.close()">
+            onclick="quality_report_modal_{{submission.pk}}.close()">
               Download
           </button>
         </form>

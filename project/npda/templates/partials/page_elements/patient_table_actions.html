@@ -72,7 +72,7 @@
                 <li>
                     <button class="btn {% if submission_error_count > 0 %} btn-warning {% else %} btn-success {% endif %} text-white {% if not perms.npda.view_submission %}btn-disabled{% endif %}"
                             type="button"
-                            onclick="quality_report_modal.showModal()">
+                            onclick="quality_report_modal_{{submission.pk}}.showModal()">
                         <i class="fa-solid fa-file-excel"></i>
                         Data Quality Report
                         {% if submission_error_count > 0 %}
@@ -97,7 +97,7 @@
                         {% if perms.npda.can_download_csv %}
                             <li>
                                 <button type="button"
-                                        onclick="original_data_modal.showModal()"
+                                        onclick="original_data_modal_{{submission.pk}}.showModal()"
                                         class="{% if not perms.npda.can_download_csv %}btn-disabled{% endif %}">
                                     <i class="fa-solid fa-download"></i>
                                     Download original file

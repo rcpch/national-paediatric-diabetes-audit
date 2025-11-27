@@ -1,5 +1,5 @@
 {% load npda_tags %}
-<dialog id="original_data_modal" class="modal text-black">
+<dialog id="original_data_modal_{{submission.pk}}" class="modal text-black">
   <div class="modal-box">
     <h3 class="text-lg font-bold">Good Data Protection Practice</h3>
     <p class="py-4">
@@ -13,10 +13,10 @@
                 name="submit-data"
                 value="download-data"
                 type="submit"
-                onclick="original_data_modal.close()">Download</button>
+                onclick="original_data_modal_{{submission.pk}}.close()">Download</button>
         <button class="btn btn-outline"
                 type="button"
-                onclick="original_data_modal.close()">
+                onclick="original_data_modal_{{submission.pk}}.close()">
           Cancel
         </form>
       </div>
