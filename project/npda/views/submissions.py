@@ -89,7 +89,10 @@ class SubmissionsListView(
                 audit_period=self.audit_period
             )
 
-        final = base_queryset.annotate(
+        # Avoid N+1 query problem, especially painful on national view
+        final = base_queryset.select_related("paediatric_diabetes_unit")
+
+        final = final.annotate(
             patient_count=Count("patients"),
             full_name_submission_by=Concat(
                 "submission_by__first_name", Value(" "), "submission_by__surname"
