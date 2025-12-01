@@ -404,6 +404,16 @@ def calculate_queryset(
                             Visit.objects.filter(
                                 patient=OuterRef("pk"),
                                 visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
+                                smoking_status__in=[99], # unknown - fail
+                            )
+                        ),
+                        then=Value("False")
+                    ),
+                    When(
+                        Exists(
+                            Visit.objects.filter(
+                                patient=OuterRef("pk"),
+                                visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
                                 smoking_status__in=[1], # non-smoker
                             )
                         ),
