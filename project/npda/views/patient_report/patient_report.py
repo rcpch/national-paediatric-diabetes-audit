@@ -25,6 +25,7 @@ from django.db.models import (
     ExpressionWrapper,
     DurationField,
     Func,
+    Value
 )
 
 # Django imports
@@ -377,69 +378,68 @@ def calculate_queryset(
                 ),
                 smoking_status=Case(
                     When(
-                        Q(visit__smoking_status__in=[1, 2])  # smoker
-                        & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE)
-                        & Q(
-                            date_of_birth__lte=audit_period.start_date
-                            - relativedelta(years=12)
-                        ),
-                        then=True,
+                        is_gte_12yo=False,
+                        then=None, # Not eligible
                     ),
                     When(
-                        Q(visit__smoking_status=99)  # not known
-                        & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE)
-                        & Q(
-                            date_of_birth__lte=audit_period.start_date
-                            - relativedelta(years=12)
+                        Exists(
+                            Visit.objects.filter(
+                                patient=OuterRef("pk"),
+                                visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
+                                smoking_status__in=[1, 2], # non-smoker or smoker recorded
+                            )
                         ),
-                        then=False,
+                        then=True, # pass
                     ),
-                    When(
-                        Q(
-                            date_of_birth__gt=audit_period.start_date
-                            - relativedelta(years=12)
-                        ),
-                        then=None,
-                    ),
-                    default=Case(
-                        When(is_gte_12yo=True, then=False),
-                        default=None,
-                        output_field=BooleanField(),
-                    ),
+                    default=Value(False), # fail (includes smoking status not recorded 99)
                     output_field=BooleanField(),
                 ),
                 smoking_cessation_referral=Case(
-                    When(  # Smoker with referral over 12 years old during audit period
-                        Q(visit__smoking_status=2)  # smoker
-                        & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE)
-                        & Q(visit__smoking_cessation_referral_date__isnull=False)
-                        & Q(
-                            date_of_birth__lte=audit_period.start_date
-                            - relativedelta(years=12)
-                        ),
-                        then=Value("True"),
+                    When(
+                        is_gte_12yo=False,
+                        then=Value("under_12"), # Not eligible
                     ),
-                    When(  # Non-smoker during audit period over 12 years old no referral needed
-                        Q(visit__smoking_status=1)  # non-smoker
-                        & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE)
-                        & Q(
-                            date_of_birth__lte=audit_period.start_date
-                            - relativedelta(years=12)
+                    When(
+                        Exists(
+                            Visit.objects.filter(
+                                patient=OuterRef("pk"),
+                                visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
+                                smoking_status__in=[99], # unknown - fail
+                            )
+                        ),
+                        then=Value("False")
+                    ),
+                    When(
+                        Exists(
+                            Visit.objects.filter(
+                                patient=OuterRef("pk"),
+                                visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
+                                smoking_status__in=[1], # non-smoker
+                            )
+                        ),
+                        then=Value("non_smoker_no_referral")
+                    ),
+                    When(
+                        Exists(
+                            Visit.objects.filter(
+                                patient=OuterRef("pk"),
+                                visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
+                                smoking_status__in=[2], # smoker
+                            )
+                        ),
+                        then=Case(
+                            When(
+                                Exists(
+                                    Visit.objects.filter(
+                                        patient=OuterRef("pk"),
+                                        visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
+                                        smoking_cessation_referral_date__isnull=False,
+                                    )
+                                ),
+                                then=Value("True"), # pass
+                            ),
+                            default=Value("False"), # fail
                         )
-                        & Q(visit__smoking_cessation_referral_date__isnull=True),
-                        then=Value("non_smoker_no_referral"),
-                    ),
-                    When(  # Under 12 years old no eligible
-                        Q(
-                            date_of_birth__gt=audit_period.start_date
-                            - relativedelta(years=12)
-                        ),
-                        then=Value("under_12"),
-                    ),
-                    default=Case(
-                        When(is_gte_12yo=True, then=Value("False")),
-                        default=None,
-                        output_field=CharField(),
                     ),
                     output_field=CharField(),
                 ),
