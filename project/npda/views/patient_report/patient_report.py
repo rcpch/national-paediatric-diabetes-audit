@@ -394,42 +394,41 @@ def calculate_queryset(
                     default=Value(False), # fail (includes smoking status not recorded 99)
                     output_field=BooleanField(),
                 ),
-                smoking_cessation_referral=Value(False),
-                # smoking_cessation_referral=Case(
-                #     When(  # Smoker with referral over 12 years old during audit period
-                #         Q(visit__smoking_status=2)  # smoker
-                #         & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE)
-                #         & Q(visit__smoking_cessation_referral_date__isnull=False)
-                #         & Q(
-                #             date_of_birth__lte=audit_period.start_date
-                #             - relativedelta(years=12)
-                #         ),
-                #         then=Value("True"),
-                #     ),
-                #     When(  # Non-smoker during audit period over 12 years old no referral needed
-                #         Q(visit__smoking_status=1)  # non-smoker
-                #         & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE)
-                #         & Q(
-                #             date_of_birth__lte=audit_period.start_date
-                #             - relativedelta(years=12)
-                #         )
-                #         & Q(visit__smoking_cessation_referral_date__isnull=True),
-                #         then=Value("non_smoker_no_referral"),
-                #     ),
-                #     When(  # Under 12 years old no eligible
-                #         Q(
-                #             date_of_birth__gt=audit_period.start_date
-                #             - relativedelta(years=12)
-                #         ),
-                #         then=Value("under_12"),
-                #     ),
-                #     default=Case(
-                #         When(is_gte_12yo=True, then=Value("False")),
-                #         default=None,
-                #         output_field=CharField(),
-                #     ),
-                #     output_field=CharField(),
-                # ),
+                smoking_cessation_referral=Case(
+                    When(  # Smoker with referral over 12 years old during audit period
+                        Q(visit__smoking_status=2)  # smoker
+                        & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE)
+                        & Q(visit__smoking_cessation_referral_date__isnull=False)
+                        & Q(
+                            date_of_birth__lte=audit_period.start_date
+                            - relativedelta(years=12)
+                        ),
+                        then=Value("True"),
+                    ),
+                    When(  # Non-smoker during audit period over 12 years old no referral needed
+                        Q(visit__smoking_status=1)  # non-smoker
+                        & Q(visit__visit_date__range=calculate_kpis.AUDIT_DATE_RANGE)
+                        & Q(
+                            date_of_birth__lte=audit_period.start_date
+                            - relativedelta(years=12)
+                        )
+                        & Q(visit__smoking_cessation_referral_date__isnull=True),
+                        then=Value("non_smoker_no_referral"),
+                    ),
+                    When(  # Under 12 years old no eligible
+                        Q(
+                            date_of_birth__gt=audit_period.start_date
+                            - relativedelta(years=12)
+                        ),
+                        then=Value("under_12"),
+                    ),
+                    default=Case(
+                        When(is_gte_12yo=True, then=Value("False")),
+                        default=None,
+                        output_field=CharField(),
+                    ),
+                    output_field=CharField(),
+                ),
                 additional_dietetic_appt_offered=Case(
                     When(
                         Exists(
