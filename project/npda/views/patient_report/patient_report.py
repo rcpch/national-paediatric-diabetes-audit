@@ -1216,7 +1216,14 @@ def download_patient_report(request, audit_period, pdu):
                         ]
 
                         for field in fields:
-                            data[field].append(measure_status(row[f"passed_{field}"]))
+                            status = measure_status(row[f"passed_{field}"])
+
+                            if field == "retinal_screening" and status == "NA" and row["is_gte_12yo"]:
+                                # As retinal screening is bi-annual, they might have been covered last year
+                                # https://github.com/rcpch/national-paediatric-diabetes-audit/pull/1276
+                                status = ""
+
+                            data[field].append(status)
 
                     case TableCategories.ADDITIONAL_CARE_PROCESSES:
                         data["complete_year_of_care"].append(

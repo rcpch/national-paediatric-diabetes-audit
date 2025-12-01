@@ -1,3 +1,9 @@
+{% comment %}
+  !! IMPORTANT !!
+  If you add any special cases here (eg retinal screening) please ensure
+  you also add them to the CSV export for the patient report too
+  (patient_report.py/download_patient_report)
+{% endcomment %}
 {% if result is True or result == "True" %}
 {% comment %} PASS {% endcomment %}
   <i class="fa-solid fa-circle-check text-success text-xl"></i>
