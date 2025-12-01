@@ -428,9 +428,9 @@ def calculate_queryset(
                                 ),
                                 then=Value("True"), # pass
                             ),
+                            default=Value("False"), # fail
                         )
                     ),
-                    default=Value("False"), # fail
                     output_field=CharField(),
                 ),
                 additional_dietetic_appt_offered=Case(
