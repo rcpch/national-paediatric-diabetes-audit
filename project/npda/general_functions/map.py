@@ -51,6 +51,7 @@ logger = logging.getLogger(__name__)
 Functions to return scatter plot of children by postcode
 """
 
+
 @cache
 def load_gdf(file):
     file_path = os.path.join(
@@ -65,7 +66,9 @@ def load_gdf(file):
     return gdf
 
 
-def get_children_by_pdu_audit_year(submission, paediatric_diabetes_unit_lead_organisation):
+def get_children_by_pdu_audit_year(
+    submission, paediatric_diabetes_unit_lead_organisation
+):
     """
     Returns a list of children by postcode for a given audit year and paediatric diabetes unit
     """
@@ -94,6 +97,8 @@ def get_children_by_pdu_audit_year(submission, paediatric_diabetes_unit_lead_org
             )
         ).values(
             "pk",
+            "nhs_number",
+            "unique_reference_number",
             "location_bng",
             "location_wgs84",
             "distance_from_lead_organisation",
@@ -323,6 +328,17 @@ def generate_distance_from_organisation_scatterplot_figure(
     )
 
     if not geo_df.empty:
+        # Build identifier string: show NHS Number if exists, otherwise show URN
+        geo_df["identifier_str"] = geo_df.apply(
+            lambda row: f"NHS Number: {row['nhs_number']}"
+            if pd.notna(row["nhs_number"]) and row["nhs_number"] != ""
+            else f"URN: {row['unique_reference_number']}"
+            if pd.notna(row["unique_reference_number"])
+            and row["unique_reference_number"] != ""
+            else "No identifier",
+            axis=1,
+        )
+
         # add the Patients as a scatterplot in pink, with distance to the lead organisation as hover text
         fig.add_trace(
             go.Scattermapbox(
@@ -336,9 +352,14 @@ def generate_distance_from_organisation_scatterplot_figure(
                 ),
                 text=geo_df["distance_km"],  # Set the hover text for the point
                 customdata=geo_df[
-                    ["pk", "distance_mi", "distance_km"]
+                    [
+                        "pk",
+                        "identifier_str",
+                        "distance_mi",
+                        "distance_km",
+                    ]
                 ].to_numpy(),  # Add custom data for hover
-                hovertemplate="<b>NPDA ID: %{customdata[0]}</b><br>Distance to Lead Centre: %{customdata[1]:.2f} mi (%{customdata[2]:.2f} km)<extra></extra>",  # Custom hovertemplate just for the lead organisation
+                hovertemplate="<b>NPDA ID: %{customdata[0]} (%{customdata[1]})</b><br>Distance to Lead Centre: %{customdata[2]:.2f} mi (%{customdata[3]:.2f} km)<extra></extra>",
                 showlegend=False,
             )
         )
@@ -387,24 +408,24 @@ def generate_dataframe_and_aggregated_distance_data_from_cases(filtered_cases):
     if not geo_df.empty:
         if "location_wgs84" in geo_df.columns:
             # Filter out rows with None or invalid geometry before processing
-            geo_df = geo_df[geo_df['location_wgs84'].notna()]
-            
+            geo_df = geo_df[geo_df["location_wgs84"].notna()]
+
             # Additional validation to ensure geometries are valid
             valid_geometries = []
             for idx, row in geo_df.iterrows():
                 try:
                     # Test if we can access x and y coordinates
-                    if row['location_wgs84'] is not None:
-                        _ = row['location_wgs84'].x
-                        _ = row['location_wgs84'].y
+                    if row["location_wgs84"] is not None:
+                        _ = row["location_wgs84"].x
+                        _ = row["location_wgs84"].y
                         valid_geometries.append(idx)
                 except (AttributeError, Exception):
                     # Skip rows with invalid geometries
                     continue
-            
+
             # Keep only rows with valid geometries
             geo_df = geo_df.loc[valid_geometries]
-            
+
             # Check if we still have data after filtering
             if geo_df.empty:
                 return {
@@ -417,10 +438,14 @@ def generate_dataframe_and_aggregated_distance_data_from_cases(filtered_cases):
                     "median_distance_travelled_mi": "~",
                     "std_distance_travelled_mi": "~",
                 }, pd.DataFrame()
-            
+
             # Now safely extract coordinates
-            geo_df["longitude"] = geo_df["location_wgs84"].apply(lambda loc: loc.x if loc is not None else None)
-            geo_df["latitude"] = geo_df["location_wgs84"].apply(lambda loc: loc.y if loc is not None else None)
+            geo_df["longitude"] = geo_df["location_wgs84"].apply(
+                lambda loc: loc.x if loc is not None else None
+            )
+            geo_df["latitude"] = geo_df["location_wgs84"].apply(
+                lambda loc: loc.y if loc is not None else None
+            )
             geo_df["distance_km"] = geo_df["distance_from_lead_organisation"].apply(
                 lambda d: d.km if d is not None else 0
             )
@@ -429,8 +454,8 @@ def generate_dataframe_and_aggregated_distance_data_from_cases(filtered_cases):
             )
 
             # Remove any rows that still have None values after coordinate extraction
-            geo_df = geo_df.dropna(subset=['longitude', 'latitude'])
-            
+            geo_df = geo_df.dropna(subset=["longitude", "latitude"])
+
             if geo_df.empty:
                 return {
                     "max_distance_travelled_km": "~",
@@ -463,16 +488,18 @@ def generate_dataframe_and_aggregated_distance_data_from_cases(filtered_cases):
                 "median_distance_travelled_mi": f"{median_distance_travelled_mi:.2f}",
                 "std_distance_travelled_mi": f"{std_distance_travelled_mi:.2f}",
             }, geo_df
-    
+
     # Return empty/default values if no valid data
-    empty_df = pd.DataFrame({
-        'pk': [],
-        'longitude': [],
-        'latitude': [],
-        'distance_km': [],
-        'distance_mi': []
-    })
-    
+    empty_df = pd.DataFrame(
+        {
+            "pk": [],
+            "longitude": [],
+            "latitude": [],
+            "distance_km": [],
+            "distance_mi": [],
+        }
+    )
+
     return {
         "max_distance_travelled_km": "~",
         "mean_distance_travelled_km": "~",
