@@ -42,14 +42,6 @@ def create_submission_with_patient(user):
     return patient
 
 
-def set_view_preference(client, view_preference, pz_code):
-    url = reverse("view_preference")
-    params = {"view_preference": view_preference, "pz_code_select_name": pz_code}
-
-    response = client.post(url, params, headers={"HX-Request": "true"})
-    assert response.status_code == HTTPStatus.NO_CONTENT
-
-
 @pytest.mark.django_db
 def test_users_only_see_patients_from_their_pdu_using_session_url(
     seed_groups_fixture,

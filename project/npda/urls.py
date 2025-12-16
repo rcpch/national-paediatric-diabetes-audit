@@ -33,7 +33,6 @@ urlpatterns = [
         view=download_template,
         name="pdu-download-template",
     ),
-    path("view_preference", view=view_preference, name="view_preference"),
     path("audit-year", view=audit_year, name="audit-year"),
     path(f"{data_prefix}/upload_csv", view=upload_csv, name="pdu-upload-csv"),
     path(f"{data_prefix}/upload_csv_in_progress", view=upload_csv_in_progress, name="pdu-upload-csv-in-progress"),
