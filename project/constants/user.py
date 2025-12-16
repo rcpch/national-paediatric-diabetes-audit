@@ -1,10 +1,3 @@
-# DEPRECATED: https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1083
-VIEW_PREFERENCES = (
-    (0, "organisation"),
-    (1, "trust"),
-    (2, "national"),
-)
-
 AUDIT_CENTRE_COORDINATOR = 1
 AUDIT_CENTRE_EDITOR = 2
 AUDIT_CENTRE_READER = 3

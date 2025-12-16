@@ -27,7 +27,7 @@ from project.npda.views.decorators import login_and_otp_required, check_data_per
 
 # RCPCH imports
 from project.constants.colors import RCPCH_LIGHT_BLUE
-from ..general_functions.session import refresh_session_filters, save_csv_uploading_user_to_visitactivity
+from ..general_functions.session import save_csv_uploading_user_to_visitactivity
 from ..general_functions.csv import (
     download_csv_file,
     download_xlsx,
@@ -76,9 +76,6 @@ class SubmissionsListView(
     permission_denied_message = "You do not have permission to view submissions."
 
     def get_queryset(self) -> Iterable[Any]:
-        """
-        Retrieve all submissions for the current PZ code, unless view_preference is set to 2 (national view)
-        """
         if self.request.user.is_rcpch_audit_team_member:
             base_queryset = self.model.objects.filter(
                 audit_period=self.audit_period

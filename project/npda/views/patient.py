@@ -50,7 +50,6 @@ from .mixins import (
     PDUPermissionMixin,
     QuestionnaireContextMixin
 )
-from ..general_functions.session import refresh_session_filters
 
 logger = logging.getLogger(__name__)
 

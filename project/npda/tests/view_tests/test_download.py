@@ -63,7 +63,10 @@ def test_uploaders_can_download_data_for_their_pdu(
         paediatric_diabetes_unit__pz_code=ALDER_HEY_PZ_CODE,
     ).first()
 
-    download_url = reverse("submissions")
+    download_url = reverse("pdu-submissions", kwargs={
+        "pz_code": ALDER_HEY_PZ_CODE,
+        "audit_period": sub.audit_period.slug,
+    })
 
     response = client.post(
         download_url,
@@ -116,7 +119,10 @@ def test_uploaders_cannot_download_data_for_other_pdu(
         paediatric_diabetes_unit__pz_code=ALDER_HEY_PZ_CODE,
     ).first()
 
-    download_url = reverse("submissions")
+    download_url = reverse("pdu-submissions", kwargs={
+        "pz_code": ALDER_HEY_PZ_CODE,
+        "audit_period": sub.audit_period.slug,
+    })
 
     client = login_and_verify_user(client, gosh_coordinator_user)
 
@@ -179,7 +185,10 @@ def test_readers_cannot_download_data_for_any_pdu(
         paediatric_diabetes_unit__pz_code=requested_pdu,
     ).first()
 
-    download_url = reverse("submissions")
+    download_url = reverse("pdu-submissions", kwargs={
+        "pz_code": requested_pdu,
+        "audit_period": sub.audit_period.slug,
+    })
 
     client = login_and_verify_user(client, home_pdu_user)
 
@@ -236,7 +245,10 @@ def test_rcpch_audit_team_can_download_data_for_any_pdu(
         paediatric_diabetes_unit__pz_code=pz_code,
     ).first()
 
-    download_url = reverse("submissions")
+    download_url = reverse("pdu-submissions", kwargs={
+        "pz_code": pz_code,
+        "audit_period": sub.audit_period.slug,
+    })
 
     response = client.post(
         download_url,

@@ -14,7 +14,6 @@ from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
 from project.npda.tests.UserDataClasses import (
     test_user_audit_centre_reader_data,
 )
-from project.constants import VIEW_PREFERENCES
 from project.npda.tests.factories.paediatrics_diabetes_unit_factory import (
     PaediatricsDiabetesUnitFactory,
 )
@@ -65,7 +64,6 @@ def test__multiple_PaediatricsDiabetesUnitFactory_instances_not_created():
             is_rcpch_audit_team_member=user_data.is_rcpch_audit_team_member,
             is_rcpch_staff=user_data.is_rcpch_staff,
             groups=[user_data.group_name],
-            view_preference=(VIEW_PREFERENCES[0][0]),
         )
 
         # Patient with default PDU
@@ -81,7 +79,6 @@ def test__multiple_PaediatricsDiabetesUnitFactory_instances_not_created():
             is_rcpch_audit_team_member=user_data.is_rcpch_audit_team_member,
             is_rcpch_staff=user_data.is_rcpch_staff,
             groups=[user_data.group_name],
-            view_preference=(VIEW_PREFERENCES[0][0]),
             # Assign to PDU via organisation employer by passing in list of pz_codes
             organisation_employers=[GOSH_PZ_CODE],
         )

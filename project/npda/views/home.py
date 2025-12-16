@@ -11,7 +11,6 @@ from project.constants.feature_flags import FEATURE_FLAGS
 from project.npda.general_functions.csv import csv_header
 from project.npda.general_functions.organisations_adapter import paediatric_diabetes_units_to_populate_select_field
 from project.npda.views.npda_users import get_user_home_page
-from ..general_functions.session import refresh_session_filters
 
 # RCPCH imports
 from .decorators import login_and_otp_required, check_data_permissions
@@ -22,32 +21,6 @@ from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 
 # Logging
 logger = logging.getLogger(__name__)
-
-# Temporary hack until everything is referenced by data url and we can remove this endpoint
-def redirect_after_switcher(request):
-    if request.htmx and request.htmx.current_url:
-        path = urlparse(request.htmx.current_url).path
-
-        if path.startswith("/period/"):
-            audit_period = AuditPeriod.objects.get(
-                start_date__year=request.session.get("selected_audit_year")
-            )
-            
-            pz_code = request.session.get("pz_code", None)
-
-            data_prefix = f"period/{audit_period.slug}/pdu/{pz_code}"
-
-            rest_of_path = "/".join(path.split("/")[5:])
-
-            return HttpResponse(
-                status=204,
-                headers={
-                    "HX-Redirect": f"/{data_prefix}/{rest_of_path}",
-                }
-            )
-
-    # Reload the page to apply the new view preference
-    return HttpResponse(status=204, headers={"HX-Refresh": "true"})
 
 
 @login_and_otp_required()
@@ -108,39 +81,6 @@ def download_template(request, audit_period, pdu):
         content_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="npda_template.csv"'},
     )
-
-
-@login_and_otp_required()
-def view_preference(request):
-    """
-    HTMX callback from the button press in the view_preference.html template.
-    """
-    selected_pz_code = request.POST.get("pz_code_select_name", None)
-
-    # includes a validation step
-    refresh_session_filters(request, pz_code=selected_pz_code)
-
-    return redirect_after_switcher(request)
-
-
-@login_and_otp_required()
-def audit_year(request):
-    """
-    View to change the audit year for the KPIs and submissions.
-    """
-    if request.method == "POST":
-        audit_year = request.POST.get("audit_year_select_name", None)
-        audit_year = int(audit_year) if audit_year else None
-
-        refresh_session_filters(request, audit_year=audit_year)
-
-        return redirect_after_switcher(request)
-
-    response = render(
-        request, template_name="partials/audit_year_select.html"
-    )
-
-    return response
 
 
 @login_and_otp_required()

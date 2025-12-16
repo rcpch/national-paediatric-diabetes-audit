@@ -77,8 +77,6 @@ class NPDAUserManager(BaseUserManager):
             user.title = title_to_choice(extra_fields.get("title"))
         else:
             user.title = None
-        if not user.view_preference:
-            user.view_preference = 1  # PDU level view preference
         if not extra_fields.get("is_superuser"):
             user.is_superuser = False
         if not extra_fields.get("is_active"):
@@ -138,7 +136,6 @@ class NPDAUserManager(BaseUserManager):
             is_rcpch_audit_team_member=True,
             is_rcpch_staff=True,
             email_confirmed=True,
-            view_preference=1,
             is_primary_employer=True,
         )
 
@@ -187,13 +184,6 @@ class NPDAUser(AbstractUser, PermissionsMixin):
         # reflects is a patient or carer
         # must be affiliated with an organisation
         default=False
-    )
-    # DEPRECATED: https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1083
-    view_preference = models.SmallIntegerField(
-        choices=VIEW_PREFERENCES,
-        default=0,  # Organisation level is default
-        blank=False,
-        null=False,
     )
     date_joined = models.DateTimeField(default=timezone.now)
     role = models.PositiveSmallIntegerField(choices=ROLES)

@@ -49,7 +49,6 @@ from project.npda.tests.UserDataClasses import (
     test_user_rcpch_audit_team_data,
 )
 from project.npda.tests.utils import login_and_verify_user
-from project.constants import VIEW_PREFERENCES
 
 logger = logging.getLogger(__name__)
 
@@ -130,75 +129,11 @@ def test_npda_user_list_view_rcpch_audit_team_can_view_all_users(
 
     client = login_and_verify_user(client, ah_audit_team_user)
 
-    # The user still defaults to seeing users from just their PDU
-    # This is the request made when you click the "All" button on the switcher in the UI
-    set_view_preference_response = client.post(
-        reverse("view_preference"),
-        {"view_preference": 2},
-        headers={"HX-Request": "true"},
-    )
-
-    assert set_view_preference_response.status_code == HTTPStatus.NO_CONTENT
-
     response = client.get(reverse("npda_users"))
     assert response.status_code == HTTPStatus.OK
 
     users = response.context_data["object_list"]
     assert users.count() > ah_users.count()
-
-
-@pytest.mark.django_db
-def test_npda_user_list_view_users_cannot_switch_outside_their_pdu(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client,
-):
-    ah_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
-    ).first()
-    client = login_and_verify_user(client, ah_user)
-
-    set_view_preference_response = client.post(
-        reverse("view_preference"),
-        {"pz_code_select_name": GOSH_PZ_CODE},
-        headers={"HX-Request": "true"},
-    )
-
-    assert set_view_preference_response.status_code == HTTPStatus.FORBIDDEN
-
-    # Check the session isn't modified anyway
-    response = client.get(reverse("npda_users"))
-    assert response.status_code == HTTPStatus.OK
-
-    users = response.context_data["object_list"]
-    check_all_users_in_pdu(ah_user, users, ALDER_HEY_PZ_CODE)
-
-
-@pytest.mark.django_db  # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/189
-def test_npda_user_list_view_normal_users_cannot_set_their_view_preference_to_national(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client,
-):
-    ah_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
-    ).first()
-    client = login_and_verify_user(client, ah_user)
-
-    set_view_preference_response = client.post(
-        reverse("view_preference"),
-        {"view_preference": 2},
-        headers={"HX-Request": "true"},
-    )
-
-    # Check the session isn't modified anyway
-    response = client.get(reverse("npda_users"))
-    assert response.status_code == HTTPStatus.OK
-
-    users = response.context_data["object_list"]
-    check_all_users_in_pdu(ah_user, users, ALDER_HEY_PZ_CODE)
 
 
 @pytest.mark.django_db
@@ -740,7 +675,11 @@ def test_users_can_download_csv(
     VisitFactory(patient=patient)
 
     # Make a POST request to download the CSV file (HTMX)
-    url = reverse("submissions")
+    url = reverse("pdu-submissions", kwargs={
+        "pz_code": test_user.organisation_employers.first().pz_code,
+        "audit_period": f"{audit_start_date.year}-{audit_start_date.year +1}",
+    })
+
     response = client.post(
         url,
         {"submit-data": "download-data", "audit_id": submission.pk},
@@ -796,7 +735,11 @@ def test_reader_cannot_download_csv(
     VisitFactory(patient=patient)
 
     # Make a POST request to download the CSV file (HTMX)
-    url = reverse("submissions")
+    url = reverse("pdu-submissions", kwargs={
+        "pz_code": editor_user.organisation_employers.first().pz_code,
+        "audit_period": f"{audit_start_date.year}-{audit_start_date.year +1}",
+    })
+
     response = client.post(
         url,
         {"submit-data": "download-data", "audit_id": submission.pk},
@@ -859,7 +802,11 @@ def test_users_can_download_report(
     VisitFactory(patient=patient)
 
     # Make a POST request to download the report (HTMX)
-    url = reverse("submissions")
+    url = reverse("pdu-submissions", kwargs={
+        "pz_code": test_user.organisation_employers.first().pz_code,
+        "audit_period": f"{audit_start_date.year}-{audit_start_date.year +1}",
+    })
+
     response = client.post(
         url,
         {"submit-data": "download-report", "audit_id": submission.pk},
@@ -916,7 +863,11 @@ def test_rcpch_audit_team_can_delete_submission(
     VisitFactory(patient=patient)
 
     # Make a POST request to delete the data (HTMX)
-    url = reverse("submissions")
+    url = reverse("pdu-submissions", kwargs={
+        "pz_code": audit_team_user.organisation_employers.first().pz_code,
+        "audit_period": f"{audit_start_date.year}-{audit_start_date.year +1}",
+    })
+
     response = client.post(
         url,
         {"submit-data": "delete-data", "audit_id": submission.pk},
@@ -978,7 +929,11 @@ def test_non_rcpch_audit_team_cannot_delete_submission(
     VisitFactory(patient=patient)
 
     # Make a POST request to delete the data (HTMX)
-    url = reverse("submissions")
+    url = reverse("pdu-submissions", kwargs={
+        "pz_code": non_deleting_user.organisation_employers.first().pz_code,
+        "audit_period": f"{audit_start_date.year}-{audit_start_date.year +1}",
+    })
+    
     response = client.post(
         url,
         {"submit-data": "delete-data", "audit_id": submission.pk},
@@ -1607,7 +1562,6 @@ def test_coordinator_cannot_change_email_for_user_with_multiple_pdus(
         is_rcpch_audit_team_member=False,
         is_rcpch_staff=False,
         groups=[test_user_audit_centre_coordinator_data.group_name],
-        view_preference=VIEW_PREFERENCES[1][0],
         organisation_employers=["PZ999"],
     )
 
@@ -1621,7 +1575,6 @@ def test_coordinator_cannot_change_email_for_user_with_multiple_pdus(
         is_rcpch_audit_team_member=False,
         is_rcpch_staff=False,
         groups=[test_user_audit_centre_reader_data.group_name],
-        view_preference=VIEW_PREFERENCES[1][0],
         organisation_employers=["PZ999", "PZ001"],
     )
 
@@ -1663,7 +1616,6 @@ def test_coordinator_cannot_change_role_for_user_with_multiple_pdus(
         is_rcpch_audit_team_member=False,
         is_rcpch_staff=False,
         groups=[test_user_audit_centre_coordinator_data.group_name],
-        view_preference=VIEW_PREFERENCES[1][0],
         organisation_employers=["PZ999"],
     )
 
@@ -1676,7 +1628,6 @@ def test_coordinator_cannot_change_role_for_user_with_multiple_pdus(
         is_rcpch_audit_team_member=False,
         is_rcpch_staff=False,
         groups=[test_user_audit_centre_reader_data.group_name],
-        view_preference=VIEW_PREFERENCES[1][0],
         organisation_employers=["PZ999", "PZ001"],
     )
 

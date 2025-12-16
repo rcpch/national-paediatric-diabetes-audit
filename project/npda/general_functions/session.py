@@ -12,63 +12,15 @@ logger = logging.getLogger(__name__)
 
 
 def create_session_object(user):
-    """
-    Create a session object for the user, based on their permissions.
-    This is called on login, and is used to filter the data the user can see.
-    """
-    AuditPeriod = apps.get_model("npda", "AuditPeriod")
-    
-    pz_code = user.primary_pdu().pz_code
-
-    # This is the year that that audit period starts in
-    audit_period = AuditPeriod.objects.get_default_audit_period()
-
     feature_flags = []
     for flag, opts in FEATURE_FLAGS.items():
         if opts.get("default"):
             feature_flags.append(flag)
 
     return {
-        "pz_code": pz_code,
-        "selected_audit_year": audit_period.audit_year(),
         "feature_flags": feature_flags,
     }
 
-
-def refresh_session_filters(request, pz_code=None, audit_year=None):
-    session = {}
-
-    AuditPeriod = apps.get_model("npda", "AuditPeriod")
-
-    pz_code = pz_code or request.session.get("pz_code")
-
-    audit_year = audit_year or request.session.get("selected_audit_year")
-
-    # Check it's a real audit period
-    audit_period = AuditPeriod.objects.get(
-        start_date__year=audit_year
-    )
-
-    session["selected_audit_year"] = audit_period.audit_year()
-
-    if pz_code:
-        user = request.user
-
-        can_see_organisations = (
-            user.is_rcpch_audit_team_member
-            or user.organisation_employers.filter(pz_code=pz_code).exists()
-        )
-
-        if not can_see_organisations:
-            logger.warning(
-                f"User {user} requested organisation {pz_code} they cannot see"
-            )
-            raise PermissionDenied()
-
-        session["pz_code"] = pz_code
-
-    request.session.update(session)
-    request.session.modified = True
 
 def save_csv_uploading_user_to_visitactivity(request):
     """

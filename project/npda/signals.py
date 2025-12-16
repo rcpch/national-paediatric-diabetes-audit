@@ -78,13 +78,11 @@ ACTIVITY = (
 
 @receiver(user_logged_in)
 def log_user_login(sender, request, user, **kwargs):
-    # Set up the session data so that views are filtered correctly (eg by PDU)
-    # Default is to show all PDUs that the user has access to, including the PDU that the user is affiliated with
     new_session_object = create_session_object(user)
     request.session.update(new_session_object)
 
     logger.info(
-        f"{user} ({user.email}) logged in from {get_client_ip(request)}. pz_code: {new_session_object['pz_code']}."
+        f"{user} ({user.email}) logged in from {get_client_ip(request)}."
     )
 
     VisitActivity.objects.create(

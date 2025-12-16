@@ -29,28 +29,13 @@ urlpatterns = [
     path("home", view=home, name="home"),
     path("period/<str:audit_period>", view=new_home, name="new-home"),
     path(
-        "home/download_template",
-        view=download_template,
-        name="download_template",
-    ),
-    path(
         f"{data_prefix}/home/download_template",
         view=download_template,
         name="pdu-download-template",
     ),
-    path("view_preference", view=view_preference, name="view_preference"),
-    path("audit-year", view=audit_year, name="audit-year"),
-    path("upload_csv", view=upload_csv, name="upload_csv"),
     path(f"{data_prefix}/upload_csv", view=upload_csv, name="pdu-upload-csv"),
-    path("upload_csv_in_progress", view=upload_csv_in_progress, name="upload-csv-in-progress"),
     path(f"{data_prefix}/upload_csv_in_progress", view=upload_csv_in_progress, name="pdu-upload-csv-in-progress"),
     path("feature_flags", view=feature_flags, name="feature-flags"),
-    # Submission views
-    path(
-        "submissions",
-        view=SubmissionsListView.as_view(),
-        name="submissions",
-    ),
     path(
         f"{data_prefix}/submissions",
         view=SubmissionsListView.as_view(),
@@ -58,31 +43,15 @@ urlpatterns = [
     ),
     # Patient views
     path(
-        "patients",
-        view=PatientListView.as_view(),
-        name="patients",
-    ),
-    path(
         f"{data_prefix}/patients",
         view=PatientListView.as_view(),
         name="pdu-patients",
     ),
-    path("patient/add/", PatientCreateView.as_view(), name="patient-add"),
     path(f"{data_prefix}/patient/add/", PatientCreateView.as_view(), name="pdu-patient-add"),
-    path(
-        "patient/<int:pk>/update",
-        PatientUpdateView.as_view(),
-        name="patient-update",
-    ),
     path(
         f"{data_prefix}/patient/<int:pk>/update",
         PatientUpdateView.as_view(),
         name="pdu-patient-update",
-    ),
-    path(
-        "patient/<int:pk>/delete",
-        PatientDeleteView.as_view(),
-        name="patient-delete",
     ),
     path(
         f"{data_prefix}/patient/<int:pk>/delete",
@@ -91,19 +60,9 @@ urlpatterns = [
     ),
     # Visit views
     path(
-        "patient/<int:patient_id>/visits",
-        view=PatientVisitsListView.as_view(),
-        name="patient_visits",
-    ),
-    path(
         f"{data_prefix}/patient/<int:patient_id>/visits",
         view=PatientVisitsListView.as_view(),
         name="pdu-patient-visits",
-    ),
-    path(
-        "patient/<int:patient_id>/visits/create",
-        view=VisitCreateView.as_view(),
-        name="visit-create",
     ),
     path(
         f"{data_prefix}/patient/<int:patient_id>/visits/create",
@@ -111,19 +70,9 @@ urlpatterns = [
         name="pdu-visit-create",
     ),
     path(
-        "patient/<int:patient_id>/visits/<int:pk>/update",
-        view=VisitUpdateView.as_view(),
-        name="visit-update",
-    ),
-    path(
         f"{data_prefix}/patient/<int:patient_id>/visits/<int:pk>/update",
         view=VisitUpdateView.as_view(),
         name="pdu-visit-update",
-    ),
-    path(
-        "patient/<int:patient_id>/visits/<int:pk>/delete",
-        view=VisitDeleteView.as_view(),
-        name="visit-delete",
     ),
     path(
         f"{data_prefix}/patient/<int:patient_id>/visits/<int:pk>/delete",
@@ -171,19 +120,9 @@ urlpatterns = [
 
 dashboard_urlpatterns = [
     path(
-        "dashboard",
-        view=dashboard.dashboard,
-        name="dashboard",
-    ),
-    path(
         f"{data_prefix}/dashboard",
         view=dashboard.dashboard,
         name="pdu-dashboard",
-    ),
-    path(
-        "get_metric_scatter_plot",
-        view=partials.get_metric_scatter_plot,
-        name="get_metric_scatter_plot",
     ),
     path(
         f"{data_prefix}/get_metric_scatter_plot",
@@ -191,19 +130,9 @@ dashboard_urlpatterns = [
         name="pdu-get-metric-scatter-plot",
     ),
     path(
-        "get_map_chart_partial",
-        view=partials.get_map_chart_partial,
-        name="get_map_chart_partial",
-    ),
-    path(
         f"{data_prefix}/get_map_chart_partial",
         view=partials.get_map_chart_partial,
         name="pdu-get-map-chart-partial",
-    ),
-    path(
-        "get_new_diagnoses_partial",
-        view=partials.get_new_diagnoses_partial,
-        name="get_new_diagnoses_partial",
     ),
     path(
         f"{data_prefix}/get_new_diagnoses_partial",
@@ -211,19 +140,9 @@ dashboard_urlpatterns = [
         name="pdu-get-new-diagnoses-partial",
     ),
     path(
-        "get_new_admissions_partial",
-        view=partials.get_new_admissions_partial,
-        name="get_new_admissions_partial",
-    ),
-    path(
         f"{data_prefix}/get_new_admissions_partial",
         view=partials.get_new_admissions_partial,
         name="pdu-get-new-admissions-partial",
-    ),
-    path(
-        "get_transitioned_to_adult_service_partial",
-        view=partials.get_transitioned_to_adult_service_partial,
-        name="get_transitioned_to_adult_service_partial",
     ),
     path(
         f"{data_prefix}/get_transitioned_to_adult_service_partial",
@@ -231,19 +150,9 @@ dashboard_urlpatterns = [
         name="pdu-get-transitioned-to-adult-service-partial",
     ),
     path(
-        "get_moved_out_of_area_partial",
-        view=partials.get_moved_out_of_area_partial,
-        name="get_moved_out_of_area_partial",
-    ),
-    path(
         f"{data_prefix}/get_moved_out_of_area_partial",
         view=partials.get_moved_out_of_area_partial,
         name="pdu-get-moved-out-of-area-partial",
-    ),
-    path(
-        "get_n_on_hcl_partial",
-        view=partials.get_n_on_hcl_partial,
-        name="get_n_on_hcl_partial",
     ),
     path(
         f"{data_prefix}/get_n_on_hcl_partial",
@@ -251,19 +160,9 @@ dashboard_urlpatterns = [
         name="pdu-get-n-on-hcl-partial",
     ),
     path(
-        "get_pump_partial",
-        view=partials.get_pump_partial,
-        name="get_pump_partial",
-    ),
-    path(
         f"{data_prefix}/get_pump_partial",
         view=partials.get_pump_partial,
         name="pdu-get-pump-partial",
-    ),
-    path(
-        "get_cgm_partial",
-        view=partials.get_cgm_partial,
-        name="get_cgm_partial",
     ),
     path(
         f"{data_prefix}/get_cgm_partial",
@@ -271,29 +170,14 @@ dashboard_urlpatterns = [
         name="pdu-get-cgm-partial",
     ),
     path(
-        "patient_ages",
-        view=patient_ages,
-        name="patient_ages",
-    ),
-    path(
         f"{data_prefix}/patient_ages",
         view=patient_ages,
         name="pdu-patient-ages",
     ),
     path(
-        "all_patient_charts",
-        view=all_patient_charts,
-        name="all_patient_charts",
-    ),
-    path(
         f"{data_prefix}/all_patient_charts",
         view=all_patient_charts,
         name="pdu-all-patient-charts",
-    ),
-    path(
-        "patient_measurements",
-        view=patient_measurements,
-        name="patient_measurements",
     ),
     path(
         f"{data_prefix}/patient_measurements",
@@ -304,19 +188,9 @@ dashboard_urlpatterns = [
 
 patient_report_urlpatterns = [
     path(
-        "patient_report",
-        view=patient_report.PatientReportView.as_view(),
-        name="patient_report",
-    ),
-    path(
         f"{data_prefix}/patient_report",
         view=patient_report.PatientReportView.as_view(),
         name="pdu-patient-report",
-    ),
-	path(
-        "patient_table_partial",
-        view=patient_report.PatientReportView.as_view(),
-        name="patient_table_partial",
     ),
     path(
         f"{data_prefix}/patient_table_partial",

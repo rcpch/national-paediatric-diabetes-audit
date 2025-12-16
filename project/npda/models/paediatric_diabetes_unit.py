@@ -6,18 +6,15 @@ class PaediatricDiabetesUnitManager(models.Manager):
     def get_pdu_for_request(self, request):
         can_view_all_data = request.user.is_superuser or request.user.is_rcpch_audit_team_member
 
-        if request.resolver_match and "pz_code" in request.resolver_match.kwargs:
-            pz_code = request.resolver_match.kwargs["pz_code"]
+        pz_code = request.resolver_match.kwargs["pz_code"]
 
-            try:
-                pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-            except PaediatricDiabetesUnit.DoesNotExist as e:
-                if not can_view_all_data:
-                    raise PermissionDenied(f"PDU {pz_code} does not exist")
+        try:
+            pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+        except PaediatricDiabetesUnit.DoesNotExist as e:
+            if not can_view_all_data:
+                raise PermissionDenied(f"PDU {pz_code} does not exist")
 
-                raise e
-        else:
-            pdu = PaediatricDiabetesUnit.objects.get(pz_code=request.session["pz_code"])
+            raise e
 
         if not can_view_all_data:
             can_view_this_pdu = request.user.organisation_employers.filter(
