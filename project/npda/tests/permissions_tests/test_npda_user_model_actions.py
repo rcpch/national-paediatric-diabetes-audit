@@ -740,7 +740,11 @@ def test_users_can_download_csv(
     VisitFactory(patient=patient)
 
     # Make a POST request to download the CSV file (HTMX)
-    url = reverse("submissions")
+    url = reverse("pdu-submissions", kwargs={
+        "pz_code": test_user.organisation_employers.first().pz_code,
+        "audit_period": f"{audit_start_date.year}-{audit_start_date.year +1}",
+    })
+
     response = client.post(
         url,
         {"submit-data": "download-data", "audit_id": submission.pk},
@@ -796,7 +800,11 @@ def test_reader_cannot_download_csv(
     VisitFactory(patient=patient)
 
     # Make a POST request to download the CSV file (HTMX)
-    url = reverse("submissions")
+    url = reverse("pdu-submissions", kwargs={
+        "pz_code": editor_user.organisation_employers.first().pz_code,
+        "audit_period": f"{audit_start_date.year}-{audit_start_date.year +1}",
+    })
+
     response = client.post(
         url,
         {"submit-data": "download-data", "audit_id": submission.pk},
@@ -859,7 +867,11 @@ def test_users_can_download_report(
     VisitFactory(patient=patient)
 
     # Make a POST request to download the report (HTMX)
-    url = reverse("submissions")
+    url = reverse("pdu-submissions", kwargs={
+        "pz_code": test_user.organisation_employers.first().pz_code,
+        "audit_period": f"{audit_start_date.year}-{audit_start_date.year +1}",
+    })
+
     response = client.post(
         url,
         {"submit-data": "download-report", "audit_id": submission.pk},
@@ -916,7 +928,11 @@ def test_rcpch_audit_team_can_delete_submission(
     VisitFactory(patient=patient)
 
     # Make a POST request to delete the data (HTMX)
-    url = reverse("submissions")
+    url = reverse("pdu-submissions", kwargs={
+        "pz_code": audit_team_user.organisation_employers.first().pz_code,
+        "audit_period": f"{audit_start_date.year}-{audit_start_date.year +1}",
+    })
+
     response = client.post(
         url,
         {"submit-data": "delete-data", "audit_id": submission.pk},
@@ -978,7 +994,11 @@ def test_non_rcpch_audit_team_cannot_delete_submission(
     VisitFactory(patient=patient)
 
     # Make a POST request to delete the data (HTMX)
-    url = reverse("submissions")
+    url = reverse("pdu-submissions", kwargs={
+        "pz_code": non_deleting_user.organisation_employers.first().pz_code,
+        "audit_period": f"{audit_start_date.year}-{audit_start_date.year +1}",
+    })
+    
     response = client.post(
         url,
         {"submit-data": "delete-data", "audit_id": submission.pk},
