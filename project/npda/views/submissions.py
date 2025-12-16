@@ -27,7 +27,7 @@ from project.npda.views.decorators import login_and_otp_required, check_data_per
 
 # RCPCH imports
 from project.constants.colors import RCPCH_LIGHT_BLUE
-from ..general_functions.session import refresh_session_filters, save_csv_uploading_user_to_visitactivity
+from ..general_functions.session import save_csv_uploading_user_to_visitactivity
 from ..general_functions.csv import (
     download_csv_file,
     download_xlsx,

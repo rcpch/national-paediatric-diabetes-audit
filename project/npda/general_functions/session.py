@@ -35,41 +35,6 @@ def create_session_object(user):
     }
 
 
-def refresh_session_filters(request, pz_code=None, audit_year=None):
-    session = {}
-
-    AuditPeriod = apps.get_model("npda", "AuditPeriod")
-
-    pz_code = pz_code or request.session.get("pz_code")
-
-    audit_year = audit_year or request.session.get("selected_audit_year")
-
-    # Check it's a real audit period
-    audit_period = AuditPeriod.objects.get(
-        start_date__year=audit_year
-    )
-
-    session["selected_audit_year"] = audit_period.audit_year()
-
-    if pz_code:
-        user = request.user
-
-        can_see_organisations = (
-            user.is_rcpch_audit_team_member
-            or user.organisation_employers.filter(pz_code=pz_code).exists()
-        )
-
-        if not can_see_organisations:
-            logger.warning(
-                f"User {user} requested organisation {pz_code} they cannot see"
-            )
-            raise PermissionDenied()
-
-        session["pz_code"] = pz_code
-
-    request.session.update(session)
-    request.session.modified = True
-
 def save_csv_uploading_user_to_visitactivity(request):
     """
     Save the user who is uploading a CSV to the VisitActivity model.
