@@ -136,11 +136,6 @@ new_user_gosh = NPDAUserFactory(
     is_rcpch_audit_team_member=is_rcpch_audit_team_member,
     is_rcpch_staff=is_rcpch_staff,
     groups=[user.group_name],
-    view_preference=(
-        VIEW_PREFERENCES[2][0]
-        if user.role == RCPCH_AUDIT_TEAM
-        else VIEW_PREFERENCES[0][0]
-    ),
     organisation_employers=[GOSH_PZ_CODE],
 )
 

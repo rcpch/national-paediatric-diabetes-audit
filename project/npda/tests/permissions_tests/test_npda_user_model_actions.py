@@ -49,7 +49,6 @@ from project.npda.tests.UserDataClasses import (
     test_user_rcpch_audit_team_data,
 )
 from project.npda.tests.utils import login_and_verify_user
-from project.constants import VIEW_PREFERENCES
 
 logger = logging.getLogger(__name__)
 
@@ -1563,7 +1562,6 @@ def test_coordinator_cannot_change_email_for_user_with_multiple_pdus(
         is_rcpch_audit_team_member=False,
         is_rcpch_staff=False,
         groups=[test_user_audit_centre_coordinator_data.group_name],
-        view_preference=VIEW_PREFERENCES[1][0],
         organisation_employers=["PZ999"],
     )
 
@@ -1577,7 +1575,6 @@ def test_coordinator_cannot_change_email_for_user_with_multiple_pdus(
         is_rcpch_audit_team_member=False,
         is_rcpch_staff=False,
         groups=[test_user_audit_centre_reader_data.group_name],
-        view_preference=VIEW_PREFERENCES[1][0],
         organisation_employers=["PZ999", "PZ001"],
     )
 
@@ -1619,7 +1616,6 @@ def test_coordinator_cannot_change_role_for_user_with_multiple_pdus(
         is_rcpch_audit_team_member=False,
         is_rcpch_staff=False,
         groups=[test_user_audit_centre_coordinator_data.group_name],
-        view_preference=VIEW_PREFERENCES[1][0],
         organisation_employers=["PZ999"],
     )
 
@@ -1632,7 +1628,6 @@ def test_coordinator_cannot_change_role_for_user_with_multiple_pdus(
         is_rcpch_audit_team_member=False,
         is_rcpch_staff=False,
         groups=[test_user_audit_centre_reader_data.group_name],
-        view_preference=VIEW_PREFERENCES[1][0],
         organisation_employers=["PZ999", "PZ001"],
     )
 

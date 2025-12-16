@@ -10,7 +10,6 @@ from django.urls import reverse
 
 from project.constants.csv_headings import (UNIQUE_IDENTIFIER_ENGLAND,
                                             UNIQUE_IDENTIFIER_JERSEY)
-from project.constants.user import VIEW_PREFERENCES
 # E12 imports
 from project.npda.models import NPDAUser
 from project.npda.tests.constants_for_tests import ALDER_HEY_PZ_CODE
@@ -44,7 +43,6 @@ def test_both_jersey_and_england_template_download_works(
         is_rcpch_audit_team_member=test_user_rcpch_audit_team_data.is_rcpch_audit_team_member,
         is_rcpch_staff=test_user_rcpch_audit_team_data.is_rcpch_staff,
         groups=[test_user_rcpch_audit_team_data.group_name],
-        view_preference=(VIEW_PREFERENCES[2][0]),
         organisation_employers=["PZ248"],
     )
 

@@ -5,7 +5,6 @@ from django.contrib.sessions.middleware import SessionMiddleware
 from django.test.client import RequestFactory
 from two_factor.utils import default_device
 
-from project.constants.user import VIEW_PREFERENCES
 from project.npda.models import AuditPeriod, PaediatricDiabetesUnit, Submission
 from project.npda.tests.UserDataClasses import test_user_audit_centre_reader_data
 from project.npda.tests.constants_for_tests import ALDER_HEY_PZ_CODE
@@ -64,7 +63,6 @@ def create_submission(
             is_rcpch_audit_team_member=test_user_audit_centre_reader_data.is_rcpch_audit_team_member,
             is_rcpch_staff=test_user_audit_centre_reader_data.is_rcpch_staff,
             groups=[test_user_audit_centre_reader_data.group_name],
-            view_preference=(VIEW_PREFERENCES[0][0]),
             # Assign to PDU via organisation employer by passing in list of pz_codes
             organisation_employers=[pz_code],
         )

@@ -18,7 +18,6 @@ from project.npda.tests.UserDataClasses import (
 from project.npda.models import NPDAUser
 from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
 from project.constants.user import RCPCH_AUDIT_TEAM
-from project.constants import VIEW_PREFERENCES
 import logging
 
 logger = logging.getLogger(__name__)
@@ -55,11 +54,6 @@ def _seed_users_fixture(django_db_setup, django_db_blocker, test_pz_codes_fixtur
                     is_rcpch_audit_team_member=user.is_rcpch_audit_team_member,
                     is_rcpch_staff=user.is_rcpch_staff,
                     groups=[user.group_name],
-                    view_preference=(
-                        VIEW_PREFERENCES[2][0]
-                        if user.role == RCPCH_AUDIT_TEAM
-                        else VIEW_PREFERENCES[1][0]
-                    ),
                     organisation_employers=[pz_code],
                 )
 

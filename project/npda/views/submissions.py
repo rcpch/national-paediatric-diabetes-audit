@@ -76,9 +76,6 @@ class SubmissionsListView(
     permission_denied_message = "You do not have permission to view submissions."
 
     def get_queryset(self) -> Iterable[Any]:
-        """
-        Retrieve all submissions for the current PZ code, unless view_preference is set to 2 (national view)
-        """
         if self.request.user.is_rcpch_audit_team_member:
             base_queryset = self.model.objects.filter(
                 audit_period=self.audit_period
