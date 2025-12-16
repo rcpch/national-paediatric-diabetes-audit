@@ -6,32 +6,6 @@ from project.npda.models.banner import Banner
 from project.npda.models.audit_period import AuditPeriod
 from project.npda.views.npda_users import get_user_home_page
 
-def current_pz_code(request):
-    pz_code = None
-
-    if request.resolver_match:
-        pz_code = request.resolver_match.kwargs.get("pz_code", None)
-
-    if not pz_code:
-        pz_code = request.session.get("pz_code", None)
-
-    return pz_code
-
-def current_audit_period_slug(request):
-    audit_period_slug = None
-
-    if request.resolver_match:
-        audit_period_slug = request.resolver_match.kwargs.get("audit_period", None)
-
-    # Temporary hack until all pages migrated over to new URL structure
-    if not audit_period_slug:
-        audit_year = request.session.get("selected_audit_year", None)
-
-        if audit_year:
-            audit_period_slug = f"{audit_year}-{audit_year + 1}"
-
-    return audit_period_slug
-
 
 def get_audit_periods_user_can_see(user):
     audit_periods = []
@@ -46,8 +20,13 @@ def get_audit_periods_user_can_see(user):
 def context_from_request(request):
     # Permission checking done in @check_data_permissions or PDUPermissionMixin
     # We are fine to trust it here as this is for rendering purposes
-    pz_code = current_pz_code(request)
-    audit_period_slug = current_audit_period_slug(request)
+    pz_code = None
+    if request.resolver_match:
+        pz_code = request.resolver_match.kwargs.get("pz_code", None)
+
+    audit_period_slug = None
+    if request.resolver_match:
+        audit_period_slug = request.resolver_match.kwargs.get("audit_period", None)
 
     user_home_page = get_user_home_page(audit_period_slug, request.user)
 

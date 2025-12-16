@@ -22,32 +22,6 @@ from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 # Logging
 logger = logging.getLogger(__name__)
 
-# Temporary hack until everything is referenced by data url and we can remove this endpoint
-def redirect_after_switcher(request):
-    if request.htmx and request.htmx.current_url:
-        path = urlparse(request.htmx.current_url).path
-
-        if path.startswith("/period/"):
-            audit_period = AuditPeriod.objects.get(
-                start_date__year=request.session.get("selected_audit_year")
-            )
-            
-            pz_code = request.session.get("pz_code", None)
-
-            data_prefix = f"period/{audit_period.slug}/pdu/{pz_code}"
-
-            rest_of_path = "/".join(path.split("/")[5:])
-
-            return HttpResponse(
-                status=204,
-                headers={
-                    "HX-Redirect": f"/{data_prefix}/{rest_of_path}",
-                }
-            )
-
-    # Reload the page to apply the new view preference
-    return HttpResponse(status=204, headers={"HX-Refresh": "true"})
-
 
 @login_and_otp_required()
 def home(request):

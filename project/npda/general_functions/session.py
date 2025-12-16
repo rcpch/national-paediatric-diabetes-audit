@@ -12,25 +12,12 @@ logger = logging.getLogger(__name__)
 
 
 def create_session_object(user):
-    """
-    Create a session object for the user, based on their permissions.
-    This is called on login, and is used to filter the data the user can see.
-    """
-    AuditPeriod = apps.get_model("npda", "AuditPeriod")
-    
-    pz_code = user.primary_pdu().pz_code
-
-    # This is the year that that audit period starts in
-    audit_period = AuditPeriod.objects.get_default_audit_period()
-
     feature_flags = []
     for flag, opts in FEATURE_FLAGS.items():
         if opts.get("default"):
             feature_flags.append(flag)
 
     return {
-        "pz_code": pz_code,
-        "selected_audit_year": audit_period.audit_year(),
         "feature_flags": feature_flags,
     }
 
