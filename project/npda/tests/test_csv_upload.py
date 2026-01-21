@@ -29,7 +29,7 @@ from project.npda.general_functions.csv import (
 from project.npda.general_functions.quarter_for_date import (
     current_audit_year_start_date,
 )
-from project.constants import csv_definition_for, ALL_VISIT_DATES
+from project.constants import csv_definition_for, ALL_VISIT_DATES, SEX_TYPE
 from project.npda.models import (
     NPDAUser,
     Patient,
@@ -143,6 +143,14 @@ def two_patients_with_one_visit_each(dummy_sheets_folder):
 
     assert len(df) == 2
     assert df["NHS Number"][1] != df["NHS Number"][0]
+
+    return df
+
+
+@pytest.fixture
+def one_patient_with_four_visits(dummy_sheets_folder):
+    file = dummy_sheets_folder / "one_patient_four_visits.csv"
+    df = csv_parse(file).df
 
     return df
 
@@ -4188,3 +4196,21 @@ def test_thyroid_and_coeliac_dates_earlier_than_90_days_before_diagnosis_fail_va
 
     assert "coeliac_screen_date" in errors[0]
     assert "thyroid_function_date" in errors[0]
+
+
+@pytest.mark.django_db
+def test_conflicting_stated_gender(test_user, one_patient_with_four_visits):
+    df = one_patient_with_four_visits
+
+    df.loc[0, "Stated gender"] = SEX_TYPE[0][0]
+    df.loc[1, "Stated gender"] = SEX_TYPE[0][0]
+    df.loc[2, "Stated gender"] = SEX_TYPE[1][0]
+    df.loc[3, "Stated gender"] = SEX_TYPE[1][0]
+
+    errors = csv_upload_sync(test_user, df)
+
+    assert "sex" in errors
+
+    assert Patient.objects.count() == 0
+    # Most recent (by visit date) modal value
+    assert Patient.objects.first().sex == SEX_TYPE[0][1]
