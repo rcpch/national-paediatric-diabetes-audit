@@ -96,6 +96,17 @@ def tidy_up_old_submissions(pdu, new_submission):
             submission.save()
 
 
+def merge_rows_for_patient(df):
+    # TODO MRB: fish out duplicates and raise them as errors!
+    df['Stated gender'] = df.groupby("Stated gender").agg(
+        Count=('NHS Number', 'count'),
+        LastVisitDate=('Visit/Appointment Date', 'max')
+    ).sort_values(by=['Count', 'LastVisitDate']).iloc[-1].name
+
+    # TODO MRB: merge more columns!
+    return df.iloc[0]
+
+
 async def csv_upload(
     dataframe,
     errors_to_return,
@@ -325,11 +336,11 @@ async def csv_upload(
     async def process_rows_for_patient(rows, async_client):
         patient = None
 
-        first_row = rows.iloc[0]
-        patient_row_index = int(first_row["row_index"])
+        patient_row = merge_rows_for_patient(rows)
+        first_patient_row_index = int(rows.iloc[0]["row_index"])
 
         try:
-            patient_form = await validate_patient_using_form(first_row, async_client)
+            patient_form = await validate_patient_using_form(patient_row, async_client)
 
             # Pull through cleaned_data so we can use it in the async visit validators
             await sync_to_async(patient_form.is_valid)()
@@ -349,10 +360,10 @@ async def csv_upload(
 
                 visit_forms.append((visit_form, int(row["row_index"])))
 
-            transfer_fields = get_valid_transfer_fields(first_row, patient_form)
+            transfer_fields = get_valid_transfer_fields(patient_row, patient_form)
 
             patient = await save_patient_and_transfer(
-                patient_form, transfer_fields, patient_row_index
+                patient_form, transfer_fields, first_patient_row_index
             )
 
             if patient:
@@ -360,9 +371,9 @@ async def csv_upload(
         except Exception as e:
             # Unexpected!
             logging.exception(
-                f"Unhandled exception processing {csv_file_name}[{patient_row_index}]"
+                f"Unhandled exception processing {csv_file_name}[{first_patient_row_index}]"
             )  # triggers an admin email
-            errors_to_return[patient_row_index]["__all__"].append(
+            errors_to_return[first_patient_row_index]["__all__"].append(
                 str(e)
             )  # record the row as failed
 
