@@ -22,20 +22,26 @@ CSV_HEADING_OBJECTS = (
         "heading": "Date of Birth",
         "model_field": "date_of_birth",
         "model": "Patient",
-        "alternative_headings": ["DOB"]
+        "alternative_headings": ["DOB"],
     },
     {
         "heading": "Postcode of usual address",
         "model_field": "postcode",
         "model": "Patient",
     },
-    {"heading": "Stated gender", "model_field": "sex", "model": "Patient"},
+    {
+        "heading": "Stated gender",
+        "model_field": "sex",
+        "model": "Patient",
+        "conflict_resolution": "most_recent_modal_value_by_visit_date"
+    },
     {
         "heading": "Ethnic Category",
         "model_field": "ethnicity",
         "model": "Patient",
         # Deliberate typo to accomodate automatically generated Wythenshawe CSVs
-        "alternative_headings": ["Ethnic cateogry"]
+        "alternative_headings": ["Ethnic cateogry"],
+        "conflict_resolution": "most_recent_modal_value_by_visit_date"
     },
     {
         "heading": "Diabetes Type",

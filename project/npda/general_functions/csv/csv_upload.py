@@ -96,12 +96,30 @@ def tidy_up_old_submissions(pdu, new_submission):
             submission.save()
 
 
-def merge_rows_for_patient(df):
-    # TODO MRB: fish out duplicates and raise them as errors!
-    df['Stated gender'] = df.groupby("Stated gender").agg(
+def most_recent_modal_value_by_visit_date(df, column):
+    # NPDA analysis has this notion of "Most up-to-date valid mode"
+    # My understanding of it is that you should:
+    #  - Work out the modal (most common) value
+    #  - If there's more than one mode, return the one from the row with the most recent visit
+
+    # TODO MRB: don't use NHS number, use the correct column to include Jersey
+    return df.groupby(column).agg(
         Count=('NHS Number', 'count'),
         LastVisitDate=('Visit/Appointment Date', 'max')
     ).sort_values(by=['Count', 'LastVisitDate']).iloc[-1].name
+
+
+def merge_rows_for_patient(df):
+    # TODO MRB: fish out duplicates and raise them as errors!
+    for column in CSV_HEADING_OBJECTS:
+        heading = column["heading"]
+        model = column.get("model")
+        conflict_resolution = column.get("conflict_resolution")
+
+        if model == "Patient":
+            match conflict_resolution:
+                case "most_recent_modal_value_by_visit_date":
+                    df[heading] = most_recent_modal_value_by_visit_date(df, heading)
 
     # TODO MRB: merge more columns!
     return df.iloc[0]
