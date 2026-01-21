@@ -25,8 +25,11 @@ def context_from_request(request):
         pz_code = request.resolver_match.kwargs.get("pz_code", None)
 
     audit_period_slug = None
-    if request.resolver_match:
+    if request.resolver_match and "audit_period" in request.resolver_match.kwargs:
         audit_period_slug = request.resolver_match.kwargs.get("audit_period", None)
+    else:
+        default_audit_period = AuditPeriod.objects.get_default_audit_period()
+        audit_period_slug = default_audit_period.slug
 
     user_home_page = get_user_home_page(audit_period_slug, request.user)
 
