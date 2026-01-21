@@ -4208,9 +4208,7 @@ def test_conflicting_stated_gender(test_user, one_patient_with_four_visits):
     df.loc[3, "Stated gender"] = SEX_TYPE[1][0]
 
     errors = csv_upload_sync(test_user, df)
-
-    # TODO MRB: put this back
-    # assert "sex" in errors
+    assert "sex" in errors[0]
 
     assert Patient.objects.count() == 1
     # Most recent (by visit date) modal value
@@ -4227,9 +4225,7 @@ def test_conflicting_ethnicity(test_user, one_patient_with_four_visits):
     df.loc[3, "Ethnic Category"] = ETHNICITIES[1][0]
 
     errors = csv_upload_sync(test_user, df)
-
-    # TODO MRB: put this back
-    # assert "ethnicity" in errors
+    assert "ethnicity" in errors[0]
 
     assert Patient.objects.count() == 1
     # Most recent (by visit date) modal value

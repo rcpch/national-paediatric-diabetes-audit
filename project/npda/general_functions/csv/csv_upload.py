@@ -96,35 +96,6 @@ def tidy_up_old_submissions(pdu, new_submission):
             submission.save()
 
 
-def most_recent_modal_value_by_visit_date(df, column):
-    # NPDA analysis has this notion of "Most up-to-date valid mode"
-    # My understanding of it is that you should:
-    #  - Work out the modal (most common) value
-    #  - If there's more than one mode, return the one from the row with the most recent visit
-
-    # TODO MRB: don't use NHS number, use the correct column to include Jersey
-    return df.groupby(column).agg(
-        Count=('NHS Number', 'count'),
-        LastVisitDate=('Visit/Appointment Date', 'max')
-    ).sort_values(by=['Count', 'LastVisitDate']).iloc[-1].name
-
-
-def merge_rows_for_patient(df):
-    # TODO MRB: fish out duplicates and raise them as errors!
-    for column in CSV_HEADING_OBJECTS:
-        heading = column["heading"]
-        model = column.get("model")
-        conflict_resolution = column.get("conflict_resolution")
-
-        if model == "Patient":
-            match conflict_resolution:
-                case "most_recent_modal_value_by_visit_date":
-                    df[heading] = most_recent_modal_value_by_visit_date(df, heading)
-
-    # TODO MRB: merge more columns!
-    return df.iloc[0]
-
-
 async def csv_upload(
     dataframe,
     errors_to_return,
@@ -290,6 +261,43 @@ async def csv_upload(
                 transfer_fields[field] = None
 
         return transfer_fields
+    
+    def most_recent_modal_value_by_visit_date(df, column):
+        # NPDA analysis has this notion of "Most up-to-date valid mode"
+        # My understanding of it is that you should:
+        #  - Work out the modal (most common) value
+        #  - If there's more than one mode, return the one from the row with the most recent visit
+
+        # TODO MRB: don't use NHS number, use the correct column to include Jersey
+        return df.groupby(column).agg(
+            Count=('NHS Number', 'count'),
+            LastVisitDate=('Visit/Appointment Date', 'max')
+        ).sort_values(by=['Count', 'LastVisitDate']).iloc[-1].name
+
+    def merge_rows_for_patient(df, patient_row_index):
+        for column in CSV_HEADING_OBJECTS:
+            heading = column["heading"]
+
+            model = column.get("model")
+            model_field = column.get("model_field")
+            conflict_resolution = column.get("conflict_resolution")
+
+            if model == "Patient":
+                unique_values = df[heading].dropna().unique()
+
+                if len(unique_values) > 1:
+                    unique_values_str = ", ".join(unique_values.astype(str))
+                    error_field = model_field if model_field else "__all__"
+                    errors_to_return[patient_row_index][error_field].append(
+                        f"Conflicting values for {heading}: {unique_values_str}"
+                    )
+
+                match conflict_resolution:
+                    case "most_recent_modal_value_by_visit_date":
+                        df[heading] = most_recent_modal_value_by_visit_date(df, heading)
+
+        # TODO MRB: merge more columns!
+        return df.iloc[0]
 
     """
     Process the csv file and validate and save the data in the tables, parsing any errors
@@ -354,8 +362,8 @@ async def csv_upload(
     async def process_rows_for_patient(rows, async_client):
         patient = None
 
-        patient_row = merge_rows_for_patient(rows)
         first_patient_row_index = int(rows.iloc[0]["row_index"])
+        patient_row = merge_rows_for_patient(rows, first_patient_row_index)
 
         try:
             patient_form = await validate_patient_using_form(patient_row, async_client)
