@@ -269,10 +269,13 @@ async def csv_upload(
         #  - If there's more than one mode, return the one from the row with the most recent visit
 
         # TODO MRB: don't use NHS number, use the correct column to include Jersey
-        return df.groupby(column).agg(
+        values_by_count_and_last_visit_date = df.groupby(column).agg(
             Count=('NHS Number', 'count'),
             LastVisitDate=('Visit/Appointment Date', 'max')
-        ).sort_values(by=['Count', 'LastVisitDate']).iloc[-1].name
+        ).sort_values(by=['Count', 'LastVisitDate'])
+
+        if len(values_by_count_and_last_visit_date) > 0:
+            return values_by_count_and_last_visit_date.iloc[-1].name
 
     def merge_rows_for_patient(df, patient_row_index):
         for column in CSV_HEADING_OBJECTS:
