@@ -262,14 +262,14 @@ async def csv_upload(
 
         return transfer_fields
     
-    def most_recent_modal_value_by_visit_date(df, column):
+    def most_recent_modal_value_by_visit_date(rows, column):
         # NPDA analysis has this notion of "Most up-to-date valid mode"
         # My understanding of it is that you should:
         #  - Work out the modal (most common) value
         #  - If there's more than one mode, return the one from the row with the most recent visit
 
         # TODO MRB: don't use NHS number, use the correct column to include Jersey
-        values_by_count_and_last_visit_date = df.groupby(column).agg(
+        values_by_count_and_last_visit_date = rows.groupby(column).agg(
             Count=('NHS Number', 'count'),
             LastVisitDate=('Visit/Appointment Date', 'max')
         ).sort_values(by=['Count', 'LastVisitDate'])
@@ -277,13 +277,18 @@ async def csv_upload(
         if len(values_by_count_and_last_visit_date) > 0:
             return values_by_count_and_last_visit_date.iloc[-1].name
     
-    def smallest_code_with_attached_date(df, code_column, date_column):
-        rows_with_leaving_service = df.dropna(subset=[date_column]).sort_values(by=code_column)
+    def smallest_code_with_attached_date(rows, code_column, date_column):
+        rows_with_leaving_service = rows.dropna(subset=[date_column]).sort_values(by=code_column)
 
         if len(rows_with_leaving_service) > 0:
             return rows_with_leaving_service.iloc[0][code_column]
     
-    def merge_rows_for_patient(df, patient_row_index):
+    def most_recent_by_visit_date(rows, column):
+        most_recent_row = rows.loc[rows['Visit/Appointment Date'].idxmax()]
+
+        return most_recent_row[column]
+    
+    def merge_rows_for_patient(rows, patient_row_index):
         for column in CSV_HEADING_OBJECTS:
             heading = column["heading"]
 
@@ -291,7 +296,7 @@ async def csv_upload(
             model_field = column.get("model_field")
 
             if model in ["Patient", "Transfer"]:
-                unique_values = df[heading].dropna().unique()
+                unique_values = rows[heading].dropna().unique()
 
                 if len(unique_values) > 1:
                     unique_values_str = ", ".join(unique_values.astype(str))
@@ -302,12 +307,14 @@ async def csv_upload(
 
                 match model_field:
                     case "date_of_birth" | "sex" | "ethnicity":
-                        df[heading] = most_recent_modal_value_by_visit_date(df, heading)
+                        rows[heading] = most_recent_modal_value_by_visit_date(rows, heading)
                     case "reason_leaving_service":
-                        df[heading] = smallest_code_with_attached_date(df, "Reason for leaving service", "Date of leaving service")
+                        rows[heading] = smallest_code_with_attached_date(rows, "Reason for leaving service", "Date of leaving service")
+                    case "diabetes_type":
+                        rows[heading] = most_recent_by_visit_date(rows, heading)
 
         # TODO MRB: merge more columns!
-        return df.iloc[0]
+        return rows.iloc[0]
 
     """
     Process the csv file and validate and save the data in the tables, parsing any errors
