@@ -64,6 +64,7 @@ CSV_HEADING_OBJECTS = (
         "heading": "Reason for leaving service",
         "model_field": "reason_leaving_service",
         "model": "Transfer",
+        "conflict_resolution": "smallest_code_with_attached_date"
     },
     {
         "heading": "Death Date",

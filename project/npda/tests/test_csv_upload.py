@@ -4338,3 +4338,7 @@ def test_conflict_resolved_leaving_reason_must_have_date_attached(test_user, one
     assert Patient.objects.count() == 1
     # 1 > 2 > 3
     assert Patient.objects.first().reason_leaving_service == LEAVE_PDU_REASONS[1][0]
+
+# TODO MRB: what about conflicting dates for the same leaving reason?
+# TODO MRB: update PR explaining that for yes/no/unknown questions like psych support we will not try to resolve conflicts
+#           could be different status at different visits (e.g. no, no, no, yes over time)

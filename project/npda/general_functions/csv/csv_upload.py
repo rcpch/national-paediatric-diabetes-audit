@@ -276,6 +276,15 @@ async def csv_upload(
 
         if len(values_by_count_and_last_visit_date) > 0:
             return values_by_count_and_last_visit_date.iloc[-1].name
+    
+    def smallest_code_with_attached_date(df, column):
+        match column:
+            case "reason_leaving_service":
+                return df.dropna(
+                    subset=["Date of leaving service"]
+                ).sort_values(
+                    by="Reason for leaving service"
+                ).iloc[0]["Reason for leaving service"]
 
     def merge_rows_for_patient(df, patient_row_index):
         for column in CSV_HEADING_OBJECTS:
@@ -298,6 +307,8 @@ async def csv_upload(
                 match conflict_resolution:
                     case "most_recent_modal_value_by_visit_date":
                         df[heading] = most_recent_modal_value_by_visit_date(df, heading)
+                    case "smallest_code_with_attached_date":
+                        df[heading] = smallest_code_with_attached_date(df, heading)
 
         # TODO MRB: merge more columns!
         return df.iloc[0]
