@@ -314,7 +314,7 @@ async def csv_upload(
                         rows[heading] = most_recent_modal_value_by_visit_date(rows, heading)
                     case "reason_leaving_service":
                         rows[heading] = smallest_code_with_attached_date(rows, "Reason for leaving service", "Date of leaving service")
-                    case "diabetes_type":
+                    case "diabetes_type" | "postcode" | "gp_practice_ods_code":
                         rows[heading] = most_recent_by_visit_date(rows, heading)
 
         # TODO MRB: merge more columns!
