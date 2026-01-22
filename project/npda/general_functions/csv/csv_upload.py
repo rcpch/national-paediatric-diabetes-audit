@@ -109,12 +109,13 @@ async def csv_upload(
     Returns the empty dict if successful, otherwise ValidationErrors indexed by the row they occurred at
     """
     pdu = submission.paediatric_diabetes_unit
-    is_jersey = pdu.pz_code == "PZ248"
 
-    if is_jersey:
+    if pdu.pz_code == "PZ248":
         CSV_HEADINGS = UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
+        identifier_heading = UNIQUE_IDENTIFIER_JERSEY[0]["heading"]
     else:
         CSV_HEADINGS = UNIQUE_IDENTIFIER_ENGLAND + CSV_HEADING_OBJECTS
+        identifier_heading = UNIQUE_IDENTIFIER_ENGLAND[0]["heading"]
 
     # Helper functions
     def csv_value_to_model_value(model_field, value):
@@ -267,10 +268,8 @@ async def csv_upload(
         # My understanding of it is that you should:
         #  - Work out the modal (most common) value
         #  - If there's more than one mode, return the one from the row with the most recent visit
-
-        # TODO MRB: don't use NHS number, use the correct column to include Jersey
         values_by_count_and_last_visit_date = rows.groupby(column).agg(
-            Count=('NHS Number', 'count'),
+            Count=(identifier_heading, 'count'),
             LastVisitDate=('Visit/Appointment Date', 'max')
         ).sort_values(by=['Count', 'LastVisitDate'])
 
@@ -331,12 +330,7 @@ async def csv_upload(
         dataframe = dataframe.assign(row_index=np.arange(dataframe.shape[0]))
 
     # We only one to create one patient per NHS number (or URN if in Jersey) and we can't create their visits if we fail to save the patient model
-    if is_jersey:
-        visits_by_patient = dataframe.groupby(
-            "Unique Reference Number", sort=False, dropna=False
-        )
-    else:
-        visits_by_patient = dataframe.groupby("NHS Number", sort=False, dropna=False)
+    visits_by_patient = dataframe.groupby(identifier_heading, sort=False, dropna=False)
 
     async def save_patient_and_transfer(
         patient_form, transfer_fields, patient_row_index
