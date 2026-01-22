@@ -23,6 +23,7 @@ CSV_HEADING_OBJECTS = (
         "model_field": "date_of_birth",
         "model": "Patient",
         "alternative_headings": ["DOB"],
+        "conflict_resolution": "most_recent_modal_value_by_visit_date"
     },
     {
         "heading": "Postcode of usual address",
@@ -68,7 +69,8 @@ CSV_HEADING_OBJECTS = (
         "heading": "Death Date",
         "model_field": "death_date",
         "model": "Patient",
-        "alternative_headings": ["Effective Death Date"]
+        "alternative_headings": ["Effective Death Date"],
+        "conflict_resolution": "most_recent_modal_value_by_visit_date"
     },
     {
         "heading": "GP Practice Code",

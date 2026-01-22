@@ -4249,6 +4249,23 @@ def test_conflicting_ethnicity_where_null_is_the_most_common_value(test_user, on
     assert Patient.objects.first().ethnicity == ETHNICITIES[1][0]
 
 
+@pytest.mark.django_db
+def test_conflicting_date_of_birth(test_user, one_patient_with_four_visits):
+    df = one_patient_with_four_visits
+
+    df.loc[0, "Date of Birth"] = "01/01/2010"
+    df.loc[1, "Date of Birth"] = "01/01/2010"
+    df.loc[2, "Date of Birth"] = "01/01/2012"
+    df.loc[3, "Date of Birth"] = "01/01/2012"
+
+    errors = csv_upload_sync(test_user, df)
+    assert "date_of_birth" in errors[0]
+
+    assert Patient.objects.count() == 1
+    # Most recent (by visit date) modal value
+    assert Patient.objects.first().date_of_birth == datetime.date(2012, 1, 1)
+
+
 @pytest.mark.django_db(transaction=True)
 def test_conflicting_date_of_birth_where_null_is_the_only_value(
     seed_groups_per_function_fixture,
