@@ -29,7 +29,13 @@ from project.npda.general_functions.csv import (
 from project.npda.general_functions.quarter_for_date import (
     current_audit_year_start_date,
 )
-from project.constants import csv_definition_for, ALL_VISIT_DATES, SEX_TYPE, ETHNICITIES
+from project.constants import (
+    csv_definition_for,
+    ALL_VISIT_DATES,
+    SEX_TYPE,
+    ETHNICITIES,
+    LEAVE_PDU_REASONS
+)
 from project.npda.models import (
     NPDAUser,
     Patient,
@@ -4291,3 +4297,44 @@ def test_conflicting_date_of_birth_where_null_is_the_only_value(
     assert "date_of_birth" in errors[0]
 
     assert Patient.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_conflicting_leaving_reason(test_user, one_patient_with_four_visits):
+    df = one_patient_with_four_visits
+
+    df.loc[0, "Reason for leaving service"] = LEAVE_PDU_REASONS[0][0]
+    df.loc[0, "Date of leaving service"] = "01/01/2020"
+    df.loc[1, "Reason for leaving service"] = LEAVE_PDU_REASONS[0][0]
+    df.loc[1, "Date of leaving service"] = "01/01/2020"
+    df.loc[2, "Reason for leaving service"] = LEAVE_PDU_REASONS[1][0]
+    df.loc[2, "Date of leaving service"] = "01/01/2020"
+    df.loc[3, "Reason for leaving service"] = LEAVE_PDU_REASONS[1][0]
+    df.loc[3, "Date of leaving service"] = "01/01/2020"
+
+    errors = csv_upload_sync(test_user, df)
+    assert "reason_leaving_service" in errors[0]
+
+    assert Patient.objects.count() == 1
+    # 1 > 2 > 3
+    assert Patient.objects.first().reason_leaving_service == LEAVE_PDU_REASONS[0][0]
+
+
+@pytest.mark.django_db
+def test_conflict_resolved_leaving_reason_must_have_date_attached(test_user, one_patient_with_four_visits):
+    df = one_patient_with_four_visits
+
+    df.loc[0, "Reason for leaving service"] = LEAVE_PDU_REASONS[0][0]
+    df.loc[1, "Reason for leaving service"] = LEAVE_PDU_REASONS[0][0]
+
+    df.loc[2, "Reason for leaving service"] = LEAVE_PDU_REASONS[1][0]
+    df.loc[2, "Date of leaving service"] = "01/01/2020"
+    df.loc[3, "Reason for leaving service"] = LEAVE_PDU_REASONS[1][0]
+    df.loc[3, "Date of leaving service"] = "01/01/2020"
+
+    errors = csv_upload_sync(test_user, df)
+    assert "reason_leaving_service" in errors[0]
+
+    assert Patient.objects.count() == 1
+    # 1 > 2 > 3
+    assert Patient.objects.first().reason_leaving_service == LEAVE_PDU_REASONS[1][0]
