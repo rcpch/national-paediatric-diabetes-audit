@@ -23,7 +23,6 @@ CSV_HEADING_OBJECTS = (
         "model_field": "date_of_birth",
         "model": "Patient",
         "alternative_headings": ["DOB"],
-        "conflict_resolution": "most_recent_modal_value_by_visit_date"
     },
     {
         "heading": "Postcode of usual address",
@@ -34,7 +33,6 @@ CSV_HEADING_OBJECTS = (
         "heading": "Stated gender",
         "model_field": "sex",
         "model": "Patient",
-        "conflict_resolution": "most_recent_modal_value_by_visit_date"
     },
     {
         "heading": "Ethnic Category",
@@ -42,7 +40,6 @@ CSV_HEADING_OBJECTS = (
         "model": "Patient",
         # Deliberate typo to accomodate automatically generated Wythenshawe CSVs
         "alternative_headings": ["Ethnic cateogry"],
-        "conflict_resolution": "most_recent_modal_value_by_visit_date"
     },
     {
         "heading": "Diabetes Type",
@@ -64,14 +61,12 @@ CSV_HEADING_OBJECTS = (
         "heading": "Reason for leaving service",
         "model_field": "reason_leaving_service",
         "model": "Transfer",
-        "conflict_resolution": "smallest_code_with_attached_date"
     },
     {
         "heading": "Death Date",
         "model_field": "death_date",
         "model": "Patient",
         "alternative_headings": ["Effective Death Date"],
-        "conflict_resolution": "most_recent_modal_value_by_visit_date"
     },
     {
         "heading": "GP Practice Code",

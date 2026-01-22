@@ -277,25 +277,18 @@ async def csv_upload(
         if len(values_by_count_and_last_visit_date) > 0:
             return values_by_count_and_last_visit_date.iloc[-1].name
     
-    def smallest_code_with_attached_date(df, column):
-        match column:
-            case "Reason for leaving service":
-                rows_with_leaving_service = df.dropna(
-                    subset=["Date of leaving service"]
-                ).sort_values(
-                    by="Reason for leaving service"
-                )
+    def smallest_code_with_attached_date(df, code_column, date_column):
+        rows_with_leaving_service = df.dropna(subset=[date_column]).sort_values(by=code_column)
 
-                if len(rows_with_leaving_service) > 0:
-                    return rows_with_leaving_service.iloc[0]["Reason for leaving service"]
-
+        if len(rows_with_leaving_service) > 0:
+            return rows_with_leaving_service.iloc[0][code_column]
+    
     def merge_rows_for_patient(df, patient_row_index):
         for column in CSV_HEADING_OBJECTS:
             heading = column["heading"]
 
             model = column.get("model")
             model_field = column.get("model_field")
-            conflict_resolution = column.get("conflict_resolution")
 
             if model in ["Patient", "Transfer"]:
                 unique_values = df[heading].dropna().unique()
@@ -307,11 +300,11 @@ async def csv_upload(
                         f"Conflicting values for {heading}: {unique_values_str}"
                     )
 
-                match conflict_resolution:
-                    case "most_recent_modal_value_by_visit_date":
+                match model_field:
+                    case "date_of_birth" | "sex" | "ethnicity":
                         df[heading] = most_recent_modal_value_by_visit_date(df, heading)
-                    case "smallest_code_with_attached_date":
-                        df[heading] = smallest_code_with_attached_date(df, heading)
+                    case "reason_leaving_service":
+                        df[heading] = smallest_code_with_attached_date(df, "Reason for leaving service", "Date of leaving service")
 
         # TODO MRB: merge more columns!
         return df.iloc[0]
