@@ -284,6 +284,10 @@ async def csv_upload(
             return rows_with_leaving_service.iloc[0][code_column]
     
     def most_recent_by_visit_date(rows, column):
+        if rows['Visit/Appointment Date'].isnull().all():
+            # Unlikely case where there are no visit dates at all (to cover tests)
+            return rows.iloc[0][column]
+
         most_recent_row = rows.loc[rows['Visit/Appointment Date'].idxmax()]
 
         return most_recent_row[column]
