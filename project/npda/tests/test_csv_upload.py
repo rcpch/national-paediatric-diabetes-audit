@@ -42,7 +42,8 @@ from project.npda.models import (
     Visit,
     PaediatricDiabetesUnit,
     AuditPeriod,
-    Submission
+    Submission,
+    Transfer
 )
 from project.npda.tests.factories.patient_factory import (
     INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
@@ -4316,8 +4317,9 @@ def test_conflicting_leaving_reason(test_user, one_patient_with_four_visits):
     assert "reason_leaving_service" in errors[0]
 
     assert Patient.objects.count() == 1
+    assert Transfer.objects.count() == 1
     # 1 > 2 > 3
-    assert Patient.objects.first().reason_leaving_service == LEAVE_PDU_REASONS[0][0]
+    assert Transfer.objects.first().reason_leaving_service == LEAVE_PDU_REASONS[0][0]
 
 
 @pytest.mark.django_db
@@ -4336,8 +4338,9 @@ def test_conflict_resolved_leaving_reason_must_have_date_attached(test_user, one
     assert "reason_leaving_service" in errors[0]
 
     assert Patient.objects.count() == 1
+    assert Transfer.objects.count() == 1
     # 1 > 2 > 3
-    assert Patient.objects.first().reason_leaving_service == LEAVE_PDU_REASONS[1][0]
+    assert Transfer.objects.first().reason_leaving_service == LEAVE_PDU_REASONS[1][0]
 
 # TODO MRB: what about conflicting dates for the same leaving reason?
 # TODO MRB: update PR explaining that for yes/no/unknown questions like psych support we will not try to resolve conflicts

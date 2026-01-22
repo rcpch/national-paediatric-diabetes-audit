@@ -279,12 +279,15 @@ async def csv_upload(
     
     def smallest_code_with_attached_date(df, column):
         match column:
-            case "reason_leaving_service":
-                return df.dropna(
+            case "Reason for leaving service":
+                rows_with_leaving_service = df.dropna(
                     subset=["Date of leaving service"]
                 ).sort_values(
                     by="Reason for leaving service"
-                ).iloc[0]["Reason for leaving service"]
+                )
+
+                if len(rows_with_leaving_service) > 0:
+                    return rows_with_leaving_service.iloc[0]["Reason for leaving service"]
 
     def merge_rows_for_patient(df, patient_row_index):
         for column in CSV_HEADING_OBJECTS:
@@ -294,7 +297,7 @@ async def csv_upload(
             model_field = column.get("model_field")
             conflict_resolution = column.get("conflict_resolution")
 
-            if model == "Patient":
+            if model in ["Patient", "Transfer"]:
                 unique_values = df[heading].dropna().unique()
 
                 if len(unique_values) > 1:
