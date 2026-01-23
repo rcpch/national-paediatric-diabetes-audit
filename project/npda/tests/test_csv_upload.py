@@ -29,14 +29,22 @@ from project.npda.general_functions.csv import (
 from project.npda.general_functions.quarter_for_date import (
     current_audit_year_start_date,
 )
-from project.constants import csv_definition_for, ALL_VISIT_DATES
+from project.constants import (
+    csv_definition_for,
+    ALL_VISIT_DATES,
+    SEX_TYPE,
+    ETHNICITIES,
+    LEAVE_PDU_REASONS,
+    DIABETES_TYPES
+)
 from project.npda.models import (
     NPDAUser,
     Patient,
     Visit,
     PaediatricDiabetesUnit,
     AuditPeriod,
-    Submission
+    Submission,
+    Transfer
 )
 from project.npda.tests.factories.patient_factory import (
     INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
@@ -144,6 +152,14 @@ def two_patients_with_one_visit_each(dummy_sheets_folder):
 
     assert len(df) == 2
     assert df["NHS Number"][1] != df["NHS Number"][0]
+
+    return df
+
+
+@pytest.fixture
+def one_patient_with_four_visits(dummy_sheets_folder):
+    file = dummy_sheets_folder / "one_patient_four_visits.csv"
+    df = csv_parse(file).df
 
     return df
 
@@ -4261,3 +4277,176 @@ def test_uploading_csv_with_conflicting_pdu_numbers(
     assert error_messages[0].level_tag == "error"
 
     assert Submission.objects.count() == 0, "No submission should be created for incorrect PDU"
+
+
+@pytest.mark.django_db
+def test_conflicting_stated_gender(test_user, one_patient_with_four_visits):
+    df = one_patient_with_four_visits
+
+    df.loc[0, "Stated gender"] = SEX_TYPE[0][0]
+    df.loc[1, "Stated gender"] = SEX_TYPE[0][0]
+    df.loc[2, "Stated gender"] = SEX_TYPE[1][0]
+    df.loc[3, "Stated gender"] = SEX_TYPE[1][0]
+
+    errors = csv_upload_sync(test_user, df)
+    assert "sex" in errors[0]
+
+    assert Patient.objects.count() == 1
+    # Most recent (by visit date) modal value
+    assert Patient.objects.first().sex == SEX_TYPE[1][0]
+
+
+@pytest.mark.django_db
+def test_conflicting_ethnicity(test_user, one_patient_with_four_visits):
+    df = one_patient_with_four_visits
+
+    df.loc[0, "Ethnic Category"] = ETHNICITIES[0][0]
+    df.loc[1, "Ethnic Category"] = ETHNICITIES[0][0]
+    df.loc[2, "Ethnic Category"] = ETHNICITIES[1][0]
+    df.loc[3, "Ethnic Category"] = ETHNICITIES[1][0]
+
+    errors = csv_upload_sync(test_user, df)
+    assert "ethnicity" in errors[0]
+
+    assert Patient.objects.count() == 1
+    # Most recent (by visit date) modal value
+    assert Patient.objects.first().ethnicity == ETHNICITIES[1][0]
+
+
+@pytest.mark.django_db
+def test_conflicting_ethnicity_where_null_is_the_most_common_value(test_user, one_patient_with_four_visits):
+    df = one_patient_with_four_visits
+
+    df.loc[0, "Ethnic Category"] = ETHNICITIES[0][0]
+    df.loc[1, "Ethnic Category"] = None
+    df.loc[2, "Ethnic Category"] = None
+    df.loc[3, "Ethnic Category"] = ETHNICITIES[1][0]
+
+    errors = csv_upload_sync(test_user, df)
+    assert "ethnicity" in errors[0]
+
+    assert Patient.objects.count() == 1
+    # Most recent (by visit date) modal value
+    assert Patient.objects.first().ethnicity == ETHNICITIES[1][0]
+
+
+@pytest.mark.django_db
+def test_conflicting_date_of_birth(test_user, one_patient_with_four_visits):
+    df = one_patient_with_four_visits
+
+    df.loc[0, "Date of Birth"] = "01/01/2010"
+    df.loc[1, "Date of Birth"] = "01/01/2010"
+    df.loc[2, "Date of Birth"] = "01/01/2012"
+    df.loc[3, "Date of Birth"] = "01/01/2012"
+
+    errors = csv_upload_sync(test_user, df)
+    assert "date_of_birth" in errors[0]
+
+    assert Patient.objects.count() == 1
+    # Most recent (by visit date) modal value
+    assert Patient.objects.first().date_of_birth == datetime.date(2012, 1, 1)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_conflicting_date_of_birth_where_null_is_the_only_value(
+    seed_groups_per_function_fixture,
+    seed_users_per_function_fixture,
+    seed_audit_periods_per_function_fixture,
+    one_patient_with_four_visits):
+    # As this test needs full transaction support we can't use our session fixtures
+    test_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
+    ).first()
+
+    # Delete all patients to ensure we're starting from a clean slate
+    Patient.objects.all().delete()
+
+    df = one_patient_with_four_visits
+
+    df.loc[0, "Date of Birth"] = None
+    df.loc[1, "Date of Birth"] = None
+    df.loc[2, "Date of Birth"] = None
+    df.loc[3, "Date of Birth"] = None
+
+    errors = csv_upload_sync(test_user, df)
+    assert "date_of_birth" in errors[0]
+
+    assert Patient.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_conflicting_leaving_reason(test_user, one_patient_with_four_visits):
+    df = one_patient_with_four_visits
+
+    df.loc[0, "Reason for leaving service"] = LEAVE_PDU_REASONS[0][0]
+    df.loc[0, "Date of leaving service"] = "01/01/2020"
+    df.loc[1, "Reason for leaving service"] = LEAVE_PDU_REASONS[0][0]
+    df.loc[1, "Date of leaving service"] = "01/01/2020"
+    df.loc[2, "Reason for leaving service"] = LEAVE_PDU_REASONS[1][0]
+    df.loc[2, "Date of leaving service"] = "01/01/2020"
+    df.loc[3, "Reason for leaving service"] = LEAVE_PDU_REASONS[1][0]
+    df.loc[3, "Date of leaving service"] = "01/01/2020"
+
+    errors = csv_upload_sync(test_user, df)
+    assert "reason_leaving_service" in errors[0]
+
+    assert Patient.objects.count() == 1
+    assert Transfer.objects.count() == 1
+    # 1 > 2 > 3
+    assert Transfer.objects.first().reason_leaving_service == LEAVE_PDU_REASONS[0][0]
+
+
+@pytest.mark.django_db
+def test_conflict_resolved_leaving_reason_must_have_date_attached(test_user, one_patient_with_four_visits):
+    df = one_patient_with_four_visits
+
+    df.loc[0, "Reason for leaving service"] = LEAVE_PDU_REASONS[0][0]
+    df.loc[1, "Reason for leaving service"] = LEAVE_PDU_REASONS[0][0]
+
+    df.loc[2, "Reason for leaving service"] = LEAVE_PDU_REASONS[1][0]
+    df.loc[2, "Date of leaving service"] = "01/01/2020"
+    df.loc[3, "Reason for leaving service"] = LEAVE_PDU_REASONS[1][0]
+    df.loc[3, "Date of leaving service"] = "01/01/2020"
+
+    errors = csv_upload_sync(test_user, df)
+    assert "reason_leaving_service" in errors[0]
+
+    assert Patient.objects.count() == 1
+    assert Transfer.objects.count() == 1
+    # 1 > 2 > 3
+    assert Transfer.objects.first().reason_leaving_service == LEAVE_PDU_REASONS[1][0]
+
+
+@pytest.mark.django_db
+def test_conflicting_diabetes_type(test_user, one_patient_with_four_visits):
+    df = one_patient_with_four_visits
+
+    df.loc[0, "Diabetes Type"] = DIABETES_TYPES[0][0]
+    df.loc[1, "Diabetes Type"] = DIABETES_TYPES[0][0]
+    df.loc[2, "Diabetes Type"] = DIABETES_TYPES[0][0]
+    df.loc[3, "Diabetes Type"] = DIABETES_TYPES[1][0]
+
+    errors = csv_upload_sync(test_user, df)
+    assert "diabetes_type" in errors[0]
+
+    assert Patient.objects.count() == 1
+    # Most recent by visit date
+    assert Patient.objects.first().diabetes_type == DIABETES_TYPES[1][0]
+
+
+@pytest.mark.django_db
+def test_conflicting_diagnosis_date(test_user, one_patient_with_four_visits):
+    df = one_patient_with_four_visits
+
+    df.loc[0, "Date of Diabetes Diagnosis"] = "01/01/2019"
+    df.loc[1, "Date of Diabetes Diagnosis"] = "01/01/2019"
+    df.loc[2, "Date of Diabetes Diagnosis"] = "01/01/2018"
+    df.loc[3, "Date of Diabetes Diagnosis"] = "01/01/2018"
+
+    errors = csv_upload_sync(test_user, df)
+    assert "diagnosis_date" in errors[0]
+
+    assert Patient.objects.count() == 1
+    # Earliest
+    assert Patient.objects.first().diagnosis_date == datetime.date(2018, 1, 1)
+

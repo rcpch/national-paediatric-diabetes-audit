@@ -22,20 +22,24 @@ CSV_HEADING_OBJECTS = (
         "heading": "Date of Birth",
         "model_field": "date_of_birth",
         "model": "Patient",
-        "alternative_headings": ["DOB"]
+        "alternative_headings": ["DOB"],
     },
     {
         "heading": "Postcode of usual address",
         "model_field": "postcode",
         "model": "Patient",
     },
-    {"heading": "Stated gender", "model_field": "sex", "model": "Patient"},
+    {
+        "heading": "Stated gender",
+        "model_field": "sex",
+        "model": "Patient",
+    },
     {
         "heading": "Ethnic Category",
         "model_field": "ethnicity",
         "model": "Patient",
         # Deliberate typo to accomodate automatically generated Wythenshawe CSVs
-        "alternative_headings": ["Ethnic cateogry"]
+        "alternative_headings": ["Ethnic cateogry"],
     },
     {
         "heading": "Diabetes Type",
@@ -62,7 +66,7 @@ CSV_HEADING_OBJECTS = (
         "heading": "Death Date",
         "model_field": "death_date",
         "model": "Patient",
-        "alternative_headings": ["Effective Death Date"]
+        "alternative_headings": ["Effective Death Date"],
     },
     {
         "heading": "GP Practice Code",
