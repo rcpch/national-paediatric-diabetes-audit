@@ -323,6 +323,16 @@ class SubmissionsListView(
 @login_and_otp_required()
 @check_data_permissions()
 def upload_csv(request, audit_period, pdu):
+    def upload_error(message):
+        messages.error(
+            request=request,
+            message=message,
+        )
+        return redirect("pdu-upload-csv",
+            pz_code=pdu.pz_code,
+            audit_period=audit_period.slug
+        )
+
     previous_submission = Submission.objects.get_submission_for_request(pdu, audit_period)
 
     if previous_submission and not previous_submission.csv_file_name:
@@ -351,14 +361,7 @@ def upload_csv(request, audit_period, pdu):
         try:
             parsed_csv = csv_parse(io.BytesIO(user_csv_bytes))
         except ValueError as e:
-            messages.error(
-                request=request,
-                message=f"Invalid CSV format: {e}",
-            )
-            return redirect("pdu-upload-csv",
-                pz_code=pz_code,
-                audit_period=audit_period.slug
-            )
+            return upload_error(f"Invalid CSV format: {e}")
 
         missing_columns = parsed_csv.missing_columns
         if not parsed_csv.identifier_column:
@@ -377,37 +380,19 @@ def upload_csv(request, audit_period, pdu):
             })
         
         if parsed_csv.identifier_column == "Unique Reference Number" and not is_jersey:
-            messages.error(
-                request=request,
-                message="CSV file must use NHS number as the identifier column unless uploading for Jersey"
-            )
-            return redirect("pdu-upload-csv",
-                pz_code=pdu.pz_code,
-                audit_period=audit_period.slug
-            )
+            return upload_error("CSV file must use NHS number as the identifier column unless uploading for Jersey")
         
         #  the same must be true for the Jersey upload
         if parsed_csv.identifier_column == "NHS Number" and is_jersey:
-            messages.error(
-                request=request,
-                message="CSV file must use Unique Reference Number as the identifier column unless uploading for Jersey"
-            )
-            return redirect("pdu-upload-csv",
-                pz_code=pdu.pz_code,
-                audit_period=audit_period.slug
-            )
-        
-        print(f"!! {parsed_csv.df['PDU Number'].unique()}")
+            return upload_error("CSV file must use Unique Reference Number as the identifier column unless uploading for Jersey")
 
         if parsed_csv.df["PDU Number"].nunique() > 1:
-            messages.error(
-                request=request,
-                message=f"CSV file contains multiple PDU Numbers: {', '.join(parsed_csv.df['PDU Number'].unique())}. Please upload a file containing data for a single PDU only."
-            )
-            return redirect("pdu-upload-csv",
-                pz_code=pdu.pz_code,
-                audit_period=audit_period.slug
-            )
+            message = f"CSV file contains multiple PDU Numbers: {', '.join(parsed_csv.df['PDU Number'].unique())}. Please upload a file containing data for a single PDU only."
+            return upload_error(message)
+        
+        if parsed_csv.df["PDU Number"].iloc[0] != pdu.pz_code:
+            message = f"PDU Number in CSV file ({parsed_csv.df['PDU Number'].iloc[0]}) does not match the PDU you are looking at ({pdu.pz_code}). Please upload a file with the correct PDU Number."
+            return upload_error(message)
 
         if not audit_period.is_open and not (request.user.is_superuser or request.user.is_rcpch_audit_team_member):
             raise PermissionDenied(f"Upload is closed for {audit_period}.")

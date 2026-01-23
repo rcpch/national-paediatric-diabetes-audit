@@ -4219,10 +4219,12 @@ def test_uploading_csv_against_incorrect_pdu(
             format='multipart'
         )
 
-    assert response.status_code == 200
-    assert "Warning: You done did a fall over" in response.content.decode("utf-8")
+    assert response.status_code == 302
 
-    assert Submission.objects.count() == 0, "No submission should be created if the PDU number is incorrect"
+    error_messages = list(get_messages(response.wsgi_request))
+    assert error_messages[0].level_tag == "error"
+
+    assert Submission.objects.count() == 0, "No submission should be created for incorrect PDU"
 
 
 @pytest.mark.django_db
@@ -4257,3 +4259,5 @@ def test_uploading_csv_with_conflicting_pdu_numbers(
 
     error_messages = list(get_messages(response.wsgi_request))
     assert error_messages[0].level_tag == "error"
+
+    assert Submission.objects.count() == 0, "No submission should be created for incorrect PDU"
