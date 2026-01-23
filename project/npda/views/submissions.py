@@ -396,6 +396,18 @@ def upload_csv(request, audit_period, pdu):
                 pz_code=pdu.pz_code,
                 audit_period=audit_period.slug
             )
+        
+        print(f"!! {parsed_csv.df['PDU Number'].unique()}")
+
+        if parsed_csv.df["PDU Number"].nunique() > 1:
+            messages.error(
+                request=request,
+                message=f"CSV file contains multiple PDU Numbers: {', '.join(parsed_csv.df['PDU Number'].unique())}. Please upload a file containing data for a single PDU only."
+            )
+            return redirect("pdu-upload-csv",
+                pz_code=pdu.pz_code,
+                audit_period=audit_period.slug
+            )
 
         if not audit_period.is_open and not (request.user.is_superuser or request.user.is_rcpch_audit_team_member):
             raise PermissionDenied(f"Upload is closed for {audit_period}.")

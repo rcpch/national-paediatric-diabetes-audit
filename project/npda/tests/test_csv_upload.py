@@ -4227,16 +4227,16 @@ def test_uploading_csv_against_incorrect_pdu(
 
 @pytest.mark.django_db
 def test_uploading_csv_with_conflicting_pdu_numbers(
-    single_row_valid_df,
+    two_patients_with_one_visit_each,
     tmp_path,
     client,
     test_rcpch_user
 ):
-    single_row_valid_df.iloc[0]["PDU Number"] = RCPCH_PZ_CODE
+    two_patients_with_one_visit_each.at[0, "PDU Number"] = RCPCH_PZ_CODE
 
     # write back into temp
     tmp_csv_path = tmp_path / "dummy_sheet_test_csv_upload_test_uploading_csv_with_conflicting_pdu_numbers.csv"
-    single_row_valid_df.to_csv(tmp_csv_path, index=False)
+    two_patients_with_one_visit_each.to_csv(tmp_csv_path, index=False)
 
     # Log in user
     client = login_and_verify_user(client, test_rcpch_user)
@@ -4253,7 +4253,7 @@ def test_uploading_csv_with_conflicting_pdu_numbers(
             format='multipart'
         )
 
-    assert response.status_code == 200
-    assert "Warning: You done did a fall over" in response.content.decode("utf-8")
+    assert response.status_code == 302
 
-    assert Submission.objects.count() == 0, "No submission should be created if there's conflicting PDU numbers"
+    error_messages = list(get_messages(response.wsgi_request))
+    assert error_messages[0].level_tag == "error"
