@@ -109,12 +109,13 @@ async def csv_upload(
     Returns the empty dict if successful, otherwise ValidationErrors indexed by the row they occurred at
     """
     pdu = submission.paediatric_diabetes_unit
-    is_jersey = pdu.pz_code == "PZ248"
 
-    if is_jersey:
+    if pdu.pz_code == "PZ248":
         CSV_HEADINGS = UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
+        identifier_heading = UNIQUE_IDENTIFIER_JERSEY[0]["heading"]
     else:
         CSV_HEADINGS = UNIQUE_IDENTIFIER_ENGLAND + CSV_HEADING_OBJECTS
+        identifier_heading = UNIQUE_IDENTIFIER_ENGLAND[0]["heading"]
 
     # Helper functions
     def csv_value_to_model_value(model_field, value):
@@ -261,6 +262,67 @@ async def csv_upload(
                 transfer_fields[field] = None
 
         return transfer_fields
+    
+    def most_recent_modal_value_by_visit_date(rows, column):
+        # NPDA analysis has this notion of "Most up-to-date valid mode"
+        # My understanding of it is that you should:
+        #  - Work out the modal (most common) value
+        #  - If there's more than one mode, return the one from the row with the most recent visit
+        values_by_count_and_last_visit_date = rows.groupby(column).agg(
+            Count=(identifier_heading, 'count'),
+            LastVisitDate=('Visit/Appointment Date', 'max')
+        ).sort_values(by=['Count', 'LastVisitDate'])
+
+        if len(values_by_count_and_last_visit_date) > 0:
+            return values_by_count_and_last_visit_date.iloc[-1].name
+    
+    def smallest(rows, column):
+        if len(rows) > 0:
+            return rows[column].min()
+
+    def smallest_code_with_attached_date(rows, code_column, date_column):
+        rows_with_leaving_service = rows.dropna(subset=[date_column]).sort_values(by=code_column)
+
+        if len(rows_with_leaving_service) > 0:
+            return rows_with_leaving_service.iloc[0][code_column]
+    
+    def most_recent_by_visit_date(rows, column):
+        if rows['Visit/Appointment Date'].isnull().all():
+            # Unlikely case where there are no visit dates at all (to cover tests)
+            return rows.iloc[0][column]
+
+        most_recent_row = rows.loc[rows['Visit/Appointment Date'].idxmax()]
+
+        return most_recent_row[column]
+    
+    def merge_rows_for_patient(rows, patient_row_index):
+        for column in CSV_HEADING_OBJECTS:
+            heading = column["heading"]
+
+            model = column.get("model")
+            model_field = column.get("model_field")
+
+            if model in ["Patient", "Transfer"]:
+                unique_values = rows[heading].dropna().unique()
+
+                if len(unique_values) > 1:
+                    unique_values_str = ", ".join(unique_values.astype(str))
+                    error_field = model_field if model_field else "__all__"
+                    errors_to_return[patient_row_index][error_field].append(
+                        f"Conflicting values for {heading}: {unique_values_str}"
+                    )
+
+                match model_field:
+                    case "date_of_birth" | "sex" | "ethnicity":
+                        rows[heading] = most_recent_modal_value_by_visit_date(rows, heading)
+                    case "reason_leaving_service":
+                        rows[heading] = smallest_code_with_attached_date(rows, "Reason for leaving service", "Date of leaving service")
+                    case "diabetes_type" | "postcode" | "gp_practice_ods_code":
+                        rows[heading] = most_recent_by_visit_date(rows, heading)
+                    case "diagnosis_date":
+                        rows[heading] = smallest(rows, heading)
+        
+        return rows.iloc[0]
 
     """
     Process the csv file and validate and save the data in the tables, parsing any errors
@@ -273,12 +335,7 @@ async def csv_upload(
         dataframe = dataframe.assign(row_index=np.arange(dataframe.shape[0]))
 
     # We only one to create one patient per NHS number (or URN if in Jersey) and we can't create their visits if we fail to save the patient model
-    if is_jersey:
-        visits_by_patient = dataframe.groupby(
-            "Unique Reference Number", sort=False, dropna=False
-        )
-    else:
-        visits_by_patient = dataframe.groupby("NHS Number", sort=False, dropna=False)
+    visits_by_patient = dataframe.groupby(identifier_heading, sort=False, dropna=False)
 
     async def save_patient_and_transfer(
         patient_form, transfer_fields, patient_row_index
@@ -325,11 +382,11 @@ async def csv_upload(
     async def process_rows_for_patient(rows, async_client):
         patient = None
 
-        first_row = rows.iloc[0]
-        patient_row_index = int(first_row["row_index"])
+        first_patient_row_index = int(rows.iloc[0]["row_index"])
+        patient_row = merge_rows_for_patient(rows, first_patient_row_index)
 
         try:
-            patient_form = await validate_patient_using_form(first_row, async_client)
+            patient_form = await validate_patient_using_form(patient_row, async_client)
 
             # Pull through cleaned_data so we can use it in the async visit validators
             await sync_to_async(patient_form.is_valid)()
@@ -349,10 +406,10 @@ async def csv_upload(
 
                 visit_forms.append((visit_form, int(row["row_index"])))
 
-            transfer_fields = get_valid_transfer_fields(first_row, patient_form)
+            transfer_fields = get_valid_transfer_fields(patient_row, patient_form)
 
             patient = await save_patient_and_transfer(
-                patient_form, transfer_fields, patient_row_index
+                patient_form, transfer_fields, first_patient_row_index
             )
 
             if patient:
@@ -360,9 +417,9 @@ async def csv_upload(
         except Exception as e:
             # Unexpected!
             logging.exception(
-                f"Unhandled exception processing {csv_file_name}[{patient_row_index}]"
+                f"Unhandled exception processing {csv_file_name}[{first_patient_row_index}]"
             )  # triggers an admin email
-            errors_to_return[patient_row_index]["__all__"].append(
+            errors_to_return[first_patient_row_index]["__all__"].append(
                 str(e)
             )  # record the row as failed
 
