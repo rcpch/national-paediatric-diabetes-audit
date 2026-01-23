@@ -276,6 +276,10 @@ async def csv_upload(
         if len(values_by_count_and_last_visit_date) > 0:
             return values_by_count_and_last_visit_date.iloc[-1].name
     
+    def smallest(rows, column):
+        if len(rows) > 0:
+            return rows[column].min()
+
     def smallest_code_with_attached_date(rows, code_column, date_column):
         rows_with_leaving_service = rows.dropna(subset=[date_column]).sort_values(by=code_column)
 
@@ -315,8 +319,9 @@ async def csv_upload(
                         rows[heading] = smallest_code_with_attached_date(rows, "Reason for leaving service", "Date of leaving service")
                     case "diabetes_type" | "postcode" | "gp_practice_ods_code":
                         rows[heading] = most_recent_by_visit_date(rows, heading)
-
-        # TODO MRB: merge more columns!
+                    case "diagnosis_date":
+                        rows[heading] = smallest(rows, heading)
+        
         return rows.iloc[0]
 
     """

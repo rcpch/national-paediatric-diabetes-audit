@@ -4360,6 +4360,23 @@ def test_conflicting_diabetes_type(test_user, one_patient_with_four_visits):
     # Most recent by visit date
     assert Patient.objects.first().diabetes_type == DIABETES_TYPES[1][0]
 
+
+@pytest.mark.django_db
+def test_conflicting_diagnosis_date(test_user, one_patient_with_four_visits):
+    df = one_patient_with_four_visits
+
+    df.loc[0, "Date of Diabetes Diagnosis"] = "01/01/2019"
+    df.loc[1, "Date of Diabetes Diagnosis"] = "01/01/2019"
+    df.loc[2, "Date of Diabetes Diagnosis"] = "01/01/2018"
+    df.loc[3, "Date of Diabetes Diagnosis"] = "01/01/2018"
+
+    errors = csv_upload_sync(test_user, df)
+    assert "diagnosis_date" in errors[0]
+
+    assert Patient.objects.count() == 1
+    # Earliest
+    assert Patient.objects.first().diagnosis_date == datetime.date(2018, 1, 1)
+
 # TODO MRB: what about conflicting dates for the same leaving reason?
 # TODO MRB: update PR explaining that for yes/no/unknown questions like psych support we will not try to resolve conflicts
 #           could be different status at different visits (e.g. no, no, no, yes over time)
