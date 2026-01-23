@@ -4377,6 +4377,3 @@ def test_conflicting_diagnosis_date(test_user, one_patient_with_four_visits):
     # Earliest
     assert Patient.objects.first().diagnosis_date == datetime.date(2018, 1, 1)
 
-# TODO MRB: what about conflicting dates for the same leaving reason?
-# TODO MRB: update PR explaining that for yes/no/unknown questions like psych support we will not try to resolve conflicts
-#           could be different status at different visits (e.g. no, no, no, yes over time)
