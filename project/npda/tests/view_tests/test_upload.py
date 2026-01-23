@@ -115,9 +115,12 @@ def test_coordinator_cannot_upload_csv_to_closed_audit_year(
     audit_period.is_open = False
     audit_period.save()
     
+    # Fix this test now PDU number must match (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1063)
+    csv_to_upload = dummy_sheet_csv.replace("PZ041", ALDER_HEY_PZ_CODE)
+
     csv_file = SimpleUploadedFile(
         "test_coordinator_cannot_upload_csv_to_closed_audit_year.csv",
-        dummy_sheet_csv.encode(),
+        csv_to_upload.encode(),
         content_type="text/csv"
     )
 
