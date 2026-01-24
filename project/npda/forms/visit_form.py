@@ -29,60 +29,6 @@ class VisitForm(forms.ModelForm):
     class Meta:
         model = Visit
         fields = "__all__"
-        # fields = [
-        #     "visit_date",
-        #     "height",
-        #     "weight",
-        #     "bmi",
-        #     "height_weight_observation_date",
-        #     "hba1c",
-        #     "hba1c_format",
-        #     "hba1c_date",
-        #     "treatment",
-        #     "closed_loop_system",
-        #     "glucose_monitoring",
-        #     "systolic_blood_pressure",
-        #     "diastolic_blood_pressure",
-        #     "blood_pressure_observation_date",
-        #     "foot_examination_observation_date",
-        #     "retinal_screening_observation_date",
-        #     "retinal_screening_result",
-        #     "albumin_creatinine_ratio",
-        #     "albumin_creatinine_ratio_date",
-        #     "albuminuria_stage",
-        #     "total_cholesterol",
-        #     "total_cholesterol_date",
-        #     "thyroid_function_date",
-        #     "thyroid_treatment_status",
-        #     "coeliac_screen_date",
-        #     "gluten_free_diet",
-        #     "psychological_screening_assessment_date",
-        #     "psychological_additional_support_status",
-        #     "smoking_status",
-        #     "smoking_cessation_referral_date",
-        #     "carbohydrate_counting_level_three_education_date",
-        #     "dietician_additional_appointment_offered",
-        #     "dietician_additional_appointment_date",
-        #     "flu_immunisation_recommended_date",
-        #     "ketone_meter_training",
-        #     "sick_day_rules_training_date",
-        #     "hospital_admission_date",
-        #     "hospital_discharge_date",
-        #     "hospital_admission_reason",
-        #     "dka_additional_therapies",
-        #     "hospital_admission_other",
-        #     # Additional 2026 fields
-        #     "immunotherapy_received",
-        #     "immunotherapy_date",
-        #     "blood_gas_ph",
-        #     "blood_gas_bicarbonate",
-        #     "insulin_regimen",
-        #     "non_insulin_medication",
-        #     "dietary_lifestyle_modification",
-        #     "cgm_use",
-        #     "psychological_support_outcome",
-        # ]
-        fields = "__all__"
 
         widgets = {
             "visit_date": DateInput(),
@@ -166,7 +112,7 @@ class VisitForm(forms.ModelForm):
                 allowed_fields = list(VISIT_FIELD_HEADINGS_2021.keys())
         else:
             # Default for new records
-            dataset_year = 2026  # or get from settings/context
+            dataset_year = 2026
             allowed_fields = list(VISIT_FIELD_HEADINGS_2026.keys())
 
         for field_name in allowed_fields:
@@ -401,6 +347,93 @@ class VisitForm(forms.ModelForm):
             )
             raise ValidationError(
                 f"'{data}' is not a value for 'Glucose Monitoring'. Please select one of {options}."
+            )
+
+    def clean_immunotherapy_received(self):
+        data = self.cleaned_data["immunotherapy_received"]
+        # Convert the list of tuples to a dictionary
+        immunotherapy_received_dict = dict(YES_NO_UNKNOWN)
+
+        if data is None or data in immunotherapy_received_dict:
+            return data
+        else:
+            options = str(YES_NO_UNKNOWN).strip("[]").replace(")", "").replace("(", "")
+            raise ValidationError(
+                f"'{data}' is not a value for 'Immunotherapy Received'. Please select one of {options}."
+            )
+
+    def clear_insulin_regimen(self):
+        data = self.cleaned_data["insulin_regimen"]
+        # Convert the list of tuples to a dictionary
+        insulin_regimen_dict = dict(INSULIN_TREATMENT)
+
+        if data is None or data in insulin_regimen_dict:
+            return data
+        else:
+            options = (
+                str(INSULIN_TREATMENT).strip("[]").replace(")", "").replace("(", "")
+            )
+            raise ValidationError(
+                f"'{data}' is not a value for 'Insulin Regimen'. Please select one of {options}."
+            )
+
+    def clean_non_insulin_medication(self):
+        data = self.cleaned_data["non_insulin_medication"]
+        # Convert the list of tuples to a dictionary
+        non_insulin_medication_dict = dict(NON_INSULIN_TREATMENT)
+
+        if data is None or data in non_insulin_medication_dict:
+            return data
+        else:
+            options = (
+                str(NON_INSULIN_TREATMENT).strip("[]").replace(")", "").replace("(", "")
+            )
+            raise ValidationError(
+                f"'{data}' is not a value for 'Non-Insulin Medication'. Please select one of {options}."
+            )
+
+    def clean_lifestyle_dietary_modification(self):
+        data = self.cleaned_data["dietary_lifestyle_modification"]
+        # Convert the list of tuples to a dictionary
+        dietary_lifestyle_modification_dict = dict(YES_NO_UNKNOWN)
+
+        if data is None or data in dietary_lifestyle_modification_dict:
+            return data
+        else:
+            options = str(YES_NO_UNKNOWN).strip("[]").replace(")", "").replace("(", "")
+            raise ValidationError(
+                f"'{data}' is not a value for 'Dietary/Lifestyle Modification'. Please select one of {options}."
+            )
+
+    def clean_cgm_use(self):
+        data = self.cleaned_data["cgm_use"]
+        # Convert the list of tuples to a dictionary
+        cgm_use_dict = dict(YES_NO_UNKNOWN)
+
+        if data is None or data in cgm_use_dict:
+            return data
+        else:
+            options = str(YES_NO_UNKNOWN).strip("[]").replace(")", "").replace("(", "")
+            raise ValidationError(
+                f"'{data}' is not a value for 'CGM Use'. Please select one of {options}."
+            )
+
+    def clean_psychological_support_outcome(self):
+        data = self.cleaned_data["psychological_support_outcome"]
+        # Convert the list of tuples to a dictionary
+        psychological_support_outcome_dict = dict(PSYCHOLOGICAL_SUPPORT_OUTCOMES)
+
+        if data is None or data in psychological_support_outcome_dict:
+            return data
+        else:
+            options = (
+                str(PSYCHOLOGICAL_SUPPORT_OUTCOMES)
+                .strip("[]")
+                .replace(")", "")
+                .replace("(", "")
+            )
+            raise ValidationError(
+                f"'{data}' is not a value for 'Psychological Support Outcome'. Please select one of {options}."
             )
 
     """
@@ -777,7 +810,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if not valid:
             raise ValidationError(error)
 
         return self.cleaned_data["hospital_admission_date"]
@@ -797,6 +830,22 @@ class VisitForm(forms.ModelForm):
             raise ValidationError(error)
 
         return self.cleaned_data["hospital_discharge_date"]
+
+    def clean_immunotherapy_date(self):
+        data = self.cleaned_data["immunotherapy_date"]
+        valid, error = validate_date(
+            date_under_examination_field_name="immunotherapy_date",
+            date_under_examination_label_name="Date Immunotherapy Started",
+            date_under_examination=data,
+            date_of_birth=self.patient.date_of_birth,
+            date_of_diagnosis=self.patient.diagnosis_date,
+            date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
+        )
+        if not valid:
+            raise ValidationError(error)
+
+        return self.cleaned_data["immunotherapy_date"]
 
     def handle_async_validation_errors(self):
         # These are calculated fields but we handle them in the form because we want to add validation errors.
@@ -951,6 +1000,41 @@ class VisitForm(forms.ModelForm):
                     }
                 )
 
+        insulin_regimen = cleaned_data.get("insulin_regimen")
+        non_insulin_medication = cleaned_data.get("non_insulin_medication")
+        dietary_lifestyle_modification = cleaned_data.get(
+            "dietary_lifestyle_modification"
+        )
+        if any(
+            [insulin_regimen, non_insulin_medication, dietary_lifestyle_modification]
+        ):
+            measure_must_have_date_and_value(
+                None,
+                None,
+                [
+                    {"insulin_regimen": insulin_regimen},
+                    {"non_insulin_medication": non_insulin_medication},
+                    {"dietary_lifestyle_modification": dietary_lifestyle_modification},
+                ],
+            )
+
+        immunotherapy_received = cleaned_data.get("immunotherapy_received")
+        immunotherapy_date = cleaned_data.get("immunotherapy_date")
+        if immunotherapy_date is not None and immunotherapy_received is None:
+            raise ValidationError(
+                {
+                    "immunotherapy_received": [
+                        "Immunotherapy Received must be filled in if Immunotherapy Date is filled in"
+                    ]
+                }
+            )
+        if any([immunotherapy_received, immunotherapy_date]):
+            measure_must_have_date_and_value(
+                immunotherapy_date,
+                "immunotherapy_date",
+                [{"immunotherapy_received": immunotherapy_received}],
+            )
+
         blood_pressure_observation_date = cleaned_data.get(
             "blood_pressure_observation_date"
         )
@@ -1049,12 +1133,25 @@ class VisitForm(forms.ModelForm):
             "smoking_cessation_referral_date"
         )
         smoking_status = cleaned_data.get("smoking_status")
+        smoking_vaping_status = cleaned_data.get("smoking_vaping_status")
         if smoking_status:
             if smoking_status != 2 and smoking_cessation_referral_date is not None:
                 raise ValidationError(
                     {
                         "smoking_cessation_referral_date": [
                             "Smoking Cessation Referral Date must be left empty if patient is not a current smoker or status is unknown."
+                        ]
+                    }
+                )
+        elif smoking_vaping_status:
+            if (
+                smoking_vaping_status not in [2, 3, 4]
+                and smoking_cessation_referral_date is not None
+            ):  # either smokes or vapes or both
+                raise ValidationError(
+                    {
+                        "smoking_cessation_referral_date": [
+                            "Smoking Cessation Referral Date must be left empty if patient is not a current smoker, vaper or status is unknown."
                         ]
                     }
                 )
@@ -1091,6 +1188,8 @@ class VisitForm(forms.ModelForm):
         hospital_admission_reason = cleaned_data.get("hospital_admission_reason")
         dka_additional_therapies = cleaned_data.get("dka_additional_therapies")
         hospital_admission_other = cleaned_data.get("hospital_admission_other")
+        blood_gas_ph = cleaned_data.get("blood_gas_ph")
+        blood_gas_bicarbonate = cleaned_data.get("blood_gas_bicarbonate")
         # clean hospital admission fields
         if hospital_admission_other == "None":
             hospital_admission_other = None
@@ -1100,17 +1199,19 @@ class VisitForm(forms.ModelForm):
                 hospital_admission_reason,
                 dka_additional_therapies,
                 hospital_admission_other,
+                blood_gas_ph,
+                blood_gas_bicarbonate,
             ]
         ):
             if hospital_admission_reason is not None:
                 if hospital_admission_reason == 2:  # DKA
-                    all_items_must_be_filled_in(
-                        [
-                            {"hospital_admission_date": hospital_admission_date},
-                            {"hospital_admission_reason": hospital_admission_reason},
-                            {"dka_additional_therapies": dka_additional_therapies},
-                        ]
-                    )
+                    items_to_include = [
+                        {"hospital_admission_date": hospital_admission_date},
+                        {"hospital_admission_reason": hospital_admission_reason},
+                        {"dka_additional_therapies": dka_additional_therapies},
+                    ]
+                    all_items_must_be_filled_in(items_to_include)
+
                 elif hospital_admission_reason == 6:  # Other
                     all_items_must_be_filled_in(
                         [
