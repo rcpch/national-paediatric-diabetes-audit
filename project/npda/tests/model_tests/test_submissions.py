@@ -257,8 +257,8 @@ def test_patients_copied_from_previous_questionnaire_submission(
 
     pdu = PaediatricsDiabetesUnitFactory(pz_code=ALDER_HEY_PZ_CODE)
 
-    current_audit_period = AuditPeriod.objects.get(start_date__year=2025)
-    previous_audit_period = current_audit_period.previous_audit_period()
+    next_audit_period = AuditPeriod.objects.get(start_date__year=2025)
+    previous_audit_period = next_audit_period.previous_audit_period()
 
     previous_submission = Submission.objects.create(
         paediatric_diabetes_unit=pdu,
@@ -293,50 +293,26 @@ def test_patients_copied_from_previous_questionnaire_submission(
 
     assert previous_submission.patients.count() == 3
 
-    assert False, "TODO MRB: New endpoint not implemented yet"
+    url = reverse("pdu-submissions", kwargs={
+        "audit_period": next_audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE
+    })
 
-    # Call the pdu-patient-add endpoint for the next audit period
-    # from project.npda.forms.patient_form import PatientForm
+    response = client.post(url, data = {
+        "submit-data": "start-questionnaire-submission"
+    })
 
-    # # Create a new patient using valid fields
-    # new_patient_form = PatientForm(
-    #     {
-    #         "nhs_number": "1111111234",
-    #         "sex": 1,
-    #         "date_of_birth": date(2010, 1, 1),
-    #         "postcode": "B11 4BH",
-    #         "ethnicity": "A",
-    #         "diabetes_type": 1,
-    #         "diagnosis_date": date(2015, 1, 1),
-    #     },
-    #     paediatric_diabetes_unit=pdu,
-    #     audit_period=next_audit_period,
-    # )
+    assert response.status_code == 302
 
-    # assert new_patient_form.is_valid(), f"Form errors: {new_patient_form.errors}"
+    next_submission = Submission.objects.filter(
+        audit_period=next_audit_period,
+        paediatric_diabetes_unit=pdu,
+        submission_active=True,
+    ).first()
 
-    # # Post to the pdu-patient-add endpoint for next audit period
-    # url = reverse(
-    #     "pdu-patient-add",
-    #     kwargs={"audit_period": next_audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE},
-    # )
+    assert next_submission is not None
 
-    # response = client.post(url, new_patient_form.data)
-
-    # # Check that the redirect was successful (patient was created)
-    # assert response.status_code == 302
-
-    # # Verify a submission was created for the next audit period
-    # next_submission = Submission.objects.filter(
-    #     audit_year=next_audit_period.audit_year(),
-    #     paediatric_diabetes_unit=pdu,
-    #     submission_active=True,
-    # ).first()
-
-    # assert next_submission is not None
-
-    # # Verify that ONLY patient_1 (the normal patient without leaving/death data) was copied
-    # assert next_submission.patients.count() == 2  # The new patient + patient_1
-    # assert patient_1 in next_submission.patients.all()
-    # assert patient_2 not in next_submission.patients.all()
-    # assert patient_3 not in next_submission.patients.all()
+    # Verify that ONLY patient_1 (the normal patient without leaving/death data) was copied
+    assert next_submission.patients.count() == 2  # The new patient + patient_1
+    assert patient_1 in next_submission.patients.all()
+    assert patient_2 not in next_submission.patients.all()
+    assert patient_3 not in next_submission.patients.all()
