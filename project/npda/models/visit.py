@@ -26,7 +26,6 @@ from ...constants import (
     TREATMENT_TYPES,
     YES_NO_UNKNOWN,
 )
-from ..general_functions import calculate_bmi
 
 from project.npda.general_functions.headings import get_field_heading
 from project.npda.general_functions.justification_or_standard import (
@@ -55,10 +54,7 @@ class Visit(models.Model):
 
     height_centile = CategorisedDecimalField(
         verbose_name="Height Centile",
-        help_text={
-            "label": "This is a calculated field. Centile value for height if available. If not available, can be blank.",
-            "reference": "Using the UK-WHO growth charts, the centile value for height is calculated based on the height in cm and age of the patient. This is used to assess the growth of the patient.",
-        },
+        help_text="This is a calculated field. Centile value for height if available. If not available, can be blank.",
         max_digits=3,
         decimal_places=1,
         null=True,
@@ -69,10 +65,7 @@ class Visit(models.Model):
 
     height_sds = CategorisedDecimalField(
         verbose_name="Height SDS",
-        help_text={
-            "label": "This is a calculated field. Centile value for height if available. If not available, can be blank.",
-            "reference": "Using the UK-WHO growth charts, the sds value for height is calculated based on the height in cm and age of the patient. This is used to assess the growth of the patient.",
-        },
+        help_text="This is a calculated field. Centile value for height if available. If not available, can be blank.",
         max_digits=3,
         decimal_places=1,
         null=True,
@@ -92,10 +85,7 @@ class Visit(models.Model):
 
     weight_centile = CategorisedDecimalField(
         verbose_name="Weight Centile",
-        help_text={
-            "label": "This is a calculated field. Centile value for weight if available. If not available, can be blank.",
-            "reference": "Using the UK-WHO growth charts, the centile value for weight is calculated based on the weight in kg and age of the patient. This is used to assess the growth of the patient.",
-        },
+        help_text="This is a calculated field. Centile value for weight if available. If not available, can be blank.",
         max_digits=3,
         decimal_places=1,
         null=True,
@@ -106,10 +96,7 @@ class Visit(models.Model):
 
     weight_sds = CategorisedDecimalField(
         verbose_name="Weight SDS",
-        help_text={
-            "label": "This is a calculated field. Centile value for weight if available. If not available, can be blank.",
-            "reference": "Using the UK-WHO growth charts, the sds value for weight is calculated based on the weight in kg and age of the patient. This is used to assess the growth of the patient.",
-        },
+        help_text="This is a calculated field. Centile value for weight if available. If not available, can be blank.",
         max_digits=3,
         decimal_places=1,
         null=True,
@@ -120,10 +107,7 @@ class Visit(models.Model):
 
     bmi = CategorisedDecimalField(
         verbose_name="Body Mass Index",
-        help_text={
-            "label": "This is a calculated field. BMI value for the patient. BMI health check is only completed if both height and weight is measured at the same visit",
-            "reference": "The BMI is calculated using the height and weight of the patient. This is used to calculate the body mass index sds and centile of the patient.",
-        },
+        help_text="This is a calculated field. BMI value for the patient. BMI health check is only completed if both height and weight is measured at the same visit",
         max_digits=3,
         decimal_places=1,
         null=True,
@@ -134,10 +118,7 @@ class Visit(models.Model):
 
     bmi_centile = CategorisedDecimalField(
         verbose_name="Body Mass Index Centile",
-        help_text={
-            "label": "This is a calculated field. Centile value for height if available. If not available, can be blank.",
-            "reference": "Using the UK-WHO growth charts, the centile value for height is calculated based on the height in cm and age of the patient. This is used to assess the growth of the patient.",
-        },
+        help_text="This is a calculated field. Centile value for height if available. If not available, can be blank.",
         max_digits=3,
         decimal_places=1,
         null=True,
@@ -148,10 +129,7 @@ class Visit(models.Model):
 
     bmi_sds = CategorisedDecimalField(
         verbose_name="Body Mass Index SDS",
-        help_text={
-            "label": "This is a calculated field. Centile value for body mass index if height and weight are available. If not available, can be blank.",
-            "reference": "Using the UK-WHO growth charts, the sds value for body mass index is calculated based on the body mass index in kg/m² and age of the patient. This is used to assess the growth of the patient.",
-        },
+        help_text="This is a calculated field. Centile value for body mass index if height and weight are available. If not available, can be blank.",
         max_digits=3,
         decimal_places=1,
         null=True,

@@ -20,7 +20,7 @@ from project.npda.models.custom_validators import (
     validate_nhs_number,
     validate_unique_reference_number,
 )
-
+from project.npda.models.help_text_mixin import HelpTextMixin
 from project.npda.general_functions.headings import get_field_heading
 from project.npda.general_functions.justification_or_standard import (
     get_field_notes,
@@ -44,7 +44,7 @@ from ..general_functions import stringify_time_elapsed
 logger = logging.getLogger(__name__)
 
 
-class Patient(models.Model):
+class Patient(models.Model, HelpTextMixin):
     """
     The Patient class.
 
