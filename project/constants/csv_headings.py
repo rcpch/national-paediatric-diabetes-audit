@@ -20,9 +20,8 @@ UNIQUE_IDENTIFIER_JERSEY = (
     },
 )
 
-# Base CSV heading objects for 2021-2025 dataset
-CSV_HEADING_OBJECTS_2021 = (
-    # Patient
+CSV_HEADING_OBJECTS = (
+    # patient
     {
         "heading": "Date of Birth",
         "model_field": "date_of_birth",
@@ -43,9 +42,8 @@ CSV_HEADING_OBJECTS_2021 = (
         "heading": "Ethnic Category",
         "model_field": "ethnicity",
         "model": "Patient",
-        "alternative_headings": [
-            "Ethnic cateogry"
-        ],  # Deliberate typo for Wythenshawe CSVs
+        # Deliberate typo to accomodate automatically generated Wythenshawe CSVs
+        "alternative_headings": ["Ethnic cateogry"],
     },
     {
         "heading": "Diabetes Type",
@@ -82,6 +80,8 @@ CSV_HEADING_OBJECTS_2021 = (
     {
         "heading": "PDU Number",
         "model_field": "pdu",
+        # Reference attached to Transfer in csv_upload
+        # Transfer
     },
     # Visit
     {
@@ -105,42 +105,32 @@ CSV_HEADING_OBJECTS_2021 = (
         "model_field": "height_weight_observation_date",
         "model": "Visit",
     },
-    {
-        "heading": "HbA1c Value",
-        "model_field": "hba1c",
-        "model": "Visit",
-        "alternative_headings": ["Hba1c Value"],
-    },
+    {"heading": "Hba1c Value", "model_field": "hba1c", "model": "Visit"},
     {
         "heading": "HbA1c result format",
         "model_field": "hba1c_format",
         "model": "Visit",
-        "alternative_headings": [
-            "HB1AC Result Format"
-        ],  # Deliberate typo for old template
+        # Deliberate typo to accomodate the old NPDA CSV template
+        "alternative_headings": ["HB1AC Result Format"],
     },
     {
-        "heading": "Observation Date: HbA1c Value",
+        "heading": "Observation Date: Hba1c Value",
         "model_field": "hba1c_date",
         "model": "Visit",
-        "alternative_headings": ["Observation Date: Hba1c Value"],
     },
     {
-        "heading": "Diabetes Treatment at time of HbA1c measurement",
+        "heading": "Diabetes Treatment at time of Hba1c measurement",
         "model_field": "treatment",
         "model": "Visit",
-        "alternative_headings": [
-            "Diabetes Treatment at the time of HbA1c measurement",
-            "Diabetes Treatment at time of Hba1c measurement",
-        ],
+        "alternative_headings": ["Diabetes Treatment at the time of HbA1c measurement"],
     },
     {
-        "heading": "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this as part of a closed loop system?",
+        "heading": "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
         "model_field": "closed_loop_system",
         "model": "Visit",
         "alternative_headings": [
-            "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
-            "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this as part of a closed loop system?)",  # Trailing bracket for Wythenshawe
+            # Trailing bracket to accomodate automatically generated Wythenshawe CSVs
+            "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this as part of a closed loop system?)"
         ],
     },
     {
@@ -167,10 +157,10 @@ CSV_HEADING_OBJECTS_2021 = (
         "model": "Visit",
     },
     {
-        "heading": "Foot Assessment/Examination Date",
+        "heading": "Foot Assessment / Examination Date",
         "model_field": "foot_examination_observation_date",
         "model": "Visit",
-        "alternative_headings": ["Foot Assessment / Examination Date"],
+        "alternative_headings": ["Foot Assessment/Examination Date"],
     },
     {
         "heading": "Retinal Screening date",
@@ -201,21 +191,16 @@ CSV_HEADING_OBJECTS_2021 = (
         "heading": "Total Cholesterol Level (mmol/l)",
         "model_field": "total_cholesterol",
         "model": "Visit",
-        "alternative_headings": ["Total Cholesterol Level"],
     },
     {
-        "heading": "Observation Date: Total Cholesterol level",
+        "heading": "Observation Date: Total Cholesterol Level",
         "model_field": "total_cholesterol_date",
         "model": "Visit",
-        "alternative_headings": ["Observation Date: Total Cholesterol Level"],
     },
     {
         "heading": "Observation Date: Thyroid Function",
         "model_field": "thyroid_function_date",
         "model": "Visit",
-        "alternative_headings": [
-            "Observation Date: Thyroid Function "
-        ],  # With trailing space
     },
     {
         "heading": "At time of, or following measurement of thyroid function, was the patient prescribed any thyroid treatment?",
@@ -234,16 +219,18 @@ CSV_HEADING_OBJECTS_2021 = (
         "heading": "Has the patient been recommended a Gluten-free diet?",
         "model_field": "gluten_free_diet",
         "model": "Visit",
+        # sic from the old NPDA template (eugh non breaking spaces)
         "alternative_headings": [
-            "Has the patient been\xa0recommended a Gluten-free\xa0diet?"  # Non-breaking spaces from old template
+            "Has the patient been\xa0recommended a Gluten-free\xa0diet?"
         ],
     },
     {
         "heading": "Observation Date - Psychological Screening Assessment",
         "model_field": "psychological_screening_assessment_date",
         "model": "Visit",
+        # sic from the old NPDA template
         "alternative_headings": [
-            "Observation Date -Psychological Assessment Screening"  # Missing space from old template
+            "Observation Date -Psychological Assessment Screening"
         ],
     },
     {
@@ -262,11 +249,11 @@ CSV_HEADING_OBJECTS_2021 = (
         "model": "Visit",
     },
     {
-        "heading": "Date Level 3 carbohydrate counting education received",
+        "heading": "Date of Level 3 carbohydrate counting education received",
         "model_field": "carbohydrate_counting_level_three_education_date",
         "model": "Visit",
         "alternative_headings": [
-            "Date of Level 3 carbohydrate counting education received"
+            "Date Level 3 carbohydrate counting education received"
         ],
     },
     {
@@ -294,7 +281,8 @@ CSV_HEADING_OBJECTS_2021 = (
         "model_field": "sick_day_rules_training_date",
         "model": "Visit",
         "alternative_headings": [
-            "Date of provision of advice('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia"  # Missing space before bracket
+            # Missing spacing before brackets to accomodate automatically generated Wythenshawe CSVs
+            "Date of provision of advice('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia"
         ],
     },
     {
@@ -326,6 +314,8 @@ CSV_HEADING_OBJECTS_2021 = (
         "model": "Visit",
     },
 )
+
+CSV_HEADING_OBJECTS_2021 = CSV_HEADING_OBJECTS
 
 # Additional/changed headings for 2026+ dataset
 CSV_HEADING_OBJECTS_2026_ADDITIONS = (
@@ -374,7 +364,7 @@ CSV_HEADING_OBJECTS_2026_ADDITIONS = (
     },
     {
         "heading": "Date immunotherapy started",
-        "model_field": "immunotherapy_start_date",
+        "model_field": "immunotherapy_date",
         "model": "Visit",
     },
     {
@@ -510,17 +500,17 @@ ALL_DATES_2021 = [
     "Death Date",
     "Visit/Appointment Date",
     "Observation Date (Height and weight)",
-    "Observation Date: HbA1c Value",
+    "Observation Date: Hba1c Value",
     "Observation Date (Blood Pressure)",
-    "Foot Assessment/Examination Date",
+    "Foot Assessment / Examination Date",
     "Retinal Screening date",
     "Observation Date: Urinary Albumin Level",
-    "Observation Date: Total Cholesterol level",
+    "Observation Date: Total Cholesterol Level",
     "Observation Date: Thyroid Function",
     "Observation Date: Coeliac Disease Screening",
     "Observation Date - Psychological Screening Assessment",
     "Date of offer of referral to smoking cessation service (if patient is a current smoker)",
-    "Date Level 3 carbohydrate counting education received",
+    "Date of Level 3 carbohydrate counting education received",
     "Date of additional appointment with dietitian",
     "Date that influenza immunisation was recommended",
     "Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia",
@@ -535,7 +525,7 @@ ALL_DATES_2026 = [
     "Death Date",
     "Visit/Appointment Date",
     "Observation Date (Height and weight)",
-    "Observation Date: HbA1c Value",
+    "Observation Date: Hba1c Value",
     "Observation Date (Blood Pressure)",
     "Foot Assessment / Examination Date",
     "Retinal Screening date",
@@ -569,12 +559,12 @@ def get_all_dates(dataset_year=None):
 ALL_VISIT_DATES_2021 = [
     ("visit_date", "Visit/Appointment Date"),
     ("height_weight_observation_date", "Observation Date (Height and weight)"),
-    ("hba1c_date", "Observation Date: HbA1c Value"),
+    ("hba1c_date", "Observation Date: Hba1c Value"),
     ("blood_pressure_observation_date", "Observation Date (Blood Pressure)"),
-    ("foot_examination_observation_date", "Foot Assessment/Examination Date"),
+    ("foot_examination_observation_date", "Foot Assessment / Examination Date"),
     ("retinal_screening_observation_date", "Retinal Screening date"),
     ("albumin_creatinine_ratio_date", "Observation Date: Urinary Albumin Level"),
-    ("total_cholesterol_date", "Observation Date: Total Cholesterol level"),
+    ("total_cholesterol_date", "Observation Date: Total Cholesterol Level"),
     ("thyroid_function_date", "Observation Date: Thyroid Function"),
     ("coeliac_screen_date", "Observation Date: Coeliac Disease Screening"),
     (
@@ -608,7 +598,7 @@ ALL_VISIT_DATES_2021 = [
 ALL_VISIT_DATES_2026 = [
     ("visit_date", "Visit/Appointment Date"),
     ("height_weight_observation_date", "Observation Date (Height and weight)"),
-    ("hba1c_date", "Observation Date: HbA1c Value"),
+    ("hba1c_date", "Observation Date: Hba1c Value"),
     ("blood_pressure_observation_date", "Observation Date (Blood Pressure)"),
     ("foot_examination_observation_date", "Foot Assessment / Examination Date"),
     ("retinal_screening_observation_date", "Retinal Screening date"),
@@ -640,7 +630,7 @@ ALL_VISIT_DATES_2026 = [
         "sick_day_rules_training_date",
         "Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia",
     ),
-    ("immunotherapy_start_date", "Date immunotherapy started"),
+    ("immunotherapy_date", "Date immunotherapy started"),
     ("hospital_admission_date", "Start date (Hospital Provider Spell)"),
     ("hospital_discharge_date", "Discharge date (Hospital provider spell)"),
 ]
@@ -666,28 +656,18 @@ ENGLAND_CSV_DATA_TYPES = {
 CSV_DATA_TYPES_MINUS_DATES = {
     "Postcode of usual address": "string",
     "Stated gender": "Int64",
-    "Sex assigned at birth": "Int64",
-    "Ethnic Category": "string",
+    "Ethnic Category": "string",  # choices are all capital letters
     "Diabetes Type": "Int64",
     "Reason for leaving service": "Int64",
     "GP Practice Code": "string",
     "PDU Number": "string",
     "Patient Height (cm)": "float64",
     "Patient Weight (kg)": "float64",
-    "HbA1c Value": "float64",
+    "Hba1c Value": "float64",
     "HbA1c result format": "Int64",
-    "Diabetes Treatment at time of HbA1c measurement": "Int64",
-    "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this as part of a closed loop system?": "Int64",
+    "Diabetes Treatment at time of Hba1c measurement": "Int64",
+    "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?": "Int64",
     "At the time of HbA1c measurement, in addition to standard blood glucose monitoring (SBGM), was the patient using any other method of glucose monitoring?": "Int64",
-    # 2026 fields
-    "Has the patient had a diagnosis of Attention Deficit Hyperactivity Disorder (ADHD) or Autism Spectrum Disorder (ASD)?": "Int64",
-    "Does the patient have a diagnosis of a learning disability?": "Int64",
-    "Insulin regime at time of visit": "Int64",
-    "Other (non-insulin) blood glucose lowering medication at time of visit": "Int64",
-    "Has lifestyle and dietary modification been recommended to reduce blood glucose levels?": "Int64",
-    "Was the patient using a continuous glucose monitor (CGM) at time of visit?": "Int64",
-    "Did the patient receive immunotherapy prior to or after the diagnosis of stage 3 Type 1 diabetes?": "Int64",
-    # Shared fields
     "Systolic Blood Pressure": "Int64",
     "Diastolic Blood pressure": "Int64",
     "Retinal Screening Result": "Int64",
@@ -697,18 +677,12 @@ CSV_DATA_TYPES_MINUS_DATES = {
     "At time of, or following measurement of thyroid function, was the patient prescribed any thyroid treatment?": "Int64",
     "Has the patient been recommended a Gluten-free diet?": "Int64",
     "Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?": "Int64",
-    "Following annual psychological screening, was the patient assessed as requiring additional psychological support outside of routine care?": "Int64",
-    "Was the patient offered an additional appointment with a mental health professional as part of the diabetes MDT?": "Int64",
     "Does the patient smoke?": "Int64",
-    "Does the patient smoke and/or vape": "Int64",
     "Was the patient offered an additional appointment with a paediatric dietitian?": "Int64",
-    "Was the patient offered an additional appointment with a paediatric dietitian during the audit year?": "Int64",
     "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?": "Int64",
     "Reason for admission": "Int64",
     "Only complete if DKA selected in previous question: During this DKA admission did the patient receive any of the following therapies?": "Int64",
     "Only complete if OTHER selected: Reason for admission (free text)": "string",
-    "Initial pH at admission": "float64",
-    "Initial Standard bicarbonate at admission (mmol/l)": "float64",
 }
 
 NONNULL_FIELDS = [
@@ -717,3 +691,18 @@ NONNULL_FIELDS = [
     "PDU Number",
     "Visit/Appointment Date",
 ]
+
+
+def csv_definition_for(model_field_or_column: str):
+    match model_field_or_column:
+        case "nhs_number" | "NHS Number":
+            return UNIQUE_IDENTIFIER_ENGLAND[0]
+        case "unique_reference_number" | "Unique Reference Number":
+            return UNIQUE_IDENTIFIER_JERSEY[0]
+        case _:
+            for item in CSV_HEADING_OBJECTS:
+                if (
+                    item["model_field"] == model_field_or_column
+                    or item["heading"] == model_field_or_column
+                ):
+                    return item

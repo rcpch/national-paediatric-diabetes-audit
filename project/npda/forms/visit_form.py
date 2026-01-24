@@ -29,6 +29,12 @@ class VisitForm(forms.ModelForm):
     class Meta:
         model = Visit
         fields = "__all__"
+        exclude = (
+            "patient",
+            "dataset_year",
+            "created_at",
+            "updated_at",
+        )
 
         widgets = {
             "visit_date": DateInput(),
@@ -98,11 +104,10 @@ class VisitForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.patient = kwargs["initial"].get("patient")
-        dataset_year = kwargs.pop("dataset_year", None)
+        dataset_year = 2021
         self.override_height_weight = kwargs.pop("override_height_weight", False)
         self.audit_period = kwargs.pop("audit_period", None)
         super(VisitForm, self).__init__(*args, **kwargs)
-
         if self.instance and self.instance.pk:
             dataset_year = self.instance.dataset_year
             if dataset_year == 2026:

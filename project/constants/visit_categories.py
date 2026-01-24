@@ -17,7 +17,7 @@ VISIT_CATEGORIES_BY_TAB = {
                 "non_insulin_medication",
                 "dietary_lifestyle_modification",
                 "immunotherapy_received",
-                "immunotherapy_start_date",
+                "immunotherapy_date",
             ],
         },
         "CGM": {

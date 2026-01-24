@@ -54,7 +54,7 @@ VISIT_FIELD_HEADINGS_2021 = {
     # Lifestyle / Education
     "smoking_status": "Does the patient smoke?",
     "smoking_cessation_referral_date": "Date of offer of referral to smoking cessation service (if patient is a current smoker)",
-    "carbohydrate_counting_level_three_education_date": "Date Level 3 carbohydrate counting education received",
+    "carbohydrate_counting_level_three_education_date": "Date of Level 3 carbohydrate counting education received",
     "dietician_additional_appointment_offered": "Was the patient offered an additional appointment with a paediatric dietitian?",
     "dietician_additional_appointment_date": "Date of additional appointment with dietitian",
     "ketone_meter_training": "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?",

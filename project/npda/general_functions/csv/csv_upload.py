@@ -35,15 +35,19 @@ from project.npda.forms.visit_form import VisitForm
 from project.npda.forms.external_patient_validators import validate_patient_async
 from project.npda.forms.external_visit_validators import validate_visit_async
 from project.npda.general_functions.csv.csv_clean import csv_clean
-from project.npda.models import (
-    Patient, 
-    Transfer,
-    Visit,
-    Submission,
-    VisitActivity
-)
+from project.npda.models import Patient, Transfer, Visit, Submission, VisitActivity
 
-def create_csv_submission(pdu, audit_period, csv_file_bytes, csv_file_name, submission_active, user=None, ip_address=None, new_dataframe=None):
+
+def create_csv_submission(
+    pdu,
+    audit_period,
+    csv_file_bytes,
+    csv_file_name,
+    submission_active,
+    user=None,
+    ip_address=None,
+    new_dataframe=None,
+):
     old_submission = Submission.objects.filter(
         paediatric_diabetes_unit=pdu,
         audit_period=audit_period,
@@ -55,22 +59,26 @@ def create_csv_submission(pdu, audit_period, csv_file_bytes, csv_file_name, subm
         old_submission.save()
 
     # Gather unique patient and visit counts and update the submission
-    patient_count, visit_per_patient_count, total_rows = gather_unique_patient_and_visit_counts(dataframe=new_dataframe, is_jersey=pdu.pz_code == "PZ248")
+    patient_count, visit_per_patient_count, total_rows = (
+        gather_unique_patient_and_visit_counts(
+            dataframe=new_dataframe, is_jersey=pdu.pz_code == "PZ248"
+        )
+    )
 
     submission = Submission.objects.create(
         submission_date=timezone.now(),
         submission_by=user,
         paediatric_diabetes_unit=pdu,
-        audit_year=audit_period.audit_year(), # compatibility
+        audit_year=audit_period.audit_year(),  # compatibility
         audit_period=audit_period,
         csv_file=csv_file_bytes,
         csv_file_name=csv_file_name,
         submission_active=submission_active,
-        total_unique_patients = patient_count,
-        total_unique_visits = total_rows,
-        visit_counts_per_patient = json.dumps(visit_per_patient_count)
+        total_unique_patients=patient_count,
+        total_unique_visits=total_rows,
+        visit_counts_per_patient=json.dumps(visit_per_patient_count),
     )
-    
+
     if user:
         VisitActivity.objects.create(
             activity=8,
@@ -84,7 +92,7 @@ def create_csv_submission(pdu, audit_period, csv_file_bytes, csv_file_name, subm
 def tidy_up_old_submissions(pdu, new_submission):
     all_submissions = Submission.objects.filter(
         paediatric_diabetes_unit=pdu,
-        audit_year=new_submission.audit_year, # compatibility
+        audit_year=new_submission.audit_year,  # compatibility
         audit_period=new_submission.audit_period,
     )
 
@@ -102,7 +110,7 @@ async def csv_upload(
     csv_file_name,
     submission,
     allow_empty_visits=False,
-    save_errors_on_submission=True
+    save_errors_on_submission=True,
 ):
     """
     Processes standardised NPDA csv file and persists results in NPDA tables
@@ -147,13 +155,13 @@ async def csv_upload(
         return ret
 
     async def validate_patient_using_form(row, async_client):
-        # Date and reason leaving service are validated by the patient form but saved in Transfer 
+        # Date and reason leaving service are validated by the patient form but saved in Transfer
         fields = row_to_dict(row, Patient) | row_to_dict(row, Transfer)
 
         form = PatientForm(
             fields,
             paediatric_diabetes_unit=pdu,
-            audit_period=submission.audit_period
+            audit_period=submission.audit_period,
         )
         form.async_validation_results = await validate_patient_async(
             postcode=fields["postcode"],
@@ -170,14 +178,18 @@ async def csv_upload(
             Visit,
         )
 
-        form = VisitForm(data=fields, initial={"patient": patient_form.instance}, audit_period=submission.audit_period)
+        form = VisitForm(
+            data=fields,
+            initial={"patient": patient_form.instance},
+            audit_period=submission.audit_period,
+        )
         form.async_validation_results = await validate_visit_async(
             birth_date=patient_form.cleaned_data.get("date_of_birth"),
             observation_date=fields["height_weight_observation_date"],
             height=fields["height"],
             weight=fields["weight"],
             sex=patient_form.cleaned_data.get("sex"),
-            async_client=async_client
+            async_client=async_client,
         )
 
         return form
@@ -216,6 +228,17 @@ async def csv_upload(
 
     def save_errors_and_retain_valid_fields(row_index, form):
         # We want to retain fields so that we can show them in the user interface
+        # Debug: record form validation state for CSV row to help diagnose missing field errors
+        try:
+            logger.debug(
+                "CSV row %s: form.errors=%s; cleaned_data=%s; raw_data=%s",
+                row_index,
+                form.errors.get_json_data() if getattr(form, "errors", None) else {},
+                getattr(form, "cleaned_data", {}),
+                form.data if getattr(form, "data", None) else {},
+            )
+        except Exception:
+            logger.exception("Failed to log CSV form debug info for row %s", row_index)
         # Use the field value from cleaned_data, falling back to data if it's not there
         # We can't retain invalid fields however as they might fail database validation
         for key, value in form.cleaned_data.items():
@@ -237,12 +260,12 @@ async def csv_upload(
         if row_index in errors_to_return:
             for field, errors in errors_to_return[row_index].items():
                 for error in errors:
-                    model_errors[field].append({ "code": "", "message": error})
+                    model_errors[field].append({"code": "", "message": error})
 
         # From forms. ValidationErrors.
         for field, errors in form.errors.get_json_data().items():
             model_errors[field] += errors
-            
+
             # Confusingly the JSON in each instance retains the ValidationError code
             # but we just store the messages for the error json on Submission
             # TODO MRB: Rationalise in https://github.com/rcpch/national-paediatric-diabetes-audit/issues/332
@@ -253,7 +276,7 @@ async def csv_upload(
             form.instance.errors = model_errors
         else:
             form.instance.errors = None
-    
+
     def get_valid_transfer_fields(row, patient_form):
         transfer_fields = row_to_dict(row, Transfer) | {"paediatric_diabetes_unit": pdu}
 
@@ -262,39 +285,45 @@ async def csv_upload(
                 transfer_fields[field] = None
 
         return transfer_fields
-    
+
     def most_recent_modal_value_by_visit_date(rows, column):
         # NPDA analysis has this notion of "Most up-to-date valid mode"
         # My understanding of it is that you should:
         #  - Work out the modal (most common) value
         #  - If there's more than one mode, return the one from the row with the most recent visit
-        values_by_count_and_last_visit_date = rows.groupby(column).agg(
-            Count=(identifier_heading, 'count'),
-            LastVisitDate=('Visit/Appointment Date', 'max')
-        ).sort_values(by=['Count', 'LastVisitDate'])
+        values_by_count_and_last_visit_date = (
+            rows.groupby(column)
+            .agg(
+                Count=(identifier_heading, "count"),
+                LastVisitDate=("Visit/Appointment Date", "max"),
+            )
+            .sort_values(by=["Count", "LastVisitDate"])
+        )
 
         if len(values_by_count_and_last_visit_date) > 0:
             return values_by_count_and_last_visit_date.iloc[-1].name
-    
+
     def smallest(rows, column):
         if len(rows) > 0:
             return rows[column].min()
 
     def smallest_code_with_attached_date(rows, code_column, date_column):
-        rows_with_leaving_service = rows.dropna(subset=[date_column]).sort_values(by=code_column)
+        rows_with_leaving_service = rows.dropna(subset=[date_column]).sort_values(
+            by=code_column
+        )
 
         if len(rows_with_leaving_service) > 0:
             return rows_with_leaving_service.iloc[0][code_column]
-    
+
     def most_recent_by_visit_date(rows, column):
-        if rows['Visit/Appointment Date'].isnull().all():
+        if rows["Visit/Appointment Date"].isnull().all():
             # Unlikely case where there are no visit dates at all (to cover tests)
             return rows.iloc[0][column]
 
-        most_recent_row = rows.loc[rows['Visit/Appointment Date'].idxmax()]
+        most_recent_row = rows.loc[rows["Visit/Appointment Date"].idxmax()]
 
         return most_recent_row[column]
-    
+
     def merge_rows_for_patient(rows, patient_row_index):
         for column in CSV_HEADING_OBJECTS:
             heading = column["heading"]
@@ -314,14 +343,20 @@ async def csv_upload(
 
                 match model_field:
                     case "date_of_birth" | "sex" | "ethnicity":
-                        rows[heading] = most_recent_modal_value_by_visit_date(rows, heading)
+                        rows[heading] = most_recent_modal_value_by_visit_date(
+                            rows, heading
+                        )
                     case "reason_leaving_service":
-                        rows[heading] = smallest_code_with_attached_date(rows, "Reason for leaving service", "Date of leaving service")
+                        rows[heading] = smallest_code_with_attached_date(
+                            rows,
+                            "Reason for leaving service",
+                            "Date of leaving service",
+                        )
                     case "diabetes_type" | "postcode" | "gp_practice_ods_code":
                         rows[heading] = most_recent_by_visit_date(rows, heading)
                     case "diagnosis_date":
                         rows[heading] = smallest(rows, heading)
-        
+
         return rows.iloc[0]
 
     """
@@ -344,7 +379,7 @@ async def csv_upload(
             save_errors_and_retain_valid_fields(patient_row_index, patient_form)
 
             patient = await sync_to_async(lambda: patient_form.save(commit=False))()
-            
+
             # Throw database level issues not covered by the form (eg missing both nhs_number and urn)
             patient.clean()
             await patient.asave()
@@ -394,13 +429,15 @@ async def csv_upload(
             visit_forms = []
             for _, row in rows.iterrows():
                 if allow_empty_visits and pd.isnull(row["Visit/Appointment Date"]):
-                    logger.info(f"Missing visit date for {pdu.pz_code} from {csv_file_name}[{row["row_index"]}]. Skipping creating visit.")
+                    logger.info(
+                        f"Missing visit date for {pdu.pz_code} from {csv_file_name}[{row['row_index']}]. Skipping creating visit."
+                    )
                     continue
 
                 visit_form = await validate_visit_using_form(
                     patient_form, row, async_client
                 )
-                
+
                 # Pull through cleaned_data
                 visit_form.is_valid()
 
