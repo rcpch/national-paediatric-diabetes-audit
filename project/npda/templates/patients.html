@@ -46,6 +46,9 @@
               <p>
                 Use this method if you don't have an electronic patient record or you can't export from it in our CSV format.
               </p>
+              {% if last_submission and not last_submission.csv_file_name %}
+                Patients will be copied from the previous audit year automatically unless they have left service or died.
+              {% endif %}
               <div class="card-actions justify-end">
                 <a href="{% data_url 'pdu-patient-add' %}"
                    class="btn btn-info {% if not perms.npda.can_submit_csv %}btn-disabled{% endif %}">Select</a>
