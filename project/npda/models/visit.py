@@ -22,6 +22,7 @@ from ...constants import (
     PSYCHOLOGICAL_SUPPORT_OUTCOMES,
     RETINAL_SCREENING_RESULTS,
     SMOKING_STATUS,
+    SMOKING_VAPING_STATUS,
     THYROID_TREATMENT_STATUS,
     TREATMENT_TYPES,
     YES_NO_UNKNOWN,
@@ -419,6 +420,14 @@ class Visit(models.Model):
     )
 
     # additional 2026 fields
+    smoking_vaping_status = CategorisedPositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        default=None,
+        choices=SMOKING_VAPING_STATUS,
+        category="Smoking",
+    )
+
     immunotherapy_received = CategorisedPositiveSmallIntegerField(
         null=True,
         blank=True,

@@ -3,8 +3,7 @@ Field headings configuration for NPDA dataset across different years.
 Maps model field names to their display headings from the official dataset documents.
 """
 
-# Field headings for 2021-2025 dataset (from 2021 guidance document)
-FIELD_HEADINGS_2021 = {
+PATIENT_FIELD_HEADINGS_2021 = {
     # Patient Details / Information
     "nhs_number": "NHS Number",
     "date_of_birth": "Date of Birth",
@@ -18,6 +17,10 @@ FIELD_HEADINGS_2021 = {
     "death_date": "Death Date",
     "gp_practice_ods_code": "GP Practice Code",
     "pdu": "PDU Number",
+}
+
+# Field headings for 2021-2025 dataset (from 2021 guidance document)
+VISIT_FIELD_HEADINGS_2021 = {
     "visit_date": "Visit/Appointment Date",
     # Routine Measurements
     "height": "Patient Height (cm)",
@@ -65,8 +68,11 @@ FIELD_HEADINGS_2021 = {
     "hospital_admission_other": "Only complete if OTHER selected: Reason for admission (free text)",
 }
 
+FIELD_HEADINGS_2021 = {**PATIENT_FIELD_HEADINGS_2021, **VISIT_FIELD_HEADINGS_2021}
+
 # Field headings for 2026+ dataset (from 2026 guidance document)
-FIELD_HEADINGS_2026 = {
+
+PATIENT_FIELD_HEADINGS_2026 = {
     # Patient Details / Information
     "nhs_number": "NHS Number",
     "date_of_birth": "Date of Birth",
@@ -77,26 +83,30 @@ FIELD_HEADINGS_2026 = {
     "learning_disability": "Does the patient have a diagnosis of a learning disability?",
     "diabetes_type": "Diabetes Type",
     "diagnosis_date": "Date of Diabetes Diagnosis",
+    "immunotherapy_received": "Did the patient receive immunotherapy prior to or after the diagnosis of stage 3 Type 1 diabetes?",
+    "immunotherapy_start_date": "Date immunotherapy started",
     "date_leaving_service": "Date of leaving service",
     "reason_leaving_service": "Reason for leaving service",
     "death_date": "Death Date",
     "gp_practice_ods_code": "GP Practice Code",
     "pdu": "PDU Number",
+}
+
+VISIT_FIELD_HEADINGS_2026 = {
     "visit_date": "Visit/Appointment Date",
     # Routine Measurements
     "height": "Patient Height (cm)",
     "weight": "Patient Weight (kg)",
     "height_weight_observation_date": "Observation Date (Height and weight)",
     "hba1c": "HbA1c Value",
+    "hba1c_format": "IFCC vs DCCT HbA1c result format",
     "hba1c_date": "Observation Date: HbA1c Value",
     # Treatment/Monitoring
-    "insulin_regime": "Insulin regime at time of visit",
+    "insulin_regimen": "Insulin regime at time of visit",
     "non_insulin_medication": "Other (non-insulin) blood glucose lowering medication at time of visit",
-    "lifestyle_dietary_modification": "Has lifestyle and dietary modification been recommended to reduce blood glucose levels?",
+    "dietary_lifestyle_modification": "Has lifestyle and dietary modification been recommended to reduce blood glucose levels?",
     "cgm_use": "Was the patient using a continuous glucose monitor (CGM) at time of visit?",
     "ketone_meter_training": "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?",
-    "immunotherapy_received": "Did the patient receive immunotherapy prior to or after the diagnosis of stage 3 Type 1 diabetes?",
-    "immunotherapy_start_date": "Date immunotherapy started",
     # Annual Review - Health Checks
     "systolic_blood_pressure": "Systolic Blood Pressure",
     "diastolic_blood_pressure": "Diastolic Blood pressure",
@@ -114,9 +124,9 @@ FIELD_HEADINGS_2026 = {
     "coeliac_screen_date": "Observation Date: Coeliac Disease Screening",
     "gluten_free_diet": "Has the patient been recommended a Gluten-free diet?",
     # Annual Review - Psychology
-    "annual_psychological_assessment_date": "Date of Annual Psychological Screening Assessment",
+    "psychological_screening_assessment_date": "Date of Annual Psychological Screening Assessment",
     "psychological_additional_support_status": "Following annual psychological screening, was the patient assessed as requiring additional psychological support outside of routine care?",
-    "mental_health_appointment_offered": "Was the patient offered an additional appointment with a mental health professional as part of the diabetes MDT?",
+    "psychological_support_outcome": "Was the patient offered an additional appointment with a mental health professional as part of the diabetes MDT?",
     # Lifestyle / Education
     "smoking_vaping_status": "Does the patient smoke and/or vape",
     "smoking_cessation_advice_date": "Date of offer of smoking cessation advice (if patient is a current smoker)",
@@ -135,6 +145,8 @@ FIELD_HEADINGS_2026 = {
     "initial_ph_admission": "Initial pH at admission",
     "initial_bicarbonate_admission": "Initial Standard bicarbonate at admission (mmol/l)",
 }
+
+FIELD_HEADINGS_2026 = {**PATIENT_FIELD_HEADINGS_2026, **VISIT_FIELD_HEADINGS_2026}
 
 
 def get_field_heading(field_name, dataset_year):

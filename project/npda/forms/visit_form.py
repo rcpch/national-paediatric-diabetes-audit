@@ -3,7 +3,11 @@ from decimal import Decimal, ROUND_HALF_UP
 from django import forms
 from django.core.exceptions import ValidationError
 
-from project.npda.general_functions.headings import get_field_heading
+from project.npda.general_functions.headings import (
+    VISIT_FIELD_HEADINGS_2021,
+    VISIT_FIELD_HEADINGS_2026,
+    get_field_heading,
+)
 from project.npda.general_functions.justification_or_standard import (
     get_field_notes,
     get_field_justification_standard,
@@ -24,49 +28,61 @@ class VisitForm(forms.ModelForm):
 
     class Meta:
         model = Visit
-        fields = [
-            "visit_date",
-            "height",
-            "weight",
-            "bmi",
-            "height_weight_observation_date",
-            "hba1c",
-            "hba1c_format",
-            "hba1c_date",
-            "treatment",
-            "closed_loop_system",
-            "glucose_monitoring",
-            "systolic_blood_pressure",
-            "diastolic_blood_pressure",
-            "blood_pressure_observation_date",
-            "foot_examination_observation_date",
-            "retinal_screening_observation_date",
-            "retinal_screening_result",
-            "albumin_creatinine_ratio",
-            "albumin_creatinine_ratio_date",
-            "albuminuria_stage",
-            "total_cholesterol",
-            "total_cholesterol_date",
-            "thyroid_function_date",
-            "thyroid_treatment_status",
-            "coeliac_screen_date",
-            "gluten_free_diet",
-            "psychological_screening_assessment_date",
-            "psychological_additional_support_status",
-            "smoking_status",
-            "smoking_cessation_referral_date",
-            "carbohydrate_counting_level_three_education_date",
-            "dietician_additional_appointment_offered",
-            "dietician_additional_appointment_date",
-            "flu_immunisation_recommended_date",
-            "ketone_meter_training",
-            "sick_day_rules_training_date",
-            "hospital_admission_date",
-            "hospital_discharge_date",
-            "hospital_admission_reason",
-            "dka_additional_therapies",
-            "hospital_admission_other",
-        ]
+        fields = "__all__"
+        # fields = [
+        #     "visit_date",
+        #     "height",
+        #     "weight",
+        #     "bmi",
+        #     "height_weight_observation_date",
+        #     "hba1c",
+        #     "hba1c_format",
+        #     "hba1c_date",
+        #     "treatment",
+        #     "closed_loop_system",
+        #     "glucose_monitoring",
+        #     "systolic_blood_pressure",
+        #     "diastolic_blood_pressure",
+        #     "blood_pressure_observation_date",
+        #     "foot_examination_observation_date",
+        #     "retinal_screening_observation_date",
+        #     "retinal_screening_result",
+        #     "albumin_creatinine_ratio",
+        #     "albumin_creatinine_ratio_date",
+        #     "albuminuria_stage",
+        #     "total_cholesterol",
+        #     "total_cholesterol_date",
+        #     "thyroid_function_date",
+        #     "thyroid_treatment_status",
+        #     "coeliac_screen_date",
+        #     "gluten_free_diet",
+        #     "psychological_screening_assessment_date",
+        #     "psychological_additional_support_status",
+        #     "smoking_status",
+        #     "smoking_cessation_referral_date",
+        #     "carbohydrate_counting_level_three_education_date",
+        #     "dietician_additional_appointment_offered",
+        #     "dietician_additional_appointment_date",
+        #     "flu_immunisation_recommended_date",
+        #     "ketone_meter_training",
+        #     "sick_day_rules_training_date",
+        #     "hospital_admission_date",
+        #     "hospital_discharge_date",
+        #     "hospital_admission_reason",
+        #     "dka_additional_therapies",
+        #     "hospital_admission_other",
+        #     # Additional 2026 fields
+        #     "immunotherapy_received",
+        #     "immunotherapy_date",
+        #     "blood_gas_ph",
+        #     "blood_gas_bicarbonate",
+        #     "insulin_regimen",
+        #     "non_insulin_medication",
+        #     "dietary_lifestyle_modification",
+        #     "cgm_use",
+        #     "psychological_support_outcome",
+        # ]
+        fields = "__all__"
 
         widgets = {
             "visit_date": DateInput(),
@@ -138,14 +154,22 @@ class VisitForm(forms.ModelForm):
         self.override_height_weight = kwargs.pop("override_height_weight", False)
         self.audit_period = kwargs.pop("audit_period", None)
         super(VisitForm, self).__init__(*args, **kwargs)
-        if dataset_year is None:
-            if self.instance and self.instance.pk:
-                dataset_year = self.instance.dataset_year
-            else:
-                # Default for new records
-                dataset_year = 2026  # or get from settings/context
 
-        for field_name, field in self.fields.items():
+        if self.instance and self.instance.pk:
+            dataset_year = self.instance.dataset_year
+            if dataset_year == 2026:
+                allowed_fields = list(VISIT_FIELD_HEADINGS_2026.keys())
+            else:
+                # Future-proofing for other dataset years
+                allowed_fields = list(VISIT_FIELD_HEADINGS_2021.keys())
+        else:
+            # Default for new records
+            dataset_year = 2026  # or get from settings/context
+            allowed_fields = list(VISIT_FIELD_HEADINGS_2026.keys())
+
+        for field_name in allowed_fields:
+            if field_name not in self.fields:
+                continue  # Skip if field is not present in the form
             model_field = Visit._meta.get_field(field_name)
             # Set help text from model field
             if dataset_year:
@@ -154,14 +178,13 @@ class VisitForm(forms.ModelForm):
                 note = get_field_notes(field_name, dataset_year)
                 reference = get_field_justification_standard(field_name, dataset_year)
                 if label:
-                    field.label = label
+                    self.fields[field_name].label = label
                 if note:
-                    field.help_text = note
+                    self.fields[field_name].help_text = note
                 if reference:
-                    field.reference = reference
-
+                    self.fields[field_name].reference = reference
             if hasattr(model_field, "category"):
-                field.category = model_field.category
+                self.fields[field_name].category = model_field.category
 
     """
     Custom clean method for all fields requiring choices
