@@ -113,7 +113,9 @@ class VisitForm(forms.ModelForm):
             "gluten_free_diet": forms.Select(),
             "psychological_screening_assessment_date": DateInput(),
             "psychological_additional_support_status": forms.Select(),
+            "psychological_support_outcome": forms.Select(),
             "smoking_status": forms.Select(),
+            "smoking_vaping_status": forms.Select(),
             "smoking_cessation_referral_date": DateInput(),
             "carbohydrate_counting_level_three_education_date": DateInput(),
             "dietician_additional_appointment_offered": forms.Select(),
@@ -177,12 +179,9 @@ class VisitForm(forms.ModelForm):
                 label = get_field_heading(field_name, dataset_year)
                 note = get_field_notes(field_name, dataset_year)
                 reference = get_field_justification_standard(field_name, dataset_year)
-                if label:
-                    self.fields[field_name].label = label
-                if note:
-                    self.fields[field_name].help_text = note
-                if reference:
-                    self.fields[field_name].reference = reference
+                self.fields[field_name].label = label
+                self.fields[field_name].help_text = note
+                self.fields[field_name].reference = reference
             if hasattr(model_field, "category"):
                 self.fields[field_name].category = model_field.category
 

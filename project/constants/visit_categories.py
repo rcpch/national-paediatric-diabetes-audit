@@ -16,6 +16,8 @@ VISIT_CATEGORIES_BY_TAB = {
                 "insulin_regimen",
                 "non_insulin_medication",
                 "dietary_lifestyle_modification",
+                "immunotherapy_received",
+                "immunotherapy_start_date",
             ],
         },
         "CGM": {
@@ -108,8 +110,8 @@ VISIT_CATEGORIES_BY_TAB = {
                 "hospital_admission_reason",
                 "dka_additional_therapies",
                 "hospital_admission_other",
-                "initial_ph_admission",
-                "initial_bicarbonate_admission",
+                "blood_gas_ph",
+                "blood_gas_bicarbonate",
             ],
         }
     },

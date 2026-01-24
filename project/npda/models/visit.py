@@ -447,8 +447,8 @@ class Visit(models.Model):
         null=True,
         blank=True,
         default=None,
-        max_digits=4,
-        decimal_places=3,
+        max_digits=3,
+        decimal_places=2,
         category="Hospital Admission",
     )
 
@@ -456,8 +456,8 @@ class Visit(models.Model):
         null=True,
         blank=True,
         default=None,
-        max_digits=5,
-        decimal_places=2,
+        max_digits=3,
+        decimal_places=1,
         category="Hospital Admission",
     )
 
@@ -498,7 +498,7 @@ class Visit(models.Model):
         blank=True,
         default=None,
         choices=PSYCHOLOGICAL_SUPPORT_OUTCOMES,
-        category="Psychological Support",
+        category="Psychology",
     )
 
     # validation fields

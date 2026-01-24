@@ -474,12 +474,12 @@ FIELD_NOTES_2026 = {
     "dka_additional_therapies": (
         "Mandatory only if 'DKA' (option 2) selected as Reason for admission."
     ),
-    "initial_ph_admission": (
+    "blood_gas_ph": (
         "If a blood gas was performed during the admission, either in DKA or not, please enter the initial (first recorded during "
         "this admission) pH and standard bicarbonate results.\n\n"
         "If multiple blood gas tests were performed, please enter the first one."
     ),
-    "initial_bicarbonate_admission": (
+    "blood_gas_bicarbonate": (
         "If a blood gas was performed during the admission, either in DKA or not, please enter the initial (first recorded during "
         "this admission) pH and standard bicarbonate results.\n\n"
         "If multiple blood gas tests were performed, please enter the first one."
@@ -862,10 +862,10 @@ FIELD_JUSTIFICATION_STANDARDS_2026 = {
         "With Best Practice Tariff it is envisaged that this type of admission will decrease and this is of interest to commissioners."
     ),
     "dka_additional_therapies": ("To assess if cerebral oedema in DKA was suspected."),
-    "initial_ph_admission": (
+    "blood_gas_ph": (
         "To assess whether an admission meets DKA diagnostic criteria. To assess the level of severity of DKA."
     ),
-    "initial_bicarbonate_admission": (
+    "blood_gas_bicarbonate": (
         "To assess whether an admission meets DKA diagnostic criteria. To assess the level of severity of DKA."
     ),
 }

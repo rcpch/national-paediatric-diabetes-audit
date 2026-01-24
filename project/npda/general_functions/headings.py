@@ -83,8 +83,6 @@ PATIENT_FIELD_HEADINGS_2026 = {
     "learning_disability": "Does the patient have a diagnosis of a learning disability?",
     "diabetes_type": "Diabetes Type",
     "diagnosis_date": "Date of Diabetes Diagnosis",
-    "immunotherapy_received": "Did the patient receive immunotherapy prior to or after the diagnosis of stage 3 Type 1 diabetes?",
-    "immunotherapy_start_date": "Date immunotherapy started",
     "date_leaving_service": "Date of leaving service",
     "reason_leaving_service": "Reason for leaving service",
     "death_date": "Death Date",
@@ -106,6 +104,8 @@ VISIT_FIELD_HEADINGS_2026 = {
     "non_insulin_medication": "Other (non-insulin) blood glucose lowering medication at time of visit",
     "dietary_lifestyle_modification": "Has lifestyle and dietary modification been recommended to reduce blood glucose levels?",
     "cgm_use": "Was the patient using a continuous glucose monitor (CGM) at time of visit?",
+    "immunotherapy_received": "Did the patient receive immunotherapy prior to or after the diagnosis of stage 3 Type 1 diabetes?",
+    "immunotherapy_date": "Date immunotherapy started",
     "ketone_meter_training": "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?",
     # Annual Review - Health Checks
     "systolic_blood_pressure": "Systolic Blood Pressure",
@@ -142,8 +142,8 @@ VISIT_FIELD_HEADINGS_2026 = {
     "hospital_admission_reason": "Reason for admission",
     "hospital_admission_other": "Only complete if OTHER selected: Reason for admission (free text)",
     "dka_additional_therapies": "Only complete if DKA selected in previous question: During this DKA admission did the patient receive any of the following therapies?",
-    "initial_ph_admission": "Initial pH at admission",
-    "initial_bicarbonate_admission": "Initial Standard bicarbonate at admission (mmol/l)",
+    "blood_gas_ph": "Initial pH at admission",
+    "blood_gas_bicarbonate": "Initial Standard bicarbonate at admission (mmol/l)",
 }
 
 FIELD_HEADINGS_2026 = {**PATIENT_FIELD_HEADINGS_2026, **VISIT_FIELD_HEADINGS_2026}
