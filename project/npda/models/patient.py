@@ -21,14 +21,22 @@ from project.npda.models.custom_validators import (
     validate_unique_reference_number,
 )
 
+from project.npda.general_functions.headings import get_field_heading
+from project.npda.general_functions.justification_or_standard import (
+    get_field_notes,
+    get_field_justification_standard,
+)
+
 # npda imports
 from ...constants import (
-    ETHNICITIES,
+    ADHD_ASD,
     DIABETES_TYPES,
+    ETHNICITIES,
     SEX_TYPE,
     CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING,
     CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING,
     CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
+    YES_NO_UNKNOWN,
 )
 from ..general_functions import stringify_time_elapsed
 
@@ -46,12 +54,10 @@ class Patient(models.Model):
     """
 
     nhs_number = CharField(  # the NHS number for England and Wales
-        "NHS Number",
         unique=False,
         validators=[validate_nhs_number],
         null=True,
         blank=True,
-        help_text="This is the NHS number for England and Wales. It is used to identify the patient in the audit.",
     )
 
     unique_reference_number = CharField(
@@ -64,11 +70,10 @@ class Patient(models.Model):
         help_text="This is a unique reference number for Jersey patients. It is used to identify the patient in the audit.",
     )
 
-    sex = models.IntegerField("Stated gender", choices=SEX_TYPE, blank=True, null=True)
+    sex = models.IntegerField(choices=SEX_TYPE, blank=True, null=True)
 
     date_of_birth = DateField("date of birth (YYYY-MM-DD)")
     postcode = CharField(
-        "Postcode of usual address",
         blank=True,
         null=True,
     )
@@ -108,21 +113,16 @@ class Patient(models.Model):
     )
 
     # Mandatory for the questionnaire but we still want to save data if missing in a CSV upload
-    diabetes_type = PositiveSmallIntegerField(
-        verbose_name="Diabetes Type", choices=DIABETES_TYPES, null=True
-    )
+    diabetes_type = PositiveSmallIntegerField(choices=DIABETES_TYPES, null=True)
 
-    diagnosis_date = DateField(verbose_name="Date of Diabetes Diagnosis", null=True)
+    diagnosis_date = DateField(null=True)
 
     death_date = models.DateField(
-        verbose_name="Date of death",
         blank=True,
         null=True,
     )
 
-    gp_practice_ods_code = models.CharField(
-        verbose_name="GP Practice Code", blank=True, null=True
-    )
+    gp_practice_ods_code = models.CharField(blank=True, null=True)
 
     gp_practice_postcode = models.CharField(
         verbose_name="GP Practice postcode", blank=True, null=True
@@ -134,6 +134,24 @@ class Patient(models.Model):
 
     errors = models.JSONField(
         verbose_name="Validation errors", blank=True, null=True, default=None
+    )
+
+    dataset_year = models.PositiveSmallIntegerField(
+        verbose_name="Dataset Year",
+        default=2021,
+        help_text="The dataset year used for this patient.",
+    )
+
+    adhd_asd_diagnosis = models.PositiveSmallIntegerField(
+        choices=ADHD_ASD,
+        blank=True,
+        null=True,
+    )
+
+    learning_disability = models.PositiveSmallIntegerField(
+        choices=YES_NO_UNKNOWN,
+        blank=True,
+        null=True,
     )
 
     class Meta:
@@ -226,11 +244,11 @@ class Patient(models.Model):
             app_label="npda", model_name="PatientSubmission"
         )
 
-        audit_period = apps.get_model(
-            app_label="npda", model_name="AuditPeriod"
-        ).objects.filter(
-            start_date__year=current_audit_year
-        ).first()
+        audit_period = (
+            apps.get_model(app_label="npda", model_name="AuditPeriod")
+            .objects.filter(start_date__year=current_audit_year)
+            .first()
+        )
 
         return (
             PatientSubmission.objects.filter(
@@ -254,11 +272,11 @@ class Patient(models.Model):
             app_label="npda", model_name="PatientSubmission"
         )
 
-        audit_period = apps.get_model(
-            app_label="npda", model_name="AuditPeriod"
-        ).objects.filter(
-            start_date__year=current_audit_year
-        ).first()
+        audit_period = (
+            apps.get_model(app_label="npda", model_name="AuditPeriod")
+            .objects.filter(start_date__year=current_audit_year)
+            .first()
+        )
 
         all_submissions = (
             PatientSubmission.objects.filter(
@@ -273,3 +291,24 @@ class Patient(models.Model):
             .all()
         )
         return all_submissions
+
+    # Labels since introduction of the 2026/7 dataset
+
+    def get_sex_label(self):
+        """Returns the label for the sex field based on the dataset year."""
+        if self.dataset_year and self.dataset_year >= 2026:
+            return "Sex assigned at birth"
+        else:
+            return "Stated gender"
+
+    def get_field_label(self, field_name):
+        """Get year-appropriate label for any field."""
+        return get_field_heading(field_name, self.dataset_year)
+
+    def get_field_help_text(self, field_name):
+        """Get year-appropriate help text for any field."""
+        return get_field_notes(field_name, self.dataset_year)
+
+    def get_field_justification_or_standard(self, field_name):
+        """Get year-appropriate justification or standard for any field."""
+        return get_field_justification_standard(field_name, self.dataset_year)
