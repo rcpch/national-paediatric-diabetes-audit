@@ -1,7 +1,8 @@
 from .dgc_centile_calculations import *
 from .email import *
 from .group_for_group import *
-from headings import *
+
+from .headings import *
 from .index_multiple_deprivation import *
 from .ip_address import *
 from .map import *

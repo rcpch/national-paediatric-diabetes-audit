@@ -37,7 +37,7 @@ from project.npda.general_functions.justification_or_standard import (
 logger = logging.getLogger(__name__)
 
 
-class Visit(models.Model, CategorisedFormFieldMixin):
+class Visit(models.Model):
     visit_date = CategorisedDateField(
         null=True,
         blank=True,
