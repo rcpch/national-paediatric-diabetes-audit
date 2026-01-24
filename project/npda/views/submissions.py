@@ -302,6 +302,10 @@ class SubmissionsListView(
                 raise PermissionDenied(
                     f"User {request.user.email} does not have permission to download data for PDU {submission.paediatric_diabetes_unit.pz_code}.",
                 )
+        
+
+        if button_name == "start-questionnaire-submission":
+            raise NotImplementedError("Questionnaire submission not implemented yet.")
             
 
         # POST is not supported for this view

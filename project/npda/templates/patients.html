@@ -48,11 +48,17 @@
               </p>
               {% if last_submission and not last_submission.csv_file_name %}
                 Patients will be copied from the previous audit year automatically unless they have left service or died.
+                <form action="{% data_url 'pdu-submissions' %}" method="POST" class="card-actions justify-end">
+                  {% csrf_token %}
+                  <input type="hidden" name="submit-data" value="start-questionnaire-submission" />
+                  <input type="submit" class="btn btn-info" value="Select" />
+                </form>
+              {% else %}
+                <div class="card-actions justify-end">
+                  <a href="{% data_url 'pdu-patient-add' %}"
+                    class="btn btn-info {% if not perms.npda.can_submit_csv %}btn-disabled{% endif %}">Select</a>
+                </div>
               {% endif %}
-              <div class="card-actions justify-end">
-                <a href="{% data_url 'pdu-patient-add' %}"
-                   class="btn btn-info {% if not perms.npda.can_submit_csv %}btn-disabled{% endif %}">Select</a>
-              </div>
             </div>
           </div>
         </div>
