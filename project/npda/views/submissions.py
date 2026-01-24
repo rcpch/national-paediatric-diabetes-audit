@@ -48,7 +48,8 @@ from ..models import (
     PaediatricDiabetesUnit,
     AuditPeriod,
     Patient,
-    PatientSubmission
+    PatientSubmission,
+    Transfer
 )
 from ..forms.upload import UploadFileForm
 from ..tasks import upload_csv_task
@@ -335,16 +336,11 @@ class SubmissionsListView(
                 )
 
                 next_patients = Patient.objects.bulk_create(last_patients)
-
-                next_patient_subs = []
-                for patient in next_patients:
-                    next_patient_subs.append(
-                        PatientSubmission(
-                            patient=patient,
-                            submission=next_submission
-                        )
-                    )
                 
+                next_patient_transfers = [Transfer(patient=patient, paediatric_diabetes_unit=self.pdu) for patient in next_patients]
+                Transfer.objects.bulk_create(next_patient_transfers)
+
+                next_patient_subs = [PatientSubmission(patient=patient, submission=next_submission) for patient in next_patients]
                 PatientSubmission.objects.bulk_create(next_patient_subs)
 
             return redirect("pdu-patients",
