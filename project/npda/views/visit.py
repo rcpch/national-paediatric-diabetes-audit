@@ -254,6 +254,9 @@ class VisitUpdateView(
 
         patient = visit.patient
         context["patient"] = visit.patient
+        context["paediatric_diabetes_unit"] = (
+            patient.submissions.first().paediatric_diabetes_unit
+        )
 
         context["breadcrumbs"] = patient_breadcrumbs(
             self.pdu,
