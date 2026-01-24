@@ -312,7 +312,7 @@ def test_patients_copied_from_previous_questionnaire_submission(
     assert next_submission is not None
 
     # Verify that ONLY patient_1 (the normal patient without leaving/death data) was copied
-    assert next_submission.patients.count() == 2  # The new patient + patient_1
-    assert patient_1 in next_submission.patients.all()
-    assert patient_2 not in next_submission.patients.all()
-    assert patient_3 not in next_submission.patients.all()
+    assert next_submission.patients.count() == 1  # patient_1
+    assert next_submission.patients.filter(nhs_number=patient_1.nhs_number).exists()
+    assert not next_submission.patients.filter(nhs_number=patient_2.nhs_number).exists()
+    assert not next_submission.patients.filter(nhs_number=patient_3.nhs_number).exists()

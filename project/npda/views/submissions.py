@@ -11,6 +11,7 @@ from django.apps import apps
 from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.db.models import Count, Case, When, Value, IntegerField, OuterRef, Subquery
 from django.db.models.functions import Concat, ExtractMonth, ExtractYear
 from django.http import HttpResponse
@@ -46,7 +47,8 @@ from ..models import (
     OrganisationEmployer,
     PaediatricDiabetesUnit,
     AuditPeriod,
-    Patient
+    Patient,
+    PatientSubmission
 )
 from ..forms.upload import UploadFileForm
 from ..tasks import upload_csv_task
@@ -305,7 +307,50 @@ class SubmissionsListView(
         
 
         if button_name == "start-questionnaire-submission":
-            raise NotImplementedError("Questionnaire submission not implemented yet.")
+            previous_audit_period = self.audit_period.previous_audit_period()
+
+            next_submission = Submission.objects.get_submission_for_request(self.pdu, self.audit_period)
+            last_submission = Submission.objects.get_submission_for_request(self.pdu, previous_audit_period)
+
+            if next_submission:
+                raise Error(f"Cannot start questionnaire submission. Active submission already exists for this audit period. audit_period={self.audit_period}, previous_audit_period={previous_audit_period}, pdu={self.pdu.pz_code}")
+
+            if last_submission and last_submission.csv_file_name:
+                raise Error(f"Cannot start questionnaire submission. Previous submission was CSV file. audit_period={self.audit_period}, previous_audit_period={previous_audit_period}, pdu={self.pdu.pz_code}")
+
+            last_patients = last_submission.patients.all() if last_submission else Patients.objects.none()
+            
+            # Clone
+            for patient in last_patients:
+                patient.pk = None
+            
+            with transaction.atomic():
+                next_submission = Submission.objects.create(
+                    paediatric_diabetes_unit=self.pdu,
+                    audit_period=self.audit_period,
+                    audit_year=self.audit_period.audit_year(),
+                    submission_active=True,
+                    submission_by=request.user,
+                    submission_date=datetime.now(timezone.utc),
+                )
+
+                next_patients = Patient.objects.bulk_create(last_patients)
+
+                next_patient_subs = []
+                for patient in next_patients:
+                    next_patient_subs.append(
+                        PatientSubmission(
+                            patient=patient,
+                            submission=next_submission
+                        )
+                    )
+                
+                PatientSubmission.objects.bulk_create(next_patient_subs)
+
+            return redirect("pdu-patients",
+                pz_code=self.pdu.pz_code,
+                audit_period=self.audit_period.slug
+            )
             
 
         # POST is not supported for this view
