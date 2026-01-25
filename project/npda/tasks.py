@@ -6,7 +6,12 @@ from asgiref.sync import async_to_sync
 
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 from project.npda.models.submission import Submission
-from project.npda.general_functions.csv import csv_parse, csv_upload, tidy_up_old_submissions
+from project.npda.general_functions.csv import (
+    csv_parse,
+    csv_upload,
+    tidy_up_old_submissions,
+    csv_year,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -28,10 +33,11 @@ def upload_csv_task(submission_id):
 
     logger.info(f"This is the submission to process: {submission} [{submission.id}]")
 
+    # Determine the dataset year from the CSV data
+    dataset_year = csv_year(io.BytesIO(submission.csv_file))
+
     # CSV parsing errors are done inline in the route that handles the file upload
-    parsed_csv = csv_parse(
-        io.BytesIO(submission.csv_file)
-    )
+    parsed_csv = csv_parse(io.BytesIO(submission.csv_file), dataset_year=dataset_year)
 
     csv_upload_sync = async_to_sync(csv_upload)
 

@@ -315,6 +315,7 @@ CSV_HEADING_OBJECTS = (
     },
 )
 
+# Combined CSV heading objects (use for backward compatibility)
 CSV_HEADING_OBJECTS_2021 = CSV_HEADING_OBJECTS
 
 # Additional/changed headings for 2026+ dataset
@@ -430,8 +431,357 @@ CSV_HEADING_OBJECTS_2026_ADDITIONS = (
     },
 )
 
-# Combined CSV heading objects (use for backward compatibility)
-CSV_HEADING_OBJECTS = CSV_HEADING_OBJECTS_2021
+CSV_HEADING_OBJECTS_2026 = (
+    # patient
+    {
+        "heading": "Date of Birth",
+        "model_field": "date_of_birth",
+        "model": "Patient",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Postcode of usual address",
+        "model_field": "postcode",
+        "model": "Patient",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Sex assigned at birth†††",
+        "model_field": "sex",
+        "model": "Patient",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Ethnic Category",
+        "model_field": "ethnicity",
+        "model": "Patient",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Has the patient had a diagnosis of Attention Deficit Hyperactivity Disorder (ADHD) or Autism Spectrum Disorder (ASD)?",
+        "model_field": "adhd_asd_diagnosis",
+        "model": "Patient",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Does the patient have a diagnosis of a learning disability?†",
+        "model_field": "learning_disability",
+        "model": "Patient",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Diabetes Type",
+        "model_field": "diabetes_type",
+        "model": "Patient",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Date of Diabetes Diagnosis",
+        "model_field": "diagnosis_date",
+        "model": "Patient",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Date of leaving service",
+        "model_field": "date_leaving_service",
+        "model": "Transfer",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Reason for leaving service",
+        "model_field": "reason_leaving_service",
+        "model": "Transfer",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Death Date",
+        "model_field": "death_date",
+        "model": "Patient",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "GP Practice Code",
+        "model_field": "gp_practice_ods_code",
+        "model": "Patient",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "PDU Number",
+        "model_field": "pdu",
+        #    Reference attached to Transfer in csv_upload
+    },
+    # Visit
+    {
+        "heading": "Visit/Appointment Date",
+        "model_field": "visit_date",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Patient Height (cm)",
+        "model_field": "height",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Patient Weight (kg)",
+        "model_field": "weight",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Observation Date (Height and weight)",
+        "model_field": "height_weight_observation_date",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Hba1c Value",
+        "model_field": "hba1c",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Observation Date: HbA1c Value†",
+        "model_field": "hba1c_date",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Insulin regime at time of visit†",
+        "model_field": "insulin_regimen",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Other (non-insulin) blood glucose lowering medication at time of visit†",
+        "model_field": "non_insulin_medication",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Has lifestyle and dietary modification been recommended to reduce blood glucose levels?†",
+        "model_field": "dietary_lifestyle_modification",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Was the patient using a continuous glucose monitor (CGM) at time of visit?†",
+        "model_field": "cgm_use",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?††",
+        "model_field": "ketone_meter_training",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Did the patient receive immunotherapy prior to or after the diagnosis of stage 3 Type 1 diabetes?†",
+        "model_field": "immunotherapy_received",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Date immunotherapy started†",
+        "model_field": "immunotherapy_date",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Systolic Blood Pressure††",
+        "model_field": "systolic_blood_pressure",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Diastolic Blood pressure†",
+        "model_field": "diastolic_blood_pressure",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Observation Date (Blood Pressure)",
+        "model_field": "blood_pressure_observation_date",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Foot Assessment / Examination Date",
+        "model_field": "foot_examination_observation_date",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Retinal Screening date",
+        "model_field": "retinal_screening_observation_date",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Retinal Screening Result",
+        "model_field": "retinal_screening_result",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Urinary Albumin Level (ACR)",
+        "model_field": "albumin_creatinine_ratio",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Observation Date: Urinary Albumin Level",
+        "model_field": "albumin_creatinine_ratio_date",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Albuminuria Stage",
+        "model_field": "albuminuria_stage",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Total Cholesterol Level (mmol/l)",
+        "model_field": "total_cholesterol",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Observation Date: Total Cholesterol Level",
+        "model_field": "total_cholesterol_date",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Observation Date: Thyroid Function",
+        "model_field": "thyroid_function_date",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "At time of, or following measurement of thyroid function, was the patient prescribed any thyroid treatment?",
+        "model_field": "thyroid_treatment_status",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Observation Date: Coeliac Disease Screening",
+        "model_field": "coeliac_screen_date",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Has the patient been recommended a Gluten-free diet?",
+        "model_field": "gluten_free_diet",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Does the patient smoke and/or vape",
+        "model_field": "smoking_vaping_status",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Date of offer of smoking cessation advice (if patient is a current smoker)",
+        "model_field": "smoking_cessation_referral_date",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Date that influenza immunisation was recommended",
+        "model_field": "flu_immunisation_recommended_date",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia††",
+        "model_field": "sick_day_rules_training_date",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Date of Annual Psychological Screening Assessment††",
+        "model_field": "psychological_screening_assessment_date",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Following annual psychological screening, was the patient assessed as requiring additional psychological support outside of routine care?†",
+        "model_field": "psychological_additional_support_status",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Was the patient offered an additional appointment with a mental health professional as part of the diabetes MDT?†",
+        "model_field": "psychological_support_outcome",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Date of Level 3 carbohydrate counting education received",
+        "model_field": "carbohydrate_counting_level_three_education_date",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Was the patient offered an additional appointment with a paediatric dietitian during the audit year?",
+        "model_field": "dietician_additional_appointment_offered",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Date of additional appointment with dietitian",
+        "model_field": "dietician_additional_appointment_date",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Start date (Hospital Provider Spell)",
+        "model_field": "hospital_admission_date",
+        "model": "",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Discharge date (Hospital provider spell)",
+        "model_field": "hospital_discharge_date",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Reason for admission",
+        "model_field": "hospital_admission_reason",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Only complete if OTHER selected: Reason for admission (free text)",
+        "model_field": "hospital_admission_other",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Only complete if DKA selected in previous question: During this DKA admission did the patient receive any of the following therapies?",
+        "model_field": "dka_additional_therapies",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Initial pH at admission†",
+        "model_field": "blood_gas_ph",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Initial Standard bicarbonate at admission (mmol/l)",
+        "model_field": "blood_gas_bicarbonate",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+)
 
 
 def get_csv_heading_objects(dataset_year=None):
@@ -454,7 +804,7 @@ def get_csv_heading_objects(dataset_year=None):
             headings_dict[item["model_field"]] = item
 
         # Override/add with 2026 versions
-        for item in CSV_HEADING_OBJECTS_2026_ADDITIONS:
+        for item in CSV_HEADING_OBJECTS_2026:
             headings_dict[item["model_field"]] = item
 
         return tuple(headings_dict.values())
@@ -479,7 +829,9 @@ def csv_definition_for(model_field_or_column: str, dataset_year=None):
         case "unique_reference_number" | "Unique Reference Number":
             return UNIQUE_IDENTIFIER_JERSEY[0]
         case _:
-            csv_objects = get_csv_heading_objects(dataset_year)
+            csv_objects = get_csv_heading_objects_for_year_and_unique_identifier(
+                dataset_year, unique_identifier="england"
+            )
             for item in csv_objects:
                 if item["model_field"] == model_field_or_column:
                     return item
@@ -693,16 +1045,24 @@ NONNULL_FIELDS = [
 ]
 
 
-def csv_definition_for(model_field_or_column: str):
-    match model_field_or_column:
-        case "nhs_number" | "NHS Number":
-            return UNIQUE_IDENTIFIER_ENGLAND[0]
-        case "unique_reference_number" | "Unique Reference Number":
-            return UNIQUE_IDENTIFIER_JERSEY[0]
-        case _:
-            for item in CSV_HEADING_OBJECTS:
-                if (
-                    item["model_field"] == model_field_or_column
-                    or item["heading"] == model_field_or_column
-                ):
-                    return item
+def get_csv_heading_objects_for_year_and_unique_identifier(
+    dataset_year=2021, unique_identifier="england"
+):
+    """
+    Returns the appropriate CSV heading objects for the given dataset year and unique identifier.
+
+    Args:
+        dataset_year: The dataset year (e.g., 2021, 2026). If None, returns 2021 format.
+        unique_identifier: "england" or "jersey" to specify which unique identifier to include.
+
+    Returns:
+        tuple: CSV heading objects appropriate for the dataset year and unique identifier
+    """
+    csv_heading_objects = get_csv_heading_objects(dataset_year)
+
+    if unique_identifier == "england":
+        return UNIQUE_IDENTIFIER_ENGLAND + csv_heading_objects
+    elif unique_identifier == "jersey":
+        return UNIQUE_IDENTIFIER_JERSEY + csv_heading_objects
+    else:
+        raise ValueError("unique_identifier must be either 'england' or 'jersey'")
