@@ -88,7 +88,7 @@ def csv_clean(df, dataset_year=2021):
         s = str(v)
         s = unicodedata.normalize("NFKD", s)
         s = "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
-        s = s.replace("\u00A0", " ")
+        s = s.replace("\u00a0", " ")
         s = s.strip()
         s = s.strip("'\"“”‘’`·†")
         s = re.sub(r"\s+", " ", s)
