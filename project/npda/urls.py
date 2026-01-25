@@ -10,7 +10,7 @@ from project.npda.views import (
     VisitCreateView,
     VisitDeleteView,
     VisitUpdateView,
-    npdauser_pdu_update
+    npdauser_pdu_update,
 )
 
 from .views import *
@@ -21,6 +21,16 @@ from .views.dashboard.patient_characteristics import (
     patient_ages,
     all_patient_charts,
 )
+from .views.home import (
+    download_template,
+    new_home,
+    feature_flags,
+    celery_test_task,
+    home,
+    index,
+)
+from .views.submissions import upload_csv, upload_csv_in_progress
+from .views.errors import csrf_fail
 
 data_prefix = "period/<str:audit_period>/pdu/<str:pz_code>"
 
@@ -34,7 +44,11 @@ urlpatterns = [
         name="pdu-download-template",
     ),
     path(f"{data_prefix}/upload_csv", view=upload_csv, name="pdu-upload-csv"),
-    path(f"{data_prefix}/upload_csv_in_progress", view=upload_csv_in_progress, name="pdu-upload-csv-in-progress"),
+    path(
+        f"{data_prefix}/upload_csv_in_progress",
+        view=upload_csv_in_progress,
+        name="pdu-upload-csv-in-progress",
+    ),
     path("feature_flags", view=feature_flags, name="feature-flags"),
     path(
         f"{data_prefix}/submissions",
@@ -47,7 +61,11 @@ urlpatterns = [
         view=PatientListView.as_view(),
         name="pdu-patients",
     ),
-    path(f"{data_prefix}/patient/add/", PatientCreateView.as_view(), name="pdu-patient-add"),
+    path(
+        f"{data_prefix}/patient/add/",
+        PatientCreateView.as_view(),
+        name="pdu-patient-add",
+    ),
     path(
         f"{data_prefix}/patient/<int:pk>/update",
         PatientUpdateView.as_view(),
@@ -200,8 +218,8 @@ patient_report_urlpatterns = [
     path(
         f"{data_prefix}/patient_report/download",
         view=patient_report.download_patient_report,
-        name="pdu-patient-report-download"
-    )
+        name="pdu-patient-report-download",
+    ),
 ]
 
 # Collate all URL patterns

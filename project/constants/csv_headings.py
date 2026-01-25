@@ -446,10 +446,10 @@ CSV_HEADING_OBJECTS_2026 = (
         "alternative_headings": [],
     },
     {
-        "heading": "Sex assigned at birth†††",
+        "heading": "Sex assigned at birth",
         "model_field": "sex",
         "model": "Patient",
-        "alternative_headings": [],
+        "alternative_headings": ["Sex assigned at birth†††"],
     },
     {
         "heading": "Ethnic Category",
@@ -464,10 +464,12 @@ CSV_HEADING_OBJECTS_2026 = (
         "alternative_headings": [],
     },
     {
-        "heading": "Does the patient have a diagnosis of a learning disability?†",
+        "heading": "Does the patient have a diagnosis of a learning disability?",
         "model_field": "learning_disability",
         "model": "Patient",
-        "alternative_headings": [],
+        "alternative_headings": [
+            "Does the patient have a diagnosis of a learning disability?†"
+        ],
     },
     {
         "heading": "Diabetes Type",
@@ -542,64 +544,74 @@ CSV_HEADING_OBJECTS_2026 = (
         "alternative_headings": [],
     },
     {
-        "heading": "Observation Date: HbA1c Value†",
+        "heading": "Observation Date: HbA1c Value",
         "model_field": "hba1c_date",
         "model": "Visit",
-        "alternative_headings": [],
+        "alternative_headings": ["Observation Date: HbA1c Value†"],
     },
     {
-        "heading": "Insulin regime at time of visit†",
+        "heading": "Insulin regime at time of visit",
         "model_field": "insulin_regimen",
         "model": "Visit",
-        "alternative_headings": [],
+        "alternative_headings": ["Insulin regime at time of visit†"],
     },
     {
-        "heading": "Other (non-insulin) blood glucose lowering medication at time of visit†",
+        "heading": "Other (non-insulin) blood glucose lowering medication at time of visit",
         "model_field": "non_insulin_medication",
         "model": "Visit",
-        "alternative_headings": [],
+        "alternative_headings": [
+            "Other (non-insulin) blood glucose lowering medication at time of visit†"
+        ],
     },
     {
-        "heading": "Has lifestyle and dietary modification been recommended to reduce blood glucose levels?†",
+        "heading": "Has lifestyle and dietary modification been recommended to reduce blood glucose levels?",
         "model_field": "dietary_lifestyle_modification",
         "model": "Visit",
-        "alternative_headings": [],
+        "alternative_headings": [
+            "Has lifestyle and dietary modification been recommended to reduce blood glucose levels?†"
+        ],
     },
     {
-        "heading": "Was the patient using a continuous glucose monitor (CGM) at time of visit?†",
+        "heading": "Was the patient using a continuous glucose monitor (CGM) at time of visit?",
         "model_field": "cgm_use",
         "model": "Visit",
-        "alternative_headings": [],
+        "alternative_headings": [
+            "Was the patient using a continuous glucose monitor (CGM) at time of visit?†"
+        ],
     },
     {
-        "heading": "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?††",
+        "heading": "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?",
         "model_field": "ketone_meter_training",
         "model": "Visit",
-        "alternative_headings": [],
+        "alternative_headings": [
+            "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?††"
+        ],
     },
     {
-        "heading": "Did the patient receive immunotherapy prior to or after the diagnosis of stage 3 Type 1 diabetes?†",
+        "heading": "Did the patient receive immunotherapy prior to or after the diagnosis of stage 3 Type 1 diabetes?",
         "model_field": "immunotherapy_received",
         "model": "Visit",
-        "alternative_headings": [],
+        "alternative_headings": [
+            "Did the patient receive immunotherapy prior to or after the diagnosis of stage 3 Type 1 diabetes?†"
+        ],
     },
     {
-        "heading": "Date immunotherapy started†",
+        "heading": "Date immunotherapy started",
         "model_field": "immunotherapy_date",
         "model": "Visit",
-        "alternative_headings": [],
+        "alternative_headings": ["Date immunotherapy started†"],
     },
     {
-        "heading": "Systolic Blood Pressure††",
+        "heading": "Systolic Blood Pressure",
         "model_field": "systolic_blood_pressure",
         "model": "Visit",
-        "alternative_headings": [],
+        "alternative_headings": ["Systolic Blood Pressure††"],
     },
     {
-        "heading": "Diastolic Blood pressure†",
+        "heading": "Diastolic Blood pressure",
         "model_field": "diastolic_blood_pressure",
         "model": "Visit",
-        "alternative_headings": [],
+        "alternative_headings": ["Diastolic Blood pressure†"],
     },
     {
         "heading": "Observation Date (Blood Pressure)",
@@ -698,28 +710,34 @@ CSV_HEADING_OBJECTS_2026 = (
         "alternative_headings": [],
     },
     {
-        "heading": "Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia††",
+        "heading": "Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia",
         "model_field": "sick_day_rules_training_date",
         "model": "Visit",
-        "alternative_headings": [],
+        "alternative_headings": [
+            "Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia††"
+        ],
     },
     {
-        "heading": "Date of Annual Psychological Screening Assessment††",
+        "heading": "Date of Annual Psychological Screening Assessment",
         "model_field": "psychological_screening_assessment_date",
         "model": "Visit",
-        "alternative_headings": [],
+        "alternative_headings": ["Date of Annual Psychological Screening Assessment††"],
     },
     {
-        "heading": "Following annual psychological screening, was the patient assessed as requiring additional psychological support outside of routine care?†",
+        "heading": "Following annual psychological screening, was the patient assessed as requiring additional psychological support outside of routine care?",
         "model_field": "psychological_additional_support_status",
         "model": "Visit",
-        "alternative_headings": [],
+        "alternative_headings": [
+            "Following annual psychological screening, was the patient assessed as requiring additional psychological support outside of routine care?†"
+        ],
     },
     {
-        "heading": "Was the patient offered an additional appointment with a mental health professional as part of the diabetes MDT?†",
+        "heading": "Was the patient offered an additional appointment with a mental health professional as part of the diabetes MDT?",
         "model_field": "psychological_support_outcome",
         "model": "Visit",
-        "alternative_headings": [],
+        "alternative_headings": [
+            "Was the patient offered an additional appointment with a mental health professional as part of the diabetes MDT?†"
+        ],
     },
     {
         "heading": "Date of Level 3 carbohydrate counting education received",
@@ -770,10 +788,10 @@ CSV_HEADING_OBJECTS_2026 = (
         "alternative_headings": [],
     },
     {
-        "heading": "Initial pH at admission†",
+        "heading": "Initial pH at admission",
         "model_field": "blood_gas_ph",
         "model": "Visit",
-        "alternative_headings": [],
+        "alternative_headings": ["Initial pH at admission†"],
     },
     {
         "heading": "Initial Standard bicarbonate at admission (mmol/l)",

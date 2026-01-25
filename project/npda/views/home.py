@@ -9,7 +9,9 @@ from django.http import HttpResponse
 
 from project.constants.feature_flags import FEATURE_FLAGS
 from project.npda.general_functions.csv import csv_header
-from project.npda.general_functions.organisations_adapter import paediatric_diabetes_units_to_populate_select_field
+from project.npda.general_functions.organisations_adapter import (
+    paediatric_diabetes_units_to_populate_select_field,
+)
 from project.npda.views.npda_users import get_user_home_page
 
 # RCPCH imports
@@ -52,14 +54,14 @@ def new_home(request, audit_period):
 
     if not request.user.is_rcpch_audit_team_member and not request.user.is_superuser:
         audit_periods = [p for p in audit_periods if p.is_visible]
-    
+
     for p in audit_periods:
         p.selected = p.slug == audit_period.slug
 
     context = {
         "pdu_choices": pdu_choices,
         "audit_periods": audit_periods,
-        "selected_audit_period_display_name": audit_period.display_name
+        "selected_audit_period_display_name": audit_period.display_name,
     }
 
     template = "new-home.html"
@@ -73,8 +75,16 @@ def download_template(request, audit_period, pdu):
     Creates the template csv for users to fill out and upload into NPDA
     """
 
+    # Allow overriding dataset_year via querystring (e.g. ?dataset_year=2026)
+    dataset_year_param = request.GET.get("dataset_year")
+    if dataset_year_param:
+        try:
+            dataset_year = int(dataset_year_param)
+        except (ValueError, TypeError):
+            logger.warning("Invalid dataset_year parameter: %s", dataset_year_param)
+            dataset_year = 2021  # Default year
     is_jersey = pdu.pz_code == "PZ248"
-    file = csv_header(is_jersey=is_jersey)
+    file = csv_header(is_jersey=is_jersey, dataset_year=dataset_year)
 
     return HttpResponse(
         file,
@@ -93,7 +103,11 @@ def celery_test_task(request):
 @login_and_otp_required()
 def feature_flags(request):
     if request.POST:
-        user_flags = [flag for flag in FEATURE_FLAGS if flag in request.POST and request.POST[flag] == "on"]
+        user_flags = [
+            flag
+            for flag in FEATURE_FLAGS
+            if flag in request.POST and request.POST[flag] == "on"
+        ]
         request.session.update({"feature_flags": user_flags})
     else:
         user_flags = request.session.get("feature_flags", [])
@@ -101,17 +115,21 @@ def feature_flags(request):
     all_flags = []
 
     for flag, details in FEATURE_FLAGS.items():
-        all_flags.append({
-            "id": flag,
-            "description": details["description"],
-            "enabled": flag in user_flags
-        })
+        all_flags.append(
+            {
+                "id": flag,
+                "description": details["description"],
+                "enabled": flag in user_flags,
+            }
+        )
 
     context = {
         "feature_flags": all_flags,
-        "feedback_email": settings.SITE_CONTACT_EMAIL
+        "feedback_email": settings.SITE_CONTACT_EMAIL,
     }
 
-    template_name = "partials/feature_flag_form.html" if request.htmx else "feature_flags.html"
+    template_name = (
+        "partials/feature_flag_form.html" if request.htmx else "feature_flags.html"
+    )
 
     return render(request=request, template_name=template_name, context=context)
