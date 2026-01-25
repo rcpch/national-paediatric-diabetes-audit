@@ -46,6 +46,7 @@ def upload_csv_task(submission_id):
         errors_to_return=parsed_csv.errors_to_return,
         csv_file_name=submission.csv_file_name,
         submission=submission,
+        dataset_year=dataset_year,
     )
 
     logger.info(f"Processed submission {submission.id}. Activating it now")

@@ -5,11 +5,15 @@ from http import HTTPStatus
 
 # Python imports
 import pytest
+
 # 3rd party imports
 from django.urls import reverse
 
-from project.constants.csv_headings import (UNIQUE_IDENTIFIER_ENGLAND,
-                                            UNIQUE_IDENTIFIER_JERSEY)
+from project.constants.csv_headings import (
+    UNIQUE_IDENTIFIER_ENGLAND,
+    UNIQUE_IDENTIFIER_JERSEY,
+)
+
 # E12 imports
 from project.npda.models import NPDAUser
 from project.npda.tests.constants_for_tests import ALDER_HEY_PZ_CODE
@@ -50,14 +54,24 @@ def test_both_jersey_and_england_template_download_works(
         login_and_verify_user(client, user)
 
         pz_code = user.organisation_employers.first().pz_code
-        url = reverse("pdu-download-template", kwargs={ "pz_code": pz_code, "audit_period": "2024-2025" })
+        for dataset_year_param in [2021, 2026]:
+            url = (
+                reverse(
+                    "pdu-download-template",
+                    kwargs={
+                        "pz_code": pz_code,
+                        "audit_period": "2024-2025",
+                    },
+                )
+                + f"?dataset_year={dataset_year_param}"
+            )
 
-        response = client.get(url)
-        assert response.status_code == HTTPStatus.OK
+            response = client.get(url)
+            assert response.status_code == HTTPStatus.OK
 
-        if user.first_name == "jersey_user":
-            UNIQUE_IDENTIFIER_HEADER = UNIQUE_IDENTIFIER_JERSEY[0]["heading"]
-        else:
-            UNIQUE_IDENTIFIER_HEADER = UNIQUE_IDENTIFIER_ENGLAND[0]["heading"]
+            if user.first_name == "jersey_user":
+                UNIQUE_IDENTIFIER_HEADER = UNIQUE_IDENTIFIER_JERSEY[0]["heading"]
+            else:
+                UNIQUE_IDENTIFIER_HEADER = UNIQUE_IDENTIFIER_ENGLAND[0]["heading"]
 
-        assert response.content.decode("utf-8").startswith(UNIQUE_IDENTIFIER_HEADER)
+            assert response.content.decode("utf-8").startswith(UNIQUE_IDENTIFIER_HEADER)

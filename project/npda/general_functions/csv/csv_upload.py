@@ -21,6 +21,7 @@ from project.constants import (
     CSV_HEADING_OBJECTS,
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
+    CSV_HEADING_OBJECTS_2026,
 )
 from project.npda.general_functions.csv.csv_parse import csv_parse
 from project.npda.general_functions.csv import (
@@ -111,6 +112,7 @@ async def csv_upload(
     submission,
     allow_empty_visits=False,
     save_errors_on_submission=True,
+    dataset_year=2021,
 ):
     """
     Processes standardised NPDA csv file and persists results in NPDA tables
@@ -119,10 +121,16 @@ async def csv_upload(
     pdu = submission.paediatric_diabetes_unit
 
     if pdu.pz_code == "PZ248":
-        CSV_HEADINGS = UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
+        if dataset_year == 2026:
+            CSV_HEADINGS = UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS_2026
+        else:
+            CSV_HEADINGS = UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
         identifier_heading = UNIQUE_IDENTIFIER_JERSEY[0]["heading"]
     else:
-        CSV_HEADINGS = UNIQUE_IDENTIFIER_ENGLAND + CSV_HEADING_OBJECTS
+        if dataset_year == 2026:
+            CSV_HEADINGS = UNIQUE_IDENTIFIER_ENGLAND + CSV_HEADING_OBJECTS_2026
+        else:
+            CSV_HEADINGS = UNIQUE_IDENTIFIER_ENGLAND + CSV_HEADING_OBJECTS
         identifier_heading = UNIQUE_IDENTIFIER_ENGLAND[0]["heading"]
 
     # Helper functions
