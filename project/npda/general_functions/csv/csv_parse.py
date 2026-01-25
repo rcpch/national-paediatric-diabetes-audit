@@ -124,7 +124,9 @@ def csv_parse(csv_file, dataset_year=2021) -> ParsedCSVFile:
     # Replace headings which were different from in the old NPDA template with the new
     for column in df.columns:
         lowercase_col = _norm_heading(column)
-        logger.debug("csv_parse: incoming column=%r normalized=%r", column, lowercase_col)
+        logger.debug(
+            "csv_parse: incoming column=%r normalized=%r", column, lowercase_col
+        )
 
         for heading in HEADINGS_OBJECTS:
             if "alternative_headings" in heading:

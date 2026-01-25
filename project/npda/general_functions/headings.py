@@ -43,7 +43,7 @@ VISIT_FIELD_HEADINGS_2021 = {
     "albumin_creatinine_ratio_date": "Observation Date: Urinary Albumin Level",
     "albuminuria_stage": "Albuminuria Stage",
     "total_cholesterol": "Total Cholesterol Level (mmol/l)",
-    "total_cholesterol_date": "Observation Date: Total Cholesterol level",
+    "total_cholesterol_date": "Observation Date: Total Cholesterol Level",
     "thyroid_function_date": "Observation Date: Thyroid Function",
     "thyroid_treatment_status": "At time of, or following measurement of thyroid function, was the patient prescribed any thyroid treatment?",
     "coeliac_screen_date": "Observation Date: Coeliac Disease Screening",

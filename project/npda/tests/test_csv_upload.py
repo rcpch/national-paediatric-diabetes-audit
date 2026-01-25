@@ -1035,12 +1035,6 @@ def test_lookup_index_of_multiple_deprivation(
 
 
 @pytest.mark.django_db
-@patch(
-    "project.npda.general_functions.csv.csv_upload.validate_patient_async",
-    mock_patient_external_validation_result(
-        index_of_multiple_deprivation_quintile=None
-    ),
-)
 def test_error_looking_up_index_of_multiple_deprivation(
     test_user, single_row_valid_df, audit_period_for_dataset_year
 ):
@@ -1765,18 +1759,27 @@ def test_hba1c_value_ifcc_less_than_20(
 
 
 @pytest.mark.django_db
-def test_hba1c_value_ifcc_more_than_195(test_user, single_row_valid_df):
-    single_row_valid_df.loc[0, "Hba1c Value"] = 196
-    single_row_valid_df.loc[0, "HbA1c result format"] = 1  # IFCC (mmol/mol)
-    single_row_valid_df.loc[0, "Observation Date: Hba1c Value"] = "01/01/2022"
-
-    # Set the audit period to be valid for the visit date at the outset
-    audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(
-        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+def test_hba1c_value_ifcc_more_than_195(
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
+):
+    hba1c_value = get_field_heading("hba1c", dataset_year)
+    hba1c_date = get_field_heading("hba1c_date", dataset_year)
+    visit_date = get_field_heading("visit_date", dataset_year)
+    if dataset_year < 2026:
+        hba1c_format = get_field_heading("hba1c_format", dataset_year)
+        single_row_valid_df[hba1c_format] = 1  # IFCC (mmol/mol)
+        single_row_valid_df.loc[0, hba1c_format] = 1  # IFCC (mmol/mol)
+    single_row_valid_df.loc[0, hba1c_value] = 196
+    single_row_valid_df.loc[0, hba1c_date] = (
+        audit_period_for_dataset_year.start_date + relativedelta(months=1)
     )
-    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
-    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
+    single_row_valid_df.loc[0, visit_date] = (
+        audit_period_for_dataset_year.start_date + relativedelta(months=1)
+    )
+
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
 
     assert "hba1c" in errors[0]
 
@@ -1788,19 +1791,27 @@ def test_hba1c_value_ifcc_more_than_195(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_hba1c_value_dcct_more_than_20(test_user, single_row_valid_df):
-    single_row_valid_df.loc[0, "Hba1c Value"] = 21
-    single_row_valid_df.loc[0, "HbA1c result format"] = 2  # DCCT (%)
-    single_row_valid_df.loc[0, "Observation Date: Hba1c Value"] = "01/01/2022"
-
-    # Set the audit period to be valid for the visit date at the outset
-    audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(
-        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+def test_hba1c_value_dcct_more_than_20(
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
+):
+    if dataset_year >= 2026:
+        pytest.skip("Test applies only to 2021 headings")
+    hba1c_value = get_field_heading("hba1c", dataset_year)
+    hba1c_date = get_field_heading("hba1c_date", dataset_year)
+    visit_date = get_field_heading("visit_date", dataset_year)
+    hba1c_format = get_field_heading("hba1c_format", dataset_year)
+    single_row_valid_df[hba1c_format] = 2  # DCCT (%)
+    single_row_valid_df.loc[0, hba1c_value] = 21
+    single_row_valid_df.loc[0, hba1c_date] = (
+        audit_period_for_dataset_year.start_date + relativedelta(months=1)
     )
-    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+    single_row_valid_df.loc[0, visit_date] = (
+        audit_period_for_dataset_year.start_date + relativedelta(months=1)
+    )
 
-    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
 
     assert "hba1c" in errors[0]
 
@@ -1812,18 +1823,26 @@ def test_hba1c_value_dcct_more_than_20(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_hba1c_value_dcct_less_than_3(test_user, single_row_valid_df):
-    single_row_valid_df.loc[0, "Hba1c Value"] = 2
-    single_row_valid_df.loc[0, "HbA1c result format"] = 2  # DCCT (%)
-    single_row_valid_df.loc[0, "Observation Date: Hba1c Value"] = "01/01/2022"
-
-    # Set the audit period to be valid for the visit date at the outset
-    audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(
-        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+def test_hba1c_value_dcct_less_than_3(
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
+):
+    if dataset_year >= 2026:
+        pytest.skip("Test applies only to 2021 headings")
+    hba1c_value = get_field_heading("hba1c", dataset_year)
+    hba1c_date = get_field_heading("hba1c_date", dataset_year)
+    visit_date = get_field_heading("visit_date", dataset_year)
+    hba1c_format = get_field_heading("hba1c_format", dataset_year)
+    single_row_valid_df[hba1c_format] = 2  # DCCT (%)
+    single_row_valid_df.loc[0, hba1c_value] = 2
+    single_row_valid_df.loc[0, hba1c_date] = (
+        audit_period_for_dataset_year.start_date + relativedelta(months=1)
     )
-    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
-    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
+    single_row_valid_df.loc[0, visit_date] = (
+        audit_period_for_dataset_year.start_date + relativedelta(months=1)
+    )
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
 
     assert "hba1c" in errors[0]
 
@@ -1835,25 +1854,29 @@ def test_hba1c_value_dcct_less_than_3(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_hba1c_missing(test_user, single_row_valid_df):
-    single_row_valid_df.loc[0, "Hba1c Value"] = None
-    single_row_valid_df.loc[0, "HbA1c result format"] = 2  # DCCT (%)
-    single_row_valid_df.loc[0, "Observation Date: Hba1c Value"] = "01/01/2022"
-
-    # Set the audit period to be valid for the visit date at the outset
-    audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(
-        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+def test_hba1c_missing(
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
+):
+    hba1c_value = get_field_heading("hba1c", dataset_year)
+    hba1c_date = get_field_heading("hba1c_date", dataset_year)
+    if dataset_year < 2026:
+        hba1c_format = get_field_heading("hba1c_format", dataset_year)
+        single_row_valid_df[hba1c_format] = 2  # DCCT (%)
+    single_row_valid_df.loc[0, hba1c_value] = None
+    single_row_valid_df.loc[0, hba1c_date] = (
+        audit_period_for_dataset_year.start_date + relativedelta(months=1)
     )
-    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
-    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
+
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
 
     assert "hba1c" in errors[0]
 
     visit = Visit.objects.first()
 
     # This would be rejected in the questionnaire but saved if it was a csv upload
-    assert visit.hba1c == None
+    assert visit.hba1c is None
     assert "hba1c" in visit.errors
 
 
@@ -2457,7 +2480,7 @@ def test_urine_albumin_value_above_range_form_fails_validation(
 
 @pytest.mark.django_db
 def test_urine_albumin_value_missing_form_fails_validation(
-    test_user, single_row_valid_df, audit_period_for_dataset_year
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
     """
     Test that urine albumin value missing  is rejected
@@ -2467,7 +2490,9 @@ def test_urine_albumin_value_missing_form_fails_validation(
     acr_date = get_field_heading("albumin_creatinine_ratio_date", dataset_year)
     single_row_valid_df.loc[0, acr] = None
     single_row_valid_df.loc[0, albuminuria_stage] = 1  # Normal
-    single_row_valid_df.loc[0, acr_date] = "01/01/2023"
+    single_row_valid_df.loc[0, acr_date] = (
+        audit_period_for_dataset_year.start_date + relativedelta(days=1)
+    )
 
     errors = csv_upload_sync(
         test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
@@ -2620,14 +2645,9 @@ def test_total_cholesterol_value_above_reference_form_fails_validation(
         audit_period_for_dataset_year.start_date + relativedelta(months=1)
     )
 
-    # Set the audit period to be valid for the visit date at the outset
-    audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(
-        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
     )
-    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
-
-    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "total_cholesterol" in errors[0], (
         f"Total cholesterol should fail validation as above reference range, but passed."
@@ -2683,7 +2703,7 @@ def test_total_cholesterol_value_below_reference_form_fails_validation(
 
 @pytest.mark.django_db
 def test_total_cholesterol_value_missing_form_fails_validation(
-    test_user, single_row_valid_df, audit_period_for_dataset_year
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
     """
     Test that total cholesterol value missing  is rejected
@@ -3070,7 +3090,9 @@ Smoking status tests
 
 
 @pytest.mark.django_db
-def test_smoking_status_passes_validation(test_user, single_row_valid_df):
+def test_smoking_status_passes_validation(
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
+):
     """
     Test that smoking status is accepted
     """
@@ -3101,7 +3123,7 @@ def test_smoking_status_passes_validation(test_user, single_row_valid_df):
 
 @pytest.mark.django_db
 def test_smoking_status_non_smoker_passes_validation(
-    test_user, single_row_valid_df, audit_period_for_dataset_year
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
     """
     Test that smoking status is accepted
@@ -3133,7 +3155,7 @@ def test_smoking_status_non_smoker_passes_validation(
 
 @pytest.mark.django_db
 def test_smoking_status_non_smoker_referral_date_provided_fails_validation(
-    test_user, single_row_valid_df, audit_period_for_dataset_year
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
     """
     Test that a non-smoker with a referral date is rejected
@@ -3201,7 +3223,7 @@ def test_smoking_status_missing_fails_validation(
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/791
 @pytest.mark.django_db
 def test_smoking_status_smoker_does_not_require_cessation_referral_date(
-    test_user, single_row_valid_df, audit_period_for_dataset_year
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
     """
     Test that smoking status is accepted
@@ -3241,7 +3263,7 @@ Dietitian referral tests
 
 @pytest.mark.django_db
 def test_dietician_referral_status_additional_offered_form_passes_validation(
-    test_user, single_row_valid_df, audit_period_for_dataset_year
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
     """
     Test that dietician referral status and date are accepted
@@ -3277,7 +3299,7 @@ def test_dietician_referral_status_additional_offered_form_passes_validation(
 
 @pytest.mark.django_db
 def test_dietician_no_additional_offered_form_passes_validation(
-    test_user, single_row_valid_df, audit_period_for_dataset_year
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
     """
     Test that dietician referral status and date are accepted
@@ -3309,7 +3331,7 @@ def test_dietician_no_additional_offered_form_passes_validation(
 
 @pytest.mark.django_db
 def test_dietician_no_additional_offered_date_provided_fail_validation(
-    test_user, single_row_valid_df, audit_period_for_dataset_year
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
     """
     Test that dietician extra appointment not offered but date provided should fail
@@ -3346,7 +3368,7 @@ def test_dietician_no_additional_offered_date_provided_fail_validation(
 
 @pytest.mark.django_db
 def test_dietician_additional_offered_date_missing_passes_validation(
-    test_user, single_row_valid_df, audit_period_for_dataset_year
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
     """
     Test that dietician extra appointment offered but date missing should pass
@@ -3378,7 +3400,7 @@ def test_dietician_additional_offered_date_missing_passes_validation(
 
 @pytest.mark.django_db
 def test_dietician_additional_offered_no_but_date_offered_fail_validation(
-    test_user, single_row_valid_df, audit_period_for_dataset_year
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
     """
     Test that dietician additional appointment answered No but date offered should fail
@@ -3535,7 +3557,7 @@ def test_inpatient_admission_stabilisation_missing_date_fails_validation(
 
 @pytest.mark.django_db
 def test_inpatient_admission_stabilisation_discharge_date_before_admission_date_fails_validation(
-    test_user, single_row_valid_df
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
     """
     Test that inpatient admission for stabilisation is rejected if discharge date before admission date
@@ -3592,7 +3614,7 @@ def test_inpatient_admission_stabilisation_discharge_date_before_diagnosis_date_
     """
     Test that inpatient admission for stabilisation is rejected if discharge date before admission date
     """
-    diagnosis_date = get_field_heading("date_of_diabetes_diagnosis", dataset_year)
+    diagnosis_date = get_field_heading("diagnosis_date", dataset_year)
     hospital_admission_date = get_field_heading("hospital_admission_date", dataset_year)
     hospital_discharge_date = get_field_heading("hospital_discharge_date", dataset_year)
     hospital_admission_reason = get_field_heading(
@@ -4168,7 +4190,7 @@ Visit date tests
 
 @pytest.mark.django_db
 def test_visit_date_provided_passes_validation(
-    test_user, single_row_valid_df, audit_period_for_dataset_year
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
     """
     Test that a visit date is accepted
@@ -4195,7 +4217,7 @@ def test_visit_date_provided_passes_validation(
 
 @pytest.mark.django_db
 def test_visit_date_missing_fails_validation(
-    test_user, single_row_valid_df, audit_period_for_dataset_year
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
     """
     Test that a missing Visit/Appointment Date is rejected
@@ -4218,7 +4240,7 @@ def test_visit_date_missing_fails_validation(
 
 @pytest.mark.django_db
 def test_visit_date_not_before_date_of_birth(
-    test_user, single_row_valid_df, audit_period_for_dataset_year
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
     """
     Test that a Visit/Appointment Date before the date of birth is rejected
@@ -4251,7 +4273,7 @@ def test_visit_date_not_before_date_of_birth(
 
 @pytest.mark.django_db
 def test_visit_date_not_after_date_of_death(
-    test_user, single_row_valid_df, audit_period_for_dataset_year
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
     """
     Test that a Visit/Appointment Date after the date of death is rejected
@@ -4293,10 +4315,13 @@ def test_visit_date_not_before_diagnosis_date(
     """
     Test that a Visit/Appointment Date before the date of diagnosis is rejected
     """
-    diagnosis_date = get_field_heading("date_of_diabetes_diagnosis", dataset_year)
+    # If the audit period starts in the future relative to today, skip this parametrisation
+    if audit_period_for_dataset_year.start_date > datetime.date.today():
+        pytest.skip("Audit period start is in the future; skip this parametrisation")
+    diagnosis_date = get_field_heading("diagnosis_date", dataset_year)
     visit_date = get_field_heading("visit_date", dataset_year)
     single_row_valid_df.loc[0, diagnosis_date] = (
-        audit_period_for_dataset_year.start_date + relativedelta(years=1)
+        audit_period_for_dataset_year.start_date + relativedelta(months=6)
     )
     single_row_valid_df.loc[0, visit_date] = audit_period_for_dataset_year.start_date
 
@@ -4313,9 +4338,9 @@ def test_visit_date_not_before_diagnosis_date(
     )
     assert (
         visit.patient.diagnosis_date
-        == audit_period_for_dataset_year.start_date + relativedelta(years=1)
+        == audit_period_for_dataset_year.start_date + relativedelta(months=6)
     ), (
-        f"Diagnosis date should be {audit_period_for_dataset_year.start_date + relativedelta(years=1)}, but was {visit.patient.diagnosis_date}"
+        f"Diagnosis date should be {audit_period_for_dataset_year.start_date + relativedelta(months=6)}, but was {visit.patient.diagnosis_date}"
     )
 
 
@@ -4895,7 +4920,7 @@ def test_visit_form_dates_outside_of_audit_period(
         **hospital_discharge_date NOT INCLUDED AS IT IS POSSIBLE TO BE DISCHARGED AFTER THE AUDIT ENDS**
     """
     birth_date = get_field_heading("date_of_birth", dataset_year)
-    diagnosis_date = get_field_heading("date_of_diabetes_diagnosis", dataset_year)
+    diagnosis_date = get_field_heading("diagnosis_date", dataset_year)
     if dataset_year >= 2026:
         smoking_status = get_field_heading("smoking_vaping_status", dataset_year)
     else:
@@ -4953,7 +4978,7 @@ def test_thyroid_and_coeliac_dates_within_90_days_before_diagnosis_pass_validati
 ):
     # Set the audit period to be valid for the visit date at the outset
 
-    diagnosis_date = get_field_heading("date_of_diabetes_diagnosis", dataset_year)
+    diagnosis_date = get_field_heading("diagnosis_date", dataset_year)
     single_row_valid_df.loc[0, diagnosis_date] = (
         audit_period_for_dataset_year.start_date + datetime.timedelta(days=100)
     )
@@ -4981,7 +5006,7 @@ def test_thyroid_and_coeliac_dates_earlier_than_90_days_before_diagnosis_fail_va
 ):
     # Set the audit period to be valid for the visit date at the outset
 
-    diagnosis_date = get_field_heading("date_of_diabetes_diagnosis", dataset_year)
+    diagnosis_date = get_field_heading("diagnosis_date", dataset_year)
     single_row_valid_df.loc[0, diagnosis_date] = (
         audit_period_for_dataset_year.start_date + datetime.timedelta(days=100)
     )
