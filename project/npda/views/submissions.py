@@ -12,7 +12,7 @@ from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.db.models import Count, Case, When, Value, IntegerField, OuterRef, Subquery
+from django.db.models import Count, Case, When, Value, IntegerField, OuterRef, Subquery, Exists, Q
 from django.db.models.functions import Concat, ExtractMonth, ExtractYear
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
@@ -320,7 +320,17 @@ class SubmissionsListView(
                 raise Error(f"Cannot start questionnaire submission. Previous submission was CSV file. audit_period={self.audit_period}, previous_audit_period={previous_audit_period}, pdu={self.pdu.pz_code}")
 
             last_patients = last_submission.patients.all() if last_submission else Patients.objects.none()
-            
+
+            last_patients = last_patients.exclude(
+                death_date__isnull=False
+            ).exclude(
+                Exists(
+                    Transfer.objects.filter(
+                        Q(patient=OuterRef("pk")) & Q(reason_leaving_service__isnull=False)
+                    )
+                )
+            )
+
             # Clone
             for patient in last_patients:
                 patient.pk = None
