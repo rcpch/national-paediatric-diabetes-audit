@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+from datetime import date
 import tempfile
 import csv
 import collections
@@ -26,6 +27,7 @@ from project.npda.general_functions.csv import (
     csv_parse,
     create_csv_submission,
 )
+from project.npda.general_functions.headings import get_field_heading
 from project.npda.general_functions.quarter_for_date import (
     current_audit_year_start_date,
 )
@@ -59,6 +61,7 @@ from project.npda.forms.external_visit_validators import (
     CentileAndSDS,
 )
 from project.npda.tests.utils import login_and_verify_user
+from project.npda.tests.factories.patient_factory import PatientFactory
 
 
 MOCK_PATIENT_EXTERNAL_VALIDATION_RESULT = PatientExternalValidationResult(
@@ -86,6 +89,41 @@ def mock_patient_external_validation_result(**kwargs):
     )
 
 
+def _sex_heading_for_df(df):
+    return _heading_for_df("sex", df)
+
+
+def _sex_heading_for_csv_string(csv_str):
+    return _heading_for_csv_string("sex", csv_str)
+
+
+def _heading_for_df(field_name, df, years=(2026, 2021)):
+    """Return the column heading for `field_name` present in the dataframe.
+
+    Tries the provided `years` in order and falls back to the last year's heading.
+    """
+    for year in years:
+        heading = get_field_heading(field_name, year)
+        if heading in df.columns:
+            return heading
+
+    return get_field_heading(field_name, years[-1])
+
+
+def _heading_for_csv_string(field_name, csv_str, years=(2026, 2021)):
+    """Return the column heading for `field_name` present in a CSV string's header row."""
+    import csv as _csv
+
+    reader = _csv.reader(csv_str.splitlines())
+    header = next(reader)
+    for year in years:
+        heading = get_field_heading(field_name, year)
+        if heading in header:
+            return heading
+
+    return get_field_heading(field_name, years[-1])
+
+
 # We don't want to call remote services in unit tests
 @pytest.fixture(autouse=True)
 def mock_remote_calls():
@@ -110,13 +148,37 @@ def valid_df(dummy_sheets_folder):
     return csv_parse(file).df
 
 
+@pytest.fixture(params=[2021, 2026])
+def dataset_year(request):
+    return request.param
+
+
 @pytest.fixture
-def single_row_valid_df(dummy_sheets_folder):
-    file = dummy_sheets_folder / "dummy_sheet_test.csv"
-    df = csv_parse(file).df
+def single_row_valid_df(dummy_sheets_folder, dataset_year):
+    filename = (
+        "dummy_sheet_2026_test.csv" if dataset_year == 2026 else "dummy_sheet_test.csv"
+    )
+    file = dummy_sheets_folder / filename
+    df = csv_parse(file, dataset_year=dataset_year).df
     df = df.head(1)
 
     return df
+
+
+@pytest.fixture
+def audit_period_for_dataset_year(dataset_year):
+    """Create an AuditPeriod for the supplied dataset_year for tests.
+
+    Tests that need a matching audit period for the CSV can depend on this
+    fixture and pass it into `csv_upload_sync` as `_audit_period`.
+    """
+    return AuditPeriod.objects.create(
+        is_open=True,
+        is_visible=True,
+        start_date=date(dataset_year, 4, 1),
+        end_date=date(dataset_year + 1, 3, 31),
+        slug=f"{dataset_year}-{dataset_year + 1}",
+    )
 
 
 @pytest.fixture
@@ -185,7 +247,42 @@ def test_rcpch_user(
 def csv_upload_sync(
     user, dataframe, pdu=None, errors_to_return=None, _audit_period=None
 ):
-    audit_period = _audit_period if _audit_period else AuditPeriod.objects.first()
+    # If an explicit audit period is provided use it, otherwise try to
+    # infer an appropriate AuditPeriod from the dataframe's visit date so
+    # tests that supply 2026 CSVs get a matching 2026 audit period.
+    if _audit_period:
+        audit_period = _audit_period
+    else:
+        audit_period = None
+
+        # Try to find a visit date column from the known visit date headings
+        for _field, heading in ALL_VISIT_DATES:
+            if heading in dataframe.columns:
+                try:
+                    first_visit = dataframe[heading].iloc[0]
+                except Exception:
+                    first_visit = None
+
+                if first_visit is not None and not pd.isna(first_visit):
+                    # Normalize to a date instance if it's a Timestamp
+                    date_instance = (
+                        first_visit.date()
+                        if hasattr(first_visit, "date")
+                        else first_visit
+                    )
+
+                    start_date = current_audit_year_start_date(
+                        date_instance=date_instance
+                    )
+
+                    audit_period = AuditPeriod.objects.filter(
+                        start_date=start_date
+                    ).first()
+                    break
+
+        # Fallback to the first seeded audit period if we couldn't infer
+        if not audit_period:
+            audit_period = AuditPeriod.objects.first()
 
     if not pdu:
         pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
@@ -249,30 +346,47 @@ def modify_raw_csv(csv_str, start=None, end=None, replacements={}):
 
 
 @pytest.mark.django_db
-def test_create_patient(test_user, single_row_valid_df):
-    csv_upload_sync(test_user, single_row_valid_df)
+def test_create_patient(
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
+):
+    csv_upload_sync(
+        test_user,
+        single_row_valid_df,
+        _audit_period=audit_period_for_dataset_year,
+    )
     patient = Patient.objects.first()
-    patient.dataset_year = 2021
-    patient.save()
+
+    # Resolve canonical headings for this dataset year to make the test dataset-aware
+    nhs_heading = get_field_heading("nhs_number", dataset_year)
+    dob_heading = get_field_heading("date_of_birth", dataset_year)
+    diabetes_type_heading = get_field_heading("diabetes_type", dataset_year)
+    diagnosis_date_heading = get_field_heading("diagnosis_date", dataset_year)
 
     assert patient.nhs_number == nhs_number.standardise_format(
-        single_row_valid_df["NHS Number"][0]
+        single_row_valid_df[nhs_heading][0]
     )
-    assert patient.date_of_birth == single_row_valid_df["Date of Birth"][0].date()
-    assert patient.diabetes_type == single_row_valid_df["Diabetes Type"][0]
+    assert patient.date_of_birth == single_row_valid_df[dob_heading][0].date()
+    assert patient.diabetes_type == single_row_valid_df[diabetes_type_heading][0]
     assert (
-        patient.diagnosis_date
-        == single_row_valid_df["Date of Diabetes Diagnosis"][0].date()
+        patient.diagnosis_date == single_row_valid_df[diagnosis_date_heading][0].date()
     )
     assert patient.death_date is None
 
 
 @pytest.mark.django_db
-def test_create_patient_with_death_date(test_user, single_row_valid_df):
-    death_date = VALID_FIELDS["diagnosis_date"] + relativedelta(years=1)
+def test_create_patient_with_death_date(
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
+):
+    # set the death date to fall within the audit period
+    death_date = audit_period_for_dataset_year.start_date + relativedelta(months=6)
     single_row_valid_df.loc[0, "Death Date"] = pd.to_datetime(death_date)
+    # set visit date to avoid audit period conflict
+    visit_heading = get_field_heading("visit_date", dataset_year)
+    single_row_valid_df.loc[0, visit_heading] = death_date - relativedelta(months=1)
 
-    csv_upload_sync(test_user, single_row_valid_df)
+    csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
     patient = Patient.objects.first()
 
     assert patient.death_date == single_row_valid_df["Death Date"][0].date()
@@ -280,14 +394,16 @@ def test_create_patient_with_death_date(test_user, single_row_valid_df):
 
 @pytest.mark.django_db
 def test_multiple_patients(
-    test_user, two_patients_first_with_two_visits_second_with_one
+    test_user,
+    two_patients_first_with_two_visits_second_with_one,
+    audit_period_for_dataset_year,
 ):
     df = two_patients_first_with_two_visits_second_with_one
 
     assert df["NHS Number"][0] == df["NHS Number"][1]
     assert df["NHS Number"][0] != df["NHS Number"][2]
 
-    csv_upload_sync(test_user, df)
+    csv_upload_sync(test_user, df, _audit_period=audit_period_for_dataset_year)
 
     assert Patient.objects.count() == 2
     [first_patient, second_patient] = Patient.objects.all()
@@ -619,7 +735,7 @@ def test_diagnosis_date_before_date_of_birth(test_user, single_row_valid_df):
 
 @pytest.mark.django_db
 def test_invalid_sex(test_user, single_row_valid_df):
-    single_row_valid_df["Stated gender"] = 45
+    single_row_valid_df[_sex_heading_for_df(single_row_valid_df)] = 45
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
     assert "sex" in errors[0]
@@ -632,7 +748,7 @@ def test_invalid_sex(test_user, single_row_valid_df):
 
 @pytest.mark.django_db
 def test_not_specified_sex(test_user, single_row_valid_df):
-    single_row_valid_df["Stated gender"] = 3
+    single_row_valid_df[_sex_heading_for_df(single_row_valid_df)] = 3
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
     assert "sex" not in errors[0]
@@ -645,7 +761,7 @@ def test_not_specified_sex(test_user, single_row_valid_df):
 
 @pytest.mark.django_db
 def test_unknown_sex(test_user, single_row_valid_df):
-    single_row_valid_df["Stated gender"] = 99
+    single_row_valid_df[_sex_heading_for_df(single_row_valid_df)] = 99
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
     assert "sex" not in errors[0]
@@ -3818,10 +3934,11 @@ def test_visit_date_not_before_diagnosis_date(test_user, single_row_valid_df):
 )
 @pytest.mark.django_db
 def test_alternative_formats_for_sex(test_user, dummy_sheet_csv, alternative, expected):
+    sex_col = _sex_heading_for_csv_string(dummy_sheet_csv)
     one_row_csv = modify_raw_csv(
         dummy_sheet_csv,
         end=2,  # exclusive
-        replacements=[{"row": 1, "column": "Stated gender", "value": alternative}],
+        replacements=[{"row": 1, "column": sex_col, "value": alternative}],
     )
 
     df = read_csv_from_str(one_row_csv).df
@@ -3846,7 +3963,13 @@ def test_mix_of_standard_and_alternative_formats_for_sex(test_user, dummy_sheet_
         dummy_sheet_csv,
         start=2,  # inclusive
         end=4,  # exclusive
-        replacements=[{"row": 2, "column": "Stated gender", "value": "M"}],
+        replacements=[
+            {
+                "row": 2,
+                "column": _sex_heading_for_csv_string(dummy_sheet_csv),
+                "value": "M",
+            }
+        ],
     )
 
     df = read_csv_from_str(two_rows_csv).df
@@ -4533,10 +4656,11 @@ def test_uploading_csv_with_conflicting_pdu_numbers(
 def test_conflicting_stated_gender(test_user, one_patient_with_four_visits):
     df = one_patient_with_four_visits
 
-    df.loc[0, "Stated gender"] = SEX_TYPE[0][0]
-    df.loc[1, "Stated gender"] = SEX_TYPE[0][0]
-    df.loc[2, "Stated gender"] = SEX_TYPE[1][0]
-    df.loc[3, "Stated gender"] = SEX_TYPE[1][0]
+    sex_col = _sex_heading_for_df(df)
+    df.loc[0, sex_col] = SEX_TYPE[0][0]
+    df.loc[1, sex_col] = SEX_TYPE[0][0]
+    df.loc[2, sex_col] = SEX_TYPE[1][0]
+    df.loc[3, sex_col] = SEX_TYPE[1][0]
 
     errors = csv_upload_sync(test_user, df)
     assert "sex" in errors[0]

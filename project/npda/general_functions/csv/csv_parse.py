@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import logging
 import re
 import collections
+import unicodedata
 
 # Django imports
 from django.core.exceptions import ValidationError
@@ -73,8 +74,24 @@ def csv_parse(csv_file, dataset_year=2021) -> ParsedCSVFile:
         )
     HEADINGS_LIST = [obj["heading"] for obj in HEADINGS_OBJECTS]
 
-    # Convert the predefined column names to lowercase
-    lowercase_headings_list = [heading.lower() for heading in HEADINGS_LIST]
+    # Helper to normalise headings for robust matching (strip non-alnum, collapse spaces)
+    # Unicode-aware normalisation: remove diacritics/combining marks,
+    # replace non-alphanumeric with spaces, collapse whitespace, lower-case.
+    def _norm_heading(s: str) -> str:
+        if not isinstance(s, str):
+            return ""
+        # Normalize unicode to decompose combined characters
+        s = unicodedata.normalize("NFKD", s)
+        # Strip combining marks (e.g., accents)
+        s = "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
+        # Replace any sequence of non-alphanumeric characters with a single space
+        s = re.sub(r"[^0-9a-zA-Z]+", " ", s)
+        # Collapse whitespace and lowercase
+        s = re.sub(r"\s+", " ", s).strip().lower()
+        return s
+
+    # Convert the predefined column names to a normalised lowercase list for matching
+    lowercase_headings_list = [_norm_heading(heading) for heading in HEADINGS_LIST]
 
     # Read the first row of the csv file
     try:
@@ -86,7 +103,7 @@ def csv_parse(csv_file, dataset_year=2021) -> ParsedCSVFile:
         csv_file.seek(0)
         df = pd.read_csv(csv_file, encoding="ISO-8859-1")
 
-    if any(col.lower() in lowercase_headings_list for col in df.columns):
+    if any(_norm_heading(col) in lowercase_headings_list for col in df.columns):
         # The first row of the csv file matches at least some of the predefined column names
         # We will use the column names in the csv file
         pass
@@ -106,12 +123,12 @@ def csv_parse(csv_file, dataset_year=2021) -> ParsedCSVFile:
 
     # Replace headings which were different from in the old NPDA template with the new
     for column in df.columns:
-        lowercase_col = column.lower()
+        lowercase_col = _norm_heading(column)
 
         for heading in HEADINGS_OBJECTS:
             if "alternative_headings" in heading:
                 lowercase_alternative_headings = [
-                    h.lower() for h in heading["alternative_headings"]
+                    _norm_heading(h) for h in heading["alternative_headings"]
                 ]
 
                 if lowercase_col in lowercase_alternative_headings:
@@ -129,11 +146,16 @@ def csv_parse(csv_file, dataset_year=2021) -> ParsedCSVFile:
 
     # Accept columns case insensitively but replace them with their official version to make life easier later
     for column in df.columns:
-        if column not in HEADINGS_LIST and column.lower() in lowercase_headings_list:
+        if (
+            column not in HEADINGS_LIST
+            and _norm_heading(column) in lowercase_headings_list
+        ):
             normalised_column = next(
-                c for c in HEADINGS_LIST if c.lower() == column.lower()
+                c for c in HEADINGS_LIST if _norm_heading(c) == _norm_heading(column)
             )
             df = df.rename(columns={column: normalised_column})
+
+    # No cross-year coercion here: we parse strictly against the provided dataset_year.
 
     identifier_england = UNIQUE_IDENTIFIER_ENGLAND[0]["heading"]
     identifier_jersey = UNIQUE_IDENTIFIER_JERSEY[0]["heading"]

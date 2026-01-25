@@ -112,13 +112,36 @@ async def csv_upload(
     submission,
     allow_empty_visits=False,
     save_errors_on_submission=True,
-    dataset_year=2021,
 ):
     """
     Processes standardised NPDA csv file and persists results in NPDA tables
     Returns the empty dict if successful, otherwise ValidationErrors indexed by the row they occurred at
     """
     pdu = submission.paediatric_diabetes_unit
+
+    # Infer dataset_year from submission.audit_period
+    try:
+        dataset_year = submission.audit_period.audit_year()
+    except Exception:
+        dataset_year = 2021
+
+    # But the dataframe itself may contain 2026 headings; prefer detecting from the dataframe
+    # if present so tests that pass a dataframe directly don't rely on seeded AuditPeriod years.
+    from project.npda.general_functions.headings import get_field_heading
+
+    try:
+        # Check for clear 2026-only headings
+        if (
+            get_field_heading("sex", 2026) in dataframe.columns
+            or get_field_heading("blood_gas_ph", 2026) in dataframe.columns
+        ):
+            dataset_year = 2026
+        # Otherwise if the dataframe explicitly has 2021 sex heading, prefer 2021
+        elif get_field_heading("sex", 2021) in dataframe.columns:
+            dataset_year = 2021
+    except Exception:
+        # If any issue accessing headings, fall back to submission-derived year
+        pass
 
     if pdu.pz_code == "PZ248":
         if dataset_year == 2026:
@@ -333,7 +356,8 @@ async def csv_upload(
         return most_recent_row[column]
 
     def merge_rows_for_patient(rows, patient_row_index):
-        for column in CSV_HEADING_OBJECTS:
+        # Use the resolved CSV_HEADINGS (depends on dataset_year and PDU)
+        for column in CSV_HEADINGS:
             heading = column["heading"]
 
             model = column.get("model")
@@ -370,7 +394,7 @@ async def csv_upload(
     """
     Process the csv file and validate and save the data in the tables, parsing any errors
     """
-    dataframe = csv_clean(dataframe)
+    dataframe = csv_clean(dataframe, dataset_year=dataset_year)
 
     # Remember the original row number to help users find where the problem was in the CSV
     # It may already be set if doing a bulk upload across multiple PDUs using the upload_csv command

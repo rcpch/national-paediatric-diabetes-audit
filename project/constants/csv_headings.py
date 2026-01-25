@@ -760,7 +760,7 @@ CSV_HEADING_OBJECTS_2026 = (
     {
         "heading": "Start date (Hospital Provider Spell)",
         "model_field": "hospital_admission_date",
-        "model": "",
+        "model": "Visit",
         "alternative_headings": [],
     },
     {

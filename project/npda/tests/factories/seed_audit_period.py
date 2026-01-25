@@ -22,7 +22,7 @@ def _seed_audit_periods_fixture(django_db_setup, django_db_blocker):
             logger.info('NOTE: Test audit periods already seeded! Not re-seeding.')
             return
 
-        for start_year in [2024, 2025]:
+        for start_year in [2024, 2025, 2026]:
             end_year = start_year + 1
 
             logger.info(f"Seeding test audit period {start_year}-{end_year}.")
