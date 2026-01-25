@@ -29,8 +29,8 @@ VISIT_FIELD_HEADINGS_2021 = {
     "hba1c": "Hba1c Value",
     "hba1c_format": "HbA1c result format",
     "hba1c_date": "Observation Date: Hba1c Value",
-    "treatment": "Diabetes Treatment at time of HbA1c measurement",
-    "closed_loop_system": "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this as part of a closed loop system?",
+    "treatment": "Diabetes Treatment at time of Hba1c measurement",
+    "closed_loop_system": "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
     "glucose_monitoring": "At the time of HbA1c measurement, in addition to standard blood glucose monitoring (SBGM), was the patient using any other method of glucose monitoring?",
     # Annual Review / Diagnosis
     "systolic_blood_pressure": "Systolic Blood Pressure",

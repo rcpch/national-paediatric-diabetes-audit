@@ -547,7 +547,10 @@ CSV_HEADING_OBJECTS_2026 = (
         "heading": "Observation Date: HbA1c Value",
         "model_field": "hba1c_date",
         "model": "Visit",
-        "alternative_headings": ["Observation Date: HbA1c Value†"],
+        "alternative_headings": [
+            "Observation Date: HbA1c Value†",
+            "Observation Date: Hba1c Value",
+        ],
     },
     {
         "heading": "Insulin regime at time of visit",

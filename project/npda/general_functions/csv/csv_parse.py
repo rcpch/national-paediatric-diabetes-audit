@@ -124,6 +124,7 @@ def csv_parse(csv_file, dataset_year=2021) -> ParsedCSVFile:
     # Replace headings which were different from in the old NPDA template with the new
     for column in df.columns:
         lowercase_col = _norm_heading(column)
+        logger.debug("csv_parse: incoming column=%r normalized=%r", column, lowercase_col)
 
         for heading in HEADINGS_OBJECTS:
             if "alternative_headings" in heading:
@@ -132,6 +133,11 @@ def csv_parse(csv_file, dataset_year=2021) -> ParsedCSVFile:
                 ]
 
                 if lowercase_col in lowercase_alternative_headings:
+                    logger.debug(
+                        "csv_parse: matched alternative heading %r -> canonical %r",
+                        column,
+                        heading["heading"],
+                    )
                     df = df.rename(columns={column: heading["heading"]})
 
     # Pandas has strange behaviour for the first line in a CSV - additional cells become row labels
@@ -152,6 +158,11 @@ def csv_parse(csv_file, dataset_year=2021) -> ParsedCSVFile:
         ):
             normalised_column = next(
                 c for c in HEADINGS_LIST if _norm_heading(c) == _norm_heading(column)
+            )
+            logger.debug(
+                "csv_parse: case-insensitive match %r -> canonical %r",
+                column,
+                normalised_column,
             )
             df = df.rename(columns={column: normalised_column})
 
@@ -278,6 +289,8 @@ def csv_parse(csv_file, dataset_year=2021) -> ParsedCSVFile:
     template_columns = [identifier_column] + [
         obj["heading"] for obj in CSV_HEADING_OBJECTS
     ]
+
+    logger.debug("csv_parse: final columns (%s): %s", dataset_year, list(df.columns))
 
     return ParsedCSVFile(
         df,

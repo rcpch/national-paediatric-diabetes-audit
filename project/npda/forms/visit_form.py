@@ -14,6 +14,9 @@ from project.npda.general_functions.justification_or_standard import (
 )
 from ...constants.styles import *
 from ...constants import *
+import logging
+
+logger = logging.getLogger(__name__)
 from ..general_functions.validate_dates import validate_date
 from ..forms.external_visit_validators import validate_visit_sync
 from ..models import Visit
@@ -950,6 +953,17 @@ class VisitForm(forms.ModelForm):
             if effective_hba1c_format == 1:
                 # mmol/mol
                 if hba1c < 20:
+                    # Debug: record when we trigger the low-IFCC validation branch
+                    try:
+                        logger.debug(
+                            "VisitForm Hba1c validation: dataset_year=%s, hba1c=%s, hba1c_format=%s, effective_format=%s",
+                            getattr(self, "dataset_year", None),
+                            hba1c,
+                            hba1c_format,
+                            effective_hba1c_format,
+                        )
+                    except Exception:
+                        pass
                     raise ValidationError(
                         {
                             "hba1c": [

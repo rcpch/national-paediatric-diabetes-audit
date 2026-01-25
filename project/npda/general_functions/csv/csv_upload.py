@@ -170,7 +170,6 @@ async def csv_upload(
 
     def row_to_dict(row, model):
         ret = {}
-
         for entry in CSV_HEADINGS:
             if "model" in entry and apps.get_model("npda", entry["model"]) == model:
                 model_field_name = entry["model_field"]
@@ -294,6 +293,17 @@ async def csv_upload(
                     model_errors[field].append({"code": "", "message": error})
 
         # From forms. ValidationErrors.
+        try:
+            logger.debug(
+                "CSV row %s: form.errors.get_json_data()=%s",
+                row_index,
+                form.errors.get_json_data(),
+            )
+        except Exception:
+            logger.exception(
+                "Failed to log form.errors.get_json_data() for CSV row %s", row_index
+            )
+
         for field, errors in form.errors.get_json_data().items():
             model_errors[field] += errors
 
