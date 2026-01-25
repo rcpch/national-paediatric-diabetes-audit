@@ -27,7 +27,11 @@ from project.npda.general_functions.csv import (
     csv_parse,
     create_csv_submission,
 )
-from project.npda.general_functions.headings import get_field_heading
+from project.npda.general_functions.headings import (
+    get_field_heading,
+    VISIT_FIELD_HEADINGS_2021,
+    VISIT_FIELD_HEADINGS_2026,
+)
 from project.npda.general_functions.quarter_for_date import (
     current_audit_year_start_date,
 )
@@ -148,7 +152,7 @@ def valid_df(dummy_sheets_folder):
     return csv_parse(file).df
 
 
-@pytest.fixture(params=[2021, 2026])
+@pytest.fixture(params=[2022, 2026])
 def dataset_year(request):
     return request.param
 
@@ -161,7 +165,9 @@ def single_row_valid_df(dummy_sheets_folder, dataset_year):
     file = dummy_sheets_folder / filename
     df = csv_parse(file, dataset_year=dataset_year).df
     df = df.head(1)
-
+    parsed = csv_parse(file, dataset_year=dataset_year)
+    df = parsed.df
+    df = df.head(1)
     return df
 
 
@@ -172,13 +178,25 @@ def audit_period_for_dataset_year(dataset_year):
     Tests that need a matching audit period for the CSV can depend on this
     fixture and pass it into `csv_upload_sync` as `_audit_period`.
     """
-    return AuditPeriod.objects.create(
-        is_open=True,
-        is_visible=True,
-        start_date=date(dataset_year, 4, 1),
-        end_date=date(dataset_year + 1, 3, 31),
-        slug=f"{dataset_year}-{dataset_year + 1}",
+    slug = f"{dataset_year}-{dataset_year + 1}"
+    audit_period, _created = AuditPeriod.objects.get_or_create(
+        slug=slug,
+        defaults={
+            "is_open": True,
+            "is_visible": True,
+            "start_date": date(dataset_year, 4, 1),
+            "end_date": date(dataset_year + 1, 3, 31),
+        },
     )
+
+    # Ensure dates/visibility are set to expected values even if the object existed
+    audit_period.is_open = True
+    audit_period.is_visible = True
+    audit_period.start_date = date(dataset_year, 4, 1)
+    audit_period.end_date = date(dataset_year + 1, 3, 31)
+    audit_period.save()
+
+    return audit_period
 
 
 @pytest.fixture
@@ -432,6 +450,7 @@ def test_missing_date_of_birth(
     seed_users_per_function_fixture,
     seed_audit_periods_per_function_fixture,
     single_row_valid_df,
+    audit_period_for_dataset_year,
 ):
     # As this test needs full transaction support we can't use our session fixtures
     test_user = NPDAUser.objects.filter(
@@ -447,7 +466,9 @@ def test_missing_date_of_birth(
         "There should be no patients in the database before the test"
     )
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
 
     assert "date_of_birth" in errors[0]
 
@@ -461,6 +482,7 @@ def test_missing_nhs_number(
     seed_users_per_function_fixture,
     seed_audit_periods_per_function_fixture,
     single_row_valid_df,
+    audit_period_for_dataset_year,
 ):
     # As these tests need full transaction support we can't use our session fixtures
     test_user = NPDAUser.objects.filter(
@@ -476,7 +498,9 @@ def test_missing_nhs_number(
         "There should be no patients in the database before the test"
     )
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
 
     assert "nhs_number" in errors[0]
 
@@ -485,10 +509,14 @@ def test_missing_nhs_number(
 
 
 @pytest.mark.django_db
-def test_missing_date_of_diagnosis(test_user, single_row_valid_df):
+def test_missing_date_of_diagnosis(
+    test_user, single_row_valid_df, audit_period_for_dataset_year
+):
     single_row_valid_df.loc[0, "Date of Diabetes Diagnosis"] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
 
     assert "diagnosis_date" in errors[0]
 
@@ -499,10 +527,14 @@ def test_missing_date_of_diagnosis(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_missing_diabetes_type(test_user, single_row_valid_df):
+def test_missing_diabetes_type(
+    test_user, single_row_valid_df, audit_period_for_dataset_year
+):
     single_row_valid_df.loc[0, "Diabetes Type"] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
 
     assert "diabetes_type" in errors[0]
 
@@ -609,7 +641,7 @@ def test_multiple_patients_where_one_has_visit_errors_and_the_other_does_not(
 
 @pytest.mark.django_db
 def test_multiple_patients_with_visit_errors(
-    test_user, two_patients_with_one_visit_each
+    test_user, two_patients_with_one_visit_each, audit_period_for_dataset_year
 ):
     df = two_patients_with_one_visit_each
 
@@ -624,7 +656,7 @@ def test_multiple_patients_with_visit_errors(
         "If treatment included insulin pump therapy (i.e. option 3 or 6 selected), was this part of a closed loop system?",
     ] = 3
 
-    errors = csv_upload_sync(test_user, df)
+    errors = csv_upload_sync(test_user, df, _audit_period=audit_period_for_dataset_year)
 
     assert "treatment" in errors[0]
     assert "treatment" in errors[1]
@@ -644,11 +676,15 @@ def test_multiple_patients_with_visit_errors(
 
 
 @pytest.mark.django_db
-def test_invalid_nhs_number(test_user, single_row_valid_df):
+def test_invalid_nhs_number(
+    test_user, single_row_valid_df, audit_period_for_dataset_year
+):
     invalid_nhs_number = "123456789"
     single_row_valid_df["NHS Number"] = invalid_nhs_number
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
     assert "nhs_number" in errors[0]
 
     patient = Patient.objects.first()
@@ -656,11 +692,15 @@ def test_invalid_nhs_number(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_future_date_of_birth(test_user, single_row_valid_df):
+def test_future_date_of_birth(
+    test_user, single_row_valid_df, audit_period_for_dataset_year
+):
     date_of_birth = TODAY + relativedelta(days=1)
     single_row_valid_df["Date of Birth"] = pd.to_datetime(date_of_birth)
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
     assert "date_of_birth" in errors[0]
 
     patient = Patient.objects.first()
@@ -673,11 +713,13 @@ def test_future_date_of_birth(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_over_25(test_user, single_row_valid_df):
+def test_over_25(test_user, single_row_valid_df, audit_period_for_dataset_year):
     date_of_birth = TODAY + -relativedelta(years=25, days=1)
     single_row_valid_df["Date of Birth"] = pd.to_datetime(date_of_birth)
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
     assert "date_of_birth" in errors[0]
 
     patient = Patient.objects.first()
@@ -690,11 +732,15 @@ def test_over_25(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_future_diagnosis_date(test_user, single_row_valid_df):
+def test_future_diagnosis_date(
+    test_user, single_row_valid_df, audit_period_for_dataset_year
+):
     diagnosis_date = TODAY + relativedelta(days=1)
     single_row_valid_df["Date of Diabetes Diagnosis"] = pd.to_datetime(diagnosis_date)
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
     assert "diagnosis_date" in errors[0]
 
     patient = Patient.objects.first()
@@ -707,13 +753,17 @@ def test_future_diagnosis_date(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_diagnosis_date_before_date_of_birth(test_user, single_row_valid_df):
+def test_diagnosis_date_before_date_of_birth(
+    test_user, single_row_valid_df, audit_period_for_dataset_year
+):
     date_of_birth = (VALID_FIELDS["date_of_birth"],)
     diagnosis_date = VALID_FIELDS["date_of_birth"] - relativedelta(years=1)
 
     single_row_valid_df["Date of Diabetes Diagnosis"] = pd.to_datetime(diagnosis_date)
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
 
     assert "diagnosis_date" in errors[0]
     error_message = errors[0]["diagnosis_date"][0]
@@ -734,10 +784,12 @@ def test_diagnosis_date_before_date_of_birth(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_invalid_sex(test_user, single_row_valid_df):
+def test_invalid_sex(test_user, single_row_valid_df, audit_period_for_dataset_year):
     single_row_valid_df[_sex_heading_for_df(single_row_valid_df)] = 45
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
     assert "sex" in errors[0]
 
     patient = Patient.objects.first()
@@ -747,10 +799,14 @@ def test_invalid_sex(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_not_specified_sex(test_user, single_row_valid_df):
+def test_not_specified_sex(
+    test_user, single_row_valid_df, audit_period_for_dataset_year
+):
     single_row_valid_df[_sex_heading_for_df(single_row_valid_df)] = 3
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
     assert "sex" not in errors[0]
 
     patient = Patient.objects.first()
@@ -760,10 +816,12 @@ def test_not_specified_sex(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_unknown_sex(test_user, single_row_valid_df):
+def test_unknown_sex(test_user, single_row_valid_df, audit_period_for_dataset_year):
     single_row_valid_df[_sex_heading_for_df(single_row_valid_df)] = 99
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
     assert "sex" not in errors[0]
 
     patient = Patient.objects.first()
@@ -773,10 +831,14 @@ def test_unknown_sex(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_missing_gp_ods_code(test_user, single_row_valid_df):
+def test_missing_gp_ods_code(
+    test_user, single_row_valid_df, audit_period_for_dataset_year
+):
     single_row_valid_df["GP Practice Code"] = None
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
     assert "gp_practice_ods_code" in errors[0]
 
     error_message = errors[0]["gp_practice_ods_code"][0]
@@ -797,12 +859,16 @@ def test_missing_gp_ods_code(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_future_death_date(test_user, single_row_valid_df):
+def test_future_death_date(
+    test_user, single_row_valid_df, audit_period_for_dataset_year
+):
     death_date = TODAY + relativedelta(days=1)
 
     single_row_valid_df["Death Date"] = pd.to_datetime(death_date)
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
     assert "death_date" in errors[0]
 
     patient = Patient.objects.first()
@@ -815,13 +881,17 @@ def test_future_death_date(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_death_date_before_date_of_birth(test_user, single_row_valid_df):
+def test_death_date_before_date_of_birth(
+    test_user, single_row_valid_df, audit_period_for_dataset_year
+):
     date_of_birth = (VALID_FIELDS["date_of_birth"],)
     death_date = VALID_FIELDS["date_of_birth"] - relativedelta(years=1)
 
     single_row_valid_df["Death Date"] = pd.to_datetime(death_date)
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
     assert "death_date" in errors[0]
 
     error_message = errors[0]["death_date"][0]
@@ -843,10 +913,14 @@ def test_death_date_before_date_of_birth(test_user, single_row_valid_df):
         postcode=ValidationError("Invalid postcode")
     ),
 )
-def test_invalid_postcode(test_user, single_row_valid_df):
+def test_invalid_postcode(
+    test_user, single_row_valid_df, audit_period_for_dataset_year
+):
     single_row_valid_df["Postcode of usual address"] = "not a postcode"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
     assert "postcode" in errors[0]
 
     patient = Patient.objects.first()
@@ -860,17 +934,14 @@ def test_invalid_postcode(test_user, single_row_valid_df):
     "project.npda.general_functions.csv.csv_upload.validate_patient_async",
     mock_patient_external_validation_result(postcode=None),
 )
-def test_error_validating_postcode(test_user, single_row_valid_df):
+def test_error_validating_postcode(
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
+):
     single_row_valid_df["Postcode of usual address"] = "WC1X 8SH"
 
-    # Set the audit period to be valid for the visit date at the outset
-    audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(
-        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
     )
-    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
-
-    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert len(errors) == 0
 
@@ -885,10 +956,14 @@ def test_error_validating_postcode(test_user, single_row_valid_df):
         gp_practice_ods_code=ValidationError("Invalid ODS code")
     ),
 )
-def test_invalid_gp_ods_code(test_user, single_row_valid_df):
+def test_invalid_gp_ods_code(
+    test_user, single_row_valid_df, audit_period_for_dataset_year
+):
     single_row_valid_df["GP Practice Code"] = "not a GP code"
 
-    errors = csv_upload_sync(test_user, single_row_valid_df)
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
     assert "gp_practice_ods_code" in errors[0]
 
     patient = Patient.objects.first()
@@ -920,7 +995,9 @@ def test_error_validating_gp_ods_code(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_gp_ods_code_trailing_space(test_user, dummy_sheet_csv):
+def test_gp_ods_code_trailing_space(
+    test_user, dummy_sheet_csv, audit_period_for_dataset_year
+):
     with patch(
         "project.npda.general_functions.csv.csv_upload.validate_patient_async",
         AsyncMock(return_value=MOCK_PATIENT_EXTERNAL_VALIDATION_RESULT),
@@ -932,7 +1009,7 @@ def test_gp_ods_code_trailing_space(test_user, dummy_sheet_csv):
         )
 
         df = read_csv_from_str(one_row_csv).df
-        csv_upload_sync(test_user, df)
+        csv_upload_sync(test_user, df, _audit_period=audit_period_for_dataset_year)
 
         assert mock_validate_patient_async.call_count == 1
         assert (
@@ -942,8 +1019,12 @@ def test_gp_ods_code_trailing_space(test_user, dummy_sheet_csv):
 
 
 @pytest.mark.django_db
-def test_lookup_index_of_multiple_deprivation(test_user, single_row_valid_df):
-    csv_upload_sync(test_user, single_row_valid_df)
+def test_lookup_index_of_multiple_deprivation(
+    test_user, single_row_valid_df, audit_period_for_dataset_year
+):
+    csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
 
     patient = Patient.objects.first()
     assert (
@@ -959,16 +1040,24 @@ def test_lookup_index_of_multiple_deprivation(test_user, single_row_valid_df):
         index_of_multiple_deprivation_quintile=None
     ),
 )
-def test_error_looking_up_index_of_multiple_deprivation(test_user, single_row_valid_df):
-    csv_upload_sync(test_user, single_row_valid_df)
+def test_error_looking_up_index_of_multiple_deprivation(
+    test_user, single_row_valid_df, audit_period_for_dataset_year
+):
+    csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
 
     patient = Patient.objects.first()
     assert patient.index_of_multiple_deprivation_quintile is None
 
 
 @pytest.mark.django_db
-def test_save_location_from_postcode(test_user, single_row_valid_df):
-    csv_upload_sync(test_user, single_row_valid_df)
+def test_save_location_from_postcode(
+    test_user, single_row_valid_df, audit_period_for_dataset_year
+):
+    csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
 
     patient = Patient.objects.first()
     assert patient.location_bng == MOCK_PATIENT_EXTERNAL_VALIDATION_RESULT.location_bng
@@ -985,8 +1074,12 @@ def test_save_location_from_postcode(test_user, single_row_valid_df):
         location_wgs84=None,
     ),
 )
-def test_missing_location_from_postcode(test_user, single_row_valid_df):
-    csv_upload_sync(test_user, single_row_valid_df)
+def test_missing_location_from_postcode(
+    test_user, single_row_valid_df, audit_period_for_dataset_year
+):
+    csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
 
     patient = Patient.objects.first()
     assert patient.location_bng is None
@@ -1609,19 +1702,26 @@ HbA1c tests
 
 
 @pytest.mark.django_db
-def test_hba1c_value_ifcc_less_than_20(test_user, single_row_valid_df):
-    single_row_valid_df.loc[0, "Hba1c Value"] = 18
-    single_row_valid_df.loc[0, "HbA1c result format"] = 1  # IFCC (mmol/mol)
-    single_row_valid_df.loc[0, "Observation Date: Hba1c Value"] = "01/01/2022"
-
-    # Set the audit period to be valid for the visit date at the outset
-    audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(
-        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+def test_hba1c_value_ifcc_less_than_20(
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
+):
+    hba1c_value = get_field_heading("hba1c_value", dataset_year)
+    hba1c_date = get_field_heading("hba1c_date", dataset_year)
+    visit_date = get_field_heading("visit_date", dataset_year)
+    if dataset_year < 2026:
+        hba1c_format = get_field_heading("hba1c_format", dataset_year)
+        single_row_valid_df[hba1c_format] = 1  # IFCC (mmol/mol)
+    single_row_valid_df[hba1c_value] = 18.0  # IFCC (mmol/mol)
+    single_row_valid_df[hba1c_date] = (
+        audit_period_for_dataset_year.start_date + relativedelta(months=1)
     )
-    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+    single_row_valid_df[visit_date] = (
+        audit_period_for_dataset_year.start_date + relativedelta(months=1)
+    )
 
-    errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
 
     assert "hba1c" in errors[0]
 
@@ -4157,8 +4257,10 @@ def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
     ],
 )
 @pytest.mark.django_db
-def test_bad_data_for_date_fields(test_user, dummy_sheet_csv, model_field):
-    headings = csv_definition_for(model_field)
+def test_bad_data_for_date_fields(
+    test_user, dummy_sheet_csv, model_field, audit_period_for_dataset_year, dataset_year
+):
+    headings = csv_definition_for(model_field, dataset_year=dataset_year)
 
     column = headings["heading"]
     model = apps.get_model("npda", headings["model"])
@@ -4185,7 +4287,7 @@ def test_bad_data_for_date_fields(test_user, dummy_sheet_csv, model_field):
     assert model.objects.count() == 1
 
     instance = model.objects.first()
-    assert getattr(instance, model_field) == None
+    assert getattr(instance, model_field) is None
 
 
 @pytest.mark.parametrize(

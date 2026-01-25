@@ -120,6 +120,9 @@ class VisitForm(forms.ModelForm):
             dataset_year = 2026
             allowed_fields = list(VISIT_FIELD_HEADINGS_2026.keys())
 
+        # Expose dataset_year to instance for use in clean()/validation
+        self.dataset_year = dataset_year
+
         for field_name in allowed_fields:
             if field_name not in self.fields:
                 continue  # Skip if field is not present in the form
@@ -558,7 +561,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if valid is False:
             raise ValidationError(error)
 
         return self.cleaned_data["hba1c_date"]
@@ -934,8 +937,17 @@ class VisitForm(forms.ModelForm):
         hba1c_format = cleaned_data.get("hba1c_format")
         hba1c_date = cleaned_data.get("hba1c_date")
 
+        # For dataset years >= 2026 the `hba1c_format` column may be absent;
+        # treat missing format as IFCC (1) for range validation in 2026+.
+        effective_hba1c_format = hba1c_format
+        if (
+            getattr(self, "dataset_year", 2026) >= 2026
+            and effective_hba1c_format is None
+        ):
+            effective_hba1c_format = 1
+
         if hba1c is not None:
-            if hba1c_format == 1:
+            if effective_hba1c_format == 1:
                 # mmol/mol
                 if hba1c < 20:
                     raise ValidationError(
@@ -967,13 +979,20 @@ class VisitForm(forms.ModelForm):
                             ]
                         }
                     )
-        if any([hba1c, hba1c_format, hba1c_date]):
-            # Validate all fields in a measure are present if any are present
-            measure_must_have_date_and_value(
-                hba1c_date,
-                "hba1c_date",
-                [{"hba1c": hba1c}, {"hba1c_format": hba1c_format}],
-            )
+        # Require the format field only for dataset years < 2026. For 2026+ we
+        # require the value and date only (format is assumed IFCC if missing).
+        if getattr(self, "dataset_year", 2026) < 2026:
+            if any([hba1c, hba1c_format, hba1c_date]):
+                measure_must_have_date_and_value(
+                    hba1c_date,
+                    "hba1c_date",
+                    [{"hba1c": hba1c}, {"hba1c_format": hba1c_format}],
+                )
+        else:
+            if any([hba1c, hba1c_date]):
+                measure_must_have_date_and_value(
+                    hba1c_date, "hba1c_date", [{"hba1c": hba1c}]
+                )
 
         treatment = cleaned_data.get("treatment")
         closed_loop_system = cleaned_data.get("closed_loop_system")
@@ -1013,9 +1032,12 @@ class VisitForm(forms.ModelForm):
         if any(
             [insulin_regimen, non_insulin_medication, dietary_lifestyle_modification]
         ):
+            # These medication fields share the visit date rather than a dedicated
+            # observation date field. If any are present, require `visit_date`.
+            visit_date = cleaned_data.get("visit_date")
             measure_must_have_date_and_value(
-                None,
-                None,
+                visit_date,
+                "visit_date",
                 [
                     {"insulin_regimen": insulin_regimen},
                     {"non_insulin_medication": non_insulin_medication},
@@ -1320,12 +1342,13 @@ def measure_must_have_date_and_value(date_field, date_field_name, field_list):
     for field in field_list:
         for key, value in field.items():
             heading = return_heading_model_field(key)
-            field_name_list.append(heading)
+            display = heading or key.replace("_", " ").title()
+            field_name_list.append(display)
             if value is None:
                 errors.update(
                     {
                         f"{key}": [
-                            f"Missing item. {heading} and the associated date must all be completed."
+                            f"Missing item. {display} and the associated date must all be completed."
                         ]
                     }
                 )
@@ -1333,14 +1356,17 @@ def measure_must_have_date_and_value(date_field, date_field_name, field_list):
     if date_field is None and any(
         value is not None for field in field_list for value in field.values()
     ):
-        # If the date is None and any of the values are not None, we raise an error
-        errors.update(
-            {
-                date_field_name: [
-                    f"Absent or invalid date error. {field_name_list} and the associated date must all be completed."
-                ]
-            }
-        )
+        # If a date field name is provided we require the date; otherwise
+        # this group has no associated date so only per-field missing errors
+        # (already added above) should be raised.
+        if date_field_name is not None:
+            errors.update(
+                {
+                    date_field_name: [
+                        f"Absent or invalid date error. {field_name_list} and the associated date must all be completed."
+                    ]
+                }
+            )
     if errors:
         raise ValidationError(errors)
 
@@ -1359,10 +1385,11 @@ def all_items_must_be_filled_in(field_list):
     for field in field_list:
         for key, value in field.items():
             heading = return_heading_model_field(key)
-            field_name_list.append(heading)
+            display = heading or key.replace("_", " ").title()
+            field_name_list.append(display)
             if value is None:
                 errors.update(
-                    {f"{key}": [f"Missing item. {heading} must also be completed."]}
+                    {f"{key}": [f"Missing item. {display} must also be completed."]}
                 )
     field_name_list = ", ".join(field_name_list)
     if errors:
