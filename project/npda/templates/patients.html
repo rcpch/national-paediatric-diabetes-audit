@@ -32,10 +32,8 @@
               <p>
                 We recommend this method if you already have a system that can export in that format or are building one.
               </p>
-              <div class="card-actions justify-end">
-                <a href="{% data_url 'pdu-upload-csv' %}"
-                   class="btn btn-info {% if not perms.npda.can_submit_csv %}btn-disabled{% endif %}">Select</a>
-              </div>
+              <a href="{% data_url 'pdu-upload-csv' %}"
+                class="btn btn-info {% if not perms.npda.can_submit_csv %}btn-disabled{% endif %}">Upload CSV</a>
             </div>
           </div>
           <div class="divider divider-horizontal">OR</div>
@@ -46,18 +44,25 @@
               <p>
                 Use this method if you don't have an electronic patient record or you can't export from it in our CSV format.
               </p>
-              {% if last_submission and not last_submission.csv_file_name %}
-                Patients will be copied from the previous audit year automatically unless they have left service or died.
-                <form action="{% data_url 'pdu-submissions' %}" method="POST" class="card-actions justify-end">
+              {% if last_submission %}
+                <hr />
+                <a href="{% data_url 'pdu-patient-add' %}"
+                    class="btn btn-info">Start from scratch</a>
+                <p>
+                  You will have to enter all patient data again including demographic data (stated gender, ethnic category etc).
+                </p>
+                <hr />
+                <form action="{% data_url 'pdu-submissions' %}" method="POST">
                   {% csrf_token %}
                   <input type="hidden" name="submit-data" value="start-questionnaire-submission" />
-                  <input type="submit" class="btn btn-info" value="Select" />
+                  <input type="submit" class="btn btn-info w-full" value="Copy patients and start" />
                 </form>
+                <p>
+                  Demographic data for patients will be copied from the previous audit year unless they have left service or died.
+                </p>
               {% else %}
-                <div class="card-actions justify-end">
                   <a href="{% data_url 'pdu-patient-add' %}"
-                    class="btn btn-info {% if not perms.npda.can_submit_csv %}btn-disabled{% endif %}">Select</a>
-                </div>
+                    class="btn btn-info {% if not perms.npda.can_submit_csv %}btn-disabled{% endif %}">Start</a>
               {% endif %}
             </div>
           </div>
