@@ -14,7 +14,7 @@ View classes tested:
 
 from http import HTTPStatus
 import logging
-from datetime import date
+from datetime import date, timedelta
 
 # Python imports
 import pytest
@@ -27,7 +27,7 @@ from django.apps import apps
 from project.constants.user import RCPCH_AUDIT_TEAM
 
 # NPDA imports
-from project.npda.models import NPDAUser, Submission
+from project.npda.models import NPDAUser, Submission, Transfer, AuditPeriod
 from project.npda.tests.utils import login_and_verify_user
 from project.npda.tests.factories import (
     PatientFactory,
@@ -240,3 +240,79 @@ def test_npda_user_can_submit_same_patient_twice_within_the_same_submission_in_d
         ).count()
         == 1
     )
+
+
+@pytest.mark.django_db
+def test_patients_copied_from_previous_questionnaire_submission(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+):
+    ah_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
+    ).first()
+
+    client = login_and_verify_user(client, ah_user)
+
+    pdu = PaediatricsDiabetesUnitFactory(pz_code=ALDER_HEY_PZ_CODE)
+
+    next_audit_period = AuditPeriod.objects.get(start_date__year=2025)
+    previous_audit_period = next_audit_period.previous_audit_period()
+
+    previous_submission = Submission.objects.create(
+        paediatric_diabetes_unit=pdu,
+        audit_year=previous_audit_period.audit_year(),
+        audit_period=previous_audit_period,
+        submission_date=previous_audit_period.end_date - timedelta(days=1),
+        submission_by=ah_user,
+        submission_active=True,
+    )
+
+    # Patient 1: Normal patient (should be copied)
+    patient_1 = PatientFactory()
+    previous_submission.patients.add(patient_1)
+
+    # Patient 2: Patient with left service (should NOT be copied)
+    patient_2 = PatientFactory()
+    previous_submission.patients.add(patient_2)
+    Transfer.objects.create(
+        patient=patient_2,
+        paediatric_diabetes_unit=pdu,
+        date_leaving_service=previous_audit_period.end_date - timedelta(days=1),
+        reason_leaving_service=1,  # Transitioned to adult diabetes service
+    )
+
+    # Patient 3: Patient with death date (should NOT be copied)
+    patient_3 = PatientFactory(death_date=previous_audit_period.end_date - timedelta(days=1))
+    previous_submission.patients.add(patient_3)
+    Transfer.objects.create(
+        patient=patient_3,
+        paediatric_diabetes_unit=pdu,
+    )
+
+    assert previous_submission.patients.count() == 3
+
+    url = reverse("pdu-submissions", kwargs={
+        "audit_period": next_audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE
+    })
+
+    response = client.post(url, data = {
+        "submit-data": "start-questionnaire-submission"
+    })
+
+    assert response.status_code == 302
+
+    next_submission = Submission.objects.filter(
+        audit_period=next_audit_period,
+        paediatric_diabetes_unit=pdu,
+        submission_active=True,
+    ).first()
+
+    assert next_submission is not None
+
+    # Verify that ONLY patient_1 (the normal patient without leaving/death data) was copied
+    assert next_submission.patients.count() == 1  # patient_1
+    assert next_submission.patients.filter(nhs_number=patient_1.nhs_number).exists()
+    assert not next_submission.patients.filter(nhs_number=patient_2.nhs_number).exists()
+    assert not next_submission.patients.filter(nhs_number=patient_3.nhs_number).exists()
