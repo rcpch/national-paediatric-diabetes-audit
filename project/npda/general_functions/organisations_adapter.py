@@ -25,8 +25,7 @@ def paediatric_diabetes_units_for_user(
         ):
             # return all paediatric diabetes units excluding those were the user is employed
             filtered_pdus = PaediatricDiabetesUnit.objects.all().exclude(
-                npda_users__npda_user=user_instance,
-                active=True
+                npda_users__npda_user=user_instance
             )
         else:
             # return only those paediatric diabetes units that a user is already affiliated with
@@ -41,7 +40,7 @@ def paediatric_diabetes_units_for_user(
             or requesting_user.is_rcpch_staff
         ):
             # return all paediatric diabetes units
-            filtered_pdus = PaediatricDiabetesUnit.objects.filter(active=True).all()
+            filtered_pdus = PaediatricDiabetesUnit.objects.all()
 
         else:
             # return all organisations that are associated with the same paediatric diabetes unit as the requesting_user
