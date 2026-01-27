@@ -136,12 +136,6 @@ class Patient(models.Model, HelpTextMixin):
         verbose_name="Validation errors", blank=True, null=True, default=None
     )
 
-    dataset_year = models.PositiveSmallIntegerField(
-        verbose_name="Dataset Year",
-        default=2021,
-        help_text="The dataset year used for this patient.",
-    )
-
     adhd_asd_diagnosis = models.PositiveSmallIntegerField(
         choices=ADHD_ASD,
         blank=True,
@@ -296,19 +290,28 @@ class Patient(models.Model, HelpTextMixin):
 
     def get_sex_label(self):
         """Returns the label for the sex field based on the dataset year."""
-        if self.dataset_year and self.dataset_year >= 2026:
+        if self.audit_period and self.audit_period.get_dataset_year() >= 2026:
             return "Sex assigned at birth"
         else:
             return "Stated gender"
 
     def get_field_label(self, field_name):
         """Get year-appropriate label for any field."""
-        return get_field_heading(field_name, self.dataset_year)
+        return get_field_heading(
+            field_name,
+            self.audit_period.get_dataset_year() if self.audit_period else None,
+        )
 
     def get_field_help_text(self, field_name):
         """Get year-appropriate help text for any field."""
-        return get_field_notes(field_name, self.dataset_year)
+        return get_field_notes(
+            field_name,
+            self.audit_period.get_dataset_year() if self.audit_period else None,
+        )
 
     def get_field_justification_or_standard(self, field_name):
         """Get year-appropriate justification or standard for any field."""
-        return get_field_justification_standard(field_name, self.dataset_year)
+        return get_field_justification_standard(
+            field_name,
+            self.audit_period.get_dataset_year() if self.audit_period else None,
+        )

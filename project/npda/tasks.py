@@ -34,10 +34,12 @@ def upload_csv_task(submission_id):
 
     # Determine the dataset year from the CSV data (use integer year)
     try:
-        dataset_year = submission.audit_period.audit_year()
+        dataset_year = submission.audit_period.get_dataset_year()
     except Exception:
         # Fallback to 2021 for safety
-        logger.exception("Failed to determine audit year from submission.audit_period; defaulting to 2021")
+        logger.exception(
+            "Failed to determine audit year from submission.audit_period; defaulting to 2021"
+        )
         dataset_year = 2021
 
     # CSV parsing errors are done inline in the route that handles the file upload

@@ -124,7 +124,6 @@ class PatientFactory(factory.django.DjangoModelFactory):
     diabetes_type = factory.lazy_attribute(lambda x: random.choice(x.diabetes_types))
     sex = factory.lazy_attribute(lambda x: random.choice([sex.value for sex in Sex]))
     ethnicity = factory.lazy_attribute(lambda x: random.choice(ETHNICITIES)[0])
-    dataset_year = 2021
 
     @factory.lazy_attribute
     def nhs_number(self):

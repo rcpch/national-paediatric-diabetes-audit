@@ -411,9 +411,7 @@ def test_hba1c_date_and_hba1c_format_missing_form_fails_validation():
     Test that HbA1c format and date missing fails validation
     """
     patient = PatientFactory()
-    visit = Visit.objects.create(
-        patient=patient, dataset_year=2021, visit_date=date(2021, 1, 1)
-    )
+    visit = Visit.objects.create(patient=patient, visit_date=date(2021, 1, 1))
     form = VisitForm(
         data={
             "hba1c": 5,

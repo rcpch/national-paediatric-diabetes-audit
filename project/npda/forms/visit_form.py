@@ -19,7 +19,7 @@ import logging
 logger = logging.getLogger(__name__)
 from ..general_functions.validate_dates import validate_date
 from ..forms.external_visit_validators import validate_visit_sync
-from ..models import Visit
+from ..models import Visit, PatientSubmission
 
 
 class DateInput(forms.DateInput):
@@ -107,38 +107,31 @@ class VisitForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.patient = kwargs["initial"].get("patient")
-        dataset_year = 2021
+
         self.override_height_weight = kwargs.pop("override_height_weight", False)
         self.audit_period = kwargs.pop("audit_period", None)
+        self.dataset_year = (
+            self.audit_period.get_dataset_year() if self.audit_period else 2021
+        )
         super(VisitForm, self).__init__(*args, **kwargs)
-        if self.instance and self.instance.pk:
-            dataset_year = self.instance.dataset_year
-            if dataset_year == 2026:
-                allowed_fields = list(VISIT_FIELD_HEADINGS_2026.keys())
-            else:
-                # Future-proofing for other dataset years
-                allowed_fields = list(VISIT_FIELD_HEADINGS_2021.keys())
-        else:
-            # Default for new records
-            dataset_year = 2026
+        if self.dataset_year == 2026:
             allowed_fields = list(VISIT_FIELD_HEADINGS_2026.keys())
-
-        # Expose dataset_year to instance for use in clean()/validation
-        self.dataset_year = dataset_year
+        else:
+            # Future-proofing for other dataset years
+            allowed_fields = list(VISIT_FIELD_HEADINGS_2021.keys())
 
         for field_name in allowed_fields:
             if field_name not in self.fields:
                 continue  # Skip if field is not present in the form
             model_field = Visit._meta.get_field(field_name)
             # Set help text from model field
-            if dataset_year:
-                # Set label from headings
-                label = get_field_heading(field_name, dataset_year)
-                note = get_field_notes(field_name, dataset_year)
-                reference = get_field_justification_standard(field_name, dataset_year)
-                self.fields[field_name].label = label
-                self.fields[field_name].help_text = note
-                self.fields[field_name].reference = reference
+            # Set label from headings
+            label = get_field_heading(field_name, self.dataset_year)
+            note = get_field_notes(field_name, self.dataset_year)
+            reference = get_field_justification_standard(field_name, self.dataset_year)
+            self.fields[field_name].label = label
+            self.fields[field_name].help_text = note
+            self.fields[field_name].reference = reference
             if hasattr(model_field, "category"):
                 self.fields[field_name].category = model_field.category
 
@@ -954,16 +947,6 @@ class VisitForm(forms.ModelForm):
                 # mmol/mol
                 if hba1c < 20:
                     # Debug: record when we trigger the low-IFCC validation branch
-                    try:
-                        logger.debug(
-                            "VisitForm Hba1c validation: dataset_year=%s, hba1c=%s, hba1c_format=%s, effective_format=%s",
-                            getattr(self, "dataset_year", None),
-                            hba1c,
-                            hba1c_format,
-                            effective_hba1c_format,
-                        )
-                    except Exception:
-                        pass
                     raise ValidationError(
                         {
                             "hba1c": [

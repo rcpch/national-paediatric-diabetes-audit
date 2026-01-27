@@ -121,7 +121,7 @@ async def csv_upload(
 
     # Infer dataset_year from submission.audit_period
     try:
-        dataset_year = submission.audit_period.audit_year()
+        dataset_year = submission.audit_period.get_dataset_year()
     except Exception:
         dataset_year = 2021
 

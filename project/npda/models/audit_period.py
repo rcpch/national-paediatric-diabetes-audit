@@ -12,12 +12,16 @@ class AuditPeriodManager(models.Manager):
             audit_period = self.get_queryset().first()
 
             if not audit_period:
-                raise ValidationError("No audit periods. Restart or run `python manage.py seed --mode=seed_audit_periods` manually")
+                raise ValidationError(
+                    "No audit periods. Restart or run `python manage.py seed --mode=seed_audit_periods` manually"
+                )
 
         return audit_period
 
     def get_audit_period_for_request(self, request):
-        can_view_all_data = request.user.is_superuser or request.user.is_rcpch_audit_team_member
+        can_view_all_data = (
+            request.user.is_superuser or request.user.is_rcpch_audit_team_member
+        )
 
         slug = request.resolver_match.kwargs["audit_period"]
 
@@ -31,7 +35,7 @@ class AuditPeriodManager(models.Manager):
 
         if not audit_period.is_visible and not can_view_all_data:
             raise PermissionDenied(f"Audit period {slug} is not visible")
-        
+
         return audit_period
 
 
@@ -50,15 +54,24 @@ class AuditPeriod(models.Model):
     def audit_year(self):
         return self.start_date.year
 
+    def get_dataset_year(self):
+        """Return the dataset year for this audit period. This is either 2021 or 2026."""
+        if self.start_date >= date(2026, 4, 1):
+            return 2026
+        else:
+            return 2021
+
     def display_name(self):
         return f"{self.start_date.year} - {self.end_date.year}"
 
     def is_allowed_to_edit(self, user):
-        return (user and (user.is_superuser or user.is_rcpch_audit_team_member)) or self.is_open
-    
+        return (
+            user and (user.is_superuser or user.is_rcpch_audit_team_member)
+        ) or self.is_open
+
     def kpi_calculation_date(self):
         today = date.today()
-    
+
         if self.start_date > today:
             # Future audit period - likely no data yet but you can still select it
             return self.start_date
