@@ -14,6 +14,7 @@ Tests for NPDAUser model actions.
 - NPDAUser can be reactivated.
 """
 
+from datetime import date
 import logging
 from http import HTTPStatus
 
@@ -30,7 +31,7 @@ from project.constants.user import (
     AUDIT_CENTRE_COORDINATOR,
     RCPCH_AUDIT_TEAM,
     TRUST_AUDIT_TEAM_COORDINATOR_ACCESS,
-    AUDIT_CENTRE_READER
+    AUDIT_CENTRE_READER,
 )
 
 # E12 imports
@@ -61,6 +62,39 @@ GOSH_PZ_CODE = "PZ196"
 def valid_df(dummy_sheets_folder):
     file = dummy_sheets_folder / "dummy_sheet_test.csv"
     return csv_parse(file).df
+
+
+@pytest.fixture(params=[2021, 2026])
+def dataset_year(request):
+    return request.param
+
+
+@pytest.fixture
+def audit_period_for_dataset_year(dataset_year):
+    """Create an AuditPeriod for the supplied dataset_year for tests.
+
+    Tests that need a matching audit period for the CSV can depend on this
+    fixture and pass it into `csv_upload_sync` as `_audit_period`.
+    """
+    slug = f"{dataset_year}-{dataset_year + 1}"
+    audit_period, _created = AuditPeriod.objects.get_or_create(
+        slug=slug,
+        defaults={
+            "is_open": True,
+            "is_visible": True,
+            "start_date": date(dataset_year, 4, 1),
+            "end_date": date(dataset_year + 1, 3, 31),
+        },
+    )
+
+    # Ensure dates/visibility are set to expected values even if the object existed
+    audit_period.is_open = True
+    audit_period.is_visible = True
+    audit_period.start_date = date(dataset_year, 4, 1)
+    audit_period.end_date = date(dataset_year + 1, 3, 31)
+    audit_period.save()
+
+    return audit_period
 
 
 def check_all_users_in_pdu(user, users, pz_code):
@@ -142,7 +176,7 @@ def test_editor_can_upload_csv(
     seed_users_fixture,
     seed_audit_periods_fixture,
     client,
-    dummy_sheets_folder
+    dummy_sheets_folder,
 ):
     # create a test user with the editor role
     editor_user = NPDAUser.objects.filter(
@@ -151,7 +185,7 @@ def test_editor_can_upload_csv(
     ).first()
     client = login_and_verify_user(client, editor_user)
     # create a test CSV file
-    
+
     file = dummy_sheets_folder / "dummy_sheet_test.csv"
 
     # upload the CSV file by posting to  'home' view
@@ -174,7 +208,7 @@ def test_reader_cannot_upload_csv(
     seed_users_fixture,
     seed_audit_periods_fixture,
     client,
-    dummy_sheets_folder
+    dummy_sheets_folder,
 ):
     # create a test user with the editor role
     reader_user = NPDAUser.objects.filter(
@@ -183,11 +217,14 @@ def test_reader_cannot_upload_csv(
     ).first()
     client = login_and_verify_user(client, reader_user)
     # create a test CSV file
-    
+
     file = dummy_sheets_folder / "dummy_sheet_test.csv"
 
     # upload the CSV file by posting to  'home' view
-    url = url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
+    url = url = reverse(
+        "pdu-upload-csv",
+        kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"},
+    )
     with open(file, "rb") as f:
         response = client.post(
             url,
@@ -261,6 +298,7 @@ def test_coordinators_cannot_change_their_employer_htmx(
     employers = {e.pz_code for e in user.organisation_employers.all()}
 
     assert employers == {ALDER_HEY_PZ_CODE}
+
 
 # Not actually used in the UI but possible to construct manually
 @pytest.mark.django_db
@@ -392,11 +430,7 @@ def test_coordinators_cannot_create_audit_team_members(
 @pytest.mark.django_db
 @pytest.mark.parametrize("action", ["deactivate", "activate"])
 def test_coordinators_cannot_activate_or_inactivate_users_outside_of_their_pdu(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client,
-    action
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, action
 ):
     ah_coordinator = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE, role=AUDIT_CENTRE_COORDINATOR
@@ -406,7 +440,7 @@ def test_coordinators_cannot_activate_or_inactivate_users_outside_of_their_pdu(
         organisation_employers__pz_code=GOSH_PZ_CODE, role=AUDIT_CENTRE_COORDINATOR
     ).first()
 
-     # Set initial state based on action being tested
+    # Set initial state based on action being tested
     if action == "deactivate":
         gosh_coordinator.is_active = True
     else:  # activate
@@ -419,7 +453,7 @@ def test_coordinators_cannot_activate_or_inactivate_users_outside_of_their_pdu(
 
     url = reverse("npdauser-update", kwargs={"pk": gosh_coordinator.pk})
 
-    response = client.post(url, data={action:'true'})
+    response = client.post(url, data={action: "true"})
 
     assert response.status_code == HTTPStatus.FORBIDDEN
     gosh_coordinator.refresh_from_db()
@@ -481,42 +515,41 @@ def test_audit_team_can_add_employers_outside_of_their_pdu(
 
     url = reverse("npdauser-pdu-update", kwargs={"pk": ah_coordinator.pk})
 
-    response = client.post(url, data={
-        "add_employer": GOSH_PZ_CODE
-    }, **{
-        # Gated on request.htmx
-        "HTTP_HX-Request": "true",
-    })
+    response = client.post(
+        url,
+        data={"add_employer": GOSH_PZ_CODE},
+        **{
+            # Gated on request.htmx
+            "HTTP_HX-Request": "true",
+        },
+    )
 
     ah_coordinator.refresh_from_db()
-    employers = { e.pz_code for e in ah_coordinator.organisation_employers.all() }
+    employers = {e.pz_code for e in ah_coordinator.organisation_employers.all()}
 
-    assert employers == { ALDER_HEY_PZ_CODE, GOSH_PZ_CODE }
+    assert employers == {ALDER_HEY_PZ_CODE, GOSH_PZ_CODE}
 
     VisitActivity = apps.get_model("npda", "VisitActivity")
     assert VisitActivity.objects.filter(
         npdauser=ah_coordinator,
-        activity=15, # Assigned to a new PDU
+        activity=15,  # Assigned to a new PDU
         npdauser_admin=audit_team_user,  # The user who made the change
-    ).exists(), "Expected a VisitActivity to be created when a coordinator tries to change their PDU."
+    ).exists(), (
+        "Expected a VisitActivity to be created when a coordinator tries to change their PDU."
+    )
 
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     "user_flag",
-    [
-        "is_superuser",
-        "is_staff",
-        "is_rcpch_audit_team_member",
-        "is_rcpch_staff"
-    ],
+    ["is_superuser", "is_staff", "is_rcpch_audit_team_member", "is_rcpch_staff"],
 )
 def test_coordinators_cannot_set_user_flags(
     seed_groups_fixture,
     seed_users_fixture,
     seed_audit_periods_fixture,
     client,
-    user_flag
+    user_flag,
 ):
     coordinator = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE, role=AUDIT_CENTRE_COORDINATOR
@@ -547,17 +580,14 @@ def test_coordinators_cannot_set_user_flags(
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     "user_flag",
-    [
-        "is_rcpch_audit_team_member",
-        "is_rcpch_staff"
-    ],
+    ["is_rcpch_audit_team_member", "is_rcpch_staff"],
 )
 def test_coordinators_cannot_create_users_with_superuser_flags(
     seed_groups_fixture,
     seed_users_fixture,
     seed_audit_periods_fixture,
     client,
-    user_flag
+    user_flag,
 ):
     user_count_before = NPDAUser.objects.count()
 
@@ -588,17 +618,14 @@ def test_coordinators_cannot_create_users_with_superuser_flags(
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     "user_flag",
-    [
-        "is_superuser",
-        "is_staff"
-    ],
+    ["is_superuser", "is_staff"],
 )
 def test_coordinators_cannot_create_users_with_django_admin_flags(
     seed_groups_fixture,
     seed_users_fixture,
     seed_audit_periods_fixture,
     client,
-    user_flag
+    user_flag,
 ):
     coordinator = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE, role=AUDIT_CENTRE_COORDINATOR
@@ -675,10 +702,13 @@ def test_users_can_download_csv(
     VisitFactory(patient=patient)
 
     # Make a POST request to download the CSV file (HTMX)
-    url = reverse("pdu-submissions", kwargs={
-        "pz_code": test_user.organisation_employers.first().pz_code,
-        "audit_period": f"{audit_start_date.year}-{audit_start_date.year +1}",
-    })
+    url = reverse(
+        "pdu-submissions",
+        kwargs={
+            "pz_code": test_user.organisation_employers.first().pz_code,
+            "audit_period": f"{audit_start_date.year}-{audit_start_date.year + 1}",
+        },
+    )
 
     response = client.post(
         url,
@@ -735,10 +765,13 @@ def test_reader_cannot_download_csv(
     VisitFactory(patient=patient)
 
     # Make a POST request to download the CSV file (HTMX)
-    url = reverse("pdu-submissions", kwargs={
-        "pz_code": editor_user.organisation_employers.first().pz_code,
-        "audit_period": f"{audit_start_date.year}-{audit_start_date.year +1}",
-    })
+    url = reverse(
+        "pdu-submissions",
+        kwargs={
+            "pz_code": editor_user.organisation_employers.first().pz_code,
+            "audit_period": f"{audit_start_date.year}-{audit_start_date.year + 1}",
+        },
+    )
 
     response = client.post(
         url,
@@ -766,6 +799,7 @@ def test_users_can_download_report(
     user_data,
     valid_df,
     dummy_sheet_csv,
+    dataset_year,
 ):
     """Test that editor, coordinator, and RCPCH audit team users can download the validation report."""
 
@@ -802,10 +836,13 @@ def test_users_can_download_report(
     VisitFactory(patient=patient)
 
     # Make a POST request to download the report (HTMX)
-    url = reverse("pdu-submissions", kwargs={
-        "pz_code": test_user.organisation_employers.first().pz_code,
-        "audit_period": f"{audit_start_date.year}-{audit_start_date.year +1}",
-    })
+    url = reverse(
+        "pdu-submissions",
+        kwargs={
+            "pz_code": test_user.organisation_employers.first().pz_code,
+            "audit_period": f"{audit_start_date.year}-{audit_start_date.year + 1}",
+        },
+    )
 
     response = client.post(
         url,
@@ -817,7 +854,10 @@ def test_users_can_download_report(
     assert response.has_header("Content-Disposition")
     assert "attachment" in response["Content-Disposition"]
     assert "filename" in response["Content-Disposition"]
-    assert response["Content-Type"] == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    assert (
+        response["Content-Type"]
+        == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 
 @pytest.mark.django_db
@@ -863,15 +903,16 @@ def test_rcpch_audit_team_can_delete_submission(
     VisitFactory(patient=patient)
 
     # Make a POST request to delete the data (HTMX)
-    url = reverse("pdu-submissions", kwargs={
-        "pz_code": audit_team_user.organisation_employers.first().pz_code,
-        "audit_period": f"{audit_start_date.year}-{audit_start_date.year +1}",
-    })
+    url = reverse(
+        "pdu-submissions",
+        kwargs={
+            "pz_code": audit_team_user.organisation_employers.first().pz_code,
+            "audit_period": f"{audit_start_date.year}-{audit_start_date.year + 1}",
+        },
+    )
 
     response = client.post(
-        url,
-        {"submit-data": "delete-data", "audit_id": submission.pk},
-        follow=True
+        url, {"submit-data": "delete-data", "audit_id": submission.pk}, follow=True
     )
     # Check that the deletion was successful (we expect a success message in the response)
     assert response.status_code == HTTPStatus.OK
@@ -929,11 +970,14 @@ def test_non_rcpch_audit_team_cannot_delete_submission(
     VisitFactory(patient=patient)
 
     # Make a POST request to delete the data (HTMX)
-    url = reverse("pdu-submissions", kwargs={
-        "pz_code": non_deleting_user.organisation_employers.first().pz_code,
-        "audit_period": f"{audit_start_date.year}-{audit_start_date.year +1}",
-    })
-    
+    url = reverse(
+        "pdu-submissions",
+        kwargs={
+            "pz_code": non_deleting_user.organisation_employers.first().pz_code,
+            "audit_period": f"{audit_start_date.year}-{audit_start_date.year + 1}",
+        },
+    )
+
     response = client.post(
         url,
         {"submit-data": "delete-data", "audit_id": submission.pk},
@@ -1083,7 +1127,8 @@ def test_editors_and_readers_can_only_view_their_own_logs(
             assert response.status_code == HTTPStatus.OK, (
                 f"User {user_should_see_all_logs.first_name} ({user_should_see_all_logs.organisation_employers.first().pz_code}) should be able to see logs for user {other_user.first_name} ({other_user.organisation_employers.first().pz_code})"
             )
-    
+
+
 @pytest.mark.django_db
 def test_coordinators_can_see_users_with_multiple_employers_if_in_same_pdu(
     client: Client,
@@ -1116,11 +1161,14 @@ def test_coordinators_can_see_users_with_multiple_employers_if_in_same_pdu(
     client = login_and_verify_user(client, test_coordinator)
 
     # Make a GET request to the user logs page
-    url = reverse("npdauser-logs", kwargs={"npdauser_id": test_user_multiple_employers.pk})
+    url = reverse(
+        "npdauser-logs", kwargs={"npdauser_id": test_user_multiple_employers.pk}
+    )
     response = client.get(url)
 
     # Check that the response is successful
     assert response.status_code == HTTPStatus.OK
+
 
 @pytest.mark.django_db
 def test_coordinators_can_edit_users_with_multiple_employers_even_if_in_same_pdu(
@@ -1159,14 +1207,12 @@ def test_coordinators_can_edit_users_with_multiple_employers_even_if_in_same_pdu
 
     # Check that the response is successful
     assert response.status_code == HTTPStatus.OK
-    
+
+
 @pytest.mark.django_db
 @pytest.mark.parametrize("action", ["deactivate", "activate"])
 def test_coordinators_cannot_activate_or_deactivate_users_with_multiple_employers_even_if_in_same_pdu(
-    client: Client,
-    seed_groups_fixture,
-    seed_users_fixture,
-    action
+    client: Client, seed_groups_fixture, seed_users_fixture, action
 ):
     """Test that coordinators cannot activate or deactivate users with multiple employers even if they are in the same PDU."""
 
@@ -1198,7 +1244,7 @@ def test_coordinators_cannot_activate_or_deactivate_users_with_multiple_employer
 
     initial_status = test_user_multiple_employers.is_active
 
-    assert test_user_multiple_employers.has_perm('npda.delete_npdauser') is False, (
+    assert test_user_multiple_employers.has_perm("npda.delete_npdauser") is False, (
         f"User {test_user_multiple_employers.first_name} ({test_user_multiple_employers.pz_code}) should not be able to change the active status of user {test_user_multiple_employers.first_name} ({test_user_multiple_employers.organisation_employers.first().pz_code})"
     )
     assert test_user_multiple_employers.organisation_employers.count() > 1, (
@@ -1210,7 +1256,7 @@ def test_coordinators_cannot_activate_or_deactivate_users_with_multiple_employer
 
     # Make a POST request to the user update url
     url = reverse("npdauser-update", kwargs={"pk": test_user_multiple_employers.pk})
-    response = client.post(url, data={action: 'true'})
+    response = client.post(url, data={action: "true"})
 
     # Check that the response is successful
     assert response.status_code == HTTPStatus.FORBIDDEN
@@ -1220,11 +1266,15 @@ def test_coordinators_cannot_activate_or_deactivate_users_with_multiple_employer
         f"User {test_user_multiple_employers.first_name} ({test_user_multiple_employers.pz_code}) should not be able to change the active status of user {test_user_multiple_employers.first_name} ({test_user_multiple_employers.organisation_employers.first().pz_code})"
     )
 
+
 @pytest.mark.django_db
-@pytest.mark.parametrize("initial_active, expected_active, action_label", [
-    (True, False, "deactivate"),
-    (False, True, "activate"),
-])
+@pytest.mark.parametrize(
+    "initial_active, expected_active, action_label",
+    [
+        (True, False, "deactivate"),
+        (False, True, "activate"),
+    ],
+)
 def test_rcpch_audit_team_and_superusers_can_toggle_is_active_for_users_with_multiple_employers(
     client,
     seed_groups_fixture,
@@ -1232,7 +1282,7 @@ def test_rcpch_audit_team_and_superusers_can_toggle_is_active_for_users_with_mul
     seed_audit_periods_fixture,
     initial_active,
     expected_active,
-    action_label
+    action_label,
 ):
     """
     RCPCH audit team and superusers should be able to activate or deactivate users with multiple employers.
@@ -1270,16 +1320,16 @@ def test_rcpch_audit_team_and_superusers_can_toggle_is_active_for_users_with_mul
 
     # POST to update user
     url = reverse("npdauser-update", kwargs={"pk": user.pk})
-    
+
     data = {
-        'deactivate': 'true',
-        'first_name': user.first_name,
-        'surname': user.surname,
-        'email': user.email,
-        'role': user.role,
+        "deactivate": "true",
+        "first_name": user.first_name,
+        "surname": user.surname,
+        "email": user.email,
+        "role": user.role,
     }
 
-    data[action_label] = 'true'
+    data[action_label] = "true"
 
     response = client.post(url, data)
 
@@ -1294,6 +1344,7 @@ def test_rcpch_audit_team_and_superusers_can_toggle_is_active_for_users_with_mul
         f"After {action_label}, user.is_active should be {expected_active} but got {user.is_active}."
     )
 
+
 @pytest.mark.django_db
 @pytest.mark.parametrize("action", ["deactivate", "activate"])
 def test_coordinators_cannot_activate_or_deactivate_themselves(
@@ -1301,7 +1352,7 @@ def test_coordinators_cannot_activate_or_deactivate_themselves(
     seed_groups_fixture,
     seed_users_fixture,
     seed_audit_periods_fixture,
-    action
+    action,
 ):
     """Test that coordinators cannot activate or deactivate themselves."""
 
@@ -1317,10 +1368,11 @@ def test_coordinators_cannot_activate_or_deactivate_themselves(
     # Login while user is active
     client = login_and_verify_user(client, test_coordinator)
     url = reverse("npdauser-update", kwargs={"pk": test_coordinator.pk})
-    response = client.post(url, data={action: 'true'})
+    response = client.post(url, data={action: "true"})
     assert response.status_code == HTTPStatus.FORBIDDEN
     test_coordinator.refresh_from_db()
     assert test_coordinator.is_active == True  # Should remain active
+
 
 @pytest.mark.django_db
 def test_coordinators_can_view_user_logs_with_multiple_employers_if_in_the_same_pdu(
@@ -1343,7 +1395,7 @@ def test_coordinators_can_view_user_logs_with_multiple_employers_if_in_the_same_
     ).first()
 
     GOSH = PaediatricDiabetesUnit.objects.get(pz_code=GOSH_PZ_CODE)
-    
+
     # Add multiple employers to the test user
     OrganisationEmployer.objects.create(
         npda_user=test_user_multiple_employers,
@@ -1355,11 +1407,14 @@ def test_coordinators_can_view_user_logs_with_multiple_employers_if_in_the_same_
     client = login_and_verify_user(client, test_coordinator)
 
     # Make a GET request to the user logs page
-    url = reverse("npdauser-logs", kwargs={"npdauser_id": test_user_multiple_employers.pk})
+    url = reverse(
+        "npdauser-logs", kwargs={"npdauser_id": test_user_multiple_employers.pk}
+    )
     response = client.get(url)
 
     # Check that the response is successful
     assert response.status_code == HTTPStatus.OK
+
 
 @pytest.mark.django_db
 def test_coordinators_with_multiple_employers_can_view_user_logs_with_multiple_employers_if_in_the_same_pdu(
@@ -1388,7 +1443,7 @@ def test_coordinators_with_multiple_employers_can_view_user_logs_with_multiple_e
         paediatric_diabetes_unit=GOSH,
         is_primary_employer=False,
     )
-    
+
     OrganisationEmployer.objects.create(
         npda_user=test_coordinator,
         paediatric_diabetes_unit=GOSH,
@@ -1399,11 +1454,14 @@ def test_coordinators_with_multiple_employers_can_view_user_logs_with_multiple_e
     client = login_and_verify_user(client, test_coordinator)
 
     # Make a GET request to the user logs page
-    url = reverse("npdauser-logs", kwargs={"npdauser_id": test_user_multiple_employers.pk})
+    url = reverse(
+        "npdauser-logs", kwargs={"npdauser_id": test_user_multiple_employers.pk}
+    )
     response = client.get(url)
 
     # Check that the response is successful
     assert response.status_code == HTTPStatus.OK
+
 
 @pytest.mark.django_db
 def test_coordinators_with_multiple_employers_cannot_view_user_logs_with_multiple_employers_if_no_common_pdu(
@@ -1424,7 +1482,7 @@ def test_coordinators_with_multiple_employers_cannot_view_user_logs_with_multipl
     OrganisationEmployer.objects.filter(
         npda_user=test_coordinator,
         paediatric_diabetes_unit__pz_code=KINGS_COLLEGE,
-    ).update(is_primary_employer=False) # can't have 2 primary employers
+    ).update(is_primary_employer=False)  # can't have 2 primary employers
 
     # Create a test user with multiple employers
     test_user_multiple_employers = NPDAUser.objects.filter(
@@ -1444,11 +1502,14 @@ def test_coordinators_with_multiple_employers_cannot_view_user_logs_with_multipl
     client = login_and_verify_user(client, test_coordinator)
 
     # Make a GET request to the user logs page
-    url = reverse("npdauser-logs", kwargs={"npdauser_id": test_user_multiple_employers.pk})
+    url = reverse(
+        "npdauser-logs", kwargs={"npdauser_id": test_user_multiple_employers.pk}
+    )
     response = client.get(url)
 
     # Check that the response is successful
     assert response.status_code == HTTPStatus.FORBIDDEN
+
 
 @pytest.mark.django_db
 def test_user_creation_has_a_timestamp_and_user(
@@ -1483,17 +1544,20 @@ def test_user_creation_has_a_timestamp_and_user(
             "add_employer": ALDER_HEY_PZ_CODE,
         },
     )
-    
+
     new_user = NPDAUser.objects.get(email="alice.smith@nhs.net")
     assert new_user.created_by == test_user
     assert new_user.created_at is not None
-    assert new_user.created_at <= timezone.now()  # Ensure the timestamp is not in the future
+    assert (
+        new_user.created_at <= timezone.now()
+    )  # Ensure the timestamp is not in the future
 
     VisitActivity = apps.get_model("npda.VisitActivity")
     assert VisitActivity.objects.filter(
         npdauser=new_user,
         activity=10,  # User creation
     ).exists(), "VisitActivity should have been created for user creation"
+
 
 @pytest.mark.django_db
 def test_user_update_has_a_timestamp_and_user(
@@ -1524,18 +1588,20 @@ def test_user_update_has_a_timestamp_and_user(
         url,
         {
             "role": AUDIT_CENTRE_COORDINATOR,
-            "surname": user_with_role.surname, # Required fields
+            "surname": user_with_role.surname,  # Required fields
             "first_name": user_with_role.first_name,  # Required fields
             "email": user_with_role.email,  # Required fields
             "add_employer": ALDER_HEY_PZ_CODE,  # Required fields
         },
     )
-    
+
     new_user = NPDAUser.objects.get(email=user_with_role.email)
     assert new_user.email == user_with_role.email
     assert new_user.role != AUDIT_CENTRE_READER  # Ensure the role has been updated
     assert new_user.updated_at is not None
-    assert new_user.updated_at <= timezone.now()  # Ensure the timestamp is not in the future
+    assert (
+        new_user.updated_at <= timezone.now()
+    )  # Ensure the timestamp is not in the future
     assert new_user.role == AUDIT_CENTRE_COORDINATOR
 
     VisitActivity = apps.get_model("npda.VisitActivity")
@@ -1544,6 +1610,7 @@ def test_user_update_has_a_timestamp_and_user(
         activity=12,  # User role change
         npdauser_admin=test_user,  # The user who made the change
     ).exists(), "VisitActivity should have been created with new user role change"
+
 
 @pytest.mark.django_db
 def test_coordinator_cannot_change_email_for_user_with_multiple_pdus(
@@ -1598,7 +1665,9 @@ def test_coordinator_cannot_change_email_for_user_with_multiple_pdus(
     victim_reader.refresh_from_db()
 
     assert victim_reader.email == email_before, (
-        f"Malicious coordinator should not be able to change email of user in multiple PDUs.")
+        f"Malicious coordinator should not be able to change email of user in multiple PDUs."
+    )
+
 
 @pytest.mark.django_db
 def test_coordinator_cannot_change_role_for_user_with_multiple_pdus(
@@ -1651,4 +1720,5 @@ def test_coordinator_cannot_change_role_for_user_with_multiple_pdus(
     victim_reader.refresh_from_db()
 
     assert victim_reader.role == AUDIT_CENTRE_READER, (
-        f"Malicious coordinator should not be able to change role of user in multiple PDUs.")
+        f"Malicious coordinator should not be able to change role of user in multiple PDUs."
+    )

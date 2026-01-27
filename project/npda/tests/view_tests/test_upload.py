@@ -1,3 +1,4 @@
+from datetime import date
 import os
 
 import pytest
@@ -8,10 +9,43 @@ from django.urls import reverse
 from project.npda.models.audit_period import AuditPeriod
 from project.npda.models.npda_user import NPDAUser
 from project.npda.tests.model_tests.test_submissions import ALDER_HEY_PZ_CODE
-from project.npda.tests.UserDataClasses import \
-    test_user_audit_centre_coordinator_data
+from project.npda.tests.UserDataClasses import test_user_audit_centre_coordinator_data
 from project.npda.tests.utils import login_and_verify_user
 from project.npda.tests.test_csv_upload import mock_remote_calls
+
+
+@pytest.fixture(params=[2021, 2026])
+def dataset_year(request):
+    return request.param
+
+
+@pytest.fixture
+def audit_period_for_dataset_year(dataset_year):
+    """Create an AuditPeriod for the supplied dataset_year for tests.
+
+    Tests that need a matching audit period for the CSV can depend on this
+    fixture and pass it into `csv_upload_sync` as `_audit_period`.
+    """
+    slug = f"{dataset_year}-{dataset_year + 1}"
+    audit_period, _created = AuditPeriod.objects.get_or_create(
+        slug=slug,
+        defaults={
+            "is_open": True,
+            "is_visible": True,
+            "start_date": date(dataset_year, 4, 1),
+            "end_date": date(dataset_year + 1, 3, 31),
+        },
+    )
+
+    # Ensure dates/visibility are set to expected values even if the object existed
+    audit_period.is_open = True
+    audit_period.is_visible = True
+    audit_period.start_date = date(dataset_year, 4, 1)
+    audit_period.end_date = date(dataset_year + 1, 3, 31)
+    audit_period.save()
+
+    return audit_period
+
 
 @pytest.mark.django_db
 def test_generate_csv_upload_to_view(
@@ -84,12 +118,13 @@ def test_generate_csv_upload_to_view(
     assert os.path.exists(coalesced_csv_path), "CSV file not generated"
 
     with open(coalesced_csv_path, "rb") as f:
-        csv_file = SimpleUploadedFile(
-            f.name, f.read(), content_type="text/csv"
-        )
+        csv_file = SimpleUploadedFile(f.name, f.read(), content_type="text/csv")
 
     # Send POST request with CSV file
-    url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
+    url = reverse(
+        "pdu-upload-csv",
+        kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"},
+    )
     response = client.post(url, {"csv_upload": csv_file})
 
     # Assert the response to ensure no error
@@ -103,7 +138,9 @@ def test_coordinator_cannot_upload_csv_to_closed_audit_year(
     seed_audit_periods_fixture,
     client,
     mock_remote_calls,
-    dummy_sheet_csv
+    dummy_sheet_csv,
+    audit_period_for_dataset_year,
+    dataset_year,
 ):
     ah_coordinator_user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -111,21 +148,27 @@ def test_coordinator_cannot_upload_csv_to_closed_audit_year(
     ).first()
     client = login_and_verify_user(client, ah_coordinator_user)
 
-    audit_period = AuditPeriod.objects.get_default_audit_period()
-    audit_period.is_open = False
-    audit_period.save()
-    
     # Fix this test now PDU number must match (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1063)
     csv_to_upload = dummy_sheet_csv.replace("PZ041", ALDER_HEY_PZ_CODE)
 
     csv_file = SimpleUploadedFile(
         "test_coordinator_cannot_upload_csv_to_closed_audit_year.csv",
         csv_to_upload.encode(),
-        content_type="text/csv"
+        content_type="text/csv",
     )
 
+    # Ensure the audit period is closed for this test
+    audit_period_for_dataset_year.is_open = False
+    audit_period_for_dataset_year.save()
+
     # Send POST request with CSV file
-    url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": audit_period.slug})
+    url = reverse(
+        "pdu-upload-csv",
+        kwargs={
+            "pz_code": ALDER_HEY_PZ_CODE,
+            "audit_period": audit_period_for_dataset_year.slug,
+        },
+    )
     response = client.post(url, {"csv_upload": csv_file})
 
     # Assert the response to ensure no error
