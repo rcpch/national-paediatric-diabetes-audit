@@ -29,14 +29,12 @@ from project.npda.general_functions.justification_or_standard import (
 
 # npda imports
 from ...constants import (
-    ADHD_ASD,
     DIABETES_TYPES,
     ETHNICITIES,
     SEX_TYPE,
     CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING,
     CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING,
     CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
-    YES_NO_UNKNOWN,
 )
 from ..general_functions import stringify_time_elapsed
 
@@ -134,18 +132,6 @@ class Patient(models.Model, HelpTextMixin):
 
     errors = models.JSONField(
         verbose_name="Validation errors", blank=True, null=True, default=None
-    )
-
-    adhd_asd_diagnosis = models.PositiveSmallIntegerField(
-        choices=ADHD_ASD,
-        blank=True,
-        null=True,
-    )
-
-    learning_disability = models.PositiveSmallIntegerField(
-        choices=YES_NO_UNKNOWN,
-        blank=True,
-        null=True,
     )
 
     class Meta:

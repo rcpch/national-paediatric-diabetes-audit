@@ -79,8 +79,6 @@ PATIENT_FIELD_HEADINGS_2026 = {
     "postcode": "Postcode of usual address",
     "sex": "Sex assigned at birth",
     "ethnicity": "Ethnic Category",
-    "adhd_asd_diagnosis": "Has the patient had a diagnosis of Attention Deficit Hyperactivity Disorder (ADHD) or Autism Spectrum Disorder (ASD)?",
-    "learning_disability": "Does the patient have a diagnosis of a learning disability?",
     "diabetes_type": "Diabetes Type",
     "diagnosis_date": "Date of Diabetes Diagnosis",
     "date_leaving_service": "Date of leaving service",
@@ -126,6 +124,8 @@ VISIT_FIELD_HEADINGS_2026 = {
     "psychological_screening_assessment_date": "Date of Annual Psychological Screening Assessment",
     "psychological_additional_support_status": "Following annual psychological screening, was the patient assessed as requiring additional psychological support outside of routine care?",
     "psychological_support_outcome": "Was the patient offered an additional appointment with a mental health professional as part of the diabetes MDT?",
+    "adhd_asd_diagnosis": "Has the patient had a diagnosis of Attention Deficit Hyperactivity Disorder (ADHD) or Autism Spectrum Disorder (ASD)?",
+    "learning_disability": "Does the patient have a diagnosis of a learning disability?",
     # Lifestyle / Education
     "smoking_vaping_status": "Does the patient smoke and/or vape",
     "smoking_cessation_referral_date": "Date of offer of smoking cessation advice (if patient is a current smoker)",

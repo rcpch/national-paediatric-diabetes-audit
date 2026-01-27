@@ -459,20 +459,6 @@ CSV_HEADING_OBJECTS_2026 = (
         "alternative_headings": [],
     },
     {
-        "heading": "Has the patient had a diagnosis of Attention Deficit Hyperactivity Disorder (ADHD) or Autism Spectrum Disorder (ASD)?",
-        "model_field": "adhd_asd_diagnosis",
-        "model": "Patient",
-        "alternative_headings": [],
-    },
-    {
-        "heading": "Does the patient have a diagnosis of a learning disability?",
-        "model_field": "learning_disability",
-        "model": "Patient",
-        "alternative_headings": [
-            "Does the patient have a diagnosis of a learning disability?†"
-        ],
-    },
-    {
         "heading": "Diabetes Type",
         "model_field": "diabetes_type",
         "model": "Patient",
@@ -514,6 +500,20 @@ CSV_HEADING_OBJECTS_2026 = (
         #    Reference attached to Transfer in csv_upload
     },
     # Visit
+    {
+        "heading": "Has the patient had a diagnosis of Attention Deficit Hyperactivity Disorder (ADHD) or Autism Spectrum Disorder (ASD)?",
+        "model_field": "adhd_asd_diagnosis",
+        "model": "Visit",
+        "alternative_headings": [],
+    },
+    {
+        "heading": "Does the patient have a diagnosis of a learning disability?",
+        "model_field": "learning_disability",
+        "model": "Visit",
+        "alternative_headings": [
+            "Does the patient have a diagnosis of a learning disability?†"
+        ],
+    },
     {
         "heading": "Visit/Appointment Date",
         "model_field": "visit_date",

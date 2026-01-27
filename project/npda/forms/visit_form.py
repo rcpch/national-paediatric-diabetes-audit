@@ -367,7 +367,7 @@ class VisitForm(forms.ModelForm):
                 f"'{data}' is not a value for 'Immunotherapy Received'. Please select one of {options}."
             )
 
-    def clear_insulin_regimen(self):
+    def clean_insulin_regimen(self):
         data = self.cleaned_data["insulin_regimen"]
         # Convert the list of tuples to a dictionary
         insulin_regimen_dict = dict(INSULIN_TREATMENT)
@@ -397,7 +397,7 @@ class VisitForm(forms.ModelForm):
                 f"'{data}' is not a value for 'Non-Insulin Medication'. Please select one of {options}."
             )
 
-    def clean_lifestyle_dietary_modification(self):
+    def clean_dietary_lifestyle_modification(self):
         data = self.cleaned_data["dietary_lifestyle_modification"]
         # Convert the list of tuples to a dictionary
         dietary_lifestyle_modification_dict = dict(YES_NO_UNKNOWN)

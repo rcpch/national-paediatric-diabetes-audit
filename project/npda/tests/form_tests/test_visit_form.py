@@ -7,7 +7,6 @@ from unittest.mock import Mock, patch
 
 from django.core.exceptions import ValidationError
 
-from project.constants import ALL_VISIT_DATES
 from project.npda.forms.visit_form import VisitForm
 from project.npda.forms.external_visit_validators import (
     VisitExternalValidationResult,
@@ -20,6 +19,11 @@ from project.npda.tests.factories.patient_factory import PatientFactory
 MOCK_EXTERNAL_VALIDATION_RESULT = VisitExternalValidationResult(None, None, None, None)
 
 
+@pytest.fixture(params=[2021, 2026])
+def dataset_year(request):
+    return request.param
+
+
 @pytest.fixture
 def audit_period_for_dataset_year(dataset_year):
     """Create an AuditPeriod for the supplied dataset_year for tests.
@@ -28,7 +32,7 @@ def audit_period_for_dataset_year(dataset_year):
     fixture and pass it into `csv_upload_sync` as `_audit_period`.
     """
     slug = f"{dataset_year}-{dataset_year + 1}"
-    audit_period, _created = AuditPeriod.objects.get_or_create(
+    audit_period, _ = AuditPeriod.objects.get_or_create(
         slug=slug,
         defaults={
             "is_open": True,
@@ -37,6 +41,7 @@ def audit_period_for_dataset_year(dataset_year):
             "end_date": date(dataset_year + 1, 3, 31),
         },
     )
+    return audit_period
 
 
 def mock_external_validation_result(**kwargs):
@@ -79,7 +84,6 @@ def test_height_and_weight_set_correctly():
 @pytest.mark.django_db
 def test_height_and_weight_missing_values():
     patient = PatientFactory()
-
     form = VisitForm(
         data={
             "height": None,
@@ -90,13 +94,12 @@ def test_height_and_weight_missing_values():
     )
 
     # Not passing all the data so it will have errors, just trigger the cleaners
-    assert form.is_valid() == False, f"Height/Weight not supplied but date supplied"
+    assert form.is_valid() is False, "Height/Weight not supplied but date supplied"
 
 
 @pytest.mark.django_db
 def test_height_and_weight_missing_date():
     patient = PatientFactory()
-
     form = VisitForm(
         data={
             "height": "60",
@@ -107,8 +110,8 @@ def test_height_and_weight_missing_date():
     )
 
     # Not passing all the data so it will have errors, just trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Height/Weight observation date not supplied but height/weight supplied"
+    assert form.is_valid() is False, (
+        "Height/Weight observation date not supplied but height/weight supplied"
     )
 
 
@@ -513,8 +516,8 @@ def test_treatment_mdi_but_closed_loop_selected_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Form should be invalid as closed loop system selected but treatment not selected as 1 or 3 (pump or pump + meds)"
+    assert form.is_valid() is False, (
+        "Form should be invalid as closed loop system selected but treatment not selected as 1 or 3 (pump or pump + meds)"
     )
 
 
@@ -2318,3 +2321,291 @@ def test_thyroid_and_coeliac_dates_earlier_Than_90_days_before_diagnosis_fail_va
     assert not form.is_valid()
     assert "thyroid_function_date" in form.errors
     assert "coeliac_screen_date" in form.errors
+
+
+# 2026 fields
+@pytest.mark.django_db
+def test_smoking_vaping_status_invalid_value_form_fails_validation(
+    audit_period_for_dataset_year,
+):
+    """
+    Test that invalid smoking status should fail
+    """
+    if audit_period_for_dataset_year.start_date.year != 2026:
+        pytest.skip("Skipping test as audit period is not for dataset year 2026")
+    patient = PatientFactory()
+
+    form = VisitForm(
+        data={
+            "smoking_vaping_status": 5,  # Invalid smoking status
+            "smoking_cessation_referral_date": "2026-01-01",
+        },
+        initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
+    )
+
+    # Trigger the cleaners
+    assert form.is_valid() is False, "Invalid smoking vaping status but test passed"
+    assert "smoking_vaping_status" in form.errors
+
+
+@pytest.mark.django_db
+def test_smoking_vaping_status_non_smoker_with_cessation_referral_date_fails_validation(
+    audit_period_for_dataset_year,
+):
+    """
+    Test that non-smoker with smoking cessation referral date should fail
+    """
+    if audit_period_for_dataset_year.start_date.year != 2026:
+        pytest.skip("Skipping test as audit period is not for dataset year 2026")
+    patient = PatientFactory()
+
+    form = VisitForm(
+        data={
+            "visit_date": "2026-01-01",  # Required for validation
+            "smoking_vaping_status": 1,  # non-smoker
+            "smoking_cessation_referral_date": "2026-01-01",
+        },
+        initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
+    )
+
+    assert form.is_valid() is False, (
+        "Non-smoker with cessation referral date should fail"
+    )
+    assert "smoking_cessation_referral_date" in form.errors
+
+
+@pytest.mark.django_db
+def test_immunotherapy_date_before_visit_date_fails_validation(
+    audit_period_for_dataset_year,
+):
+    """
+    Test that immunotherapy date before visit date should fail
+    """
+    if audit_period_for_dataset_year.start_date.year != 2026:
+        pytest.skip("Skipping test as audit period is not for dataset year 2026")
+    patient = PatientFactory()
+
+    form = VisitForm(
+        data={
+            "visit_date": "2026-01-10",  # Required for validation
+            "immunotherapy_date": "2026-01-01",
+        },
+        initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
+    )
+
+    assert form.is_valid() is False, "Immunotherapy date before visit date should fail"
+    assert "immunotherapy_date" in form.errors
+
+
+@pytest.mark.django_db
+def test_immunotherapy_date_after_visit_date_passes_validation(
+    audit_period_for_dataset_year,
+):
+    """
+    Test that immunotherapy date after visit date should pass
+    """
+    if audit_period_for_dataset_year.start_date.year != 2026:
+        pytest.skip("Skipping test as audit period is not for dataset year 2026")
+    patient = PatientFactory()
+
+    form = VisitForm(
+        data={
+            "visit_date": audit_period_for_dataset_year.end_date
+            - datetime.timedelta(days=1),
+            "immunotherapy_date": audit_period_for_dataset_year.start_date
+            + datetime.timedelta(days=1),
+            "immunotherapy_received": 1,  # Yes
+        },
+        initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
+    )
+
+    assert form.is_valid(), "Immunotherapy date after visit date should pass"
+    assert "immunotherapy_date" not in form.errors
+
+
+@pytest.mark.django_db
+def test_immunotherapy_given_without_date_fails_validation(
+    audit_period_for_dataset_year,
+):
+    """
+    Test that immunotherapy given without date should fail
+    """
+    if audit_period_for_dataset_year.start_date.year != 2026:
+        pytest.skip("Skipping test as audit period is not for dataset year 2026")
+    patient = PatientFactory()
+
+    form = VisitForm(
+        data={
+            "visit_date": audit_period_for_dataset_year.end_date
+            - datetime.timedelta(days=1),
+            "immunotherapy_received": 1,  # Yes
+            "immunotherapy_date": None,
+        },
+        initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
+    )
+
+    assert form.is_valid() is False, "Immunotherapy given without date should fail"
+    assert "immunotherapy_date" in form.errors
+
+
+@pytest.mark.django_db
+def test_adhd_asd_diagnosis_invalid_value_form_fails_validation(
+    audit_period_for_dataset_year,
+):
+    """
+    Test that invalid adhd_asd_diagnosis should fail
+    """
+    if audit_period_for_dataset_year.start_date.year != 2026:
+        pytest.skip("Skipping test as audit period is not for dataset year 2026")
+    patient = PatientFactory()
+
+    form = VisitForm(
+        data={
+            "visit_date": audit_period_for_dataset_year.end_date
+            - datetime.timedelta(days=1),
+            "adhd_asd_diagnosis": 24,  # Invalid value
+        },
+        initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
+    )
+
+    # Trigger the cleaners
+    assert form.is_valid() is False, "Invalid adhd_asd_diagnosis but test passed"
+    assert "adhd_asd_diagnosis" in form.errors
+
+
+@pytest.mark.django_db
+def test_learning_disability_invalid_value_form_fails_validation(
+    audit_period_for_dataset_year,
+):
+    """
+    Test that invalid learning_disability should fail
+    """
+    if audit_period_for_dataset_year.start_date.year != 2026:
+        pytest.skip("Skipping test as audit period is not for dataset year 2026")
+    patient = PatientFactory()
+
+    form = VisitForm(
+        data={
+            "visit_date": audit_period_for_dataset_year.end_date
+            - datetime.timedelta(days=1),
+            "learning_disability": 4,  # Invalid value
+        },
+        initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
+    )
+
+    # Trigger the cleaners
+    assert form.is_valid() is False, "Invalid learning_disability but test passed"
+    assert "learning_disability" in form.errors
+
+
+@pytest.mark.django_db
+def test_insulin_regime_invalid_value_form_fails_validation(
+    audit_period_for_dataset_year,
+):
+    """
+    Test that invalid insulin_regime should fail
+    """
+    if audit_period_for_dataset_year.start_date.year != 2026:
+        pytest.skip("Skipping test as audit period is not for dataset year 2026")
+    patient = PatientFactory()
+
+    form = VisitForm(
+        data={
+            "visit_date": audit_period_for_dataset_year.end_date
+            - datetime.timedelta(days=1),
+            "insulin_regimen": 10,  # Invalid value
+        },
+        initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
+    )
+
+    # Trigger the cleaners
+    assert form.is_valid() is False, "Invalid insulin_regimen but test passed"
+    assert "insulin_regimen" in form.errors
+
+
+@pytest.mark.django_db
+def test_non_insulin_medication_invalid_value_form_fails_validation(
+    audit_period_for_dataset_year,
+):
+    """
+    Test that invalid non_insulin_medication should fail
+    """
+    if audit_period_for_dataset_year.start_date.year != 2026:
+        pytest.skip("Skipping test as audit period is not for dataset year 2026")
+    patient = PatientFactory()
+
+    form = VisitForm(
+        data={
+            "visit_date": audit_period_for_dataset_year.end_date
+            - datetime.timedelta(days=1),
+            "non_insulin_medication": 10,  # Invalid value
+        },
+        initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
+    )
+
+    # Trigger the cleaners
+    assert form.is_valid() is False, "Invalid non_insulin_medication but test passed"
+    assert "non_insulin_medication" in form.errors
+
+
+@pytest.mark.django_db
+def test_lifestyle_dietary_modification_invalid_value_form_fails_validation(
+    audit_period_for_dataset_year,
+):
+    """
+    Test that invalid lifestyle_dietary_modification should fail
+    """
+    if audit_period_for_dataset_year.start_date.year != 2026:
+        pytest.skip("Skipping test as audit period is not for dataset year 2026")
+    patient = PatientFactory()
+
+    form = VisitForm(
+        data={
+            "visit_date": audit_period_for_dataset_year.end_date
+            - datetime.timedelta(days=1),
+            "dietary_lifestyle_modification": 4,  # Invalid value
+        },
+        initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
+    )
+
+    # Trigger the cleaners
+    assert form.is_valid() is False, (
+        "Invalid dietary_lifestyle_modification but test passed"
+    )
+    assert "dietary_lifestyle_modification" in form.errors
+
+
+@pytest.mark.django_db
+def test_cgm_use_invalid_value_form_fails_validation(
+    audit_period_for_dataset_year,
+):
+    """
+    Test that invalid cgm_use should fail
+    """
+    if audit_period_for_dataset_year.start_date.year != 2026:
+        pytest.skip("Skipping test as audit period is not for dataset year 2026")
+    patient = PatientFactory()
+
+    form = VisitForm(
+        data={
+            "visit_date": audit_period_for_dataset_year.end_date
+            - datetime.timedelta(days=1),
+            "cgm_use": 5,  # Invalid value
+        },
+        initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
+    )
+
+    # Trigger the cleaners
+    assert form.is_valid() is False, "Invalid cgm_use but test passed"
+    assert "cgm_use" in form.errors

@@ -5118,7 +5118,8 @@ def test_visit_form_dates_outside_of_audit_period(
 
     # set all the dates associated with the visit to 01/01/2020
     for date_field in get_all_visit_dates(dataset_year):
-        single_row_valid_df.loc[0, date_field] = (
+        # date_field is a (field_name, heading) tuple — use the heading to index the DataFrame
+        single_row_valid_df.loc[0, date_field[1]] = (
             audit_period_for_dataset_year.start_date + relativedelta(years=1)
         )
 
