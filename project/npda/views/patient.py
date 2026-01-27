@@ -138,8 +138,7 @@ class PatientListView(
                 filtered_patients &= combined_q  # Apply the combined OR query
 
         filtered_patients &= Q(
-            submissions__paediatric_diabetes_unit__pz_code=self.pdu.pz_code,
-            submissions__paediatric_diabetes_unit__active=True
+            submissions__paediatric_diabetes_unit__pz_code=self.pdu.pz_code
         )
 
         patient_queryset = patient_queryset.filter(filtered_patients)
