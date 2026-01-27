@@ -18,6 +18,7 @@ from .decorators import login_and_otp_required, check_data_permissions
 from project.npda.tasks import test_task
 from project.npda.models.audit_period import AuditPeriod
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
+from project.npda.models.submission import Submission
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -45,7 +46,16 @@ def new_home(request, audit_period):
     pdus = list(paediatric_diabetes_units_for_user(request.user))
 
     active_pdus = [pdu for pdu in pdus if pdu.active]
-    inactive_pdus = [pdu for pdu in pdus if not pdu.active]
+    
+    inactive_pdus = []
+    for pdu in pdus:
+        if not pdu.active:
+            if Submission.objects.filter(
+                paediatric_diabetes_unit=pdu,
+                audit_period__slug=audit_period,
+                submission_active=True
+            ).exists():
+                inactive_pdus.append(pdu)
 
     # Put the test PZ999 at the top of the list otherwise it's hard to find!
     sorted_active_pdus = sorted(active_pdus, key=lambda pdu: "" if pdu.pz_code == "PZ999" else pdu.pz_code)
