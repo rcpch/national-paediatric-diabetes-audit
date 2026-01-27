@@ -11,17 +11,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def paediatric_diabetes_units_to_populate_select_field(
+def paediatric_diabetes_units_for_user(
     requesting_user, user_instance=None
 ):
-    """
-    This function is used to populate any select field with paediatric diabetes units: their PZ code and name, based on requesting_user permissions.
-    The user_instance is used to filter out paediatric diabetes units that that user is already affiliated with, if it is used for selects in forms.
-    If no user_instance is provided, the function will return all paediatric diabetes units that the requesting_user has access to, irrespective of affiliation.
-
-    This is because in the create and update user forms particularly, the user creating or updating the form  might have different permissions to the user being created or updated.
-    """
-
     PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
 
     if user_instance:
@@ -58,6 +50,23 @@ def paediatric_diabetes_units_to_populate_select_field(
             )
 
     filtered_pdus = filtered_pdus.order_by("pz_code")
+    return filtered_pdus
+
+
+def paediatric_diabetes_units_to_populate_select_field(
+    requesting_user, user_instance=None
+):
+    """
+    This function is used to populate any select field with paediatric diabetes units: their PZ code and name, based on requesting_user permissions.
+    The user_instance is used to filter out paediatric diabetes units that that user is already affiliated with, if it is used for selects in forms.
+    If no user_instance is provided, the function will return all paediatric diabetes units that the requesting_user has access to, irrespective of affiliation.
+
+    This is because in the create and update user forms particularly, the user creating or updating the form  might have different permissions to the user being created or updated.
+    """
+
+    filtered_pdus = paediatric_diabetes_units_for_user(
+        requesting_user, user_instance=user_instance
+    )
 
     pdu_choices = [
         (pdu.pz_code, f"{pdu.lead_organisation_name} - {pdu.parent_name}") for pdu in filtered_pdus

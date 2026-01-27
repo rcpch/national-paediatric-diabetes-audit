@@ -10,22 +10,22 @@
     </h1>
   </div>
   <div class="flex flex-row flex-wrap justify-center gap-4 p-4">
-    {% for pdu in pdu_choices %}
+    {% for pdu in active_pdus %}
       <div class="card bg-base-100 w-96 shadow-xl">
         <div class="card-body">
-          <h2 class="card-title">{{pdu.0}}</h2>
-          <p>{{pdu.1}}</p>
+          <h2 class="card-title">{{pdu.pz_code}}</h2>
+          <p>{{pdu.lead_organisation_name}} - {{pdu.parent_name}}</p>
           <div class="card-actions justify-end">
             <div>
-              <a class="btn bg-rcpch_pink text-white" href="{% url 'pdu-patients' audit_period=audit_period_slug pz_code=pdu.0 %}">
+              <a class="btn bg-rcpch_pink text-white" href="{% url 'pdu-patients' audit_period=audit_period_slug pz_code=pdu.pz_code %}">
                 Patient data
               </a>
             </div>
             <div>
-              <a class="btn btn-info" href="{% url 'pdu-dashboard' audit_period=audit_period_slug pz_code=pdu.0 %}">
+              <a class="btn btn-info" href="{% url 'pdu-dashboard' audit_period=audit_period_slug pz_code=pdu.pz_code %}">
                 Unit Report
               </a>
-              <a class="btn btn-info" href="{% url 'pdu-patient-report' audit_period=audit_period_slug pz_code=pdu.0 %}">
+              <a class="btn btn-info" href="{% url 'pdu-patient-report' audit_period=audit_period_slug pz_code=pdu.pz_code %}">
                 Patient Report
               </a>
             </div>
