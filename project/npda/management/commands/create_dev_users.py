@@ -33,11 +33,13 @@ class Command(BaseCommand):
             )
             
             self.stdout.write(self.style.SUCCESS(f"Successfully created {email}."))
+            created = True
         else:
             self.stdout.write(self.style.WARNING(f"{email} already exists."))
             user = user_model.objects.get(email=email)
+            created = False
         
-        return user
+        return (user, created)
 
     def handle(self, *args, **kwargs):
         user_model = get_user_model()
@@ -107,7 +109,7 @@ class Command(BaseCommand):
 
         # Test inactive split unit (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/924)
         # PZ003 was split into PZ251 and PZ252
-        split_user = self.create_user_if_not_exists(
+        (split_user, created) = self.create_user_if_not_exists(
             pz_code="PZ251",
             email=f"{local_part}+split@{domain}",
             first_name="SplitUnitAda",
@@ -116,11 +118,12 @@ class Command(BaseCommand):
             role=AUDIT_CENTRE_COORDINATOR,
         )
 
-        OrganisationEmployer.objects.create(
-            paediatric_diabetes_unit=PaediatricDiabetesUnit.objects.get(pz_code="PZ003"),
-            npda_user=split_user,
-            is_primary_employer=False,
-        )
+        if created:
+            OrganisationEmployer.objects.create(
+                paediatric_diabetes_unit=PaediatricDiabetesUnit.objects.get(pz_code="PZ003"),
+                npda_user=split_user,
+                is_primary_employer=False,
+            )
 
 
 
