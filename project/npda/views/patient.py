@@ -197,6 +197,7 @@ class PatientListView(
         submission_error_count = 0
 
         submission = Submission.objects.get_submission_for_request(self.pdu, self.audit_period)
+        last_submission = Submission.objects.get_submission_for_request(self.pdu, self.audit_period.previous_audit_period())
 
         if submission and submission.errors:
             submission_errors = json.loads(submission.errors)
@@ -207,6 +208,7 @@ class PatientListView(
                     submission_error_count += len(errors_for_field)
 
         context["submission"] = submission
+        context["last_submission"] = last_submission
         context["submission_valid_count"] = (
             context["paginator"].count - submission_error_count
         )

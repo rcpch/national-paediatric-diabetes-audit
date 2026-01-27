@@ -85,6 +85,9 @@ class AuditPeriod(models.Model):
     def clean(self):
         if self.end_date <= self.start_date:
             raise ValidationError("Audit start date must be before the audit end date.")
+    
+    def previous_audit_period(self):
+        return AuditPeriod.objects.filter(end_date__lt=self.start_date).order_by("-end_date").first()
 
     def __str__(self):
         return f"AuditPeriod {self.start_date} - {self.end_date}"

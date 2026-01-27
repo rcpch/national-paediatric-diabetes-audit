@@ -11,7 +11,18 @@ from django.apps import apps
 from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, Case, When, Value, IntegerField, OuterRef, Subquery
+from django.db import transaction
+from django.db.models import (
+    Count,
+    Case,
+    When,
+    Value,
+    IntegerField,
+    OuterRef,
+    Subquery,
+    Exists,
+    Q,
+)
 from django.db.models.functions import Concat, ExtractMonth, ExtractYear
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
@@ -44,6 +55,8 @@ from ..models import (
     PaediatricDiabetesUnit,
     AuditPeriod,
     Patient,
+    PatientSubmission,
+    Transfer,
 )
 from ..forms.upload import UploadFileForm
 from ..tasks import upload_csv_task
@@ -305,6 +318,70 @@ class SubmissionsListView(
                     f"User {request.user.email} does not have permission to download data for PDU {submission.paediatric_diabetes_unit.pz_code}.",
                 )
 
+        if button_name == "start-questionnaire-submission":
+            previous_audit_period = self.audit_period.previous_audit_period()
+
+            next_submission = Submission.objects.get_submission_for_request(
+                self.pdu, self.audit_period
+            )
+            last_submission = Submission.objects.get_submission_for_request(
+                self.pdu, previous_audit_period
+            )
+
+            if next_submission:
+                raise RuntimeError(
+                    f"Cannot start questionnaire submission. Active submission already exists for this audit period. audit_period={self.audit_period}, previous_audit_period={previous_audit_period}, pdu={self.pdu.pz_code}"
+                )
+
+            last_patients = (
+                last_submission.patients.all()
+                if last_submission
+                else Patient.objects.none()
+            )
+
+            last_patients = last_patients.exclude(death_date__isnull=False).exclude(
+                Exists(
+                    Transfer.objects.filter(
+                        Q(patient=OuterRef("pk"))
+                        & Q(reason_leaving_service__isnull=False)
+                    )
+                )
+            )
+
+            # Clone
+            for patient in last_patients:
+                patient.pk = None
+
+            with transaction.atomic():
+                next_submission = Submission.objects.create(
+                    paediatric_diabetes_unit=self.pdu,
+                    audit_period=self.audit_period,
+                    audit_year=self.audit_period.audit_year(),
+                    submission_active=True,
+                    submission_by=request.user,
+                    submission_date=datetime.now(timezone.utc),
+                )
+
+                next_patients = Patient.objects.bulk_create(last_patients)
+
+                next_patient_transfers = [
+                    Transfer(patient=patient, paediatric_diabetes_unit=self.pdu)
+                    for patient in next_patients
+                ]
+                Transfer.objects.bulk_create(next_patient_transfers)
+
+                next_patient_subs = [
+                    PatientSubmission(patient=patient, submission=next_submission)
+                    for patient in next_patients
+                ]
+                PatientSubmission.objects.bulk_create(next_patient_subs)
+
+            return redirect(
+                "pdu-patients",
+                pz_code=self.pdu.pz_code,
+                audit_period=self.audit_period.slug,
+            )
+
         # POST is not supported for this view
         # Must therefore return the queryset as an obect_list and context
         self.object_list = self.get_queryset()
@@ -417,7 +494,11 @@ def upload_csv(request, audit_period, pdu):
             message = f"CSV file contains multiple PDU Numbers: {', '.join(parsed_csv.df['PDU Number'].unique())}. Please upload a file containing data for a single PDU only."
             return upload_error(message)
 
-        if parsed_csv.df["PDU Number"].iloc[0] != pdu.pz_code:
+        # 1316 - Twinkle/Diamond outputs PDU number without leading PZ and zeros
+        expected_pdu_number = pdu.pz_code.lstrip("PZ").lstrip("0")
+        pdu_number_in_csv = parsed_csv.df["PDU Number"].iloc[0].lstrip("PZ").lstrip("0")
+
+        if pdu_number_in_csv != expected_pdu_number:
             message = f"PDU Number in CSV file ({parsed_csv.df['PDU Number'].iloc[0]}) does not match the PDU you are looking at ({pdu.pz_code}). Please upload a file with the correct PDU Number."
             return upload_error(message)
 

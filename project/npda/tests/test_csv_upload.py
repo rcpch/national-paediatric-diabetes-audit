@@ -5294,6 +5294,80 @@ def test_uploading_csv_with_conflicting_pdu_numbers(
 
 
 @pytest.mark.django_db
+def test_uploading_csv_with_pdu_number_missing_leading_pz(
+    two_patients_with_one_visit_each,
+    tmp_path,
+    client,
+    test_rcpch_user
+):
+    two_patients_with_one_visit_each = two_patients_with_one_visit_each.assign(**{"PDU Number": "004"})
+
+    # write back into temp
+    tmp_csv_path = tmp_path / "dummy_sheet_test_csv_upload_test_uploading_csv_with_pdu_number_missing_leading_pz.csv"
+    two_patients_with_one_visit_each.to_csv(tmp_csv_path, index=False)
+
+    # Log in user
+    client = login_and_verify_user(client, test_rcpch_user)
+
+    url = reverse("pdu-upload-csv", kwargs={ "pz_code": "PZ004", "audit_period": "2025-2026"})
+
+    # Feed file to view
+    with open(tmp_csv_path, "rb") as csv_file:
+        response = client.post(
+            url,
+            {
+                'csv_upload': csv_file
+            },
+            format='multipart'
+        )
+
+    assert response.status_code == 302
+
+    redirect_url = reverse("pdu-upload-csv-in-progress", kwargs={ "pz_code": "PZ004", "audit_period": "2025-2026"})
+    assert response.url == redirect_url
+    
+    assert Submission.objects.count() == 1, "Submission should be created for PDU with missing leading PZ"
+    assert Submission.objects.first().paediatric_diabetes_unit.pz_code == "PZ004"
+
+
+@pytest.mark.django_db
+def test_uploading_csv_with_pdu_number_missing_leading_zeros(
+    two_patients_with_one_visit_each,
+    tmp_path,
+    client,
+    test_rcpch_user
+):
+    two_patients_with_one_visit_each = two_patients_with_one_visit_each.assign(**{"PDU Number": "4"})
+
+    # write back into temp
+    tmp_csv_path = tmp_path / "dummy_sheet_test_csv_upload_ttest_uploading_csv_with_pdu_number_missing_leading_zeros.csv"
+    two_patients_with_one_visit_each.to_csv(tmp_csv_path, index=False)
+
+    # Log in user
+    client = login_and_verify_user(client, test_rcpch_user)
+
+    url = reverse("pdu-upload-csv", kwargs={ "pz_code": "PZ004", "audit_period": "2025-2026"})
+
+    # Feed file to view
+    with open(tmp_csv_path, "rb") as csv_file:
+        response = client.post(
+            url,
+            {
+                'csv_upload': csv_file
+            },
+            format='multipart'
+        )
+
+    assert response.status_code == 302
+
+    redirect_url = reverse("pdu-upload-csv-in-progress", kwargs={ "pz_code": "PZ004", "audit_period": "2025-2026"})
+    assert response.url == redirect_url
+
+    assert Submission.objects.count() == 1, "Submission should be created for PDU with missing leading zeroes"
+    assert Submission.objects.first().paediatric_diabetes_unit.pz_code == "PZ004"
+
+
+@pytest.mark.django_db
 def test_conflicting_stated_gender(test_user, one_patient_with_four_visits):
     df = one_patient_with_four_visits
 
