@@ -11,27 +11,15 @@
   </div>
   <div class="flex flex-row flex-wrap justify-center gap-4 p-4">
     {% for pdu in active_pdus %}
-      <div class="card bg-base-100 w-96 shadow-xl">
-        <div class="card-body">
-          <h2 class="card-title">{{pdu.pz_code}}</h2>
-          <p>{{pdu.lead_organisation_name}} - {{pdu.parent_name}}</p>
-          <div class="card-actions justify-end">
-            <div>
-              <a class="btn bg-rcpch_pink text-white" href="{% url 'pdu-patients' audit_period=audit_period_slug pz_code=pdu.pz_code %}">
-                Patient data
-              </a>
-            </div>
-            <div>
-              <a class="btn btn-info" href="{% url 'pdu-dashboard' audit_period=audit_period_slug pz_code=pdu.pz_code %}">
-                Unit Report
-              </a>
-              <a class="btn btn-info" href="{% url 'pdu-patient-report' audit_period=audit_period_slug pz_code=pdu.pz_code %}">
-                Patient Report
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
+      {% include "partials/pdu-card.html" with pdu=pdu %}
     {% endfor %}
   </div>
+  {% if inactive_pdus %}
+    <h2 class="text-center text-xl">Inactive</h2>
+    <div class="flex flex-row flex-wrap justify-center gap-4 p-4">
+      {% for pdu in inactive_pdus %}
+        {% include "partials/pdu-card.html" with pdu=pdu %}
+      {% endfor %}
+    </div>
+  {% endif %}
 {% endblock %}
