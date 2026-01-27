@@ -61,7 +61,7 @@ def paediatric_diabetes_units_seeder():
             ).get("ods_code")
             lead_organisation_name = pdu.get("name")
             last_updated = pdu.get("last_updated") or None
-            active = pdu.get("active") or None
+            active = pdu.get("active") or False
 
             if not lead_organisation_ods_code:
                 logger.warning(
@@ -89,8 +89,10 @@ def paediatric_diabetes_units_seeder():
             if not pz_code:
                 logger.warning(f"PZ code not found for PDU: {pz_code}")
                 continue
-            if active is not None and active is True:
-                default ={
+            
+            new_pdu, created = PaediatricDiabetesUnit.objects.update_or_create(
+                pz_code=pz_code,
+                defaults={
                     "lead_organisation_ods_code": lead_organisation_ods_code,
                     "lead_organisation_name": lead_organisation_name,
                     "parent_ods_code": parent_ods_code,
@@ -99,15 +101,7 @@ def paediatric_diabetes_units_seeder():
                     "paediatric_diabetes_network_name": network_name,
                     "active": active,
                     "last_updated": last_updated,
-                }
-            else:
-                default = {
-                    "active": False,
-                    "last_updated": last_updated,
-                }
-            new_pdu, created = PaediatricDiabetesUnit.objects.update_or_create(
-                pz_code=pz_code,
-                defaults=default,
+                },
             )
 
             add_geocoordinates(new_pdu)
