@@ -399,8 +399,8 @@ def test_hba1c_date_missing_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Form should not be valid when HbA1c date is missing"
+    assert form.is_valid() is False, (
+        "Form should not be valid when HbA1c date is missing"
     )
     assert "hba1c_date" in form.errors
 
@@ -447,7 +447,7 @@ def test_hba1c_date_and_hba1c_format_hba1c_all_missing_form_passes_validation():
     )
     # Trigger the cleaners
     assert form.is_valid() is True, (
-        f"Form should  be valid when HbA1c, HbA1c date and format are missing, but got {form.errors}"
+        "Form should  be valid when HbA1c, HbA1c date and format are missing, but got {form.errors}"
     )
     assert "hba1c_date" not in form.errors
     assert "hba1c_format" not in form.errors
@@ -493,8 +493,8 @@ def test_treatment_missing_closed_loop_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Form should be invalid as closed loop system selected but treatment not selected as 1 or 3 (pump or pump + meds)"
+    assert form.is_valid() is False, (
+        "Form should be invalid as closed loop system selected but treatment not selected as 1 or 3 (pump or pump + meds)"
     )
 
 
@@ -559,8 +559,8 @@ def test_blood_pressure_missing_values_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Form should be invalid as missing systolic blood pressure but passed measure."
+    assert form.is_valid() is False, (
+        "Form should be invalid as missing systolic blood pressure but passed measure."
     )
 
 
@@ -580,8 +580,8 @@ def test_blood_pressure_missing_date_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Form should be invalid as missing blood pressure date but passed measure."
+    assert form.is_valid() is False, (
+        "Form should be invalid as missing blood pressure date but passed measure."
     )
 
 
@@ -601,8 +601,8 @@ def test_systolic_blood_pressure_over_240_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Form should be invalid as systolic blood pressure > 240 and is a medical emergency, but passed measure."
+    assert form.is_valid() is False, (
+        "Form should be invalid as systolic blood pressure > 240 and is a medical emergency, but passed measure."
     )
 
 
@@ -622,8 +622,8 @@ def test_systolic_blood_pressure_below_80_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Form should be invalid as systolic blood pressure < 80 and tbh not really compatible with life, but passed measure."
+    assert form.is_valid() is False, (
+        "Form should be invalid as systolic blood pressure < 80 and tbh not really compatible with life, but passed measure."
     )
 
 
@@ -643,8 +643,8 @@ def test_diastolic_blood_pressure_over_120_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Form should be invalid as diastolic blood pressure > 120 and is a medical emergency, but passed measure."
+    assert form.is_valid() is False, (
+        "Form should be invalid as diastolic blood pressure > 120 and is a medical emergency, but passed measure."
     )
 
 
@@ -664,8 +664,8 @@ def test_diastolic_blood_pressure_below_20_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Form should be invalid as diastolic blood pressure < 20, but passed measure."
+    assert form.is_valid() is False, (
+        "Form should be invalid as diastolic blood pressure < 20, but passed measure."
     )
 
 
@@ -708,8 +708,8 @@ def test_decs_value_unrecognized_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Invalid retinal screening result offered but test passed"
+    assert form.is_valid() is False, (
+        "Invalid retinal screening result offered but test passed"
     )
 
 
@@ -728,8 +728,8 @@ def test_decs_value_none_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"No retinal screening result offered but test passed"
+    assert form.is_valid() is False, (
+        "No retinal screening result offered but test passed"
     )
 
 
@@ -748,9 +748,7 @@ def test_decs_date_none_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"No retinal screening date offered but test passed"
-    )
+    assert form.is_valid() is False, "No retinal screening date offered but test passed"
 
 
 """
@@ -794,8 +792,8 @@ def test_urine_albumin_impossible_value_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Form should be invalid as albuminuria stage impossible, but got {form.errors}"
+    assert form.is_valid() is False, (
+        "Form should be invalid as albuminuria stage impossible, but got {form.errors}"
     )
 
 
@@ -815,9 +813,7 @@ def test_urine_albumin_value_below_range_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Form should be invalid as albuminuria < 0, passed"
-    )
+    assert form.is_valid() is False, "Form should be invalid as albuminuria < 0, passed"
 
 
 @pytest.mark.django_db
@@ -836,9 +832,7 @@ def test_urine_albumin_value_above_range_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Form should be invalid as albuminuria < 3, passed"
-    )
+    assert form.is_valid() is False, "Form should be invalid as albuminuria < 3, passed"
 
 
 @pytest.mark.django_db
@@ -857,8 +851,8 @@ def test_urine_albumin_value_missing_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Form should be invalid as albuminuria None, passed"
+    assert form.is_valid() is False, (
+        "Form should be invalid as albuminuria None, passed"
     )
 
 
@@ -879,8 +873,8 @@ def test_urine_albumin_stage_missing_form_fails_validation():
     )
 
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Form should be invalid as albuminuria None, passed"
+    assert form.is_valid() is False, (
+        "Form should be invalid as albuminuria None, passed"
     )
 
 
@@ -901,8 +895,8 @@ def test_urine_albumin_date_missing_form_fails_validation():
     )
 
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Form should be invalid as albuminuria date is None, passed"
+    assert form.is_valid() is False, (
+        "Form should be invalid as albuminuria date is None, passed"
     )
 
 
@@ -946,8 +940,8 @@ def test_total_cholesterol_value_below_range_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Form should be invalid as total cholesterol < 2, passed"
+    assert form.is_valid() is False, (
+        "Form should be invalid as total cholesterol < 2, passed"
     )
 
 
@@ -966,8 +960,8 @@ def test_total_cholesterol_value_above_range_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Form should be invalid as total cholesterol > 12 mmol/L, passed"
+    assert form.is_valid() is False, (
+        "Form should be invalid as total cholesterol > 12 mmol/L, passed"
     )
 
 
@@ -986,8 +980,8 @@ def test_total_cholesterol_value_missing_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Form should be invalid as total cholesterol None, passed"
+    assert form.is_valid() is False, (
+        "Form should be invalid as total cholesterol None, passed"
     )
 
 
@@ -1007,8 +1001,8 @@ def test_total_cholesterol_date_missing_form_fails_validation():
     )
 
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Form should be invalid as total cholesterol date is None, passed"
+    assert form.is_valid() is False, (
+        "Form should be invalid as total cholesterol date is None, passed"
     )
 
 
@@ -1053,8 +1047,8 @@ def test_thyroid_treatment_status_unrecognized_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Invalid thyroid treatment status offered but test passed"
+    assert form.is_valid() is False, (
+        "Invalid thyroid treatment status offered but test passed"
     )
     assert "thyroid_treatment_status" in form.errors
 
@@ -1074,8 +1068,8 @@ def test_thyroid_treatment_status_none_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"No thyroid treatment status offered but test passed"
+    assert form.is_valid() is False, (
+        "No thyroid treatment status offered but test passed"
     )
     assert "thyroid_treatment_status" in form.errors
 
@@ -1096,8 +1090,8 @@ def test_thyroid_function_date_none_form_passes_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == True, (
-        f"No thyroid function date offered with treatment should pass"
+    assert form.is_valid() is True, (
+        "No thyroid function date offered with treatment should pass"
     )
     assert "thyroid_function_date" not in form.errors
 
@@ -1165,8 +1159,8 @@ def test_coeliac_treatment_status_unrecognized_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Invalid coeliac function status offered but test passed"
+    assert form.is_valid() is False, (
+        "Invalid coeliac function status offered but test passed"
     )
 
 
@@ -1243,8 +1237,8 @@ def test_psychological_status_unrecognized_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Invalid psychological status offered but test passed"
+    assert form.is_valid() is False, (
+        "Invalid psychological status offered but test passed"
     )
 
 
@@ -1263,7 +1257,7 @@ def test_psychological_status_none_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, f"No psychological status offered but test passed"
+    assert form.is_valid() is False, "No psychological status offered but test passed"
 
 
 @pytest.mark.django_db
@@ -1281,7 +1275,7 @@ def test_psychological_screen_date_none_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() == False, f"No psychological date offered but test passed"
+    assert form.is_valid() is False, "No psychological date offered but test passed"
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/628
@@ -1299,7 +1293,7 @@ def test_psychological_screen_date_none_with_status_unknown_passes_validation():
     )
     # Trigger the cleaners
     assert "psychological_screening_assessment_date" not in form.errors
-    assert form.is_valid()
+    assert form.is_valid() is True
 
 
 """
@@ -1365,7 +1359,7 @@ def test_smoking_status_unrecognized_form_fails_validation():
     )
 
     # Trigger the cleaners
-    assert form.is_valid() == False, f"Invalid smoking status offered but test passed"
+    assert form.is_valid() is False, "Invalid smoking status offered but test passed"
     assert "smoking_status" in form.errors, (
         "Invalid smoking status offered but test passed"
     )
@@ -1390,8 +1384,8 @@ def test_smoking_status_date_when_non_smoker_form_fails_validation():
     )
 
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Smoking cessation referral date offered but test passed"
+    assert form.is_valid() is False, (
+        "Smoking cessation referral date offered but test passed"
     )
     assert "smoking_status" not in form.errors
     assert "smoking_cessation_referral_date" in form.errors
@@ -1482,8 +1476,8 @@ def test_dietician_no_additional_offered_date_provided_fail_validation():
     )
 
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Dietician extra appointment not offered but date provided should fail"
+    assert form.is_valid() is False, (
+        "Dietician extra appointment not offered but date provided should fail"
     )
     assert "dietician_additional_appointment_date" in form.errors
 
@@ -1509,7 +1503,7 @@ def test_dietician_additional_offered_date_missing_passes_validation():
 
     # Trigger the cleaners
     assert form.is_valid(), (
-        f"Dietician extra appointment offered but date missing should pass"
+        "Dietician extra appointment offered but date missing should pass"
     )
     assert "dietician_additional_appointment_date" not in form.errors
 
@@ -1532,8 +1526,8 @@ def test_dietician_additional_offered_no_but_date_offered_fail_validation():
     )
 
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Dietician additional appointment No but date offered should fail"
+    assert form.is_valid() is False, (
+        "Dietician additional appointment No but date offered should fail"
     )
     assert "dietician_additional_appointment_date" in form.errors
 
@@ -1588,8 +1582,8 @@ def test_inpatient_admission_stabilisation_missing_date_fails_validation():
     )
 
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Inpatient admission for stabilisation missing date should fail"
+    assert form.is_valid() is False, (
+        "Inpatient admission for stabilisation missing date should fail"
     )
     assert "hospital_admission_date" in form.errors
 
@@ -1613,8 +1607,8 @@ def test_inpatient_admission_stabilisation_discharge_date_before_admission_date_
     )
 
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Inpatient admission for stabilisation admission date before discharge date should fail"
+    assert form.is_valid() is False, (
+        "Inpatient admission for stabilisation admission date before discharge date should fail"
     )
     assert "hospital_admission_date" in form.errors
 
@@ -1639,8 +1633,8 @@ def test_inpatient_admission_stabilisation_discharge_date_before_diagnosis_date_
     )
 
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Inpatient admission for stabilisation admission date before discharge date should fail"
+    assert form.is_valid() is False, (
+        "Inpatient admission for stabilisation admission date before discharge date should fail"
     )
     assert "hospital_discharge_date" in form.errors
 
@@ -1665,8 +1659,8 @@ def test_inpatient_admission_stabilisation_admission_date_more_than_eleven_days_
     )
 
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Inpatient admission for stabilisation admission date more than 11 days before diagnosis date should fail"
+    assert form.is_valid() is False, (
+        "Inpatient admission for stabilisation admission date more than 11 days before diagnosis date should fail"
     )
     assert "hospital_admission_date" in form.errors
 
@@ -1739,8 +1733,8 @@ def test_inpatient_admission_stabilisation_discharge_date_after_date_of_death_fa
     )
 
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Inpatient admission for stabilisation admission date before discharge date should fail"
+    assert form.is_valid() is False, (
+        "Inpatient admission for stabilisation admission date before discharge date should fail"
     )
     assert "hospital_discharge_date" in form.errors
 
@@ -1764,8 +1758,8 @@ def test_inpatient_admission_stabilisation_dka_additional_therapies_provided_fai
     )
 
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Inpatient admission for stabilisation with DKA additional therapies should fail"
+    assert form.is_valid() is False, (
+        "Inpatient admission for stabilisation with DKA additional therapies should fail"
     )
     assert "dka_additional_therapies" in form.errors, (
         "DKA additional therapies should be in errors as hospital admission for stabilisation"
@@ -1791,8 +1785,8 @@ def test_inpatient_admission_stabilisation_hospital_admission_other_provided_fai
     )
 
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Inpatient admission for stabilisation with hospital admission other should fail"
+    assert form.is_valid() is False, (
+        "Inpatient admission for stabilisation with hospital admission other should fail"
     )
     assert "hospital_admission_reason" in form.errors, (
         "Hospital admission other should be in errors as hospital admission for stabilisation"
@@ -1843,8 +1837,8 @@ def test_inpatient_admission_dka_additional_therapies_missing_fails_validation()
     )
 
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Inpatient admission for DKA without additional therapies should fail"
+    assert form.is_valid() is False, (
+        "Inpatient admission for DKA without additional therapies should fail"
     )
     assert "dka_additional_therapies" in form.errors, (
         "DKA additional therapies should be in errors as hospital admission for DKA"
@@ -1871,8 +1865,8 @@ def test_inpatient_admission_dka_additional_therapies_hospital_admission_also_pr
     )
 
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Inpatient admission for DKA with additional therapies and hospital_admission_other should fail"
+    assert form.is_valid() is False, (
+        "Inpatient admission for DKA with additional therapies and hospital_admission_other should fail"
     )
     assert "hospital_admission_reason" in form.errors, (
         "hospital_admission_other should be in errors as hospital admission for DKA"
@@ -1923,8 +1917,8 @@ def test_inpatient_admission_other_missing_fails_validation():
     )
 
     # Trigger the cleaners
-    assert form.is_valid() == False, (
-        f"Inpatient admission for other reason without reason should fail"
+    assert form.is_valid() is False, (
+        "Inpatient admission for other reason without reason should fail"
     )
     assert "hospital_admission_other" in form.errors, (
         "hospital_admission_other should be in errors as hospital admission for other reason"
@@ -1993,7 +1987,7 @@ def test_visit_date_missing_fails_validation():
     )
 
     # Trigger the cleaners
-    assert form.is_valid() == False, f"Visit date missing should fail"
+    assert form.is_valid() is False, "Visit date missing should fail"
     assert "visit_date" in form.errors
 
 
@@ -2035,7 +2029,7 @@ def test_visit_date_before_diagnosis_date_fails_validation():
     )
 
     # Trigger the cleaners
-    assert form.is_valid() == False, f"Visit date before diagnosis date should fail"
+    assert form.is_valid() is False, "Visit date before diagnosis date should fail"
     assert "visit_date" in form.errors
 
 
@@ -2055,7 +2049,7 @@ def test_visit_date_after_death_date_fails_validation():
     )
 
     # Trigger the cleaners
-    assert form.is_valid() == False, f"Visit date after death date should fail"
+    assert form.is_valid() is False, "Visit date after death date should fail"
     assert "visit_date" in form.errors
 
 
@@ -2097,7 +2091,7 @@ def test_visit_date_before_birth_date_fails_validation():
     )
 
     # Trigger the cleaners
-    assert form.is_valid() == False, f"Visit date before birth date should fail"
+    assert form.is_valid() is False, "Visit date before birth date should fail"
     assert "visit_date" in form.errors
 
 
