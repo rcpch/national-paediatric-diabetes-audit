@@ -50,7 +50,7 @@ def new_home(request, audit_period):
     inactive_pdus = []
     for pdu in pdus:
         if not pdu.active:
-            if Submission.objects.filter(
+            if request.user.is_rcpch_audit_team_member or Submission.objects.filter(
                 paediatric_diabetes_unit=pdu,
                 audit_period__slug=audit_period,
                 submission_active=True
