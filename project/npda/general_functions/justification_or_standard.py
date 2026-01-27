@@ -401,7 +401,7 @@ FIELD_NOTES_2026 = {
         "Data for this item can be entered into the audit if a gluten-free diet was recommended at a video/telephone appointment."
     ),
     # Annual Review - Psychology
-    "annual_psychological_assessment_date": (
+    "psychological_screening_assessment_date": (
         "Enter a date that a formal assessment has taken place for the 'need of additional psychological support' (beyond that "
         "which might be routinely provided within clinic). An assumption will be made that no assessment has taken place if no "
         "date entered.\n\n"
@@ -428,7 +428,7 @@ FIELD_NOTES_2026 = {
     "smoking_vaping_status": (
         "Data for this item can be entered into the audit if collected at a video/telephone appointment."
     ),
-    "smoking_cessation_advice_date": (
+    "smoking_cessation_referral_date": (
         "Data for this item can be entered into the audit if offered at a video/telephone appointment."
     ),
     # Annual Review - Dietetics
@@ -822,7 +822,7 @@ FIELD_JUSTIFICATION_STANDARDS_2026 = {
         "NG 20: 1.1.1 Offer serological testing for coeliac disease to people with: Type 1 diabetes, at diagnosis."
     ),
     # Annual Review - Psychology
-    "annual_psychological_assessment_date": (
+    "psychological_screening_assessment_date": (
         "Regular assessment of a broad range of psychological and behavioural problems in children and adults with type 1 diabetes is "
         "recommended.\n\n"
         "NG18: 1.2.103 and 1.3.64 Diabetes teams should be aware that children and young people with type 1/type 2 diabetes have a greater "

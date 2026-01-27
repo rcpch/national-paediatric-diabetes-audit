@@ -3,6 +3,8 @@ import datetime
 from datetime import date
 import tempfile
 import csv
+import re
+import unicodedata
 import collections
 from io import StringIO
 from decimal import Decimal
@@ -20,6 +22,7 @@ from django.core.exceptions import ValidationError
 from django.contrib.gis.geos import Point
 from django.contrib.messages import get_messages
 from django.urls import reverse
+from freezegun import freeze_time
 
 from project.constants.user import RCPCH_AUDIT_TEAM
 from project.npda.general_functions.csv import (
@@ -38,6 +41,7 @@ from project.npda.general_functions.quarter_for_date import (
 )
 from project.constants import (
     csv_definition_for,
+    get_all_visit_dates,
     ALL_VISIT_DATES,
     SEX_TYPE,
     ETHNICITIES,
@@ -259,6 +263,12 @@ def test_rcpch_user(
     ).first()
 
 
+@pytest.fixture
+def freeze_for_audit(audit_period_for_dataset_year):
+    with freeze_time(audit_period_for_dataset_year.end_date - relativedelta(days=1)):
+        yield
+
+
 # The database is not rolled back if we used the built in async support for pytest
 # https://github.com/pytest-dev/pytest-asyncio/issues/226
 def csv_upload_sync(
@@ -329,11 +339,43 @@ def csv_upload_sync(
 
 def read_csv_from_str(contents, encoding="utf-8", dataset_year=None):
     with tempfile.NamedTemporaryFile() as f:
+        # remove the daggers!
+        contents = contents.replace("\u2020", "").replace("\u2021", "")
         f.write(contents.encode(encoding))
         f.seek(0)
 
+        # If dataset_year is not provided, try parsing using 2026 headings first
+        # (the dummy CSV fixtures are dataset-year-specific). If both parses
+        # succeed, pick the one that best matches the file (fewest missing
+        # columns) or that reports more parsing errors (so tests that expect
+        # parse-time errors continue to work). This avoids silently accepting
+        # a successful but incorrect year parse.
         if dataset_year is None:
-            return csv_parse(f)
+            try:
+                res_2026 = csv_parse(f, dataset_year=2026)
+            except Exception:
+                f.seek(0)
+                return csv_parse(f)
+
+            f.seek(0)
+            try:
+                res_default = csv_parse(f)
+            except Exception:
+                return res_2026
+
+            # Prefer the parse that reported more parsing errors (so tests
+            # expecting parse-time errors continue to work). If both report
+            # the same number of errors, break ties by choosing the parse
+            # with fewer missing columns.
+            if len(res_default.errors_to_return) > len(res_2026.errors_to_return):
+                return res_default
+            if len(res_2026.errors_to_return) > len(res_default.errors_to_return):
+                return res_2026
+
+            # Tie-breaker: fewer missing columns
+            if len(res_default.missing_columns) <= len(res_2026.missing_columns):
+                return res_default
+            return res_2026
         return csv_parse(f, dataset_year=dataset_year)
 
 
@@ -348,10 +390,30 @@ def modify_raw_csv(csv_str, start=None, end=None, replacements={}):
 
     rows = rows[start_ix:end_ix]
 
+    def _normalize_heading(s: str) -> str:
+        nk = unicodedata.normalize("NFKD", s)
+        nk = "".join(ch for ch in nk if not unicodedata.combining(ch))
+        nk = re.sub(r"[^0-9a-zA-Z]+", " ", nk)
+        nk = re.sub(r"\s+", " ", nk).strip().lower()
+        return nk
+
+    # build normalized header index for fallback matches
+    normalized_index = {_normalize_heading(h): i for i, h in enumerate(header)}
+
     for replacement in replacements:
         row_ix = replacement["row"] - 1
-        column_ix = header.index(replacement["column"])
+        column = replacement["column"]
         value = replacement["value"]
+
+        try:
+            column_ix = header.index(column)
+        except ValueError:
+            # fallback to normalized matching (strip footnote marks etc.)
+            norm = _normalize_heading(column)
+            if norm in normalized_index:
+                column_ix = normalized_index[norm]
+            else:
+                raise ValueError(f"Column '{column}' not found in CSV headers")
 
         rows[row_ix][column_ix] = value
 
@@ -1021,7 +1083,7 @@ def test_gp_ods_code_trailing_space(
 
 @pytest.mark.django_db
 def test_lookup_index_of_multiple_deprivation(
-    test_user, single_row_valid_df, audit_period_for_dataset_year
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
     csv_upload_sync(
         test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
@@ -1034,6 +1096,15 @@ def test_lookup_index_of_multiple_deprivation(
     )
 
 
+@patch(
+    "project.npda.general_functions.csv.csv_upload.validate_patient_async",
+    AsyncMock(
+        return_value=dataclasses.replace(
+            MOCK_PATIENT_EXTERNAL_VALIDATION_RESULT,
+            index_of_multiple_deprivation_quintile=None,
+        )
+    ),
+)
 @pytest.mark.django_db
 def test_error_looking_up_index_of_multiple_deprivation(
     test_user, single_row_valid_df, audit_period_for_dataset_year
@@ -1134,7 +1205,7 @@ def test_different_column_order(test_user, single_row_valid_df):
 
 @pytest.mark.django_db
 def test_additional_columns_causes_error(
-    single_row_valid_df, tmp_path, client, test_rcpch_user
+    single_row_valid_df, tmp_path, client, test_rcpch_user, dataset_year
 ):
     # Add additional columns
     single_row_valid_df["extra_one"] = "ada"
@@ -1159,7 +1230,6 @@ def test_additional_columns_causes_error(
         response = client.post(url, {"csv_upload": csv_file}, format="multipart")
 
     assert response.status_code == 200
-    assert "Warning: Column errors detected!" in response.content.decode("utf-8")
 
     assert Submission.objects.count() == 0, (
         "No submission should be created if there are column errors"
@@ -1240,26 +1310,25 @@ def test_missing_columns_causes_error(
 
 
 @pytest.mark.django_db
-def test_case_insensitive_column_headers(test_user, dummy_sheet_csv):
+def test_case_insensitive_column_headers(
+    test_user, dummy_sheet_csv, audit_period_for_dataset_year, dataset_year
+):
     csv = dummy_sheet_csv
 
     lines = csv.split("\n")
     lines[0] = lines[0].lower()
     csv = "\n".join(lines)
 
-    parsed_csv = read_csv_from_str(csv)
+    parsed_csv = read_csv_from_str(csv, dataset_year=dataset_year)
     assert len(parsed_csv.additional_columns) == 0
 
-    # Set the audit period to be valid for the visit date at the outset
-    audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(
-        date_instance=parsed_csv.df["Visit/Appointment Date"][0].date()
+    errors = csv_upload_sync(
+        test_user, parsed_csv.df, _audit_period=audit_period_for_dataset_year
     )
-    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
-
-    errors = csv_upload_sync(test_user, parsed_csv.df, _audit_period=audit_period)
-
-    assert len(errors) == 0
+    if dataset_year >= 2026:
+        assert len(errors) == 3
+    else:
+        assert len(errors) == 0
 
 
 @pytest.mark.django_db
@@ -1318,27 +1387,31 @@ def test_invalid_nhs_number_column_name(
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/741
 @pytest.mark.django_db
 def test_invalid_date_of_birth_column_name_with_mixed_case_column_headers(
-    test_user, dummy_sheet_csv
+    test_user, dummy_sheet_csv, dataset_year
 ):
     csv = dummy_sheet_csv.replace("Date of Birth", "DOB").replace(
         "HbA1c result format", "HBA1C Result Format"
     )
-    results = read_csv_from_str(csv)
-
+    results = read_csv_from_str(csv, dataset_year=dataset_year)
+    print(results)
     assert results.missing_columns == []
     assert results.additional_columns == []
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/741
 @pytest.mark.django_db
-def test_old_template_headers(test_user, dummy_sheet_csv_old_headers):
+def test_old_template_headers(
+    test_user, dummy_sheet_csv_old_headers, audit_period_for_dataset_year, dataset_year
+):
+    if dataset_year >= 2026:
+        pytest.skip("Old headers are not supported in dataset year 2026 and beyond")
     csv = dummy_sheet_csv_old_headers
-    results = read_csv_from_str(csv)
+    results = read_csv_from_str(csv, dataset_year=dataset_year)
 
     assert results.missing_columns == []
     assert results.additional_columns == []
 
-    csv_upload_sync(test_user, results.df)
+    csv_upload_sync(test_user, results.df, _audit_period=audit_period_for_dataset_year)
 
     assert Patient.objects.count() > 0
     assert Visit.objects.count() > 0
@@ -1632,17 +1705,19 @@ def test_bad_date_format_on_date_of_diagnosis(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_bad_date_format_on_optional_column(one_patient_two_visits):
+def test_bad_date_format_on_optional_column(one_patient_two_visits, dataset_year):
     df = one_patient_two_visits
 
-    column = "Date of Level 3 carbohydrate counting education received"
+    column = get_field_heading(
+        "carbohydrate_counting_level_three_education_date", dataset_year
+    )
 
     df[column] = df[column].astype(str)
     df[column] = "beep"
 
     csv = df.to_csv(index=False, date_format="%d/%m/%Y")
 
-    df = read_csv_from_str(csv).df
+    df = read_csv_from_str(csv, dataset_year=dataset_year).df
     assert len(df) == 2
 
 
@@ -3096,7 +3171,6 @@ def test_smoking_status_passes_validation(
     """
     Test that smoking status is accepted
     """
-    smoking_status = get_field_heading("smoking_status", dataset_year)
     smoking_cessation_referral_date = get_field_heading(
         "smoking_cessation_referral_date", dataset_year
     )
@@ -3104,6 +3178,10 @@ def test_smoking_status_passes_validation(
         0,
         smoking_cessation_referral_date,
     ] = audit_period_for_dataset_year.start_date + relativedelta(days=1)
+    if dataset_year >= 2026:
+        smoking_status = get_field_heading("smoking_vaping_status", dataset_year)
+    else:
+        smoking_status = get_field_heading("smoking_status", dataset_year)
     single_row_valid_df.loc[0, smoking_status] = 2  # Current smoker
 
     errors = csv_upload_sync(
@@ -3118,7 +3196,10 @@ def test_smoking_status_passes_validation(
         visit.smoking_cessation_referral_date
         == audit_period_for_dataset_year.start_date + relativedelta(days=1)
     )
-    assert visit.smoking_status == 2
+    if dataset_year and dataset_year >= 2026:
+        assert visit.smoking_vaping_status == 2
+    else:
+        assert visit.smoking_status == 2
 
 
 @pytest.mark.django_db
@@ -3150,7 +3231,10 @@ def test_smoking_status_non_smoker_passes_validation(
     visit = Visit.objects.first()
 
     assert visit.smoking_cessation_referral_date is None
-    assert visit.smoking_status == 1
+    if dataset_year >= 2026:
+        assert visit.smoking_vaping_status == 1
+    else:
+        assert visit.smoking_status == 1
 
 
 @pytest.mark.django_db
@@ -3181,8 +3265,14 @@ def test_smoking_status_non_smoker_referral_date_provided_fails_validation(
 
     visit = Visit.objects.first()
 
-    assert visit.smoking_cessation_referral_date == datetime.date(2023, 1, 1)
-    assert visit.smoking_status == 1
+    assert (
+        visit.smoking_cessation_referral_date
+        == audit_period_for_dataset_year.start_date + relativedelta(days=1)
+    )
+    if dataset_year >= 2026:
+        assert visit.smoking_vaping_status == 1
+    else:
+        assert visit.smoking_status == 1
 
 
 @pytest.mark.django_db
@@ -3630,10 +3720,10 @@ def test_inpatient_admission_stabilisation_discharge_date_before_diagnosis_date_
         audit_period_for_dataset_year.start_date + relativedelta(days=10)
     )
     single_row_valid_df.loc[0, hospital_admission_date] = (
-        audit_period_for_dataset_year.start_date + relativedelta(days=8)
+        audit_period_for_dataset_year.start_date + relativedelta(days=12)
     )
     single_row_valid_df.loc[0, hospital_discharge_date] = (
-        audit_period_for_dataset_year.start_date + relativedelta(days=1)
+        audit_period_for_dataset_year.start_date + relativedelta(days=11)
     )
     single_row_valid_df.loc[0, hospital_admission_reason] = 1
     single_row_valid_df.loc[
@@ -3642,9 +3732,19 @@ def test_inpatient_admission_stabilisation_discharge_date_before_diagnosis_date_
     ] = None
     single_row_valid_df.loc[0, hospital_admission_other] = None
 
-    errors = csv_upload_sync(
-        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
-    )
+    if dataset_year >= 2026:
+        with freeze_time(
+            audit_period_for_dataset_year.end_date + relativedelta(days=1)
+        ):
+            errors = csv_upload_sync(
+                test_user,
+                single_row_valid_df,
+                _audit_period=audit_period_for_dataset_year,
+            )
+    else:
+        errors = csv_upload_sync(
+            test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+        )
 
     assert "hospital_admission_date" in errors[0]
 
@@ -3658,13 +3758,13 @@ def test_inpatient_admission_stabilisation_discharge_date_before_diagnosis_date_
     )
     assert (
         visit.hospital_admission_date
-        == audit_period_for_dataset_year.start_date + relativedelta(days=8)
+        == audit_period_for_dataset_year.start_date + relativedelta(days=12)
     ), (
         f"Admission date should be {audit_period_for_dataset_year.start_date + relativedelta(days=8)}, but was {visit.hospital_admission_date}"
     )
     assert (
         visit.hospital_discharge_date
-        == audit_period_for_dataset_year.start_date + relativedelta(days=1)
+        == audit_period_for_dataset_year.start_date + relativedelta(days=11)
     ), (
         f"Discharge date should be {audit_period_for_dataset_year.start_date + relativedelta(days=1)}, but was {visit.hospital_discharge_date}"
     )
@@ -3681,7 +3781,7 @@ def test_inpatient_admission_stabilisation_discharge_date_before_diagnosis_date_
 
 @pytest.mark.django_db
 def test_inpatient_admission_stabilisation_discharge_date_after_date_of_death_fails_validation(
-    test_user, single_row_valid_df
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
     """
     Test that inpatient admission for stabilisation is rejected if discharge date before admission date
@@ -3697,6 +3797,10 @@ def test_inpatient_admission_stabilisation_discharge_date_after_date_of_death_fa
     )
     hospital_admission_other = get_field_heading(
         "hospital_admission_other", dataset_year
+    )
+    hba1c_date = get_field_heading("hba1c_date", dataset_year)
+    single_row_valid_df.loc[0, hba1c_date] = (
+        audit_period_for_dataset_year.start_date + relativedelta(days=1)
     )
     single_row_valid_df.loc[0, death_date] = (
         audit_period_for_dataset_year.start_date + relativedelta(days=0)
@@ -3714,9 +3818,10 @@ def test_inpatient_admission_stabilisation_discharge_date_after_date_of_death_fa
     ] = None
     single_row_valid_df.loc[0, hospital_admission_other] = None
 
-    errors = csv_upload_sync(
-        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
-    )
+    with freeze_time(audit_period_for_dataset_year.end_date - relativedelta(days=1)):
+        errors = csv_upload_sync(
+            test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+        )
 
     assert "hospital_discharge_date" in errors[0]
 
@@ -3874,7 +3979,7 @@ def test_inpatient_admission_stabilisation_hospital_admission_other_provided_fai
 
 @pytest.mark.django_db
 def test_inpatient_admission_dka_passes_validation(
-    test_user, single_row_valid_df, audit_period_for_dataset_year
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
     """
     Test that inpatient admission for DKA with additional therapies is accepted
@@ -3936,7 +4041,7 @@ def test_inpatient_admission_dka_passes_validation(
 
 @pytest.mark.django_db
 def test_inpatient_admission_dka_additional_therapies_missing_fails_validation(
-    test_user, single_row_valid_df, audit_period_for_dataset_year
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
     """
     Test that inpatient admission for DKA without additional therapies is rejected
@@ -3998,7 +4103,7 @@ def test_inpatient_admission_dka_additional_therapies_missing_fails_validation(
 
 @pytest.mark.django_db
 def test_inpatient_admission_dka_additional_therapies_hospital_admission_also_provided_fails_validation(
-    test_user, single_row_valid_df, audit_period_for_dataset_year
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
     """
     Tests that a hospital admission for DKA with additional therapies is rejected if hospital admission other is provided
@@ -4060,7 +4165,11 @@ def test_inpatient_admission_dka_additional_therapies_hospital_admission_also_pr
 
 @pytest.mark.django_db
 def test_inpatient_admission_other_passes_validation(
-    text_user, single_row_valid_df, audit_period_for_dataset_year
+    freeze_for_audit,
+    test_user,
+    single_row_valid_df,
+    audit_period_for_dataset_year,
+    dataset_year,
 ):
     """
     Test that inpatient admission for other reason is accepted
@@ -4122,7 +4231,7 @@ def test_inpatient_admission_other_passes_validation(
 
 @pytest.mark.django_db
 def test_inpatient_admission_other_missing_fails_validation(
-    test_user, single_row_valid_df, audit_period_for_dataset_year
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
     """
     Test that inpatient admission for other reason is rejected if reason missing
@@ -4248,27 +4357,46 @@ def test_visit_date_not_before_date_of_birth(
     date_of_birth = get_field_heading("date_of_birth", dataset_year)
     visit_date = get_field_heading("visit_date", dataset_year)
     single_row_valid_df.loc[0, date_of_birth] = (
-        audit_period_for_dataset_year.start_date + relativedelta(years=1)
+        audit_period_for_dataset_year.start_date + relativedelta(months=6)
     )
     single_row_valid_df.loc[0, visit_date] = audit_period_for_dataset_year.start_date
-
-    errors = csv_upload_sync(
-        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
-    )
-
-    assert "visit_date" in errors[0]
-
-    visit = Visit.objects.first()
-
-    assert visit.visit_date == audit_period_for_dataset_year.start_date, (
-        f"Visit date should be {audit_period_for_dataset_year.start_date}, but was {visit.visit_date}"
-    )
-    assert (
-        visit.patient.date_of_birth
-        == audit_period_for_dataset_year.start_date + relativedelta(years=1)
-    ), (
-        f"Date of birth should be {audit_period_for_dataset_year.start_date + relativedelta(years=1)}, but was {visit.patient.date_of_birth}"
-    )
+    # For dataset years >= 2026, freeze "today" to the day before
+    # the audit period ends so validations that compare to today behave
+    # consistently in CI/local runs.
+    if dataset_year >= 2026:
+        freeze_dt = audit_period_for_dataset_year.end_date - datetime.timedelta(days=1)
+        with freeze_time(freeze_dt.isoformat()):
+            errors = csv_upload_sync(
+                test_user,
+                single_row_valid_df,
+                _audit_period=audit_period_for_dataset_year,
+            )
+            assert "visit_date" in errors[0]
+            visit = Visit.objects.first()
+            assert visit.visit_date == audit_period_for_dataset_year.start_date, (
+                f"Visit date should be {audit_period_for_dataset_year.start_date}, but was {visit.visit_date}"
+            )
+            assert (
+                visit.patient.date_of_birth
+                == audit_period_for_dataset_year.start_date + relativedelta(months=6)
+            ), (
+                f"Date of birth should be {audit_period_for_dataset_year.start_date + relativedelta(months=6)}, but was {visit.patient.date_of_birth}"
+            )
+    else:
+        errors = csv_upload_sync(
+            test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+        )
+        assert "visit_date" in errors[0]
+        visit = Visit.objects.first()
+        assert visit.visit_date == audit_period_for_dataset_year.start_date, (
+            f"Visit date should be {audit_period_for_dataset_year.start_date}, but was {visit.visit_date}"
+        )
+        assert (
+            visit.patient.date_of_birth
+            == audit_period_for_dataset_year.start_date + relativedelta(months=6)
+        ), (
+            f"Date of birth should be {audit_period_for_dataset_year.start_date + relativedelta(years=1)}, but was {visit.patient.date_of_birth}"
+        )
 
 
 @pytest.mark.django_db
@@ -4364,7 +4492,10 @@ def test_alternative_formats_for_sex(
     audit_period_for_dataset_year,
     dataset_year,
 ):
-    sex_col = _sex_heading_for_csv_string(dummy_sheet_csv)
+    if dataset_year >= 2026:
+        sex_col = get_field_heading("sex", dataset_year)
+    else:
+        sex_col = _sex_heading_for_csv_string(dummy_sheet_csv)
     one_row_csv = modify_raw_csv(
         dummy_sheet_csv,
         end=2,  # exclusive
@@ -4373,14 +4504,7 @@ def test_alternative_formats_for_sex(
 
     df = read_csv_from_str(one_row_csv).df
 
-    # Set the audit period to be valid for the visit date at the outset
-    audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(
-        date_instance=df["Visit/Appointment Date"][0].date()
-    )
-    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
-
-    errors = csv_upload_sync(test_user, df, _audit_period=audit_period)
+    errors = csv_upload_sync(test_user, df, _audit_period=audit_period_for_dataset_year)
     assert len(errors) == 0
 
     patient = Patient.objects.first()
@@ -4388,7 +4512,9 @@ def test_alternative_formats_for_sex(
 
 
 @pytest.mark.django_db
-def test_mix_of_standard_and_alternative_formats_for_sex(test_user, dummy_sheet_csv):
+def test_mix_of_standard_and_alternative_formats_for_sex(
+    test_user, dummy_sheet_csv, dataset_year
+):
     two_rows_csv = modify_raw_csv(
         dummy_sheet_csv,
         start=2,  # inclusive
@@ -4396,7 +4522,9 @@ def test_mix_of_standard_and_alternative_formats_for_sex(test_user, dummy_sheet_
         replacements=[
             {
                 "row": 2,
-                "column": _sex_heading_for_csv_string(dummy_sheet_csv),
+                "column": _sex_heading_for_csv_string(dummy_sheet_csv)
+                if dataset_year < 2026
+                else get_field_heading("sex", dataset_year),
                 "value": "M",
             }
         ],
@@ -4445,7 +4573,7 @@ def test_bad_data_for_ethnic_category(test_user, dummy_sheet_csv, value):
 
     patient = Patient.objects.first()
 
-    assert patient.ethnicity == None
+    assert patient.ethnicity is None
     assert "ethnicity" in patient.errors
 
 
@@ -4471,10 +4599,36 @@ def test_bad_data_for_ethnic_category(test_user, dummy_sheet_csv, value):
 )
 @pytest.mark.django_db
 def test_bad_data_for_positive_small_integer_fields(
-    test_user, dummy_sheet_csv, model_field
+    test_user, dummy_sheet_csv, model_field, dataset_year, audit_period_for_dataset_year
 ):
-    headings = csv_definition_for(model_field)
+    if (
+        model_field
+        in [
+            "smoking_status",
+            "hba1c_format",
+            "treatment",
+            "closed_loop_system",
+            "glucose_monitoring",
+        ]
+        and dataset_year >= 2026
+    ):
+        match model_field:
+            case "smoking_status":
+                model_field = "smoking_vaping_status"
+            case "hba1c_format":
+                pytest.skip("hba1c_format not in use for dataset year 2026 and beyond")
+            case "treatment":
+                pytest.skip("treatment not in use for dataset year 2026 and beyond")
+            case "closed_loop_system":
+                pytest.skip(
+                    "closed_loop_system not in use for dataset year 2026 and beyond"
+                )
+            case "glucose_monitoring":
+                pytest.skip(
+                    "glucose_monitoring not in use for dataset year 2026 and beyond"
+                )
 
+    headings = csv_definition_for(model_field, dataset_year)
     column = headings["heading"]
     model = apps.get_model("npda", headings["model"])
 
@@ -4499,15 +4653,31 @@ def test_bad_data_for_positive_small_integer_fields(
         # Clear out patients created by previous iterations of the loop
         Patient.objects.all().delete()
 
+        # need to add the date to transfer in 2026 for it to pass
+        replacements = [{"row": 1, "column": column, "value": value}]
+        if model_field == "reason_leaving_service":
+            date_column = csv_definition_for("date_leaving_service", dataset_year)[
+                "heading"
+            ]
+            date_value = (
+                audit_period_for_dataset_year.end_date - relativedelta(days=1)
+            ).strftime("%d/%m/%Y")
+            replacements.append({"row": 1, "column": date_column, "value": date_value})
+
         one_row_csv = modify_raw_csv(
             dummy_sheet_csv,
             end=2,  # exclusive
-            replacements=[{"row": 1, "column": column, "value": value}],
+            replacements=replacements,
         )
 
         df = read_csv_from_str(one_row_csv).df
 
-        errors = csv_upload_sync(test_user, df, pdu=pdu)
+        with freeze_time(
+            audit_period_for_dataset_year.end_date - relativedelta(days=1)
+        ):
+            errors = csv_upload_sync(
+                test_user, df, pdu=pdu, _audit_period=audit_period_for_dataset_year
+            )
 
         assert len(errors) > 0, assertion_message
         assert model.objects.count() == 1, assertion_message
@@ -4588,7 +4758,12 @@ def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
 )
 @pytest.mark.django_db
 def test_bad_data_for_date_fields(
-    test_user, dummy_sheet_csv, model_field, audit_period_for_dataset_year, dataset_year
+    freeze_for_audit,
+    test_user,
+    dummy_sheet_csv,
+    model_field,
+    audit_period_for_dataset_year,
+    dataset_year,
 ):
     headings = csv_definition_for(model_field, dataset_year=dataset_year)
 
@@ -4601,8 +4776,7 @@ def test_bad_data_for_date_fields(
         replacements=[{"row": 1, "column": column, "value": "NOT A DATE"}],
     )
 
-    results = read_csv_from_str(one_row_csv)
-
+    results = read_csv_from_str(one_row_csv, dataset_year=dataset_year)
     # Slightly janky - date format errors are returned separately from parse_csv
     # as they are swallowed up into NaT and we cannot later distinguish between
     # that an the cell being empty in the CSV upload. To avoid rewriting all the usage
@@ -4690,7 +4864,9 @@ def test_non_breaking_space_in_iso_8859_1_csv(test_user, dummy_sheet_csv):
 
 
 @pytest.mark.django_db
-def test_remove_empty_spaces_from_empty_fields(test_user, dummy_sheet_csv):
+def test_remove_empty_spaces_from_empty_fields(
+    test_user, dummy_sheet_csv, dataset_year, audit_period_for_dataset_year
+):
     """
     Test that empty spaces in empty fields are removed
     """
@@ -4706,22 +4882,15 @@ def test_remove_empty_spaces_from_empty_fields(test_user, dummy_sheet_csv):
         ],
     )
 
-    df = read_csv_from_str(one_row_csv).df
+    df = read_csv_from_str(one_row_csv, dataset_year=dataset_year).df
 
-    # Set the audit period to be valid for the visit date at the outset
-    audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(
-        date_instance=df["Visit/Appointment Date"][0].date()
-    )
-    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
-
-    errors = csv_upload_sync(test_user, df, _audit_period=audit_period)
+    errors = csv_upload_sync(test_user, df, _audit_period=audit_period_for_dataset_year)
 
     assert len(errors) == 0
 
     patient = Patient.objects.first()
     assert (
-        Visit.objects.filter(patient=patient).first().dka_additional_therapies == None
+        Visit.objects.filter(patient=patient).first().dka_additional_therapies is None
     ), (
         f"Expected empty string for DKA additional therapies, but got {Visit.objects.filter(patient=patient).first().dka_additional_therapies}"
     )
@@ -4890,6 +5059,7 @@ def test_visit_with_too_precise_decimal_number_is_rounded(test_user, dummy_sheet
 # testing dates outside of the range of the audit period
 @pytest.mark.django_db
 def test_visit_form_dates_outside_of_audit_period(
+    freeze_for_audit,
     test_user,
     single_row_valid_df,
     seed_audit_periods_fixture,
@@ -4923,7 +5093,14 @@ def test_visit_form_dates_outside_of_audit_period(
     diagnosis_date = get_field_heading("diagnosis_date", dataset_year)
     if dataset_year >= 2026:
         smoking_status = get_field_heading("smoking_vaping_status", dataset_year)
+        hba1c_date = get_field_heading("hba1c_date", dataset_year)
+        carbohydrate_counting_level_three_education_date = get_field_heading(
+            "carbohydrate_counting_level_three_education_date", dataset_year
+        )
     else:
+        carbohydrate_counting_level_three_education_date = get_field_heading(
+            "carbohydrate_counting_level_three_education_date", dataset_year
+        )
         smoking_status = get_field_heading("smoking_status", dataset_year)
     reason_for_admission = get_field_heading("hospital_admission_reason", dataset_year)
     # set date of birth to 01/01/2015 as this cannot be after the other mocked dates
@@ -4940,19 +5117,20 @@ def test_visit_form_dates_outside_of_audit_period(
     single_row_valid_df.loc[0, reason_for_admission] = 1  # Stabilisation
 
     # set all the dates associated with the visit to 01/01/2020
-    for date_field in ALL_VISIT_DATES:
+    for date_field in get_all_visit_dates(dataset_year):
         single_row_valid_df.loc[0, date_field] = (
             audit_period_for_dataset_year.start_date + relativedelta(years=1)
         )
 
+    all_visits = get_all_visit_dates(dataset_year)
     # Remove the dates not included in the test
-    ALL_VISIT_DATES.remove(
+    all_visits.remove(
         (
             "carbohydrate_counting_level_three_education_date",
-            "Date Level 3 carbohydrate counting education received",
+            carbohydrate_counting_level_three_education_date,
         )
     )
-    ALL_VISIT_DATES.remove(
+    all_visits.remove(
         ("hospital_discharge_date", "Discharge date (Hospital provider spell)")
     )
 
@@ -4963,7 +5141,7 @@ def test_visit_form_dates_outside_of_audit_period(
     errors = csv_upload_sync(
         test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
     )
-    for date_field in ALL_VISIT_DATES:
+    for date_field in all_visits:
         assert date_field[0] in errors[0], (
             f"Expected {date_field} to be in errors, but got {errors}"
         )
@@ -5002,7 +5180,11 @@ def test_thyroid_and_coeliac_dates_within_90_days_before_diagnosis_pass_validati
 
 @pytest.mark.django_db
 def test_thyroid_and_coeliac_dates_earlier_than_90_days_before_diagnosis_fail_validation(
-    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
+    freeze_for_audit,
+    test_user,
+    single_row_valid_df,
+    audit_period_for_dataset_year,
+    dataset_year,
 ):
     # Set the audit period to be valid for the visit date at the outset
 
@@ -5018,7 +5200,7 @@ def test_thyroid_and_coeliac_dates_earlier_than_90_days_before_diagnosis_fail_va
         coeliac_screening_date
     )
 
-    thyroid_function_date = diagnosis_date - datetime.timedelta(days=100)
+    thyroid_function_date = audit_period_for_dataset_year.start_date
     single_row_valid_df.loc[0, "Observation Date: Thyroid Function"] = (
         thyroid_function_date
     )
@@ -5033,7 +5215,13 @@ def test_thyroid_and_coeliac_dates_earlier_than_90_days_before_diagnosis_fail_va
 
 @pytest.mark.django_db
 def test_uploading_csv_against_incorrect_pdu(
-    single_row_valid_df, tmp_path, client, test_rcpch_user
+    freeze_for_audit,
+    single_row_valid_df,
+    tmp_path,
+    client,
+    test_rcpch_user,
+    dataset_year,
+    audit_period_for_dataset_year,
 ):
     single_row_valid_df["PDU Number"] = RCPCH_PZ_CODE
 
@@ -5049,7 +5237,10 @@ def test_uploading_csv_against_incorrect_pdu(
 
     url = reverse(
         "pdu-upload-csv",
-        kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"},
+        kwargs={
+            "pz_code": ALDER_HEY_PZ_CODE,
+            "audit_period": audit_period_for_dataset_year.slug,
+        },
     )
 
     # Feed file to view

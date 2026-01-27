@@ -128,7 +128,7 @@ VISIT_FIELD_HEADINGS_2026 = {
     "psychological_support_outcome": "Was the patient offered an additional appointment with a mental health professional as part of the diabetes MDT?",
     # Lifestyle / Education
     "smoking_vaping_status": "Does the patient smoke and/or vape",
-    "smoking_cessation_advice_date": "Date of offer of smoking cessation advice (if patient is a current smoker)",
+    "smoking_cessation_referral_date": "Date of offer of smoking cessation advice (if patient is a current smoker)",
     "flu_immunisation_recommended_date": "Date that influenza immunisation was recommended",
     "sick_day_rules_training_date": "Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia",
     # Annual Review - Dietetics

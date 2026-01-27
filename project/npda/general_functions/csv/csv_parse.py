@@ -3,7 +3,6 @@ from dataclasses import dataclass
 import logging
 import re
 import collections
-import unicodedata
 
 # Django imports
 from django.core.exceptions import ValidationError
@@ -14,7 +13,6 @@ import numpy as np
 
 # RCPCH imports
 from project.constants import (
-    ALL_DATES,
     CSV_DATA_TYPES_MINUS_DATES,
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
@@ -23,6 +21,7 @@ from project.constants import (
     csv_definition_for,
     JERSEY_CSV_DATA_TYPES,
     ENGLAND_CSV_DATA_TYPES,
+    get_all_dates,
 )
 
 # Logging setup
@@ -47,7 +46,7 @@ class ParsedCSVFile:
     ]
 
 
-def csv_parse(csv_file, dataset_year=2021) -> ParsedCSVFile:
+def csv_parse(csv_file, dataset_year=2021):
     """
     Read the csv file and return a pandas dataframe
     Assigns the correct data types to the columns
@@ -59,39 +58,22 @@ def csv_parse(csv_file, dataset_year=2021) -> ParsedCSVFile:
     # If it does not, we will use the predefined column names
     # If it does, we will use the column names in the csv file
     # The exception is if the first row of the csv file does not match any of the predefined column names, in which case we will reject the csv
-
     errors_to_return = collections.defaultdict(lambda: collections.defaultdict(list))
 
-    if dataset_year == 2021:
-        HEADINGS_OBJECTS = (
-            UNIQUE_IDENTIFIER_ENGLAND + UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
-        )
-    else:
+    if dataset_year >= 2026:
         HEADINGS_OBJECTS = (
             UNIQUE_IDENTIFIER_ENGLAND
             + UNIQUE_IDENTIFIER_JERSEY
             + CSV_HEADING_OBJECTS_2026
         )
+    else:
+        HEADINGS_OBJECTS = (
+            UNIQUE_IDENTIFIER_ENGLAND + UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
+        )
     HEADINGS_LIST = [obj["heading"] for obj in HEADINGS_OBJECTS]
 
-    # Helper to normalise headings for robust matching (strip non-alnum, collapse spaces)
-    # Unicode-aware normalisation: remove diacritics/combining marks,
-    # replace non-alphanumeric with spaces, collapse whitespace, lower-case.
-    def _norm_heading(s: str) -> str:
-        if not isinstance(s, str):
-            return ""
-        # Normalize unicode to decompose combined characters
-        s = unicodedata.normalize("NFKD", s)
-        # Strip combining marks (e.g., accents)
-        s = "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
-        # Replace any sequence of non-alphanumeric characters with a single space
-        s = re.sub(r"[^0-9a-zA-Z]+", " ", s)
-        # Collapse whitespace and lowercase
-        s = re.sub(r"\s+", " ", s).strip().lower()
-        return s
-
-    # Convert the predefined column names to a normalised lowercase list for matching
-    lowercase_headings_list = [_norm_heading(heading) for heading in HEADINGS_LIST]
+    # Convert the predefined column names to lowercase
+    lowercase_headings_list = [heading.lower() for heading in HEADINGS_LIST]
 
     # Read the first row of the csv file
     try:
@@ -103,7 +85,7 @@ def csv_parse(csv_file, dataset_year=2021) -> ParsedCSVFile:
         csv_file.seek(0)
         df = pd.read_csv(csv_file, encoding="ISO-8859-1")
 
-    if any(_norm_heading(col) in lowercase_headings_list for col in df.columns):
+    if any(col.lower() in lowercase_headings_list for col in df.columns):
         # The first row of the csv file matches at least some of the predefined column names
         # We will use the column names in the csv file
         pass
@@ -123,25 +105,16 @@ def csv_parse(csv_file, dataset_year=2021) -> ParsedCSVFile:
 
     # Replace headings which were different from in the old NPDA template with the new
     for column in df.columns:
-        lowercase_col = _norm_heading(column)
-        logger.debug(
-            "csv_parse: incoming column=%r normalized=%r", column, lowercase_col
-        )
+        lowercase_col = column.lower()
 
         for heading in HEADINGS_OBJECTS:
             if "alternative_headings" in heading:
                 lowercase_alternative_headings = [
-                    _norm_heading(h) for h in heading["alternative_headings"]
+                    h.lower() for h in heading["alternative_headings"]
                 ]
 
                 if lowercase_col in lowercase_alternative_headings:
-                    logger.debug(
-                        "csv_parse: matched alternative heading %r -> canonical %r",
-                        column,
-                        heading["heading"],
-                    )
                     df = df.rename(columns={column: heading["heading"]})
-
     # Pandas has strange behaviour for the first line in a CSV - additional cells become row labels
     # https://github.com/pandas-dev/pandas/issues/47490
     #
@@ -154,21 +127,11 @@ def csv_parse(csv_file, dataset_year=2021) -> ParsedCSVFile:
 
     # Accept columns case insensitively but replace them with their official version to make life easier later
     for column in df.columns:
-        if (
-            column not in HEADINGS_LIST
-            and _norm_heading(column) in lowercase_headings_list
-        ):
+        if column not in HEADINGS_LIST and column.lower() in lowercase_headings_list:
             normalised_column = next(
-                c for c in HEADINGS_LIST if _norm_heading(c) == _norm_heading(column)
-            )
-            logger.debug(
-                "csv_parse: case-insensitive match %r -> canonical %r",
-                column,
-                normalised_column,
+                c for c in HEADINGS_LIST if c.lower() == column.lower()
             )
             df = df.rename(columns={column: normalised_column})
-
-    # No cross-year coercion here: we parse strictly against the provided dataset_year.
 
     identifier_england = UNIQUE_IDENTIFIER_ENGLAND[0]["heading"]
     identifier_jersey = UNIQUE_IDENTIFIER_JERSEY[0]["heading"]
@@ -226,7 +189,7 @@ def csv_parse(csv_file, dataset_year=2021) -> ParsedCSVFile:
         if result and result.group(1) not in duplicate_columns:
             duplicate_columns.append(result.group(1))
 
-    for column in ALL_DATES:
+    for column in get_all_dates(dataset_year=dataset_year):
         if column in df.columns:
             column_before = df[column].copy()
             # Support DD/MM/YYYY and DD/MM/YY
@@ -243,9 +206,15 @@ def csv_parse(csv_file, dataset_year=2021) -> ParsedCSVFile:
                     and pd.isna(value_after)
                     and not (type(value_before) is str and value_before.strip() == "")
                 ):
-                    model_field = csv_definition_for(column)["model_field"]
+                    try:
+                        model_field = csv_definition_for(
+                            column, dataset_year=dataset_year
+                        )["model_field"]
+                    except Exception:
+                        logger.debug("Unknown date heading")
+                        continue
                     errors_to_return[row_index][model_field].append(
-                        "Date format is incorrect (expected DD/MM/YYYY)"
+                        "Date format is incorrect (expected DD/MM/YYYY)",
                     )
 
             df[column] = column_after
@@ -291,8 +260,6 @@ def csv_parse(csv_file, dataset_year=2021) -> ParsedCSVFile:
     template_columns = [identifier_column] + [
         obj["heading"] for obj in CSV_HEADING_OBJECTS
     ]
-
-    logger.debug("csv_parse: final columns (%s): %s", dataset_year, list(df.columns))
 
     return ParsedCSVFile(
         df,

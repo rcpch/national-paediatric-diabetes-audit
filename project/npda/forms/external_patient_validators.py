@@ -18,10 +18,7 @@ from ..general_functions import (
     lookup_terminated_postcode,
 )
 
-from ...constants.postcodes import (
-    skip_api_validation_for_postcode,
-    is_jersey_postcode
-)
+from ...constants.postcodes import skip_api_validation_for_postcode, is_jersey_postcode
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +38,7 @@ def future_resolve(value):
     future.set_result(value)
     return future
 
+
 async def _lookup_postcode(
     postcode: str | None, async_client: AsyncClient
 ) -> ValidatedPostcode | None:
@@ -49,13 +47,15 @@ async def _lookup_postcode(
             normalised_postcode = await lookup_postcode(postcode, async_client)
 
             if not normalised_postcode:
-                normalised_postcode = await lookup_terminated_postcode(postcode, async_client)
-            
+                normalised_postcode = await lookup_terminated_postcode(
+                    postcode, async_client
+                )
+
                 if not normalised_postcode:
                     raise ValidationError(
                         "Invalid postcode %(postcode)s", params={"postcode": postcode}
                     )
-            
+
             return normalised_postcode
         except HTTPError as err:
             logger.warning(f"Error validating postcode {postcode} {err}", exc_info=True)
@@ -64,13 +64,20 @@ async def _lookup_postcode(
 async def _imd_for_postcode(
     postcode: str | None, async_client: AsyncClient
 ) -> str | None:
-    if postcode and not skip_api_validation_for_postcode(postcode) and not is_jersey_postcode(postcode):
+    if (
+        postcode
+        and not skip_api_validation_for_postcode(postcode)
+        and not is_jersey_postcode(postcode)
+    ):
         try:
             imd = await imd_for_postcode(postcode, async_client)
 
             return imd
         except HTTPError as err:
-            logger.warning(f"Cannot calculate deprivation score for {postcode} {err}", exc_info=True)
+            logger.warning(
+                f"Cannot calculate deprivation score for {postcode} {err}",
+                exc_info=True,
+            )
 
 
 async def _gp_details_from_ods_code(
@@ -88,23 +95,23 @@ async def _gp_details_from_ods_code(
             postcode = result["GeoLoc"]["Location"]["PostCode"]
             return [ods_code, postcode]
     except HTTPError as err:
-        logger.warning(f"Error looking up GP practice by ODS code {ods_code} {err}", exc_info=True)
+        logger.warning(
+            f"Error looking up GP practice by ODS code {ods_code} {err}", exc_info=True
+        )
 
 
 async def _gp_details_from_postcode(
     gp_practice_postcode: str, async_client: AsyncClient
 ) -> tuple[str, str] | None:
     try:
-        result = await _lookup_postcode(
-            gp_practice_postcode, async_client
-        )
+        result = await _lookup_postcode(gp_practice_postcode, async_client)
 
         if not result:
             raise ValidationError(
                 "Invalid GP practice with postcode %(postcode)s",
                 params={"postcode": gp_practice_postcode},
             )
-        
+
         normalised_postcode = result.normalised_postcode
 
         ods_code = await gp_ods_code_for_postcode(normalised_postcode, async_client)
@@ -117,7 +124,10 @@ async def _gp_details_from_postcode(
         else:
             return [ods_code, normalised_postcode]
     except HTTPError as err:
-        logger.warning(f"Error looking up GP practice by postcode {normalised_postcode} {err}", exc_info=True)
+        logger.warning(
+            f"Error looking up GP practice by postcode {normalised_postcode} {err}",
+            exc_info=True,
+        )
 
 
 # Parallelise lookups to external APIs to speed up processing patients in a CSV upload
@@ -168,7 +178,7 @@ async def validate_patient_async(
         if skip_api_validation_for_postcode(postcode):
             ret.postcode = postcode
             # No location data available
-        
+
         # The postcode does not exist or we skipped it. There's no point calling the IMD API
         imd_task = future_resolve(None)
     else:
@@ -176,13 +186,15 @@ async def validate_patient_async(
         ret.location_bng = validated_postcode.location_bng
         ret.location_wgs84 = validated_postcode.location_wgs84
 
-        imd_task = _imd_for_postcode(validated_postcode.normalised_postcode, async_client)
+        imd_task = _imd_for_postcode(
+            validated_postcode.normalised_postcode, async_client
+        )
 
-    index_of_multiple_deprivation_quintile = await imd_task       
+    index_of_multiple_deprivation_quintile = await imd_task
 
     if (
         isinstance(index_of_multiple_deprivation_quintile, Exception)
-        and not type(index_of_multiple_deprivation_quintile) is ValidationError
+        and type(index_of_multiple_deprivation_quintile) is not ValidationError
     ):
         raise index_of_multiple_deprivation_quintile
     else:

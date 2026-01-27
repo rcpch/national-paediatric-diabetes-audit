@@ -253,7 +253,8 @@ CSV_HEADING_OBJECTS = (
         "model_field": "carbohydrate_counting_level_three_education_date",
         "model": "Visit",
         "alternative_headings": [
-            "Date Level 3 carbohydrate counting education received"
+            "Date Level 3 carbohydrate counting education received",
+            "Date of Level 3 carbohydrate counting education received",
         ],
     },
     {
@@ -376,7 +377,7 @@ CSV_HEADING_OBJECTS_2026_ADDITIONS = (
     },
     {
         "heading": "Date of offer of smoking cessation advice (if patient is a current smoker)",
-        "model_field": "smoking_cessation_advice_date",
+        "model_field": "smoking_cessation_referral_date",
         "model": "Visit",
         "alternative_headings": [
             "Date of offer of referral to smoking cessation service (if patient is a current smoker)"
@@ -384,7 +385,7 @@ CSV_HEADING_OBJECTS_2026_ADDITIONS = (
     },
     {
         "heading": "Date of Annual Psychological Screening Assessment",
-        "model_field": "annual_psychological_assessment_date",
+        "model_field": "psychological_screening_assessment_date",
         "model": "Visit",
         "alternative_headings": [
             "Observation Date - Psychological Screening Assessment"
@@ -437,7 +438,7 @@ CSV_HEADING_OBJECTS_2026 = (
         "heading": "Date of Birth",
         "model_field": "date_of_birth",
         "model": "Patient",
-        "alternative_headings": [],
+        "alternative_headings": ["DOB"],
     },
     {
         "heading": "Postcode of usual address",
@@ -587,7 +588,8 @@ CSV_HEADING_OBJECTS_2026 = (
         "model_field": "ketone_meter_training",
         "model": "Visit",
         "alternative_headings": [
-            "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?††"
+            "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?††",
+            "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?��",
         ],
     },
     {
@@ -815,14 +817,12 @@ def get_csv_heading_objects(dataset_year=None):
     Returns:
         tuple: CSV heading objects appropriate for the dataset year
     """
+    headings_dict = {}
     if dataset_year and dataset_year >= 2026:
         # Merge 2021 base with 2026 additions/changes
         # Create a dict to handle overrides
-        headings_dict = {}
 
-        # Add all 2021 headings
-        for item in CSV_HEADING_OBJECTS_2021:
-            headings_dict[item["model_field"]] = item
+        # # Add all 2021 headings
 
         # Override/add with 2026 versions
         for item in CSV_HEADING_OBJECTS_2026:
@@ -830,7 +830,9 @@ def get_csv_heading_objects(dataset_year=None):
 
         return tuple(headings_dict.values())
     else:
-        return CSV_HEADING_OBJECTS_2021
+        for item in CSV_HEADING_OBJECTS_2021:
+            headings_dict[item["model_field"]] = item
+        return tuple(headings_dict.values())
 
 
 def csv_definition_for(model_field_or_column: str, dataset_year=None):
@@ -898,7 +900,7 @@ ALL_DATES_2026 = [
     "Death Date",
     "Visit/Appointment Date",
     "Observation Date (Height and weight)",
-    "Observation Date: Hba1c Value",
+    "Observation Date: HbA1c Value",
     "Observation Date (Blood Pressure)",
     "Foot Assessment / Examination Date",
     "Retinal Screening date",
@@ -950,7 +952,7 @@ ALL_VISIT_DATES_2021 = [
     ),
     (
         "carbohydrate_counting_level_three_education_date",
-        "Date Level 3 carbohydrate counting education received",
+        "Date of Level 3 carbohydrate counting education received",
     ),
     (
         "dietician_additional_appointment_date",
@@ -971,7 +973,7 @@ ALL_VISIT_DATES_2021 = [
 ALL_VISIT_DATES_2026 = [
     ("visit_date", "Visit/Appointment Date"),
     ("height_weight_observation_date", "Observation Date (Height and weight)"),
-    ("hba1c_date", "Observation Date: Hba1c Value"),
+    ("hba1c_date", "Observation Date: HbA1c Value"),
     ("blood_pressure_observation_date", "Observation Date (Blood Pressure)"),
     ("foot_examination_observation_date", "Foot Assessment / Examination Date"),
     ("retinal_screening_observation_date", "Retinal Screening date"),
@@ -980,11 +982,11 @@ ALL_VISIT_DATES_2026 = [
     ("thyroid_function_date", "Observation Date: Thyroid Function"),
     ("coeliac_screen_date", "Observation Date: Coeliac Disease Screening"),
     (
-        "annual_psychological_assessment_date",
+        "psychological_screening_assessment_date",
         "Date of Annual Psychological Screening Assessment",
     ),
     (
-        "smoking_cessation_advice_date",
+        "smoking_cessation_referral_date",
         "Date of offer of smoking cessation advice (if patient is a current smoker)",
     ),
     (
@@ -1087,3 +1089,11 @@ def get_csv_heading_objects_for_year_and_unique_identifier(
         return UNIQUE_IDENTIFIER_JERSEY + csv_heading_objects
     else:
         raise ValueError("unique_identifier must be either 'england' or 'jersey'")
+
+
+def get_all_visit_dates(dataset_year=None):
+    """Returns all the field headings for a the given dataset year vists"""
+    if dataset_year and dataset_year >= 2026:
+        return ALL_VISIT_DATES_2026
+    else:
+        return ALL_VISIT_DATES_2021

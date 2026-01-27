@@ -158,6 +158,25 @@ async def csv_upload(
 
     # Helper functions
     def csv_value_to_model_value(model_field, value):
+        # Handle pandas Series (duplicate column labels or mis-shaped rows)
+        if isinstance(value, pd.Series):
+            try:
+                # Prefer non-null values; if all null return None
+                non_na = value.dropna()
+                if len(non_na) == 0:
+                    return None
+                # If all remaining values are the same, take that value
+                if non_na.nunique(dropna=True) == 1:
+                    value = non_na.iloc[0]
+                else:
+                    # Fall back to the first non-null element
+                    value = non_na.iloc[0]
+            except Exception:
+                try:
+                    value = value.iloc[0]
+                except Exception:
+                    value = None
+
         if pd.isnull(value):
             return None
 
@@ -175,7 +194,15 @@ async def csv_upload(
                 model_field_name = entry["model_field"]
                 model_field_definition = model._meta.get_field(model_field_name)
 
-                csv_value = row[entry["heading"]]
+                # Use Series.get to avoid KeyError when a heading is absent
+                try:
+                    csv_value = row.get(entry["heading"], None)
+                except Exception:
+                    # Fallback for index types that don't support .get
+                    try:
+                        csv_value = row[entry["heading"]]
+                    except Exception:
+                        csv_value = None
                 model_field_value = csv_value_to_model_value(
                     model_field_definition, csv_value
                 )
@@ -187,7 +214,6 @@ async def csv_upload(
     async def validate_patient_using_form(row, async_client):
         # Date and reason leaving service are validated by the patient form but saved in Transfer
         fields = row_to_dict(row, Patient) | row_to_dict(row, Transfer)
-
         form = PatientForm(
             fields,
             paediatric_diabetes_unit=pdu,
@@ -257,18 +283,6 @@ async def csv_upload(
             return False
 
     def save_errors_and_retain_valid_fields(row_index, form):
-        # We want to retain fields so that we can show them in the user interface
-        # Debug: record form validation state for CSV row to help diagnose missing field errors
-        try:
-            logger.debug(
-                "CSV row %s: form.errors=%s; cleaned_data=%s; raw_data=%s",
-                row_index,
-                form.errors.get_json_data() if getattr(form, "errors", None) else {},
-                getattr(form, "cleaned_data", {}),
-                form.data if getattr(form, "data", None) else {},
-            )
-        except Exception:
-            logger.exception("Failed to log CSV form debug info for row %s", row_index)
         # Use the field value from cleaned_data, falling back to data if it's not there
         # We can't retain invalid fields however as they might fail database validation
         for key, value in form.cleaned_data.items():
@@ -292,18 +306,6 @@ async def csv_upload(
                 for error in errors:
                     model_errors[field].append({"code": "", "message": error})
 
-        # From forms. ValidationErrors.
-        try:
-            logger.debug(
-                "CSV row %s: form.errors.get_json_data()=%s",
-                row_index,
-                form.errors.get_json_data(),
-            )
-        except Exception:
-            logger.exception(
-                "Failed to log form.errors.get_json_data() for CSV row %s", row_index
-            )
-
         for field, errors in form.errors.get_json_data().items():
             model_errors[field] += errors
 
@@ -320,7 +322,6 @@ async def csv_upload(
 
     def get_valid_transfer_fields(row, patient_form):
         transfer_fields = row_to_dict(row, Transfer) | {"paediatric_diabetes_unit": pdu}
-
         for field in transfer_fields:
             if not can_save_field(patient_form, field):
                 transfer_fields[field] = None
@@ -408,7 +409,7 @@ async def csv_upload(
 
     # Remember the original row number to help users find where the problem was in the CSV
     # It may already be set if doing a bulk upload across multiple PDUs using the upload_csv command
-    if not "row_index" in dataframe.columns:
+    if "row_index" not in dataframe.columns:
         dataframe = dataframe.assign(row_index=np.arange(dataframe.shape[0]))
 
     # We only one to create one patient per NHS number (or URN if in Jersey) and we can't create their visits if we fail to save the patient model
