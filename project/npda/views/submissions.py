@@ -441,8 +441,12 @@ def upload_csv(request, audit_period, pdu):
         if parsed_csv.df["PDU Number"].nunique() > 1:
             message = f"CSV file contains multiple PDU Numbers: {', '.join(parsed_csv.df['PDU Number'].unique())}. Please upload a file containing data for a single PDU only."
             return upload_error(message)
-        
-        if parsed_csv.df["PDU Number"].iloc[0] != pdu.pz_code:
+
+        # 1316 - Twinkle/Diamond outputs PDU number without leading PZ and zeros
+        expected_pdu_number = pdu.pz_code.lstrip("PZ").lstrip("0")
+        pdu_number_in_csv = parsed_csv.df["PDU Number"].iloc[0].lstrip("PZ").lstrip("0")
+
+        if pdu_number_in_csv != expected_pdu_number:
             message = f"PDU Number in CSV file ({parsed_csv.df['PDU Number'].iloc[0]}) does not match the PDU you are looking at ({pdu.pz_code}). Please upload a file with the correct PDU Number."
             return upload_error(message)
 
