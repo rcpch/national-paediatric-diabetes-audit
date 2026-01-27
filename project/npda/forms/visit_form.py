@@ -107,14 +107,15 @@ class VisitForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.patient = kwargs["initial"].get("patient")
-
         self.override_height_weight = kwargs.pop("override_height_weight", False)
         self.audit_period = kwargs.pop("audit_period", None)
         self.dataset_year = (
             self.audit_period.get_dataset_year() if self.audit_period else 2021
         )
+        print(f"VisitForm: dataset_year set to {self.dataset_year}")
         super(VisitForm, self).__init__(*args, **kwargs)
         if self.dataset_year == 2026:
+            print("VisitForm: Setting field headings for dataset year 2026")
             allowed_fields = list(VISIT_FIELD_HEADINGS_2026.keys())
         else:
             # Future-proofing for other dataset years
