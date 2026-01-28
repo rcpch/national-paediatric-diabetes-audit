@@ -314,6 +314,7 @@ class PatientCreateView(
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         title = f"Add New Child to {self.pdu.lead_organisation_name}  ({self.pdu.pz_code})"
+        context["pdu"] = self.pdu
         context["title"] = title
         context["button_title"] = "Create New Child Patient Record"
         context["form_method"] = "create"
@@ -426,6 +427,7 @@ class PatientUpdateView(
         patient = get_object_or_404(Patient, pk=self.kwargs["pk"])
         transfer = Transfer.objects.get(patient=patient)
         context = super().get_context_data(**kwargs)
+        context["pdu"] = self.pdu
         context["title"] = "Edit Child Details"
         context["button_title"] = "Save Changes"
         context["form_method"] = "update"
