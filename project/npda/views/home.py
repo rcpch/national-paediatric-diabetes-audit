@@ -12,6 +12,8 @@ from project.npda.general_functions.csv import csv_header
 from project.npda.general_functions.organisations_adapter import (
     paediatric_diabetes_units_to_populate_select_field,
 )
+from project.npda.general_functions.organisations_adapter import paediatric_diabetes_units_for_user
+
 from project.npda.views.npda_users import get_user_home_page
 
 # RCPCH imports
@@ -20,6 +22,7 @@ from .decorators import login_and_otp_required, check_data_permissions
 from project.npda.tasks import test_task
 from project.npda.models.audit_period import AuditPeriod
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
+from project.npda.models.submission import Submission
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -44,10 +47,23 @@ def index(request):
 
 @login_and_otp_required()
 def new_home(request, audit_period):
-    pdu_choices = paediatric_diabetes_units_to_populate_select_field(request.user)
+    pdus = list(paediatric_diabetes_units_for_user(request.user))
+
+    active_pdus = [pdu for pdu in pdus if pdu.active]
+    
+    inactive_pdus = []
+    for pdu in pdus:
+        if not pdu.active:
+            if request.user.is_rcpch_audit_team_member or Submission.objects.filter(
+                paediatric_diabetes_unit=pdu,
+                audit_period__slug=audit_period,
+                submission_active=True
+            ).exists():
+                inactive_pdus.append(pdu)
 
     # Put the test PZ999 at the top of the list otherwise it's hard to find!
-    pdu_choices.sort(key=lambda pdu: "" if pdu[0] == "PZ999" else pdu[0])
+    sorted_active_pdus = sorted(active_pdus, key=lambda pdu: "" if pdu.pz_code == "PZ999" else pdu.pz_code)
+    sorted_inactive_pdus = sorted(inactive_pdus, key=lambda pdu: pdu.pz_code)
 
     audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
     audit_periods = list(AuditPeriod.objects.all())
@@ -59,7 +75,8 @@ def new_home(request, audit_period):
         p.selected = p.slug == audit_period.slug
 
     context = {
-        "pdu_choices": pdu_choices,
+        "active_pdus": sorted_active_pdus,
+        "inactive_pdus": sorted_inactive_pdus,
         "audit_periods": audit_periods,
         "selected_audit_period_display_name": audit_period.display_name,
     }
