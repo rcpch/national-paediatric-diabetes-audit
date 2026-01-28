@@ -1,4 +1,4 @@
-{% if patient.is_in_transfer_in_the_last_year or is_csv_upload and not is_questionnaire %}
+{% if patient.is_in_transfer_in_the_last_year or not pdu.active or is_csv_upload %}
     <div class="alert alert-info text-white" role="alert">
         <i class="fa-solid fa-info"></i>
         <div class="flex flex-col">
@@ -7,7 +7,7 @@
                     This patient has been transferred in the last year.
                 </span>
             {% endif %}
-            {% if is_csv_upload and not is_questionnaire %}
+            {% if is_csv_upload %}
                 <span>
                     {% if data_upload_rules_overridden %}
                         Manually editing data from a CSV file. Uploading the original file will overwrite any changes.
@@ -15,13 +15,23 @@
                         Browsing data from a CSV file. To make changes, edit the file and upload again.
                     {% endif %}
                 </span>
+            {% elif not pdu.active %}
+                <span>
+                    {% if data_upload_rules_overridden %}
+                        Editing data for an inactive PDU.
+                    {% else %}
+                        This PDU is inactive. Data cannot be edited.
+                    {% endif %}
+                </span>
             {% endif %}
         </div>
-        {% if is_csv_upload and not is_questionnaire and can_override_data_upload_rules and not data_upload_rules_overridden %}
-            <a href="{{request.path}}?unlock=true" class="btn text-rcpch_red">
-            <i class="fa-solid fa-lock"></i>
-            Unlock (Audit Team only)
-            </a>
+        {% if is_csv_upload or not pdu.active %}
+            {% if can_override_data_upload_rules and not data_upload_rules_overridden %}
+                <a href="{{request.path}}?unlock=true" class="btn text-rcpch_red">
+                <i class="fa-solid fa-lock"></i>
+                Unlock (Audit Team only)
+                </a>
+            {% endif %}
         {% endif %}
     </div>
 {% endif %}

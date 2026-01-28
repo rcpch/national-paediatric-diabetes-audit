@@ -138,8 +138,7 @@ class PatientListView(
                 filtered_patients &= combined_q  # Apply the combined OR query
 
         filtered_patients &= Q(
-            submissions__paediatric_diabetes_unit__pz_code=self.pdu.pz_code,
-            submissions__paediatric_diabetes_unit__active=True
+            submissions__paediatric_diabetes_unit__pz_code=self.pdu.pz_code
         )
 
         patient_queryset = patient_queryset.filter(filtered_patients)
@@ -315,6 +314,7 @@ class PatientCreateView(
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         title = f"Add New Child to {self.pdu.lead_organisation_name}  ({self.pdu.pz_code})"
+        context["pdu"] = self.pdu
         context["title"] = title
         context["button_title"] = "Create New Child Patient Record"
         context["form_method"] = "create"
@@ -427,6 +427,7 @@ class PatientUpdateView(
         patient = get_object_or_404(Patient, pk=self.kwargs["pk"])
         transfer = Transfer.objects.get(patient=patient)
         context = super().get_context_data(**kwargs)
+        context["pdu"] = self.pdu
         context["title"] = "Edit Child Details"
         context["button_title"] = "Save Changes"
         context["form_method"] = "update"

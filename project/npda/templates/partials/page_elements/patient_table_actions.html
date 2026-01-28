@@ -40,7 +40,7 @@
             </button>
         </label>
     </label>
-    {% if can_use_questionnaire %}
+    {% if can_use_questionnaire and pdu.active %}
         <div class="pl-1 pr-1">
             <ul class="menu menu-horizontal">
                 <li>
@@ -59,7 +59,7 @@
                 </li>
             </ul>
         </div>
-    {% else %}
+    {% elif pdu.active %}
         <div class="pl-1 pr-1">
             <ul class="menu menu-horizontal">
                 <li>

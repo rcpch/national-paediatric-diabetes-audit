@@ -68,6 +68,7 @@ class PatientVisitsListView(
     def get_context_data(self, **kwargs):
         context = super(PatientVisitsListView, self).get_context_data(**kwargs)
         context["audit_period"] = self.audit_period
+        context["pdu"] = self.pdu
         context["pz_code"] = self.pz_code
         context["patient_id"] = self.kwargs["patient_id"]
         patient = get_object_or_404(Patient, pk=context["patient_id"])
@@ -142,9 +143,7 @@ class VisitCreateView(
         context["visit_tabs"] = get_visit_tabs(form=None)
         context["override_height_weight"] = False
 
-        context["paediatric_diabetes_unit"] = (
-            patient.submissions.first().paediatric_diabetes_unit
-        )
+        context["pdu"] = self.pdu
 
         context["breadcrumbs"] = patient_breadcrumbs(
             self.pdu,
@@ -243,6 +242,7 @@ class VisitUpdateView(
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["pdu"] = self.pdu
         context["patient_id"] = self.kwargs["patient_id"]
         context["nhs_number"] = context["form"].patient.nhs_number
         context["visit_id"] = self.kwargs["pk"]

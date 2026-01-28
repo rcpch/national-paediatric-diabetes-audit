@@ -1,0 +1,21 @@
+<div class="card bg-base-100 w-96 shadow-xl">
+    <div class="card-body">
+        <h2 class="card-title">{{pdu.pz_code}}</h2>
+        <p>{{pdu.lead_organisation_name}} - {{pdu.parent_name}}</p>
+        <div class="card-actions justify-end">
+            <div>
+                <a class="btn bg-rcpch_pink text-white" href="{% url 'pdu-patients' audit_period=audit_period_slug pz_code=pdu.pz_code %}">
+                Patient data
+                </a>
+            </div>
+            <div>
+                <a class="btn btn-info" href="{% url 'pdu-dashboard' audit_period=audit_period_slug pz_code=pdu.pz_code %}">
+                Unit Report
+                </a>
+                <a class="btn btn-info" href="{% url 'pdu-patient-report' audit_period=audit_period_slug pz_code=pdu.pz_code %}">
+                Patient Report
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

@@ -127,7 +127,7 @@ class CheckCurrentAuditYearMixin(AccessMixin):
             )
             raise PermissionDenied()
         
-        if not audit_period.is_open:
+        if request.method != "GET" and not audit_period.is_open:
             if not request.user.is_superuser and not request.user.is_rcpch_audit_team_member:
                 logger.warning(
                     f"User {request.user} tried to create/edit or delete data in a closed audit year."
@@ -156,7 +156,7 @@ class QuestionnaireContextMixin(AccessMixin):
             "is_questionnaire": is_questionnaire,
             "can_override_data_upload_rules": can_override_data_upload_rules,
             "data_upload_rules_overridden": data_upload_rules_overridden,
-            "can_use_questionnaire": data_upload_rules_overridden or is_questionnaire,
+            "can_use_questionnaire": data_upload_rules_overridden or (is_questionnaire and pdu.active),
         }  
 
 
