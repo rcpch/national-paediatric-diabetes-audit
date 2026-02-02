@@ -6,8 +6,6 @@ from decimal import Decimal
 # django imports
 from django.contrib.gis.db import models
 
-from project.constants.adhd_asd import ADHD_ASD
-
 # npda imports
 from .help_text_mixin import HelpTextMixin
 from .categorised_formfield_mixin import *
@@ -430,21 +428,6 @@ class Visit(models.Model):
         category="Smoking",
     )
 
-    immunotherapy_received = CategorisedPositiveSmallIntegerField(
-        null=True,
-        blank=True,
-        default=None,
-        choices=YES_NO_UNKNOWN,
-        category="Treatment",
-    )
-
-    immunotherapy_date = CategorisedDateField(
-        null=True,
-        blank=True,
-        default=None,
-        category="Treatment",
-    )
-
     blood_gas_ph = CategorisedDecimalField(
         null=True,
         blank=True,
@@ -500,20 +483,6 @@ class Visit(models.Model):
         blank=True,
         default=None,
         choices=PSYCHOLOGICAL_SUPPORT_OUTCOMES,
-        category="Psychology",
-    )
-
-    adhd_asd_diagnosis = CategorisedPositiveSmallIntegerField(
-        choices=ADHD_ASD,
-        blank=True,
-        null=True,
-        category="Psychology",
-    )
-
-    learning_disability = CategorisedPositiveSmallIntegerField(
-        choices=YES_NO_UNKNOWN,
-        blank=True,
-        null=True,
         category="Psychology",
     )
 

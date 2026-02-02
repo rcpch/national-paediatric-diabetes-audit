@@ -22,6 +22,15 @@ from ...constants import LEAVE_PDU_REASONS, ADHD_ASD, YES_NO_UNKNOWN
 from ..models import Patient, Transfer
 from ..validators import not_in_the_future_validator
 from .external_patient_validators import validate_patient_sync
+from project.npda.general_functions.headings import (
+    get_field_heading,
+    PATIENT_FIELD_HEADINGS_2021,
+    PATIENT_FIELD_HEADINGS_2026,
+)
+from project.npda.general_functions.justification_or_standard import (
+    get_field_justification_standard,
+    get_field_notes,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -70,21 +79,16 @@ class PatientForm(forms.ModelForm):
     reason_leaving_service = forms.ChoiceField(
         required=False, choices=LEAVE_PDU_REASONS
     )
+    dataset_year = 2021
 
     class Meta:
         model = Patient
-        fields = [
-            "nhs_number",
-            "unique_reference_number",
-            "sex",
-            "date_of_birth",
-            "postcode",
-            "ethnicity",
-            "diabetes_type",
-            "diagnosis_date",
-            "death_date",
-            "gp_practice_ods_code",
-            "gp_practice_postcode",
+        fields = "__all__"
+        exclude = [
+            "index_of_multiple_deprivation_quintile",
+            "location_bng",
+            "location_wgs84",
+            "location_wgs",
         ]
         field_classes = {
             "nhs_number": NHSNumberField,
@@ -114,8 +118,48 @@ class PatientForm(forms.ModelForm):
         self.audit_period = kwargs.pop("audit_period", None)
         self.paediatric_diabetes_unit = kwargs.pop("paediatric_diabetes_unit", None)
         self.override_postcode = kwargs.pop("override_postcode", False)
-
+        self.dataset_year = (
+            self.audit_period.get_dataset_year() if self.audit_period else 2021
+        )
         super().__init__(*args, **kwargs)
+
+        # Determine which patient fields should be presented for this dataset year
+        if self.dataset_year == 2026:
+            allowed_fields = list(PATIENT_FIELD_HEADINGS_2026.keys())
+        else:
+            # Future-proofing for other dataset years
+            allowed_fields = list(PATIENT_FIELD_HEADINGS_2021.keys())
+
+        # Keep any explicit extra form fields (non-model) plus allowed model fields
+        extra_fields = {
+            "date_leaving_service",
+            "reason_leaving_service",
+            "gp_practice_postcode",
+        }
+        keep_fields = set(allowed_fields) | extra_fields
+
+        # Remove fields that are not relevant to this dataset year
+        for fname in list(self.fields.keys()):
+            if fname not in keep_fields:
+                del self.fields[fname]
+
+        # Set help texts and labels dynamically from model field and headings
+        for field_name in allowed_fields:
+            if field_name not in self.fields:
+                continue  # Skip if field is not present in the form
+            model_field = Patient._meta.get_field(field_name)
+            # Set help text from model field
+            # Set label from headings
+            label = get_field_heading(field_name, self.dataset_year)
+            note = get_field_notes(field_name, self.dataset_year)
+            reference = get_field_justification_standard(field_name, self.dataset_year)
+            self.fields[field_name].label = label
+            self.fields[field_name].help_text = note
+            self.fields[field_name].reference = reference
+            if hasattr(model_field, "category"):
+                self.fields[field_name].category = model_field.category
+
+        # Populate transfer-related initial values if editing an existing patient
         if self.instance.pk:
             try:
                 patient_transfer = Transfer.objects.filter(patient=self.instance).get()

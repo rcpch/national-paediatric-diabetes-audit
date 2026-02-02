@@ -17,8 +17,8 @@ from django.urls import reverse
 # RCPCH imports
 from ..forms.visit_form import VisitForm
 from ..general_functions import (
-    get_visit_categories,
-    get_visit_tabs,
+    get_categories,
+    get_tabs,
     visit_falls_within_audit_period_Q_object,
     data_breadcrumbs,
     patient_breadcrumbs,
@@ -91,7 +91,7 @@ class PatientVisitsListView(
         )
         calculated_visits = []
         for visit in visits:
-            visit_categories = get_visit_categories(instance=visit, form=None)
+            visit_categories = get_categories(instance=visit, form=None, type="visit")
             calculated_visits.append({"visit": visit, "categories": visit_categories})
         context["visits"] = calculated_visits
         context["patient"] = patient
@@ -140,7 +140,7 @@ class VisitCreateView(
         context["title"] = "Add New Visit"
         context["form_method"] = "create"
         context["button_title"] = "Create New Visit"
-        context["visit_tabs"] = get_visit_tabs(form=None)
+        context["visit_tabs"] = get_tabs(form=None, type="visit")
         context["override_height_weight"] = False
         context["audit_period"] = self.audit_period
         context["paediatric_diabetes_unit"] = self.pdu
@@ -252,7 +252,7 @@ class VisitUpdateView(
         context["title"] = "Edit/Update Visit Details"
         context["button_title"] = "Save Changes"
         context["form_method"] = "update"
-        context["visit_tabs"] = get_visit_tabs(form=context["form"])
+        context["visit_tabs"] = get_tabs(form=context["form"], type="visit")
         visit = Visit.objects.get(pk=self.kwargs["pk"])
         context["audit_period"] = self.audit_period
         patient = visit.patient

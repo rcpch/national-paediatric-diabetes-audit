@@ -16,6 +16,8 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 
+from project.constants.adhd_asd import ADHD_ASD
+from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 from project.npda.models.custom_validators import (
     validate_nhs_number,
     validate_unique_reference_number,
@@ -37,6 +39,7 @@ from ...constants import (
     CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
 )
 from ..general_functions import stringify_time_elapsed
+from .categorised_formfield_mixin import *
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -51,14 +54,15 @@ class Patient(models.Model, HelpTextMixin):
     Custom methods age and age_days, returns the age
     """
 
-    nhs_number = CharField(  # the NHS number for England and Wales
+    nhs_number = CategorisedCharField(  # the NHS number for England and Wales
         unique=False,
         validators=[validate_nhs_number],
         null=True,
         blank=True,
+        category="Identifiers and Personal Details",
     )
 
-    unique_reference_number = CharField(
+    unique_reference_number = CategorisedCharField(
         "Unique Reference Number",
         max_length=50,
         unique=False,
@@ -66,14 +70,23 @@ class Patient(models.Model, HelpTextMixin):
         blank=True,
         null=True,
         help_text="This is a unique reference number for Jersey patients. It is used to identify the patient in the audit.",
+        category="Identifiers and Personal Details",
     )
 
-    sex = models.IntegerField(choices=SEX_TYPE, blank=True, null=True)
-
-    date_of_birth = DateField("date of birth (YYYY-MM-DD)")
-    postcode = CharField(
+    sex = CategorisedPositiveSmallIntegerField(
+        choices=SEX_TYPE,
         blank=True,
         null=True,
+        category="Identifiers and Personal Details",
+    )
+
+    date_of_birth = CategorisedDateField(
+        "date of birth (YYYY-MM-DD)", category="Identifiers and Personal Details"
+    )
+    postcode = CategorisedCharField(
+        blank=True,
+        null=True,
+        category="Identifiers and Personal Details",
     )
 
     location_wgs = PointField(
@@ -97,33 +110,77 @@ class Patient(models.Model, HelpTextMixin):
         blank=True,
     )
 
-    ethnicity = CharField(
-        "Ethnic Category", max_length=4, choices=ETHNICITIES, blank=True, null=True
+    ethnicity = CategorisedCharField(
+        "Ethnic Category",
+        max_length=4,
+        choices=ETHNICITIES,
+        blank=True,
+        null=True,
+        category="Identifiers and Personal Details",
     )
 
-    index_of_multiple_deprivation_quintile = models.PositiveSmallIntegerField(
+    index_of_multiple_deprivation_quintile = CategorisedPositiveSmallIntegerField(
         # this is a calculated field - it relies on the availability of the RCPCH Census Platform
         # A quintile is calculated on save and persisted in the database
         "index of multiple deprivation calculated from RCPCH Census Platform.",
         blank=True,
         editable=False,
         null=True,
+        category="Identifiers and Personal Details",
     )
 
     # Mandatory for the questionnaire but we still want to save data if missing in a CSV upload
-    diabetes_type = PositiveSmallIntegerField(choices=DIABETES_TYPES, null=True)
+    diabetes_type = CategorisedPositiveSmallIntegerField(
+        choices=DIABETES_TYPES, null=True, category="Diabetes Details"
+    )
 
-    diagnosis_date = DateField(null=True)
+    diagnosis_date = CategorisedDateField(
+        null=True, category="Identifiers and Personal Details"
+    )
 
-    death_date = models.DateField(
+    death_date = CategorisedDateField(
         blank=True,
         null=True,
     )
 
-    gp_practice_ods_code = models.CharField(blank=True, null=True)
+    gp_practice_ods_code = CategorisedCharField(
+        blank=True, null=True, category="GP Details"
+    )
 
-    gp_practice_postcode = models.CharField(
-        verbose_name="GP Practice postcode", blank=True, null=True
+    gp_practice_postcode = CategorisedCharField(
+        verbose_name="GP Practice postcode",
+        blank=True,
+        null=True,
+        category="GP Details",
+    )
+
+    adhd_asd_status = CategorisedPositiveSmallIntegerField(
+        choices=ADHD_ASD,
+        blank=True,
+        null=True,
+        category="Neurodevelopmental Conditions",
+    )
+
+    learning_disability_status = CategorisedPositiveSmallIntegerField(
+        choices=YES_NO_UNKNOWN,
+        blank=True,
+        null=True,
+        category="Neurodevelopmental Conditions",
+    )
+
+    immunotherapy_received = CategorisedPositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        default=None,
+        choices=YES_NO_UNKNOWN,
+        category="Immunotherapy",
+    )
+
+    immunotherapy_date = CategorisedDateField(
+        null=True,
+        blank=True,
+        default=None,
+        category="Immunotherapy",
     )
 
     is_valid = models.BooleanField(

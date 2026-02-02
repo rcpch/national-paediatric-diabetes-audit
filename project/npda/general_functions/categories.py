@@ -1,13 +1,19 @@
 import urllib.parse
 from ...constants.visit_categories import VISIT_CATEGORIES_BY_TAB
+from ...constants.patient_categories import PATIENT_CATEGORIES_BY_TAB
 
-def get_visit_categories(instance, form):
+
+def get_categories(instance, form, type="visit"):
     """
     Returns visit categories present in this visit instance, and tags them as to whether they contain errors
     """
     categories = []
 
-    for _, tab in VISIT_CATEGORIES_BY_TAB.items():
+    CATEGORIES_BY_TAB = (
+        VISIT_CATEGORIES_BY_TAB if type == "visit" else PATIENT_CATEGORIES_BY_TAB
+    )
+
+    for _, tab in CATEGORIES_BY_TAB.items():
         for category_name, category in tab.items():
             fields = category["fields"]
 
@@ -20,7 +26,7 @@ def get_visit_categories(instance, form):
                 for field in form:
                     if field.name in fields:
                         present = True
-                        
+
                         if field.errors:
                             errors[field.name] = field.errors
 
@@ -33,7 +39,9 @@ def get_visit_categories(instance, form):
                 if instance.errors:
                     for field in instance.errors.keys():
                         if field in fields:
-                            errors[field] = [error["message"] for error in instance.errors[field]]
+                            errors[field] = [
+                                error["message"] for error in instance.errors[field]
+                            ]
 
             categories.append(
                 {
@@ -41,22 +49,25 @@ def get_visit_categories(instance, form):
                     "present": present,
                     "errors": errors,
                     "anchor": urllib.parse.quote_plus(category_name),
-                    "colour": category["colour"]
+                    "colour": category["colour"],
                 }
             )
 
     return categories
 
 
-def get_visit_tabs(form):
+def get_tabs(form, type="visit"):
     tabs = []
     instance = form.instance if form else None
 
-    all_categories = get_visit_categories(instance, form)
-
+    all_categories = get_categories(instance, form, type=type)
     assigned_active_tab = False
 
-    for tab_name, categories in VISIT_CATEGORIES_BY_TAB.items():
+    CATEGORIES_BY_TAB = (
+        VISIT_CATEGORIES_BY_TAB if type == "visit" else PATIENT_CATEGORIES_BY_TAB
+    )
+
+    for tab_name, categories in CATEGORIES_BY_TAB.items():
         category_names = categories.keys()
         categories = [c for c in all_categories if c["name"] in category_names]
 
@@ -65,11 +76,7 @@ def get_visit_tabs(form):
             for field, field_errors in category["errors"].items():
                 errors[field] = field_errors
 
-        tab = {
-            "name": tab_name,
-            "categories": categories,
-            "errors": errors
-        }
+        tab = {"name": tab_name, "categories": categories, "errors": errors}
 
         # Show the first tab with errors
         if errors and not assigned_active_tab:
@@ -77,7 +84,7 @@ def get_visit_tabs(form):
             assigned_active_tab = True
 
         tabs.append(tab)
-    
+
     # Otherwise show the first one
     if not assigned_active_tab:
         tabs[0]["active"] = True

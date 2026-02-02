@@ -12,10 +12,11 @@ PATIENT_FIELD_HEADINGS_2021 = {
     "ethnicity": "Ethnic Category",
     "diabetes_type": "Diabetes Type",
     "diagnosis_date": "Date of Diabetes Diagnosis",
-    "date_leaving_service": "Date of leaving service",
-    "reason_leaving_service": "Reason for leaving service",
+    # "date_leaving_service": "Date of leaving service", # this is in the Transfer model
+    # "reason_leaving_service": "Reason for leaving service", # this is in the Transfer model
     "death_date": "Death Date",
     "gp_practice_ods_code": "GP Practice Code",
+    "gp_practice_postcode": "GP Practice Postcode",
     "pdu": "PDU Number",
 }
 
@@ -81,11 +82,15 @@ PATIENT_FIELD_HEADINGS_2026 = {
     "ethnicity": "Ethnic Category",
     "diabetes_type": "Diabetes Type",
     "diagnosis_date": "Date of Diabetes Diagnosis",
-    "date_leaving_service": "Date of leaving service",
-    "reason_leaving_service": "Reason for leaving service",
+    # "date_leaving_service": "Date of leaving service", # this is in the Transfer model
+    # "reason_leaving_service": "Reason for leaving service", # this is in the Transfer model
     "death_date": "Death Date",
     "gp_practice_ods_code": "GP Practice Code",
     "pdu": "PDU Number",
+    "adhd_asd_diagnosis": "Has the patient had a diagnosis of Attention Deficit Hyperactivity Disorder (ADHD) or Autism Spectrum Disorder (ASD)?",
+    "learning_disability": "Does the patient have a diagnosis of a learning disability?",
+    "immunotherapy_received": "Did the patient receive immunotherapy prior to or after the diagnosis of stage 3 Type 1 diabetes?",
+    "immunotherapy_date": "Date immunotherapy started",
 }
 
 VISIT_FIELD_HEADINGS_2026 = {
@@ -101,8 +106,6 @@ VISIT_FIELD_HEADINGS_2026 = {
     "non_insulin_medication": "Other (non-insulin) blood glucose lowering medication at time of visit",
     "dietary_lifestyle_modification": "Has lifestyle and dietary modification been recommended to reduce blood glucose levels?",
     "cgm_use": "Was the patient using a continuous glucose monitor (CGM) at time of visit?",
-    "immunotherapy_received": "Did the patient receive immunotherapy prior to or after the diagnosis of stage 3 Type 1 diabetes?",
-    "immunotherapy_date": "Date immunotherapy started",
     "ketone_meter_training": "Was the patient using (or trained to use) blood ketone testing equipment at time of visit?",
     # Annual Review - Health Checks
     "systolic_blood_pressure": "Systolic Blood Pressure",
@@ -124,8 +127,6 @@ VISIT_FIELD_HEADINGS_2026 = {
     "psychological_screening_assessment_date": "Date of Annual Psychological Screening Assessment",
     "psychological_additional_support_status": "Following annual psychological screening, was the patient assessed as requiring additional psychological support outside of routine care?",
     "psychological_support_outcome": "Was the patient offered an additional appointment with a mental health professional as part of the diabetes MDT?",
-    "adhd_asd_diagnosis": "Has the patient had a diagnosis of Attention Deficit Hyperactivity Disorder (ADHD) or Autism Spectrum Disorder (ASD)?",
-    "learning_disability": "Does the patient have a diagnosis of a learning disability?",
     # Lifestyle / Education
     "smoking_vaping_status": "Does the patient smoke and/or vape",
     "smoking_cessation_referral_date": "Date of offer of smoking cessation advice (if patient is a current smoker)",
