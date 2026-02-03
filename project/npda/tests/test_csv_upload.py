@@ -3995,6 +3995,9 @@ def test_inpatient_admission_dka_passes_validation(
     hospital_admission_other = get_field_heading(
         "hospital_admission_other", dataset_year
     )
+    if dataset_year >= 2026:
+        blood_gas_ph = get_field_heading("blood_gas_ph", dataset_year)
+        blood_gas_bicarbonate = get_field_heading("blood_gas_bicarbonate", dataset_year)
     single_row_valid_df.loc[0, hospital_admission_date] = (
         audit_period_for_dataset_year.start_date + relativedelta(days=0)
     )
@@ -4007,6 +4010,9 @@ def test_inpatient_admission_dka_passes_validation(
         dka_additional_therapies,
     ] = 1  # Hypertonic saline
     single_row_valid_df.loc[0, hospital_admission_other] = None
+    if dataset_year >= 2026:
+        single_row_valid_df.loc[0, blood_gas_ph] = 7.1
+        single_row_valid_df.loc[0, blood_gas_bicarbonate] = 20
 
     errors = csv_upload_sync(
         test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
@@ -4131,6 +4137,11 @@ def test_inpatient_admission_dka_additional_therapies_hospital_admission_also_pr
         dka_additional_therapies,
     ] = 1  # Hypertonic saline
     single_row_valid_df.loc[0, hospital_admission_other] = "Other reason"
+    if dataset_year >= 2026:
+        blood_gas_ph = get_field_heading("blood_gas_ph", dataset_year)
+        blood_gas_bicarbonate = get_field_heading("blood_gas_bicarbonate", dataset_year)
+        single_row_valid_df.loc[0, blood_gas_ph] = 7.1
+        single_row_valid_df.loc[0, blood_gas_bicarbonate] = 20
 
     errors = csv_upload_sync(
         test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
@@ -5295,75 +5306,81 @@ def test_uploading_csv_with_conflicting_pdu_numbers(
 
 @pytest.mark.django_db
 def test_uploading_csv_with_pdu_number_missing_leading_pz(
-    two_patients_with_one_visit_each,
-    tmp_path,
-    client,
-    test_rcpch_user
+    two_patients_with_one_visit_each, tmp_path, client, test_rcpch_user
 ):
-    two_patients_with_one_visit_each = two_patients_with_one_visit_each.assign(**{"PDU Number": "004"})
+    two_patients_with_one_visit_each = two_patients_with_one_visit_each.assign(
+        **{"PDU Number": "004"}
+    )
 
     # write back into temp
-    tmp_csv_path = tmp_path / "dummy_sheet_test_csv_upload_test_uploading_csv_with_pdu_number_missing_leading_pz.csv"
+    tmp_csv_path = (
+        tmp_path
+        / "dummy_sheet_test_csv_upload_test_uploading_csv_with_pdu_number_missing_leading_pz.csv"
+    )
     two_patients_with_one_visit_each.to_csv(tmp_csv_path, index=False)
 
     # Log in user
     client = login_and_verify_user(client, test_rcpch_user)
 
-    url = reverse("pdu-upload-csv", kwargs={ "pz_code": "PZ004", "audit_period": "2025-2026"})
+    url = reverse(
+        "pdu-upload-csv", kwargs={"pz_code": "PZ004", "audit_period": "2025-2026"}
+    )
 
     # Feed file to view
     with open(tmp_csv_path, "rb") as csv_file:
-        response = client.post(
-            url,
-            {
-                'csv_upload': csv_file
-            },
-            format='multipart'
-        )
+        response = client.post(url, {"csv_upload": csv_file}, format="multipart")
 
     assert response.status_code == 302
 
-    redirect_url = reverse("pdu-upload-csv-in-progress", kwargs={ "pz_code": "PZ004", "audit_period": "2025-2026"})
+    redirect_url = reverse(
+        "pdu-upload-csv-in-progress",
+        kwargs={"pz_code": "PZ004", "audit_period": "2025-2026"},
+    )
     assert response.url == redirect_url
-    
-    assert Submission.objects.count() == 1, "Submission should be created for PDU with missing leading PZ"
+
+    assert Submission.objects.count() == 1, (
+        "Submission should be created for PDU with missing leading PZ"
+    )
     assert Submission.objects.first().paediatric_diabetes_unit.pz_code == "PZ004"
 
 
 @pytest.mark.django_db
 def test_uploading_csv_with_pdu_number_missing_leading_zeros(
-    two_patients_with_one_visit_each,
-    tmp_path,
-    client,
-    test_rcpch_user
+    two_patients_with_one_visit_each, tmp_path, client, test_rcpch_user
 ):
-    two_patients_with_one_visit_each = two_patients_with_one_visit_each.assign(**{"PDU Number": "4"})
+    two_patients_with_one_visit_each = two_patients_with_one_visit_each.assign(
+        **{"PDU Number": "4"}
+    )
 
     # write back into temp
-    tmp_csv_path = tmp_path / "dummy_sheet_test_csv_upload_ttest_uploading_csv_with_pdu_number_missing_leading_zeros.csv"
+    tmp_csv_path = (
+        tmp_path
+        / "dummy_sheet_test_csv_upload_ttest_uploading_csv_with_pdu_number_missing_leading_zeros.csv"
+    )
     two_patients_with_one_visit_each.to_csv(tmp_csv_path, index=False)
 
     # Log in user
     client = login_and_verify_user(client, test_rcpch_user)
 
-    url = reverse("pdu-upload-csv", kwargs={ "pz_code": "PZ004", "audit_period": "2025-2026"})
+    url = reverse(
+        "pdu-upload-csv", kwargs={"pz_code": "PZ004", "audit_period": "2025-2026"}
+    )
 
     # Feed file to view
     with open(tmp_csv_path, "rb") as csv_file:
-        response = client.post(
-            url,
-            {
-                'csv_upload': csv_file
-            },
-            format='multipart'
-        )
+        response = client.post(url, {"csv_upload": csv_file}, format="multipart")
 
     assert response.status_code == 302
 
-    redirect_url = reverse("pdu-upload-csv-in-progress", kwargs={ "pz_code": "PZ004", "audit_period": "2025-2026"})
+    redirect_url = reverse(
+        "pdu-upload-csv-in-progress",
+        kwargs={"pz_code": "PZ004", "audit_period": "2025-2026"},
+    )
     assert response.url == redirect_url
 
-    assert Submission.objects.count() == 1, "Submission should be created for PDU with missing leading zeroes"
+    assert Submission.objects.count() == 1, (
+        "Submission should be created for PDU with missing leading zeroes"
+    )
     assert Submission.objects.first().paediatric_diabetes_unit.pz_code == "PZ004"
 
 
