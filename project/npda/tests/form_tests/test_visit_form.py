@@ -2,6 +2,7 @@ import dataclasses
 import datetime
 from datetime import date
 from decimal import Decimal
+from freezegun import freeze_time
 import pytest
 from unittest.mock import Mock, patch
 
@@ -1797,20 +1798,41 @@ def test_inpatient_admission_stabilisation_hospital_admission_other_provided_fai
 
 
 @pytest.mark.django_db
-def test_inpatient_admission_dka_passes_validation():
+def test_inpatient_admission_dka_passes_validation(
+    dataset_year, audit_period_for_dataset_year
+):
     """
     Test that inpatient admission for DKA with additional therapies is accepted
     """
     patient = PatientFactory()
 
+    data = {
+        "visit_date": "2026-01-01",  # Required for validation
+        "hospital_admission_date": "2026-01-01",
+        "hospital_discharge_date": "2026-01-08",
+        "hospital_admission_reason": 2,  # DKA
+        "dka_additional_therapies": 1,  # hypertonic saline
+        "blood_gas_ph": None,
+        "blood_gas_bicarbonate": None,
+    }
+    if dataset_year >= 2026:
+        with freeze_time(
+            audit_period_for_dataset_year.end_date - datetime.timedelta(days=1)
+        ):
+            data["blood_gas_ph"] = 7.1
+            data["blood_gas_bicarbonate"] = 12
+            data["visit_date"] = (
+                audit_period_for_dataset_year.start_date + datetime.timedelta(days=10)
+            )
+            data["hospital_admission_date"] = (
+                audit_period_for_dataset_year.start_date + datetime.timedelta(days=20)
+            )
+            data["hospital_discharge_date"] = (
+                audit_period_for_dataset_year.start_date + datetime.timedelta(days=25)
+            )
+
     form = VisitForm(
-        data={
-            "visit_date": "2026-01-01",  # Required for validation
-            "hospital_admission_date": "2026-01-01",
-            "hospital_discharge_date": "2026-01-08",
-            "hospital_admission_reason": 2,  # DKA
-            "dka_additional_therapies": 1,  # hypertonic saline
-        },
+        data=data,
         initial={"patient": patient},
     )
 
@@ -1823,19 +1845,41 @@ def test_inpatient_admission_dka_passes_validation():
 
 
 @pytest.mark.django_db
-def test_inpatient_admission_dka_additional_therapies_missing_fails_validation():
+def test_inpatient_admission_dka_additional_therapies_missing_fails_validation(
+    dataset_year, audit_period_for_dataset_year
+):
     """
     Test that inpatient admission for DKA without additional therapies is rejected
     """
     patient = PatientFactory()
 
+    data = {
+        "visit_date": "2026-01-01",  # Required for validation
+        "hospital_admission_date": "2026-01-01",
+        "hospital_discharge_date": "2026-01-08",
+        "hospital_admission_reason": 2,  # DKA
+        "dka_additional_therapies": None,  # hypertonic saline
+        "blood_gas_ph": None,
+        "blood_gas_bicarbonate": None,
+    }
+    if dataset_year >= 2026:
+        with freeze_time(
+            audit_period_for_dataset_year.end_date - datetime.timedelta(days=1)
+        ):
+            data["blood_gas_ph"] = 7.1
+            data["blood_gas_bicarbonate"] = 12
+            data["visit_date"] = (
+                audit_period_for_dataset_year.start_date + datetime.timedelta(days=10)
+            )
+            data["hospital_admission_date"] = (
+                audit_period_for_dataset_year.start_date + datetime.timedelta(days=20)
+            )
+            data["hospital_discharge_date"] = (
+                audit_period_for_dataset_year.start_date + datetime.timedelta(days=25)
+            )
+
     form = VisitForm(
-        data={
-            "hospital_admission_date": "2026-01-01",
-            "hospital_discharge_date": "2026-01-08",
-            "hospital_admission_reason": 2,  # DKA
-            "dka_additional_therapies": None,
-        },
+        data=data,
         initial={"patient": patient},
     )
 
@@ -1949,6 +1993,242 @@ def test_inpatient_admission_without_discharge_date():
     # Trigger the cleaners
     assert len(form.errors) == 0, f"Form should be valid but got {form.errors}"
     assert form.is_valid()
+
+
+@pytest.mark.django_db
+def test_dka_no_blood_gas_values_provided_fails_validation(
+    dataset_year, audit_period_for_dataset_year
+):
+    """
+    Test that DKA admission without blood gas values is rejected
+    """
+    if dataset_year < 2026:
+        pytest.skip("Blood gas validation only applies from 2026 onwards")
+    patient = PatientFactory()
+
+    data = {
+        "visit_date": "2026-05-01",  # Required for validation
+        "hospital_admission_date": "2026-05-01",
+        "hospital_discharge_date": "2026-05-08",
+        "hospital_admission_reason": 2,  # DKA
+        "dka_additional_therapies": 1,  # hypertonic saline
+        "blood_gas_ph": None,
+        "blood_gas_bicarbonate": None,
+    }
+
+    with freeze_time(
+        audit_period_for_dataset_year.end_date - datetime.timedelta(days=1)
+    ):
+        data["visit_date"] = (
+            audit_period_for_dataset_year.start_date + datetime.timedelta(days=10)
+        )
+        data["hospital_admission_date"] = (
+            audit_period_for_dataset_year.start_date + datetime.timedelta(days=20)
+        )
+        data["hospital_discharge_date"] = (
+            audit_period_for_dataset_year.start_date + datetime.timedelta(days=25)
+        )
+
+    form = VisitForm(
+        data=data,
+        initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
+    )
+
+    # Trigger the cleaners
+    assert form.is_valid() is False, (
+        "Inpatient admission for DKA without blood gas values should fail"
+    )
+    assert "blood_gas_ph" in form.errors
+    assert "blood_gas_bicarbonate" in form.errors
+
+
+@pytest.mark.django_db
+def test_dka_blood_gas_values_provided_passes_validation(
+    dataset_year, audit_period_for_dataset_year
+):
+    """
+    Test that DKA admission with blood gas values is accepted
+    """
+    if dataset_year < 2026:
+        pytest.skip("Blood gas validation only applies from 2026 onwards")
+    patient = PatientFactory()
+
+    data = {
+        "visit_date": "2026-05-01",  # Required for validation
+        "hospital_admission_date": "2026-05-01",
+        "hospital_discharge_date": "2026-05-08",
+        "hospital_admission_reason": 2,  # DKA
+        "dka_additional_therapies": 1,  # hypertonic saline
+        "blood_gas_ph": 7.1,
+        "blood_gas_bicarbonate": 12,
+    }
+
+    with freeze_time(
+        audit_period_for_dataset_year.end_date - datetime.timedelta(days=1)
+    ):
+        data["visit_date"] = (
+            audit_period_for_dataset_year.start_date + datetime.timedelta(days=10)
+        )
+        data["hospital_admission_date"] = (
+            audit_period_for_dataset_year.start_date + datetime.timedelta(days=20)
+        )
+        data["hospital_discharge_date"] = (
+            audit_period_for_dataset_year.start_date + datetime.timedelta(days=25)
+        )
+
+    form = VisitForm(
+        data=data,
+        initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
+    )
+
+    # Trigger the cleaners
+    assert form.is_valid(), f"Form should be valid but got {form.errors}"
+    assert "blood_gas_ph" not in form.errors
+    assert "blood_gas_bicarbonate" not in form.errors
+
+
+@pytest.mark.django_db
+def test_dka_only_one_blood_gas_value_provided_fails_validation(
+    dataset_year, audit_period_for_dataset_year
+):
+    """
+    Test that DKA admission with only one blood gas value is rejected
+    """
+    if dataset_year < 2026:
+        pytest.skip("Blood gas validation only applies from 2026 onwards")
+    patient = PatientFactory()
+
+    data = {
+        "visit_date": "2026-05-01",  # Required for validation
+        "hospital_admission_date": "2026-05-01",
+        "hospital_discharge_date": "2026-05-08",
+        "hospital_admission_reason": 2,  # DKA
+        "dka_additional_therapies": 1,  # hypertonic saline
+        "blood_gas_ph": 7.1,
+        "blood_gas_bicarbonate": None,
+    }
+
+    with freeze_time(
+        audit_period_for_dataset_year.end_date - datetime.timedelta(days=1)
+    ):
+        data["visit_date"] = (
+            audit_period_for_dataset_year.start_date + datetime.timedelta(days=10)
+        )
+        data["hospital_admission_date"] = (
+            audit_period_for_dataset_year.start_date + datetime.timedelta(days=20)
+        )
+        data["hospital_discharge_date"] = (
+            audit_period_for_dataset_year.start_date + datetime.timedelta(days=25)
+        )
+
+    form = VisitForm(
+        data=data,
+        initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
+    )
+
+    # Trigger the cleaners
+    assert form.is_valid() is False, (
+        "Inpatient admission for DKA with only one blood gas value should fail"
+    )
+    assert "blood_gas_ph" not in form.errors
+    assert "blood_gas_bicarbonate" in form.errors
+
+
+@pytest.mark.django_db
+def test_dka_blood_gas_ph_out_of_range_fails_validation(
+    dataset_year, audit_period_for_dataset_year
+):
+    """
+    Test that DKA admission with out of range blood gas pH is rejected
+    """
+    if dataset_year < 2026:
+        pytest.skip("Blood gas validation only applies from 2026 onwards")
+    patient = PatientFactory()
+
+    data = {
+        "visit_date": "2026-05-01",  # Required for validation
+        "hospital_admission_date": "2026-05-01",
+        "hospital_discharge_date": "2026-05-08",
+        "hospital_admission_reason": 2,  # DKA
+        "dka_additional_therapies": 1,  # hypertonic saline
+        "blood_gas_ph": 8.0,  # out of range
+        "blood_gas_bicarbonate": 12,
+    }
+
+    with freeze_time(
+        audit_period_for_dataset_year.end_date - datetime.timedelta(days=1)
+    ):
+        data["visit_date"] = (
+            audit_period_for_dataset_year.start_date + datetime.timedelta(days=10)
+        )
+        data["hospital_admission_date"] = (
+            audit_period_for_dataset_year.start_date + datetime.timedelta(days=20)
+        )
+        data["hospital_discharge_date"] = (
+            audit_period_for_dataset_year.start_date + datetime.timedelta(days=25)
+        )
+
+    form = VisitForm(
+        data=data,
+        initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
+    )
+
+    # Trigger the cleaners
+    assert form.is_valid() is False, (
+        "Inpatient admission for DKA with out of range blood gas pH should fail"
+    )
+    assert "blood_gas_ph" in form.errors
+
+
+@pytest.mark.django_db
+def test_dka_blood_gas_bicarbonate_out_of_range_fails_validation(
+    dataset_year, audit_period_for_dataset_year
+):
+    """
+    Test that DKA admission with out of range blood gas bicarbonate is rejected
+    """
+    if dataset_year < 2026:
+        pytest.skip("Blood gas validation only applies from 2026 onwards")
+    patient = PatientFactory()
+
+    data = {
+        "visit_date": "2026-05-01",  # Required for validation
+        "hospital_admission_date": "2026-05-01",
+        "hospital_discharge_date": "2026-05-08",
+        "hospital_admission_reason": 2,  # DKA
+        "dka_additional_therapies": 1,  # hypertonic saline
+        "blood_gas_ph": 7.1,
+        "blood_gas_bicarbonate": 90,  # out of range
+    }
+
+    with freeze_time(
+        audit_period_for_dataset_year.end_date - datetime.timedelta(days=1)
+    ):
+        data["visit_date"] = (
+            audit_period_for_dataset_year.start_date + datetime.timedelta(days=10)
+        )
+        data["hospital_admission_date"] = (
+            audit_period_for_dataset_year.start_date + datetime.timedelta(days=20)
+        )
+        data["hospital_discharge_date"] = (
+            audit_period_for_dataset_year.start_date + datetime.timedelta(days=25)
+        )
+
+    form = VisitForm(
+        data=data,
+        initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
+    )
+
+    # Trigger the cleaners
+    assert form.is_valid() is False, (
+        "Inpatient admission for DKA with out of range blood gas bicarbonate should fail"
+    )
+    assert "blood_gas_bicarbonate" in form.errors
 
 
 """

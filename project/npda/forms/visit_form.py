@@ -112,10 +112,8 @@ class VisitForm(forms.ModelForm):
         self.dataset_year = (
             self.audit_period.get_dataset_year() if self.audit_period else 2021
         )
-        print(f"VisitForm: dataset_year set to {self.dataset_year}")
         super(VisitForm, self).__init__(*args, **kwargs)
         if self.dataset_year == 2026:
-            print("VisitForm: Setting field headings for dataset year 2026")
             allowed_fields = list(VISIT_FIELD_HEADINGS_2026.keys())
         else:
             # Future-proofing for other dataset years
@@ -494,6 +492,32 @@ class VisitForm(forms.ModelForm):
 
         return total_cholesterol
 
+    def clean_blood_gas_ph(self):
+        blood_gas_ph = self.cleaned_data["blood_gas_ph"]
+
+        if blood_gas_ph:
+            if blood_gas_ph < 6.5:
+                raise ValidationError("Blood Gas pH out of range. Cannot be below 6.5")
+            elif blood_gas_ph > 7.8:
+                raise ValidationError("Blood Gas pH out of range. Cannot be above 7.8")
+
+        return blood_gas_ph
+
+    def clean_blood_gas_bicarbonate(self):
+        blood_gas_bicarbonate = self.cleaned_data["blood_gas_bicarbonate"]
+
+        if blood_gas_bicarbonate:
+            if blood_gas_bicarbonate < 5:
+                raise ValidationError(
+                    "Blood Gas Bicarbonate out of range. Cannot be below 5"
+                )
+            elif blood_gas_bicarbonate > 50:
+                raise ValidationError(
+                    "Blood Gas Bicarbonate out of range. Cannot be above 50"
+                )
+
+        return blood_gas_bicarbonate
+
     """
     Custom clean methods for all fields requiring dates
     """
@@ -529,7 +553,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if valid is False:
             raise ValidationError(error)
 
         return self.cleaned_data["height_weight_observation_date"]
@@ -561,7 +585,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if valid is False:
             raise ValidationError(error)
 
         return self.cleaned_data["blood_pressure_observation_date"]
@@ -577,7 +601,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if valid is False:
             raise ValidationError(error)
 
         return self.cleaned_data["foot_examination_observation_date"]
@@ -593,7 +617,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if valid is False:
             raise ValidationError(error)
 
         return self.cleaned_data["retinal_screening_observation_date"]
@@ -641,7 +665,7 @@ class VisitForm(forms.ModelForm):
             audit_period=self.audit_period,
         )
 
-        if valid == False:
+        if valid is False:
             raise ValidationError(error)
 
         if (
@@ -666,7 +690,7 @@ class VisitForm(forms.ModelForm):
             audit_period=self.audit_period,
         )
 
-        if valid == False:
+        if valid is False:
             raise ValidationError(error)
 
         if (
@@ -691,7 +715,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if valid is False:
             raise ValidationError(error)
 
         return self.cleaned_data["psychological_screening_assessment_date"]
@@ -707,7 +731,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if valid is False:
             raise ValidationError(error)
 
         return self.cleaned_data["smoking_cessation_referral_date"]
@@ -726,7 +750,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
         )
 
-        if valid == False:
+        if valid is False:
             raise ValidationError(error)
 
         return self.cleaned_data["carbohydrate_counting_level_three_education_date"]
@@ -742,7 +766,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if valid is False:
             raise ValidationError(error)
 
         return self.cleaned_data["dietician_additional_appointment_date"]
@@ -758,7 +782,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if valid is False:
             raise ValidationError(error)
 
         return self.cleaned_data["flu_immunisation_recommended_date"]
@@ -774,7 +798,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if valid is False:
             raise ValidationError(error)
 
         return self.cleaned_data["sick_day_rules_training_date"]
@@ -802,7 +826,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if not valid:
+        if valid is False:
             raise ValidationError(error)
 
         return self.cleaned_data["hospital_admission_date"]
@@ -818,7 +842,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=None,  # Hospital admission dates are not bound by the audit period
         )
-        if valid == False:
+        if valid is False:
             raise ValidationError(error)
 
         return self.cleaned_data["hospital_discharge_date"]
@@ -834,7 +858,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if not valid:
+        if valid is False:
             raise ValidationError(error)
 
         return self.cleaned_data["immunotherapy_date"]
@@ -1207,6 +1231,13 @@ class VisitForm(forms.ModelForm):
                         {"hospital_admission_reason": hospital_admission_reason},
                         {"dka_additional_therapies": dka_additional_therapies},
                     ]
+                    if self.dataset_year >= 2026:
+                        items_to_include.append(
+                            {"blood_gas_ph": blood_gas_ph},
+                        )
+                        items_to_include.append(
+                            {"blood_gas_bicarbonate": blood_gas_bicarbonate},
+                        )
                     all_items_must_be_filled_in(items_to_include)
 
                 elif hospital_admission_reason == 6:  # Other
