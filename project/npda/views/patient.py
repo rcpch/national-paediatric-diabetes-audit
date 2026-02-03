@@ -328,6 +328,8 @@ class PatientCreateView(
             ],
         )
         context["audit_period"] = self.audit_period
+        # Provide tabs structure for patient form
+        context["patient_tabs"] = get_tabs(form=context.get("form"), type="patient")
         return context
 
     def form_invalid(self, form):
@@ -444,6 +446,7 @@ class PatientUpdateView(
         context["audit_period"] = self.audit_period
         context["date_leaving_service"] = transfer.date_leaving_service
         context["reason_leaving_service"] = transfer.reason_leaving_service
+        # Provide tabs structure for patient form
         return context
 
     def form_valid(self, form: BaseForm) -> HttpResponse:

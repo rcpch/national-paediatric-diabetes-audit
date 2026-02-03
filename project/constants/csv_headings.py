@@ -331,12 +331,12 @@ CSV_HEADING_OBJECTS_2026_ADDITIONS = (
     # New fields for 2026
     {
         "heading": "Has the patient had a diagnosis of Attention Deficit Hyperactivity Disorder (ADHD) or Autism Spectrum Disorder (ASD)?",
-        "model_field": "adhd_asd_diagnosis",
+        "model_field": "adhd_asd_status",
         "model": "Patient",
     },
     {
         "heading": "Does the patient have a diagnosis of a learning disability?",
-        "model_field": "learning_disability",
+        "model_field": "learning_disability_status",
         "model": "Patient",
     },
     {
@@ -362,12 +362,12 @@ CSV_HEADING_OBJECTS_2026_ADDITIONS = (
     {
         "heading": "Did the patient receive immunotherapy prior to or after the diagnosis of stage 3 Type 1 diabetes?",
         "model_field": "immunotherapy_received",
-        "model": "Visit",
+        "model": "Patient",
     },
     {
         "heading": "Date immunotherapy started",
         "model_field": "immunotherapy_date",
-        "model": "Visit",
+        "model": "Patient",
     },
     {
         "heading": "Does the patient smoke and/or vape",
@@ -502,14 +502,14 @@ CSV_HEADING_OBJECTS_2026 = (
     # Visit
     {
         "heading": "Has the patient had a diagnosis of Attention Deficit Hyperactivity Disorder (ADHD) or Autism Spectrum Disorder (ASD)?",
-        "model_field": "adhd_asd_diagnosis",
-        "model": "Visit",
+        "model_field": "adhd_asd_status",
+        "model": "Patient",
         "alternative_headings": [],
     },
     {
         "heading": "Does the patient have a diagnosis of a learning disability?",
-        "model_field": "learning_disability",
-        "model": "Visit",
+        "model_field": "learning_disability_status",
+        "model": "Patient",
         "alternative_headings": [
             "Does the patient have a diagnosis of a learning disability?†"
         ],
@@ -595,7 +595,7 @@ CSV_HEADING_OBJECTS_2026 = (
     {
         "heading": "Did the patient receive immunotherapy prior to or after the diagnosis of stage 3 Type 1 diabetes?",
         "model_field": "immunotherapy_received",
-        "model": "Visit",
+        "model": "Patient",
         "alternative_headings": [
             "Did the patient receive immunotherapy prior to or after the diagnosis of stage 3 Type 1 diabetes?†"
         ],
@@ -603,7 +603,7 @@ CSV_HEADING_OBJECTS_2026 = (
     {
         "heading": "Date immunotherapy started",
         "model_field": "immunotherapy_date",
-        "model": "Visit",
+        "model": "Patient",
         "alternative_headings": ["Date immunotherapy started†"],
     },
     {
@@ -1005,7 +1005,6 @@ ALL_VISIT_DATES_2026 = [
         "sick_day_rules_training_date",
         "Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia",
     ),
-    ("immunotherapy_date", "Date immunotherapy started"),
     ("hospital_admission_date", "Start date (Hospital Provider Spell)"),
     ("hospital_discharge_date", "Discharge date (Hospital provider spell)"),
 ]

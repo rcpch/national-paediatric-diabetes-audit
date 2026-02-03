@@ -250,10 +250,10 @@ FIELD_NOTES_2026 = {
         "In some hospitals this information is collected at registration and recorded on your Patient Management System (PMS). "
         "Therefore, this data should be available to you."
     ),
-    "adhd_asd_diagnosis": (
+    "adhd_asd_status": (
         "This should only include diagnoses confirmed by a healthcare professional qualified to make such a diagnosis."
     ),
-    "learning_disability": (
+    "learning_disability_status": (
         "This should only include diagnoses confirmed by a healthcare professional qualified to assess mental health conditions "
         "and/or learning disabilities.\n\n"
         "This includes intellectual disability, learning disabilities, and global developmental delay."
@@ -701,10 +701,10 @@ FIELD_JUSTIFICATION_STANDARDS_2026 = {
         "and BP collected data."
     ),
     "ethnicity": ("Necessary to examine the influence of ethnic origin on outcomes."),
-    "adhd_asd_diagnosis": (
+    "adhd_asd_status": (
         "To examine the relationship between the presence of ADHD and/or ASD on care and outcomes."
     ),
-    "learning_disability": (
+    "learning_disability_status": (
         "To examine the relationship between the presence of learning disabilities on care and outcomes"
     ),
     "diabetes_type": (

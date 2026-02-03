@@ -749,11 +749,11 @@ def test_edit_patient(mocked_pdu):
 
 
 # @pytest.mark.django_db
-# def test_adhd_asd_diagnosis_invalid_value_form_fails_validation(
+# def test_adhd_asd_status_invalid_value_form_fails_validation(
 #     audit_period_for_dataset_year,
 # ):
 #     """
-#     Test that invalid adhd_asd_diagnosis should fail
+#     Test that invalid adhd_asd_status should fail
 #     """
 #     if audit_period_for_dataset_year.start_date.year != 2026:
 #         pytest.skip("Skipping test as audit period is not for dataset year 2026")
@@ -763,23 +763,22 @@ def test_edit_patient(mocked_pdu):
 #         data={
 #             "visit_date": audit_period_for_dataset_year.end_date
 #             - datetime.timedelta(days=1),
-#             "adhd_asd_diagnosis": 24,  # Invalid value
+#             "adhd_asd_status": 24,  # Invalid value
 #         },
 #         initial={"patient": patient},
 #         audit_period=audit_period_for_dataset_year,
 #     )
 
 #     # Trigger the cleaners
-#     assert form.is_valid() is False, "Invalid adhd_asd_diagnosis but test passed"
-#     assert "adhd_asd_diagnosis" in form.errors
-
+#     assert form.is_valid() is False, "Invalid adhd_asd_status but test passed"
+#     assert "adhd_asd_status" in form.errors
 
 # @pytest.mark.django_db
-# def test_learning_disability_invalid_value_form_fails_validation(
+# def test_learning_disability_status_invalid_value_form_fails_validation(
 #     audit_period_for_dataset_year,
 # ):
 #     """
-#     Test that invalid learning_disability should fail
+#     Test that invalid learning_disability_status should fail
 #     """
 #     if audit_period_for_dataset_year.start_date.year != 2026:
 #         pytest.skip("Skipping test as audit period is not for dataset year 2026")

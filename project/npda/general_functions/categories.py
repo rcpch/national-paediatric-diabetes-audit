@@ -1,6 +1,5 @@
 import urllib.parse
 from ...constants.visit_categories import VISIT_CATEGORIES_BY_TAB
-from ...constants.patient_categories import PATIENT_CATEGORIES_BY_TAB
 
 
 def get_categories(instance, form, type="visit"):
@@ -9,9 +8,7 @@ def get_categories(instance, form, type="visit"):
     """
     categories = []
 
-    CATEGORIES_BY_TAB = (
-        VISIT_CATEGORIES_BY_TAB if type == "visit" else PATIENT_CATEGORIES_BY_TAB
-    )
+    CATEGORIES_BY_TAB = VISIT_CATEGORIES_BY_TAB
 
     for _, tab in CATEGORIES_BY_TAB.items():
         for category_name, category in tab.items():
@@ -70,7 +67,6 @@ def get_tabs(form, type="visit"):
     for tab_name, categories in CATEGORIES_BY_TAB.items():
         category_names = categories.keys()
         categories = [c for c in all_categories if c["name"] in category_names]
-
         errors = {}
         for category in categories:
             for field, field_errors in category["errors"].items():

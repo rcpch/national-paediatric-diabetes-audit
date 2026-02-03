@@ -354,19 +354,6 @@ class VisitForm(forms.ModelForm):
                 f"'{data}' is not a value for 'Glucose Monitoring'. Please select one of {options}."
             )
 
-    def clean_immunotherapy_received(self):
-        data = self.cleaned_data["immunotherapy_received"]
-        # Convert the list of tuples to a dictionary
-        immunotherapy_received_dict = dict(YES_NO_UNKNOWN)
-
-        if data is None or data in immunotherapy_received_dict:
-            return data
-        else:
-            options = str(YES_NO_UNKNOWN).strip("[]").replace(")", "").replace("(", "")
-            raise ValidationError(
-                f"'{data}' is not a value for 'Immunotherapy Received'. Please select one of {options}."
-            )
-
     def clean_insulin_regimen(self):
         data = self.cleaned_data["insulin_regimen"]
         # Convert the list of tuples to a dictionary
@@ -1043,22 +1030,7 @@ class VisitForm(forms.ModelForm):
                 ],
             )
 
-        immunotherapy_received = cleaned_data.get("immunotherapy_received")
-        immunotherapy_date = cleaned_data.get("immunotherapy_date")
-        if immunotherapy_date is not None and immunotherapy_received is None:
-            raise ValidationError(
-                {
-                    "immunotherapy_received": [
-                        "Immunotherapy Received must be filled in if Immunotherapy Date is filled in"
-                    ]
-                }
-            )
-        if any([immunotherapy_received, immunotherapy_date]):
-            measure_must_have_date_and_value(
-                immunotherapy_date,
-                "immunotherapy_date",
-                [{"immunotherapy_received": immunotherapy_received}],
-            )
+        # Immunotherapy fields moved to Patient model (handled on patient form)
 
         blood_pressure_observation_date = cleaned_data.get(
             "blood_pressure_observation_date"

@@ -31,6 +31,10 @@ from project.npda.general_functions.justification_or_standard import (
     get_field_justification_standard,
     get_field_notes,
 )
+from project.constants.patient_categories import (
+    PATIENT_CATEGORIES_2021,
+    PATIENT_CATEGORIES_2026,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -135,6 +139,7 @@ class PatientForm(forms.ModelForm):
             "date_leaving_service",
             "reason_leaving_service",
             "gp_practice_postcode",
+            "unique_reference_number",
         }
         keep_fields = set(allowed_fields) | extra_fields
 
@@ -147,7 +152,6 @@ class PatientForm(forms.ModelForm):
         for field_name in allowed_fields:
             if field_name not in self.fields:
                 continue  # Skip if field is not present in the form
-            model_field = Patient._meta.get_field(field_name)
             # Set help text from model field
             # Set label from headings
             label = get_field_heading(field_name, self.dataset_year)
@@ -156,8 +160,61 @@ class PatientForm(forms.ModelForm):
             self.fields[field_name].label = label
             self.fields[field_name].help_text = note
             self.fields[field_name].reference = reference
-            if hasattr(model_field, "category"):
-                self.fields[field_name].category = model_field.category
+
+        PATIENT_CATEGORIES = (
+            PATIENT_CATEGORIES_2021
+            if self.dataset_year == 2021
+            else PATIENT_CATEGORIES_2026
+        )
+
+        # Set initial values for transfer fields if editing an existing patient
+        # and ensure we process categories in priority order
+        sorted_categories = sorted(
+            PATIENT_CATEGORIES, key=lambda c: c.get("priority", 0)
+        )
+        for category in sorted_categories:
+            for field in category["fields"]:
+                if field not in self.fields:
+                    continue
+                self.fields[field].category = category["name"]
+                self.fields[field].category_colour = category["colour"]
+
+        # Reorder form fields so they appear grouped by the category order
+        # defined in PATIENT_CATEGORIES. We perform a stable sort based on
+        # category priority and preserve the original relative order for any
+        # fields that share the same priority or are uncategorised. This
+        # avoids popping items from `self.fields` which can be error-prone
+        # when the form is used in different contexts (UI vs CSV upload).
+        from collections import OrderedDict
+
+        # Record original order index for stability
+        original_keys = list(self.fields.keys())
+        original_index = {k: i for i, k in enumerate(original_keys)}
+
+        # Build a map of field -> (priority, within_category_index)
+        priority_map = {}
+        within_index = {}
+        for cat in sorted_categories:
+            pr = cat.get("priority", 0)
+            for idx, fname in enumerate(cat.get("fields", [])):
+                # Lower priority value sorts earlier (1 is high priority)
+                priority_map[fname] = pr
+                within_index[fname] = idx
+
+        # Define a key function that sorts by (priority, within_category_index, original_index)
+        def sort_key(fname):
+            return (
+                priority_map.get(fname, 9999),
+                within_index.get(fname, 9999),
+                original_index.get(fname, 9999),
+            )
+
+        ordered_keys = sorted(original_keys, key=sort_key)
+
+        new_fields = OrderedDict((k, self.fields[k]) for k in ordered_keys)
+
+        # Replace the form's fields with the reordered mapping
+        self.fields = new_fields
 
         # Populate transfer-related initial values if editing an existing patient
         if self.instance.pk:

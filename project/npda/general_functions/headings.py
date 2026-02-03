@@ -87,8 +87,8 @@ PATIENT_FIELD_HEADINGS_2026 = {
     "death_date": "Death Date",
     "gp_practice_ods_code": "GP Practice Code",
     "pdu": "PDU Number",
-    "adhd_asd_diagnosis": "Has the patient had a diagnosis of Attention Deficit Hyperactivity Disorder (ADHD) or Autism Spectrum Disorder (ASD)?",
-    "learning_disability": "Does the patient have a diagnosis of a learning disability?",
+    "adhd_asd_status": "Has the patient had a diagnosis of Attention Deficit Hyperactivity Disorder (ADHD) or Autism Spectrum Disorder (ASD)?",
+    "learning_disability_status": "Does the patient have a diagnosis of a learning disability?",
     "immunotherapy_received": "Did the patient receive immunotherapy prior to or after the diagnosis of stage 3 Type 1 diabetes?",
     "immunotherapy_date": "Date immunotherapy started",
 }
