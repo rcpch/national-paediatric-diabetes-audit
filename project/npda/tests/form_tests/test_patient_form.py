@@ -1,4 +1,5 @@
 # Standard imports
+from datetime import date
 import pytest
 import logging
 import dataclasses
@@ -9,9 +10,10 @@ from unittest import skip
 from django.apps import apps
 from django.core.exceptions import ValidationError
 from dateutil.relativedelta import relativedelta
+from freezegun import freeze_time
 
 # NPDA Imports
-from project.npda.models import Patient, Transfer
+from project.npda.models import Patient, Transfer, AuditPeriod
 from project.npda.forms.patient_form import PatientForm
 from project.npda.forms.external_patient_validators import (
     PatientExternalValidationResult,
@@ -39,6 +41,31 @@ MOCK_EXTERNAL_VALIDATION_RESULT = PatientExternalValidationResult(
 )
 
 ALDER_HEY_PZ_CODE = "PZ074"
+
+
+@pytest.fixture(params=[2021, 2026])
+def dataset_year(request):
+    return request.param
+
+
+@pytest.fixture
+def audit_period_for_dataset_year(dataset_year):
+    """Create an AuditPeriod for the supplied dataset_year for tests.
+
+    Tests that need a matching audit period for the CSV can depend on this
+    fixture and pass it into `csv_upload_sync` as `_audit_period`.
+    """
+    slug = f"{dataset_year}-{dataset_year + 1}"
+    audit_period, _ = AuditPeriod.objects.get_or_create(
+        slug=slug,
+        defaults={
+            "is_open": True,
+            "is_visible": True,
+            "start_date": date(dataset_year, 4, 1),
+            "end_date": date(dataset_year + 1, 3, 31),
+        },
+    )
+    return audit_period
 
 
 @pytest.fixture
@@ -671,129 +698,199 @@ def test_edit_patient(mocked_pdu):
     assert patient.sex == SEX_TYPE[1][0]
 
 
-# @pytest.mark.django_db
-# def test_immunotherapy_date_before_visit_date_fails_validation(
-#     audit_period_for_dataset_year,
-# ):
-#     """
-#     Test that immunotherapy date before visit date should fail
-#     """
-#     if audit_period_for_dataset_year.start_date.year != 2026:
-#         pytest.skip("Skipping test as audit period is not for dataset year 2026")
-#     patient = PatientFactory()
+@pytest.mark.django_db
+def test_immunotherapy_received_must_not_be_empty_if_date_provided(
+    mocked_pdu, audit_period_for_dataset_year, dataset_year
+):
+    if dataset_year < 2026:
+        pytest.skip("Skipping test as audit period is not for dataset year 2026")
+    with freeze_time(audit_period_for_dataset_year.end_date - relativedelta(days=1)):
+        form = PatientForm(
+            VALID_FIELDS
+            | {
+                "immunotherapy_date": TODAY,
+                "immunotherapy_received": None,
+            },
+            paediatric_diabetes_unit=mocked_pdu,
+            audit_period=audit_period_for_dataset_year,
+        )
 
-#     form = VisitForm(
-#         data={
-#             "visit_date": "2026-01-10",  # Required for validation
-#             "immunotherapy_date": "2026-01-01",
-#         },
-#         initial={"patient": patient},
-#         audit_period=audit_period_for_dataset_year,
-#     )
+    # print.the form fields
+    print("Form data:", form.data)
 
-#     assert form.is_valid() is False, "Immunotherapy date before visit date should fail"
-#     assert "immunotherapy_date" in form.errors
-
-
-# @pytest.mark.django_db
-# def test_immunotherapy_date_after_visit_date_passes_validation(
-#     audit_period_for_dataset_year,
-# ):
-#     """
-#     Test that immunotherapy date after visit date should pass
-#     """
-#     if audit_period_for_dataset_year.start_date.year != 2026:
-#         pytest.skip("Skipping test as audit period is not for dataset year 2026")
-#     patient = PatientFactory()
-
-#     form = VisitForm(
-#         data={
-#             "visit_date": audit_period_for_dataset_year.end_date
-#             - datetime.timedelta(days=1),
-#             "immunotherapy_date": audit_period_for_dataset_year.start_date
-#             + datetime.timedelta(days=1),
-#             "immunotherapy_received": 1,  # Yes
-#         },
-#         initial={"patient": patient},
-#         audit_period=audit_period_for_dataset_year,
-#     )
-
-#     assert form.is_valid(), "Immunotherapy date after visit date should pass"
-#     assert "immunotherapy_date" not in form.errors
+    assert form.is_valid() is False, (
+        "Immunotherapy date provided without immunotherapy received should fail"
+    )
+    assert "immunotherapy_received" in form.errors
 
 
-# @pytest.mark.django_db
-# def test_immunotherapy_given_without_date_fails_validation(
-#     audit_period_for_dataset_year,
-# ):
-#     """
-#     Test that immunotherapy given without date should fail
-#     """
-#     if audit_period_for_dataset_year.start_date.year != 2026:
-#         pytest.skip("Skipping test as audit period is not for dataset year 2026")
-#     patient = PatientFactory()
+@pytest.mark.django_db
+def test_immunotherapy_date_must_not_be_empty_if_received(
+    mocked_pdu, audit_period_for_dataset_year, dataset_year
+):
+    if dataset_year < 2026:
+        pytest.skip("Skipping test as audit period is not for dataset year 2026")
+    with freeze_time(audit_period_for_dataset_year.end_date - relativedelta(days=1)):
+        form = PatientForm(
+            VALID_FIELDS
+            | {
+                "immunotherapy_date": None,
+                "immunotherapy_received": 1,  # Yes
+            },
+            paediatric_diabetes_unit=mocked_pdu,
+            audit_period=audit_period_for_dataset_year,
+        )
 
-#     form = VisitForm(
-#         data={
-#             "visit_date": audit_period_for_dataset_year.end_date
-#             - datetime.timedelta(days=1),
-#             "immunotherapy_received": 1,  # Yes
-#             "immunotherapy_date": None,
-#         },
-#         initial={"patient": patient},
-#         audit_period=audit_period_for_dataset_year,
-#     )
+    # print.the form fields
+    print("Form data:", form.data)
 
-#     assert form.is_valid() is False, "Immunotherapy given without date should fail"
-#     assert "immunotherapy_date" in form.errors
+    assert form.is_valid() is False, "Immunotherapy received without date should fail"
+    assert "immunotherapy_date" in form.errors
 
 
-# @pytest.mark.django_db
-# def test_adhd_asd_status_invalid_value_form_fails_validation(
-#     audit_period_for_dataset_year,
-# ):
-#     """
-#     Test that invalid adhd_asd_status should fail
-#     """
-#     if audit_period_for_dataset_year.start_date.year != 2026:
-#         pytest.skip("Skipping test as audit period is not for dataset year 2026")
-#     patient = PatientFactory()
+@pytest.mark.django_db
+def test_immunotherapy_date_after_death_date_fails_validation(
+    mocked_pdu, audit_period_for_dataset_year, dataset_year
+):
+    if dataset_year < 2026:
+        pytest.skip("Skipping test as audit period is not for dataset year 2026")
+    death_date = TODAY - relativedelta(days=1)
+    immunotherapy_date = TODAY
+    with freeze_time(audit_period_for_dataset_year.end_date - relativedelta(days=1)):
+        form = PatientForm(
+            VALID_FIELDS
+            | {
+                "death_date": death_date,
+                "immunotherapy_date": immunotherapy_date,
+                "immunotherapy_received": 1,  # Yes
+            },
+            paediatric_diabetes_unit=mocked_pdu,
+            audit_period=audit_period_for_dataset_year,
+        )
 
-#     form = VisitForm(
-#         data={
-#             "visit_date": audit_period_for_dataset_year.end_date
-#             - datetime.timedelta(days=1),
-#             "adhd_asd_status": 24,  # Invalid value
-#         },
-#         initial={"patient": patient},
-#         audit_period=audit_period_for_dataset_year,
-#     )
+    assert form.is_valid() is False, "Immunotherapy date after death date should fail"
+    assert "immunotherapy_date" in form.errors
 
-#     # Trigger the cleaners
-#     assert form.is_valid() is False, "Invalid adhd_asd_status but test passed"
-#     assert "adhd_asd_status" in form.errors
 
-# @pytest.mark.django_db
-# def test_learning_disability_status_invalid_value_form_fails_validation(
-#     audit_period_for_dataset_year,
-# ):
-#     """
-#     Test that invalid learning_disability_status should fail
-#     """
-#     if audit_period_for_dataset_year.start_date.year != 2026:
-#         pytest.skip("Skipping test as audit period is not for dataset year 2026")
-#     patient = PatientFactory()
+@pytest.mark.django_db
+def test_immunotherapy_date_cannot_be_before_diagnosis_date(
+    mocked_pdu, audit_period_for_dataset_year, dataset_year
+):
+    if dataset_year < 2026:
+        pytest.skip("Skipping test as audit period is not for dataset year 2026")
+    diagnosis_date = TODAY
+    immunotherapy_date = TODAY - relativedelta(days=1)
+    with freeze_time(audit_period_for_dataset_year.end_date - relativedelta(days=1)):
+        form = PatientForm(
+            VALID_FIELDS
+            | {
+                "diagnosis_date": diagnosis_date,
+                "immunotherapy_date": immunotherapy_date,
+                "immunotherapy_received": 1,  # Yes
+            },
+            paediatric_diabetes_unit=mocked_pdu,
+            audit_period=audit_period_for_dataset_year,
+        )
 
-#     form = VisitForm(
-#         data={
-#             "visit_date": audit_period_for_dataset_year.end_date
-#             - datetime.timedelta(days=1),
-#             "learning_disability": 4,  # Invalid value
-#         },
-#         initial={"patient": patient},
-#         audit_period=audit_period_for_dataset_year,
-#     )
+    assert form.is_valid() is False, (
+        "Immunotherapy date before diagnosis date should fail"
+    )
+    assert "immunotherapy_date" in form.errors
 
-#     # Trigger the cleaners
-#     assert form.is_valid() is False, "Invalid learning_disability but test passed"
-#     assert "learning_disability" in form.errors
+
+@pytest.mark.django_db
+def test_immunotherapy_date_cannot_be_in_future(
+    mocked_pdu, audit_period_for_dataset_year, dataset_year
+):
+    if dataset_year < 2026:
+        pytest.skip("Skipping test as audit period is not for dataset year 2026")
+    future_date = TODAY + relativedelta(days=1)
+    with freeze_time(audit_period_for_dataset_year.end_date - relativedelta(days=1)):
+        form = PatientForm(
+            VALID_FIELDS
+            | {
+                "immunotherapy_date": future_date,
+                "immunotherapy_received": 1,  # Yes
+            },
+            paediatric_diabetes_unit=mocked_pdu,
+            audit_period=audit_period_for_dataset_year,
+        )
+
+    assert form.is_valid() is False, "Immunotherapy date in the future should fail"
+    assert "immunotherapy_date" in form.errors
+
+
+@pytest.mark.django_db
+def test_immunotherapy_date_cannot_be_before_birth_date(
+    mocked_pdu, audit_period_for_dataset_year, dataset_year
+):
+    if dataset_year < 2026:
+        pytest.skip("Skipping test as audit period is not for dataset year 2026")
+    birth_date = TODAY
+    immunotherapy_date = TODAY - relativedelta(days=1)
+    with freeze_time(audit_period_for_dataset_year.end_date - relativedelta(days=1)):
+        form = PatientForm(
+            VALID_FIELDS
+            | {
+                "date_of_birth": birth_date,
+                "immunotherapy_date": immunotherapy_date,
+                "immunotherapy_received": 1,  # Yes
+            },
+            paediatric_diabetes_unit=mocked_pdu,
+            audit_period=audit_period_for_dataset_year,
+        )
+
+    assert form.is_valid() is False, "Immunotherapy date before birth date should fail"
+    assert "immunotherapy_date" in form.errors
+
+
+@pytest.mark.django_db
+def test_adhd_asd_status_invalid_value_form_fails_validation(
+    audit_period_for_dataset_year, mocked_pdu
+):
+    """
+    Test that invalid adhd_asd_status should fail
+    """
+    if audit_period_for_dataset_year.start_date.year < 2026:
+        pytest.skip("Skipping test as audit period is not for dataset year 2026")
+
+    with freeze_time(audit_period_for_dataset_year.end_date - relativedelta(days=1)):
+        form = PatientForm(
+            VALID_FIELDS
+            | {
+                "adhd_asd_status": 24,  # Invalid value
+            },
+            paediatric_diabetes_unit=mocked_pdu,
+            audit_period=audit_period_for_dataset_year,
+        )
+
+    # Trigger the cleaners
+    assert form.is_valid() is False, "Invalid adhd_asd_status but test passed"
+    assert "adhd_asd_status" in form.errors
+
+
+@pytest.mark.django_db
+def test_learning_disability_status_invalid_value_form_fails_validation(
+    audit_period_for_dataset_year, mocked_pdu, dataset_year
+):
+    """
+    Test that invalid learning_disability_status should fail
+    """
+    if dataset_year < 2026:
+        pytest.skip("Skipping test as audit period is not for dataset year 2026")
+
+    with freeze_time(audit_period_for_dataset_year.end_date - relativedelta(days=1)):
+        form = PatientForm(
+            VALID_FIELDS
+            | {
+                "learning_disability_status": 5,  # Invalid value
+            },
+            paediatric_diabetes_unit=mocked_pdu,
+            audit_period=audit_period_for_dataset_year,
+        )
+
+    # Trigger the cleaners
+    assert form.is_valid() is False, (
+        "Invalid learning_disability_status but test passed"
+    )
+    assert "learning_disability_status" in form.errors

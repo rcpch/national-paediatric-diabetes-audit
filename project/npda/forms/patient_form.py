@@ -114,6 +114,10 @@ class PatientForm(forms.ModelForm):
             "diabetes_type": forms.Select(),
             "diagnosis_date": DateInput(),
             "death_date": DateInput(),
+            "immunotherapy_date": DateInput(),
+            "immunotherapy_received": forms.Select(),
+            "learning_disability_status": forms.Select(),
+            "adhd_asd_status": forms.Select(),
             "gp_practice_ods_code": forms.TextInput(attrs={"class": TEXT_INPUT}),
             "gp_practice_postcode": forms.TextInput(attrs={"class": TEXT_INPUT}),
         }
@@ -296,6 +300,18 @@ class PatientForm(forms.ModelForm):
                 f"'{data}' is not a value for 'Learning Disability Status'. Please select one of {options}."
             )
 
+    def clean_immunotherapy_received(self):
+        data = self.cleaned_data["immunotherapy_received"]
+        # Convert the list of tuples to a dictionary
+        yes_no_unknown_dict = dict(YES_NO_UNKNOWN)
+        if data is None or data in yes_no_unknown_dict:
+            return data
+        else:
+            options = str(YES_NO_UNKNOWN).strip("[]").replace(")", "").replace("(", "")
+            raise ValidationError(
+                f"'{data}' is not a value for 'Immunotherapy Received'. Please select one of {options}."
+            )
+
     def handle_async_validation_result(self, key):
         value = getattr(self.async_validation_results, key)
         # override the invalid postcode error if the user has sanctioned the postcode
@@ -320,7 +336,8 @@ class PatientForm(forms.ModelForm):
         death_date = cleaned_data.get("death_date")
         gp_practice_ods_code = cleaned_data.get("gp_practice_ods_code")
         gp_practice_postcode = cleaned_data.get("gp_practice_postcode")
-
+        immunotherapy_date = cleaned_data.get("immunotherapy_date")
+        immunotherapy_received = cleaned_data.get("immunotherapy_received")
         nhs_number = cleaned_data.get("nhs_number")
         unique_reference_number = cleaned_data.get("unique_reference_number")
 
@@ -415,6 +432,56 @@ class PatientForm(forms.ModelForm):
                         "'Death Date' cannot be before 'Date of Diabetes Diagnosis'"
                     ),
                 )
+
+        if immunotherapy_date is not None and diagnosis_date is not None:
+            if immunotherapy_date < diagnosis_date:
+                self.add_error(
+                    "immunotherapy_date",
+                    ValidationError(
+                        "'Date Immunotherapy Started' cannot be before 'Date of Diabetes Diagnosis'"
+                    ),
+                )
+
+        if immunotherapy_date is not None and immunotherapy_date > date.today():
+            self.add_error(
+                "immunotherapy_date",
+                ValidationError("'Date Immunotherapy Started' cannot be in the future"),
+            )
+
+        if immunotherapy_date is not None and date_of_birth is not None:
+            if immunotherapy_date < date_of_birth:
+                self.add_error(
+                    "immunotherapy_date",
+                    ValidationError(
+                        "'Date Immunotherapy Started' cannot be before 'Date of Birth'"
+                    ),
+                )
+
+        if immunotherapy_date is not None and death_date is not None:
+            if immunotherapy_date > death_date:
+                self.add_error(
+                    "immunotherapy_date",
+                    ValidationError(
+                        "'Date Immunotherapy Started' cannot be after 'Death Date'"
+                    ),
+                )
+
+        if (immunotherapy_date is not None and immunotherapy_received is None) or (
+            immunotherapy_date is None
+            and immunotherapy_received == YES_NO_UNKNOWN[0][0]
+        ):
+            self.add_error(
+                "immunotherapy_date",
+                ValidationError(
+                    "'Immunotherapy Received' and 'Date Immunotherapy Started' must both be provided or both be empty"
+                ),
+            )
+            self.add_error(
+                "immunotherapy_received",
+                ValidationError(
+                    "'Immunotherapy Received' and 'Date Immunotherapy Started' must both be provided or both be empty"
+                ),
+            )
 
         if gp_practice_ods_code is None and gp_practice_postcode is None:
             self.add_error(

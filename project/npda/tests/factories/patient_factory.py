@@ -13,6 +13,7 @@ import nhs_number
 from dateutil.relativedelta import relativedelta
 
 # rcpch imports
+from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 from project.npda.general_functions.audit_period import get_audit_period_for_date
 from project.npda.general_functions.random_date import get_random_date
 from project.npda.models import Patient
