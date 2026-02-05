@@ -16,6 +16,8 @@ __pycache__
 !/.vscode/extensions.json
 
 node_modules
+venv/
+env/
 
 build_info.json
 
