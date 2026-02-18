@@ -10,6 +10,7 @@ az storage file download \
     --path .env --dest envs/.env
 
 # Tests (against local Postgres)
-docker compose up -d
+# Can remove disabling BuildKit once https://github.com/docker/buildx/issues/3576 is released (BuildKit 0.28+)
+DOCKER_BUILDKIT=0 docker compose up -d
 s/test
 docker compose down
