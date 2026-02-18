@@ -10,6 +10,6 @@ az storage file download \
     --path .env --dest envs/.env
 
 # Tests (against local Postgres)
-docker compose up -d
+DOCKER_BUILDKIT=0 docker compose up -d
 s/test
 docker compose down
