@@ -14,7 +14,8 @@ az storage file download \
 # Burn in build info (git hash, branch etc) into the image
 s/get-build-info > build_info.json
 
-docker compose build
+# Can remove disabling BuildKit once https://github.com/docker/buildx/issues/3576 is released (BuildKit 0.28+)
+DOCKER_BUILDKIT=0 docker compose build
 
 # Tests (against local Postgres)
 docker compose up -d
