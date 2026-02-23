@@ -1440,3 +1440,75 @@ def test_smoker_with_two_visits_one_with_smoking_cessation_referral_one_without_
     assert patient["patient_identifier"] == "4444444444"
     assert patient["smoking_status"] is True  # from the first visit
     assert patient["smoking_cessation_referral"] == "True"  # from the first visit
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1327
+@pytest.mark.django_db
+def test_thyroid_and_coelaic_screening_on_day_of_diagnosis(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    date_of_birth = audit_period.start_date - relativedelta(years=14)
+
+    # diagnosed within the audit year
+    diagnosis_date = audit_period.start_date + relativedelta(days=2)
+
+    patient = PatientFactory(
+        nhs_number="4444444444",
+        diabetes_type=DIABETES_TYPES[0][0],  # T1DM
+        date_of_birth=date_of_birth,
+        diagnosis_date=diagnosis_date
+    )
+
+    visit_date = diagnosis_date
+
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        carbohydrate_counting_level_three_education_date=visit_date + relativedelta(days=10),
+        thyroid_function_date=visit_date,
+        coeliac_screen_date=visit_date,
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(patient)
+
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
+
+    response = client.get(
+        url + f"?category={TableCategories.CARE_AT_DIAGNOSIS.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    assert len(response.context["patients"]) == 1
+
+    patient = response.context["patients"][0]
+
+    assert patient["patient_identifier"] == "4444444444"
+
+    assert patient["carbohydrate_counting_education"]
+    assert patient["coeliac_disease_screening"]
+    assert patient["thyroid_disease_screening"]
