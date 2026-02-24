@@ -300,34 +300,31 @@ async def csv_upload(
 
         return most_recent_row[column]
     
-    def merge_rows_for_patient(rows, patient_row_index):
-        for column in CSV_HEADING_OBJECTS:
-            heading = column["heading"]
+    def merge_rows_for_patient(column, rows, patient_row_index):
+        heading = column["heading"]
 
-            model = column.get("model")
-            model_field = column.get("model_field")
+        model = column.get("model")
+        model_field = column.get("model_field")
 
-            if model in ["Patient", "Transfer"]:
-                unique_values = rows[heading].dropna().unique()
+        if model in ["Patient", "Transfer"]:
+            unique_values = rows[heading].dropna().unique()
 
-                if len(unique_values) > 1:
-                    unique_values_str = ", ".join(unique_values.astype(str))
-                    error_field = model_field if model_field else "__all__"
-                    errors_to_return[patient_row_index][error_field].append(
-                        f"Conflicting values for {heading}: {unique_values_str}"
-                    )
+            if len(unique_values) > 1:
+                unique_values_str = ", ".join(unique_values.astype(str))
+                error_field = model_field if model_field else "__all__"
+                errors_to_return[patient_row_index][error_field].append(
+                    f"Conflicting values for {heading}: {unique_values_str}"
+                )
 
-                match model_field:
-                    case "date_of_birth" | "sex" | "ethnicity":
-                        rows[heading] = most_recent_modal_value_by_visit_date(rows, heading)
-                    case "reason_leaving_service":
-                        rows[heading] = smallest_code_with_attached_date(rows, "Reason for leaving service", "Date of leaving service")
-                    case "diabetes_type" | "postcode" | "gp_practice_ods_code":
-                        rows[heading] = most_recent_by_visit_date(rows, heading)
-                    case "diagnosis_date":
-                        rows[heading] = smallest(rows, heading)
-        
-        return rows.iloc[0]
+            match model_field:
+                case "date_of_birth" | "sex" | "ethnicity":
+                    rows[heading] = most_recent_modal_value_by_visit_date(rows, heading)
+                case "reason_leaving_service":
+                    rows[heading] = smallest_code_with_attached_date(rows, "Reason for leaving service", "Date of leaving service")
+                case "diabetes_type" | "postcode" | "gp_practice_ods_code":
+                    rows[heading] = most_recent_by_visit_date(rows, heading)
+                case "diagnosis_date":
+                    rows[heading] = smallest(rows, heading)
 
     """
     Process the csv file and validate and save the data in the tables, parsing any errors
@@ -388,7 +385,11 @@ async def csv_upload(
         patient = None
 
         first_patient_row_index = int(rows.iloc[0]["row_index"])
-        patient_row = merge_rows_for_patient(rows, first_patient_row_index)
+
+        for column in CSV_HEADING_OBJECTS:
+            merge_rows_for_patient(column, rows, first_patient_row_index)
+        
+        patient_row = rows.iloc[0]
 
         try:
             patient_form = await validate_patient_using_form(patient_row, async_client)
