@@ -929,6 +929,8 @@ def test_total_cholesterol_value_below_range_form_fails_validation():
         form.is_valid() == False
     ), f"Form should be invalid as total cholesterol < 2, passed"
 
+    assert "total_cholesterol" in form.errors
+
 
 @pytest.mark.django_db
 def test_total_cholesterol_value_above_range_form_fails_validation():
@@ -948,6 +950,8 @@ def test_total_cholesterol_value_above_range_form_fails_validation():
     assert (
         form.is_valid() == False
     ), f"Form should be invalid as total cholesterol > 12 mmol/L, passed"
+
+    assert "total_cholesterol" not in form.errors
 
 
 @pytest.mark.django_db
