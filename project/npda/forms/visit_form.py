@@ -411,13 +411,13 @@ class VisitForm(forms.ModelForm):
         total_cholesterol = self.cleaned_data["total_cholesterol"]
 
         if total_cholesterol:
-            if total_cholesterol < 2:
+            if total_cholesterol < 0.9:
                 raise ValidationError(
-                    "Total Cholesterol Level (mmol/l) out of range. Cannot be below 2"
+                    "Total Cholesterol Level (mmol/l) out of range. Cannot be below 0.9"
                 )
-            elif total_cholesterol > 12:
+            elif total_cholesterol > 15:
                 raise ValidationError(
-                    "Total Cholesterol Level (mmol/l) out of range. Cannot be above 12"
+                    "Total Cholesterol Level (mmol/l) out of range. Cannot be above 15"
                 )
 
         return total_cholesterol
