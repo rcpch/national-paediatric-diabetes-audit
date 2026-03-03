@@ -362,7 +362,12 @@ async def csv_upload(
             # Unlikely case where there are no visit dates at all (to cover tests)
             return rows.iloc[0][column]
 
-        most_recent_row = rows.loc[rows["Visit/Appointment Date"].idxmax()]
+        rows_with_value = rows.dropna(subset=[column])
+
+        if len(rows_with_value) == 0:
+            return None
+
+        most_recent_row = rows.loc[rows_with_value["Visit/Appointment Date"].idxmax()]
 
         return most_recent_row[column]
 

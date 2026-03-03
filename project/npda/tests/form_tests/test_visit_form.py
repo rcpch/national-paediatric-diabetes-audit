@@ -938,15 +938,17 @@ def test_total_cholesterol_value_below_range_form_fails_validation():
 
     form = VisitForm(
         data={
-            "total_cholesterol": 1,
+            "total_cholesterol": 0.8,
             "total_cholesterol_date": "2026-01-01",
         },
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() is False, (
-        "Form should be invalid as total cholesterol < 2, passed"
+    assert form.is_valid() == False, (
+        f"Form should be invalid as total cholesterol < 0.9, passed"
     )
+
+    assert "total_cholesterol" in form.errors
 
 
 @pytest.mark.django_db
@@ -964,8 +966,8 @@ def test_total_cholesterol_value_above_range_form_fails_validation():
         initial={"patient": patient},
     )
     # Trigger the cleaners
-    assert form.is_valid() is False, (
-        "Form should be invalid as total cholesterol > 12 mmol/L, passed"
+    assert form.is_valid() == False, (
+        f"Form should be invalid as total cholesterol > 15 mmol/L, passed"
     )
 
 
