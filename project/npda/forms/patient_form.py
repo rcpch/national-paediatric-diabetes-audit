@@ -130,7 +130,12 @@ class PatientForm(forms.ModelForm):
             self.audit_period.get_dataset_year() if self.audit_period else 2021
         )
         super().__init__(*args, **kwargs)
+        self._init_fields_by_dataset_year()
 
+    def _init_fields_by_dataset_year(self):
+        """
+        Initialize form fields based on the dataset year.
+        """
         # Determine which patient fields should be presented for this dataset year
         if self.dataset_year == 2026:
             allowed_fields = list(PATIENT_FIELD_HEADINGS_2026.keys())
