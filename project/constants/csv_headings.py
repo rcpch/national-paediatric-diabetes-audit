@@ -807,7 +807,7 @@ CSV_HEADING_OBJECTS_2026 = (
 )
 
 
-def get_csv_heading_objects(dataset_year=None):
+def get_csv_heading_objects(dataset_year):
     """
     Returns the appropriate CSV heading objects for the given dataset year.
 
