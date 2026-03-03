@@ -319,119 +319,6 @@ CSV_HEADING_OBJECTS = (
 # Combined CSV heading objects (use for backward compatibility)
 CSV_HEADING_OBJECTS_2021 = CSV_HEADING_OBJECTS
 
-# Additional/changed headings for 2026+ dataset
-CSV_HEADING_OBJECTS_2026_ADDITIONS = (
-    # Changed headings (2026 versions)
-    {
-        "heading": "Sex assigned at birth",
-        "model_field": "sex",
-        "model": "Patient",
-        "alternative_headings": ["Stated gender"],  # Accept old format too
-    },
-    # New fields for 2026
-    {
-        "heading": "Has the patient had a diagnosis of Attention Deficit Hyperactivity Disorder (ADHD) or Autism Spectrum Disorder (ASD)?",
-        "model_field": "adhd_asd_status",
-        "model": "Patient",
-    },
-    {
-        "heading": "Does the patient have a diagnosis of a learning disability?",
-        "model_field": "learning_disability_status",
-        "model": "Patient",
-    },
-    {
-        "heading": "Insulin regime at time of visit",
-        "model_field": "insulin_regime",
-        "model": "Visit",
-    },
-    {
-        "heading": "Other (non-insulin) blood glucose lowering medication at time of visit",
-        "model_field": "non_insulin_medication",
-        "model": "Visit",
-    },
-    {
-        "heading": "Has lifestyle and dietary modification been recommended to reduce blood glucose levels?",
-        "model_field": "lifestyle_dietary_modification",
-        "model": "Visit",
-    },
-    {
-        "heading": "Was the patient using a continuous glucose monitor (CGM) at time of visit?",
-        "model_field": "cgm_use",
-        "model": "Visit",
-    },
-    {
-        "heading": "Did the patient receive immunotherapy prior to or after the diagnosis of stage 3 Type 1 diabetes?",
-        "model_field": "immunotherapy_received",
-        "model": "Patient",
-    },
-    {
-        "heading": "Date immunotherapy started",
-        "model_field": "immunotherapy_date",
-        "model": "Patient",
-    },
-    {
-        "heading": "Does the patient smoke and/or vape",
-        "model_field": "smoking_vaping_status",
-        "model": "Visit",
-        "alternative_headings": ["Does the patient smoke?"],  # Accept old format too
-    },
-    {
-        "heading": "Date of offer of smoking cessation advice (if patient is a current smoker)",
-        "model_field": "smoking_cessation_referral_date",
-        "model": "Visit",
-        "alternative_headings": [
-            "Date of offer of referral to smoking cessation service (if patient is a current smoker)"
-        ],
-    },
-    {
-        "heading": "Date of Annual Psychological Screening Assessment",
-        "model_field": "psychological_screening_assessment_date",
-        "model": "Visit",
-        "alternative_headings": [
-            "Observation Date - Psychological Screening Assessment"
-        ],
-    },
-    {
-        "heading": "Following annual psychological screening, was the patient assessed as requiring additional psychological support outside of routine care?",
-        "model_field": "psychological_additional_support_status",
-        "model": "Visit",
-        "alternative_headings": [
-            "Was the patient assessed as requiring additional psychological/CAMHS support outside of MDT clinics?"
-        ],
-    },
-    {
-        "heading": "Was the patient offered an additional appointment with a mental health professional as part of the diabetes MDT?",
-        "model_field": "mental_health_appointment_offered",
-        "model": "Visit",
-    },
-    {
-        "heading": "Date of Level 3 carbohydrate counting education received",
-        "model_field": "carbohydrate_counting_level_three_education_date",
-        "model": "Visit",
-        "alternative_headings": [
-            "Date Level 3 carbohydrate counting education received"
-        ],
-    },
-    {
-        "heading": "Was the patient offered an additional appointment with a paediatric dietitian during the audit year?",
-        "model_field": "dietician_additional_appointment_offered",
-        "model": "Visit",
-        "alternative_headings": [
-            "Was the patient offered an additional appointment with a paediatric dietitian?"
-        ],
-    },
-    {
-        "heading": "Initial pH at admission",
-        "model_field": "initial_ph_admission",
-        "model": "Visit",
-    },
-    {
-        "heading": "Initial Standard bicarbonate at admission (mmol/l)",
-        "model_field": "initial_bicarbonate_admission",
-        "model": "Visit",
-    },
-)
-
 CSV_HEADING_OBJECTS_2026 = (
     # patient
     {
@@ -1059,13 +946,6 @@ CSV_DATA_TYPES_MINUS_DATES = {
     "Only complete if OTHER selected: Reason for admission (free text)": "string",
 }
 
-NONNULL_FIELDS = [
-    "Date of Birth",
-    "Diabetes Type",
-    "PDU Number",
-    "Visit/Appointment Date",
-]
-
 
 def get_csv_heading_objects_for_year_and_unique_identifier(
     dataset_year=2021, unique_identifier="england"
@@ -1091,7 +971,7 @@ def get_csv_heading_objects_for_year_and_unique_identifier(
 
 
 def get_all_visit_dates(dataset_year=None):
-    """Returns all the field headings for a the given dataset year vists"""
+    """Returns all the field headings for a the given dataset year vists. Used in test_all_visit_dates"""
     if dataset_year and dataset_year >= 2026:
         return ALL_VISIT_DATES_2026
     else:
