@@ -37,13 +37,6 @@ def most_recent_by_visit_date(rows, column):
 
     return most_recent_row[column]
 
-def report_conflicting_values(unique_values, model_field, patient_row_index, heading, errors_to_return):
-    unique_values_str = ", ".join(unique_values.astype(str))
-    error_field = model_field if model_field else "__all__"
-    errors_to_return[patient_row_index][error_field].append(
-        f"Conflicting values for {heading}: {unique_values_str}"
-    )
-
 def merge_patient_rows_for_column(identifier_heading, column, rows, patient_row_index, errors_to_return):
     heading = column["heading"]
 
@@ -54,7 +47,11 @@ def merge_patient_rows_for_column(identifier_heading, column, rows, patient_row_
         unique_values = rows[heading].dropna().unique()
 
         if len(unique_values) > 1:
-            report_conflicting_values(unique_values, model_field, patient_row_index, heading, errors_to_return)
+            unique_values_str = ", ".join(unique_values.astype(str))
+            error_field = model_field if model_field else "__all__"
+            errors_to_return[patient_row_index][error_field].append(
+                f"Conflicting values for {heading}: {unique_values_str}"
+            )
 
         match model_field:
             case "date_of_birth" | "sex" | "ethnicity":
