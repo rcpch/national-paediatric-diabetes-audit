@@ -1,4 +1,52 @@
 from project.constants.csv_headings import CSV_HEADING_OBJECTS
+from project.constants.sex_types import SEX_TYPE
+
+
+def merge_sex_values(values_by_date):
+    UNKNOWN = SEX_TYPE[-1][0] # 99
+
+    # Moving from UNKNOWN to known is not an error (but moving back to it is)
+    seen_non_unkown_value = False
+    seen_unknown_value_before_non_unknown_value = False
+    
+    acc = {}
+
+    for (date, value) in values_by_date:
+        if value == UNKNOWN and not seen_non_unkown_value:
+            seen_unknown_value_before_non_unknown_value = True
+            continue
+        
+        seen_non_unkown_value = True
+
+        if value in acc:
+            acc[value]["count"] += 1
+
+            if date > acc[value]["most_recent_date"]:
+                acc[value]["most_recent_date"] = date
+        else:
+            acc[value] = {
+                "count": 1,
+                "most_recent_date": date,
+            }
+
+    
+    if len(acc) == 0:
+        if seen_unknown_value_before_non_unknown_value:
+            return UNKNOWN, False # not inconsistent, just unknown
+        
+        return None, True # no information at all, flag as error
+    
+    sorted_values = sorted(acc.items(), key=lambda item: (item[1]["count"], item[1]["most_recent_date"]))
+
+    most_common_value = sorted_values[-1][0]
+
+    flag_errors = len(acc.keys()) > 1
+
+    return most_common_value, flag_errors
+    
+
+
+
 
 def most_recent_modal_value_by_visit_date(identifier_heading, rows, column):
     # NPDA analysis has this notion of "Most up-to-date valid mode"
