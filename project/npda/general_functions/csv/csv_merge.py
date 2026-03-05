@@ -45,15 +45,18 @@ def most_recent_modal_value_by_visit_date(values_by_date, unknown_value):
 
     return most_common_value, flag_errors
 
+
 def smallest(rows, column):
     if len(rows) > 0:
         return rows[column].min()
+
 
 def smallest_code_with_attached_date(rows, code_column, date_column):
     rows_with_leaving_service = rows.dropna(subset=[date_column]).sort_values(by=code_column)
 
     if len(rows_with_leaving_service) > 0:
         return rows_with_leaving_service.iloc[0][code_column]
+
 
 def most_recent_by_visit_date(rows, column):
     if rows['Visit/Appointment Date'].isnull().all():
@@ -68,6 +71,7 @@ def most_recent_by_visit_date(rows, column):
     most_recent_row = rows.loc[rows_with_value['Visit/Appointment Date'].idxmax()]
 
     return most_recent_row[column]
+
 
 def merge_patient_rows_for_column(identifier_heading, column, rows, patient_row_index, errors_to_return):
     heading = column["heading"]
@@ -84,21 +88,26 @@ def merge_patient_rows_for_column(identifier_heading, column, rows, patient_row_
         match model_field:
             case "date_of_birth":
                 rows[heading], flag_values = most_recent_modal_value_by_visit_date(values_by_date, unknown_value=None)
+            
             case "sex":
                 rows[heading], flag_values = most_recent_modal_value_by_visit_date(values_by_date, unknown_value=SEX_TYPE[-1][0])
+            
             case "ethnicity":
                 rows[heading], flag_values = most_recent_modal_value_by_visit_date(values_by_date, unknown_value=ETHNICITIES[-1][0])
+            
             case "reason_leaving_service":
                 rows[heading] = smallest_code_with_attached_date(rows, "Reason for leaving service", "Date of leaving service")
-                flag_values = True
-            case "diabetes_type" | "postcode" | "gp_practice_ods_code":
-                rows[heading] = most_recent_by_visit_date(rows, heading)
-                flag_values = True
+                flag_values = len(unique_values) > 1
+            
             case "diagnosis_date":
                 rows[heading] = smallest(rows, heading)
-                flag_values = True
+                flag_values = len(unique_values) > 1
+            
+            case "diabetes_type" | "postcode" | "gp_practice_ods_code":
+                rows[heading] = most_recent_by_visit_date(rows, heading)
+                flag_values = False # not an error if these change
         
-        if len(unique_values) > 1 and flag_values:
+        if flag_values:
             unique_values_str = ", ".join(unique_values.astype(str))
             error_field = model_field if model_field else "__all__"
             errors_to_return[patient_row_index][error_field].append(
