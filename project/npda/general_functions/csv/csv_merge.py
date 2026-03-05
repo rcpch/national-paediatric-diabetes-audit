@@ -58,21 +58,6 @@ def smallest_code_with_attached_date(rows, code_column, date_column):
         return rows_with_leaving_service.iloc[0][code_column]
 
 
-def most_recent_by_visit_date(rows, column):
-    if rows['Visit/Appointment Date'].isnull().all():
-        # Unlikely case where there are no visit dates at all (to cover tests)
-        return rows.iloc[0][column]
-
-    rows_with_value = rows.dropna(subset=[column])
-
-    if len(rows_with_value) == 0:
-        return None
-
-    most_recent_row = rows.loc[rows_with_value['Visit/Appointment Date'].idxmax()]
-
-    return most_recent_row[column]
-
-
 def merge_patient_rows_for_column(identifier_heading, column, rows, patient_row_index, errors_to_return):
     heading = column["heading"]
 
@@ -80,8 +65,10 @@ def merge_patient_rows_for_column(identifier_heading, column, rows, patient_row_
     model_field = column.get("model_field")
 
     if model in ["Patient", "Transfer"]:
-        values_by_date = ((row["Visit/Appointment Date"], row[heading]) for _, row in rows.iterrows() if pd.notnull(row[heading]))
         unique_values = rows[heading].dropna().unique()
+
+        values_by_date = ((row["Visit/Appointment Date"], row[heading]) for _, row in rows.iterrows() if pd.notnull(row[heading]))
+        values_by_date = sorted(values_by_date, key=lambda x: x[0]) # sort by date
 
         flag_values = False
 
@@ -104,7 +91,7 @@ def merge_patient_rows_for_column(identifier_heading, column, rows, patient_row_
                 flag_values = len(unique_values) > 1
             
             case "diabetes_type" | "postcode" | "gp_practice_ods_code":
-                rows[heading] = most_recent_by_visit_date(rows, heading)
+                rows[heading] = values_by_date[-1][1] if len(values_by_date) > 0 else None # most recent value by date
                 flag_values = False # not an error if these change
         
         if flag_values:
