@@ -76,7 +76,7 @@ def merge_patient_rows_for_column(identifier_heading, column, rows, patient_row_
     model_field = column.get("model_field")
 
     if model in ["Patient", "Transfer"]:
-        values_by_date = ((row["Visit/Appointment Date"], row[heading]) for _, row in rows.iterrows() if pd.notnull(row[heading]) and pd.notnull(row["Visit/Appointment Date"]))
+        values_by_date = ((row["Visit/Appointment Date"], row[heading]) for _, row in rows.iterrows() if pd.notnull(row[heading]))
         unique_values = rows[heading].dropna().unique()
 
         flag_values = False
@@ -90,10 +90,13 @@ def merge_patient_rows_for_column(identifier_heading, column, rows, patient_row_
                 rows[heading], flag_values = most_recent_modal_value_by_visit_date(values_by_date, unknown_value=ETHNICITIES[-1][0])
             case "reason_leaving_service":
                 rows[heading] = smallest_code_with_attached_date(rows, "Reason for leaving service", "Date of leaving service")
+                flag_values = True
             case "diabetes_type" | "postcode" | "gp_practice_ods_code":
                 rows[heading] = most_recent_by_visit_date(rows, heading)
+                flag_values = True
             case "diagnosis_date":
                 rows[heading] = smallest(rows, heading)
+                flag_values = True
         
         if len(unique_values) > 1 and flag_values:
             unique_values_str = ", ".join(unique_values.astype(str))
