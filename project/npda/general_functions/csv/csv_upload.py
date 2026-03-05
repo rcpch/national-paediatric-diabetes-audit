@@ -35,6 +35,7 @@ from project.npda.forms.visit_form import VisitForm
 from project.npda.forms.external_patient_validators import validate_patient_async
 from project.npda.forms.external_visit_validators import validate_visit_async
 from project.npda.general_functions.csv.csv_clean import csv_clean
+from project.npda.general_functions.csv.csv_merge import merge_rows_for_patient
 from project.npda.models import (
     Patient, 
     Transfer,
@@ -262,72 +263,7 @@ async def csv_upload(
                 transfer_fields[field] = None
 
         return transfer_fields
-    
-    def most_recent_modal_value_by_visit_date(rows, column):
-        # NPDA analysis has this notion of "Most up-to-date valid mode"
-        # My understanding of it is that you should:
-        #  - Work out the modal (most common) value
-        #  - If there's more than one mode, return the one from the row with the most recent visit
-        values_by_count_and_last_visit_date = rows.groupby(column).agg(
-            Count=(identifier_heading, 'count'),
-            LastVisitDate=('Visit/Appointment Date', 'max')
-        ).sort_values(by=['Count', 'LastVisitDate'])
 
-        if len(values_by_count_and_last_visit_date) > 0:
-            return values_by_count_and_last_visit_date.iloc[-1].name
-    
-    def smallest(rows, column):
-        if len(rows) > 0:
-            return rows[column].min()
-
-    def smallest_code_with_attached_date(rows, code_column, date_column):
-        rows_with_leaving_service = rows.dropna(subset=[date_column]).sort_values(by=code_column)
-
-        if len(rows_with_leaving_service) > 0:
-            return rows_with_leaving_service.iloc[0][code_column]
-    
-    def most_recent_by_visit_date(rows, column):
-        if rows['Visit/Appointment Date'].isnull().all():
-            # Unlikely case where there are no visit dates at all (to cover tests)
-            return rows.iloc[0][column]
-
-        rows_with_value = rows.dropna(subset=[column])
-
-        if len(rows_with_value) == 0:
-            return None
-
-        most_recent_row = rows.loc[rows_with_value['Visit/Appointment Date'].idxmax()]
-
-        return most_recent_row[column]
-    
-    def merge_rows_for_patient(rows, patient_row_index):
-        for column in CSV_HEADING_OBJECTS:
-            heading = column["heading"]
-
-            model = column.get("model")
-            model_field = column.get("model_field")
-
-            if model in ["Patient", "Transfer"]:
-                unique_values = rows[heading].dropna().unique()
-
-                if len(unique_values) > 1:
-                    unique_values_str = ", ".join(unique_values.astype(str))
-                    error_field = model_field if model_field else "__all__"
-                    errors_to_return[patient_row_index][error_field].append(
-                        f"Conflicting values for {heading}: {unique_values_str}"
-                    )
-
-                match model_field:
-                    case "date_of_birth" | "sex" | "ethnicity":
-                        rows[heading] = most_recent_modal_value_by_visit_date(rows, heading)
-                    case "reason_leaving_service":
-                        rows[heading] = smallest_code_with_attached_date(rows, "Reason for leaving service", "Date of leaving service")
-                    case "diabetes_type" | "postcode" | "gp_practice_ods_code":
-                        rows[heading] = most_recent_by_visit_date(rows, heading)
-                    case "diagnosis_date":
-                        rows[heading] = smallest(rows, heading)
-        
-        return rows.iloc[0]
 
     """
     Process the csv file and validate and save the data in the tables, parsing any errors
@@ -388,7 +324,9 @@ async def csv_upload(
         patient = None
 
         first_patient_row_index = int(rows.iloc[0]["row_index"])
-        patient_row = merge_rows_for_patient(rows, first_patient_row_index)
+
+        merge_rows_for_patient(identifier_heading, rows, first_patient_row_index, errors_to_return)
+        patient_row = rows.iloc[0]
 
         try:
             patient_form = await validate_patient_using_form(patient_row, async_client)
