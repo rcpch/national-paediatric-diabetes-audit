@@ -14,7 +14,16 @@ DOCKER_BUILDKIT=0 docker compose build django
 # Must start django service so s/test can exec into it
 DOCKER_BUILDKIT=0 docker compose up -d postgis redis django
 
-# Run tests
-s/test
+# Wait for services to be ready
+sleep 5
+
+# Run tests with aggressive memory optimizations for CI
+docker compose exec django pytest \
+  --no-header \
+  --tb=line \
+  -o log_cli=false \
+  -p no:warnings \
+  --maxfail=1 \
+  --capture=no
 
 docker compose down -v
