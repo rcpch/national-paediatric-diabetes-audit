@@ -11,7 +11,8 @@ az storage file download \
 DOCKER_BUILDKIT=0 docker compose build django
 
 # Only dependencies needed for tests (reduces memory, avoids running flower/mkdocs/etc)
-DOCKER_BUILDKIT=0 docker compose up -d postgis redis
+# Must start django service so s/test can exec into it
+DOCKER_BUILDKIT=0 docker compose up -d postgis redis django
 
 # Run tests
 s/test
