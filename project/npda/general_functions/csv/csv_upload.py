@@ -159,25 +159,6 @@ async def csv_upload(
 
     # Helper functions
     def csv_value_to_model_value(model_field, value):
-        # Handle pandas Series (duplicate column labels or mis-shaped rows)
-        if isinstance(value, pd.Series):
-            try:
-                # Prefer non-null values; if all null return None
-                non_na = value.dropna()
-                if len(non_na) == 0:
-                    return None
-                # If all remaining values are the same, take that value
-                if non_na.nunique(dropna=True) == 1:
-                    value = non_na.iloc[0]
-                else:
-                    # Fall back to the first non-null element
-                    value = non_na.iloc[0]
-            except Exception:
-                try:
-                    value = value.iloc[0]
-                except Exception:
-                    value = None
-
         if pd.isnull(value):
             return None
 
@@ -189,21 +170,15 @@ async def csv_upload(
         return value.item() if isinstance(value, np.generic) else value
 
     def row_to_dict(row, model):
+        # Use the resolved CSV_HEADINGS (depends on dataset_year and PDU)
         ret = {}
+
         for entry in CSV_HEADINGS:
             if "model" in entry and apps.get_model("npda", entry["model"]) == model:
                 model_field_name = entry["model_field"]
                 model_field_definition = model._meta.get_field(model_field_name)
 
-                # Use Series.get to avoid KeyError when a heading is absent
-                try:
-                    csv_value = row.get(entry["heading"], None)
-                except Exception:
-                    # Fallback for index types that don't support .get
-                    try:
-                        csv_value = row[entry["heading"]]
-                    except Exception:
-                        csv_value = None
+                csv_value = row[entry["heading"]]
                 model_field_value = csv_value_to_model_value(
                     model_field_definition, csv_value
                 )
@@ -215,10 +190,9 @@ async def csv_upload(
     async def validate_patient_using_form(row, async_client):
         # Date and reason leaving service are validated by the patient form but saved in Transfer
         fields = row_to_dict(row, Patient) | row_to_dict(row, Transfer)
+
         form = PatientForm(
-            fields,
-            paediatric_diabetes_unit=pdu,
-            audit_period=submission.audit_period,
+            fields, paediatric_diabetes_unit=pdu, audit_period=submission.audit_period
         )
         form.async_validation_results = await validate_patient_async(
             postcode=fields["postcode"],
@@ -284,6 +258,7 @@ async def csv_upload(
             return False
 
     def save_errors_and_retain_valid_fields(row_index, form):
+        # We want to retain fields so that we can show them in the user interface
         # Use the field value from cleaned_data, falling back to data if it's not there
         # We can't retain invalid fields however as they might fail database validation
         for key, value in form.cleaned_data.items():
@@ -307,6 +282,7 @@ async def csv_upload(
                 for error in errors:
                     model_errors[field].append({"code": "", "message": error})
 
+        # From forms. ValidationErrors.
         for field, errors in form.errors.get_json_data().items():
             model_errors[field] += errors
 
@@ -323,90 +299,12 @@ async def csv_upload(
 
     def get_valid_transfer_fields(row, patient_form):
         transfer_fields = row_to_dict(row, Transfer) | {"paediatric_diabetes_unit": pdu}
+
         for field in transfer_fields:
             if not can_save_field(patient_form, field):
                 transfer_fields[field] = None
 
         return transfer_fields
-
-    def most_recent_modal_value_by_visit_date(rows, column):
-        # NPDA analysis has this notion of "Most up-to-date valid mode"
-        # My understanding of it is that you should:
-        #  - Work out the modal (most common) value
-        #  - If there's more than one mode, return the one from the row with the most recent visit
-        values_by_count_and_last_visit_date = (
-            rows.groupby(column)
-            .agg(
-                Count=(identifier_heading, "count"),
-                LastVisitDate=("Visit/Appointment Date", "max"),
-            )
-            .sort_values(by=["Count", "LastVisitDate"])
-        )
-
-        if len(values_by_count_and_last_visit_date) > 0:
-            return values_by_count_and_last_visit_date.iloc[-1].name
-
-    def smallest(rows, column):
-        if len(rows) > 0:
-            return rows[column].min()
-
-    def smallest_code_with_attached_date(rows, code_column, date_column):
-        rows_with_leaving_service = rows.dropna(subset=[date_column]).sort_values(
-            by=code_column
-        )
-
-        if len(rows_with_leaving_service) > 0:
-            return rows_with_leaving_service.iloc[0][code_column]
-
-    def most_recent_by_visit_date(rows, column):
-        if rows["Visit/Appointment Date"].isnull().all():
-            # Unlikely case where there are no visit dates at all (to cover tests)
-            return rows.iloc[0][column]
-
-        rows_with_value = rows.dropna(subset=[column])
-
-        if len(rows_with_value) == 0:
-            return None
-
-        most_recent_row = rows.loc[rows_with_value["Visit/Appointment Date"].idxmax()]
-
-        return most_recent_row[column]
-
-    def merge_rows_for_patient(rows, patient_row_index):
-        # Use the resolved CSV_HEADINGS (depends on dataset_year and PDU)
-        for column in CSV_HEADINGS:
-            heading = column["heading"]
-
-            model = column.get("model")
-            model_field = column.get("model_field")
-
-            if model in ["Patient", "Transfer"]:
-                unique_values = rows[heading].dropna().unique()
-
-                if len(unique_values) > 1:
-                    unique_values_str = ", ".join(unique_values.astype(str))
-                    error_field = model_field if model_field else "__all__"
-                    errors_to_return[patient_row_index][error_field].append(
-                        f"Conflicting values for {heading}: {unique_values_str}"
-                    )
-
-                match model_field:
-                    case "date_of_birth" | "sex" | "ethnicity":
-                        rows[heading] = most_recent_modal_value_by_visit_date(
-                            rows, heading
-                        )
-                    case "reason_leaving_service":
-                        rows[heading] = smallest_code_with_attached_date(
-                            rows,
-                            "Reason for leaving service",
-                            "Date of leaving service",
-                        )
-                    case "diabetes_type" | "postcode" | "gp_practice_ods_code":
-                        rows[heading] = most_recent_by_visit_date(rows, heading)
-                    case "diagnosis_date":
-                        rows[heading] = smallest(rows, heading)
-
-        return rows.iloc[0]
 
     """
     Process the csv file and validate and save the data in the tables, parsing any errors
@@ -465,11 +363,14 @@ async def csv_upload(
 
     async def process_rows_for_patient(rows, async_client):
         patient = None
-
         first_patient_row_index = int(rows.iloc[0]["row_index"])
 
         merge_rows_for_patient(
-            identifier_heading, rows, first_patient_row_index, errors_to_return
+            identifier_heading,
+            rows,
+            first_patient_row_index,
+            errors_to_return,
+            dataset_year,
         )
         patient_row = rows.iloc[0]
 
