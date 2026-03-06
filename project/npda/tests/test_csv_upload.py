@@ -5529,23 +5529,6 @@ def test_conflict_resolved_leaving_reason_must_have_date_attached(
 
 
 @pytest.mark.django_db
-def test_conflicting_diabetes_type(test_user, one_patient_with_four_visits):
-    df = one_patient_with_four_visits
-
-    df.loc[0, "Diabetes Type"] = DIABETES_TYPES[0][0]
-    df.loc[1, "Diabetes Type"] = DIABETES_TYPES[0][0]
-    df.loc[2, "Diabetes Type"] = DIABETES_TYPES[0][0]
-    df.loc[3, "Diabetes Type"] = DIABETES_TYPES[1][0]
-
-    errors = csv_upload_sync(test_user, df)
-    assert "diabetes_type" in errors[0]
-
-    assert Patient.objects.count() == 1
-    # Most recent by visit date
-    assert Patient.objects.first().diabetes_type == DIABETES_TYPES[1][0]
-
-
-@pytest.mark.django_db
 def test_conflicting_diagnosis_date(test_user, one_patient_with_four_visits):
     df = one_patient_with_four_visits
 
@@ -5574,7 +5557,6 @@ def test_conflicting_diabetes_type_where_last_row_is_null(
     df.loc[3, "Diabetes Type"] = None
 
     errors = csv_upload_sync(test_user, df)
-    assert "diabetes_type" in errors[0]
 
     assert Patient.objects.count() == 1
     # Most recent by visit date

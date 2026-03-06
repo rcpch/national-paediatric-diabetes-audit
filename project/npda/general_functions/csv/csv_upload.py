@@ -36,6 +36,7 @@ from project.npda.forms.visit_form import VisitForm
 from project.npda.forms.external_patient_validators import validate_patient_async
 from project.npda.forms.external_visit_validators import validate_visit_async
 from project.npda.general_functions.csv.csv_clean import csv_clean
+from project.npda.general_functions.csv.csv_merge import merge_rows_for_patient
 from project.npda.models import Patient, Transfer, Visit, Submission, VisitActivity
 
 
@@ -466,7 +467,11 @@ async def csv_upload(
         patient = None
 
         first_patient_row_index = int(rows.iloc[0]["row_index"])
-        patient_row = merge_rows_for_patient(rows, first_patient_row_index)
+
+        merge_rows_for_patient(
+            identifier_heading, rows, first_patient_row_index, errors_to_return
+        )
+        patient_row = rows.iloc[0]
 
         try:
             patient_form = await validate_patient_using_form(patient_row, async_client)
