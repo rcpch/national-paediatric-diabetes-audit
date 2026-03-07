@@ -48,20 +48,25 @@ jobs:
         env:
           NPDA_DATASET_YEARS: "2021"
           NPDA_PYTEST_MARKER: dataset
+          PYTEST_ADDOPTS: "-o log_cli=false"
         run: s/test
 
       - name: "Run dataset tests (2026)"
         env:
           NPDA_DATASET_YEARS: "2026"
           NPDA_PYTEST_MARKER: dataset
+          PYTEST_ADDOPTS: "-o log_cli=false"
         run: s/test
 
       - name: "Run non-dataset tests"
         env:
           NPDA_PYTEST_MARKER: "not dataset"
+          PYTEST_ADDOPTS: "-o log_cli=false"
         run: s/test
 
       - name: "Run performance tests"
+        env:
+          PYTEST_ADDOPTS: "-o log_cli=false"
         run: docker compose exec django pytest -v -m performance
 
       - name: "Shutdown containers"
