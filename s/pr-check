@@ -26,8 +26,27 @@ restart_django() {
   sleep 5
 }
 
-echo "Running KPI calculation tests..."
-docker compose exec django pytest project/npda/tests/kpi_calculations/ \
+# Split KPI tests into two halves to stay within CI memory limits.
+# The 2026 dataset adds many Visit model fields; each PatientFactory/VisitFactory
+# call is heavier and memory accumulates over a long session.
+echo "Running KPI calculation tests (part 1/2)..."
+docker compose exec django pytest \
+  project/npda/tests/kpi_calculations/test_calculate_kpis.py \
+  project/npda/tests/kpi_calculations/test_dashboard_kpi_calculations.py \
+  project/npda/tests/kpi_calculations/test_kpis_13_20.py \
+  project/npda/tests/kpi_calculations/test_kpis_21_23.py \
+  project/npda/tests/kpi_calculations/test_kpis_24.py \
+  --no-header --tb=line -o log_cli=false -p no:warnings
+
+restart_django
+
+echo "Running KPI calculation tests (part 2/2)..."
+docker compose exec django pytest \
+  project/npda/tests/kpi_calculations/test_kpis_1_12.py \
+  project/npda/tests/kpi_calculations/test_kpis_25_32.py \
+  project/npda/tests/kpi_calculations/test_kpis_33_40.py \
+  project/npda/tests/kpi_calculations/test_kpis_41_43.py \
+  project/npda/tests/kpi_calculations/test_kpis_44_49.py \
   --no-header --tb=line -o log_cli=false -p no:warnings
 
 restart_django
