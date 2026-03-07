@@ -7,9 +7,15 @@ import time
 
 import pytest
 from bs4 import BeautifulSoup
+from django.urls import reverse
 
 from project.npda.general_functions.data_generator_extended import (
-    AgeRange, FakePatientCreator, HbA1cTargetRange, VisitType)
+    AgeRange,
+    FakePatientCreator,
+    HbA1cTargetRange,
+    VisitType,
+)
+from project.npda.models.audit_period import AuditPeriod
 from project.npda.models.npda_user import NPDAUser
 from project.npda.models.submission import Submission
 from project.npda.tests.test_csv_upload import ALDER_HEY_PZ_CODE
@@ -26,7 +32,6 @@ def test_dashboard_view_response_time(
     AUDIT_END_DATE,
     seed_groups_fixture,
     seed_users_fixture,
-    seed_patients_fixture,
     client,
 ):
     """Basic performance test for the dashboard view response time with lots of patients."""
@@ -53,7 +58,9 @@ def test_dashboard_view_response_time(
             audit_start_date=AUDIT_START_DATE,
             audit_end_date=AUDIT_END_DATE,
         )
-        logger.info(f'Seeding {N_PATIENTS} patients with {len(VISIT_TYPES)} visit types...')
+        logger.info(
+            f"Seeding {N_PATIENTS} patients with {len(VISIT_TYPES)} visit types..."
+        )
         new_pts = fake_patient_creator.create_and_save_fake_patients(
             n=N_PATIENTS,
             age_range=AgeRange.AGE_11_15,
@@ -64,8 +71,8 @@ def test_dashboard_view_response_time(
             visit_types=VISIT_TYPES,
             visit_kwargs={"is_valid": True},
         )
-        logger.info('DONE!')
-        logger.info('Creating submission...')
+        logger.info("DONE!")
+        logger.info("Creating submission...")
         new_submission = Submission.objects.create(
             paediatric_diabetes_unit=ah_user.organisation_employers.first(),
             audit_year=AUDIT_START_DATE.year,
@@ -76,15 +83,27 @@ def test_dashboard_view_response_time(
 
         # Add patients to submission
         new_submission.patients.add(*new_pts)
-        logger.info('DONE!')
+        logger.info("DONE!")
 
     def get_top_level_dashboard_view_response():
         start_dashboard = time.time()
         logger.info("\t⏳ Getting top-level dashboard view response...")
-        response = client.get("/dashboard")
+        response = client.get(
+            reverse(
+                "pdu-dashboard",
+                kwargs={
+                    "audit_period": audit_period.slug,
+                    "pz_code": ALDER_HEY_PZ_CODE,
+                },
+            )
+        )
         elapsed_dashboard = time.time() - start_dashboard
 
-        logger.info(f"N_PATIENTS: {N_PATIENTS} * VISIT_TYPES: {len(VISIT_TYPES)}".center(80, "*"))
+        logger.info(
+            f"N_PATIENTS: {N_PATIENTS} * VISIT_TYPES: {len(VISIT_TYPES)}".center(
+                80, "*"
+            )
+        )
 
         # Check valid overall response within some leeway upperbound
         assert response.status_code == 200
@@ -99,6 +118,8 @@ def test_dashboard_view_response_time(
         # Extract All HTMX Requests + hx-vals from the rendered HTML
         for tag in soup.find_all(attrs={"hx-get": True}):
             url = tag["hx-get"]
+            if not url:
+                continue
             hx_vals = tag.get("hx-vals", "{}")
             try:
                 hx_vals_json = json.loads(hx_vals)
@@ -162,6 +183,8 @@ def test_dashboard_view_response_time(
 
     # Login
     client = login_and_verify_user(client, ah_user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
 
     # Now create patients
     seed_patients()

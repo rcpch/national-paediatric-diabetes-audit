@@ -73,6 +73,9 @@ from project.npda.tests.utils import login_and_verify_user
 from project.npda.tests.factories.patient_factory import PatientFactory
 
 
+pytestmark = pytest.mark.dataset
+
+
 MOCK_PATIENT_EXTERNAL_VALIDATION_RESULT = PatientExternalValidationResult(
     postcode=VALID_FIELDS["postcode"],
     gp_practice_ods_code=VALID_FIELDS["gp_practice_ods_code"],
@@ -155,11 +158,6 @@ RCPCH_PZ_CODE = "PZ999"
 def valid_df(dummy_sheets_folder):
     file = dummy_sheets_folder / "dummy_sheet_test.csv"
     return csv_parse(file).df
-
-
-@pytest.fixture(params=[2021, 2026])
-def dataset_year(request):
-    return request.param
 
 
 @pytest.fixture
@@ -5264,7 +5262,11 @@ def test_uploading_csv_against_incorrect_pdu(
     error_messages = list(get_messages(response.wsgi_request))
     assert error_messages[0].level_tag == "error"
 
-    assert Submission.objects.count() == 0, (
+    submissions_for_pdu = Submission.objects.filter(
+        audit_period=audit_period_for_dataset_year,
+        paediatric_diabetes_unit__pz_code=ALDER_HEY_PZ_CODE,
+    )
+    assert submissions_for_pdu.count() == 0, (
         "No submission should be created for incorrect PDU"
     )
 
@@ -5290,6 +5292,20 @@ def test_uploading_csv_with_conflicting_pdu_numbers(
         kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"},
     )
 
+    audit_period, _created = AuditPeriod.objects.get_or_create(
+        slug="2025-2026",
+        defaults={
+            "is_open": True,
+            "is_visible": True,
+            "start_date": date(2025, 4, 1),
+            "end_date": date(2026, 3, 31),
+        },
+    )
+    submission_count_before = Submission.objects.filter(
+        audit_period=audit_period,
+        paediatric_diabetes_unit__pz_code=ALDER_HEY_PZ_CODE,
+    ).count()
+
     # Feed file to view
     with open(tmp_csv_path, "rb") as csv_file:
         response = client.post(url, {"csv_upload": csv_file}, format="multipart")
@@ -5299,7 +5315,11 @@ def test_uploading_csv_with_conflicting_pdu_numbers(
     error_messages = list(get_messages(response.wsgi_request))
     assert error_messages[0].level_tag == "error"
 
-    assert Submission.objects.count() == 0, (
+    submission_count_after = Submission.objects.filter(
+        audit_period=audit_period,
+        paediatric_diabetes_unit__pz_code=ALDER_HEY_PZ_CODE,
+    ).count()
+    assert submission_count_after == submission_count_before, (
         "No submission should be created for incorrect PDU"
     )
 
@@ -5326,6 +5346,20 @@ def test_uploading_csv_with_pdu_number_missing_leading_pz(
         "pdu-upload-csv", kwargs={"pz_code": "PZ004", "audit_period": "2025-2026"}
     )
 
+    audit_period, _created = AuditPeriod.objects.get_or_create(
+        slug="2025-2026",
+        defaults={
+            "is_open": True,
+            "is_visible": True,
+            "start_date": date(2025, 4, 1),
+            "end_date": date(2026, 3, 31),
+        },
+    )
+    submission_count_before = Submission.objects.filter(
+        audit_period=audit_period,
+        paediatric_diabetes_unit__pz_code="PZ004",
+    ).count()
+
     # Feed file to view
     with open(tmp_csv_path, "rb") as csv_file:
         response = client.post(url, {"csv_upload": csv_file}, format="multipart")
@@ -5338,10 +5372,13 @@ def test_uploading_csv_with_pdu_number_missing_leading_pz(
     )
     assert response.url == redirect_url
 
-    assert Submission.objects.count() == 1, (
+    submission_count_after = Submission.objects.filter(
+        audit_period=audit_period,
+        paediatric_diabetes_unit__pz_code="PZ004",
+    ).count()
+    assert submission_count_after == submission_count_before + 1, (
         "Submission should be created for PDU with missing leading PZ"
     )
-    assert Submission.objects.first().paediatric_diabetes_unit.pz_code == "PZ004"
 
 
 @pytest.mark.django_db
@@ -5366,6 +5403,20 @@ def test_uploading_csv_with_pdu_number_missing_leading_zeros(
         "pdu-upload-csv", kwargs={"pz_code": "PZ004", "audit_period": "2025-2026"}
     )
 
+    audit_period, _created = AuditPeriod.objects.get_or_create(
+        slug="2025-2026",
+        defaults={
+            "is_open": True,
+            "is_visible": True,
+            "start_date": date(2025, 4, 1),
+            "end_date": date(2026, 3, 31),
+        },
+    )
+    submission_count_before = Submission.objects.filter(
+        audit_period=audit_period,
+        paediatric_diabetes_unit__pz_code="PZ004",
+    ).count()
+
     # Feed file to view
     with open(tmp_csv_path, "rb") as csv_file:
         response = client.post(url, {"csv_upload": csv_file}, format="multipart")
@@ -5378,10 +5429,13 @@ def test_uploading_csv_with_pdu_number_missing_leading_zeros(
     )
     assert response.url == redirect_url
 
-    assert Submission.objects.count() == 1, (
+    submission_count_after = Submission.objects.filter(
+        audit_period=audit_period,
+        paediatric_diabetes_unit__pz_code="PZ004",
+    ).count()
+    assert submission_count_after == submission_count_before + 1, (
         "Submission should be created for PDU with missing leading zeroes"
     )
-    assert Submission.objects.first().paediatric_diabetes_unit.pz_code == "PZ004"
 
 
 @pytest.mark.django_db

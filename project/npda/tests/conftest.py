@@ -5,6 +5,7 @@ Configures pytest fixtures for npda app tests.
 # standard imports
 
 import logging
+import os
 
 # third-party imports
 from datetime import date
@@ -45,6 +46,38 @@ register(NPDAUserFactory)  # => npdauser_factory
 register(OrganisationEmployerFactory)  # => npdauser_factory
 register(PaediatricsDiabetesUnitFactory)  # => npdauser_factory
 register(TransferFactory)  # => npdauser_factory
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--dataset-year",
+        action="append",
+        default=[],
+        help="Dataset year(s) to test (e.g. --dataset-year=2021)",
+    )
+
+
+def _dataset_years_from_config(pytestconfig):
+    opt = pytestconfig.getoption("--dataset-year")
+    if opt:
+        return [int(y) for y in opt]
+
+    env = os.getenv("NPDA_DATASET_YEARS")
+    if env:
+        return [int(y.strip()) for y in env.split(",") if y.strip()]
+
+    return [2021, 2026]
+
+
+def pytest_generate_tests(metafunc):
+    if "dataset_year" in metafunc.fixturenames:
+        years = _dataset_years_from_config(metafunc.config)
+        metafunc.parametrize("dataset_year", years)
+
+
+@pytest.fixture
+def dataset_year(request):
+    return request.param
 
 
 @pytest.fixture

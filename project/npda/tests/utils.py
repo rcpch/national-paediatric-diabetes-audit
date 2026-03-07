@@ -40,7 +40,7 @@ def create_submission(
     audit_start_date_or_audit_period: date | AuditPeriod,
     pz_code: str,
     csv_file_name: str | None = None,
-    csv_file: bytes | None = None
+    csv_file: bytes | None = None,
 ) -> Submission:
     """
 
@@ -55,18 +55,25 @@ def create_submission(
         audit_period = AuditPeriod.objects.get(start_date=audit_start_date)
 
     npda_user = NPDAUserFactory(
-            first_name="test",
-            role=test_user_audit_centre_reader_data.role,
-            # Assign flags based on user role
-            is_active=test_user_audit_centre_reader_data.is_active,
-            is_staff=test_user_audit_centre_reader_data.is_staff,
-            is_rcpch_audit_team_member=test_user_audit_centre_reader_data.is_rcpch_audit_team_member,
-            is_rcpch_staff=test_user_audit_centre_reader_data.is_rcpch_staff,
-            groups=[test_user_audit_centre_reader_data.group_name],
-            # Assign to PDU via organisation employer by passing in list of pz_codes
-            organisation_employers=[pz_code],
-        )
+        first_name="test",
+        role=test_user_audit_centre_reader_data.role,
+        # Assign flags based on user role
+        is_active=test_user_audit_centre_reader_data.is_active,
+        is_staff=test_user_audit_centre_reader_data.is_staff,
+        is_rcpch_audit_team_member=test_user_audit_centre_reader_data.is_rcpch_audit_team_member,
+        is_rcpch_staff=test_user_audit_centre_reader_data.is_rcpch_staff,
+        groups=[test_user_audit_centre_reader_data.group_name],
+        # Assign to PDU via organisation employer by passing in list of pz_codes
+        organisation_employers=[pz_code],
+    )
     pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
+
+    # Ensure a single active submission per PDU/year for tests that hit update_or_create.
+    Submission.objects.filter(
+        paediatric_diabetes_unit=pdu,
+        audit_year=audit_start_date.year,
+        submission_active=True,
+    ).update(submission_active=False)
 
     return Submission.objects.create(
         paediatric_diabetes_unit=pdu,
@@ -76,5 +83,5 @@ def create_submission(
         submission_by=npda_user,
         submission_active=True,
         csv_file_name=csv_file_name,
-        csv_file=csv_file
+        csv_file=csv_file,
     )

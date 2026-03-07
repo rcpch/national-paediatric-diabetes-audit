@@ -8,4 +8,18 @@
 # all arguments passed to this script are passed to pytest
 
 # *** The project's containers MUST BE RUNNING to execute tests inside it! ***
-docker compose exec django pytest -v $*
+extra_args=()
+if [ -n "${NPDA_PYTEST_MARKER:-}" ]; then
+	extra_args+=("-m" "(${NPDA_PYTEST_MARKER}) and not performance")
+fi
+
+if [ -n "${NPDA_DATASET_YEARS:-}" ]; then
+	docker compose exec \
+		-e NPDA_DATASET_YEARS="$NPDA_DATASET_YEARS" \
+		-e NPDA_PYTEST_MARKER="$NPDA_PYTEST_MARKER" \
+		django pytest -v "${extra_args[@]}" "$@"
+else
+	docker compose exec \
+		-e NPDA_PYTEST_MARKER="$NPDA_PYTEST_MARKER" \
+		django pytest -v "${extra_args[@]}" "$@"
+fi

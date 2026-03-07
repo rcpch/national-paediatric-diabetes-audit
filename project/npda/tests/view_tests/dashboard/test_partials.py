@@ -14,10 +14,9 @@ from project.npda.models import NPDAUser
 from project.npda.models.audit_period import AuditPeriod
 from project.npda.models.patient import Patient
 from project.npda.models.submission import Submission
+from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 from project.npda.tests.constants_for_tests import ALDER_HEY_PZ_CODE
-from project.npda.tests.factories import (
-    test_user_audit_centre_editor_data
-)
+from project.npda.tests.factories import test_user_audit_centre_editor_data
 from project.npda.tests.utils import login_and_verify_user
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
@@ -33,17 +32,20 @@ def setup(audit_period, patient_args):
         role=test_user_audit_centre_editor_data.role,
     ).first()
 
+    pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
+
     date_of_birth = audit_period.start_date - relativedelta(years=11, days=2)
 
     patient = PatientFactory(
         nhs_number="4444444444",
         diabetes_type=DIABETES_TYPES[0][0],  # T1DM
         date_of_birth=date_of_birth,
-        **patient_args
+        transfer__paediatric_diabetes_unit=pdu,
+        **patient_args,
     )
 
     submission = Submission.objects.create(
-        paediatric_diabetes_unit=user.organisation_employers.first(),
+        paediatric_diabetes_unit=pdu,
         audit_period=audit_period,
         audit_year=audit_period.start_date.year,
         submission_date=audit_period.start_date,
@@ -54,21 +56,26 @@ def setup(audit_period, patient_args):
 
     return user, patient
 
+
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1156
 @pytest.mark.django_db
 def test_count_of_patients_transitioning_to_adult_care_does_not_include_other_transfers(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
 ):
     audit_period = AuditPeriod.objects.get_default_audit_period()
 
-    user, patient = setup(audit_period, patient_args={
-        "diagnosis_date": audit_period.start_date - relativedelta(days=2), # complete year of care
-        "transfer__date_leaving_service": audit_period.start_date + relativedelta(days=2),
-        "transfer__reason_leaving_service": LEAVE_PDU_REASONS[1][0] # Moved out of area
-    })
+    user, patient = setup(
+        audit_period,
+        patient_args={
+            "diagnosis_date": audit_period.start_date
+            - relativedelta(days=2),  # complete year of care
+            "transfer__date_leaving_service": audit_period.start_date
+            + relativedelta(days=2),
+            "transfer__reason_leaving_service": LEAVE_PDU_REASONS[1][
+                0
+            ],  # Moved out of area
+        },
+    )
 
     # Need a visit in the audit period to be eligible
     VisitFactory(
@@ -81,10 +88,12 @@ def test_count_of_patients_transitioning_to_adult_care_does_not_include_other_tr
 
     client = login_and_verify_user(client, user)
 
-    response = client.get(reverse("pdu-get-transitioned-to-adult-service-partial", kwargs={
-        "audit_period": audit_period.slug,
-        "pz_code": ALDER_HEY_PZ_CODE
-    }))
+    response = client.get(
+        reverse(
+            "pdu-get-transitioned-to-adult-service-partial",
+            kwargs={"audit_period": audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE},
+        )
+    )
 
     assert response.status_code == HTTPStatus.OK
     assert response.context["number"] == 0
@@ -93,27 +102,33 @@ def test_count_of_patients_transitioning_to_adult_care_does_not_include_other_tr
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1203
 @pytest.mark.django_db
 def test_count_of_patients_transitioning_to_adult_care_includes_patients_without_visits(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
 ):
     audit_period = AuditPeriod.objects.get_default_audit_period()
 
-    user, _ = setup(audit_period, patient_args={
-        "diagnosis_date": audit_period.start_date - relativedelta(days=2), # complete year of care
-        "transfer__date_leaving_service": audit_period.start_date + relativedelta(days=2),
-        "transfer__reason_leaving_service": LEAVE_PDU_REASONS[0][0] # Transitioned to adult diabetes service
-    })
+    user, _ = setup(
+        audit_period,
+        patient_args={
+            "diagnosis_date": audit_period.start_date
+            - relativedelta(days=2),  # complete year of care
+            "transfer__date_leaving_service": audit_period.start_date
+            + relativedelta(days=2),
+            "transfer__reason_leaving_service": LEAVE_PDU_REASONS[0][
+                0
+            ],  # Transitioned to adult diabetes service
+        },
+    )
 
     # Deliberately no visit (to cover https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1203)
 
     client = login_and_verify_user(client, user)
 
-    response = client.get(reverse("pdu-get-transitioned-to-adult-service-partial", kwargs={
-        "audit_period": audit_period.slug,
-        "pz_code": ALDER_HEY_PZ_CODE
-    }))
+    response = client.get(
+        reverse(
+            "pdu-get-transitioned-to-adult-service-partial",
+            kwargs={"audit_period": audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE},
+        )
+    )
 
     assert response.status_code == HTTPStatus.OK
     assert response.context["number"] == 1
@@ -121,25 +136,28 @@ def test_count_of_patients_transitioning_to_adult_care_includes_patients_without
 
 @pytest.mark.django_db
 def test_new_diagnoses_includes_patients_without_visits(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
 ):
     audit_period = AuditPeriod.objects.get_default_audit_period()
 
-    user, _ = setup(audit_period, patient_args={
-        "diagnosis_date": audit_period.start_date + relativedelta(days=2), # incomplete year of care
-    })
+    user, _ = setup(
+        audit_period,
+        patient_args={
+            "diagnosis_date": audit_period.start_date
+            + relativedelta(days=2),  # incomplete year of care
+        },
+    )
 
     # Deliberately no visit (to cover https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1203)
 
     client = login_and_verify_user(client, user)
 
-    response = client.get(reverse("pdu-get-new-diagnoses-partial", kwargs={
-        "audit_period": audit_period.slug,
-        "pz_code": ALDER_HEY_PZ_CODE
-    }))
+    response = client.get(
+        reverse(
+            "pdu-get-new-diagnoses-partial",
+            kwargs={"audit_period": audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE},
+        )
+    )
 
     assert response.status_code == HTTPStatus.OK
     assert response.context["number"] == 1
@@ -147,27 +165,33 @@ def test_new_diagnoses_includes_patients_without_visits(
 
 @pytest.mark.django_db
 def test_moved_out_of_area_includes_patients_without_visits(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
 ):
     audit_period = AuditPeriod.objects.get_default_audit_period()
 
-    user, _ = setup(audit_period, patient_args={
-        "diagnosis_date": audit_period.start_date - relativedelta(days=2), # complete year of care
-        "transfer__date_leaving_service": audit_period.start_date + relativedelta(days=2),
-        "transfer__reason_leaving_service": LEAVE_PDU_REASONS[1][0] # Moved out of area
-    })
+    user, _ = setup(
+        audit_period,
+        patient_args={
+            "diagnosis_date": audit_period.start_date
+            - relativedelta(days=2),  # complete year of care
+            "transfer__date_leaving_service": audit_period.start_date
+            + relativedelta(days=2),
+            "transfer__reason_leaving_service": LEAVE_PDU_REASONS[1][
+                0
+            ],  # Moved out of area
+        },
+    )
 
     # Deliberately no visit (to cover https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1203)
 
     client = login_and_verify_user(client, user)
 
-    response = client.get(reverse("pdu-get-moved-out-of-area-partial", kwargs={
-        "audit_period": audit_period.slug,
-        "pz_code": ALDER_HEY_PZ_CODE
-    }))
+    response = client.get(
+        reverse(
+            "pdu-get-moved-out-of-area-partial",
+            kwargs={"audit_period": audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE},
+        )
+    )
 
     assert response.status_code == HTTPStatus.OK
     assert response.context["number"] == 1
@@ -183,11 +207,7 @@ def test_moved_out_of_area_includes_patients_without_visits(
 )
 @pytest.mark.django_db
 def test_partials_before_submission(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client,
-    route
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, route
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -198,10 +218,12 @@ def test_partials_before_submission(
 
     client = login_and_verify_user(client, user)
 
-    response = client.get(reverse(route, kwargs={
-        "audit_period": audit_period.slug,
-        "pz_code": ALDER_HEY_PZ_CODE
-    }))
+    response = client.get(
+        reverse(
+            route,
+            kwargs={"audit_period": audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE},
+        )
+    )
 
     assert response.status_code == HTTPStatus.OK
     assert response.context["number"] == 0

@@ -14,9 +14,7 @@ from project.npda.tests.utils import login_and_verify_user
 from project.npda.tests.test_csv_upload import mock_remote_calls
 
 
-@pytest.fixture(params=[2021, 2026])
-def dataset_year(request):
-    return request.param
+pytestmark = pytest.mark.dataset
 
 
 @pytest.fixture

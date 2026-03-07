@@ -55,6 +55,9 @@ from project.npda.tests.utils import login_and_verify_user
 
 logger = logging.getLogger(__name__)
 
+
+pytestmark = pytest.mark.dataset
+
 ALDER_HEY_PZ_CODE = "PZ074"
 
 GOSH_PZ_CODE = "PZ196"
@@ -64,11 +67,6 @@ GOSH_PZ_CODE = "PZ196"
 def valid_df(dummy_sheets_folder):
     file = dummy_sheets_folder / "dummy_sheet_test.csv"
     return csv_parse(file).df
-
-
-@pytest.fixture(params=[2021, 2026])
-def dataset_year(request):
-    return request.param
 
 
 @pytest.fixture

@@ -27,7 +27,13 @@ from django.apps import apps
 from project.constants.user import RCPCH_AUDIT_TEAM
 
 # NPDA imports
-from project.npda.models import NPDAUser, Submission, Transfer, AuditPeriod
+from project.npda.models import (
+    NPDAUser,
+    Submission,
+    Transfer,
+    AuditPeriod,
+    PaediatricDiabetesUnit,
+)
 from project.npda.tests.utils import login_and_verify_user
 from project.npda.tests.factories import (
     PatientFactory,
@@ -66,7 +72,7 @@ def test_npda_user_can_create_submission(
     client = login_and_verify_user(client, ah_user)
 
     # Get Alder Hey PDU
-    pdu = PaediatricsDiabetesUnitFactory(pz_code=ALDER_HEY_PZ_CODE)
+    pdu = PaediatricDiabetesUnit.objects.get(pz_code=ALDER_HEY_PZ_CODE)
 
     # Create some patients
     patients = PatientFactory.create_batch(5)
@@ -284,7 +290,9 @@ def test_patients_copied_from_previous_questionnaire_submission(
     )
 
     # Patient 3: Patient with death date (should NOT be copied)
-    patient_3 = PatientFactory(death_date=previous_audit_period.end_date - timedelta(days=1))
+    patient_3 = PatientFactory(
+        death_date=previous_audit_period.end_date - timedelta(days=1)
+    )
     previous_submission.patients.add(patient_3)
     Transfer.objects.create(
         patient=patient_3,
@@ -293,13 +301,12 @@ def test_patients_copied_from_previous_questionnaire_submission(
 
     assert previous_submission.patients.count() == 3
 
-    url = reverse("pdu-submissions", kwargs={
-        "audit_period": next_audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE
-    })
+    url = reverse(
+        "pdu-submissions",
+        kwargs={"audit_period": next_audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE},
+    )
 
-    response = client.post(url, data = {
-        "submit-data": "start-questionnaire-submission"
-    })
+    response = client.post(url, data={"submit-data": "start-questionnaire-submission"})
 
     assert response.status_code == 302
 

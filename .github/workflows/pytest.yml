@@ -13,7 +13,7 @@ on:
       - "*"
 
 jobs:
-  build-and-run-pytest-suite-in-docker-compose:
+  build-and-run-tests:
     runs-on: ubuntu-latest
 
     steps:
@@ -29,8 +29,41 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: "Run PR check script"
+      - name: "Setup environment and containers"
         env:
           AZURE_CONFIG_STORAGE_ACCOUNT: ${{ secrets.AZURE_CONFIG_STORAGE_ACCOUNT }}
           AZURE_CONFIG_FILE_SHARE: ${{ secrets.AZURE_CONFIG_FILE_SHARE }}
-        run: s/pr-check
+        run: |
+          az storage file download \
+            --auth-mode login \
+            --enable-file-backup-request-intent \
+            --account-name ${AZURE_CONFIG_STORAGE_ACCOUNT} \
+            --share-name ${AZURE_CONFIG_FILE_SHARE} \
+            --query 'size' \
+            --path .env --dest envs/.env
+          DOCKER_BUILDKIT=0 docker compose up -d postgis
+          DOCKER_BUILDKIT=0 docker compose up -d --no-deps django
+
+      - name: "Run dataset tests (2021)"
+        env:
+          NPDA_DATASET_YEARS: "2021"
+          NPDA_PYTEST_MARKER: dataset
+        run: s/test
+
+      - name: "Run dataset tests (2026)"
+        env:
+          NPDA_DATASET_YEARS: "2026"
+          NPDA_PYTEST_MARKER: dataset
+        run: s/test
+
+      - name: "Run non-dataset tests"
+        env:
+          NPDA_PYTEST_MARKER: "not dataset"
+        run: s/test
+
+      - name: "Run performance tests"
+        run: docker compose exec django pytest -v -m performance
+
+      - name: "Shutdown containers"
+        if: always()
+        run: docker compose down

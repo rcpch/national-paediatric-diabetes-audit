@@ -17,12 +17,10 @@ from project.npda.models import Visit, AuditPeriod
 from project.npda.tests.factories.patient_factory import PatientFactory
 
 
+pytestmark = pytest.mark.dataset
+
+
 MOCK_EXTERNAL_VALIDATION_RESULT = VisitExternalValidationResult(None, None, None, None)
-
-
-@pytest.fixture(params=[2021, 2026])
-def dataset_year(request):
-    return request.param
 
 
 @pytest.fixture

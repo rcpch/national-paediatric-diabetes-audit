@@ -31,6 +31,9 @@ from project.constants import SEX_TYPE
 logger = logging.getLogger(__name__)
 
 
+pytestmark = pytest.mark.dataset
+
+
 MOCK_EXTERNAL_VALIDATION_RESULT = PatientExternalValidationResult(
     postcode=VALID_FIELDS["postcode"],
     gp_practice_ods_code=VALID_FIELDS["gp_practice_ods_code"],
@@ -41,11 +44,6 @@ MOCK_EXTERNAL_VALIDATION_RESULT = PatientExternalValidationResult(
 )
 
 ALDER_HEY_PZ_CODE = "PZ074"
-
-
-@pytest.fixture(params=[2021, 2026])
-def dataset_year(request):
-    return request.param
 
 
 @pytest.fixture
