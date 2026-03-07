@@ -52,47 +52,55 @@ docker compose exec django pytest \
 restart_django
 
 # CSV upload tests: 374 collected items (dataset_year fixture is parametrised
-# [2021, 2026] so most tests run twice). Split into 5 batches of ≤65 items each
-# to stay well within CI memory limits.
+# [2021, 2026] so most tests run twice). Split into 6 batches to stay well
+# within CI memory limits.
 #
 # Batch coverage (157 unique test functions):
-#   B1a (35 fns): everything not in the other 4 batches (general/patient/date-of-birth tests)
-#   B1b (34 fns): column/header validation, hba1c, treatment variants
-#   B2a (16 fns): blood pressure + decs + urine albumin value/stage/date
-#   B2b (37 fns): cholesterol, thyroid, coeliac, psychological, smoking, dietician, inpatient
-#   B3  (35 fns): visit date, bad data, conflict resolution tests
+#   1/6 B1a (35 fns, ~64 items):  everything not in the other 5 batches
+#   2/6 B1b (34 fns, ~66 items):  column/header validation, hba1c, treatment
+#   3/6 B2a (16 fns, ~38 items):  blood pressure + decs + urine albumin
+#   4/6 B2b (37 fns, ~84 items):  cholesterol, thyroid, coeliac, psychological, smoking, dietician, inpatient
+#   5/6 B3a (30 fns, ~52 items):  visit date, sex formats, space/upload/conflict tests
+#   6/6 B3b (5 fns,  ~79 items):  bad_data_for field-type tests (parametrized, high item count)
 
-echo "Running CSV upload tests (1/5: general/patient/date-of-birth)..."
+echo "Running CSV upload tests (1/6: general/patient/date-of-birth)..."
 docker compose exec django pytest project/npda/tests/test_csv_upload.py \
   -k "not (different_column or additional_columns or duplicate_columns or missing_columns or case_insensitive or mixed_case or column_headers_with or invalid_nhs_number_column or invalid_date_of_birth_column or old_template or first_row_with or second_row_with or upload_without_headers or jersey_csv or missing_identifier or both_identifier or dates_with_short or urine_albumin_value_is_rounded or bad_date_format or height_is_rounded or cleaned_fields or async_visit or hba1c or treatment_closed or treatment_missing_closed or treatment_mdi or blood_pressure or decs_value or decs_date or urine_albumin_value_form or urine_albumin_value_below or urine_albumin_value_above or urine_albumin_value_missing or urine_albumin_stage_missing or urine_albumin_date_missing or total_cholesterol or thyroid_treatment or coeliac_screening or psychological_support or smoking_status or dietician or inpatient_admission or visit_date_provided or visit_date_missing or visit_date_not or alternative_formats_for_sex or mix_of_standard_and_alternative or bad_data_for or non_breaking_space or remove_empty_spaces or csv_height_weight or submission_has_audit or visit_with_too or visit_form_dates or thyroid_and_coeliac or uploading_csv or conflicting or conflict_resolved)" \
   --no-header --tb=line -o log_cli=false -p no:warnings
 
 restart_django
 
-echo "Running CSV upload tests (2/5: column headers, hba1c, treatment)..."
+echo "Running CSV upload tests (2/6: column headers, hba1c, treatment)..."
 docker compose exec django pytest project/npda/tests/test_csv_upload.py \
   -k "different_column or additional_columns or duplicate_columns or missing_columns or case_insensitive or mixed_case or column_headers_with or invalid_nhs_number_column or invalid_date_of_birth_column or old_template or first_row_with or second_row_with or upload_without_headers or jersey_csv or missing_identifier or both_identifier or dates_with_short or urine_albumin_value_is_rounded or bad_date_format or height_is_rounded or cleaned_fields or async_visit or hba1c or treatment_closed or treatment_missing_closed or treatment_mdi" \
   --no-header --tb=line -o log_cli=false -p no:warnings
 
 restart_django
 
-echo "Running CSV upload tests (3/5: blood pressure, DECS, urine albumin)..."
+echo "Running CSV upload tests (3/6: blood pressure, DECS, urine albumin)..."
 docker compose exec django pytest project/npda/tests/test_csv_upload.py \
   -k "blood_pressure or decs_value or decs_date or urine_albumin_value_form or urine_albumin_value_below or urine_albumin_value_above or urine_albumin_value_missing or urine_albumin_stage_missing or urine_albumin_date_missing" \
   --no-header --tb=line -o log_cli=false -p no:warnings
 
 restart_django
 
-echo "Running CSV upload tests (4/5: cholesterol, thyroid, coeliac, psychological, smoking, dietician, inpatient)..."
+echo "Running CSV upload tests (4/6: cholesterol, thyroid, coeliac, psychological, smoking, dietician, inpatient)..."
 docker compose exec django pytest project/npda/tests/test_csv_upload.py \
   -k "total_cholesterol or thyroid_treatment or coeliac_screening or psychological_support or smoking_status or dietician or inpatient_admission" \
   --no-header --tb=line -o log_cli=false -p no:warnings
 
 restart_django
 
-echo "Running CSV upload tests (5/5: visit date, bad data, conflicts)..."
+echo "Running CSV upload tests (5/6: visit date, sex formats, conflicts)..."
 docker compose exec django pytest project/npda/tests/test_csv_upload.py \
-  -k "visit_date_provided or visit_date_missing or visit_date_not or alternative_formats_for_sex or mix_of_standard_and_alternative or bad_data_for or non_breaking_space or remove_empty_spaces or csv_height_weight or submission_has_audit or visit_with_too or visit_form_dates or thyroid_and_coeliac or uploading_csv or conflicting or conflict_resolved" \
+  -k "visit_date_provided or visit_date_missing or visit_date_not or alternative_formats_for_sex or mix_of_standard_and_alternative or non_breaking_space or remove_empty_spaces or csv_height_weight or submission_has_audit or visit_with_too or visit_form_dates or thyroid_and_coeliac or uploading_csv or conflicting or conflict_resolved" \
+  --no-header --tb=line -o log_cli=false -p no:warnings
+
+restart_django
+
+echo "Running CSV upload tests (6/6: bad data for field types)..."
+docker compose exec django pytest project/npda/tests/test_csv_upload.py \
+  -k "bad_data_for" \
   --no-header --tb=line -o log_cli=false -p no:warnings
 
 restart_django
