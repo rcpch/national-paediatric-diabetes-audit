@@ -17,8 +17,8 @@
     </span>
   {% endif %}
   {% if pz_code == 'PZ248' %}
-    {% include 'partials/page_elements/copy_button.html' with value=patient.unique_reference_number tooltip="Copy Unique Reference Number" button_class="ml-2" size="xs" %}
+    {% include 'partials/page_elements/copy_button.html' with value=patient_identifier tooltip="Copy Unique Reference Number" button_class="ml-2" size="xs" %}
   {% else %}
-    {% include 'partials/page_elements/copy_button.html' with value=patient.nhs_number tooltip="Copy NHS Number" button_class="ml-2" size="xs" %}
+    {% include 'partials/page_elements/copy_button.html' with value=patient_identifier tooltip="Copy NHS Number" button_class="ml-2" size="xs" %}
   {% endif %}
 </span>
