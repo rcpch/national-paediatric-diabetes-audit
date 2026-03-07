@@ -4,6 +4,7 @@ import logging
 
 # Django imports
 from django.conf import settings
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect, render
 from django.http import HttpResponse
 
@@ -115,6 +116,8 @@ def celery_test_task(request):
 
 @login_and_otp_required()
 def feature_flags(request):
+    if not (request.user.is_superuser or request.user.is_rcpch_audit_team_member):
+        raise PermissionDenied("Feature previews are restricted to audit team.")
     if request.POST:
         user_flags = [
             flag
