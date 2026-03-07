@@ -614,10 +614,73 @@ def test_care_at_diagnosis_for_type_1_patient(
 
     assert patient["patient_identifier"] == "4444444444"
     assert patient["carbohydrate_counting_education"]
+    assert patient["carb_counting_status"] == "on_time"
 
     # Not completed yet
     assert not patient["coeliac_disease_screening"]
     assert not patient["thyroid_disease_screening"]
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1301
+@pytest.mark.django_db
+def test_carb_counting_countdown_when_no_date_entered(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    reference_date = audit_period.kpi_calculation_date()
+    diagnosis_date = reference_date - relativedelta(days=7)
+
+    patient = PatientFactory(
+        nhs_number="9999990000",
+        diabetes_type=DIABETES_TYPES[0][0],  # T1DM
+        date_of_birth=reference_date - relativedelta(years=14),
+        diagnosis_date=diagnosis_date,
+    )
+
+    VisitFactory(
+        patient=patient,
+        visit_date=reference_date - relativedelta(days=1),
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(patient)
+
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
+
+    response = client.get(
+        url + f"?category={TableCategories.CARE_AT_DIAGNOSIS.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    assert len(response.context["patients"]) == 1
+
+    patient = response.context["patients"][0]
+
+    assert patient["carb_counting_status"] == "countdown"
+    assert patient["carb_counting_countdown_label"] == "Due in 7 days"
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1199

@@ -2,7 +2,7 @@ import logging
 import io
 
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from enum import Enum
 
@@ -52,6 +52,38 @@ def use_patient_report_query_helpers(request) -> bool:
     return PATIENT_REPORT_QUERY_HELPERS_FLAG in request.session.get(
         "feature_flags", []
     )
+
+
+def apply_carb_counting_display(patients, reference_date):
+    for patient in patients:
+        diagnosis_date = patient.get("diagnosis_date")
+        if not diagnosis_date:
+            continue
+
+        due_date = diagnosis_date + timedelta(days=14)
+        patient["carb_counting_due_date"] = due_date
+
+        if patient.get("carbohydrate_counting_education") is True:
+            patient["carb_counting_status"] = "on_time"
+            continue
+
+        if reference_date > due_date:
+            patient["carb_counting_status"] = "overdue"
+            continue
+
+        days_remaining = (due_date - reference_date).days
+        patient["carb_counting_status"] = "countdown"
+        patient["carb_counting_days_remaining"] = days_remaining
+        if days_remaining == 0:
+            patient["carb_counting_countdown_label"] = "Due today"
+        elif days_remaining == 1:
+            patient["carb_counting_countdown_label"] = "Due in 1 day"
+        else:
+            patient["carb_counting_countdown_label"] = (
+                f"Due in {days_remaining} days"
+            )
+
+    return patients
 
 
 class TableCategories(Enum):
@@ -1136,6 +1168,10 @@ class PatientReportView(
                 )
             else:
                 pt_qs = calculate_hba1c_values(pt_qs, calculate_kpis)
+
+        if self.selected_category == TableCategories.CARE_AT_DIAGNOSIS.value:
+            reference_date = self.audit_period.kpi_calculation_date()
+            pt_qs = apply_carb_counting_display(list(pt_qs), reference_date)
 
         return pt_qs
 

@@ -111,7 +111,18 @@
         {{patient.diagnosis_date}}
       </td>
       <td>
-        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.carbohydrate_counting_education %}
+        {# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1301 #}
+        {% if patient.carb_counting_status == "on_time" %}
+          <i class="fa-solid fa-circle-check text-success text-xl"></i>
+        {% elif patient.carb_counting_status == "overdue" %}
+          <div class="tooltip tooltip-bottom" data-tip="14-day threshold has passed">
+            <i class="fa-solid fa-circle-exclamation text-error text-xl"></i>
+          </div>
+        {% elif patient.carb_counting_status == "countdown" %}
+          <span class="text-sm text-gray-700">{{ patient.carb_counting_countdown_label }}</span>
+        {% else %}
+          {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.carbohydrate_counting_education %}
+        {% endif %}
       </td>
       <td>
         {{patient.diagnosis_date|plus_days:14}}
