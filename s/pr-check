@@ -51,8 +51,28 @@ docker compose exec django pytest \
 
 restart_django
 
-echo "Running CSV upload tests..."
+# CSV upload tests: 374 collected items (dataset_year fixture is parametrized
+# [2021, 2026] so most tests run twice). Split into 3 batches of ~125 each.
+# Split 1: patient/demographics + column/header validation tests (~142 items)
+echo "Running CSV upload tests (part 1/3: patient and header validation)..."
 docker compose exec django pytest project/npda/tests/test_csv_upload.py \
+  -k "not (blood_pressure or decs_value or decs_date or urine_albumin_value_form or urine_albumin_value_below or urine_albumin_value_above or urine_albumin_value_missing or urine_albumin_stage_missing or urine_albumin_date_missing or total_cholesterol or thyroid_treatment or coeliac_screening or psychological_support or smoking_status or dietician or inpatient_admission or visit_date_provided or visit_date_missing or visit_date_not or alternative_formats_for_sex or mix_of_standard_and_alternative or bad_data_for or non_breaking_space or remove_empty_spaces or csv_height_weight or submission_has_audit or visit_with_too or visit_form_dates or thyroid_and_coeliac or uploading_csv or conflicting or conflict_resolved)" \
+  --no-header --tb=line -o log_cli=false -p no:warnings
+
+restart_django
+
+# Split 2: blood pressure through inpatient admission tests (~100 items)
+echo "Running CSV upload tests (part 2/3: blood pressure through inpatient)..."
+docker compose exec django pytest project/npda/tests/test_csv_upload.py \
+  -k "blood_pressure or decs_value or decs_date or urine_albumin_value_form or urine_albumin_value_below or urine_albumin_value_above or urine_albumin_value_missing or urine_albumin_stage_missing or urine_albumin_date_missing or total_cholesterol or thyroid_treatment or coeliac_screening or psychological_support or smoking_status or dietician or inpatient_admission" \
+  --no-header --tb=line -o log_cli=false -p no:warnings
+
+restart_django
+
+# Split 3: visit date, bad data, conflict tests + parametrized large blocks (~132 items)
+echo "Running CSV upload tests (part 3/3: visit date, bad data, conflicts)..."
+docker compose exec django pytest project/npda/tests/test_csv_upload.py \
+  -k "visit_date_provided or visit_date_missing or visit_date_not or alternative_formats_for_sex or mix_of_standard_and_alternative or bad_data_for or non_breaking_space or remove_empty_spaces or csv_height_weight or submission_has_audit or visit_with_too or visit_form_dates or thyroid_and_coeliac or uploading_csv or conflicting or conflict_resolved" \
   --no-header --tb=line -o log_cli=false -p no:warnings
 
 restart_django
