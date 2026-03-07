@@ -683,6 +683,193 @@ def test_carb_counting_countdown_when_no_date_entered(
     assert patient["carb_counting_countdown_label"] == "Due in 7 days"
 
 
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1301
+@pytest.mark.django_db
+def test_coeliac_screening_countdown_when_no_date_entered(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    reference_date = audit_period.kpi_calculation_date()
+    diagnosis_date = reference_date - relativedelta(days=20)
+
+    patient = PatientFactory(
+        nhs_number="9999990001",
+        diabetes_type=DIABETES_TYPES[0][0],  # T1DM
+        date_of_birth=reference_date - relativedelta(years=14),
+        diagnosis_date=diagnosis_date,
+    )
+
+    VisitFactory(
+        patient=patient,
+        visit_date=reference_date - relativedelta(days=1),
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(patient)
+
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
+
+    response = client.get(
+        url + f"?category={TableCategories.CARE_AT_DIAGNOSIS.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    assert len(response.context["patients"]) == 1
+
+    patient = response.context["patients"][0]
+
+    assert patient["coeliac_screening_status"] == "countdown"
+    assert patient["coeliac_screening_countdown_label"] == "Due in 70 days"
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1301
+@pytest.mark.django_db
+def test_thyroid_screening_overdue_when_threshold_passed(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    reference_date = audit_period.kpi_calculation_date()
+    diagnosis_date = reference_date - relativedelta(days=100)
+
+    patient = PatientFactory(
+        nhs_number="9999990002",
+        diabetes_type=DIABETES_TYPES[0][0],  # T1DM
+        date_of_birth=reference_date - relativedelta(years=14),
+        diagnosis_date=diagnosis_date,
+    )
+
+    VisitFactory(
+        patient=patient,
+        visit_date=reference_date - relativedelta(days=1),
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(patient)
+
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
+
+    response = client.get(
+        url + f"?category={TableCategories.CARE_AT_DIAGNOSIS.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    assert len(response.context["patients"]) == 1
+
+    patient = response.context["patients"][0]
+
+    assert patient["thyroid_screening_status"] == "overdue"
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1301
+@pytest.mark.django_db
+def test_coeliac_and_thyroid_screening_on_time_when_dates_present(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    diagnosis_date = audit_period.start_date + relativedelta(days=2)
+    visit_date = diagnosis_date + relativedelta(days=30)
+
+    patient = PatientFactory(
+        nhs_number="9999990003",
+        diabetes_type=DIABETES_TYPES[0][0],  # T1DM
+        date_of_birth=audit_period.start_date - relativedelta(years=14),
+        diagnosis_date=diagnosis_date,
+    )
+
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        coeliac_screen_date=visit_date,
+        thyroid_function_date=visit_date,
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(patient)
+
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
+
+    response = client.get(
+        url + f"?category={TableCategories.CARE_AT_DIAGNOSIS.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    assert len(response.context["patients"]) == 1
+
+    patient = response.context["patients"][0]
+
+    assert patient["coeliac_screening_status"] == "on_time"
+    assert patient["thyroid_screening_status"] == "on_time"
+
+
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1199
 @pytest.mark.django_db
 def test_non_type_1_patients_do_not_appear_in_care_at_diagnosis(
@@ -1402,10 +1589,7 @@ def test_smoker_with_two_visits_one_with_smoking_cessation_referral_one_without_
     )
 
     # Second visit WITHOUT smoking data
-    VisitFactory(
-        patient=patient,
-        visit_date=visit_date_2
-    )
+    VisitFactory(patient=patient, visit_date=visit_date_2)
 
     submission = Submission.objects.create(
         paediatric_diabetes_unit=user.organisation_employers.first(),

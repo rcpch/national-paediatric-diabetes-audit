@@ -25,7 +25,7 @@ from django.db.models import (
     ExpressionWrapper,
     DurationField,
     Func,
-    Value
+    Value,
 )
 
 # Django imports
@@ -36,7 +36,9 @@ from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REAS
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.npda.general_functions.breadcrumbs import data_breadcrumbs
 from project.npda.kpi_class.kpis import CalculateKPIS
-from project.npda.general_functions.patient_report import queries as patient_report_queries
+from project.npda.general_functions.patient_report import (
+    queries as patient_report_queries,
+)
 from project.npda.models import Patient, AuditPeriod, Visit
 from project.npda.models.db_functions import Round
 from project.npda.views.decorators import check_data_permissions, login_and_otp_required
@@ -49,9 +51,61 @@ PATIENT_REPORT_QUERY_HELPERS_FLAG = "patient_report_query_helpers"
 
 
 def use_patient_report_query_helpers(request) -> bool:
-    return PATIENT_REPORT_QUERY_HELPERS_FLAG in request.session.get(
-        "feature_flags", []
-    )
+    return PATIENT_REPORT_QUERY_HELPERS_FLAG in request.session.get("feature_flags", [])
+
+
+def apply_care_at_diagnosis_display(patients, reference_date):
+    def apply_status(patient, diagnosis_date, *, due_days, result_key, prefix):
+        due_date = diagnosis_date + timedelta(days=due_days)
+        patient[f"{prefix}_due_date"] = due_date
+
+        if patient.get(result_key) is True:
+            patient[f"{prefix}_status"] = "on_time"
+            return
+
+        if reference_date > due_date:
+            patient[f"{prefix}_status"] = "overdue"
+            return
+
+        days_remaining = (due_date - reference_date).days
+        patient[f"{prefix}_status"] = "countdown"
+        patient[f"{prefix}_days_remaining"] = days_remaining
+        if days_remaining == 0:
+            label = "Due today"
+        elif days_remaining == 1:
+            label = "Due in 1 day"
+        else:
+            label = f"Due in {days_remaining} days"
+        patient[f"{prefix}_countdown_label"] = label
+
+    for patient in patients:
+        diagnosis_date = patient.get("diagnosis_date")
+        if not diagnosis_date:
+            continue
+
+        apply_status(
+            patient,
+            diagnosis_date,
+            due_days=14,
+            result_key="carbohydrate_counting_education",
+            prefix="carb_counting",
+        )
+        apply_status(
+            patient,
+            diagnosis_date,
+            due_days=90,
+            result_key="coeliac_disease_screening",
+            prefix="coeliac_screening",
+        )
+        apply_status(
+            patient,
+            diagnosis_date,
+            due_days=90,
+            result_key="thyroid_disease_screening",
+            prefix="thyroid_screening",
+        )
+
+    return patients
 
 
 def apply_carb_counting_display(patients, reference_date):
@@ -79,9 +133,7 @@ def apply_carb_counting_display(patients, reference_date):
         elif days_remaining == 1:
             patient["carb_counting_countdown_label"] = "Due in 1 day"
         else:
-            patient["carb_counting_countdown_label"] = (
-                f"Due in {days_remaining} days"
-            )
+            patient["carb_counting_countdown_label"] = f"Due in {days_remaining} days"
 
     return patients
 
@@ -276,49 +328,46 @@ def calculate_queryset(
             return pt_qs, calculate_kpis, patient_identifier
 
         if selected_category == TableCategories.ADMISSIONS.value:
-            pt_qs = (
-                patient_report_queries.annotate_admissions(base_qs, audit_period)
-                .values(
-                    "pk",
-                    "patient_identifier",
-                    "is_complete_year_of_care",
-                    "number_of_admissions",
-                    "number_of_dka_admissions",
-                )
+            pt_qs = patient_report_queries.annotate_admissions(
+                base_qs, audit_period
+            ).values(
+                "pk",
+                "patient_identifier",
+                "is_complete_year_of_care",
+                "number_of_admissions",
+                "number_of_dka_admissions",
             )
             pt_qs = patient_report_queries.calculate_hba1c_values(pt_qs, audit_period)
             return pt_qs, calculate_kpis, patient_identifier
 
         if selected_category == TableCategories.TREATMENT.value:
-            pt_qs = (
-                patient_report_queries.annotate_treatment(base_qs, audit_period)
-                .values(
-                    "pk",
-                    "patient_identifier",
-                    "is_complete_year_of_care",
-                    "treatment_regimen",
-                    "glucose_monitoring",
-                    "hcl",
-                )
+            pt_qs = patient_report_queries.annotate_treatment(
+                base_qs, audit_period
+            ).values(
+                "pk",
+                "patient_identifier",
+                "is_complete_year_of_care",
+                "treatment_regimen",
+                "glucose_monitoring",
+                "hcl",
             )
             return pt_qs, calculate_kpis, patient_identifier
 
         if selected_category == TableCategories.OUTCOMES.value:
-            pt_qs = (
-                patient_report_queries.annotate_outcomes(base_qs, audit_period)
-                .values(
-                    "pk",
-                    "patient_identifier",
-                    "is_complete_year_of_care",
-                    "latest_hba1c_mmol_mol",
-                    "latest_hba1c_pct",
-                    "previous_to_latest_hba1c_mmol_mol",
-                    "previous_to_latest_hba1c_pct",
-                    "hba1c_delta",
-                    "latest_hba1c_date",
-                    "previous_to_latest_hba1c_date",
-                    "days_delta_between_latest_and_previous_hba1c",
-                )
+            pt_qs = patient_report_queries.annotate_outcomes(
+                base_qs, audit_period
+            ).values(
+                "pk",
+                "patient_identifier",
+                "is_complete_year_of_care",
+                "latest_hba1c_mmol_mol",
+                "latest_hba1c_pct",
+                "previous_to_latest_hba1c_mmol_mol",
+                "previous_to_latest_hba1c_pct",
+                "hba1c_delta",
+                "latest_hba1c_date",
+                "previous_to_latest_hba1c_date",
+                "days_delta_between_latest_and_previous_hba1c",
             )
             return pt_qs, calculate_kpis, patient_identifier
 
@@ -557,52 +606,57 @@ def calculate_queryset(
                 smoking_status=Case(
                     When(
                         is_gte_12yo=False,
-                        then=None, # Not eligible
+                        then=None,  # Not eligible
                     ),
                     When(
                         Exists(
                             Visit.objects.filter(
                                 patient=OuterRef("pk"),
                                 visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
-                                smoking_status__in=[1, 2], # non-smoker or smoker recorded
+                                smoking_status__in=[
+                                    1,
+                                    2,
+                                ],  # non-smoker or smoker recorded
                             )
                         ),
-                        then=True, # pass
+                        then=True,  # pass
                     ),
-                    default=Value(False), # fail (includes smoking status not recorded 99)
+                    default=Value(
+                        False
+                    ),  # fail (includes smoking status not recorded 99)
                     output_field=BooleanField(),
                 ),
                 smoking_cessation_referral=Case(
                     When(
                         is_gte_12yo=False,
-                        then=Value("under_12"), # Not eligible
+                        then=Value("under_12"),  # Not eligible
                     ),
                     When(
                         Exists(
                             Visit.objects.filter(
                                 patient=OuterRef("pk"),
                                 visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
-                                smoking_status__in=[99], # unknown - fail
+                                smoking_status__in=[99],  # unknown - fail
                             )
                         ),
-                        then=Value("False")
+                        then=Value("False"),
                     ),
                     When(
                         Exists(
                             Visit.objects.filter(
                                 patient=OuterRef("pk"),
                                 visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
-                                smoking_status__in=[1], # non-smoker
+                                smoking_status__in=[1],  # non-smoker
                             )
                         ),
-                        then=Value("non_smoker_no_referral")
+                        then=Value("non_smoker_no_referral"),
                     ),
                     When(
                         Exists(
                             Visit.objects.filter(
                                 patient=OuterRef("pk"),
                                 visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
-                                smoking_status__in=[2], # smoker
+                                smoking_status__in=[2],  # smoker
                             )
                         ),
                         then=Case(
@@ -614,10 +668,10 @@ def calculate_queryset(
                                         smoking_cessation_referral_date__isnull=False,
                                     )
                                 ),
-                                then=Value("True"), # pass
+                                then=Value("True"),  # pass
                             ),
-                            default=Value("False"), # fail
-                        )
+                            default=Value("False"),  # fail
+                        ),
                     ),
                     output_field=CharField(),
                 ),
@@ -1171,7 +1225,7 @@ class PatientReportView(
 
         if self.selected_category == TableCategories.CARE_AT_DIAGNOSIS.value:
             reference_date = self.audit_period.kpi_calculation_date()
-            pt_qs = apply_carb_counting_display(list(pt_qs), reference_date)
+            pt_qs = apply_care_at_diagnosis_display(list(pt_qs), reference_date)
 
         return pt_qs
 
@@ -1418,7 +1472,11 @@ def download_patient_report(request, audit_period, pdu):
                         for field in fields:
                             status = measure_status(row[f"passed_{field}"])
 
-                            if field == "retinal_screening" and status == "NA" and row["is_gte_12yo"]:
+                            if (
+                                field == "retinal_screening"
+                                and status == "NA"
+                                and row["is_gte_12yo"]
+                            ):
                                 # As retinal screening is bi-annual, they might have been covered last year
                                 # https://github.com/rcpch/national-paediatric-diabetes-audit/pull/1276
                                 status = ""

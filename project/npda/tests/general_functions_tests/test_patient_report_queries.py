@@ -38,7 +38,9 @@ class TestPatientReportHealthCheckQueries:
         return submission
 
     def _get_health_check_rows(self, pdu, audit_period):
-        qs = annotate_health_checks(build_base_queryset(pdu, audit_period), audit_period)
+        qs = annotate_health_checks(
+            build_base_queryset(pdu, audit_period), audit_period
+        )
         return {
             row["pk"]: row
             for row in qs.values(
@@ -133,7 +135,8 @@ class TestPatientReportHealthCheckQueries:
             patient=patient,
             visit_date=audit_period.start_date + relativedelta(days=10),
             retinal_screening_result=1,
-            retinal_screening_observation_date=audit_period.start_date + relativedelta(days=10),
+            retinal_screening_observation_date=audit_period.start_date
+            + relativedelta(days=10),
         )
         self._create_submission(pdu, audit_period, user, [patient])
 
@@ -159,7 +162,8 @@ class TestPatientReportHealthCheckQueries:
             patient=patient,
             visit_date=audit_period.start_date + relativedelta(days=10),
             retinal_screening_result=1,
-            retinal_screening_observation_date=audit_period.start_date + relativedelta(days=10),
+            retinal_screening_observation_date=audit_period.start_date
+            + relativedelta(days=10),
         )
         self._create_submission(pdu, audit_period, user, [patient])
 
@@ -415,7 +419,8 @@ class TestPatientReportHealthCheckQueries:
             patient=patient_with_bmi,
             visit_date=audit_period.start_date + relativedelta(days=10),
             bmi=Decimal("18.5"),
-            height_weight_observation_date=audit_period.start_date + relativedelta(days=10),
+            height_weight_observation_date=audit_period.start_date
+            + relativedelta(days=10),
         )
 
         patient_without_bmi = PatientFactory(
@@ -428,7 +433,8 @@ class TestPatientReportHealthCheckQueries:
             patient=patient_without_bmi,
             visit_date=audit_period.start_date + relativedelta(days=10),
             bmi=None,
-            height_weight_observation_date=audit_period.start_date + relativedelta(days=10),
+            height_weight_observation_date=audit_period.start_date
+            + relativedelta(days=10),
         )
 
         self._create_submission(

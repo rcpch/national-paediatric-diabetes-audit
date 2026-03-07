@@ -42,7 +42,7 @@ def save_csv_uploading_user_to_visitactivity(request):
     This is used to track who is uploading CSVs and when.
     """
     VisitActivity = apps.get_model("npda", "VisitActivity")
-    
+
     # Create VisitActivity entry for the user
     VisitActivity.objects.create(
         npdauser=request.user,

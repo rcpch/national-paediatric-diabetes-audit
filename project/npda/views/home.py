@@ -9,7 +9,9 @@ from django.http import HttpResponse
 
 from project.constants.feature_flags import FEATURE_FLAGS
 from project.npda.general_functions.csv import csv_header
-from project.npda.general_functions.organisations_adapter import paediatric_diabetes_units_for_user
+from project.npda.general_functions.organisations_adapter import (
+    paediatric_diabetes_units_for_user,
+)
 from project.npda.general_functions.session import get_user_feature_flags
 from project.npda.views.npda_users import get_user_home_page
 
@@ -47,19 +49,24 @@ def new_home(request, audit_period):
     pdus = list(paediatric_diabetes_units_for_user(request.user))
 
     active_pdus = [pdu for pdu in pdus if pdu.active]
-    
+
     inactive_pdus = []
     for pdu in pdus:
         if not pdu.active:
-            if request.user.is_rcpch_audit_team_member or Submission.objects.filter(
-                paediatric_diabetes_unit=pdu,
-                audit_period__slug=audit_period,
-                submission_active=True
-            ).exists():
+            if (
+                request.user.is_rcpch_audit_team_member
+                or Submission.objects.filter(
+                    paediatric_diabetes_unit=pdu,
+                    audit_period__slug=audit_period,
+                    submission_active=True,
+                ).exists()
+            ):
                 inactive_pdus.append(pdu)
 
     # Put the test PZ999 at the top of the list otherwise it's hard to find!
-    sorted_active_pdus = sorted(active_pdus, key=lambda pdu: "" if pdu.pz_code == "PZ999" else pdu.pz_code)
+    sorted_active_pdus = sorted(
+        active_pdus, key=lambda pdu: "" if pdu.pz_code == "PZ999" else pdu.pz_code
+    )
     sorted_inactive_pdus = sorted(inactive_pdus, key=lambda pdu: pdu.pz_code)
 
     audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
@@ -67,7 +74,7 @@ def new_home(request, audit_period):
 
     if not request.user.is_rcpch_audit_team_member and not request.user.is_superuser:
         audit_periods = [p for p in audit_periods if p.is_visible]
-    
+
     for p in audit_periods:
         p.selected = p.slug == audit_period.slug
 
@@ -75,7 +82,7 @@ def new_home(request, audit_period):
         "active_pdus": sorted_active_pdus,
         "inactive_pdus": sorted_inactive_pdus,
         "audit_periods": audit_periods,
-        "selected_audit_period_display_name": audit_period.display_name
+        "selected_audit_period_display_name": audit_period.display_name,
     }
 
     template = "new-home.html"
@@ -109,7 +116,11 @@ def celery_test_task(request):
 @login_and_otp_required()
 def feature_flags(request):
     if request.POST:
-        user_flags = [flag for flag in FEATURE_FLAGS if flag in request.POST and request.POST[flag] == "on"]
+        user_flags = [
+            flag
+            for flag in FEATURE_FLAGS
+            if flag in request.POST and request.POST[flag] == "on"
+        ]
         request.user.feature_flags = user_flags
         request.user.save(update_fields=["feature_flags"])
         request.session.update({"feature_flags": user_flags})
@@ -120,17 +131,21 @@ def feature_flags(request):
     all_flags = []
 
     for flag, details in FEATURE_FLAGS.items():
-        all_flags.append({
-            "id": flag,
-            "description": details["description"],
-            "enabled": flag in user_flags
-        })
+        all_flags.append(
+            {
+                "id": flag,
+                "description": details["description"],
+                "enabled": flag in user_flags,
+            }
+        )
 
     context = {
         "feature_flags": all_flags,
-        "feedback_email": settings.SITE_CONTACT_EMAIL
+        "feedback_email": settings.SITE_CONTACT_EMAIL,
     }
 
-    template_name = "partials/feature_flag_form.html" if request.htmx else "feature_flags.html"
+    template_name = (
+        "partials/feature_flag_form.html" if request.htmx else "feature_flags.html"
+    )
 
     return render(request=request, template_name=template_name, context=context)
