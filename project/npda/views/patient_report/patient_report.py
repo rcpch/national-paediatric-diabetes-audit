@@ -36,6 +36,7 @@ from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REAS
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.npda.general_functions.breadcrumbs import data_breadcrumbs
 from project.npda.kpi_class.kpis import CalculateKPIS
+from project.npda.general_functions.patient_report import queries as patient_report_queries
 from project.npda.models import Patient, AuditPeriod, Visit
 from project.npda.models.db_functions import Round
 from project.npda.views.decorators import check_data_permissions, login_and_otp_required
@@ -43,6 +44,14 @@ from project.npda.views.mixins import PDUPermissionMixin, LoginAndOTPRequiredMix
 from django.db.models import QuerySet
 
 logger = logging.getLogger(__name__)
+
+PATIENT_REPORT_QUERY_HELPERS_FLAG = "patient_report_query_helpers"
+
+
+def use_patient_report_query_helpers(request) -> bool:
+    return PATIENT_REPORT_QUERY_HELPERS_FLAG in request.session.get(
+        "feature_flags", []
+    )
 
 
 class TableCategories(Enum):
@@ -131,8 +140,9 @@ def calculate_hba1c_values(pt_qs: QuerySet[Patient], calculate_kpis: CalculateKP
 
 
 def calculate_queryset(
-    pz_code: str, audit_period: AuditPeriod, selected_category: str
+    pdu, audit_period: AuditPeriod, selected_category: str, use_query_helpers: bool
 ) -> QuerySet[Patient]:
+    pz_code = pdu.pz_code
     calculation_date = audit_period.kpi_calculation_date()
 
     calculate_kpis = CalculateKPIS(
@@ -144,6 +154,142 @@ def calculate_queryset(
     patient_identifier = (
         "nhs_number" if pz_code != "PZ248" else "unique_reference_number"
     )
+    if use_query_helpers:
+        base_qs = patient_report_queries.build_base_queryset(pdu, audit_period)
+        patient_identifier = patient_report_queries._patient_identifier_field(pdu)
+
+        if selected_category == TableCategories.HEALTH_CHECKS.value:
+            pt_qs = (
+                patient_report_queries.annotate_health_checks(base_qs, audit_period)
+                .order_by(
+                    "-is_complete_year_of_care",
+                    "-passed_hba1c",
+                    "-passed_bmi",
+                    "-passed_thyroid_screen",
+                    "-passed_blood_pressure",
+                    "-passed_urinary_albumin",
+                    "-passed_foot_exam",
+                    "patient_identifier",
+                )
+                .values(
+                    "pk",
+                    "patient_identifier",
+                    "is_gte_12yo",
+                    "is_complete_year_of_care",
+                    "passed_hba1c",
+                    "passed_bmi",
+                    "passed_thyroid_screen",
+                    "passed_blood_pressure",
+                    "passed_urinary_albumin",
+                    "passed_foot_exam",
+                    "num_passed",
+                    "num_total",
+                    "passed_retinal_screening",
+                )
+            )
+            return pt_qs, calculate_kpis, patient_identifier
+
+        if selected_category == TableCategories.ADDITIONAL_CARE_PROCESSES.value:
+            pt_qs = (
+                patient_report_queries.annotate_additional_care_processes(
+                    base_qs, audit_period
+                )
+                .order_by(
+                    "-is_complete_year_of_care",
+                    "-hba1c_4plus",
+                    "-psychological_assessment",
+                    "-smoking_status",
+                    "-smoking_cessation_referral",
+                    "-additional_dietetic_appt_offered",
+                    "-pts_attending_additional_dietetic_appt",
+                    "-influenza_immunisation_recommended",
+                    "-sick_day_rules_advice",
+                    "patient_identifier",
+                )
+                .values(
+                    "pk",
+                    "patient_identifier",
+                    "is_complete_year_of_care",
+                    "is_gte_12yo",
+                    "hba1c_4plus",
+                    "psychological_assessment",
+                    "smoking_status",
+                    "smoking_cessation_referral",
+                    "additional_dietetic_appt_offered",
+                    "pts_attending_additional_dietetic_appt",
+                    "influenza_immunisation_recommended",
+                    "sick_day_rules_advice",
+                )
+            )
+            return pt_qs, calculate_kpis, patient_identifier
+
+        if selected_category == TableCategories.CARE_AT_DIAGNOSIS.value:
+            pt_qs = (
+                patient_report_queries.annotate_care_at_diagnosis(base_qs, audit_period)
+                .order_by(
+                    "-coeliac_disease_screening",
+                    "-thyroid_disease_screening",
+                    "-carbohydrate_counting_education",
+                    "patient_identifier",
+                )
+                .values(
+                    "pk",
+                    "patient_identifier",
+                    "diagnosis_date",
+                    "coeliac_disease_screening",
+                    "thyroid_disease_screening",
+                    "carbohydrate_counting_education",
+                )
+            )
+            return pt_qs, calculate_kpis, patient_identifier
+
+        if selected_category == TableCategories.ADMISSIONS.value:
+            pt_qs = (
+                patient_report_queries.annotate_admissions(base_qs, audit_period)
+                .values(
+                    "pk",
+                    "patient_identifier",
+                    "is_complete_year_of_care",
+                    "number_of_admissions",
+                    "number_of_dka_admissions",
+                )
+            )
+            pt_qs = patient_report_queries.calculate_hba1c_values(pt_qs, audit_period)
+            return pt_qs, calculate_kpis, patient_identifier
+
+        if selected_category == TableCategories.TREATMENT.value:
+            pt_qs = (
+                patient_report_queries.annotate_treatment(base_qs, audit_period)
+                .values(
+                    "pk",
+                    "patient_identifier",
+                    "is_complete_year_of_care",
+                    "treatment_regimen",
+                    "glucose_monitoring",
+                    "hcl",
+                )
+            )
+            return pt_qs, calculate_kpis, patient_identifier
+
+        if selected_category == TableCategories.OUTCOMES.value:
+            pt_qs = (
+                patient_report_queries.annotate_outcomes(base_qs, audit_period)
+                .values(
+                    "pk",
+                    "patient_identifier",
+                    "is_complete_year_of_care",
+                    "latest_hba1c_mmol_mol",
+                    "latest_hba1c_pct",
+                    "previous_to_latest_hba1c_mmol_mol",
+                    "previous_to_latest_hba1c_pct",
+                    "hba1c_delta",
+                    "latest_hba1c_date",
+                    "previous_to_latest_hba1c_date",
+                    "days_delta_between_latest_and_previous_hba1c",
+                )
+            )
+            return pt_qs, calculate_kpis, patient_identifier
+
     all_t1dm_pts = (
         calculate_kpis.calculate_kpi_3_total_t1dm()
         .patient_querysets["eligible"]
@@ -927,8 +1073,9 @@ class PatientReportView(
         self.selected_category = category
         pz_code = self.pdu.pz_code
 
+        use_query_helpers = use_patient_report_query_helpers(request)
         pt_qs, calculate_kpis, patient_identifier = calculate_queryset(
-            pz_code, self.audit_period, category
+            self.pdu, self.audit_period, category, use_query_helpers
         )
 
         # Save to use later in get_context_data
@@ -952,7 +1099,12 @@ class PatientReportView(
                 reverse = sort_order == "desc"
                 field_name = sort_field.replace("-", "")
                 # Calculate HbA1c values
-                pt_qs = calculate_hba1c_values(pt_qs, calculate_kpis)
+                if use_query_helpers:
+                    pt_qs = patient_report_queries.calculate_hba1c_values(
+                        pt_qs, self.audit_period
+                    )
+                else:
+                    pt_qs = calculate_hba1c_values(pt_qs, calculate_kpis)
 
                 pt_qs = sorted(
                     pt_qs,
@@ -964,7 +1116,12 @@ class PatientReportView(
                 )
             else:
                 pt_qs = pt_qs.order_by(sort_field)
-                pt_qs = calculate_hba1c_values(pt_qs, calculate_kpis)
+                if use_query_helpers:
+                    pt_qs = patient_report_queries.calculate_hba1c_values(
+                        pt_qs, self.audit_period
+                    )
+                else:
+                    pt_qs = calculate_hba1c_values(pt_qs, calculate_kpis)
         else:
             # Default ordering
             order_by = ["-is_complete_year_of_care", patient_identifier]
@@ -973,7 +1130,12 @@ class PatientReportView(
                 order_by = [patient_identifier]
 
             pt_qs = pt_qs.order_by(*order_by)
-            pt_qs = calculate_hba1c_values(pt_qs, calculate_kpis)
+            if use_query_helpers:
+                pt_qs = patient_report_queries.calculate_hba1c_values(
+                    pt_qs, self.audit_period
+                )
+            else:
+                pt_qs = calculate_hba1c_values(pt_qs, calculate_kpis)
 
         return pt_qs
 
@@ -1183,9 +1345,10 @@ def download_patient_report(request, audit_period, pdu):
     with pd.ExcelWriter(contents, engine="openpyxl") as writer:
         for category in TableCategories:
             pt_qs, _, patient_identifier = calculate_queryset(
-                pz_code=pdu.pz_code,
+                pdu=pdu,
                 audit_period=audit_period,
                 selected_category=category.value,
+                use_query_helpers=use_patient_report_query_helpers(request),
             )
 
             data = defaultdict(list)

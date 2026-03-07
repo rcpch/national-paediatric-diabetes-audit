@@ -11,14 +11,28 @@ from project.npda.general_functions import get_client_ip
 logger = logging.getLogger(__name__)
 
 
-def create_session_object(user):
+def get_default_feature_flags():
     feature_flags = []
     for flag, opts in FEATURE_FLAGS.items():
         if opts.get("default"):
             feature_flags.append(flag)
+    return feature_flags
 
+
+def get_user_feature_flags(user):
+    if user is None:
+        return get_default_feature_flags()
+
+    user_flags = getattr(user, "feature_flags", None)
+    if user_flags is None:
+        return get_default_feature_flags()
+
+    return list(user_flags)
+
+
+def create_session_object(user):
     return {
-        "feature_flags": feature_flags,
+        "feature_flags": get_user_feature_flags(user),
     }
 
 

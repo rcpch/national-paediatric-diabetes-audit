@@ -189,6 +189,7 @@ class NPDAUser(AbstractUser, PermissionsMixin):
     role = models.PositiveSmallIntegerField(choices=ROLES)
     email_confirmed = models.BooleanField(default=False)
     password_last_set = models.DateTimeField(default=timezone.now)
+    feature_flags = models.JSONField(default=list, blank=True)
 
     REQUIRED_FIELDS = ["role", "first_name", "surname", "is_rcpch_audit_team_member"]
     USERNAME_FIELD = "email"

@@ -305,11 +305,12 @@ def annotate_additional_care_processes(qs, audit_period):
             output_field=BooleanField(),
         ),
         smoking_cessation_referral=Case(
-            When(Q(is_gte_12yo=False), then=None),
-            When(smoker_exists & smoking_referral_exists, then=True),
-            When(smoker_exists, then=False),
-            default=None,
-            output_field=BooleanField(),
+            When(Q(is_gte_12yo=False), then=Value("under_12")),
+            When(smoker_exists & smoking_referral_exists, then=Value("True")),
+            When(smoker_exists, then=Value("False")),
+            When(smoking_status_exists, then=Value("non_smoker_no_referral")),
+            default=Value("False"),
+            output_field=CharField(),
         ),
         additional_dietetic_appt_offered=Case(
             When(dietetic_offered_exists, then=True),

@@ -10,6 +10,7 @@ from django.http import HttpResponse
 from project.constants.feature_flags import FEATURE_FLAGS
 from project.npda.general_functions.csv import csv_header
 from project.npda.general_functions.organisations_adapter import paediatric_diabetes_units_for_user
+from project.npda.general_functions.session import get_user_feature_flags
 from project.npda.views.npda_users import get_user_home_page
 
 # RCPCH imports
@@ -109,9 +110,12 @@ def celery_test_task(request):
 def feature_flags(request):
     if request.POST:
         user_flags = [flag for flag in FEATURE_FLAGS if flag in request.POST and request.POST[flag] == "on"]
+        request.user.feature_flags = user_flags
+        request.user.save(update_fields=["feature_flags"])
         request.session.update({"feature_flags": user_flags})
     else:
-        user_flags = request.session.get("feature_flags", [])
+        user_flags = get_user_feature_flags(request.user)
+        request.session.update({"feature_flags": user_flags})
 
     all_flags = []
 
