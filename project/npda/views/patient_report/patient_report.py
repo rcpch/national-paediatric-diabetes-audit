@@ -1167,6 +1167,55 @@ class PatientReportView(
         # Save to use later in get_context_data
         self.calculate_kpis = calculate_kpis
 
+        allowed_sort_fields = {
+            TableCategories.HEALTH_CHECKS.value: {
+                "passed_hba1c",
+                "passed_bmi",
+                "passed_thyroid_screen",
+                "passed_blood_pressure",
+                "passed_urinary_albumin",
+                "passed_foot_exam",
+            },
+            TableCategories.ADDITIONAL_CARE_PROCESSES.value: {
+                "hba1c_4plus",
+                "psychological_assessment",
+                "smoking_status",
+                "smoking_cessation_referral",
+                "additional_dietetic_appt_offered",
+                "pts_attending_additional_dietetic_appt",
+                "influenza_immunisation_recommended",
+                "sick_day_rules_advice",
+            },
+            TableCategories.CARE_AT_DIAGNOSIS.value: {
+                "diagnosis_date",
+                "carbohydrate_counting_education",
+                "coeliac_disease_screening",
+                "thyroid_disease_screening",
+            },
+            TableCategories.ADMISSIONS.value: {
+                "kpi_44_mean_hba1c",
+                "kpi_45_median_hba1c",
+                "number_of_admissions",
+                "number_of_dka_admissions",
+            },
+            TableCategories.TREATMENT.value: {
+                "treatment_regimen",
+                "glucose_monitoring",
+                "hcl",
+            },
+            TableCategories.OUTCOMES.value: {
+                "latest_hba1c_mmol_mol",
+                "hba1c_delta",
+                "kpi_45_median_hba1c",
+                "kpi_44_mean_hba1c",
+            },
+        }
+        if sort_field:
+            allowed = allowed_sort_fields.get(self.selected_category, set())
+            allowed = allowed | {"nhs_number", "unique_identifier"}
+            if sort_field not in allowed:
+                sort_field = None
+
         # Sort the queryset based on the selected sort field and order
         if sort_field:
             # Handle sort direction

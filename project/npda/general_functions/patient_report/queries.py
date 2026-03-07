@@ -22,6 +22,7 @@ from django.db.models import (
     Value,
     When,
 )
+from django.db.models import DurationField, Func
 
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.constants.hba1c_format import HBA1C_FORMATS
@@ -570,6 +571,9 @@ def annotate_treatment(qs, audit_period):
 
     return qs.annotate(
         latest_visit_date=Subquery(latest_visit[:1]),
+        latest_treatment=latest_treatment,
+        latest_glucose_monitoring=latest_glucose_monitoring,
+        latest_closed_loop=latest_closed_loop,
         treatment_regimen=treatment_case,
         glucose_monitoring=glucose_case,
         hcl=hcl_case,
@@ -650,6 +654,23 @@ def annotate_outcomes(qs, audit_period):
     return qs.annotate(
         latest_hba1c_date=latest_hba1c_date,
         previous_to_latest_hba1c_date=previous_hba1c_date,
+        days_delta_between_latest_and_previous_hba1c=Case(
+            When(
+                Q(latest_hba1c_date__isnull=False)
+                & Q(previous_to_latest_hba1c_date__isnull=False),
+                then=Func(
+                    ExpressionWrapper(
+                        F("latest_hba1c_date") - F("previous_to_latest_hba1c_date"),
+                        output_field=DurationField(),
+                    ),
+                    function="EXTRACT",
+                    template="EXTRACT(DAY FROM %(expressions)s)",
+                    output_field=IntegerField(),
+                ),
+            ),
+            default=None,
+            output_field=IntegerField(),
+        ),
         latest_hba1c_mmol_mol=latest_hba1c_mmol_mol,
         previous_to_latest_hba1c_mmol_mol=previous_hba1c_mmol_mol,
         latest_hba1c_pct=Case(
