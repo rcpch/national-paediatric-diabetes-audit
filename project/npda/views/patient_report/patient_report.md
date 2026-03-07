@@ -178,7 +178,7 @@ This should involve:
 ##### Health Checks
 
 - HbA1c: `Exists` visit with `hba1c` and `hba1c_date` in audit range.
-- BMI: `Exists` visit with `height`, `weight`, and `height_weight_observation_date` in audit range.
+- BMI: `Exists` visit with `bmi` and `height_weight_observation_date` in audit range.
 - Thyroid screen: `Exists` visit with `thyroid_function_date` in audit range; not required if diabetes duration < 1 year.
 - Blood pressure: `Exists` visit with `systolic_blood_pressure` and `blood_pressure_observation_date` in audit range; only required if >= 12.
 - Urinary albumin: `Exists` visit with `albumin_creatinine_ratio` and `albumin_creatinine_ratio_date` in audit range; only required if >= 12.
