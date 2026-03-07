@@ -157,7 +157,7 @@
         {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_bmi field_name="bmi" %}
       </td>
       <td>
-        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_thyroid_screen field_name="thyroid_screen" %}
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_thyroid_screen ineligible_reason=ineligible_reasons.thyroid_screen field_name="thyroid_screen" %}
       </td>
       <td>
         {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_blood_pressure ineligible_reason=ineligible_reasons.blood_pressure field_name="blood_pressure" %}

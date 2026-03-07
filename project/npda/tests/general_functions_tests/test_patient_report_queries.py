@@ -84,10 +84,38 @@ class TestPatientReportHealthCheckQueries:
         row = rows[patient.pk]
 
         assert row["is_gte_12yo"] is False
+        assert row["passed_thyroid_screen"] is False
         assert row["passed_blood_pressure"] is None
         assert row["passed_urinary_albumin"] is None
         assert row["passed_foot_exam"] is None
         assert row["num_total"] == 3
+
+    def test_thyroid_screening_not_required_within_first_year_of_diagnosis(
+        self, seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
+    ):
+        user, pdu = self._get_user_and_pdu()
+        audit_period = AuditPeriod.objects.get_default_audit_period()
+
+        patient = PatientFactory(
+            nhs_number="1111111122",
+            diabetes_type=DIABETES_TYPES[0][0],
+            date_of_birth=audit_period.start_date - relativedelta(years=11, days=2),
+            diagnosis_date=audit_period.start_date + relativedelta(days=30),
+        )
+        VisitFactory(
+            patient=patient,
+            visit_date=audit_period.start_date + relativedelta(days=10),
+            hba1c=50,
+            hba1c_format=HBA1C_FORMATS[0][0],
+            hba1c_date=audit_period.start_date + relativedelta(days=10),
+        )
+        self._create_submission(pdu, audit_period, user, [patient])
+
+        rows = self._get_health_check_rows(pdu, audit_period)
+        row = rows[patient.pk]
+
+        assert row["is_gte_12yo"] is False
+        assert row["passed_thyroid_screen"] is None
 
     def test_retinal_screening_under_12_is_not_required(
         self, seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture

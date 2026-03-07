@@ -737,11 +737,15 @@ def calculate_hba1c_values(qs, audit_period):
             patient["kpi_44_mean_hba1c"] = round(mean_val)
             patient["kpi_45_median_hba1c"] = round(median_val)
             patient["mean_hba1c_pct"] = round(
-                (0.09148 * mean_val) + 2.152 if mean_val > 0 else None,
+                (Decimal("0.09148") * mean_val) + Decimal("2.152")
+                if mean_val > 0
+                else None,
                 1,
             )
             patient["median_hba1c_pct"] = round(
-                (0.09148 * median_val) + 2.152 if median_val > 0 else None,
+                (Decimal("0.09148") * median_val) + Decimal("2.152")
+                if median_val > 0
+                else None,
                 1,
             )
         else:
