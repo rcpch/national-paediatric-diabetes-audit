@@ -14,7 +14,7 @@ on:
 
 jobs:
   build-and-run-pytest-suite-in-docker-compose:
-    runs-on: ubuntu-latest-4-cores
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout full code repo

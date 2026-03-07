@@ -17,13 +17,52 @@ DOCKER_BUILDKIT=0 docker compose up -d postgis redis django
 # Wait for services to be ready
 sleep 5
 
-# Run tests with aggressive memory optimizations for CI
+# Run tests in batches to avoid memory exhaustion (exit code 137)
+# Each batch runs separately to allow memory cleanup between groups
+
+restart_django() {
+  echo "Restarting Django container to reclaim memory..."
+  docker compose restart django
+  sleep 5
+}
+
+echo "Running KPI calculation tests..."
+docker compose exec django pytest project/npda/tests/kpi_calculations/ \
+  --no-header --tb=line -o log_cli=false -p no:warnings
+
+restart_django
+
+echo "Running CSV upload tests..."
+docker compose exec django pytest project/npda/tests/test_csv_upload.py \
+  --no-header --tb=line -o log_cli=false -p no:warnings
+
+restart_django
+
+echo "Running view tests..."
+docker compose exec django pytest project/npda/tests/view_tests/ \
+  --no-header --tb=line -o log_cli=false -p no:warnings
+
+restart_django
+
+echo "Running model and form tests..."
 docker compose exec django pytest \
-  --no-header \
-  --tb=line \
-  -o log_cli=false \
-  -p no:warnings \
-  --maxfail=1 \
-  --capture=no
+  project/npda/tests/model_tests/ \
+  project/npda/tests/form_tests/ \
+  project/npda/tests/permissions_tests/ \
+  --no-header --tb=line -o log_cli=false -p no:warnings
+
+restart_django
+
+echo "Running remaining tests..."
+docker compose exec django pytest \
+  project/npda/tests/general_functions_tests/ \
+  project/npda/tests/general_tests/ \
+  project/npda/tests/test_user_actions/ \
+  project/npda/tests/test_error_pages/ \
+  project/npda/tests/test_import_user.py \
+  project/npda/tests/test_meta_tests.py \
+  --no-header --tb=line -o log_cli=false -p no:warnings
+
+echo "All test batches completed successfully!"
 
 docker compose down -v
