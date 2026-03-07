@@ -133,6 +133,16 @@ def annotate_health_checks(qs, audit_period):
         )
     )
 
+    latest_retinal_screening_date = Subquery(
+        Visit.objects.filter(
+            patient=OuterRef("pk"),
+            retinal_screening_observation_date__range=retinal_range,
+            retinal_screening_result__isnull=False,
+        )
+        .order_by("-retinal_screening_observation_date")
+        .values("retinal_screening_observation_date")[:1]
+    )
+
     return qs.annotate(
         passed_hba1c=Case(
             When(hba1c_exists, then=True),
@@ -177,6 +187,7 @@ def annotate_health_checks(qs, audit_period):
             default=False,
             output_field=BooleanField(),
         ),
+        latest_retinal_screening_date=latest_retinal_screening_date,
     ).annotate(
         num_passed=Case(
             When(

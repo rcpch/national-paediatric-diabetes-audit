@@ -170,7 +170,7 @@
       </td>
       <td>{{ patient.num_passed }} / {{ patient.num_total }}</td>
       <td>
-        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_retinal_screening ineligible_reason=ineligible_reasons.retinal_screening field_name="retinal_screening" %}
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_retinal_screening ineligible_reason=ineligible_reasons.retinal_screening field_name="retinal_screening" complete_tooltip_date=patient.latest_retinal_screening_date %}
       </td>
     </tr>
   {% empty %}

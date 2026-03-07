@@ -269,6 +269,7 @@ def calculate_queryset(
                     "num_passed",
                     "num_total",
                     "passed_retinal_screening",
+                    "latest_retinal_screening_date",
                 )
             )
             return pt_qs, calculate_kpis, patient_identifier
@@ -395,6 +396,11 @@ def calculate_queryset(
     )
 
     if selected_category == TableCategories.HEALTH_CHECKS.value:
+        prev_audit = audit_period.previous_audit_period()
+        retinal_range = (
+            prev_audit.start_date if prev_audit else audit_period.start_date,
+            audit_period.end_date,
+        )
         pt_qs = (
             pt_qs.annotate(
                 is_gte_12yo=Q(
@@ -501,6 +507,15 @@ def calculate_queryset(
                     default=False,
                     output_field=BooleanField(),
                 ),
+                latest_retinal_screening_date=Subquery(
+                    Visit.objects.filter(
+                        patient=OuterRef("pk"),
+                        retinal_screening_observation_date__range=retinal_range,
+                        retinal_screening_result__isnull=False,
+                    )
+                    .order_by("-retinal_screening_observation_date")
+                    .values("retinal_screening_observation_date")[:1]
+                ),
                 passed_foot_exam=Case(
                     When(
                         Exists(
@@ -571,6 +586,7 @@ def calculate_queryset(
                 "num_passed",
                 "num_total",
                 "passed_retinal_screening",
+                "latest_retinal_screening_date",
             )
         )
     elif selected_category == TableCategories.ADDITIONAL_CARE_PROCESSES.value:
