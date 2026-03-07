@@ -217,7 +217,7 @@ This should involve:
 
 ##### Treatment
 
-- Use the latest visit in the audit period (or overall, to be confirmed) to derive:
+- Use the latest visit in the audit period to derive:
    - Treatment regimen
    - Glucose monitoring
    - HCL (hybrid closed loop)
@@ -234,6 +234,21 @@ This should involve:
 - Ensure CSV/XLSX export matches UI status logic for each category.
 - Extend the status icon component to support missed and not-required states.
 - Add TODO comments for 2026 fields pending data model updates.
+- Add django-filter facets in column headers (completed/eligible counts) for each category, wired to the new ORM querysets.
+
+#### Requirements Coverage Checklist
+
+- Feature flag: server-side, persistent per-user; toggle visible to NPDA audit team members and superusers.
+- UI framework: use DaisyUI components and existing config; avoid custom components where DaisyUI fits.
+- Interactivity: HTMX for category switching, sorting, and pagination (reuse existing partials).
+- Security: keep current decorators/mixins for OTP login, PDU scoping, and role-based access.
+- Structure: category toggle buttons with one table per category, matching current layout.
+- Filtering: only T1DM patients in active submissions for the selected audit period and PDU; visits scoped to audit period.
+- Facets: per-column completed/eligible counts via django-filter facets.
+- Incomplete year of care: based on transfer date within the audit period; apply special styling.
+- Default ordering: incomplete first, complete, not required, then incomplete year of care.
+- Downloads: keep Excel export; PDF export remains a TODO (issue #1238).
+- Reuse: keep existing partials where possible to reduce refactor risk.
 
 #### Verification Plan
 
