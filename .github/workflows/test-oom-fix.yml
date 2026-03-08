@@ -1,0 +1,36 @@
+# Temporary workflow to validate the OOM fix branch before raising a PR.
+# Delete this file once the branch is merged.
+
+name: Test OOM fix branch
+
+permissions:
+  id-token: write
+  contents: read
+
+on:
+  push:
+    branches:
+      - fix/ci-oom-split-test-runs
+
+jobs:
+  build-and-run-pytest-suite-in-docker-compose:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout full code repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 'Login via Azure CLI'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: 'Run PR check script'
+        env:
+          AZURE_CONFIG_STORAGE_ACCOUNT: ${{ secrets.AZURE_CONFIG_STORAGE_ACCOUNT }}
+          AZURE_CONFIG_FILE_SHARE: ${{ secrets.AZURE_CONFIG_FILE_SHARE }}
+        run: s/pr-check

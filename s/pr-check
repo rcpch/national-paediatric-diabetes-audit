@@ -12,9 +12,13 @@ az storage file download \
 DOCKER_BUILDKIT=0 docker compose build django
 
 # Only services needed for tests (avoids running flower/mkdocs/etc)
-DOCKER_BUILDKIT=0 docker compose up -d postgis redis django
+DOCKER_BUILDKIT=0 docker compose up -d postgis redis
 
-# Run tests
-s/test
+# Run all tests except csv upload (fresh container, memory freed on exit)
+# --create-db forces a fresh test DB so session-scoped fixtures re-run correctly
+docker compose run --rm django pytest -v --create-db --ignore=project/npda/tests/test_csv_upload.py
+
+# Run csv upload tests separately so each batch starts with a clean process
+docker compose run --rm django pytest -v --create-db project/npda/tests/test_csv_upload.py
 
 docker compose down -v
