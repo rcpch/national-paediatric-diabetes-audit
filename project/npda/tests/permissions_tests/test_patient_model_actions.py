@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import patch
 
 # Django imports
 from django.apps import apps
@@ -43,7 +44,12 @@ def create_submission_with_patient(user):
 
 
 @pytest.mark.django_db
+@patch(
+    "project.npda.views.patient.fetch_organisation_by_ods_code",
+    return_value={"longitude": -2.9, "latitude": 53.4},
+)
 def test_users_only_see_patients_from_their_pdu_using_session_url(
+    mock_fetch_org,
     seed_groups_fixture,
     seed_users_fixture,
     seed_audit_periods_fixture,
@@ -77,7 +83,12 @@ def test_users_only_see_patients_from_their_pdu_using_session_url(
 
 
 @pytest.mark.django_db
+@patch(
+    "project.npda.views.patient.fetch_organisation_by_ods_code",
+    return_value={"longitude": -2.9, "latitude": 53.4},
+)
 def test_users_only_see_patients_from_their_pdu_using_data_url(
+    mock_fetch_org,
     seed_groups_fixture,
     seed_users_fixture,
     seed_audit_periods_fixture,
