@@ -4279,6 +4279,82 @@ def test_uploading_csv_with_conflicting_pdu_numbers(
     assert Submission.objects.count() == 0, "No submission should be created for incorrect PDU"
 
 
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1344
+@pytest.mark.django_db
+def test_uploading_csv_with_multiple_pdu_numbers_including_one_missing(
+    two_patients_first_with_two_visits_second_with_one,
+    tmp_path,
+    client,
+    test_rcpch_user
+):
+    two_patients_first_with_two_visits_second_with_one.at[0, "PDU Number"] = None
+    two_patients_first_with_two_visits_second_with_one.at[1, "PDU Number"] = RCPCH_PZ_CODE
+
+    # write back into temp
+    tmp_csv_path = tmp_path / "dummy_sheet_test_csv_upload_test_uploading_csv_with_multiple_pdu_numbers_including_one_missing.csv"
+    two_patients_first_with_two_visits_second_with_one.to_csv(tmp_csv_path, index=False)
+
+    # Log in user
+    client = login_and_verify_user(client, test_rcpch_user)
+
+    url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
+
+    # Feed file to view
+    with open(tmp_csv_path, "rb") as csv_file:
+        response = client.post(
+            url,
+            {
+                'csv_upload': csv_file
+            },
+            format='multipart'
+        )
+
+    assert response.status_code == 302
+
+    error_messages = list(get_messages(response.wsgi_request))
+    assert error_messages[0].level_tag == "error"
+
+    assert Submission.objects.count() == 0, "No submission should be created for incorrect PDU"
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1344
+# Found as part of debugging the above issue so including for maximum regression proofing hopefully
+@pytest.mark.django_db
+def test_uploading_csv_with_first_row_missing_pdu_number(
+    two_patients_with_one_visit_each,
+    tmp_path,
+    client,
+    test_rcpch_user
+):
+    two_patients_with_one_visit_each.at[0, "PDU Number"] = None
+
+    # write back into temp
+    tmp_csv_path = tmp_path / "dummy_sheet_test_csv_upload_test_uploading_csv_with_first_row_missing_pdu_number.csv"
+    two_patients_with_one_visit_each.to_csv(tmp_csv_path, index=False)
+
+    # Log in user
+    client = login_and_verify_user(client, test_rcpch_user)
+
+    url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
+
+    # Feed file to view
+    with open(tmp_csv_path, "rb") as csv_file:
+        response = client.post(
+            url,
+            {
+                'csv_upload': csv_file
+            },
+            format='multipart'
+        )
+
+    assert response.status_code == 302
+
+    error_messages = list(get_messages(response.wsgi_request))
+    assert error_messages[0].level_tag == "error"
+
+    assert Submission.objects.count() == 0, "No submission should be created for incorrect PDU"
+
+
 @pytest.mark.django_db
 def test_uploading_csv_with_pdu_number_missing_leading_pz(
     two_patients_with_one_visit_each,
