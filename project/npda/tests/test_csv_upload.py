@@ -4289,6 +4289,7 @@ def test_uploading_csv_with_multiple_pdu_numbers_including_one_missing(
 ):
     two_patients_first_with_two_visits_second_with_one.at[0, "PDU Number"] = None
     two_patients_first_with_two_visits_second_with_one.at[1, "PDU Number"] = RCPCH_PZ_CODE
+    two_patients_first_with_two_visits_second_with_one.at[2, "PDU Number"] = ALDER_HEY_PZ_CODE
 
     # write back into temp
     tmp_csv_path = tmp_path / "dummy_sheet_test_csv_upload_test_uploading_csv_with_multiple_pdu_numbers_including_one_missing.csv"
@@ -4326,6 +4327,7 @@ def test_uploading_csv_with_first_row_missing_pdu_number(
     client,
     test_rcpch_user
 ):
+    two_patients_with_one_visit_each = two_patients_with_one_visit_each.assign(**{"PDU Number": "PZ004"})
     two_patients_with_one_visit_each.at[0, "PDU Number"] = None
 
     # write back into temp
@@ -4335,7 +4337,7 @@ def test_uploading_csv_with_first_row_missing_pdu_number(
     # Log in user
     client = login_and_verify_user(client, test_rcpch_user)
 
-    url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
+    url = reverse("pdu-upload-csv", kwargs={ "pz_code": "PZ004", "audit_period": "2025-2026"})
 
     # Feed file to view
     with open(tmp_csv_path, "rb") as csv_file:
@@ -4349,10 +4351,11 @@ def test_uploading_csv_with_first_row_missing_pdu_number(
 
     assert response.status_code == 302
 
-    error_messages = list(get_messages(response.wsgi_request))
-    assert error_messages[0].level_tag == "error"
-
-    assert Submission.objects.count() == 0, "No submission should be created for incorrect PDU"
+    redirect_url = reverse("pdu-upload-csv-in-progress", kwargs={ "pz_code": "PZ004", "audit_period": "2025-2026"})
+    assert response.url == redirect_url
+    
+    assert Submission.objects.count() == 1, "Submission should be created for upload where first row is missing PDU number but subsequent rows have correct PDU number"
+    assert Submission.objects.first().paediatric_diabetes_unit.pz_code == "PZ004"
 
 
 @pytest.mark.django_db
