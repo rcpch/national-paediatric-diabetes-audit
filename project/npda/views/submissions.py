@@ -438,16 +438,20 @@ def upload_csv(request, audit_period, pdu):
         if parsed_csv.identifier_column == "NHS Number" and is_jersey:
             return upload_error("CSV file must use Unique Reference Number as the identifier column unless uploading for Jersey")
 
-        if parsed_csv.df["PDU Number"].nunique() > 1:
-            message = f"CSV file contains multiple PDU Numbers: {', '.join(parsed_csv.df['PDU Number'].unique())}. Please upload a file containing data for a single PDU only."
+        # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1344
+        # Gracefully handle missing values in the "PDU Number" column
+        unique_pdu_numbers = parsed_csv.df["PDU Number"].dropna().unique()
+
+        if len(unique_pdu_numbers) > 1:
+            message = f"CSV file contains multiple PDU Numbers: {', '.join(unique_pdu_numbers)}. Please upload a file containing data for a single PDU only."
             return upload_error(message)
 
         # 1316 - Twinkle/Diamond outputs PDU number without leading PZ and zeros
         expected_pdu_number = pdu.pz_code.lstrip("PZ").lstrip("0")
-        pdu_number_in_csv = parsed_csv.df["PDU Number"].iloc[0].lstrip("PZ").lstrip("0")
+        pdu_number_in_csv = unique_pdu_numbers[0].lstrip("PZ").lstrip("0") if len(unique_pdu_numbers) > 0 else None
 
         if pdu_number_in_csv != expected_pdu_number:
-            message = f"PDU Number in CSV file ({parsed_csv.df['PDU Number'].iloc[0]}) does not match the PDU you are looking at ({pdu.pz_code}). Please upload a file with the correct PDU Number."
+            message = f"PDU Number in CSV file ({unique_pdu_numbers[0]}) does not match the PDU you are looking at ({pdu.pz_code}). Please upload a file with the correct PDU Number."
             return upload_error(message)
 
         if not audit_period.is_open and not (request.user.is_superuser or request.user.is_rcpch_audit_team_member):
