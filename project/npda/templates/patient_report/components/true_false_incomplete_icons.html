@@ -6,12 +6,16 @@
 {% endcomment %}
 {% if result is True or result == "True" %}
 {% comment %} PASS {% endcomment %}
-  <i class="fa-solid fa-circle-check text-success text-xl"></i>
+  {% if complete_tooltip_date %}
+    <div class="tooltip tooltip-bottom" data-tip="Most recent: {{ complete_tooltip_date|date:'d/m/Y' }}">
+      <i class="fa-solid fa-circle-check text-success text-xl"></i>
+    </div>
+  {% else %}
+    <i class="fa-solid fa-circle-check text-success text-xl"></i>
+  {% endif %}
 {% elif result is False or result == "False" %}
 {% comment %} FAIL {% endcomment %}
 <i class="fa-solid fa-circle-exclamation text-error text-xl"></i>
-{% elif field_name == "retinal_screening" and result != "under_12" %}
-{% comment %} NO DATA SUPPLIED FOR THIS AUDIT YEAR {% endcomment %}
 {% else %}
 {% comment %} INELIGIBLE {% endcomment %}
   <div class="tooltip tooltip-bottom" data-tip="

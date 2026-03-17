@@ -19,7 +19,7 @@ def title_to_choice(title_to_find):
     if not title_to_find:
         return None
 
-    for (choice, title) in TITLES:
+    for choice, title in TITLES:
         if title_to_find.lower() == title.lower():
             return choice
     return None
@@ -35,7 +35,9 @@ class NPDAUserManager(BaseUserManager):
     All clinicians must be associated with a organisation trust
     """
 
-    def create_or_update_user(self, email, password, role, pz_code, is_primary_employer=False, **extra_fields):
+    def create_or_update_user(
+        self, email, password, role, pz_code, is_primary_employer=False, **extra_fields
+    ):
         """
         Create and save a User with the given email and password.
         Note this is only used for creating dev user or importing users currently.
@@ -68,11 +70,10 @@ class NPDAUserManager(BaseUserManager):
                 user.set_password(password)
             else:
                 user.set_unusable_password()
-            
+
             user.password_last_set = timezone.now()
             user.date_joined = timezone.now()
-        
-        
+
         if extra_fields.get("title"):
             user.title = title_to_choice(extra_fields.get("title"))
         else:
@@ -92,7 +93,7 @@ class NPDAUserManager(BaseUserManager):
         # user not active until has confirmed by email
         if not extra_fields.get("email_confirmed"):
             user.email_confirmed = False
-        
+
         user.save()
 
         """
@@ -116,13 +117,7 @@ class NPDAUserManager(BaseUserManager):
 
         return user
 
-    def create_superuser(
-        self,
-        first_name,
-        surname,
-        email,
-        password
-    ):
+    def create_superuser(self, first_name, surname, email, password):
         return self.create_or_update_user(
             pz_code="PZ999",  # RCPCH
             email=email.lower(),
@@ -189,6 +184,7 @@ class NPDAUser(AbstractUser, PermissionsMixin):
     role = models.PositiveSmallIntegerField(choices=ROLES)
     email_confirmed = models.BooleanField(default=False)
     password_last_set = models.DateTimeField(default=timezone.now)
+    feature_flags = models.JSONField(default=list, blank=True)
 
     REQUIRED_FIELDS = ["role", "first_name", "surname", "is_rcpch_audit_team_member"]
     USERNAME_FIELD = "email"
@@ -251,13 +247,13 @@ class NPDAUser(AbstractUser, PermissionsMixin):
 
     def get_short_name(self):
         return self.first_name
-    
+
     def number_of_pdu_memberships(self):
         return self.organisation_employers.count()
 
     def get_all_employer_organisations(self):
         return self.organisation_employers.all()
-    
+
     def user_roles(self):
         roles = []
         if self.is_rcpch_audit_team_member:
@@ -269,18 +265,18 @@ class NPDAUser(AbstractUser, PermissionsMixin):
         if self.role == RCPCH_AUDIT_TEAM:
             roles.append("RCPCH Audit Team")
         return ", ".join(roles)
-    
+
     def user_groups(self):
         """
         Returns a list of group names the user belongs to.
         """
         return [group.name for group in self.groups.all()]
-    
+
     def user_groups_readable(self):
         """
         Returns a readable string of group names the user belongs to.
         """
-        
+
         group_keys = self.user_groups()
         if not group_keys:
             return "No groups"
@@ -312,7 +308,10 @@ class NPDAUser(AbstractUser, PermissionsMixin):
         user_creating_or_updating_user = current_user or get_current_user()
         # Set created_by and updated_by. Note that the created_at and updated_at fields
         # are automatically set by Django when the model is saved, so we don't need to set
-        if user_creating_or_updating_user and user_creating_or_updating_user.is_authenticated:
+        if (
+            user_creating_or_updating_user
+            and user_creating_or_updating_user.is_authenticated
+        ):
             if not self.pk:
                 # If this is a new record, set the created_by field
                 self.created_by = user_creating_or_updating_user
@@ -335,7 +334,7 @@ class NPDAUser(AbstractUser, PermissionsMixin):
             CAN_PUBLISH_NPDA_DATA,
             CAN_CONSENT_TO_AUDIT_PARTICIPATION,
             CAN_SUBMIT_CSV,
-            CAN_DOWNLOAD_CSV
+            CAN_DOWNLOAD_CSV,
         ]
         ordering = ("surname",)
 

@@ -157,7 +157,7 @@
         {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_bmi field_name="bmi" %}
       </td>
       <td>
-        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_thyroid_screen field_name="thyroid_screen" %}
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_thyroid_screen ineligible_reason=ineligible_reasons.thyroid_screen field_name="thyroid_screen" %}
       </td>
       <td>
         {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_blood_pressure ineligible_reason=ineligible_reasons.blood_pressure field_name="blood_pressure" %}
@@ -170,7 +170,7 @@
       </td>
       <td>{{ patient.num_passed }} / {{ patient.num_total }}</td>
       <td>
-        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_retinal_screening ineligible_reason=ineligible_reasons.retinal_screening field_name="retinal_screening" %}
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_retinal_screening ineligible_reason=ineligible_reasons.retinal_screening field_name="retinal_screening" complete_tooltip_date=patient.latest_retinal_screening_date %}
       </td>
     </tr>
   {% empty %}

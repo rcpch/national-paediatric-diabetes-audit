@@ -2,7 +2,7 @@ import logging
 import io
 
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from enum import Enum
 
@@ -25,7 +25,7 @@ from django.db.models import (
     ExpressionWrapper,
     DurationField,
     Func,
-    Value
+    Value,
 )
 
 # Django imports
@@ -36,6 +36,9 @@ from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REAS
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.npda.general_functions.breadcrumbs import data_breadcrumbs
 from project.npda.kpi_class.kpis import CalculateKPIS
+from project.npda.general_functions.patient_report import (
+    queries as patient_report_queries,
+)
 from project.npda.models import Patient, AuditPeriod, Visit
 from project.npda.models.db_functions import Round
 from project.npda.views.decorators import check_data_permissions, login_and_otp_required
@@ -43,6 +46,96 @@ from project.npda.views.mixins import PDUPermissionMixin, LoginAndOTPRequiredMix
 from django.db.models import QuerySet
 
 logger = logging.getLogger(__name__)
+
+PATIENT_REPORT_QUERY_HELPERS_FLAG = "patient_report_query_helpers"
+
+
+def use_patient_report_query_helpers(request) -> bool:
+    return PATIENT_REPORT_QUERY_HELPERS_FLAG in request.session.get("feature_flags", [])
+
+
+def apply_care_at_diagnosis_display(patients, reference_date):
+    def apply_status(patient, diagnosis_date, *, due_days, result_key, prefix):
+        due_date = diagnosis_date + timedelta(days=due_days)
+        patient[f"{prefix}_due_date"] = due_date
+
+        if patient.get(result_key) is True:
+            patient[f"{prefix}_status"] = "on_time"
+            return
+
+        if reference_date > due_date:
+            patient[f"{prefix}_status"] = "overdue"
+            return
+
+        days_remaining = (due_date - reference_date).days
+        patient[f"{prefix}_status"] = "countdown"
+        patient[f"{prefix}_days_remaining"] = days_remaining
+        if days_remaining == 0:
+            label = "Due today"
+        elif days_remaining == 1:
+            label = "Due in 1 day"
+        else:
+            label = f"Due in {days_remaining} days"
+        patient[f"{prefix}_countdown_label"] = label
+
+    for patient in patients:
+        diagnosis_date = patient.get("diagnosis_date")
+        if not diagnosis_date:
+            continue
+
+        apply_status(
+            patient,
+            diagnosis_date,
+            due_days=14,
+            result_key="carbohydrate_counting_education",
+            prefix="carb_counting",
+        )
+        apply_status(
+            patient,
+            diagnosis_date,
+            due_days=90,
+            result_key="coeliac_disease_screening",
+            prefix="coeliac_screening",
+        )
+        apply_status(
+            patient,
+            diagnosis_date,
+            due_days=90,
+            result_key="thyroid_disease_screening",
+            prefix="thyroid_screening",
+        )
+
+    return patients
+
+
+def apply_carb_counting_display(patients, reference_date):
+    for patient in patients:
+        diagnosis_date = patient.get("diagnosis_date")
+        if not diagnosis_date:
+            continue
+
+        due_date = diagnosis_date + timedelta(days=14)
+        patient["carb_counting_due_date"] = due_date
+
+        if patient.get("carbohydrate_counting_education") is True:
+            patient["carb_counting_status"] = "on_time"
+            continue
+
+        if reference_date > due_date:
+            patient["carb_counting_status"] = "overdue"
+            continue
+
+        days_remaining = (due_date - reference_date).days
+        patient["carb_counting_status"] = "countdown"
+        patient["carb_counting_days_remaining"] = days_remaining
+        if days_remaining == 0:
+            patient["carb_counting_countdown_label"] = "Due today"
+        elif days_remaining == 1:
+            patient["carb_counting_countdown_label"] = "Due in 1 day"
+        else:
+            patient["carb_counting_countdown_label"] = f"Due in {days_remaining} days"
+
+    return patients
 
 
 class TableCategories(Enum):
@@ -131,8 +224,9 @@ def calculate_hba1c_values(pt_qs: QuerySet[Patient], calculate_kpis: CalculateKP
 
 
 def calculate_queryset(
-    pz_code: str, audit_period: AuditPeriod, selected_category: str
+    pdu, audit_period: AuditPeriod, selected_category: str, use_query_helpers: bool
 ) -> QuerySet[Patient]:
+    pz_code = pdu.pz_code
     calculation_date = audit_period.kpi_calculation_date()
 
     calculate_kpis = CalculateKPIS(
@@ -144,6 +238,140 @@ def calculate_queryset(
     patient_identifier = (
         "nhs_number" if pz_code != "PZ248" else "unique_reference_number"
     )
+    if use_query_helpers:
+        base_qs = patient_report_queries.build_base_queryset(pdu, audit_period)
+        patient_identifier = patient_report_queries._patient_identifier_field(pdu)
+
+        if selected_category == TableCategories.HEALTH_CHECKS.value:
+            pt_qs = (
+                patient_report_queries.annotate_health_checks(base_qs, audit_period)
+                .order_by(
+                    "-is_complete_year_of_care",
+                    "-passed_hba1c",
+                    "-passed_bmi",
+                    "-passed_thyroid_screen",
+                    "-passed_blood_pressure",
+                    "-passed_urinary_albumin",
+                    "-passed_foot_exam",
+                    "patient_identifier",
+                )
+                .values(
+                    "pk",
+                    "patient_identifier",
+                    "is_gte_12yo",
+                    "is_complete_year_of_care",
+                    "passed_hba1c",
+                    "passed_bmi",
+                    "passed_thyroid_screen",
+                    "passed_blood_pressure",
+                    "passed_urinary_albumin",
+                    "passed_foot_exam",
+                    "num_passed",
+                    "num_total",
+                    "passed_retinal_screening",
+                    "latest_retinal_screening_date",
+                )
+            )
+            return pt_qs, calculate_kpis, patient_identifier
+
+        if selected_category == TableCategories.ADDITIONAL_CARE_PROCESSES.value:
+            pt_qs = (
+                patient_report_queries.annotate_additional_care_processes(
+                    base_qs, audit_period
+                )
+                .order_by(
+                    "-is_complete_year_of_care",
+                    "-hba1c_4plus",
+                    "-psychological_assessment",
+                    "-smoking_status",
+                    "-smoking_cessation_referral",
+                    "-additional_dietetic_appt_offered",
+                    "-pts_attending_additional_dietetic_appt",
+                    "-influenza_immunisation_recommended",
+                    "-sick_day_rules_advice",
+                    "patient_identifier",
+                )
+                .values(
+                    "pk",
+                    "patient_identifier",
+                    "is_complete_year_of_care",
+                    "is_gte_12yo",
+                    "hba1c_4plus",
+                    "psychological_assessment",
+                    "smoking_status",
+                    "smoking_cessation_referral",
+                    "additional_dietetic_appt_offered",
+                    "pts_attending_additional_dietetic_appt",
+                    "influenza_immunisation_recommended",
+                    "sick_day_rules_advice",
+                )
+            )
+            return pt_qs, calculate_kpis, patient_identifier
+
+        if selected_category == TableCategories.CARE_AT_DIAGNOSIS.value:
+            pt_qs = (
+                patient_report_queries.annotate_care_at_diagnosis(base_qs, audit_period)
+                .order_by(
+                    "-coeliac_disease_screening",
+                    "-thyroid_disease_screening",
+                    "-carbohydrate_counting_education",
+                    "patient_identifier",
+                )
+                .values(
+                    "pk",
+                    "patient_identifier",
+                    "diagnosis_date",
+                    "coeliac_disease_screening",
+                    "thyroid_disease_screening",
+                    "carbohydrate_counting_education",
+                )
+            )
+            return pt_qs, calculate_kpis, patient_identifier
+
+        if selected_category == TableCategories.ADMISSIONS.value:
+            pt_qs = patient_report_queries.annotate_admissions(
+                base_qs, audit_period
+            ).values(
+                "pk",
+                "patient_identifier",
+                "is_complete_year_of_care",
+                "number_of_admissions",
+                "number_of_dka_admissions",
+            )
+            pt_qs = patient_report_queries.calculate_hba1c_values(pt_qs, audit_period)
+            return pt_qs, calculate_kpis, patient_identifier
+
+        if selected_category == TableCategories.TREATMENT.value:
+            pt_qs = patient_report_queries.annotate_treatment(
+                base_qs, audit_period
+            ).values(
+                "pk",
+                "patient_identifier",
+                "is_complete_year_of_care",
+                "treatment_regimen",
+                "glucose_monitoring",
+                "hcl",
+            )
+            return pt_qs, calculate_kpis, patient_identifier
+
+        if selected_category == TableCategories.OUTCOMES.value:
+            pt_qs = patient_report_queries.annotate_outcomes(
+                base_qs, audit_period
+            ).values(
+                "pk",
+                "patient_identifier",
+                "is_complete_year_of_care",
+                "latest_hba1c_mmol_mol",
+                "latest_hba1c_pct",
+                "previous_to_latest_hba1c_mmol_mol",
+                "previous_to_latest_hba1c_pct",
+                "hba1c_delta",
+                "latest_hba1c_date",
+                "previous_to_latest_hba1c_date",
+                "days_delta_between_latest_and_previous_hba1c",
+            )
+            return pt_qs, calculate_kpis, patient_identifier
+
     all_t1dm_pts = (
         calculate_kpis.calculate_kpi_3_total_t1dm()
         .patient_querysets["eligible"]
@@ -168,6 +396,11 @@ def calculate_queryset(
     )
 
     if selected_category == TableCategories.HEALTH_CHECKS.value:
+        prev_audit = audit_period.previous_audit_period()
+        retinal_range = (
+            prev_audit.start_date if prev_audit else audit_period.start_date,
+            audit_period.end_date,
+        )
         pt_qs = (
             pt_qs.annotate(
                 is_gte_12yo=Q(
@@ -274,6 +507,15 @@ def calculate_queryset(
                     default=False,
                     output_field=BooleanField(),
                 ),
+                latest_retinal_screening_date=Subquery(
+                    Visit.objects.filter(
+                        patient=OuterRef("pk"),
+                        retinal_screening_observation_date__range=retinal_range,
+                        retinal_screening_result__isnull=False,
+                    )
+                    .order_by("-retinal_screening_observation_date")
+                    .values("retinal_screening_observation_date")[:1]
+                ),
                 passed_foot_exam=Case(
                     When(
                         Exists(
@@ -344,6 +586,7 @@ def calculate_queryset(
                 "num_passed",
                 "num_total",
                 "passed_retinal_screening",
+                "latest_retinal_screening_date",
             )
         )
     elif selected_category == TableCategories.ADDITIONAL_CARE_PROCESSES.value:
@@ -379,52 +622,57 @@ def calculate_queryset(
                 smoking_status=Case(
                     When(
                         is_gte_12yo=False,
-                        then=None, # Not eligible
+                        then=None,  # Not eligible
                     ),
                     When(
                         Exists(
                             Visit.objects.filter(
                                 patient=OuterRef("pk"),
                                 visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
-                                smoking_status__in=[1, 2], # non-smoker or smoker recorded
+                                smoking_status__in=[
+                                    1,
+                                    2,
+                                ],  # non-smoker or smoker recorded
                             )
                         ),
-                        then=True, # pass
+                        then=True,  # pass
                     ),
-                    default=Value(False), # fail (includes smoking status not recorded 99)
+                    default=Value(
+                        False
+                    ),  # fail (includes smoking status not recorded 99)
                     output_field=BooleanField(),
                 ),
                 smoking_cessation_referral=Case(
                     When(
                         is_gte_12yo=False,
-                        then=Value("under_12"), # Not eligible
+                        then=Value("under_12"),  # Not eligible
                     ),
                     When(
                         Exists(
                             Visit.objects.filter(
                                 patient=OuterRef("pk"),
                                 visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
-                                smoking_status__in=[99], # unknown - fail
+                                smoking_status__in=[99],  # unknown - fail
                             )
                         ),
-                        then=Value("False")
+                        then=Value("False"),
                     ),
                     When(
                         Exists(
                             Visit.objects.filter(
                                 patient=OuterRef("pk"),
                                 visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
-                                smoking_status__in=[1], # non-smoker
+                                smoking_status__in=[1],  # non-smoker
                             )
                         ),
-                        then=Value("non_smoker_no_referral")
+                        then=Value("non_smoker_no_referral"),
                     ),
                     When(
                         Exists(
                             Visit.objects.filter(
                                 patient=OuterRef("pk"),
                                 visit_date__range=calculate_kpis.AUDIT_DATE_RANGE,
-                                smoking_status__in=[2], # smoker
+                                smoking_status__in=[2],  # smoker
                             )
                         ),
                         then=Case(
@@ -436,10 +684,10 @@ def calculate_queryset(
                                         smoking_cessation_referral_date__isnull=False,
                                     )
                                 ),
-                                then=Value("True"), # pass
+                                then=Value("True"),  # pass
                             ),
-                            default=Value("False"), # fail
-                        )
+                            default=Value("False"),  # fail
+                        ),
                     ),
                     output_field=CharField(),
                 ),
@@ -927,12 +1175,62 @@ class PatientReportView(
         self.selected_category = category
         pz_code = self.pdu.pz_code
 
+        use_query_helpers = use_patient_report_query_helpers(request)
         pt_qs, calculate_kpis, patient_identifier = calculate_queryset(
-            pz_code, self.audit_period, category
+            self.pdu, self.audit_period, category, use_query_helpers
         )
 
         # Save to use later in get_context_data
         self.calculate_kpis = calculate_kpis
+
+        allowed_sort_fields = {
+            TableCategories.HEALTH_CHECKS.value: {
+                "passed_hba1c",
+                "passed_bmi",
+                "passed_thyroid_screen",
+                "passed_blood_pressure",
+                "passed_urinary_albumin",
+                "passed_foot_exam",
+            },
+            TableCategories.ADDITIONAL_CARE_PROCESSES.value: {
+                "hba1c_4plus",
+                "psychological_assessment",
+                "smoking_status",
+                "smoking_cessation_referral",
+                "additional_dietetic_appt_offered",
+                "pts_attending_additional_dietetic_appt",
+                "influenza_immunisation_recommended",
+                "sick_day_rules_advice",
+            },
+            TableCategories.CARE_AT_DIAGNOSIS.value: {
+                "diagnosis_date",
+                "carbohydrate_counting_education",
+                "coeliac_disease_screening",
+                "thyroid_disease_screening",
+            },
+            TableCategories.ADMISSIONS.value: {
+                "kpi_44_mean_hba1c",
+                "kpi_45_median_hba1c",
+                "number_of_admissions",
+                "number_of_dka_admissions",
+            },
+            TableCategories.TREATMENT.value: {
+                "treatment_regimen",
+                "glucose_monitoring",
+                "hcl",
+            },
+            TableCategories.OUTCOMES.value: {
+                "latest_hba1c_mmol_mol",
+                "hba1c_delta",
+                "kpi_45_median_hba1c",
+                "kpi_44_mean_hba1c",
+            },
+        }
+        if sort_field:
+            allowed = allowed_sort_fields.get(self.selected_category, set())
+            allowed = allowed | {"nhs_number", "unique_identifier"}
+            if sort_field not in allowed:
+                sort_field = None
 
         # Sort the queryset based on the selected sort field and order
         if sort_field:
@@ -952,7 +1250,12 @@ class PatientReportView(
                 reverse = sort_order == "desc"
                 field_name = sort_field.replace("-", "")
                 # Calculate HbA1c values
-                pt_qs = calculate_hba1c_values(pt_qs, calculate_kpis)
+                if use_query_helpers:
+                    pt_qs = patient_report_queries.calculate_hba1c_values(
+                        pt_qs, self.audit_period
+                    )
+                else:
+                    pt_qs = calculate_hba1c_values(pt_qs, calculate_kpis)
 
                 pt_qs = sorted(
                     pt_qs,
@@ -964,7 +1267,12 @@ class PatientReportView(
                 )
             else:
                 pt_qs = pt_qs.order_by(sort_field)
-                pt_qs = calculate_hba1c_values(pt_qs, calculate_kpis)
+                if use_query_helpers:
+                    pt_qs = patient_report_queries.calculate_hba1c_values(
+                        pt_qs, self.audit_period
+                    )
+                else:
+                    pt_qs = calculate_hba1c_values(pt_qs, calculate_kpis)
         else:
             # Default ordering
             order_by = ["-is_complete_year_of_care", patient_identifier]
@@ -973,7 +1281,16 @@ class PatientReportView(
                 order_by = [patient_identifier]
 
             pt_qs = pt_qs.order_by(*order_by)
-            pt_qs = calculate_hba1c_values(pt_qs, calculate_kpis)
+            if use_query_helpers:
+                pt_qs = patient_report_queries.calculate_hba1c_values(
+                    pt_qs, self.audit_period
+                )
+            else:
+                pt_qs = calculate_hba1c_values(pt_qs, calculate_kpis)
+
+        if self.selected_category == TableCategories.CARE_AT_DIAGNOSIS.value:
+            reference_date = self.audit_period.kpi_calculation_date()
+            pt_qs = apply_care_at_diagnosis_display(list(pt_qs), reference_date)
 
         return pt_qs
 
@@ -999,6 +1316,7 @@ class PatientReportView(
                 "urinary_albumin": "Not required as less than 12 years old",
                 "foot_exam": "Not required as less than 12 years old",
                 "retinal_screening": "Not required as less than 12 years old",
+                "thyroid_screen": "Not required as within 1 year of diagnosis",
             }
 
             def get_patient_ids_and_count(**kwargs):
@@ -1183,9 +1501,10 @@ def download_patient_report(request, audit_period, pdu):
     with pd.ExcelWriter(contents, engine="openpyxl") as writer:
         for category in TableCategories:
             pt_qs, _, patient_identifier = calculate_queryset(
-                pz_code=pdu.pz_code,
+                pdu=pdu,
                 audit_period=audit_period,
                 selected_category=category.value,
+                use_query_helpers=use_patient_report_query_helpers(request),
             )
 
             data = defaultdict(list)
@@ -1218,7 +1537,11 @@ def download_patient_report(request, audit_period, pdu):
                         for field in fields:
                             status = measure_status(row[f"passed_{field}"])
 
-                            if field == "retinal_screening" and status == "NA" and row["is_gte_12yo"]:
+                            if (
+                                field == "retinal_screening"
+                                and status == "NA"
+                                and row["is_gte_12yo"]
+                            ):
                                 # As retinal screening is bi-annual, they might have been covered last year
                                 # https://github.com/rcpch/national-paediatric-diabetes-audit/pull/1276
                                 status = ""
