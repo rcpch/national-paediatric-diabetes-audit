@@ -1235,7 +1235,7 @@ def test_retinal_screening_under_12yo_shows_ineligible(
         nhs_number="5555555555",
         diabetes_type=DIABETES_TYPES[0][0],  # T1DM
         date_of_birth=date_of_birth,
-        diagnosis_date=audit_period.start_date - relativedelta(days=365),
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
     )
 
     visit_date = audit_period.start_date + relativedelta(days=10)
@@ -1308,7 +1308,7 @@ def test_retinal_screening_over_12yo_with_data_passes(
         nhs_number="6666666666",
         diabetes_type=DIABETES_TYPES[0][0],  # T1DM
         date_of_birth=date_of_birth,
-        diagnosis_date=audit_period.start_date - relativedelta(days=365),
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
     )
 
     visit_date = audit_period.start_date + relativedelta(days=10)
@@ -1381,7 +1381,7 @@ def test_retinal_screening_over_12yo_with_data_fails(
         nhs_number="7777777777",
         diabetes_type=DIABETES_TYPES[0][0],  # T1DM
         date_of_birth=date_of_birth,
-        diagnosis_date=audit_period.start_date - relativedelta(days=365),
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
     )
 
     visit_date = audit_period.start_date + relativedelta(days=10)
@@ -1454,7 +1454,7 @@ def test_retinal_screening_over_12yo_without_data_shows_blank(
         nhs_number="8888888888",
         diabetes_type=DIABETES_TYPES[0][0],  # T1DM
         date_of_birth=date_of_birth,
-        diagnosis_date=audit_period.start_date - relativedelta(days=365),
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
     )
 
     visit_date = audit_period.start_date + relativedelta(days=10)
