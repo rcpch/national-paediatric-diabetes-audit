@@ -102,6 +102,7 @@ def test_no_duplicate_patients_in_report(
     new_submission = Submission.objects.create(
         paediatric_diabetes_unit=ah_rcpch_audit_team_user.organisation_employers.first(),
         audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
         submission_date=audit_period.start_date,
         submission_by=ah_rcpch_audit_team_user,
         submission_active=True,
@@ -157,7 +158,7 @@ def _create_outcomes_test_setup(client):
         "transfer__date_leaving_service": None,
     }
 
-    return ah_rcpch_audit_team_user, AUDIT_START_DATE, eligible_criteria
+    return ah_rcpch_audit_team_user, audit_period, AUDIT_START_DATE, eligible_criteria
 
 
 @pytest.mark.django_db
@@ -173,7 +174,7 @@ def test_outcomes_no_hba1c_measurements(
     Verifies that all HbA1c-related fields are None when a patient
     has visits but no HbA1c data recorded.
     """
-    ah_rcpch_audit_team_user, AUDIT_START_DATE, eligible_criteria = (
+    ah_rcpch_audit_team_user, audit_period, AUDIT_START_DATE, eligible_criteria = (
         _create_outcomes_test_setup(client)
     )
 
@@ -195,6 +196,7 @@ def test_outcomes_no_hba1c_measurements(
     submission = Submission.objects.create(
         paediatric_diabetes_unit=ah_rcpch_audit_team_user.organisation_employers.first(),
         audit_year=AUDIT_START_DATE.year,
+        audit_period=audit_period,
         submission_date=AUDIT_START_DATE,
         submission_by=ah_rcpch_audit_team_user,
         submission_active=True,
@@ -244,7 +246,7 @@ def test_outcomes_single_hba1c_measurement(
     Verifies that latest HbA1c values are populated correctly while
     previous values remain None, and no delta calculations are performed.
     """
-    ah_rcpch_audit_team_user, AUDIT_START_DATE, eligible_criteria = (
+    ah_rcpch_audit_team_user, audit_period, AUDIT_START_DATE, eligible_criteria = (
         _create_outcomes_test_setup(client)
     )
 
@@ -266,6 +268,7 @@ def test_outcomes_single_hba1c_measurement(
     submission = Submission.objects.create(
         paediatric_diabetes_unit=ah_rcpch_audit_team_user.organisation_employers.first(),
         audit_year=AUDIT_START_DATE.year,
+        audit_period=audit_period,
         submission_date=AUDIT_START_DATE,
         submission_by=ah_rcpch_audit_team_user,
         submission_active=True,
@@ -318,7 +321,7 @@ def test_outcomes_multiple_hba1c_measurements(
     percentage conversions are accurate, and delta calculations show the
     percentage change between measurements.
     """
-    ah_rcpch_audit_team_user, AUDIT_START_DATE, eligible_criteria = (
+    ah_rcpch_audit_team_user, audit_period, AUDIT_START_DATE, eligible_criteria = (
         _create_outcomes_test_setup(client)
     )
 
@@ -349,6 +352,7 @@ def test_outcomes_multiple_hba1c_measurements(
     submission = Submission.objects.create(
         paediatric_diabetes_unit=ah_rcpch_audit_team_user.organisation_employers.first(),
         audit_year=AUDIT_START_DATE.year,
+        audit_period=audit_period,
         submission_date=AUDIT_START_DATE,
         submission_by=ah_rcpch_audit_team_user,
         submission_active=True,
@@ -430,6 +434,7 @@ def test_report_for_patients_turning_12_in_audit_year(
     submission = Submission.objects.create(
         paediatric_diabetes_unit=user.organisation_employers.first(),
         audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
         submission_date=audit_period.start_date,
         submission_by=user,
         submission_active=True,
@@ -523,6 +528,7 @@ def test_report_for_sick_day_rules(
     submission = Submission.objects.create(
         paediatric_diabetes_unit=user.organisation_employers.first(),
         audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
         submission_date=audit_period.start_date,
         submission_by=user,
         submission_active=True,
@@ -588,6 +594,7 @@ def test_care_at_diagnosis_for_type_1_patient(
     submission = Submission.objects.create(
         paediatric_diabetes_unit=user.organisation_employers.first(),
         audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
         submission_date=audit_period.start_date,
         submission_by=user,
         submission_active=True,
@@ -655,6 +662,7 @@ def test_carb_counting_countdown_when_no_date_entered(
     submission = Submission.objects.create(
         paediatric_diabetes_unit=user.organisation_employers.first(),
         audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
         submission_date=audit_period.start_date,
         submission_by=user,
         submission_active=True,
@@ -717,6 +725,7 @@ def test_coeliac_screening_countdown_when_no_date_entered(
     submission = Submission.objects.create(
         paediatric_diabetes_unit=user.organisation_employers.first(),
         audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
         submission_date=audit_period.start_date,
         submission_by=user,
         submission_active=True,
@@ -779,6 +788,7 @@ def test_thyroid_screening_overdue_when_threshold_passed(
     submission = Submission.objects.create(
         paediatric_diabetes_unit=user.organisation_employers.first(),
         audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
         submission_date=audit_period.start_date,
         submission_by=user,
         submission_active=True,
@@ -842,6 +852,7 @@ def test_coeliac_and_thyroid_screening_on_time_when_dates_present(
     submission = Submission.objects.create(
         paediatric_diabetes_unit=user.organisation_employers.first(),
         audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
         submission_date=audit_period.start_date,
         submission_by=user,
         submission_active=True,
@@ -907,6 +918,7 @@ def test_non_type_1_patients_do_not_appear_in_care_at_diagnosis(
     submission = Submission.objects.create(
         paediatric_diabetes_unit=user.organisation_employers.first(),
         audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
         submission_date=audit_period.start_date,
         submission_by=user,
         submission_active=True,
@@ -969,6 +981,7 @@ def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_hba1c_he
     submission = Submission.objects.create(
         paediatric_diabetes_unit=user.organisation_employers.first(),
         audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
         submission_date=audit_period.start_date,
         submission_by=user,
         submission_active=True,
@@ -1034,6 +1047,7 @@ def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_influenz
     submission = Submission.objects.create(
         paediatric_diabetes_unit=user.organisation_employers.first(),
         audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
         submission_date=audit_period.start_date,
         submission_by=user,
         submission_active=True,
@@ -1097,6 +1111,7 @@ def test_patient_under_12yo_should_show_as_ineligible_for_smoking_status_screene
     submission = Submission.objects.create(
         paediatric_diabetes_unit=user.organisation_employers.first(),
         audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
         submission_date=audit_period.start_date,
         submission_by=user,
         submission_active=True,
@@ -1161,6 +1176,7 @@ def test_patient_over_12yo_non_smoker_should_not_be_eligible_for_smoking_cessati
     submission = Submission.objects.create(
         paediatric_diabetes_unit=user.organisation_employers.first(),
         audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
         submission_date=audit_period.start_date,
         submission_by=user,
         submission_active=True,
@@ -1235,6 +1251,7 @@ def test_retinal_screening_under_12yo_shows_ineligible(
     submission = Submission.objects.create(
         paediatric_diabetes_unit=user.organisation_employers.first(),
         audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
         submission_date=audit_period.start_date,
         submission_by=user,
         submission_active=True,
@@ -1307,6 +1324,7 @@ def test_retinal_screening_over_12yo_with_data_passes(
     submission = Submission.objects.create(
         paediatric_diabetes_unit=user.organisation_employers.first(),
         audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
         submission_date=audit_period.start_date,
         submission_by=user,
         submission_active=True,
@@ -1379,6 +1397,7 @@ def test_retinal_screening_over_12yo_with_data_fails(
     submission = Submission.objects.create(
         paediatric_diabetes_unit=user.organisation_employers.first(),
         audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
         submission_date=audit_period.start_date,
         submission_by=user,
         submission_active=True,
@@ -1451,6 +1470,7 @@ def test_retinal_screening_over_12yo_without_data_shows_blank(
     submission = Submission.objects.create(
         paediatric_diabetes_unit=user.organisation_employers.first(),
         audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
         submission_date=audit_period.start_date,
         submission_by=user,
         submission_active=True,
@@ -1525,6 +1545,7 @@ def test_patient_with_two_visits_one_with_smoking_status_one_without_has_one_row
     submission = Submission.objects.create(
         paediatric_diabetes_unit=user.organisation_employers.first(),
         audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
         submission_date=audit_period.start_date,
         submission_by=user,
         submission_active=True,
@@ -1594,6 +1615,7 @@ def test_smoker_with_two_visits_one_with_smoking_cessation_referral_one_without_
     submission = Submission.objects.create(
         paediatric_diabetes_unit=user.organisation_employers.first(),
         audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
         submission_date=audit_period.start_date,
         submission_by=user,
         submission_active=True,
