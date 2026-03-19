@@ -144,7 +144,7 @@ class TestPatientReportHealthCheckQueries:
         row = rows[patient.pk]
 
         assert row["is_gte_12yo"] is False
-        assert row["passed_retinal_screening"] is None
+        assert row["passed_retinal_screening"] == "not_required"
 
     def test_retinal_screening_over_12_with_data_passes(
         self, seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
@@ -171,9 +171,9 @@ class TestPatientReportHealthCheckQueries:
         row = rows[patient.pk]
 
         assert row["is_gte_12yo"] is True
-        assert row["passed_retinal_screening"] is True
+        assert row["passed_retinal_screening"] == "complete"
 
-    def test_retinal_screening_over_12_without_data_fails(
+    def test_retinal_screening_over_12_without_data_is_blank(
         self, seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
     ):
         user, pdu = self._get_user_and_pdu()
@@ -197,9 +197,9 @@ class TestPatientReportHealthCheckQueries:
         row = rows[patient.pk]
 
         assert row["is_gte_12yo"] is True
-        assert row["passed_retinal_screening"] is False
+        assert row["passed_retinal_screening"] == ""
 
-    def test_retinal_screening_passes_with_previous_audit_period_data(
+    def test_retinal_screening_blank_with_previous_audit_period_data(
         self, seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
     ):
         user, pdu = self._get_user_and_pdu()
@@ -222,7 +222,7 @@ class TestPatientReportHealthCheckQueries:
             hba1c_date=audit_period.start_date + relativedelta(days=10),
         )
 
-        # Retinal screening in previous audit period should count
+        # Retinal screening in previous audit period no longer counts
         VisitFactory(
             patient=patient,
             visit_date=previous_period.start_date + relativedelta(days=60),
@@ -236,9 +236,9 @@ class TestPatientReportHealthCheckQueries:
         rows = self._get_health_check_rows(pdu, audit_period)
         row = rows[patient.pk]
 
-        assert row["passed_retinal_screening"] is True
+        assert row["passed_retinal_screening"] == ""
 
-    def test_retinal_screening_fails_with_no_data_across_two_periods(
+    def test_retinal_screening_blank_with_no_data_across_two_periods(
         self, seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
     ):
         user, pdu = self._get_user_and_pdu()
@@ -264,7 +264,7 @@ class TestPatientReportHealthCheckQueries:
         rows = self._get_health_check_rows(pdu, audit_period)
         row = rows[patient.pk]
 
-        assert row["passed_retinal_screening"] is False
+        assert row["passed_retinal_screening"] == ""
 
     def test_retinal_screening_not_required_within_first_year_of_diagnosis(
         self, seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
@@ -293,9 +293,9 @@ class TestPatientReportHealthCheckQueries:
         row = rows[patient.pk]
 
         assert row["is_gte_12yo"] is True
-        assert row["passed_retinal_screening"] is None
+        assert row["passed_retinal_screening"] == "not_required"
 
-    def test_retinal_screening_with_date_but_no_result_fails(
+    def test_retinal_screening_with_date_but_no_result_is_blank(
         self, seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
     ):
         user, pdu = self._get_user_and_pdu()
@@ -330,9 +330,9 @@ class TestPatientReportHealthCheckQueries:
         row = rows[patient.pk]
 
         assert row["is_gte_12yo"] is True
-        assert row["passed_retinal_screening"] is False
+        assert row["passed_retinal_screening"] == ""
 
-    def test_retinal_screening_previous_period_date_without_result_fails(
+    def test_retinal_screening_previous_period_date_without_result_is_blank(
         self, seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
     ):
         user, pdu = self._get_user_and_pdu()
@@ -368,7 +368,7 @@ class TestPatientReportHealthCheckQueries:
         row = rows[patient.pk]
 
         assert row["is_gte_12yo"] is True
-        assert row["passed_retinal_screening"] is False
+        assert row["passed_retinal_screening"] == ""
 
     def test_incomplete_year_of_care_still_passes_hba1c(
         self, seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture

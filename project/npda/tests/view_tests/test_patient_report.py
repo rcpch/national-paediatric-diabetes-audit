@@ -1278,8 +1278,8 @@ def test_retinal_screening_under_12yo_shows_ineligible(
     patient_data = patients[0]
     assert patient_data["patient_identifier"] == "5555555555"
     assert patient_data["is_gte_12yo"] is False
-    # Should be None (ineligible) even though data exists
-    assert patient_data["passed_retinal_screening"] is None
+    # Should be "not_required" (ineligible) even though data exists
+    assert patient_data["passed_retinal_screening"] == "not_required"
 
 
 @pytest.mark.django_db
@@ -1352,7 +1352,7 @@ def test_retinal_screening_over_12yo_with_data_passes(
     assert patient_data["patient_identifier"] == "6666666666"
     assert patient_data["is_gte_12yo"] is True
     # Should pass because they are 12+ with valid data
-    assert patient_data["passed_retinal_screening"] is True
+    assert patient_data["passed_retinal_screening"] == "complete"
 
 
 @pytest.mark.django_db
@@ -1424,8 +1424,8 @@ def test_retinal_screening_over_12yo_with_data_fails(
     patient_data = patients[0]
     assert patient_data["patient_identifier"] == "7777777777"
     assert patient_data["is_gte_12yo"] is True
-    # Should fail because they are eligible but don't pass
-    assert patient_data["passed_retinal_screening"] is False
+    # Should be blank because they are eligible but don't pass — eye screen is biannual
+    assert patient_data["passed_retinal_screening"] == ""
 
 
 @pytest.mark.django_db
@@ -1497,8 +1497,8 @@ def test_retinal_screening_over_12yo_without_data_shows_blank(
     patient_data = patients[0]
     assert patient_data["patient_identifier"] == "8888888888"
     assert patient_data["is_gte_12yo"] is True
-    # Should be None (no data available) - template will show blank, not ineligible icon
-    assert patient_data["passed_retinal_screening"] is None
+    # Should be blank (no data available) - template will show blank, not ineligible icon
+    assert patient_data["passed_retinal_screening"] == ""
 
 
 @pytest.mark.django_db
