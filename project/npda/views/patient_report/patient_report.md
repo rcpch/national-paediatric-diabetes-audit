@@ -134,7 +134,7 @@ This shows the mean and median HbA1c (both as IFCC and DCCT) of all visit HbA1cs
 
 ### Aim
 
-To Create a new patient report behind a feature flag that does not use the KPI class for its calculations, addressing each of the issues above.
+To Create a new patient report that does not use the KPI class for its calculations, addressing each of the issues above.
 
 This should involve:
 
@@ -152,12 +152,6 @@ This should involve:
 - [ ] It is fine to reuse partials to limit the impact of the refactor
 
 ### Detailed Implementation Plan (Agreed)
-
-#### Feature Flag and Access
-
-- Implement a server-side, persistent per-user feature flag to enable the new patient report, scoped to NPDA audit team members and superusers.
-- Keep the existing patient report routes and templates; switch query source based on the feature flag.
-- Leave the existing KPI-based implementation intact for fallback.
 
 #### Cohort Definition (Base Query)
 
@@ -238,7 +232,6 @@ This should involve:
 
 #### Requirements Coverage Checklist
 
-- Feature flag: server-side, persistent per-user; toggle visible to NPDA audit team members and superusers.
 - UI framework: use DaisyUI components and existing config; avoid custom components where DaisyUI fits.
 - Interactivity: HTMX for category switching, sorting, and pagination (reuse existing partials).
 - Security: keep current decorators/mixins for OTP login, PDU scoping, and role-based access.
