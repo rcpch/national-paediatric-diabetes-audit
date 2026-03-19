@@ -37,18 +37,21 @@ def _patient_identifier_field(pdu) -> str:
     return "unique_reference_number" if pdu.pz_code == "PZ248" else "nhs_number"
 
 
-def build_base_queryset(pdu, audit_period):
+def build_base_queryset(pdu, audit_period, *, type1_only=True):
     audit_range = (audit_period.start_date, audit_period.end_date)
     patient_identifier = _patient_identifier_field(pdu)
 
+    filters = Q(
+        submissions__submission_active=True,
+        submissions__audit_period=audit_period,
+        submissions__paediatric_diabetes_unit=pdu,
+        visit__visit_date__range=audit_range,
+    )
+    if type1_only:
+        filters &= Q(diabetes_type=DIABETES_TYPES[0][0])
+
     base_qs = (
-        Patient.objects.filter(
-            submissions__submission_active=True,
-            submissions__audit_period=audit_period,
-            submissions__paediatric_diabetes_unit=pdu,
-            diabetes_type=DIABETES_TYPES[0][0],
-            visit__visit_date__range=audit_range,
-        )
+        Patient.objects.filter(filters)
         .distinct()
         .annotate(
             patient_identifier=F(patient_identifier),

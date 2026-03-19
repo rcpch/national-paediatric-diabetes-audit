@@ -219,6 +219,7 @@ This should involve:
 
 ##### Outcomes
 
+- Base cohort is all patients, not just those with Type 1 diabetes. Still only include patients in the current audit period.
 - Latest and previous HbA1c in audit period via `Subquery` ordered by `visit_date`.
 - Compute % change between previous and latest HbA1c (rounded).
 - Mean and median HbA1c per patient from audit-period values, excluding first 90 days post-diagnosis.

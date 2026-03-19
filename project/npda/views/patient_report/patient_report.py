@@ -270,8 +270,11 @@ def calculate_queryset(
         return pt_qs, calculate_kpis, patient_identifier
 
     if selected_category == TableCategories.OUTCOMES.value:
+        outcomes_qs = patient_report_queries.build_base_queryset(
+            pdu, audit_period, type1_only=False
+        )
         pt_qs = patient_report_queries.annotate_outcomes(
-            base_qs, audit_period
+            outcomes_qs, audit_period
         ).values(
             "pk",
             "patient_identifier",
