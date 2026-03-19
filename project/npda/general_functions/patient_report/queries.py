@@ -37,18 +37,21 @@ def _patient_identifier_field(pdu) -> str:
     return "unique_reference_number" if pdu.pz_code == "PZ248" else "nhs_number"
 
 
-def build_base_queryset(pdu, audit_period):
+def build_base_queryset(pdu, audit_period, *, type1_only=True):
     audit_range = (audit_period.start_date, audit_period.end_date)
     patient_identifier = _patient_identifier_field(pdu)
 
+    filters = Q(
+        submissions__submission_active=True,
+        submissions__audit_period=audit_period,
+        submissions__paediatric_diabetes_unit=pdu,
+        visit__visit_date__range=audit_range,
+    )
+    if type1_only:
+        filters &= Q(diabetes_type=DIABETES_TYPES[0][0])
+
     base_qs = (
-        Patient.objects.filter(
-            submissions__submission_active=True,
-            submissions__audit_period=audit_period,
-            submissions__paediatric_diabetes_unit=pdu,
-            diabetes_type=DIABETES_TYPES[0][0],
-            visit__visit_date__range=audit_range,
-        )
+        Patient.objects.filter(filters)
         .distinct()
         .annotate(
             patient_identifier=F(patient_identifier),
@@ -79,11 +82,6 @@ def build_base_queryset(pdu, audit_period):
 
 def annotate_health_checks(qs, audit_period):
     audit_range = (audit_period.start_date, audit_period.end_date)
-    prev_audit = audit_period.previous_audit_period()
-    retinal_range = (
-        prev_audit.start_date if prev_audit else audit_period.start_date,
-        audit_period.end_date,
-    )
 
     hba1c_exists = Exists(
         Visit.objects.filter(
@@ -128,7 +126,7 @@ def annotate_health_checks(qs, audit_period):
     retinal_exists = Exists(
         Visit.objects.filter(
             patient=OuterRef("pk"),
-            retinal_screening_observation_date__range=retinal_range,
+            retinal_screening_observation_date__range=audit_range,
             retinal_screening_result__isnull=False,
         )
     )
@@ -136,7 +134,7 @@ def annotate_health_checks(qs, audit_period):
     latest_retinal_screening_date = Subquery(
         Visit.objects.filter(
             patient=OuterRef("pk"),
-            retinal_screening_observation_date__range=retinal_range,
+            retinal_screening_observation_date__range=audit_range,
             retinal_screening_result__isnull=False,
         )
         .order_by("-retinal_screening_observation_date")
@@ -181,11 +179,11 @@ def annotate_health_checks(qs, audit_period):
         passed_retinal_screening=Case(
             When(
                 Q(is_gte_12yo=True) & Q(dx_over_1y=True) & retinal_exists,
-                then=True,
+                then=Value("complete"),
             ),
-            When(Q(is_gte_12yo=False) | Q(dx_over_1y=False), then=None),
-            default=False,
-            output_field=BooleanField(),
+            When(Q(is_gte_12yo=False) | Q(dx_over_1y=False), then=Value("not_required")),
+            default=Value(""),
+            output_field=CharField(),
         ),
         latest_retinal_screening_date=latest_retinal_screening_date,
     ).annotate(

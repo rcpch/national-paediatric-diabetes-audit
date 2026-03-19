@@ -134,7 +134,7 @@ This shows the mean and median HbA1c (both as IFCC and DCCT) of all visit HbA1cs
 
 ### Aim
 
-To Create a new patient report behind a feature flag that does not use the KPI class for its calculations, addressing each of the issues above.
+To Create a new patient report that does not use the KPI class for its calculations, addressing each of the issues above.
 
 This should involve:
 
@@ -152,12 +152,6 @@ This should involve:
 - [ ] It is fine to reuse partials to limit the impact of the refactor
 
 ### Detailed Implementation Plan (Agreed)
-
-#### Feature Flag and Access
-
-- Implement a server-side, persistent per-user feature flag to enable the new patient report, scoped to NPDA audit team members and superusers.
-- Keep the existing patient report routes and templates; switch query source based on the feature flag.
-- Leave the existing KPI-based implementation intact for fallback.
 
 #### Cohort Definition (Base Query)
 
@@ -183,7 +177,8 @@ This should involve:
 - Blood pressure: `Exists` visit with `systolic_blood_pressure` and `blood_pressure_observation_date` in audit range; only required if >= 12.
 - Urinary albumin: `Exists` visit with `albumin_creatinine_ratio` and `albumin_creatinine_ratio_date` in audit range; only required if >= 12.
 - Foot exam: `Exists` visit with `foot_examination_observation_date` in audit range; only required if >= 12.
-- Eye screen: `Exists` visit with `retinal_screening_observation_date` and `retinal_screening_result` in current or previous audit period; not required if < 12 or diabetes duration < 1 year.
+- Eye screen: `Exists` visit with `retinal_screening_observation_date` and `retinal_screening_result` in audit range; not required if < 12 or diabetes duration < 1 year.
+  - If not present, return a blank entry in the report not "incomplete". This is because the screen is only mandatory bi-annually.
 - Total: `num_passed` vs `num_total` (3 for < 12, 6 for >= 12).
 
 ##### Additional Care Processes
@@ -225,6 +220,7 @@ This should involve:
 
 ##### Outcomes
 
+- Base cohort is all patients, not just those with Type 1 diabetes. Still only include patients in the current audit period.
 - Latest and previous HbA1c in audit period via `Subquery` ordered by `visit_date`.
 - Compute % change between previous and latest HbA1c (rounded).
 - Mean and median HbA1c per patient from audit-period values, excluding first 90 days post-diagnosis.
@@ -238,7 +234,6 @@ This should involve:
 
 #### Requirements Coverage Checklist
 
-- Feature flag: server-side, persistent per-user; toggle visible to NPDA audit team members and superusers.
 - UI framework: use DaisyUI components and existing config; avoid custom components where DaisyUI fits.
 - Interactivity: HTMX for category switching, sorting, and pagination (reuse existing partials).
 - Security: keep current decorators/mixins for OTP login, PDU scoping, and role-based access.
