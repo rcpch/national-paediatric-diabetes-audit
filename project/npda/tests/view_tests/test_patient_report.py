@@ -40,32 +40,6 @@ from dateutil.relativedelta import relativedelta
 
 logger = logging.getLogger(__name__)
 
-pytestmark = [
-    pytest.mark.usefixtures("patient_report_feature_flag"),
-    pytest.mark.parametrize(
-        "patient_report_feature_flag",
-        [False, True],
-        indirect=True,
-    ),
-]
-
-
-@pytest.fixture
-def patient_report_feature_flag(request, monkeypatch):
-    enabled = request.param
-
-    import project.npda.tests.view_tests.test_patient_report as module
-
-    original_login = module.login_and_verify_user
-
-    def _wrapped_login(client, user):
-        user.feature_flags = ["patient_report_query_helpers"] if enabled else []
-        user.save(update_fields=["feature_flags"])
-        return original_login(client, user)
-
-    monkeypatch.setattr(module, "login_and_verify_user", _wrapped_login)
-    return enabled
-
 
 @pytest.mark.django_db
 def test_anonymous_user_cannot_access_patient_report(
