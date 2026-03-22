@@ -6,9 +6,8 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ("npda", "0042_remove_npdauser_view_preference"),
+        ("npda", "0043_npdauser_feature_flags"),
     ]
 
     operations = [
