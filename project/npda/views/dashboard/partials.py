@@ -51,14 +51,9 @@ def get_map_chart_partial(request, audit_period, pdu):
 
     lead_organisation_ods_code = submission.paediatric_diabetes_unit.lead_organisation_ods_code
 
-    try:
-        pdu_lead_organisation = fetch_organisation_by_ods_code(
-            ods_code=lead_organisation_ods_code
-        )
-    except:
-        raise ValueError(
-            f"Lead organisation for PDU {lead_organisation_ods_code=} not found"
-        )
+    pdu_lead_organisation = fetch_organisation_by_ods_code(
+        ods_code=lead_organisation_ods_code
+    )
 
     try:
         # these are all registered patients for the current cohort at the selected organisation to be plotted in the map

@@ -2,15 +2,13 @@ import urllib.parse
 from ...constants.visit_categories import VISIT_CATEGORIES_BY_TAB
 
 
-def get_categories(instance, form, type="visit"):
+def get_categories(instance, form):
     """
     Returns visit categories present in this visit instance, and tags them as to whether they contain errors
     """
     categories = []
 
-    CATEGORIES_BY_TAB = VISIT_CATEGORIES_BY_TAB
-
-    for _, tab in CATEGORIES_BY_TAB.items():
+    for _, tab in VISIT_CATEGORIES_BY_TAB.items():
         for category_name, category in tab.items():
             fields = category["fields"]
 
@@ -53,18 +51,14 @@ def get_categories(instance, form, type="visit"):
     return categories
 
 
-def get_tabs(form, type="visit"):
+def get_tabs(form):
     tabs = []
     instance = form.instance if form else None
 
     all_categories = get_categories(instance, form, type=type)
     assigned_active_tab = False
 
-    CATEGORIES_BY_TAB = (
-        VISIT_CATEGORIES_BY_TAB if type == "visit" else PATIENT_CATEGORIES_BY_TAB
-    )
-
-    for tab_name, categories in CATEGORIES_BY_TAB.items():
+    for tab_name, categories in VISIT_CATEGORIES_BY_TAB.items():
         category_names = categories.keys()
         categories = [c for c in all_categories if c["name"] in category_names]
         errors = {}

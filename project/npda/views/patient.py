@@ -12,13 +12,13 @@ from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.db.models import Count, Case, When, Max, Q, F
 from django.forms import BaseForm
-from django.forms import BaseForm
-from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import get_object_or_404, render, redirect, reverse
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
+from project.npda.general_functions.categories import get_tabs
 
 
 # Third party imports
@@ -328,8 +328,6 @@ class PatientCreateView(
             ],
         )
         context["audit_period"] = self.audit_period
-        # Provide tabs structure for patient form
-        context["patient_tabs"] = get_tabs(form=context.get("form"), type="patient")
         return context
 
     def form_invalid(self, form):
@@ -392,7 +390,6 @@ class PatientCreateView(
             paediatric_diabetes_unit=self.pdu,
             submission_active=True,
             defaults={
-                "submission_by": NPDAUser.objects.get(pk=self.request.user.pk),
                 "submission_by": NPDAUser.objects.get(pk=self.request.user.pk),
                 "submission_date": timezone.now(),
                 "audit_period": audit_period,

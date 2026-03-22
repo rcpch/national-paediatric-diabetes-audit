@@ -157,7 +157,7 @@
         {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_bmi field_name="bmi" %}
       </td>
       <td>
-        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_thyroid_screen field_name="thyroid_screen" %}
+        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_thyroid_screen ineligible_reason=ineligible_reasons.thyroid_screen field_name="thyroid_screen" %}
       </td>
       <td>
         {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_blood_pressure ineligible_reason=ineligible_reasons.blood_pressure field_name="blood_pressure" %}
@@ -170,7 +170,19 @@
       </td>
       <td>{{ patient.num_passed }} / {{ patient.num_total }}</td>
       <td>
-        {% include "patient_report/components/true_false_incomplete_icons.html" with result=patient.passed_retinal_screening ineligible_reason=ineligible_reasons.retinal_screening field_name="retinal_screening" %}
+        {% if patient.passed_retinal_screening == "complete" %}
+          {% if patient.latest_retinal_screening_date %}
+            <div class="tooltip tooltip-bottom" data-tip="Most recent: {{ patient.latest_retinal_screening_date|date:'d/m/Y' }}">
+              <i class="fa-solid fa-circle-check text-success text-xl"></i>
+            </div>
+          {% else %}
+            <i class="fa-solid fa-circle-check text-success text-xl"></i>
+          {% endif %}
+        {% elif patient.passed_retinal_screening == "not_required" %}
+          <div class="tooltip tooltip-bottom" data-tip="{{ ineligible_reasons.retinal_screening }}">
+            <i class="fa-solid fa-ban text-muted text-xl"></i>
+          </div>
+        {% endif %}
       </td>
     </tr>
   {% empty %}
