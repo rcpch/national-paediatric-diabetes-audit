@@ -55,7 +55,7 @@ def get_tabs(form):
     tabs = []
     instance = form.instance if form else None
 
-    all_categories = get_categories(instance, form, type=type)
+    all_categories = get_categories(instance, form)
     assigned_active_tab = False
 
     for tab_name, categories in VISIT_CATEGORIES_BY_TAB.items():

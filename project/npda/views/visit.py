@@ -91,7 +91,7 @@ class PatientVisitsListView(
         )
         calculated_visits = []
         for visit in visits:
-            visit_categories = get_categories(instance=visit, form=None, type="visit")
+            visit_categories = get_categories(instance=visit, form=None)
             calculated_visits.append({"visit": visit, "categories": visit_categories})
         context["visits"] = calculated_visits
         context["patient"] = patient
