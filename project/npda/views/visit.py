@@ -140,7 +140,7 @@ class VisitCreateView(
         context["title"] = "Add New Visit"
         context["form_method"] = "create"
         context["button_title"] = "Create New Visit"
-        context["visit_tabs"] = get_tabs(form=None, type="visit")
+        context["visit_tabs"] = get_tabs(form=None)
         context["override_height_weight"] = False
         context["audit_period"] = self.audit_period
         context["paediatric_diabetes_unit"] = self.pdu
@@ -252,7 +252,7 @@ class VisitUpdateView(
         context["title"] = "Edit/Update Visit Details"
         context["button_title"] = "Save Changes"
         context["form_method"] = "update"
-        context["visit_tabs"] = get_tabs(form=context["form"], type="visit")
+        context["visit_tabs"] = get_tabs(form=context["form"])
         visit = Visit.objects.get(pk=self.kwargs["pk"])
         context["audit_period"] = self.audit_period
         patient = visit.patient
