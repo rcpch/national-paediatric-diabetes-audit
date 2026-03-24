@@ -19,7 +19,12 @@ Each category lists all patients in a PDU as a table with flags (complete/incomp
 
 Each row represents an individual patient, with the first column their unique identifier.
 
-The patients are sorted with those with with incomplete measures showing first in the list, so that users can identify patients that still need care processes improving. It is possible to resort the patients in descending or ascending order by clicking on a given column header. The user can click through from the patient identifier (NHS number or Unique Reference Number) to the patient record [see issue #1310]
+The patients are sorted with those with with incomplete measures showing first in the list, so that users can identify patients that still need care processes improving. It is possible to resort the patients in descending or ascending order by clicking on a given column header. The user can click through from the patient identifier (NHS number or Unique Reference Number) to the patient record [see issue #1310].
+
+An incomplete year of care can occur in two situations:
+
+- The patient was diagnosed within the current audit year (diagnosis_date on the Patient model)
+- The patient transferred out of this PDU in the current audit year (date_leaving_service is set on the Transfer model associated with the patient)
 
 The columns per category are as follows:
 
@@ -55,7 +60,7 @@ Note retinal screening is counted only every 2 years (see issue #1285) and only 
 - Influenza immunisation recommended
 - Sick day rules advice
 
-These measures are all scored with flags, as in the Health Checks category. HbA1c 4+ reflects if a patient has had 4 HbA1c values (and associated date) within the audit period to get a complete. Incomplete is otherwise scored unless the patient has transferred from another PDU in that audit period and therefore scores as incomplete year of care. Note that smoking status screened and referral to smoking status are only scored in children >= 12y. Smoking status is incomplete if they are scored as a smoker but a referral date is not provided. 
+These measures are all scored with flags, as in the Health Checks category. HbA1c 4+ reflects if a patient has had 4 HbA1c values (and associated date) within the audit period to get a complete. Incomplete is otherwise scored unless the patient has an incomplete year of care. Note that smoking status screened and referral to smoking status are only scored in children >= 12y. Smoking status is incomplete if they are scored as a smoker but a referral date is not provided. 
 
 In the 2026 dataset changes include:
 
@@ -74,7 +79,7 @@ In the 2026 dataset changes include:
 
 These items are scored using flags as with Health Checks.
 
-Patients must be screened for coeliac disease and thyroid function within 90 days of diagnosis (to include the day of diagnosis) to score as complete. If there is no date within this audit period of a child diagnosed within the last 90 days (and that did not have the check in the previous audit period if diagnosed then and still within 90 days - see issue #1327), they are marked as incomplete. It they have had diabetes for more than a year they are marked as not required, and if they have transferred in from another PDU they are scored as incomplete year of care.
+Patients must be screened for coeliac disease and thyroid function within 90 days of diagnosis (to include the day of diagnosis) to score as complete. If there is no date within this audit period of a child diagnosed within the last 90 days (and that did not have the check in the previous audit period if diagnosed then and still within 90 days - see issue #1327), they are marked as incomplete. It they have had diabetes for more than a year they are marked as not required, and also if they have an incomplete year of care.
 
 The same methodology applies to carbohydrate counting, though the threshold is 14 days.
 
@@ -147,7 +152,7 @@ This should involve:
 - [ ] Queries should use the ORM, avoid complexity where possible.
 - [ ] The new implementation should include facets in column headers using the `django-filter` dependency
 - [ ] Filters should include visits of children with T1 diabetes in an active submission that fall within the audit period. Note that a submission is related to the PDU (through the Submission model) and the patient through the PatientSubmission model.
-- [ ] Patients that have been under the care of a PDU for less than a year are tracked in the Transfer model (which relates to the Patient model) and for most measures will score as 'incomplete year of care'.
+- [ ] Patients that that have been under the care of a PDU for less than a year (see definition of incomplete year of care above) will score as 'incomplete year of care' for most measures.
 - [ ] By default, the table should be sorted with incomplete measures first, then complete, then not required and finally incomplete year of care. Those with an incomplete year of care have background coloured pale orange.
 - [ ] It is fine to reuse partials to limit the impact of the refactor
 
@@ -158,7 +163,9 @@ This should involve:
 - Base cohort: patients with Type 1 diabetes in the active submission for the selected audit period and PDU.
 - Scope to visits within the selected audit period.
 - Patient identifier: `nhs_number` unless PZ248, then `unique_reference_number`.
-- Incomplete year of care: a patient is incomplete year of care if `Transfer.date_leaving_service` is within the audit period (>= audit_start_date and <= audit_end_date).
+- Incomplete year of care, either:
+  - Diagnosed in the current audit year (`audit_start_date` <= `Transfer.date_leaving_service` <= `audit_end_date`)
+  - Moved out of service in the current audit year (`audit_start_date` <= `Transfer.date_leaving_service` <= `audit_end_date`)
 
 #### Common ORM Building Blocks
 

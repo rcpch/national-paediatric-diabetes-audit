@@ -61,11 +61,24 @@ def build_base_queryset(pdu, audit_period, *, type1_only=True):
             dx_over_1y=Q(
                 diagnosis_date__lte=audit_period.start_date - relativedelta(years=1)
             ),
-            is_incomplete_year_of_care=Exists(
-                Transfer.objects.filter(
-                    patient=OuterRef("pk"),
-                    date_leaving_service__range=audit_range,
-                )
+            is_incomplete_year_of_care=Case(
+                # Diagnosed within the audit year
+                When(
+                    Q(diagnosis_date__range=audit_range),
+                    then=True,
+                ),
+                # Transferred out during the audit year
+                When(
+                    Exists(
+                        Transfer.objects.filter(
+                            patient=OuterRef("pk"),
+                            date_leaving_service__range=audit_range,
+                        )
+                    ),
+                    then=True,
+                ),
+                default=False,
+                output_field=BooleanField(),
             ),
         )
         .annotate(

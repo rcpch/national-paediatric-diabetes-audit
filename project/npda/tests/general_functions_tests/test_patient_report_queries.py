@@ -403,6 +403,36 @@ class TestPatientReportHealthCheckQueries:
         assert row["is_complete_year_of_care"] is False
         assert row["passed_hba1c"] is True
 
+    def test_incomplete_year_of_care_when_diagnosed_within_audit_year(
+        self, seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
+    ):
+        """Test that a patient diagnosed within the audit year has incomplete year of care."""
+        user, pdu = self._get_user_and_pdu()
+        audit_period = AuditPeriod.objects.get_default_audit_period()
+
+        patient = PatientFactory(
+            nhs_number="8888888888",
+            diabetes_type=DIABETES_TYPES[0][0],
+            date_of_birth=audit_period.start_date - relativedelta(years=14),
+            diagnosis_date=audit_period.start_date + relativedelta(days=30),  # Diagnosed within audit year
+        )
+        VisitFactory(
+            patient=patient,
+            visit_date=audit_period.start_date + relativedelta(days=35),
+            hba1c=50,
+            hba1c_format=HBA1C_FORMATS[0][0],
+            hba1c_date=audit_period.start_date + relativedelta(days=35),
+        )
+        # No Transfer created - incomplete year of care should be True due to diagnosis date only
+        self._create_submission(pdu, audit_period, user, [patient])
+
+        rows = self._get_health_check_rows(pdu, audit_period)
+        row = rows[patient.pk]
+
+        assert row["is_incomplete_year_of_care"] is True
+        assert row["is_complete_year_of_care"] is False
+        assert row["passed_hba1c"] is True
+
     def test_bmi_passes_only_when_bmi_and_observation_date_present(
         self, seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
     ):
