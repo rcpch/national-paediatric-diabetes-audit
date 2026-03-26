@@ -14,7 +14,6 @@ class DateInput(forms.DateInput):
 
 
 class VisitForm(forms.ModelForm):
-
     patient = None
 
     class Meta:
@@ -311,7 +310,6 @@ class VisitForm(forms.ModelForm):
         data = self.cleaned_data["retinal_screening_result"]
         # Convert the list of tuples to a dictionary
         retinal_screening_result_dict = dict(RETINAL_SCREENING_RESULTS)
-
         if data is None or data in retinal_screening_result_dict:
             return data
         else:
@@ -572,8 +570,14 @@ class VisitForm(forms.ModelForm):
         if valid == False:
             raise ValidationError(error)
 
-        if data and self.patient.diagnosis_date and data < self.patient.diagnosis_date - timedelta(days=90):
-            raise ValidationError("Expected thyroid function date within 90 days before diagnosis.")
+        if (
+            data
+            and self.patient.diagnosis_date
+            and data < self.patient.diagnosis_date - timedelta(days=90)
+        ):
+            raise ValidationError(
+                "Expected thyroid function date within 90 days before diagnosis."
+            )
 
         return self.cleaned_data["thyroid_function_date"]
 
@@ -590,9 +594,15 @@ class VisitForm(forms.ModelForm):
 
         if valid == False:
             raise ValidationError(error)
-        
-        if data and self.patient.diagnosis_date and data < self.patient.diagnosis_date - timedelta(days=90):
-            raise ValidationError("Expected coeliac screen date within 90 days before diagnosis.")
+
+        if (
+            data
+            and self.patient.diagnosis_date
+            and data < self.patient.diagnosis_date - timedelta(days=90)
+        ):
+            raise ValidationError(
+                "Expected coeliac screen date within 90 days before diagnosis."
+            )
 
         return self.cleaned_data["coeliac_screen_date"]
 
@@ -732,7 +742,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
-            audit_period=None, # Hospital admission dates are not bound by the audit period
+            audit_period=None,  # Hospital admission dates are not bound by the audit period
         )
         if valid == False:
             raise ValidationError(error)
@@ -751,7 +761,11 @@ class VisitForm(forms.ModelForm):
         ]:
             result = getattr(self.async_validation_results, result_field)
 
-            if result and type(result) is ValidationError and not self.override_height_weight:
+            if (
+                result
+                and type(result) is ValidationError
+                and not self.override_height_weight
+            ):
                 for field in fields_to_attach_errors:
                     self.add_error(field, result)
 
@@ -957,8 +971,6 @@ class VisitForm(forms.ModelForm):
                 }
             )
 
-        
-
         psychological_screening_assessment_date = cleaned_data.get(
             "psychological_screening_assessment_date"
         )
@@ -1121,7 +1133,10 @@ class VisitForm(forms.ModelForm):
         # I haven't implemented it here. The risk is that future versions of Django will add more
         # behaviour that we miss out on.
 
-        if getattr(self, "async_validation_results") and not self.override_height_weight:
+        if (
+            getattr(self, "async_validation_results")
+            and not self.override_height_weight
+        ):
             self.instance.bmi = self.async_validation_results.bmi
 
             for field_prefix in ["height", "weight", "bmi"]:
@@ -1160,7 +1175,9 @@ def measure_must_have_date_and_value(date_field, date_field_name, field_list):
                     }
                 )
     field_name_list = ", ".join(field_name_list)
-    if date_field is None and any(value is not None for field in field_list for value in field.values()):
+    if date_field is None and any(
+        value is not None for field in field_list for value in field.values()
+    ):
         # If the date is None and any of the values are not None, we raise an error
         errors.update(
             {

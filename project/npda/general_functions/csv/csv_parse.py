@@ -60,7 +60,9 @@ def csv_parse(csv_file):
 
     errors_to_return = collections.defaultdict(lambda: collections.defaultdict(list))
 
-    HEADINGS_OBJECTS = UNIQUE_IDENTIFIER_ENGLAND + UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
+    HEADINGS_OBJECTS = (
+        UNIQUE_IDENTIFIER_ENGLAND + UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
+    )
     HEADINGS_LIST = [obj["heading"] for obj in HEADINGS_OBJECTS]
 
     # Convert the predefined column names to lowercase
@@ -92,7 +94,7 @@ def csv_parse(csv_file):
     df.columns = df.columns.str.strip()
 
     # issue #1038 - Twinkle users inexplicably submit CSV files with headings that are in quotes.
-    df.columns = df.columns.str.strip('\'"')
+    df.columns = df.columns.str.strip("'\"")
 
     # Replace headings which were different from in the old NPDA template with the new
     for column in df.columns:
@@ -100,7 +102,9 @@ def csv_parse(csv_file):
 
         for heading in HEADINGS_OBJECTS:
             if "alternative_headings" in heading:
-                lowercase_alternative_headings = [h.lower() for h in heading["alternative_headings"]]
+                lowercase_alternative_headings = [
+                    h.lower() for h in heading["alternative_headings"]
+                ]
 
                 if lowercase_col in lowercase_alternative_headings:
                     df = df.rename(columns={column: heading["heading"]})
@@ -117,7 +121,7 @@ def csv_parse(csv_file):
 
     # Accept columns case insensitively but replace them with their official version to make life easier later
     for column in df.columns:
-        if not column in HEADINGS_LIST and column.lower() in lowercase_headings_list:
+        if column not in HEADINGS_LIST and column.lower() in lowercase_headings_list:
             normalised_column = next(
                 c for c in HEADINGS_LIST if c.lower() == column.lower()
             )
@@ -139,14 +143,18 @@ def csv_parse(csv_file):
     # Set the identifier column
     if identifier_jersey in df.columns:
         identifier_column = identifier_jersey
-        _headings_list = [heading for heading in HEADINGS_LIST if heading != identifier_england]
+        _headings_list = [
+            heading for heading in HEADINGS_LIST if heading != identifier_england
+        ]
 
         # Gather missing / additional columns
         missing_columns = list(set(_headings_list) - set(df.columns))
         additional_columns = list(set(df.columns) - set(_headings_list))
     else:
         identifier_column = identifier_england
-        _headings_list = [heading for heading in HEADINGS_LIST if heading != identifier_jersey]
+        _headings_list = [
+            heading for heading in HEADINGS_LIST if heading != identifier_jersey
+        ]
 
         # Gather missing / additional columns
         missing_columns = list(set(_headings_list) - set(df.columns))
@@ -187,7 +195,11 @@ def csv_parse(csv_file):
                 zip(column_before, column_after)
             ):
                 # Handle empty strings (including spaces) for optional date columns
-                if not pd.isna(value_before) and pd.isna(value_after) and not (type(value_before) is str and value_before.strip() == ""):
+                if (
+                    not pd.isna(value_before)
+                    and pd.isna(value_after)
+                    and not (type(value_before) is str and value_before.strip() == "")
+                ):
                     model_field = csv_definition_for(column)["model_field"]
                     errors_to_return[row_index][model_field].append(
                         "Date format is incorrect (expected DD/MM/YYYY)"
@@ -200,10 +212,46 @@ def csv_parse(csv_file):
     else:
         datatypes = ENGLAND_CSV_DATA_TYPES | CSV_DATA_TYPES_MINUS_DATES
 
+    nullable_int_types = {
+        "Int8",
+        "Int16",
+        "Int32",
+        "Int64",
+        "UInt8",
+        "UInt16",
+        "UInt32",
+        "UInt64",
+    }
+
     # Apply the dtype to non-date columns
     for column, dtype in datatypes.items():
         try:
             if column in df.columns:
+                if dtype in nullable_int_types and pd.api.types.is_float_dtype(
+                    df[column]
+                ):
+                    # pandas 2 refuses to cast float64 → nullable int when NaN is present
+                    # because numpy's safe-cast rules see NaN as non-representable.
+                    # Pre-process the column via a list comprehension:
+                    #   - NaN          → None  (becomes pd.NA in the Int64 series)
+                    #   - integer-valued float (1.0, 2.0)  → int(v)  (valid; stored as float because of NaN elsewhere in column)
+                    #   - non-integer float (99.5)          → kept as-is (bad data)
+                    # When bad data is present the subsequent astype() will still raise,
+                    # routing the column through parse_type_error_columns as before so
+                    # that downstream validation can flag it properly.
+                    # Use pd.NA (not None) so pd.Series doesn't infer float64.
+                    # pd.Series([1, None]) → float64 in pandas 2.x;
+                    # pd.Series([1, pd.NA]) stays object, astype('Int64') works.
+                    df[column] = pd.Series(
+                        [
+                            pd.NA
+                            if pd.isna(v)
+                            else (int(v) if float(v).is_integer() else v)
+                            for v in df[column]
+                        ],
+                        index=df.index,
+                        dtype=object,
+                    )
                 df[column] = df[column].astype(dtype)
         except (ValueError, TypeError) as e:
             parse_type_error_columns.append(column)
@@ -211,11 +259,11 @@ def csv_parse(csv_file):
 
         # Convert NaN to None-y for nullable fields
         if column in df.columns:
-            # For string dtypes, use pd.NA
             if dtype == "string":
                 df[column] = df[column].fillna(pd.NA)
-            # For other dtypes, convert nulls to None after dtype conversion
-            else:
+            elif dtype not in nullable_int_types:
+                # nullable int columns already have pd.NA set correctly above;
+                # applying where(..., None) on an Int64 series upcasts to object dtype
                 df[column] = df[column].where(pd.notnull(df[column]), None)
         # round height and weight if provided to 1 decimal place
         if (
@@ -233,7 +281,9 @@ def csv_parse(csv_file):
             else:
                 parse_type_error_columns.append(column)
 
-    template_columns = [identifier_column] + [obj["heading"] for obj in CSV_HEADING_OBJECTS]
+    template_columns = [identifier_column] + [
+        obj["heading"] for obj in CSV_HEADING_OBJECTS
+    ]
 
     return ParsedCSVFile(
         df,
