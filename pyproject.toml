@@ -1,0 +1,40 @@
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | migrations
+  | staticfiles
+  | staticdocs
+  | node_modules
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 88
+skip = ["migrations", "staticfiles", "staticdocs", "node_modules"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+exclude = [
+    ".git",
+    ".venv",
+    "migrations",
+    "staticfiles",
+    "staticdocs",
+    "node_modules",
+]
+
+[tool.ruff.lint]
+# E/W: pycodestyle, F: pyflakes, B: bugbear, C4: comprehensions, UP: pyupgrade, S: bandit security
+select = ["E", "F", "W", "B", "C4", "UP", "S"]
+# E501: line-too-long is handled by black
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# Hardcoded passwords/secrets are acceptable in test fixtures and test files
+"**/tests/**" = ["S105", "S106", "S107"]
