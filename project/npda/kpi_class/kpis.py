@@ -248,9 +248,7 @@ class CalculateKPIS:
 
         return kpi_registry.get_rendered_label(kpi_number)
 
-    def _run_kpi_calculation_method(
-        self, kpi_method_name: str
-    ) -> KPIResult | str:
+    def _run_kpi_calculation_method(self, kpi_method_name: str) -> KPIResult | str:
         """Will find and run kpi calculation method
         (name schema is calculation_KPI_NAME_MAP_VALUE)
         """
@@ -332,15 +330,13 @@ class CalculateKPIS:
 
         # Set the query set as an attribute to be used in subsequent KPI calculations
         self.total_kpi_1_eligible_pts_base_query_set = self.patients.filter(
-
-                # Valid attributes
-                (Q(nhs_number__isnull=False) | Q(unique_reference_number__isnull=False))
-                & Q(date_of_birth__isnull=False)
-                # Visit / admisison date within audit period
-                & Q(visit__visit_date__range=(self.AUDIT_DATE_RANGE))
-                # Below the age of 25 at the start of the audit period
-                & Q(date_of_birth__gt=self.audit_start_date - relativedelta(years=25))
-
+            # Valid attributes
+            (Q(nhs_number__isnull=False) | Q(unique_reference_number__isnull=False))
+            & Q(date_of_birth__isnull=False)
+            # Visit / admisison date within audit period
+            & Q(visit__visit_date__range=(self.AUDIT_DATE_RANGE))
+            # Below the age of 25 at the start of the audit period
+            & Q(date_of_birth__gt=self.audit_start_date - relativedelta(years=25))
         ).distinct()  # When you filter on a related model field
         # (visit__visit_date__range), Django performs a join between the
         # Patient model and the Visit model. If a patient has multiple visits
@@ -819,56 +815,46 @@ class CalculateKPIS:
         # (additionally specifies visit date). So we need to make a new
         # query set
         eligible_patients = self.patients.filter(
-
-                # Valid attributes
-                (Q(nhs_number__isnull=False) | Q(unique_reference_number__isnull=False))
-                & Q(date_of_birth__isnull=False)
-                # * Age < 25y years at the start of the audit period
-                & Q(date_of_birth__gt=self.audit_start_date - relativedelta(years=25))
-                # Diagnosis of Type 1 diabetes
-                & Q(diabetes_type=DIABETES_TYPES[0][0])
-                & Q(diagnosis_date__range=self.AUDIT_DATE_RANGE)
-                & (
-                    # an observation within the audit period
-                    # this requires checking for a date in any of the Visit model's
-                    # observation fields (found simply by searching for date fields
-                    # with the word 'observation' in the field verbose_name)
-                    Q(
-                        visit__height_weight_observation_date__range=(
-                            self.AUDIT_DATE_RANGE
-                        )
-                    )
-                    | Q(visit__hba1c_date__range=(self.AUDIT_DATE_RANGE))
-                    | Q(
-                        visit__blood_pressure_observation_date__range=(
-                            self.AUDIT_DATE_RANGE
-                        )
-                    )
-                    | Q(
-                        visit__foot_examination_observation_date__range=(
-                            self.AUDIT_DATE_RANGE
-                        )
-                    )
-                    | Q(
-                        visit__retinal_screening_observation_date__range=(
-                            self.AUDIT_DATE_RANGE
-                        )
-                    )
-                    | Q(
-                        visit__albumin_creatinine_ratio_date__range=(
-                            self.AUDIT_DATE_RANGE
-                        )
-                    )
-                    | Q(visit__total_cholesterol_date__range=(self.AUDIT_DATE_RANGE))
-                    | Q(visit__thyroid_function_date__range=(self.AUDIT_DATE_RANGE))
-                    | Q(visit__coeliac_screen_date__range=(self.AUDIT_DATE_RANGE))
-                    | Q(
-                        visit__psychological_screening_assessment_date__range=(
-                            self.AUDIT_DATE_RANGE
-                        )
+            # Valid attributes
+            (Q(nhs_number__isnull=False) | Q(unique_reference_number__isnull=False))
+            & Q(date_of_birth__isnull=False)
+            # * Age < 25y years at the start of the audit period
+            & Q(date_of_birth__gt=self.audit_start_date - relativedelta(years=25))
+            # Diagnosis of Type 1 diabetes
+            & Q(diabetes_type=DIABETES_TYPES[0][0])
+            & Q(diagnosis_date__range=self.AUDIT_DATE_RANGE)
+            & (
+                # an observation within the audit period
+                # this requires checking for a date in any of the Visit model's
+                # observation fields (found simply by searching for date fields
+                # with the word 'observation' in the field verbose_name)
+                Q(visit__height_weight_observation_date__range=(self.AUDIT_DATE_RANGE))
+                | Q(visit__hba1c_date__range=(self.AUDIT_DATE_RANGE))
+                | Q(
+                    visit__blood_pressure_observation_date__range=(
+                        self.AUDIT_DATE_RANGE
                     )
                 )
-
+                | Q(
+                    visit__foot_examination_observation_date__range=(
+                        self.AUDIT_DATE_RANGE
+                    )
+                )
+                | Q(
+                    visit__retinal_screening_observation_date__range=(
+                        self.AUDIT_DATE_RANGE
+                    )
+                )
+                | Q(visit__albumin_creatinine_ratio_date__range=(self.AUDIT_DATE_RANGE))
+                | Q(visit__total_cholesterol_date__range=(self.AUDIT_DATE_RANGE))
+                | Q(visit__thyroid_function_date__range=(self.AUDIT_DATE_RANGE))
+                | Q(visit__coeliac_screen_date__range=(self.AUDIT_DATE_RANGE))
+                | Q(
+                    visit__psychological_screening_assessment_date__range=(
+                        self.AUDIT_DATE_RANGE
+                    )
+                )
+            )
         ).distinct()  # the reason for distinct is same as KPI1 (see comments).
         # This time, was failing tests for KPI 41-42.
 
@@ -3708,7 +3694,8 @@ class CalculateKPIS:
                 eligible_patients_t2dm,
                 eligible_patients,
                 eligible_patients_other,
-            ), strict=False,
+            ),
+            strict=False,
         ):
             # Retrieve all visits with valid HbA1c values
             valid_visits = (

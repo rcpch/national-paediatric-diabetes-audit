@@ -422,7 +422,7 @@ def exclude_admin_user_field(field, user):
                 return True
         if user.is_rcpch_audit_team_member:
             if field.id_for_label in [
-                "id_is_staff" "id_is_rcpch_staff",
+                "id_is_staffid_is_rcpch_staff",
                 "id_is_rcpch_audit_team_member",
             ]:
                 return True

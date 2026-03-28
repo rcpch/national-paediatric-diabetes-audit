@@ -326,9 +326,9 @@ def test_missing_date_of_birth(
 
     single_row_valid_df.loc[0, "Date of Birth"] = None
 
-    assert (
-        Patient.objects.count() == 0
-    ), "There should be no patients in the database before the test"
+    assert Patient.objects.count() == 0, (
+        "There should be no patients in the database before the test"
+    )
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
 
@@ -355,9 +355,9 @@ def test_missing_nhs_number(
 
     single_row_valid_df.loc[0, "NHS Number"] = None
 
-    assert (
-        Patient.objects.count() == 0
-    ), "There should be no patients in the database before the test"
+    assert Patient.objects.count() == 0, (
+        "There should be no patients in the database before the test"
+    )
 
     errors = csv_upload_sync(test_user, single_row_valid_df)
 
@@ -955,9 +955,9 @@ def test_additional_columns_causes_error(
     assert response.status_code == 200
     assert "Warning: Column errors detected!" in response.content.decode("utf-8")
 
-    assert (
-        Submission.objects.count() == 0
-    ), "No submission should be created if there are column errors"
+    assert Submission.objects.count() == 0, (
+        "No submission should be created if there are column errors"
+    )
 
 
 @pytest.mark.django_db
@@ -995,9 +995,9 @@ def test_duplicate_columns_causes_error(
     assert response.status_code == 200
     assert "Warning: Column errors detected!" in response.content.decode("utf-8")
 
-    assert (
-        Submission.objects.count() == 0
-    ), "No submission should be created if there are column errors"
+    assert Submission.objects.count() == 0, (
+        "No submission should be created if there are column errors"
+    )
 
 
 @pytest.mark.django_db
@@ -1028,9 +1028,9 @@ def test_missing_columns_causes_error(
     assert response.status_code == 200
     assert "Warning: Column errors detected!" in response.content.decode("utf-8")
 
-    assert (
-        Submission.objects.count() == 0
-    ), "No submission should be created if there are column errors"
+    assert Submission.objects.count() == 0, (
+        "No submission should be created if there are column errors"
+    )
 
 
 @pytest.mark.django_db
@@ -1242,7 +1242,6 @@ def test_missing_identifier_columns(
 
     # Feed file into view
     with open(tmp_csv_path, "rb") as csv_file:
-
         response = client.post(url, {"csv_upload": csv_file}, format="multipart")
 
     assert response.status_code == 302
@@ -1278,7 +1277,6 @@ def test_both_identifier_columns_causes_an_error(
 
     # Feed file into view
     with open(tmp_csv_path, "rb") as csv_file:
-
         response = client.post(url, {"csv_upload": csv_file}, format="multipart")
 
     assert response.status_code == 302
@@ -1339,18 +1337,18 @@ def test_bad_date_format_on_date_of_birth(
 
     csv = df.to_csv(index=False, date_format="%d/%m/%Y")
 
-    assert (
-        Patient.objects.count() == 0
-    ), "There should be no patients in the database before the test"
+    assert Patient.objects.count() == 0, (
+        "There should be no patients in the database before the test"
+    )
 
     df = read_csv_from_str(csv).df
     errors = csv_upload_sync(test_user, df)
 
     assert len(errors) == 1
 
-    assert (
-        Patient.objects.count() == 0
-    ), "There should be no patients in the database after the test"
+    assert Patient.objects.count() == 0, (
+        "There should be no patients in the database after the test"
+    )
 
 
 @pytest.mark.django_db
@@ -1749,9 +1747,9 @@ def test_blood_pressure_missing_values_fails_validation(test_user, single_row_va
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
-    assert (
-        "systolic_blood_pressure" in errors[0]
-    ), "Systolic Blood Pressure is None but passes validation."
+    assert "systolic_blood_pressure" in errors[0], (
+        "Systolic Blood Pressure is None but passes validation."
+    )
 
     visit = Visit.objects.first()
     assert visit.systolic_blood_pressure is None
@@ -1780,20 +1778,20 @@ def test_blood_pressure_missing_date_form_fails_validation(
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
-    assert (
-        "blood_pressure_observation_date" in errors[0]
-    ), "Blood Pressure observation date is None but passes validation."
+    assert "blood_pressure_observation_date" in errors[0], (
+        "Blood Pressure observation date is None but passes validation."
+    )
 
     visit = Visit.objects.first()
-    assert (
-        visit.systolic_blood_pressure == 120
-    ), f"Systolic blood pressure should be 120 but was {visit.systolic_blood_pressure}"
-    assert (
-        visit.diastolic_blood_pressure == 80
-    ), f"Diastolic blood pressure should be 80 but was {visit.diastolic_blood_pressure}"
-    assert (
-        visit.blood_pressure_observation_date is None
-    ), f"Blood pressure observation date should be empty but is {visit.blood_pressure_observation_date}"
+    assert visit.systolic_blood_pressure == 120, (
+        f"Systolic blood pressure should be 120 but was {visit.systolic_blood_pressure}"
+    )
+    assert visit.diastolic_blood_pressure == 80, (
+        f"Diastolic blood pressure should be 80 but was {visit.diastolic_blood_pressure}"
+    )
+    assert visit.blood_pressure_observation_date is None, (
+        f"Blood pressure observation date should be empty but is {visit.blood_pressure_observation_date}"
+    )
 
 
 @pytest.mark.django_db
@@ -1818,20 +1816,20 @@ def test_systolic_blood_pressure_over_240_form_fails_validation(
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
-    assert (
-        "systolic_blood_pressure" in errors[0]
-    ), "Systolic Blood Pressure is >240 (so really dangerously high!) but passes validation."
+    assert "systolic_blood_pressure" in errors[0], (
+        "Systolic Blood Pressure is >240 (so really dangerously high!) but passes validation."
+    )
 
     visit = Visit.objects.first()
-    assert (
-        visit.systolic_blood_pressure == 250
-    ), f"Systolic blood pressure should be 250 (and really the child should be in hospital) but was {visit.systolic_blood_pressure}"
-    assert (
-        visit.diastolic_blood_pressure == 80
-    ), f"Diastolic blood pressure should be 80 but was {visit.diastolic_blood_pressure}"
-    assert visit.blood_pressure_observation_date == datetime.date(
-        2023, 1, 1
-    ), f"Blood pressure observation date should be 1/1/2023 but is {visit.blood_pressure_observation_date}"
+    assert visit.systolic_blood_pressure == 250, (
+        f"Systolic blood pressure should be 250 (and really the child should be in hospital) but was {visit.systolic_blood_pressure}"
+    )
+    assert visit.diastolic_blood_pressure == 80, (
+        f"Diastolic blood pressure should be 80 but was {visit.diastolic_blood_pressure}"
+    )
+    assert visit.blood_pressure_observation_date == datetime.date(2023, 1, 1), (
+        f"Blood pressure observation date should be 1/1/2023 but is {visit.blood_pressure_observation_date}"
+    )
 
 
 @pytest.mark.django_db
@@ -1856,20 +1854,20 @@ def test_systolic_blood_pressure_below_50_form_fails_validation(
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
-    assert (
-        "systolic_blood_pressure" in errors[0]
-    ), "Systolic Blood Pressure is < 50 (so really dangerously low!) but passes validation."
+    assert "systolic_blood_pressure" in errors[0], (
+        "Systolic Blood Pressure is < 50 (so really dangerously low!) but passes validation."
+    )
 
     visit = Visit.objects.first()
-    assert (
-        visit.systolic_blood_pressure == 49
-    ), f"Systolic blood pressure should be 49 (and really the child should be in hospital) but was {visit.systolic_blood_pressure}"
-    assert (
-        visit.diastolic_blood_pressure == 40
-    ), f"Diastolic blood pressure should be 40 but was {visit.diastolic_blood_pressure}"
-    assert visit.blood_pressure_observation_date == datetime.date(
-        2023, 1, 1
-    ), f"Blood pressure observation date should be 1/1/203 but is {visit.blood_pressure_observation_date}"
+    assert visit.systolic_blood_pressure == 49, (
+        f"Systolic blood pressure should be 49 (and really the child should be in hospital) but was {visit.systolic_blood_pressure}"
+    )
+    assert visit.diastolic_blood_pressure == 40, (
+        f"Diastolic blood pressure should be 40 but was {visit.diastolic_blood_pressure}"
+    )
+    assert visit.blood_pressure_observation_date == datetime.date(2023, 1, 1), (
+        f"Blood pressure observation date should be 1/1/203 but is {visit.blood_pressure_observation_date}"
+    )
 
 
 @pytest.mark.django_db
@@ -1894,20 +1892,20 @@ def test_diastolic_blood_pressure_over_120_form_fails_validation(
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
-    assert (
-        "diastolic_blood_pressure" in errors[0]
-    ), "Diastolic Blood Pressure is >120 (so really dangerously high!) but passes validation."
+    assert "diastolic_blood_pressure" in errors[0], (
+        "Diastolic Blood Pressure is >120 (so really dangerously high!) but passes validation."
+    )
 
     visit = Visit.objects.first()
-    assert (
-        visit.systolic_blood_pressure == 120
-    ), f"Systolic blood pressure should be 120 but was {visit.systolic_blood_pressure}"
-    assert (
-        visit.diastolic_blood_pressure == 125
-    ), f"Diastolic blood pressure should be 125 (and really the child should be in hospital) but was {visit.diastolic_blood_pressure}"
-    assert visit.blood_pressure_observation_date == datetime.date(
-        2023, 1, 1
-    ), f"Blood pressure observation date should be 1/1/2023 but is {visit.blood_pressure_observation_date}"
+    assert visit.systolic_blood_pressure == 120, (
+        f"Systolic blood pressure should be 120 but was {visit.systolic_blood_pressure}"
+    )
+    assert visit.diastolic_blood_pressure == 125, (
+        f"Diastolic blood pressure should be 125 (and really the child should be in hospital) but was {visit.diastolic_blood_pressure}"
+    )
+    assert visit.blood_pressure_observation_date == datetime.date(2023, 1, 1), (
+        f"Blood pressure observation date should be 1/1/2023 but is {visit.blood_pressure_observation_date}"
+    )
 
 
 @pytest.mark.django_db
@@ -1932,20 +1930,20 @@ def test_diastolic_blood_pressure_below_20_form_fails_validation(
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
-    assert (
-        "diastolic_blood_pressure" in errors[0]
-    ), "Diastolic Blood Pressure is < 20 (so really dangerously low!) but passes validation."
+    assert "diastolic_blood_pressure" in errors[0], (
+        "Diastolic Blood Pressure is < 20 (so really dangerously low!) but passes validation."
+    )
 
     visit = Visit.objects.first()
-    assert (
-        visit.systolic_blood_pressure == 120
-    ), f"Systolic blood pressure should be 120 but was {visit.systolic_blood_pressure}"
-    assert (
-        visit.diastolic_blood_pressure == 15
-    ), f"Diastolic blood pressure should be 15 (and really the child should be in hospital) but was {visit.diastolic_blood_pressure}"
-    assert visit.blood_pressure_observation_date == datetime.date(
-        2023, 1, 1
-    ), f"Blood pressure observation date should be 1/1/2023 but is {visit.blood_pressure_observation_date}"
+    assert visit.systolic_blood_pressure == 120, (
+        f"Systolic blood pressure should be 120 but was {visit.systolic_blood_pressure}"
+    )
+    assert visit.diastolic_blood_pressure == 15, (
+        f"Diastolic blood pressure should be 15 (and really the child should be in hospital) but was {visit.diastolic_blood_pressure}"
+    )
+    assert visit.blood_pressure_observation_date == datetime.date(2023, 1, 1), (
+        f"Blood pressure observation date should be 1/1/2023 but is {visit.blood_pressure_observation_date}"
+    )
 
 
 """
@@ -1970,17 +1968,17 @@ def test_decs_value_form_passes_validation(test_user, single_row_valid_df):
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
-    assert (
-        len(errors) == 0
-    ), f"Retinal screening date and result should pass validation, but failed with errors: {errors}"
+    assert len(errors) == 0, (
+        f"Retinal screening date and result should pass validation, but failed with errors: {errors}"
+    )
 
     visit = Visit.objects.first()
-    assert visit.retinal_screening_observation_date == datetime.date(
-        2023, 1, 1
-    ), f"Saved Retinal screening date should be 1/1/2023, but was {visit.retinal_screening_observation_date}"
-    assert (
-        visit.retinal_screening_result == 1
-    ), f"Saved Retinal screening result should be 1 (Normal), but was {visit.retinal_screening_result}"
+    assert visit.retinal_screening_observation_date == datetime.date(2023, 1, 1), (
+        f"Saved Retinal screening date should be 1/1/2023, but was {visit.retinal_screening_observation_date}"
+    )
+    assert visit.retinal_screening_result == 1, (
+        f"Saved Retinal screening result should be 1 (Normal), but was {visit.retinal_screening_result}"
+    )
 
 
 @pytest.mark.django_db
@@ -2000,17 +1998,17 @@ def test_decs_value_none_form_fails_validation(test_user, single_row_valid_df):
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
-    assert (
-        "retinal_screening_result" in errors[0]
-    ), "Retinal screening result should fail validation due to missing result, but passed."
+    assert "retinal_screening_result" in errors[0], (
+        "Retinal screening result should fail validation due to missing result, but passed."
+    )
 
     visit = Visit.objects.first()
-    assert visit.retinal_screening_observation_date == datetime.date(
-        2023, 1, 1
-    ), f"Saved Retinal screening date should be 1/1/2023, but was {visit.retinal_screening_observation_date}"
-    assert (
-        visit.retinal_screening_result is None
-    ), f"Saved Retinal screening result should be None, but was {visit.retinal_screening_result}"
+    assert visit.retinal_screening_observation_date == datetime.date(2023, 1, 1), (
+        f"Saved Retinal screening date should be 1/1/2023, but was {visit.retinal_screening_observation_date}"
+    )
+    assert visit.retinal_screening_result is None, (
+        f"Saved Retinal screening result should be None, but was {visit.retinal_screening_result}"
+    )
 
 
 @pytest.mark.django_db
@@ -2030,17 +2028,17 @@ def test_decs_date_none_form_fails_validation(test_user, single_row_valid_df):
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
-    assert (
-        "retinal_screening_observation_date" in errors[0]
-    ), "Retinal screening date should fail validation due to missing date, but passed."
+    assert "retinal_screening_observation_date" in errors[0], (
+        "Retinal screening date should fail validation due to missing date, but passed."
+    )
 
     visit = Visit.objects.first()
-    assert (
-        visit.retinal_screening_observation_date is None
-    ), f"Saved Retinal screening date should be None, but was {visit.retinal_screening_observation_date}"
-    assert (
-        visit.retinal_screening_result == 1
-    ), f"Saved Retinal screening result should be 1 (Normal), but was {visit.retinal_screening_result}"
+    assert visit.retinal_screening_observation_date is None, (
+        f"Saved Retinal screening date should be None, but was {visit.retinal_screening_observation_date}"
+    )
+    assert visit.retinal_screening_result == 1, (
+        f"Saved Retinal screening result should be 1 (Normal), but was {visit.retinal_screening_result}"
+    )
 
 
 """
@@ -2070,15 +2068,15 @@ def test_urine_albumin_value_form_passes_validation(test_user, single_row_valid_
 
     visit = Visit.objects.first()
 
-    assert (
-        visit.albumin_creatinine_ratio == 30
-    ), f"Saved urine albumin should be 30, but was {visit.albumin_creatinine_ratio}"
-    assert (
-        visit.albuminuria_stage == 1
-    ), f"Saved urine albumin stage should be 1 (Normal), but was {visit.albuminuria_stage}"
-    assert visit.albumin_creatinine_ratio_date == datetime.date(
-        2023, 1, 1
-    ), f"Saved urine albumin observation date should be 1/1/2023, but was {visit.albumin_creatinine_ratio_date}"
+    assert visit.albumin_creatinine_ratio == 30, (
+        f"Saved urine albumin should be 30, but was {visit.albumin_creatinine_ratio}"
+    )
+    assert visit.albuminuria_stage == 1, (
+        f"Saved urine albumin stage should be 1 (Normal), but was {visit.albuminuria_stage}"
+    )
+    assert visit.albumin_creatinine_ratio_date == datetime.date(2023, 1, 1), (
+        f"Saved urine albumin observation date should be 1/1/2023, but was {visit.albumin_creatinine_ratio_date}"
+    )
 
 
 @pytest.mark.django_db
@@ -2101,21 +2099,21 @@ def test_urine_albumin_value_below_range_form_fails_validation(
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
-    assert (
-        "albumin_creatinine_ratio" in errors[0]
-    ), "Urine albumin creatinine ratio should fail validation as < 3, but passed."
+    assert "albumin_creatinine_ratio" in errors[0], (
+        "Urine albumin creatinine ratio should fail validation as < 3, but passed."
+    )
 
     visit = Visit.objects.first()
 
-    assert visit.albumin_creatinine_ratio == Decimal(
-        "-10"
-    ), f"Saved urine albumin should be -10, but was {visit.albumin_creatinine_ratio}"
-    assert (
-        visit.albuminuria_stage == 1
-    ), f"Saved urine albumin stage should be 1 (Normal), but was {visit.albuminuria_stage}"
-    assert visit.albumin_creatinine_ratio_date == datetime.date(
-        2023, 1, 1
-    ), f"Saved urine albumin observation date should be 1/1/2023, but was {visit.albumin_creatinine_ratio_date}"
+    assert visit.albumin_creatinine_ratio == Decimal("-10"), (
+        f"Saved urine albumin should be -10, but was {visit.albumin_creatinine_ratio}"
+    )
+    assert visit.albuminuria_stage == 1, (
+        f"Saved urine albumin stage should be 1 (Normal), but was {visit.albuminuria_stage}"
+    )
+    assert visit.albumin_creatinine_ratio_date == datetime.date(2023, 1, 1), (
+        f"Saved urine albumin observation date should be 1/1/2023, but was {visit.albumin_creatinine_ratio_date}"
+    )
 
 
 @pytest.mark.django_db
@@ -2138,21 +2136,21 @@ def test_urine_albumin_value_above_range_form_fails_validation(
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
-    assert (
-        "albumin_creatinine_ratio" in errors[0]
-    ), "Urine albumin creatinine ratio should fail validation as > 50, but passed."
+    assert "albumin_creatinine_ratio" in errors[0], (
+        "Urine albumin creatinine ratio should fail validation as > 50, but passed."
+    )
 
     visit = Visit.objects.first()
 
-    assert (
-        visit.albumin_creatinine_ratio == 1000
-    ), f"Saved urine albumin should be 1000, but was {visit.albumin_creatinine_ratio}"
-    assert (
-        visit.albuminuria_stage == 1
-    ), f"Saved urine albumin stage should be 1 (Normal), but was {visit.albuminuria_stage}"
-    assert visit.albumin_creatinine_ratio_date == datetime.date(
-        2023, 1, 1
-    ), f"Saved urine albumin observation date should be 1/1/2023, but was {visit.albumin_creatinine_ratio_date}"
+    assert visit.albumin_creatinine_ratio == 1000, (
+        f"Saved urine albumin should be 1000, but was {visit.albumin_creatinine_ratio}"
+    )
+    assert visit.albuminuria_stage == 1, (
+        f"Saved urine albumin stage should be 1 (Normal), but was {visit.albuminuria_stage}"
+    )
+    assert visit.albumin_creatinine_ratio_date == datetime.date(2023, 1, 1), (
+        f"Saved urine albumin observation date should be 1/1/2023, but was {visit.albumin_creatinine_ratio_date}"
+    )
 
 
 @pytest.mark.django_db
@@ -2175,21 +2173,21 @@ def test_urine_albumin_value_missing_form_fails_validation(
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
-    assert (
-        "albumin_creatinine_ratio" in errors[0]
-    ), "Urine albumin creatinine level should fail validation as None, but passed."
+    assert "albumin_creatinine_ratio" in errors[0], (
+        "Urine albumin creatinine level should fail validation as None, but passed."
+    )
 
     visit = Visit.objects.first()
 
-    assert (
-        visit.albumin_creatinine_ratio is None
-    ), f"Saved urine albumin should be None, but was {visit.albumin_creatinine_ratio}"
-    assert (
-        visit.albuminuria_stage == 1
-    ), f"Saved urine albumin stage should be 1 (Normal), but was {visit.albuminuria_stage}"
-    assert visit.albumin_creatinine_ratio_date == datetime.date(
-        2023, 1, 1
-    ), f"Saved urine albumin observation date should be 1/1/2023, but was {visit.albumin_creatinine_ratio_date}"
+    assert visit.albumin_creatinine_ratio is None, (
+        f"Saved urine albumin should be None, but was {visit.albumin_creatinine_ratio}"
+    )
+    assert visit.albuminuria_stage == 1, (
+        f"Saved urine albumin stage should be 1 (Normal), but was {visit.albuminuria_stage}"
+    )
+    assert visit.albumin_creatinine_ratio_date == datetime.date(2023, 1, 1), (
+        f"Saved urine albumin observation date should be 1/1/2023, but was {visit.albumin_creatinine_ratio_date}"
+    )
 
 
 @pytest.mark.django_db
@@ -2212,21 +2210,21 @@ def test_urine_albumin_stage_missing_form_fails_validation(
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
-    assert (
-        "albuminuria_stage" in errors[0]
-    ), "Urine albumin creatinine stage should fail validation as None, but passed."
+    assert "albuminuria_stage" in errors[0], (
+        "Urine albumin creatinine stage should fail validation as None, but passed."
+    )
 
     visit = Visit.objects.first()
 
-    assert (
-        visit.albumin_creatinine_ratio == 10
-    ), f"Saved urine albumin should be 10, but was {visit.albumin_creatinine_ratio}"
-    assert (
-        visit.albuminuria_stage is None
-    ), f"Saved urine albumin stage should be None, but was {visit.albuminuria_stage}"
-    assert visit.albumin_creatinine_ratio_date == datetime.date(
-        2023, 1, 1
-    ), f"Saved urine albumin observation date should be 1/1/2023, but was {visit.albumin_creatinine_ratio_date}"
+    assert visit.albumin_creatinine_ratio == 10, (
+        f"Saved urine albumin should be 10, but was {visit.albumin_creatinine_ratio}"
+    )
+    assert visit.albuminuria_stage is None, (
+        f"Saved urine albumin stage should be None, but was {visit.albuminuria_stage}"
+    )
+    assert visit.albumin_creatinine_ratio_date == datetime.date(2023, 1, 1), (
+        f"Saved urine albumin observation date should be 1/1/2023, but was {visit.albumin_creatinine_ratio_date}"
+    )
 
 
 @pytest.mark.django_db
@@ -2249,21 +2247,21 @@ def test_urine_albumin_date_missing_form_fails_validation(
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
-    assert (
-        "albumin_creatinine_ratio_date" in errors[0]
-    ), "Urine albumin creatinine date should fail validation as None, but passed."
+    assert "albumin_creatinine_ratio_date" in errors[0], (
+        "Urine albumin creatinine date should fail validation as None, but passed."
+    )
 
     visit = Visit.objects.first()
 
-    assert (
-        visit.albumin_creatinine_ratio == 10
-    ), f"Saved urine albumin should be 10, but was {visit.albumin_creatinine_ratio}"
-    assert (
-        visit.albuminuria_stage == 1
-    ), f"Saved urine albumin stage should be 1 (Normal), but was {visit.albuminuria_stage}"
-    assert (
-        visit.albumin_creatinine_ratio_date is None
-    ), f"Saved urine albumin observation date should be None, but was {visit.albumin_creatinine_ratio_date}"
+    assert visit.albumin_creatinine_ratio == 10, (
+        f"Saved urine albumin should be 10, but was {visit.albumin_creatinine_ratio}"
+    )
+    assert visit.albuminuria_stage == 1, (
+        f"Saved urine albumin stage should be 1 (Normal), but was {visit.albuminuria_stage}"
+    )
+    assert visit.albumin_creatinine_ratio_date is None, (
+        f"Saved urine albumin observation date should be None, but was {visit.albumin_creatinine_ratio_date}"
+    )
 
 
 """
@@ -2294,12 +2292,12 @@ def test_total_cholesterol_value_form_passes_validation(test_user, single_row_va
 
     visit = Visit.objects.first()
 
-    assert (
-        visit.total_cholesterol == 5
-    ), f"Saved total cholesterol should be 5, but was {visit.total_cholesterol}"
-    assert visit.total_cholesterol_date == datetime.date(
-        2023, 1, 1
-    ), f"Saved total cholesterol observation date should be 1/1/2023, but was {visit.total_cholesterol_date}"
+    assert visit.total_cholesterol == 5, (
+        f"Saved total cholesterol should be 5, but was {visit.total_cholesterol}"
+    )
+    assert visit.total_cholesterol_date == datetime.date(2023, 1, 1), (
+        f"Saved total cholesterol observation date should be 1/1/2023, but was {visit.total_cholesterol_date}"
+    )
 
 
 @pytest.mark.django_db
@@ -2323,18 +2321,18 @@ def test_total_cholesterol_value_above_reference_form_fails_validation(
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
-    assert (
-        "total_cholesterol" in errors[0]
-    ), "Total cholesterol should fail validation as above reference range, but passed."
+    assert "total_cholesterol" in errors[0], (
+        "Total cholesterol should fail validation as above reference range, but passed."
+    )
 
     visit = Visit.objects.first()
 
-    assert (
-        visit.total_cholesterol == 20
-    ), f"Saved total cholesterol should be 1000, but was {visit.total_cholesterol}"
-    assert visit.total_cholesterol_date == datetime.date(
-        2023, 1, 1
-    ), f"Saved total cholesterol observation date should be 1/1/2023, but was {visit.total_cholesterol_date}"
+    assert visit.total_cholesterol == 20, (
+        f"Saved total cholesterol should be 1000, but was {visit.total_cholesterol}"
+    )
+    assert visit.total_cholesterol_date == datetime.date(2023, 1, 1), (
+        f"Saved total cholesterol observation date should be 1/1/2023, but was {visit.total_cholesterol_date}"
+    )
 
 
 @pytest.mark.django_db
@@ -2358,18 +2356,18 @@ def test_total_cholesterol_value_below_reference_form_fails_validation(
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
-    assert (
-        "total_cholesterol" in errors[0]
-    ), "Total cholesterol should fail validation as impossible, but passed."
+    assert "total_cholesterol" in errors[0], (
+        "Total cholesterol should fail validation as impossible, but passed."
+    )
 
     visit = Visit.objects.first()
 
-    assert visit.total_cholesterol == Decimal(
-        "0.1"
-    ), f"Saved total cholesterol should be 0, but was {visit.total_cholesterol}"
-    assert visit.total_cholesterol_date == datetime.date(
-        2023, 1, 1
-    ), f"Saved total cholesterol observation date should be 1/1/2023, but was {visit.total_cholesterol_date}"
+    assert visit.total_cholesterol == Decimal("0.1"), (
+        f"Saved total cholesterol should be 0, but was {visit.total_cholesterol}"
+    )
+    assert visit.total_cholesterol_date == datetime.date(2023, 1, 1), (
+        f"Saved total cholesterol observation date should be 1/1/2023, but was {visit.total_cholesterol_date}"
+    )
 
 
 @pytest.mark.django_db
@@ -2393,18 +2391,18 @@ def test_total_cholesterol_value_missing_form_fails_validation(
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
-    assert (
-        "total_cholesterol" in errors[0]
-    ), "Total cholesterol should fail validation as None, but passed."
+    assert "total_cholesterol" in errors[0], (
+        "Total cholesterol should fail validation as None, but passed."
+    )
 
     visit = Visit.objects.first()
 
-    assert (
-        visit.total_cholesterol is None
-    ), f"Saved total cholesterol should be None, but was {visit.total_cholesterol}"
-    assert visit.total_cholesterol_date == datetime.date(
-        2023, 1, 1
-    ), f"Saved total cholesterol observation date should be 1/1/2023, but was {visit.total_cholesterol_date}"
+    assert visit.total_cholesterol is None, (
+        f"Saved total cholesterol should be None, but was {visit.total_cholesterol}"
+    )
+    assert visit.total_cholesterol_date == datetime.date(2023, 1, 1), (
+        f"Saved total cholesterol observation date should be 1/1/2023, but was {visit.total_cholesterol_date}"
+    )
 
 
 @pytest.mark.django_db
@@ -2426,18 +2424,18 @@ def test_total_cholesterol_date_missing_form_fails_validation(
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
-    assert (
-        "total_cholesterol_date" in errors[0]
-    ), "Total cholesterol date should fail validation as None, but passed."
+    assert "total_cholesterol_date" in errors[0], (
+        "Total cholesterol date should fail validation as None, but passed."
+    )
 
     visit = Visit.objects.first()
 
-    assert (
-        visit.total_cholesterol == 5
-    ), f"Saved total cholesterol should be 5, but was {visit.total_cholesterol}"
-    assert (
-        visit.total_cholesterol_date is None
-    ), f"Saved total cholesterol observation date should be None, but was {visit.total_cholesterol_date}"
+    assert visit.total_cholesterol == 5, (
+        f"Saved total cholesterol should be 5, but was {visit.total_cholesterol}"
+    )
+    assert visit.total_cholesterol_date is None, (
+        f"Saved total cholesterol observation date should be None, but was {visit.total_cholesterol_date}"
+    )
 
 
 """
@@ -3098,21 +3096,21 @@ def test_inpatient_admission_stabilisation_passes_validation(
 
     visit = Visit.objects.first()
 
-    assert visit.hospital_admission_date == datetime.date(
-        2023, 1, 1
-    ), f"Admission date should be 1/1/2023, but was {visit.hospital_admission_date}"
-    assert visit.hospital_discharge_date == datetime.date(
-        2023, 1, 2
-    ), f"Discharge date should be 2/1/2023, but was {visit.hospital_discharge_date}"
-    assert (
-        visit.hospital_admission_reason == 1
-    ), f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
-    assert (
-        visit.dka_additional_therapies is None
-    ), f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
-    assert (
-        visit.hospital_admission_other is None
-    ), f"Admission other should be None, but was {visit.hospital_admission_other}"
+    assert visit.hospital_admission_date == datetime.date(2023, 1, 1), (
+        f"Admission date should be 1/1/2023, but was {visit.hospital_admission_date}"
+    )
+    assert visit.hospital_discharge_date == datetime.date(2023, 1, 2), (
+        f"Discharge date should be 2/1/2023, but was {visit.hospital_discharge_date}"
+    )
+    assert visit.hospital_admission_reason == 1, (
+        f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
+    )
+    assert visit.dka_additional_therapies is None, (
+        f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
+    )
+    assert visit.hospital_admission_other is None, (
+        f"Admission other should be None, but was {visit.hospital_admission_other}"
+    )
 
 
 @pytest.mark.django_db
@@ -3233,24 +3231,24 @@ def test_inpatient_admission_stabilisation_discharge_date_before_diagnosis_date_
 
     visit = Visit.objects.first()
 
-    assert visit.patient.diagnosis_date == datetime.date(
-        2021, 1, 10
-    ), f"Diagnosis date should be 1/1/2021, but was {visit.patient.diagnosis_date}"
-    assert visit.hospital_admission_date == datetime.date(
-        2023, 1, 8
-    ), f"Admission date should be 8/1/2023, but was {visit.hospital_admission_date}"
-    assert visit.hospital_discharge_date == datetime.date(
-        2023, 1, 1
-    ), f"Discharge date should be 1/1/2023, but was {visit.hospital_discharge_date}"
-    assert (
-        visit.hospital_admission_reason == 1
-    ), f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
-    assert (
-        visit.dka_additional_therapies is None
-    ), f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
-    assert (
-        visit.hospital_admission_other is None
-    ), f"Admission other should be None, but was {visit.hospital_admission_other}"
+    assert visit.patient.diagnosis_date == datetime.date(2021, 1, 10), (
+        f"Diagnosis date should be 1/1/2021, but was {visit.patient.diagnosis_date}"
+    )
+    assert visit.hospital_admission_date == datetime.date(2023, 1, 8), (
+        f"Admission date should be 8/1/2023, but was {visit.hospital_admission_date}"
+    )
+    assert visit.hospital_discharge_date == datetime.date(2023, 1, 1), (
+        f"Discharge date should be 1/1/2023, but was {visit.hospital_discharge_date}"
+    )
+    assert visit.hospital_admission_reason == 1, (
+        f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
+    )
+    assert visit.dka_additional_therapies is None, (
+        f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
+    )
+    assert visit.hospital_admission_other is None, (
+        f"Admission other should be None, but was {visit.hospital_admission_other}"
+    )
 
 
 @pytest.mark.django_db
@@ -3287,24 +3285,24 @@ def test_inpatient_admission_stabilisation_discharge_date_after_date_of_death_fa
 
     visit = Visit.objects.first()
 
-    assert visit.patient.death_date == datetime.date(
-        2022, 1, 1
-    ), f"Date of death should be 1/1/2022, but was {visit.patient.date_of_death}"
-    assert visit.hospital_admission_date == datetime.date(
-        2022, 1, 1
-    ), f"Admission date should be 1/1/2022, but was {visit.hospital_admission_date}"
-    assert visit.hospital_discharge_date == datetime.date(
-        2022, 1, 8
-    ), f"Discharge date should be 8/1/2022, but was {visit.hospital_discharge_date}"
-    assert (
-        visit.hospital_admission_reason == 1
-    ), f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
-    assert (
-        visit.dka_additional_therapies is None
-    ), f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
-    assert (
-        visit.hospital_admission_other is None
-    ), f"Admission other should be None, but was {visit.hospital_admission_other}"
+    assert visit.patient.death_date == datetime.date(2022, 1, 1), (
+        f"Date of death should be 1/1/2022, but was {visit.patient.date_of_death}"
+    )
+    assert visit.hospital_admission_date == datetime.date(2022, 1, 1), (
+        f"Admission date should be 1/1/2022, but was {visit.hospital_admission_date}"
+    )
+    assert visit.hospital_discharge_date == datetime.date(2022, 1, 8), (
+        f"Discharge date should be 8/1/2022, but was {visit.hospital_discharge_date}"
+    )
+    assert visit.hospital_admission_reason == 1, (
+        f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
+    )
+    assert visit.dka_additional_therapies is None, (
+        f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
+    )
+    assert visit.hospital_admission_other is None, (
+        f"Admission other should be None, but was {visit.hospital_admission_other}"
+    )
 
 
 @pytest.mark.django_db
@@ -3342,21 +3340,21 @@ def test_inpatient_admission_stabilisation_dka_additional_therapies_provided_fai
 
     visit = Visit.objects.first()
 
-    assert visit.hospital_admission_date == datetime.date(
-        2023, 1, 1
-    ), f"Admission date should be 1/1/2023, but was {visit.hospital_admission_date}"
-    assert visit.hospital_discharge_date == datetime.date(
-        2023, 1, 8
-    ), f"Discharge date should be 8/1/2023, but was {visit.hospital_discharge_date}"
-    assert (
-        visit.hospital_admission_reason == 1
-    ), f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
-    assert (
-        visit.dka_additional_therapies == 1
-    ), f"DKA additional therapies should be 1 (hypertonic saline), but was {visit.dka_additional_therapies}"
-    assert (
-        visit.hospital_admission_other is None
-    ), f"Admission other should be None, but was {visit.hospital_admission_other}"
+    assert visit.hospital_admission_date == datetime.date(2023, 1, 1), (
+        f"Admission date should be 1/1/2023, but was {visit.hospital_admission_date}"
+    )
+    assert visit.hospital_discharge_date == datetime.date(2023, 1, 8), (
+        f"Discharge date should be 8/1/2023, but was {visit.hospital_discharge_date}"
+    )
+    assert visit.hospital_admission_reason == 1, (
+        f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
+    )
+    assert visit.dka_additional_therapies == 1, (
+        f"DKA additional therapies should be 1 (hypertonic saline), but was {visit.dka_additional_therapies}"
+    )
+    assert visit.hospital_admission_other is None, (
+        f"Admission other should be None, but was {visit.hospital_admission_other}"
+    )
 
 
 @pytest.mark.django_db
@@ -3394,21 +3392,21 @@ def test_inpatient_admission_stabilisation_hospital_admission_other_provided_fai
 
     visit = Visit.objects.first()
 
-    assert visit.hospital_admission_date == datetime.date(
-        2023, 1, 1
-    ), f"Admission date should be 1/1/2023, but was {visit.hospital_admission_date}"
-    assert visit.hospital_discharge_date == datetime.date(
-        2023, 1, 8
-    ), f"Discharge date should be 8/1/2023, but was {visit.hospital_discharge_date}"
-    assert (
-        visit.hospital_admission_reason == 1
-    ), f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
-    assert (
-        visit.dka_additional_therapies == 1
-    ), f"DKA additional therapies should be 1 (hypertonic saline), but was {visit.dka_additional_therapies}"
-    assert (
-        visit.hospital_admission_other is None
-    ), f"Admission other should be None, but was {visit.hospital_admission_other}"
+    assert visit.hospital_admission_date == datetime.date(2023, 1, 1), (
+        f"Admission date should be 1/1/2023, but was {visit.hospital_admission_date}"
+    )
+    assert visit.hospital_discharge_date == datetime.date(2023, 1, 8), (
+        f"Discharge date should be 8/1/2023, but was {visit.hospital_discharge_date}"
+    )
+    assert visit.hospital_admission_reason == 1, (
+        f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
+    )
+    assert visit.dka_additional_therapies == 1, (
+        f"DKA additional therapies should be 1 (hypertonic saline), but was {visit.dka_additional_therapies}"
+    )
+    assert visit.hospital_admission_other is None, (
+        f"Admission other should be None, but was {visit.hospital_admission_other}"
+    )
 
 
 @pytest.mark.django_db
@@ -3444,21 +3442,21 @@ def test_inpatient_admission_dka_passes_validation(test_user, single_row_valid_d
 
     visit = Visit.objects.first()
 
-    assert visit.hospital_admission_date == datetime.date(
-        2023, 1, 1
-    ), f"Admission date should be 1/1/2022, but was {visit.hospital_admission_date}"
-    assert visit.hospital_discharge_date == datetime.date(
-        2023, 1, 8
-    ), f"Discharge date should be 8/1/2022, but was {visit.hospital_discharge_date}"
-    assert (
-        visit.hospital_admission_reason == 2
-    ), f"Admission reason should be 2 (DKA), but was {visit.hospital_admission_reason}"
-    assert (
-        visit.dka_additional_therapies == 1
-    ), f"DKA additional therapies should be 1 (hypertonic saline), but was {visit.dka_additional_therapies}"
-    assert (
-        visit.hospital_admission_other is None
-    ), f"Admission other should be None, but was {visit.hospital_admission_other}"
+    assert visit.hospital_admission_date == datetime.date(2023, 1, 1), (
+        f"Admission date should be 1/1/2022, but was {visit.hospital_admission_date}"
+    )
+    assert visit.hospital_discharge_date == datetime.date(2023, 1, 8), (
+        f"Discharge date should be 8/1/2022, but was {visit.hospital_discharge_date}"
+    )
+    assert visit.hospital_admission_reason == 2, (
+        f"Admission reason should be 2 (DKA), but was {visit.hospital_admission_reason}"
+    )
+    assert visit.dka_additional_therapies == 1, (
+        f"DKA additional therapies should be 1 (hypertonic saline), but was {visit.dka_additional_therapies}"
+    )
+    assert visit.hospital_admission_other is None, (
+        f"Admission other should be None, but was {visit.hospital_admission_other}"
+    )
 
 
 @pytest.mark.django_db
@@ -3496,21 +3494,21 @@ def test_inpatient_admission_dka_additional_therapies_missing_fails_validation(
 
     visit = Visit.objects.first()
 
-    assert visit.hospital_admission_date == datetime.date(
-        2022, 1, 1
-    ), f"Admission date should be 1/1/2022, but was {visit.hospital_admission_date}"
-    assert visit.hospital_discharge_date == datetime.date(
-        2022, 1, 8
-    ), f"Discharge date should be 8/1/2022, but was {visit.hospital_discharge_date}"
-    assert (
-        visit.hospital_admission_reason == 2
-    ), f"Admission reason should be 2 (DKA), but was {visit.hospital_admission_reason}"
-    assert (
-        visit.dka_additional_therapies is None
-    ), f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
-    assert (
-        visit.hospital_admission_other is None
-    ), f"Admission other should be None, but was {visit.hospital_admission_other}"
+    assert visit.hospital_admission_date == datetime.date(2022, 1, 1), (
+        f"Admission date should be 1/1/2022, but was {visit.hospital_admission_date}"
+    )
+    assert visit.hospital_discharge_date == datetime.date(2022, 1, 8), (
+        f"Discharge date should be 8/1/2022, but was {visit.hospital_discharge_date}"
+    )
+    assert visit.hospital_admission_reason == 2, (
+        f"Admission reason should be 2 (DKA), but was {visit.hospital_admission_reason}"
+    )
+    assert visit.dka_additional_therapies is None, (
+        f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
+    )
+    assert visit.hospital_admission_other is None, (
+        f"Admission other should be None, but was {visit.hospital_admission_other}"
+    )
 
 
 @pytest.mark.django_db
@@ -3548,21 +3546,21 @@ def test_inpatient_admission_dka_additional_therapies_hospital_admission_also_pr
 
     visit = Visit.objects.first()
 
-    assert visit.hospital_admission_date == datetime.date(
-        2023, 1, 1
-    ), f"Admission date should be 1/1/2023, but was {visit.hospital_admission_date}"
-    assert visit.hospital_discharge_date == datetime.date(
-        2023, 1, 8
-    ), f"Discharge date should be 8/1/2023, but was {visit.hospital_discharge_date}"
-    assert (
-        visit.hospital_admission_reason == 2
-    ), f"Admission reason should be 2 (DKA), but was {visit.hospital_admission_reason}"
-    assert (
-        visit.dka_additional_therapies == 1
-    ), f"DKA additional therapies should be 1 (hypertonic saline), but was {visit.dka_additional_therapies}"
-    assert (
-        visit.hospital_admission_other == "Other reason"
-    ), f"Admission other should be 'Other reason', but was {visit.hospital_admission_other}"
+    assert visit.hospital_admission_date == datetime.date(2023, 1, 1), (
+        f"Admission date should be 1/1/2023, but was {visit.hospital_admission_date}"
+    )
+    assert visit.hospital_discharge_date == datetime.date(2023, 1, 8), (
+        f"Discharge date should be 8/1/2023, but was {visit.hospital_discharge_date}"
+    )
+    assert visit.hospital_admission_reason == 2, (
+        f"Admission reason should be 2 (DKA), but was {visit.hospital_admission_reason}"
+    )
+    assert visit.dka_additional_therapies == 1, (
+        f"DKA additional therapies should be 1 (hypertonic saline), but was {visit.dka_additional_therapies}"
+    )
+    assert visit.hospital_admission_other == "Other reason", (
+        f"Admission other should be 'Other reason', but was {visit.hospital_admission_other}"
+    )
 
 
 @pytest.mark.django_db
@@ -3598,21 +3596,21 @@ def test_inpatient_admission_other_passes_validation(test_user, single_row_valid
 
     visit = Visit.objects.first()
 
-    assert visit.hospital_admission_date == datetime.date(
-        2023, 1, 1
-    ), f"Admission date should be 1/1/2023, but was {visit.hospital_admission_date}"
-    assert visit.hospital_discharge_date == datetime.date(
-        2023, 1, 8
-    ), f"Discharge date should be 8/1/2023, but was {visit.hospital_discharge_date}"
-    assert (
-        visit.hospital_admission_reason == 6
-    ), f"Admission reason should be 6 (other), but was {visit.hospital_admission_reason}"
-    assert (
-        visit.dka_additional_therapies is None
-    ), f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
-    assert (
-        visit.hospital_admission_other == "Other reason"
-    ), f"Admission other should be 'Other reason', but was {visit.hospital_admission_other}"
+    assert visit.hospital_admission_date == datetime.date(2023, 1, 1), (
+        f"Admission date should be 1/1/2023, but was {visit.hospital_admission_date}"
+    )
+    assert visit.hospital_discharge_date == datetime.date(2023, 1, 8), (
+        f"Discharge date should be 8/1/2023, but was {visit.hospital_discharge_date}"
+    )
+    assert visit.hospital_admission_reason == 6, (
+        f"Admission reason should be 6 (other), but was {visit.hospital_admission_reason}"
+    )
+    assert visit.dka_additional_therapies is None, (
+        f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
+    )
+    assert visit.hospital_admission_other == "Other reason", (
+        f"Admission other should be 'Other reason', but was {visit.hospital_admission_other}"
+    )
 
 
 @pytest.mark.django_db
@@ -3651,21 +3649,21 @@ def test_inpatient_admission_other_missing_fails_validation(
 
     visit = Visit.objects.first()
 
-    assert visit.hospital_admission_date == datetime.date(
-        2023, 1, 1
-    ), f"Admission date should be 1/1/2023, but was {visit.hospital_admission_date}"
-    assert visit.hospital_discharge_date == datetime.date(
-        2023, 1, 8
-    ), f"Discharge date should be 8/1/2023, but was {visit.hospital_discharge_date}"
-    assert (
-        visit.hospital_admission_reason == 6
-    ), f"Admission reason should be 6 (other), but was {visit.hospital_admission_reason}"
-    assert (
-        visit.dka_additional_therapies is None
-    ), f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
-    assert (
-        visit.hospital_admission_other is None
-    ), f"Admission other should be None, but was {visit.hospital_admission_other}"
+    assert visit.hospital_admission_date == datetime.date(2023, 1, 1), (
+        f"Admission date should be 1/1/2023, but was {visit.hospital_admission_date}"
+    )
+    assert visit.hospital_discharge_date == datetime.date(2023, 1, 8), (
+        f"Discharge date should be 8/1/2023, but was {visit.hospital_discharge_date}"
+    )
+    assert visit.hospital_admission_reason == 6, (
+        f"Admission reason should be 6 (other), but was {visit.hospital_admission_reason}"
+    )
+    assert visit.dka_additional_therapies is None, (
+        f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
+    )
+    assert visit.hospital_admission_other is None, (
+        f"Admission other should be None, but was {visit.hospital_admission_other}"
+    )
 
 
 """
@@ -3693,9 +3691,9 @@ def test_visit_date_provided_passes_validation(test_user, single_row_valid_df):
 
     visit = Visit.objects.first()
 
-    assert visit.visit_date == datetime.date(
-        2023, 1, 1
-    ), f"Visit/Appointment Date should be 1/1/2023, but was {visit.visit_date}"
+    assert visit.visit_date == datetime.date(2023, 1, 1), (
+        f"Visit/Appointment Date should be 1/1/2023, but was {visit.visit_date}"
+    )
 
 
 @pytest.mark.django_db
@@ -3711,9 +3709,9 @@ def test_visit_date_missing_fails_validation(test_user, single_row_valid_df):
 
     visit = Visit.objects.first()
 
-    assert (
-        visit.visit_date is None
-    ), f"Visit/Appointment Date should be None, but was {visit.visit_date}"
+    assert visit.visit_date is None, (
+        f"Visit/Appointment Date should be None, but was {visit.visit_date}"
+    )
 
 
 @pytest.mark.django_db
@@ -3737,12 +3735,12 @@ def test_visit_date_not_before_date_of_birth(test_user, single_row_valid_df):
 
     visit = Visit.objects.first()
 
-    assert visit.visit_date == datetime.date(
-        2021, 1, 1
-    ), f"Visit date should be 1/1/2021, but was {visit.visit_date}"
-    assert visit.patient.date_of_birth == datetime.date(
-        2022, 1, 1
-    ), f"Date of birth should be 1/1/2022, but was {visit.patient.date_of_birth}"
+    assert visit.visit_date == datetime.date(2021, 1, 1), (
+        f"Visit date should be 1/1/2021, but was {visit.visit_date}"
+    )
+    assert visit.patient.date_of_birth == datetime.date(2022, 1, 1), (
+        f"Date of birth should be 1/1/2022, but was {visit.patient.date_of_birth}"
+    )
 
 
 @pytest.mark.django_db
@@ -3766,12 +3764,12 @@ def test_visit_date_not_after_date_of_death(test_user, single_row_valid_df):
 
     visit = Visit.objects.first()
 
-    assert visit.visit_date == datetime.date(
-        2023, 1, 1
-    ), f"Visit date should be 1/1/2023, but was {visit.visit_date}"
-    assert visit.patient.death_date == datetime.date(
-        2022, 1, 1
-    ), f"Death date should be 1/1/2022, but was {visit.patient.death_date}"
+    assert visit.visit_date == datetime.date(2023, 1, 1), (
+        f"Visit date should be 1/1/2023, but was {visit.visit_date}"
+    )
+    assert visit.patient.death_date == datetime.date(2022, 1, 1), (
+        f"Death date should be 1/1/2022, but was {visit.patient.death_date}"
+    )
 
 
 @pytest.mark.django_db
@@ -3797,12 +3795,12 @@ def test_visit_date_not_before_diagnosis_date(test_user, single_row_valid_df):
 
     visit = Visit.objects.first()
 
-    assert visit.visit_date == datetime.date(
-        year=2021, month=1, day=1
-    ), f"Visit date should be 1/1/2021, but was {visit.visit_date}"
-    assert visit.patient.diagnosis_date == datetime.date(
-        year=2022, month=1, day=1
-    ), f"Diagnosis date should be 1/1/2022, but was {visit.patient.diagnosis_date}"
+    assert visit.visit_date == datetime.date(year=2021, month=1, day=1), (
+        f"Visit date should be 1/1/2021, but was {visit.visit_date}"
+    )
+    assert visit.patient.diagnosis_date == datetime.date(year=2022, month=1, day=1), (
+        f"Diagnosis date should be 1/1/2022, but was {visit.patient.diagnosis_date}"
+    )
 
 
 @pytest.mark.parametrize(
@@ -4167,7 +4165,9 @@ def test_remove_empty_spaces_from_empty_fields(test_user, dummy_sheet_csv):
     patient = Patient.objects.first()
     assert (
         Visit.objects.filter(patient=patient).first().dka_additional_therapies is None
-    ), f"Expected empty string for DKA additional therapies, but got {Visit.objects.filter(patient=patient).first().dka_additional_therapies}"
+    ), (
+        f"Expected empty string for DKA additional therapies, but got {Visit.objects.filter(patient=patient).first().dka_additional_therapies}"
+    )
 
 
 @pytest.mark.django_db
@@ -4179,9 +4179,9 @@ def test_remove_empty_spaces_in_empty_date_fields(test_user, dummy_sheet_csv):
     )
 
     parsed_csv = read_csv_from_str(one_row_csv)
-    assert (
-        len(parsed_csv.errors_to_return) == 0
-    ), f"Expected no errors when parsing CSV, got {parsed_csv.errors_to_return}"
+    assert len(parsed_csv.errors_to_return) == 0, (
+        f"Expected no errors when parsing CSV, got {parsed_csv.errors_to_return}"
+    )
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
@@ -4232,12 +4232,12 @@ def test_csv_height_weight_fields_with_units_have_units_removed(
     patient = Patient.objects.first()
     visit = Visit.objects.filter(patient=patient).first()
 
-    assert visit.height == Decimal(
-        "150.0"
-    ), f"Expected height to be 150.0, but got {visit.height}"
-    assert visit.weight == Decimal(
-        "50.0"
-    ), f"Expected weight to be 50.0, but got {visit.weight}"
+    assert visit.height == Decimal("150.0"), (
+        f"Expected height to be 150.0, but got {visit.height}"
+    )
+    assert visit.weight == Decimal("50.0"), (
+        f"Expected weight to be 50.0, but got {visit.weight}"
+    )
 
 
 @pytest.mark.django_db
@@ -4251,9 +4251,9 @@ def test_submission_has_audit_period_attached(test_user, single_row_valid_df):
     assert Submission.objects.count() == 1, "Expected one submission to be created"
     submission = Submission.objects.first()
 
-    assert (
-        submission.audit_period == audit_period
-    ), f"Expected submission to have audit period {audit_period}, but got {submission.audit_period}"
+    assert submission.audit_period == audit_period, (
+        f"Expected submission to have audit period {audit_period}, but got {submission.audit_period}"
+    )
 
 
 @pytest.mark.django_db
@@ -4265,9 +4265,9 @@ def test_visit_with_too_big_decimal_number_still_saves(test_user, dummy_sheet_cs
     )
 
     parsed_csv = read_csv_from_str(one_row_csv)
-    assert (
-        len(parsed_csv.errors_to_return) == 0
-    ), f"Expected no errors when parsing CSV, got {parsed_csv.errors_to_return}"
+    assert len(parsed_csv.errors_to_return) == 0, (
+        f"Expected no errors when parsing CSV, got {parsed_csv.errors_to_return}"
+    )
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
@@ -4289,9 +4289,9 @@ def test_visit_with_too_big_decimal_number_still_saves(test_user, dummy_sheet_cs
     visit = Visit.objects.first()
 
     assert visit.weight == Decimal(0)
-    assert (
-        "weight" in visit.errors
-    ), f"Expected weight to have an error, but got {visit.errors}"
+    assert "weight" in visit.errors, (
+        f"Expected weight to have an error, but got {visit.errors}"
+    )
 
 
 @pytest.mark.django_db
@@ -4305,9 +4305,9 @@ def test_visit_with_too_precise_decimal_number_is_rounded(test_user, dummy_sheet
     )
 
     parsed_csv = read_csv_from_str(one_row_csv)
-    assert (
-        len(parsed_csv.errors_to_return) == 0
-    ), f"Expected no errors when parsing CSV, got {parsed_csv.errors_to_return}"
+    assert len(parsed_csv.errors_to_return) == 0, (
+        f"Expected no errors when parsing CSV, got {parsed_csv.errors_to_return}"
+    )
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
@@ -4383,18 +4383,18 @@ def test_visit_form_dates_outside_of_audit_period(
         ("hospital_discharge_date", "Discharge date (Hospital provider spell)")
     )
 
-    assert (
-        Visit.objects.count() == 0
-    ), "Expected no visits to be created before the test"
+    assert Visit.objects.count() == 0, (
+        "Expected no visits to be created before the test"
+    )
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
     for date_field in ALL_VISIT_DATES:
-        assert (
-            date_field[0] in errors[0]
-        ), f"Expected {date_field} to be in errors, but got {errors}"
-    assert (
-        Visit.objects.count() == 1
-    ), "Expected the visit still to be created even though visit date outside of audit period"
+        assert date_field[0] in errors[0], (
+            f"Expected {date_field} to be in errors, but got {errors}"
+        )
+    assert Visit.objects.count() == 1, (
+        "Expected the visit still to be created even though visit date outside of audit period"
+    )
 
 
 @pytest.mark.django_db
@@ -4487,9 +4487,9 @@ def test_uploading_csv_against_incorrect_pdu(
     error_messages = list(get_messages(response.wsgi_request))
     assert error_messages[0].level_tag == "error"
 
-    assert (
-        Submission.objects.count() == 0
-    ), "No submission should be created for incorrect PDU"
+    assert Submission.objects.count() == 0, (
+        "No submission should be created for incorrect PDU"
+    )
 
 
 @pytest.mark.django_db
@@ -4522,9 +4522,9 @@ def test_uploading_csv_with_conflicting_pdu_numbers(
     error_messages = list(get_messages(response.wsgi_request))
     assert error_messages[0].level_tag == "error"
 
-    assert (
-        Submission.objects.count() == 0
-    ), "No submission should be created for incorrect PDU"
+    assert Submission.objects.count() == 0, (
+        "No submission should be created for incorrect PDU"
+    )
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1344
@@ -4567,9 +4567,9 @@ def test_uploading_csv_with_multiple_pdu_numbers_including_one_missing(
     error_messages = list(get_messages(response.wsgi_request))
     assert error_messages[0].level_tag == "error"
 
-    assert (
-        Submission.objects.count() == 0
-    ), "No submission should be created for incorrect PDU"
+    assert Submission.objects.count() == 0, (
+        "No submission should be created for incorrect PDU"
+    )
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1344
@@ -4609,9 +4609,9 @@ def test_uploading_csv_with_first_row_missing_pdu_number(
     )
     assert response.url == redirect_url
 
-    assert (
-        Submission.objects.count() == 1
-    ), "Submission should be created for upload where first row is missing PDU number but subsequent rows have correct PDU number"
+    assert Submission.objects.count() == 1, (
+        "Submission should be created for upload where first row is missing PDU number but subsequent rows have correct PDU number"
+    )
     assert Submission.objects.first().paediatric_diabetes_unit.pz_code == "PZ004"
 
 
@@ -4649,9 +4649,9 @@ def test_uploading_csv_with_pdu_number_missing_leading_pz(
     )
     assert response.url == redirect_url
 
-    assert (
-        Submission.objects.count() == 1
-    ), "Submission should be created for PDU with missing leading PZ"
+    assert Submission.objects.count() == 1, (
+        "Submission should be created for PDU with missing leading PZ"
+    )
     assert Submission.objects.first().paediatric_diabetes_unit.pz_code == "PZ004"
 
 
@@ -4689,9 +4689,9 @@ def test_uploading_csv_with_pdu_number_missing_leading_zeros(
     )
     assert response.url == redirect_url
 
-    assert (
-        Submission.objects.count() == 1
-    ), "Submission should be created for PDU with missing leading zeroes"
+    assert Submission.objects.count() == 1, (
+        "Submission should be created for PDU with missing leading zeroes"
+    )
     assert Submission.objects.first().paediatric_diabetes_unit.pz_code == "PZ004"
 
 

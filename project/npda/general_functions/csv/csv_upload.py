@@ -346,7 +346,7 @@ async def csv_upload(
             for _, row in rows.iterrows():
                 if allow_empty_visits and pd.isnull(row["Visit/Appointment Date"]):
                     logger.info(
-                        f"Missing visit date for {pdu.pz_code} from {csv_file_name}[{row["row_index"]}]. Skipping creating visit."
+                        f"Missing visit date for {pdu.pz_code} from {csv_file_name}[{row['row_index']}]. Skipping creating visit."
                     )
                     continue
 

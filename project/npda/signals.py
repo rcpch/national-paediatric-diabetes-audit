@@ -404,7 +404,7 @@ def _send_email_change_notification(user, email_change, current_user):
 
     Previous email: {old_email}
     New email: {new_email}
-    Changed by: {current_user.email if current_user else 'System'}
+    Changed by: {current_user.email if current_user else "System"}
 
     If you did not request this change, please contact the NPDA team immediately.
     """
@@ -436,10 +436,10 @@ def _send_admin_notification(user, changes, current_user):
     User permissions have been modified:
 
     User: {user.get_full_name()} ({user.email})
-    Changed by: {current_user.email if current_user else 'System'}
+    Changed by: {current_user.email if current_user else "System"}
 
     Changes:
-    {chr(10).join(f'• {detail}' for detail in change_details)}
+    {chr(10).join(f"• {detail}" for detail in change_details)}
     """
     # send to admins
     try:
@@ -464,7 +464,7 @@ def _send_user_creation_notification(user, current_user):
 
     User: {user.get_full_name()} ({user.email})
     Role: {user.get_role_display()}
-    Created by: {current_user.email if current_user else 'System'}
+    Created by: {current_user.email if current_user else "System"}
     """
 
     # Send to audit team members
@@ -543,9 +543,9 @@ def _send_pdu_assignment_notification(
     User: {user.get_full_name()} ({user.email})
     PDU: {pdu.lead_organisation_name} ({pdu.pz_code})
     Action: User {action} PDU
-    Modified by: {current_user.email if current_user else 'System'}
+    Modified by: {current_user.email if current_user else "System"}
 
-    Role in PDU: {getattr(user, 'role', 'Not specified')}
+    Role in PDU: {getattr(user, "role", "Not specified")}
     """
     # Send to audit team members
     try:
@@ -578,15 +578,15 @@ def _send_user_deletion_notification(user_instance, current_user):
     message = f"""
     An NPDA user has been DELETED:
 
-    User: {deletion_data.get('full_name', 'Unknown')} ({deletion_data.get('email', 'Unknown')})
-    Role: {deletion_data.get('role', 'Unknown')}
-    Active: {deletion_data.get('is_active', 'Unknown')}
-    Audit Team Member: {deletion_data.get('is_rcpch_audit_team_member', 'Unknown')}
-    RCPCH Staff: {deletion_data.get('is_rcpch_staff', 'Unknown')}
-    Date Joined: {deletion_data.get('date_joined', 'Unknown')}
-    Last Login: {deletion_data.get('last_login', 'Never') if deletion_data.get('last_login') else 'Never'}{pdu_info}
+    User: {deletion_data.get("full_name", "Unknown")} ({deletion_data.get("email", "Unknown")})
+    Role: {deletion_data.get("role", "Unknown")}
+    Active: {deletion_data.get("is_active", "Unknown")}
+    Audit Team Member: {deletion_data.get("is_rcpch_audit_team_member", "Unknown")}
+    RCPCH Staff: {deletion_data.get("is_rcpch_staff", "Unknown")}
+    Date Joined: {deletion_data.get("date_joined", "Unknown")}
+    Last Login: {deletion_data.get("last_login", "Never") if deletion_data.get("last_login") else "Never"}{pdu_info}
 
-    Deleted by: {current_user.email if current_user else 'System'}
+    Deleted by: {current_user.email if current_user else "System"}
 
     ⚠️ This action cannot be undone. All user data has been permanently removed.
     """

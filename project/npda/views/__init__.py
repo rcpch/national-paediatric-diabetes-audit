@@ -15,7 +15,14 @@ from project.npda.views.dashboard.partials import (
 # Dashboard view
 from .dashboard.dashboard import dashboard as dashboard
 from .errors import csrf_fail, error_400, error_403, error_404, error_500
-from .home import celery_test_task, download_template, feature_flags, home, index, new_home
+from .home import (
+    celery_test_task,
+    download_template,
+    feature_flags,
+    home,
+    index,
+    new_home,
+)
 from .npda_users import (
     NPDAUserCreateView,
     NPDAUserListView,
@@ -26,6 +33,16 @@ from .npda_users import (
     get_user_home_page,
     npdauser_pdu_update,
 )
-from .patient import PatientCreateView, PatientDeleteView, PatientListView, PatientUpdateView
+from .patient import (
+    PatientCreateView,
+    PatientDeleteView,
+    PatientListView,
+    PatientUpdateView,
+)
 from .submissions import SubmissionsListView, upload_csv, upload_csv_in_progress
-from .visit import PatientVisitsListView, VisitCreateView, VisitDeleteView, VisitUpdateView
+from .visit import (
+    PatientVisitsListView,
+    VisitCreateView,
+    VisitDeleteView,
+    VisitUpdateView,
+)
