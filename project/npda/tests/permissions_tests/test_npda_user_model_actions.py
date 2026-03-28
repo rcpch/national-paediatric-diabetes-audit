@@ -1334,7 +1334,7 @@ def test_coordinators_cannot_activate_or_deactivate_themselves(
     response = client.post(url, data={action: "true"})
     assert response.status_code == HTTPStatus.FORBIDDEN
     test_coordinator.refresh_from_db()
-    assert test_coordinator.is_active == True  # Should remain active
+    assert test_coordinator.is_active  # Should remain active
 
 
 @pytest.mark.django_db

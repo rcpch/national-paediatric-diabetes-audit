@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
@@ -14,7 +15,7 @@ handler500 = "project.npda.views.error_500"
 
 # OVERRIDE TWO_FACTOR LOGIN URL TO CAPTCHA LOGIN
 for item in tf_urls:
-    if type(item) == list:
+    if isinstance(item, list):
         for url_pattern in item:
             if vars(url_pattern).get("name") == "login":
                 url_pattern.callback = RCPCHLoginView.as_view()

@@ -16,7 +16,7 @@ Example use:
         --pz_code="PZ999" \
         --imd=2 \
         --build
-    
+
     # Jersey
 
     python manage.py create_csv \
@@ -641,12 +641,7 @@ class Command(BaseCommand):
         visits: str = options["visits"]
         # Map to actual VisitType
         # NOTE: `_map_visit_type_letters_to_names` already did some basic validation
-        visit_types = list(
-            map(
-                lambda letter: letter_name_map[letter],
-                visits.replace(" ", ""),
-            )
-        )
+        visit_types = [letter_name_map[letter] for letter in visits.replace(" ", "")]
 
         # hba1c target
         hba1c_target = hb_target_map[options["hb_target"]]

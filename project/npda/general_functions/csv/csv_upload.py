@@ -27,13 +27,13 @@ from project.npda.general_functions.csv import gather_unique_patient_and_visit_c
 # Logging setup
 logger = logging.getLogger(__name__)
 
-from project.npda.forms.external_patient_validators import validate_patient_async
-from project.npda.forms.external_visit_validators import validate_visit_async
-from project.npda.forms.patient_form import PatientForm
-from project.npda.forms.visit_form import VisitForm
-from project.npda.general_functions.csv.csv_clean import csv_clean
-from project.npda.general_functions.csv.csv_merge import merge_rows_for_patient
-from project.npda.models import Patient, Submission, Transfer, Visit, VisitActivity
+from project.npda.forms.external_patient_validators import validate_patient_async  # noqa: E402
+from project.npda.forms.external_visit_validators import validate_visit_async  # noqa: E402
+from project.npda.forms.patient_form import PatientForm  # noqa: E402
+from project.npda.forms.visit_form import VisitForm  # noqa: E402
+from project.npda.general_functions.csv.csv_clean import csv_clean  # noqa: E402
+from project.npda.general_functions.csv.csv_merge import merge_rows_for_patient  # noqa: E402
+from project.npda.models import Patient, Submission, Transfer, Visit, VisitActivity  # noqa: E402
 
 
 def create_csv_submission(
@@ -319,7 +319,7 @@ async def csv_upload(
                 save_errors_and_retain_valid_fields(visit_row_index, visit_form)
                 visit_form.instance.patient = patient
 
-                await sync_to_async(lambda: visit_form.save())()
+                await sync_to_async(lambda vf=visit_form: vf.save())()
             except Exception as error:
                 logger.exception(
                     f"Error saving visit for {pdu.pz_code} from {csv_file_name}[{visit_row_index}]: {error}"

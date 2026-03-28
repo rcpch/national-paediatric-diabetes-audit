@@ -36,5 +36,41 @@ select = ["E", "F", "W", "B", "C4", "UP", "S"]
 ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
-# Hardcoded passwords/secrets are acceptable in test fixtures and test files
-"**/tests/**" = ["S105", "S106", "S107"]
+# Tests: assert is standard pytest; random is fine for fixture data; factory
+# assignments are intentionally unused (side-effect: creates DB row)
+"**/tests/**" = ["S101", "S105", "S106", "S107", "S311", "F841"]
+# Settings: 0.0.0.0 is intentional for Docker / debugpy
+"project/settings.py" = ["S104"]
+# Deploy script: shell=True is intentional to compose az CLI commands
+"s/deploy-revision.py" = ["S602", "S603"]
+# Aggregator __init__ files that re-export many names via star imports
+"project/constants/__init__.py" = ["F401", "F403"]
+"project/constants/styles/__init__.py" = ["F401", "F403"]
+"project/npda/filtersets/__init__.py" = ["F401", "F403"]
+"project/npda/general_functions/__init__.py" = ["F401", "F403"]
+"project/npda/general_functions/csv/__init__.py" = ["F401", "F403"]
+"project/npda/management/commands/seed_functions/__init__.py" = ["F401", "F403"]
+"project/npda/models/__init__.py" = ["F401", "F403"]
+"project/npda/templatetags/__init__.py" = ["F401", "F403"]
+"project/npda/tests/factories/__init__.py" = ["F401", "F403"]
+# views/__init__.py re-exports everything; stars come from already-suppressed sources
+"project/npda/views/__init__.py" = ["F401", "F403", "F405"]
+# models.py is a thin wrapper that re-exports models/__init__
+"project/npda/models.py" = ["F401", "F403", "F405"]
+# project/urls.py uses star import from npda.views (legacy pattern)
+"project/urls.py" = ["F401", "F403", "F405"]
+# Forms use star imports from the styles constants (many CSS class names)
+"project/npda/forms/npda_user_form.py" = ["F403", "F405"]
+"project/npda/forms/patient_form.py" = ["F403", "F405"]
+"project/npda/forms/visit_form.py" = ["F403", "F405"]
+# Models use star imports from constants (many domain constants)
+"project/npda/models/npda_user.py" = ["F403", "F405"]
+"project/npda/models/transfer.py" = ["F401", "F403", "F405"]
+"project/npda/models/visit.py" = ["F403", "F405"]
+# conftest.py must import fixtures into module scope for pytest to discover them
+"project/npda/tests/conftest.py" = ["F401"]
+# Data-generator uses random for generating fake clinical data (not crypto)
+"project/npda/general_functions/data_generator_extended.py" = ["S311"]
+"project/npda/general_functions/random_date.py" = ["S311"]
+"project/npda/general_functions/utils.py" = ["S311"]
+"project/npda/management/commands/create_csv.py" = ["S311"]

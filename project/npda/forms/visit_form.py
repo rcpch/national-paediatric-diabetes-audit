@@ -443,7 +443,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if not valid:
             raise ValidationError(error)
 
         return self.cleaned_data["visit_date"]
@@ -459,7 +459,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if not valid:
             raise ValidationError(error)
 
         return self.cleaned_data["height_weight_observation_date"]
@@ -475,7 +475,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if not valid:
             raise ValidationError(error)
 
         return self.cleaned_data["hba1c_date"]
@@ -491,7 +491,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if not valid:
             raise ValidationError(error)
 
         return self.cleaned_data["blood_pressure_observation_date"]
@@ -507,7 +507,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if not valid:
             raise ValidationError(error)
 
         return self.cleaned_data["foot_examination_observation_date"]
@@ -523,7 +523,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if not valid:
             raise ValidationError(error)
 
         return self.cleaned_data["retinal_screening_observation_date"]
@@ -539,7 +539,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if not valid:
             raise ValidationError(error)
 
         return self.cleaned_data["albumin_creatinine_ratio_date"]
@@ -555,7 +555,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if not valid:
             raise ValidationError(error)
 
         return self.cleaned_data["total_cholesterol_date"]
@@ -571,7 +571,7 @@ class VisitForm(forms.ModelForm):
             audit_period=self.audit_period,
         )
 
-        if valid == False:
+        if not valid:
             raise ValidationError(error)
 
         if (
@@ -596,7 +596,7 @@ class VisitForm(forms.ModelForm):
             audit_period=self.audit_period,
         )
 
-        if valid == False:
+        if not valid:
             raise ValidationError(error)
 
         if (
@@ -621,7 +621,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if not valid:
             raise ValidationError(error)
 
         return self.cleaned_data["psychological_screening_assessment_date"]
@@ -637,7 +637,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if not valid:
             raise ValidationError(error)
 
         return self.cleaned_data["smoking_cessation_referral_date"]
@@ -656,7 +656,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
         )
 
-        if valid == False:
+        if not valid:
             raise ValidationError(error)
 
         return self.cleaned_data["carbohydrate_counting_level_three_education_date"]
@@ -672,7 +672,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if not valid:
             raise ValidationError(error)
 
         return self.cleaned_data["dietician_additional_appointment_date"]
@@ -688,7 +688,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if not valid:
             raise ValidationError(error)
 
         return self.cleaned_data["flu_immunisation_recommended_date"]
@@ -704,7 +704,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if not valid:
             raise ValidationError(error)
 
         return self.cleaned_data["sick_day_rules_training_date"]
@@ -732,7 +732,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
-        if valid == False:
+        if not valid:
             raise ValidationError(error)
 
         return self.cleaned_data["hospital_admission_date"]
@@ -748,7 +748,7 @@ class VisitForm(forms.ModelForm):
             date_of_death=self.patient.death_date,
             audit_period=None,  # Hospital admission dates are not bound by the audit period
         )
-        if valid == False:
+        if not valid:
             raise ValidationError(error)
 
         return self.cleaned_data["hospital_discharge_date"]

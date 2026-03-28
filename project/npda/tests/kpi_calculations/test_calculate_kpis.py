@@ -146,11 +146,9 @@ def test_kpi_calculations_dont_break_when_no_patients(
 
         # if this is one of measures 1-12, the pass and failed keys will contain None - remove them
         assert all(
-            [
-                isinstance(value, int) or isinstance(value, float)
+            isinstance(value, int) or isinstance(value, float)
                 for value in values
                 if value is not None
-            ]
         ), f"KPI {kpi} has non-integer values: {results}"
 
 

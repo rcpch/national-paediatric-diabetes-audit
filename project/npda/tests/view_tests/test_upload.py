@@ -8,6 +8,7 @@ from django.urls import reverse
 from project.npda.models.audit_period import AuditPeriod
 from project.npda.models.npda_user import NPDAUser
 from project.npda.tests.model_tests.test_submissions import ALDER_HEY_PZ_CODE
+from project.npda.tests.test_csv_upload import mock_remote_calls  # noqa: F401
 from project.npda.tests.UserDataClasses import test_user_audit_centre_coordinator_data
 from project.npda.tests.utils import login_and_verify_user
 

@@ -9,14 +9,13 @@ from project.npda.models import Visit
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
 from project.npda.views.dashboard.patient_characteristics import (
-    audit_period_for_audit_year,
     get_median_hba1c_by_patient,
 )
+from project.npda.general_functions.audit_period import audit_period_for_audit_year
 
 
 @pytest.mark.django_db
 class TestReturnEligibleVisits:
-
     @pytest.fixture
     def setup_patients_and_visits(self):
         # Create patients with different audit years

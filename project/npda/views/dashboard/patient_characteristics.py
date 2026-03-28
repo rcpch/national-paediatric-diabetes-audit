@@ -452,7 +452,7 @@ def create_piechart(dict_counts, field):
                 "family": "Montserrat",
             },
         },
-        margin=dict(l=20, r=20, t=50, b=20),  # minimal margins
+        margin={"l": 20, "r": 20, "t": 50, "b": 20},  # minimal margins
         height=500,
         width=600,
     )
@@ -573,7 +573,7 @@ def _build_box_plot(
                     name=item,
                     marker_color="rgba(200, 200, 200, 0.5)",  # Light grey
                     fillcolor="rgba(220, 220, 220, 0.5)",  # Lighter grey
-                    line=dict(width=1, color="rgba(200, 200, 200, 0.5)"),
+                    line={"width": 1, "color": "rgba(200, 200, 200, 0.5)"},
                     boxpoints=False,  # Don't show outlier points
                     hoverinfo="name",
                     hovertemplate=f"{item}: No data available<extra></extra>",
@@ -594,7 +594,7 @@ def _build_box_plot(
                     marker_color=line_colors[item],
                     fillcolor=fill_colors[item],
                     boxmean=True,
-                    hoverlabel=dict(bgcolor=fill_colors[item]),
+                    hoverlabel={"bgcolor": fill_colors[item]},
                     hoverinfo="y",
                 )
             )
@@ -607,7 +607,7 @@ def _build_box_plot(
                     x=[item] * len(subset),  # Position scatter points over the box
                     y=subset["median_hba1c_mmol_mol"],
                     mode="markers",
-                    marker=dict(color="black", size=3, opacity=0.6),
+                    marker={"color": "black", "size": 3, "opacity": 0.6},
                     name=f"{item} mmol/mol",
                     showlegend=False,  # Don't duplicate legend entries
                     customdata=custom_data,
@@ -622,7 +622,7 @@ def _build_box_plot(
                     name=item,
                     marker_color="rgba(200, 200, 200, 0.5)",  # Light grey
                     fillcolor="rgba(220, 220, 220, 0.5)",  # Lighter grey
-                    line=dict(width=1, color="rgba(200, 200, 200, 0.5)"),
+                    line={"width": 1, "color": "rgba(200, 200, 200, 0.5)"},
                     boxpoints=False,  # Don't show outlier points
                     hoverinfo="name",
                     hovertemplate=f"{item}: No data available<extra></extra>",
@@ -634,11 +634,11 @@ def _build_box_plot(
         title=title,
         yaxis_title="HbA1c (mmol/mol)",
         xaxis_title=xaxis_title,
-        xaxis=dict(
-            categoryorder="array",
-            categoryarray=category_order,
-        ),
-        legend=dict(traceorder="normal"),
+        xaxis={
+            "categoryorder": "array",
+            "categoryarray": category_order,
+        },
+        legend={"traceorder": "normal"},
     )
 
     fig.update_layout(
@@ -650,7 +650,7 @@ def _build_box_plot(
                 "family": "Montserrat",
             },
         },
-        margin=dict(l=20, r=20, t=50, b=20),  # minimal margins
+        margin={"l": 20, "r": 20, "t": 50, "b": 20},  # minimal margins
     )
 
     return fig

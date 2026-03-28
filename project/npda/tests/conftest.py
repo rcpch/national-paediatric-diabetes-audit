@@ -22,6 +22,17 @@ from project.npda.tests.factories import (
     PatientFactory,
     TransferFactory,
     VisitFactory,
+    # Fixtures must be imported here so pytest can discover them  # noqa: F401
+    dummy_sheet_csv,  # noqa: F401
+    dummy_sheet_csv_jersey,  # noqa: F401
+    dummy_sheet_csv_old_headers,  # noqa: F401
+    dummy_sheets_folder,  # noqa: F401
+    seed_audit_periods_fixture,  # noqa: F401
+    seed_audit_periods_per_function_fixture,  # noqa: F401
+    seed_groups_fixture,  # noqa: F401
+    seed_groups_per_function_fixture,  # noqa: F401
+    seed_users_fixture,  # noqa: F401
+    seed_users_per_function_fixture,  # noqa: F401
 )
 
 logger = logging.getLogger(__name__)

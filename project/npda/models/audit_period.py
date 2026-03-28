@@ -29,7 +29,7 @@ class AuditPeriodManager(models.Manager):
             audit_period = AuditPeriod.objects.get(slug=slug)
         except AuditPeriod.DoesNotExist as e:
             if not can_view_all_data:
-                raise PermissionDenied(f"Audit period {slug} does not exist")
+                raise PermissionDenied(f"Audit period {slug} does not exist") from e
 
             raise e
 

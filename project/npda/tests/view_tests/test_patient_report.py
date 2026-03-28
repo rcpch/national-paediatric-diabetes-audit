@@ -124,9 +124,9 @@ def test_no_duplicate_patients_in_report(
     assert len(response.context["patients"]) == N_PATIENTS
 
     # Check that there are no duplicate patients
-    duplicates = set(
+    duplicates = {
         patient["patient_identifier"] for patient in response.context["patients"]
-    )
+    }
     assert len(duplicates) == N_PATIENTS
 
 

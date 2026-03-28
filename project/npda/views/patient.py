@@ -192,7 +192,6 @@ class PatientListView(
         if submission and submission.errors:
             submission_errors = json.loads(submission.errors)
 
-            error_count = 0
             for errors_for_visit in submission_errors.values():
                 for errors_for_field in errors_for_visit.values():
                     submission_error_count += len(errors_for_field)
@@ -212,7 +211,6 @@ class PatientListView(
         seen_first_error = False
         seen_first_valid = False
         seen_first_valid_incomplete_full_year = False
-        seen_first_died = False
 
         context["search_input_list"] = self.split_search_string(
             search_string=self.request.GET.get("search-input", "")
@@ -385,7 +383,6 @@ class PatientCreateView(
             submission_active=True,
             defaults={
                 "submission_by": NPDAUser.objects.get(pk=self.request.user.pk),
-                "submission_by": NPDAUser.objects.get(pk=self.request.user.pk),
                 "submission_date": timezone.now(),
                 "audit_period": audit_period,
             },
@@ -424,7 +421,7 @@ class PatientUpdateView(
     def get_context_data(self, **kwargs):
         Transfer = apps.get_model("npda", "Transfer")
         patient = get_object_or_404(Patient, pk=self.kwargs["pk"])
-        transfer = Transfer.objects.get(patient=patient)
+        Transfer.objects.get(patient=patient)
         context = super().get_context_data(**kwargs)
         context["pdu"] = self.pdu
         context["title"] = "Edit Child Details"

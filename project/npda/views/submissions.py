@@ -427,7 +427,7 @@ def upload_csv(request, audit_period, pdu):
         if not has_perm:
             raise PermissionDenied("You do not have permission to upload CSV files.")
 
-        form = UploadFileForm(request.POST, request.FILES)
+        UploadFileForm(request.POST, request.FILES)
 
         user_csv = request.FILES["csv_upload"]
         user_csv_filename = user_csv.name
@@ -633,40 +633,40 @@ def create_column_chart(pdus_by_latest_submission, selected_audit_period):
                 ],
                 textposition="inside",  # Text inside bars for horizontal layout
                 hovertemplate="<b>%{y} (%{customdata})</b><br>Quarter: %{text}<extra></extra>",
-                textfont=dict(
-                    color="white", size=12, family="Montserrat"  # Change font family
-                ),
-                hoverlabel=dict(
-                    bgcolor=RCPCH_LIGHT_BLUE,
-                    bordercolor=RCPCH_LIGHT_BLUE,
-                    font=dict(color="white", size=14, family="Montserrat"),
-                ),
+                textfont={
+                    "color": "white", "size": 12, "family": "Montserrat"  # Change font family
+                },
+                hoverlabel={
+                    "bgcolor": RCPCH_LIGHT_BLUE,
+                    "bordercolor": RCPCH_LIGHT_BLUE,
+                    "font": {"color": "white", "size": 14, "family": "Montserrat"},
+                },
             )
         ]
     )
 
     # Update layout for horizontal bars
     fig.update_layout(
-        title=dict(
-            text=f"Latest Submission Data by Quarter (using latest visit date) against PZ Code (Audit Period: {selected_audit_period.slug})",
-            font=dict(family="Montserrat", size=16, color="black"),
-            x=0.5,  # Center the title horizontally
-            xanchor="center",  # Anchor the title at its center
-        ),
+        title={
+            "text": f"Latest Submission Data by Quarter (using latest visit date) against PZ Code (Audit Period: {selected_audit_period.slug})",
+            "font": {"family": "Montserrat", "size": 16, "color": "black"},
+            "x": 0.5,  # Center the title horizontally
+            "xanchor": "center",  # Anchor the title at its center
+        },
         xaxis_title="Latest Quarter (by Latest Visit Date)",
         yaxis_title="PZ Code",
-        xaxis=dict(
-            tickvals=[0, 1, 2, 3, 4],
-            ticktext=["No Data", "Q1", "Q2", "Q3", "Q4"],
-            range=[0, 4.5],  # Ensure all values are visible
-        ),
-        yaxis=dict(
-            tickfont=dict(color="black", size=10),  # Smaller font for many PDUs
-            automargin=True,  # Auto-adjust margins for long PDU names
-        ),
+        xaxis={
+            "tickvals": [0, 1, 2, 3, 4],
+            "ticktext": ["No Data", "Q1", "Q2", "Q3", "Q4"],
+            "range": [0, 4.5],  # Ensure all values are visible
+        },
+        yaxis={
+            "tickfont": {"color": "black", "size": 10},  # Smaller font for many PDUs
+            "automargin": True,  # Auto-adjust margins for long PDU names
+        },
         paper_bgcolor="white",
         height=max(400, len(df) * 25),  # Dynamic height based on number of PDUs
-        margin=dict(l=100, r=50, t=80, b=50),  # Adjust margins for PDU labels
+        margin={"l": 100, "r": 50, "t": 80, "b": 50},  # Adjust margins for PDU labels
         showlegend=False,
     )
 

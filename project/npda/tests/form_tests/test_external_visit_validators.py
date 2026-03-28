@@ -258,5 +258,5 @@ async def test_passes_through_unexpected_error():
         "project.npda.forms.external_visit_validators.calculate_centiles_z_scores",
         AsyncMock(side_effect=Exception("oopsie!")),
     ) as mock:
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             await validate_visit_async(**VALID_FIELDS)

@@ -192,7 +192,7 @@ def csv_parse(csv_file):
             )
 
             for row_index, (value_before, value_after) in enumerate(
-                zip(column_before, column_after)
+                zip(column_before, column_after, strict=False)
             ):
                 # Handle empty strings (including spaces) for optional date columns
                 if (

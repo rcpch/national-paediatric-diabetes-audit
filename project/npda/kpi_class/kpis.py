@@ -2008,8 +2008,6 @@ class CalculateKPIS:
             self._total_kpi_3_pts_and_count()
         )
 
-        total_eligible_kpi_t1dm = total_kpi_3_eligible_pts_base_query_set.count()
-
         # Get quarter dates
         quarter_end_dates = [
             quarter[1]
@@ -3710,7 +3708,7 @@ class CalculateKPIS:
                 eligible_patients_t2dm,
                 eligible_patients,
                 eligible_patients_other,
-            ),
+            ), strict=False,
         ):
             # Retrieve all visits with valid HbA1c values
             valid_visits = (

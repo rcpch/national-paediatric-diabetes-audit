@@ -132,8 +132,8 @@ class Command(BaseCommand):
         for pz_code in df["PDU Number"].unique():
             try:
                 pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-            except PaediatricDiabetesUnit.DoesNotExist:
-                raise ValueError(f"Invalid PDU Number: {pz_code}")
+            except PaediatricDiabetesUnit.DoesNotExist as e:
+                raise ValueError(f"Invalid PDU Number: {pz_code}") from e
 
             try:
                 submission = Submission.objects.get(
@@ -198,7 +198,7 @@ class Command(BaseCommand):
                     pdu_df = pdu_df[pdu_df[identifier_column] != identifier]
 
             # HACK: eagerly load paediatric_diabetes_unit to avoid crash doing it later from the async context in csv_upload
-            submission.paediatric_diabetes_unit
+            submission.paediatric_diabetes_unit  # noqa: B018
 
             errors = async_to_sync(csv_upload)(
                 dataframe=pdu_df,

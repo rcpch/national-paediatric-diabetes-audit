@@ -4,16 +4,31 @@ from django.urls import include, path
 
 from project.npda.forms.npda_user_form import NPDAUpdatePasswordForm
 from project.npda.views import (
+    NPDAUserCreateView,
+    NPDAUserListView,
+    NPDAUserLogsListView,
+    NPDAUserUpdateView,
+    PatientCreateView,
+    PatientDeleteView,
     PatientListView,
+    PatientUpdateView,
     PatientVisitsListView,
+    ResetPasswordView,
     SubmissionsListView,
     VisitCreateView,
     VisitDeleteView,
     VisitUpdateView,
+    celery_test_task,
+    csrf_fail,
+    download_template,
+    feature_flags,
+    home,
+    index,
+    new_home,
     npdauser_pdu_update,
+    upload_csv,
+    upload_csv_in_progress,
 )
-
-from .views import *
 from .views.dashboard import dashboard, partials
 from .views.dashboard.patient_characteristics import all_patient_charts, patient_ages
 from .views.dashboard.patient_measurements import patient_measurements

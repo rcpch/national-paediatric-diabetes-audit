@@ -13,7 +13,7 @@ PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
 OrganisationEmployer = apps.get_model("npda", "OrganisationEmployer")
 NPDAUser = apps.get_model("npda", "NPDAUser")
 
-from project.constants import AUDIT_CENTRE_COORDINATOR, AUDIT_CENTRE_EDITOR, DR, MS
+from project.constants import AUDIT_CENTRE_COORDINATOR, AUDIT_CENTRE_EDITOR, DR, MS  # noqa: E402
 
 
 @pytest.mark.django_db

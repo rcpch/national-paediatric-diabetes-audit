@@ -401,11 +401,11 @@ def _send_email_change_notification(user, email_change, current_user):
     subject = "NPDA Account Email Address Changed"
     message = f"""
     Your NPDA account email address has been changed.
-    
+
     Previous email: {old_email}
     New email: {new_email}
     Changed by: {current_user.email if current_user else 'System'}
-    
+
     If you did not request this change, please contact the NPDA team immediately.
     """
 
@@ -434,10 +434,10 @@ def _send_admin_notification(user, changes, current_user):
     subject = f"NPDA User Permission Changes - {user.get_full_name()}"
     message = f"""
     User permissions have been modified:
-    
+
     User: {user.get_full_name()} ({user.email})
     Changed by: {current_user.email if current_user else 'System'}
-    
+
     Changes:
     {chr(10).join(f'• {detail}' for detail in change_details)}
     """
@@ -461,7 +461,7 @@ def _send_user_creation_notification(user, current_user):
     subject = f"New NPDA User Created - {user.get_full_name()}"
     message = f"""
     A new NPDA user has been created:
-    
+
     User: {user.get_full_name()} ({user.email})
     Role: {user.get_role_display()}
     Created by: {current_user.email if current_user else 'System'}
@@ -539,12 +539,12 @@ def _send_pdu_assignment_notification(
 
     message = f"""
     A user's PDU assignment has been modified:
-    
+
     User: {user.get_full_name()} ({user.email})
     PDU: {pdu.lead_organisation_name} ({pdu.pz_code})
     Action: User {action} PDU
     Modified by: {current_user.email if current_user else 'System'}
-    
+
     Role in PDU: {getattr(user, 'role', 'Not specified')}
     """
     # Send to audit team members
@@ -577,7 +577,7 @@ def _send_user_deletion_notification(user_instance, current_user):
 
     message = f"""
     An NPDA user has been DELETED:
-    
+
     User: {deletion_data.get('full_name', 'Unknown')} ({deletion_data.get('email', 'Unknown')})
     Role: {deletion_data.get('role', 'Unknown')}
     Active: {deletion_data.get('is_active', 'Unknown')}
@@ -585,15 +585,15 @@ def _send_user_deletion_notification(user_instance, current_user):
     RCPCH Staff: {deletion_data.get('is_rcpch_staff', 'Unknown')}
     Date Joined: {deletion_data.get('date_joined', 'Unknown')}
     Last Login: {deletion_data.get('last_login', 'Never') if deletion_data.get('last_login') else 'Never'}{pdu_info}
-    
+
     Deleted by: {current_user.email if current_user else 'System'}
-    
+
     ⚠️ This action cannot be undone. All user data has been permanently removed.
     """
 
     # Send to audit team members
     try:
-        if CHANGE_NOTIFICATION_EMAILS:
+        if settings.CHANGE_NOTIFICATION_EMAILS:
             send_email_to_recipients(
                 recipients=settings.CHANGE_NOTIFICATION_EMAILS,
                 subject=subject,

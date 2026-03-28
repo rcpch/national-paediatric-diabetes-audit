@@ -6,9 +6,9 @@ from django.core.management.base import BaseCommand
 # Logging setup
 logger = logging.getLogger(__name__)
 
-from .create_groups import groups_seeder
-from .seed_functions.audit_periods_seeder import audit_periods_seeder
-from .seed_functions.paediatric_diabetes_units_seeder import (
+from .create_groups import groups_seeder  # noqa: E402
+from .seed_functions.audit_periods_seeder import audit_periods_seeder  # noqa: E402
+from .seed_functions.paediatric_diabetes_units_seeder import (  # noqa: E402
     paediatric_diabetes_units_seeder,
 )
 

@@ -14,7 +14,7 @@ class PaediatricDiabetesUnitManager(models.Manager):
             pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
         except PaediatricDiabetesUnit.DoesNotExist as e:
             if not can_view_all_data:
-                raise PermissionDenied(f"PDU {pz_code} does not exist")
+                raise PermissionDenied(f"PDU {pz_code} does not exist") from e
 
             raise e
 

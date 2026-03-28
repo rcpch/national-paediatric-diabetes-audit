@@ -131,7 +131,7 @@ def error_for_field(errors_by_field, field):
 
     error_messages = [conditional_escape(error["message"]) for error in errors]
 
-    return mark_safe("\n".join(error_messages))
+    return mark_safe("\n".join(error_messages))  # noqa: S308
 
 
 @register.simple_tag
@@ -377,22 +377,6 @@ def hba1c_units(value, is_ifcc=True):
         return f"{value} mmol/mol"
     else:
         return f"({value} %)"
-
-
-@register.filter
-def percentage(value: str, total: str):
-    if (
-        value is None
-        or total is None
-        or value == ""
-        or total == ""
-        or total == 0
-        or value == 0
-        or total == "0"
-        or value == "0"
-    ):
-        return "-"
-    return f"{round(int(value) / int(total) * 100)}%"
 
 
 @register.filter

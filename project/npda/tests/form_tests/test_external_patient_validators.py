@@ -198,7 +198,7 @@ async def test_http_error_calculating_index_of_multiple_deprivation():
         assert result.index_of_multiple_deprivation_quintile is None
 
 
-async def test_http_error_calculating_index_of_multiple_deprivation():
+async def test_runtime_error_calculating_index_of_multiple_deprivation():
     with patch(
         "project.npda.forms.external_patient_validators.imd_for_postcode",
         AsyncMock(side_effect=RuntimeError("oopsie!")),

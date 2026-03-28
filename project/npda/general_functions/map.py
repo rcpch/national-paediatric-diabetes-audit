@@ -179,24 +179,24 @@ def generate_distance_from_organisation_scatterplot_figure(
     # set the labels for the IMD deciles
 
     annotations = [
-        dict(
-            x=0.95,
-            y=1,
-            xref="paper",
-            yref="paper",
-            text="Least Deprived",
-            showarrow=False,
-            font=dict(size=12, color="black", family="montserrat"),
-        ),
-        dict(
-            x=0.95,
-            y=0,
-            xref="paper",
-            yref="paper",
-            text="Most Deprived",
-            showarrow=False,
-            font=dict(size=12, color="black", family="montserrat"),
-        ),
+        {
+            "x": 0.95,
+            "y": 1,
+            "xref": "paper",
+            "yref": "paper",
+            "text": "Least Deprived",
+            "showarrow": False,
+            "font": {"size": 12, "color": "black", "family": "montserrat"},
+        },
+        {
+            "x": 0.95,
+            "y": 0,
+            "xref": "paper",
+            "yref": "paper",
+            "text": "Most Deprived",
+            "showarrow": False,
+            "font": {"size": 12, "color": "black", "family": "montserrat"},
+        },
     ]
 
     # Create a Plotly choropleth map with the filtered English LSOAs coloured by IMD Rank
@@ -213,16 +213,16 @@ def generate_distance_from_organisation_scatterplot_figure(
                 ["LSOA name (2011)", "Index of Multiple Deprivation (IMD) Decile"]
             ].to_numpy(),
             hovertemplate="<b>%{customdata[0]}</b><br>IMD Decile: %{customdata[1]}<extra></extra>",  # Custom hover template
-            colorbar=dict(
-                title=dict(
-                    text="English IMD Rank",
-                    font=dict(size=12, color="black", family="montserrat"),
-                    side="right",  # Position the title above the colorbar
-                ),
-                tickfont=dict(size=10, color="black", family="montserrat"),
-                x=0.88,  # Position the English color scale on the right
-                len=0.9,  # Length of the color bar
-            ),
+            colorbar={
+                "title": {
+                    "text": "English IMD Rank",
+                    "font": {"size": 12, "color": "black", "family": "montserrat"},
+                    "side": "right",  # Position the title above the colorbar
+                },
+                "tickfont": {"size": 10, "color": "black", "family": "montserrat"},
+                "x": 0.88,  # Position the English color scale on the right
+                "len": 0.9,  # Length of the color bar
+            },
         )
     )
 
@@ -240,16 +240,16 @@ def generate_distance_from_organisation_scatterplot_figure(
                 ["LSOA11NM", "Index of Multiple Deprivation (IMD) Decile"]
             ].to_numpy(),
             hovertemplate="<b>%{customdata[0]}</b><br>IMD Decile: %{customdata[1]}<extra></extra>",  # Custom hover template
-            colorbar=dict(
-                title=dict(
-                    text="Welsh IMD Rank",
-                    font=dict(size=12, color="black", family="montserrat"),
-                    side="right",  # Position the title above the colorbar
-                ),
-                tickfont=dict(size=10, color="black", family="montserrat"),
-                x=0.95,  # Position the Welsh color scale to the right of the English one
-                len=0.9,  # Length of the color bar
-            ),
+            colorbar={
+                "title": {
+                    "text": "Welsh IMD Rank",
+                    "font": {"size": 12, "color": "black", "family": "montserrat"},
+                    "side": "right",  # Position the title above the colorbar
+                },
+                "tickfont": {"size": 10, "color": "black", "family": "montserrat"},
+                "x": 0.95,  # Position the Welsh color scale to the right of the English one
+                "len": 0.9,  # Length of the color bar
+            },
         )
     )
 
@@ -370,21 +370,21 @@ def generate_distance_from_organisation_scatterplot_figure(
 
     fig.update_layout(
         margin={"r": 0, "t": 0, "l": 0, "b": 0},
-        font=dict(family="Montserrat-Regular", color="#FFFFFF"),
-        hoverlabel=dict(
-            bgcolor=RCPCH_LIGHT_BLUE,
-            font_size=12,
-            font=dict(color="white", family="montserrat"),
-            bordercolor=RCPCH_LIGHT_BLUE,
-        ),
-        mapbox=dict(
-            style="carto-positron",
-            zoom=10,
-            center=dict(
-                lat=pdu_lead_organisation["latitude"],
-                lon=pdu_lead_organisation["longitude"],
-            ),
-        ),
+        font={"family": "Montserrat-Regular", "color": "#FFFFFF"},
+        hoverlabel={
+            "bgcolor": RCPCH_LIGHT_BLUE,
+            "font_size": 12,
+            "font": {"color": "white", "family": "montserrat"},
+            "bordercolor": RCPCH_LIGHT_BLUE,
+        },
+        mapbox={
+            "style": "carto-positron",
+            "zoom": 10,
+            "center": {
+                "lat": pdu_lead_organisation["latitude"],
+                "lon": pdu_lead_organisation["longitude"],
+            },
+        },
         mapbox_layers=[
             {
                 "below": "traces",
@@ -423,7 +423,7 @@ def generate_dataframe_and_aggregated_distance_data_from_cases(filtered_cases):
                         _ = row["location_wgs84"].x
                         _ = row["location_wgs84"].y
                         valid_geometries.append(idx)
-                except (AttributeError, Exception):
+                except (AttributeError, Exception):  # noqa: S112
                     # Skip rows with invalid geometries
                     continue
 

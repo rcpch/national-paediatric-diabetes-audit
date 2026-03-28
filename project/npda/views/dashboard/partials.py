@@ -131,13 +131,13 @@ def get_metric_scatter_plot(request, audit_period, pdu):
 
         # Extracting data
         quarters = [f"Q{q}" for q in data]
-        percentages = [data[q]["pct"] for q in data]
+        [data[q]["pct"] for q in data]
         passed = [data[q]["total_passed"] for q in data]
         cumulative_sum = 0
         incremental_passed = [
             (cumulative_sum := cumulative_sum + data[q]["total_passed"]) for q in data
         ]
-        eligible = [data[q]["total_eligible"] for q in data]
+        [data[q]["total_eligible"] for q in data]
         all_colors = [colors.RCPCH_LIGHT_BLUE for _ in data]
         # highlight the last quarter
         all_colors[-1] = colors.RCPCH_PINK
@@ -150,12 +150,12 @@ def get_metric_scatter_plot(request, audit_period, pdu):
             go.Scatter(
                 x=quarters,
                 y=incremental_passed,
-                marker=dict(
-                    color=colors.RCPCH_LIGHT_GREY,  # Change to desired color
-                    line=dict(color=colors.RCPCH_LIGHT_GREY, width=1),  # Add border
-                    symbol="square",
-                    size=12,
-                ),
+                marker={
+                    "color": colors.RCPCH_LIGHT_GREY,  # Change to desired color
+                    "line": {"color": colors.RCPCH_LIGHT_GREY, "width": 1},  # Add border
+                    "symbol": "square",
+                    "size": 12,
+                },
                 hovertemplate="<b>Running Total: <i>%{y}</i> children in %{x}</b><extra></extra>",
                 name="Cumulative Total",
             ),
@@ -166,12 +166,12 @@ def get_metric_scatter_plot(request, audit_period, pdu):
                 x=quarters,
                 y=passed,
                 mode="lines+markers",
-                marker=dict(
-                    size=12,
-                    color=all_colors,
-                    symbol="square",
-                ),
-                line=dict(color=colors.RCPCH_LIGHT_BLUE),
+                marker={
+                    "size": 12,
+                    "color": all_colors,
+                    "symbol": "square",
+                },
+                line={"color": colors.RCPCH_LIGHT_BLUE},
                 hovertemplate="Quarter total: <b><i>%{y}</i> children in %{x}</b><extra></extra>",
                 name="Quarterly Total",
             ),
@@ -192,17 +192,17 @@ def get_metric_scatter_plot(request, audit_period, pdu):
             y=passed[-1],
             text=f"{passed[-1]} children in {quarters[-1]}",
             showarrow=False,
-            font=dict(color=colors.RCPCH_PINK, size=12),
+            font={"color": colors.RCPCH_PINK, "size": 12},
             yshift=yshift,
         )
 
         # Layout adjustments
         fig.update_layout(
-            xaxis=dict(title="Quarter", range=[-0.5, len(quarters) - 0.5]),
-            yaxis=dict(title="Number of children"),
+            xaxis={"title": "Quarter", "range": [-0.5, len(quarters) - 0.5]},
+            yaxis={"title": "Number of children"},
             showlegend=True,
             template="simple_white",  # Clean grid style
-            margin=dict(l=0, r=0, t=0, b=0),
+            margin={"l": 0, "r": 0, "t": 0, "b": 0},
         )
 
         chart_html = fig.to_html(

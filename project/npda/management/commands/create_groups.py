@@ -35,7 +35,7 @@ def groups_seeder(
     Note view permissions include viewing users, but not creating, updating or deleting them
     View permissions include viewing but NOT updating or deleting case audit records
 
-    NOTE Additional constraints are applied in view decorators to prevent users accessing 
+    NOTE Additional constraints are applied in view decorators to prevent users accessing
     records of users or children in organisations other than their own
     """
 
@@ -149,7 +149,7 @@ def groups_seeder(
     Full access inherit all editor permissions
     - transfer to another lead NPDA centre
 
-    NOTE Additional constraints are applied in view decorators to prevent users accessing 
+    NOTE Additional constraints are applied in view decorators to prevent users accessing
     records of users or children in organisations other than their own
     """
 
@@ -201,6 +201,21 @@ def groups_seeder(
             create_permissions(app_config, verbosity=0)
             app_config.models_module = None
 
+    def add_permissions_to_group(permissions_list, group_to_add):
+        for permission in permissions_list:
+            codename = permission.get("codename")
+            content_type = permission.get("content_type")
+            newPermission = Permission.objects.get(
+                codename=codename, content_type=content_type
+            )
+            if group_to_add.permissions.filter(codename=codename).exists():
+                if verbose:
+                    print(f"{codename} already exists for this group. Skipping...")
+            else:
+                if verbose:
+                    print(f"...Adding {codename}")
+                group_to_add.permissions.add(newPermission)
+
     if add_permissions_to_existing_groups:
         for group in GROUPS:
             if verbose:
@@ -243,21 +258,6 @@ def groups_seeder(
             else:
                 if verbose:
                     print("Error: group does not exist!")
-
-    def add_permissions_to_group(permissions_list, group_to_add):
-        for permission in permissions_list:
-            codename = permission.get("codename")
-            content_type = permission.get("content_type")
-            newPermission = Permission.objects.get(
-                codename=codename, content_type=content_type
-            )
-            if group_to_add.permissions.filter(codename=codename).exists():
-                if verbose:
-                    print(f"{codename} already exists for this group. Skipping...")
-            else:
-                if verbose:
-                    print(f"...Adding {codename}")
-                group_to_add.permissions.add(newPermission)
 
     if run_create_groups:
         for group in GROUPS:

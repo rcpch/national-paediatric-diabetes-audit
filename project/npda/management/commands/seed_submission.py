@@ -38,16 +38,16 @@ Options:
             - T (TARGET)
             - A (ABOVE)
             - W (WELL_ABOVE)
-    
+
     --age_range (str, optional):
-        The possible age range for the patients to be seeded. 
+        The possible age range for the patients to be seeded.
         Defaults to 11_15.
             - 0_4
             - 5_10
             - 11_15
             - 16_19
             - 20_25
-    
+
     --user_pk (int, optional):
         The primary key of the user for whom the submission is created.
         Defaults to the seeded SuperuserAda. Note that Submission.pdu is set
@@ -271,12 +271,7 @@ class Command(BaseCommand):
         visits: str = options["visits"]
         # Map to actual VisitType
         # NOTE: `_map_visit_type_letters_to_names` already did some basic validation
-        visit_types = list(
-            map(
-                lambda letter: letter_name_map[letter],
-                visits.replace(" ", ""),
-            )
-        )
+        visit_types = [letter_name_map[letter] for letter in visits.replace(" ", "")]
 
         # hba1c target
         hba1c_target = hb_target_map[options["hb_target"]]

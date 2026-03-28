@@ -724,7 +724,7 @@ class ResetPasswordForm(PasswordResetForm):
         email_field_name = NPDAUser.get_email_field_name()
         active_users = NPDAUser._default_manager.filter(
             **{
-                "%s__iexact" % email_field_name: email,
+                f"{email_field_name}__iexact": email,
                 "is_active": True,
             }
         )

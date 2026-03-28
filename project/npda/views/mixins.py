@@ -56,7 +56,9 @@ class LoginAndOTPRequiredMixin(AccessMixin):
 
 
 class PDUPermissionMixin(AccessMixin):
-    def data_reverse(self, viewname, kwargs={}):
+    def data_reverse(self, viewname, kwargs=None):
+        if kwargs is None:
+            kwargs = {}
         next_kwargs = kwargs | {
             "audit_period": self.audit_period.slug,
             "pz_code": self.pdu.pz_code,
