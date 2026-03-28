@@ -1,5 +1,8 @@
-from project.npda.general_functions.csv.csv_merge import most_recent_modal_value_by_visit_date
 from project.constants.sex_types import SEX_TYPE
+from project.npda.general_functions.csv.csv_merge import (
+    most_recent_modal_value_by_visit_date,
+)
+
 
 def test_consistent_sex():
     data = [

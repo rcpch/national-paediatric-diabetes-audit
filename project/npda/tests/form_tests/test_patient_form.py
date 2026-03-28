@@ -1,29 +1,30 @@
 # Standard imports
-import pytest
-import logging
 import dataclasses
+import logging
 from unittest.mock import Mock, patch
-from unittest import skip
+
+import pytest
+from dateutil.relativedelta import relativedelta
 
 # 3rd Party imports
 from django.apps import apps
 from django.core.exceptions import ValidationError
-from dateutil.relativedelta import relativedelta
 
-# NPDA Imports
-from project.npda.models import Patient, Transfer
-from project.npda.forms.patient_form import PatientForm
+from project.constants import SEX_TYPE
 from project.npda.forms.external_patient_validators import (
     PatientExternalValidationResult,
 )
+from project.npda.forms.patient_form import PatientForm
+
+# NPDA Imports
+from project.npda.models import Transfer
+from project.npda.tests.factories import PaediatricsDiabetesUnitFactory
 from project.npda.tests.factories.patient_factory import (
+    INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
     TODAY,
     VALID_FIELDS,
     VALID_FIELDS_WITH_GP_POSTCODE,
-    INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
 )
-from project.npda.tests.factories import PaediatricsDiabetesUnitFactory
-from project.constants import SEX_TYPE
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -39,6 +40,7 @@ MOCK_EXTERNAL_VALIDATION_RESULT = PatientExternalValidationResult(
 )
 
 ALDER_HEY_PZ_CODE = "PZ074"
+
 
 @pytest.fixture
 def mocked_pdu():
@@ -63,9 +65,7 @@ def mock_remote_calls():
 
 @pytest.mark.django_db
 def test_create_patient(mocked_pdu):
-    form = PatientForm(
-        VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu
-    )
+    form = PatientForm(VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu)
     assert len(form.errors.as_data()) == 0
 
 
@@ -82,9 +82,7 @@ def test_create_patient_with_death_date(mocked_pdu):
 
 @pytest.mark.django_db
 def test_missing_nhs_number(mocked_pdu):
-    form = PatientForm(
-        {}, paediatric_diabetes_unit=mocked_pdu
-    )
+    form = PatientForm({}, paediatric_diabetes_unit=mocked_pdu)
     assert "nhs_number" in form.errors.as_data()
 
 
@@ -100,9 +98,7 @@ def test_invalid_nhs_number(mocked_pdu):
 
 @pytest.mark.django_db
 def test_date_of_birth_missing(mocked_pdu):
-    form = PatientForm(
-        {}, paediatric_diabetes_unit=mocked_pdu
-    )
+    form = PatientForm({}, paediatric_diabetes_unit=mocked_pdu)
     assert "date_of_birth" in form.errors.as_data()
 
 
@@ -136,9 +132,7 @@ def test_over_25(mocked_pdu):
 
 @pytest.mark.django_db
 def test_missing_diabetes_type(mocked_pdu):
-    form = PatientForm(
-        {}, paediatric_diabetes_unit=mocked_pdu
-    )
+    form = PatientForm({}, paediatric_diabetes_unit=mocked_pdu)
     assert "diabetes_type" in form.errors.as_data()
 
 
@@ -154,9 +148,7 @@ def test_invalid_diabetes_type(mocked_pdu):
 
 @pytest.mark.django_db
 def test_missing_diagnosis_date(mocked_pdu):
-    form = PatientForm(
-        {}, paediatric_diabetes_unit=mocked_pdu
-    )
+    form = PatientForm({}, paediatric_diabetes_unit=mocked_pdu)
     assert "diagnosis_date" in form.errors.as_data()
 
 
@@ -212,9 +204,7 @@ def test_invalid_ethnicity(mocked_pdu):
 
 @pytest.mark.django_db
 def test_missing_gp_details(mocked_pdu):
-    form = PatientForm(
-        {}, paediatric_diabetes_unit=mocked_pdu
-    )
+    form = PatientForm({}, paediatric_diabetes_unit=mocked_pdu)
 
     errors = form.errors.as_data()
     assert "gp_practice_ods_code" in errors
@@ -241,9 +231,7 @@ def test_patient_creation_with_future_death_date(mocked_pdu):
 
 
 @pytest.mark.django_db
-def test_patient_creation_with_death_date_before_date_of_birth(
-    mocked_pdu
-):
+def test_patient_creation_with_death_date_before_date_of_birth(mocked_pdu):
     form = PatientForm(
         {
             "date_of_birth": VALID_FIELDS["date_of_birth"],
@@ -326,9 +314,7 @@ def test_dashes_removed_from_postcode(mocked_pdu):
     mock_external_validation_result(postcode="W1A 1AA"),
 )
 def test_normalised_postcode_saved(mocked_pdu):
-    form = PatientForm(
-        VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu
-    )
+    form = PatientForm(VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu)
     form.is_valid()
 
     assert form.cleaned_data["postcode"] == "W1A 1AA"
@@ -340,9 +326,7 @@ def test_normalised_postcode_saved(mocked_pdu):
     mock_external_validation_result(postcode=ValidationError("Invalid postcode")),
 )
 def test_invalid_postcode(mocked_pdu):
-    form = PatientForm(
-        VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu
-    )
+    form = PatientForm(VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu)
     form.is_valid()
 
     assert "postcode" in form.errors.as_data()
@@ -355,9 +339,7 @@ def test_invalid_postcode(mocked_pdu):
 )
 def test_error_validating_postcode(mocked_pdu):
     # TODO MRB: report this back somehow rather than just eat it in the log? (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/334)
-    form = PatientForm(
-        VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu
-    )
+    form = PatientForm(VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu)
     form.is_valid()
 
     assert len(form.errors.as_data()) == 0
@@ -404,9 +386,7 @@ def test_error_validating_gp_postcode(mocked_pdu):
     ),
 )
 def test_invalid_gp_ods_code(mocked_pdu):
-    form = PatientForm(
-        VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu
-    )
+    form = PatientForm(VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu)
     form.is_valid()
 
     assert "gp_practice_ods_code" in form.errors.as_data()
@@ -419,9 +399,7 @@ def test_invalid_gp_ods_code(mocked_pdu):
 )
 def test_error_validating_gp_ods_code(mocked_pdu):
     # TODO MRB: report this back somehow rather than just eat it in the log? (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/334)
-    form = PatientForm(
-        VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu
-    )
+    form = PatientForm(VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu)
     form.is_valid()
 
     assert len(form.errors.as_data()) == 0
@@ -429,9 +407,7 @@ def test_error_validating_gp_ods_code(mocked_pdu):
 
 @pytest.mark.django_db
 def test_lookup_index_of_multiple_deprivation(mocked_pdu):
-    form = PatientForm(
-        VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu
-    )
+    form = PatientForm(VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu)
 
     form.is_valid()
     assert len(form.errors.as_data()) == 0
@@ -445,9 +421,7 @@ def test_lookup_index_of_multiple_deprivation(mocked_pdu):
 
 @pytest.mark.django_db
 def test_lookup_location(mocked_pdu):
-    form = PatientForm(
-        VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu
-    )
+    form = PatientForm(VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu)
 
     form.is_valid()
     assert len(form.errors.as_data()) == 0
@@ -464,9 +438,7 @@ def test_lookup_location(mocked_pdu):
 )
 def test_error_looking_up_index_of_multiple_deprivation(mocked_pdu):
     # TODO MRB: report this back somehow rather than just eat it in the log? (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/334)
-    form = PatientForm(
-        VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu
-    )
+    form = PatientForm(VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu)
     form.is_valid()
 
     patient = form.save()
@@ -563,7 +535,7 @@ def test_successful_patient_transfer(mocked_pdu):
         VALID_FIELDS,
         paediatric_diabetes_unit=mocked_pdu,
     )
-    
+
     assert len(form.errors.as_data()) == 0
     patient = form.save()
 
@@ -588,7 +560,7 @@ def test_successful_patient_transfer(mocked_pdu):
 
     assert len(form.errors.as_data()) == 0
     assert form.is_valid()
-    
+
     assert transfer.patient == patient
     assert transfer.date_leaving_service == TODAY
     assert transfer.reason_leaving_service == 1
@@ -605,9 +577,7 @@ def test_fail_validation_if_same_patient_twice_in_same_submission(
         organisation_employers__pz_code=mocked_pdu.pz_code
     ).first()
 
-    form = PatientForm(
-        VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu
-    )
+    form = PatientForm(VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu)
     assert len(form.errors.as_data()) == 0
     patient = form.save()
 
@@ -618,17 +588,16 @@ def test_fail_validation_if_same_patient_twice_in_same_submission(
         submission_active=True,
         submission_date=TODAY,
         submission_by=pdu_user,
-        audit_year=2024
+        audit_year=2024,
     )
     submission.patients.add(patient)
 
     # Create a new form with the same patient
-    new_form = PatientForm(
-        VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu
-    )
+    new_form = PatientForm(VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu)
     new_form.is_valid()
 
     assert "nhs_number" in new_form.errors.as_data()
+
 
 @pytest.mark.django_db
 def test_pass_validation_if_same_patient_twice_in_same_submission_but_different_pdu(
@@ -641,9 +610,7 @@ def test_pass_validation_if_same_patient_twice_in_same_submission_but_different_
         organisation_employers__pz_code=mocked_pdu.pz_code
     ).first()
 
-    form = PatientForm(
-        VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu
-    )
+    form = PatientForm(VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu)
     assert len(form.errors.as_data()) == 0
     patient = form.save()
 
@@ -654,18 +621,20 @@ def test_pass_validation_if_same_patient_twice_in_same_submission_but_different_
         submission_active=True,
         submission_date=TODAY,
         submission_by=pdu_user,
-        audit_year=2024
+        audit_year=2024,
     )
     submission.patients.add(patient)
 
     another_pdu = PaediatricsDiabetesUnitFactory(pz_code="PZ075")
 
     # Create a new form with the same patient but in a different PDU
-    new_form = PatientForm(
-        VALID_FIELDS, paediatric_diabetes_unit=another_pdu
-    )
-    assert new_form.is_valid(), "Form should be valid even with the same patient in a different PDU"
-    assert "nhs_number" not in new_form.errors.as_data(), "There should be no error for nhs_number when the patient is in a different PDU"
+    new_form = PatientForm(VALID_FIELDS, paediatric_diabetes_unit=another_pdu)
+    assert (
+        new_form.is_valid()
+    ), "Form should be valid even with the same patient in a different PDU"
+    assert (
+        "nhs_number" not in new_form.errors.as_data()
+    ), "There should be no error for nhs_number when the patient is in a different PDU"
 
 
 @pytest.mark.django_db
@@ -675,9 +644,7 @@ def test_edit_patient(mocked_pdu):
         organisation_employers__pz_code=mocked_pdu.pz_code
     ).first()
 
-    form = PatientForm(
-        VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu
-    )
+    form = PatientForm(VALID_FIELDS, paediatric_diabetes_unit=mocked_pdu)
 
     assert len(form.errors.as_data()) == 0
     patient = form.save()
@@ -689,14 +656,14 @@ def test_edit_patient(mocked_pdu):
         submission_active=True,
         submission_date=TODAY,
         submission_by=pdu_user,
-        audit_year=2024
+        audit_year=2024,
     )
     submission.patients.add(patient)
 
     form = PatientForm(
-        VALID_FIELDS | { "sex": SEX_TYPE[1][0] },
+        VALID_FIELDS | {"sex": SEX_TYPE[1][0]},
         instance=patient,
-        paediatric_diabetes_unit=mocked_pdu
+        paediatric_diabetes_unit=mocked_pdu,
     )
 
     assert len(form.errors.as_data()) == 0

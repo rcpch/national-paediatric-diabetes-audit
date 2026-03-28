@@ -10,11 +10,13 @@ from django.utils.translation import gettext as _
 
 # RCPCH imports
 
+
 def not_in_the_future_validator(value):
     if value and value <= date.today():
         return value
     elif value:
         raise ValidationError("Cannot be in the future")
+
 
 class CapitalAndSymbolValidator:
     def __init__(
@@ -55,7 +57,7 @@ class CapitalAndSymbolValidator:
         )
 
 
-class NumberValidator(object):
+class NumberValidator:
     def validate(self, password, user=None):
         if not re.findall(r"\d", password):
             raise ValidationError(

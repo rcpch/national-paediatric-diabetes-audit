@@ -1,4 +1,3 @@
-from datetime import date
 
 
 def validate_date(
@@ -8,7 +7,7 @@ def validate_date(
     date_of_birth,
     date_of_diagnosis=None,
     date_of_death=None,
-    audit_period=None
+    audit_period=None,
 ):
     """
     Dates passed in are already validated as date objects
@@ -49,9 +48,12 @@ def validate_date(
             }
             errors.append(error)
             valid = False
-    
+
     if audit_period is not None:
-        if date_under_examination < audit_period.start_date or date_under_examination > audit_period.end_date:
+        if (
+            date_under_examination < audit_period.start_date
+            or date_under_examination > audit_period.end_date
+        ):
             error = {
                 f"{date_under_examination_field_name}": [
                     f"'{date_under_examination_label_name}' must be within the audit period {audit_period.start_date.strftime("%d %b %Y")} to {audit_period.end_date.strftime("%d %b %Y")}."

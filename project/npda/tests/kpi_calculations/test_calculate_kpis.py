@@ -13,11 +13,11 @@ from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult, kpi_registry
 from project.npda.models.patient import Patient
 from project.npda.models.submission import Submission
 from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
-from project.npda.tests.factories.paediatrics_diabetes_unit_factory import \
-    PaediatricsDiabetesUnitFactory
+from project.npda.tests.factories.paediatrics_diabetes_unit_factory import (
+    PaediatricsDiabetesUnitFactory,
+)
 from project.npda.tests.factories.patient_factory import PatientFactory
-from project.npda.tests.UserDataClasses import \
-    test_user_audit_centre_reader_data
+from project.npda.tests.UserDataClasses import test_user_audit_centre_reader_data
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -37,7 +37,9 @@ def assert_kpi_result_equal(
     :raises AssertionError: If the fields in the KPIResult objects differ.
     """
     if isinstance(expected, KPIResult) is False:
-        raise TypeError(f"expected must be of type KPIResult (current: {type(expected)}")
+        raise TypeError(
+            f"expected must be of type KPIResult (current: {type(expected)}"
+        )
     if isinstance(actual, KPIResult) is False:
         raise TypeError(f"actual must be of type KPIResult (current: {type(actual)}")
 
@@ -67,7 +69,9 @@ def assert_kpi_result_equal(
     if expected.patient_querysets is not None:
         # If actual.patient_querysets is None, we can't compare the querysets
         if actual.patient_querysets is None:
-            mismatches.append(f"patient_querysets: expected {expected.patient_querysets}, got None")
+            mismatches.append(
+                f"patient_querysets: expected {expected.patient_querysets}, got None"
+            )
         else:
             # For each pt queryset in expected, check if the actual queryset is
             # the same
@@ -96,8 +100,12 @@ def test_ensure_mocked_audit_date_range_is_correct(AUDIT_START_DATE):
     """Ensure that the mocked audit date range is correct."""
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
 
-    assert calc_kpis.audit_start_date == date(2024, 4, 1), f"Mocked audit start date incorrect!"
-    assert calc_kpis.audit_end_date == date(2025, 3, 31), f"Mocked audit end date incorrect!"
+    assert calc_kpis.audit_start_date == date(
+        2024, 4, 1
+    ), "Mocked audit start date incorrect!"
+    assert calc_kpis.audit_end_date == date(
+        2025, 3, 31
+    ), "Mocked audit end date incorrect!"
 
 
 @pytest.mark.parametrize(
@@ -247,9 +255,9 @@ def test_calculate_kpis_only_includes_patients_with_an_active_submission(
 
     kpi_calculator.set_patients_for_calculation(pz_codes=[submission_pdu.pz_code])
 
-    kpi_1_patients: QuerySet[Patient] = kpi_calculator._calculate_kpis()["calculated_kpi_values"][
-        kpi_calculator.kpi_name_registry.get_attribute_name(1)
-    ]["patient_querysets"]
+    kpi_1_patients: QuerySet[Patient] = kpi_calculator._calculate_kpis()[
+        "calculated_kpi_values"
+    ][kpi_calculator.kpi_name_registry.get_attribute_name(1)]["patient_querysets"]
 
     # Ensure correct pts
     assert (

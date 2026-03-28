@@ -1,24 +1,21 @@
 # python imports
 import logging
 
-# django imports
-from django.apps import apps
-from django.conf import settings
-from django.contrib.auth.forms import SetPasswordForm, AuthenticationForm
+# third party imports
+from captcha.fields import CaptchaField
 from django import forms
+
+# django imports
+from django.conf import settings
+from django.contrib.auth.forms import AuthenticationForm, SetPasswordForm
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
-# third party imports
-from captcha.fields import CaptchaField
-
-from project.npda.general_functions.group_for_group import group_for_role
 
 # RCPCH imports
 from ...constants.styles.form_styles import *
 from ..models import NPDAUser, VisitActivity
 from ..signals import get_client_ip
-
 
 # Logging setup
 logger = logging.getLogger(__name__)
@@ -91,7 +88,7 @@ class NPDAUserForm(forms.ModelForm):
 
         for field in restricted_fields:
             # Deliberately using readonly rather than disabled as permission checks are done in the view
-            self.fields[field].widget.attrs['readonly'] = True
+            self.fields[field].widget.attrs["readonly"] = True
 
         # only if the form is bound - this user is being updated
         if self.instance.pk is not None:
@@ -103,10 +100,11 @@ class NPDAUserForm(forms.ModelForm):
             self.data.pop("add_employer", None)
 
             if not self.request.user.has_perm("npda.change_npdauser"):
-                self.fields['email'].widget.attrs['disabled'] = True
+                self.fields["email"].widget.attrs["disabled"] = True
                 self.fields["email"].help_text = _(
                     "You cannot change the email address of this user."
                 )
+
 
 class NPDAUpdatePasswordForm(SetPasswordForm):
     # form show when setting or resetting password
@@ -122,7 +120,7 @@ class NPDAUpdatePasswordForm(SetPasswordForm):
                 or user.is_superuser
                 or user.is_rcpch_staff
             )
-        
+
         super(SetPasswordForm, self).__init__(*args, **kwargs)
 
     def clean(self) -> dict[str]:
@@ -170,7 +168,7 @@ class CaptchaAuthenticationForm(AuthenticationForm):
         # If in DEBUG -> don't require captch, pre fill fields
         if settings.DEBUG:
             logger.warning(
-                f"IN LOCAL DEVELOPMENT, BYPASSING LOGIN BY PREFILLING FIELDS"
+                "IN LOCAL DEVELOPMENT, BYPASSING LOGIN BY PREFILLING FIELDS"
             )
             self.fields["username"].widget.attrs["value"] = (
                 settings.LOCAL_DEV_ADMIN_EMAIL

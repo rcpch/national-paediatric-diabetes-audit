@@ -11,9 +11,9 @@ from project.npda.general_functions.patient_report.queries import (
 )
 from project.npda.models import AuditPeriod, NPDAUser, Submission, Transfer
 from project.npda.tests.constants_for_tests import ALDER_HEY_PZ_CODE
+from project.npda.tests.factories import test_user_audit_centre_editor_data
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.tests.factories import test_user_audit_centre_editor_data
 
 
 @pytest.mark.django_db
@@ -414,7 +414,8 @@ class TestPatientReportHealthCheckQueries:
             nhs_number="8888888888",
             diabetes_type=DIABETES_TYPES[0][0],
             date_of_birth=audit_period.start_date - relativedelta(years=14),
-            diagnosis_date=audit_period.start_date + relativedelta(days=30),  # Diagnosed within audit year
+            diagnosis_date=audit_period.start_date
+            + relativedelta(days=30),  # Diagnosed within audit year
         )
         VisitFactory(
             patient=patient,

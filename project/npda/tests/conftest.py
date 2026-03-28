@@ -8,10 +8,11 @@ import logging
 
 # third-party imports
 from datetime import date
-from unittest.mock import patch
 
 import pytest
 from pytest_factoryboy import register
+
+from project.npda.models import AuditPeriod
 
 # rcpch imports
 from project.npda.tests.factories import (
@@ -21,19 +22,7 @@ from project.npda.tests.factories import (
     PatientFactory,
     TransferFactory,
     VisitFactory,
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    seed_groups_per_function_fixture,
-    seed_users_per_function_fixture,
-    seed_audit_periods_per_function_fixture,
-    dummy_sheets_folder,
-    dummy_sheet_csv,
-    dummy_sheet_csv_jersey,
-    dummy_sheet_csv_old_headers,
 )
-
-from project.npda.models import AuditPeriod
 
 logger = logging.getLogger(__name__)
 # register factories to be used across test directory

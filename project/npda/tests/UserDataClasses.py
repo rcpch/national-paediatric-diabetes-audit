@@ -4,19 +4,15 @@ Set up dataclasses for NPDA User Test Fixtures
 
 # Standard Imports
 from dataclasses import dataclass
-from project.npda.general_functions import group_for_role
 
 # RCPCH Imports
 from project.constants.user import (
-    AUDIT_CENTRE_READER,
-    AUDIT_CENTRE_EDITOR,
     AUDIT_CENTRE_COORDINATOR,
+    AUDIT_CENTRE_EDITOR,
+    AUDIT_CENTRE_READER,
     RCPCH_AUDIT_TEAM,
-    TRUST_AUDIT_TEAM_VIEW_ONLY,
-    TRUST_AUDIT_TEAM_EDIT_ACCESS,
-    TRUST_AUDIT_TEAM_COORDINATOR_ACCESS,
-    NPDA_AUDIT_TEAM_FULL_ACCESS,
 )
+from project.npda.general_functions import group_for_role
 
 
 @dataclass

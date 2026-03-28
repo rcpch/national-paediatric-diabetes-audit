@@ -1,13 +1,13 @@
 """Tests related to generating fake Patient instances"""
 
-from datetime import date, timedelta
 import random
-import pytest
 import time
+from datetime import date, timedelta
+
+import pytest
 
 from project.npda.general_functions.audit_period import (
     get_audit_period_for_date,
-    get_quarter_for_visit,
 )
 from project.npda.general_functions.data_generator_extended import (
     FakePatientCreator,
@@ -15,10 +15,7 @@ from project.npda.general_functions.data_generator_extended import (
     VisitType,
 )
 from project.npda.models.patient import Patient
-from project.npda.tests.factories.patient_factory import (
-    PatientFactory,
-    AgeRange,
-)
+from project.npda.tests.factories.patient_factory import AgeRange
 
 
 def generate_random_visit_types(n: int) -> list[VisitType]:
@@ -168,12 +165,13 @@ def test_example_use_fake_patient_creator():
     assert len(pts) == 10
     assert len(visits) == 120  # 10 patients * 12 visits
 
+
 @pytest.mark.skip(reason="not finished")
 @pytest.mark.django_db
 def test_example_use_fake_patient_creator_with_submission():
-    """Example use to associate fake patients with submissions
-    """
+    """Example use to associate fake patients with submissions"""
     pass
+
 
 # pytest project/npda/tests/factories/test_fake_patient_builder.py::test_performance_check_for_fake_patient_creator
 @pytest.mark.skip(reason="only for performance checking")
@@ -236,6 +234,7 @@ def test_performance_check_for_fake_patient_creator(
             print(f"| {patients:<23} | {time_taken:<16.2f} |")
         print("+-------------------------+------------------+")
 
+
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1248
 @pytest.mark.django_db
 def test_finding_usable_visit_period_for_all_diagnoses_dates_within_audit_year():
@@ -255,7 +254,7 @@ def test_finding_usable_visit_period_for_all_diagnoses_dates_within_audit_year()
             [patient] = fake_patient_creator.build_fake_patients(
                 n=1,
                 age_range=AgeRange.AGE_0_4,
-                diagnosis_date=diagnosis_date,    
+                diagnosis_date=diagnosis_date,
             )
 
             fake_patient_creator.build_fake_visits(
@@ -267,4 +266,6 @@ def test_finding_usable_visit_period_for_all_diagnoses_dates_within_audit_year()
 
             diagnosis_date += timedelta(days=1)
     except Exception as err:
-        pytest.fail(f"Failed to create visit for diagnosis date {diagnosis_date}: {err}")
+        pytest.fail(
+            f"Failed to create visit for diagnosis date {diagnosis_date}: {err}"
+        )

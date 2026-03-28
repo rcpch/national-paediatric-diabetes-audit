@@ -1,5 +1,4 @@
 import pytest
-
 from django.contrib.auth.models import Group
 
 from project.npda.management.commands.create_groups import groups_seeder
@@ -19,6 +18,7 @@ def _seed_groups_fixture(django_db_setup, django_db_blocker):
             )
         else:
             print("Groups already seeded. Skipping")
+
 
 @pytest.fixture(scope="session")
 def seed_groups_fixture(django_db_setup, django_db_blocker):

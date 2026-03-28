@@ -2,8 +2,8 @@
 
 import argparse
 import re
-import tempfile
 import subprocess
+import tempfile
 
 # Workaround the limitation that az revision copy doesn't let you
 # update multiple containers at once
@@ -18,7 +18,7 @@ args = parser.parse_args()
 
 template_str = subprocess.check_output(
     f"az containerapp show --name {args.name} --resource-group {args.resource_group} --output yaml",
-    shell=True
+    shell=True,
 ).decode("utf-8")
 
 regex = re.compile(r"rcpch.azurecr.io/npda-django:\w+")
@@ -29,5 +29,5 @@ with tempfile.NamedTemporaryFile() as fp:
 
     subprocess.run(
         f"az containerapp update --name {args.name} --resource-group {args.resource_group} --yaml {fp.name} --query 'properties.provisioningState'",
-        shell=True
+        shell=True,
     )

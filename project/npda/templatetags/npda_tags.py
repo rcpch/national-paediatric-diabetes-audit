@@ -1,21 +1,19 @@
-from datetime import date, timedelta
 import itertools
 import logging
 import re
+from datetime import date, timedelta
 
-from django import template, forms
+from django import forms, template
 from django.conf import settings
 from django.contrib.gis.measure import D
-from django.utils.html import conditional_escape, mark_safe
 from django.urls import reverse
+from django.utils.html import conditional_escape, mark_safe
 
-from ...constants import (
-    # VisitCategories,
+from ...constants import (  # VisitCategories,
     CSV_HEADING_OBJECTS,
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
 )
-
 
 register = template.Library()
 
@@ -440,8 +438,7 @@ def exclude_admin_user_field(field, user):
                 return True
         if user.is_rcpch_audit_team_member:
             if field.id_for_label in [
-                "id_is_staff"
-                "id_is_rcpch_staff",
+                "id_is_staff" "id_is_rcpch_staff",
                 "id_is_rcpch_audit_team_member",
             ]:
                 return True
@@ -454,6 +451,7 @@ def exclude_admin_user_field(field, user):
     ]:
         return False
     return True
+
 
 @register.filter
 def include_admin_users(user):
@@ -479,6 +477,7 @@ def disable_fields(field, form):
 
     return False
 
+
 @register.filter
 def percentage(measure, total):
     """
@@ -490,25 +489,34 @@ def percentage(measure, total):
         return "0%"
     return f"{round(int(measure) / int(total) * 100)}%"
 
+
 @register.filter
 def round_to_1dp(value):
     """
     Rounds a number to 1 decimal place
     """
-    if not value or value =="0":
+    if not value or value == "0":
         return "-"
     try:
         return f"{float(value):.1f}"
     except (ValueError, TypeError):
         return value
 
+
 @register.filter
 def plus_days(value, days):
     return value + timedelta(days=days)
 
+
 @register.simple_tag(takes_context=True)
 def data_url(context, view_name, *args, **kwargs):
-    return reverse(view_name, kwargs = ({
-        "pz_code": context.get("pz_code", None),
-        "audit_period": context.get("audit_period_slug", None),
-    } | kwargs))
+    return reverse(
+        view_name,
+        kwargs=(
+            {
+                "pz_code": context.get("pz_code", None),
+                "audit_period": context.get("audit_period_slug", None),
+            }
+            | kwargs
+        ),
+    )

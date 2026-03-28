@@ -1,24 +1,18 @@
-"""Tests for the testing environment and the test database.
-"""
+"""Tests for the testing environment and the test database."""
+
+import logging
 
 import pytest
-import logging
-import os
-
 from django.contrib.auth.models import Group
-from django.db.models import F, Value
 
-from project.npda.models import NPDAUser, OrganisationEmployer, Patient
+from project.npda.models import NPDAUser, OrganisationEmployer
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
-from project.npda.tests.UserDataClasses import (
-    test_user_audit_centre_reader_data,
-)
 from project.npda.tests.factories.paediatrics_diabetes_unit_factory import (
     PaediatricsDiabetesUnitFactory,
 )
 from project.npda.tests.factories.patient_factory import PatientFactory
-from project.npda.general_functions import print_instance_field_attrs
+from project.npda.tests.UserDataClasses import test_user_audit_centre_reader_data
 
 # logging
 logger = logging.getLogger(__name__)

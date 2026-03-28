@@ -13,7 +13,6 @@ from django.shortcuts import render
 
 import project.constants.colors as colors
 from project.constants.leave_pdu_reasons import LEAVE_PDU_REASONS
-from project.npda.general_functions.audit_period import audit_period_for_audit_year
 from project.npda.general_functions.map import (
     generate_dataframe_and_aggregated_distance_data_from_cases,
     generate_distance_from_organisation_scatterplot_figure,
@@ -24,9 +23,7 @@ from project.npda.general_functions.rcpch_nhs_organisations import (
 )
 from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.models.submission import Submission
-from project.npda.models.audit_period import AuditPeriod
-from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
-from project.npda.views.decorators import login_and_otp_required, check_data_permissions
+from project.npda.views.decorators import check_data_permissions, login_and_otp_required
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +46,9 @@ def get_map_chart_partial(request, audit_period, pdu):
             {"info": "No patient data yet"},
         )
 
-    lead_organisation_ods_code = submission.paediatric_diabetes_unit.lead_organisation_ods_code
+    lead_organisation_ods_code = (
+        submission.paediatric_diabetes_unit.lead_organisation_ods_code
+    )
 
     pdu_lead_organisation = fetch_organisation_by_ods_code(
         ods_code=lead_organisation_ods_code
@@ -57,7 +56,9 @@ def get_map_chart_partial(request, audit_period, pdu):
 
     try:
         # these are all registered patients for the current cohort at the selected organisation to be plotted in the map
-        patients_to_plot = get_children_by_pdu_audit_year(submission,pdu_lead_organisation)
+        patients_to_plot = get_children_by_pdu_audit_year(
+            submission, pdu_lead_organisation
+        )
 
         # aggregated distances (mean, median, max, min) that patients have travelled to the selected organisation
         aggregated_distances, patient_distances_dataframe = (
@@ -89,7 +90,7 @@ def get_map_chart_partial(request, audit_period, pdu):
             },
         )
 
-    except Exception as e:
+    except Exception:
         logger.error("Error generating map chart", exc_info=True)
         return render(
             request,
@@ -222,7 +223,7 @@ def get_metric_scatter_plot(request, audit_period, pdu):
                 "tooltip_text": tooltip_text,
             },
         )
-    except Exception as e:
+    except Exception:
         logger.error("Error generating metric scatter plot", exc_info=True)
         return render(
             request,
@@ -290,7 +291,9 @@ def get_transitioned_to_adult_service_partial(request, audit_period, pdu):
     sub = Submission.objects.get_submission_for_request(pdu, audit_period)
 
     if sub:
-        count = sub.patients.filter(paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[0][0]).count()
+        count = sub.patients.filter(
+            paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[0][0]
+        ).count()
     else:
         count = 0
 
@@ -315,7 +318,9 @@ def get_moved_out_of_area_partial(request, audit_period, pdu):
     sub = Submission.objects.get_submission_for_request(pdu, audit_period)
 
     if sub:
-        count = sub.patients.filter(paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[1][0]).count()
+        count = sub.patients.filter(
+            paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[1][0]
+        ).count()
     else:
         count = 0
 
@@ -453,4 +458,3 @@ def get_selected_chart_data(selected_chart: str, calculation_date: date, pz_code
             "All children transitioned to adult service by quarter",
             "Numbers of patients with diabetes transitioned to adult services by quarter. These numbers include all patients who transition to adults by quarter in blue. Cumulative totals by quarter are shown in grey.",
         )
-

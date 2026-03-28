@@ -12,15 +12,15 @@ class VisitActivity(models.Model):
     PASSWORD_LOCKOUT = 6
     SETUP_TWO_FACTOR_AUTHENTICATION = 7
     UPLOADED_CSV = 8
-    TOUCHED_PATIENT_RECORD = 9 # This is not implemented yet
+    TOUCHED_PATIENT_RECORD = 9  # This is not implemented yet
     CREATED_USER_RECORD = 10
     CHANGED_USER_RECORD = 11
     CHANGED_USER_ROLE = 12
     CHANGED_ADMIN_FLAG = 13
-    DELETED_USER_RECORD = 14 
-    ASSIGNED_USER_TO_PDU = 15 
-    REMOVED_USER_FROM_PDU = 16 
-    USER_PDU_ROLE_CHANGED = 17 
+    DELETED_USER_RECORD = 14
+    ASSIGNED_USER_TO_PDU = 15
+    REMOVED_USER_FROM_PDU = 16
+    USER_PDU_ROLE_CHANGED = 17
     ACTIVITY = (
         (SUCCESSFUL_LOGIN, "Successful login"),
         (UNSUCCESSFUL_LOGIN, "Login failed"),
@@ -30,13 +30,16 @@ class VisitActivity(models.Model):
         (PASSWORD_LOCKOUT, "Password lockout"),
         (SETUP_TWO_FACTOR_AUTHENTICATION, "Two factor authentication set up"),
         (UPLOADED_CSV, "Uploaded CSV"),
-        (TOUCHED_PATIENT_RECORD, "Touched patient record"), #  - This is not implemented yet
-        (CREATED_USER_RECORD, "Created a user record"), 
+        (
+            TOUCHED_PATIENT_RECORD,
+            "Touched patient record",
+        ),  #  - This is not implemented yet
+        (CREATED_USER_RECORD, "Created a user record"),
         (CHANGED_USER_RECORD, "User record changed"),
         (CHANGED_USER_ROLE, "User role changed"),
         (CHANGED_ADMIN_FLAG, "Superuser or admin status changed"),
         (DELETED_USER_RECORD, "User record deleted"),
-        (ASSIGNED_USER_TO_PDU, "User assigned to PDU"), 
+        (ASSIGNED_USER_TO_PDU, "User assigned to PDU"),
         (REMOVED_USER_FROM_PDU, "User removed from PDU"),
         (USER_PDU_ROLE_CHANGED, "User PDU role changed"),
     )

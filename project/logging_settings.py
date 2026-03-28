@@ -5,9 +5,7 @@ import os
 
 # LOGGING ENV VARS
 CONSOLE_LOG_LEVEL = os.getenv("CONSOLE_LOG_LEVEL", "INFO")  # For npda specific logs
-CONSOLE_DJANGO_LOG_LEVEL = os.getenv(
-    "CONSOLE_DJANGO_LOG_LEVEL", "INFO"
-)
+CONSOLE_DJANGO_LOG_LEVEL = os.getenv("CONSOLE_DJANGO_LOG_LEVEL", "INFO")
 FILE_LOG_LEVEL = os.getenv("FILE_LOG_LEVEL", "INFO")
 
 
@@ -94,7 +92,7 @@ LOGGING = {
         # The logging middleware generates the format for compatibility with the old gunicorn request logs
         "npda_request_log": {
             "format": "%(message)s",
-        }
+        },
     },
     "handlers": {
         "npda_console": {
@@ -144,7 +142,7 @@ LOGGING = {
         "two_factor": {
             "handlers": ["npda_console", "npda_logfile", "mail_admins"],
         },
-        **request_loggers
+        **request_loggers,
     },
 }
 

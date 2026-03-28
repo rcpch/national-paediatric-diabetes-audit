@@ -1,11 +1,13 @@
 from datetime import date, timedelta
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
+
 from django import forms
 from django.core.exceptions import ValidationError
-from ...constants.styles import *
+
 from ...constants import *
-from ..general_functions.validate_dates import validate_date
+from ...constants.styles import *
 from ..forms.external_visit_validators import validate_visit_sync
+from ..general_functions.validate_dates import validate_date
 from ..models import Visit
 
 
@@ -131,7 +133,7 @@ class VisitForm(forms.ModelForm):
         self.patient = kwargs["initial"].get("patient")
         self.override_height_weight = kwargs.pop("override_height_weight", False)
         self.audit_period = kwargs.pop("audit_period", None)
-        super(VisitForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
             model_field = Visit._meta.get_field(field_name)
 
@@ -572,8 +574,14 @@ class VisitForm(forms.ModelForm):
         if valid == False:
             raise ValidationError(error)
 
-        if data and self.patient.diagnosis_date and data < self.patient.diagnosis_date - timedelta(days=90):
-            raise ValidationError("Expected thyroid function date within 90 days before diagnosis.")
+        if (
+            data
+            and self.patient.diagnosis_date
+            and data < self.patient.diagnosis_date - timedelta(days=90)
+        ):
+            raise ValidationError(
+                "Expected thyroid function date within 90 days before diagnosis."
+            )
 
         return self.cleaned_data["thyroid_function_date"]
 
@@ -590,9 +598,15 @@ class VisitForm(forms.ModelForm):
 
         if valid == False:
             raise ValidationError(error)
-        
-        if data and self.patient.diagnosis_date and data < self.patient.diagnosis_date - timedelta(days=90):
-            raise ValidationError("Expected coeliac screen date within 90 days before diagnosis.")
+
+        if (
+            data
+            and self.patient.diagnosis_date
+            and data < self.patient.diagnosis_date - timedelta(days=90)
+        ):
+            raise ValidationError(
+                "Expected coeliac screen date within 90 days before diagnosis."
+            )
 
         return self.cleaned_data["coeliac_screen_date"]
 
@@ -732,7 +746,7 @@ class VisitForm(forms.ModelForm):
             date_of_birth=self.patient.date_of_birth,
             date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
-            audit_period=None, # Hospital admission dates are not bound by the audit period
+            audit_period=None,  # Hospital admission dates are not bound by the audit period
         )
         if valid == False:
             raise ValidationError(error)
@@ -751,7 +765,11 @@ class VisitForm(forms.ModelForm):
         ]:
             result = getattr(self.async_validation_results, result_field)
 
-            if result and type(result) is ValidationError and not self.override_height_weight:
+            if (
+                result
+                and type(result) is ValidationError
+                and not self.override_height_weight
+            ):
                 for field in fields_to_attach_errors:
                     self.add_error(field, result)
 
@@ -957,8 +975,6 @@ class VisitForm(forms.ModelForm):
                 }
             )
 
-        
-
         psychological_screening_assessment_date = cleaned_data.get(
             "psychological_screening_assessment_date"
         )
@@ -1121,7 +1137,10 @@ class VisitForm(forms.ModelForm):
         # I haven't implemented it here. The risk is that future versions of Django will add more
         # behaviour that we miss out on.
 
-        if getattr(self, "async_validation_results") and not self.override_height_weight:
+        if (
+            self.async_validation_results
+            and not self.override_height_weight
+        ):
             self.instance.bmi = self.async_validation_results.bmi
 
             for field_prefix in ["height", "weight", "bmi"]:
@@ -1129,7 +1148,7 @@ class VisitForm(forms.ModelForm):
                     self.async_validation_results, f"{field_prefix}_result"
                 )
 
-                if result and not type(result) is ValidationError:
+                if result and type(result) is not ValidationError:
                     setattr(self.instance, f"{field_prefix}_centile", result.centile)
                     setattr(self.instance, f"{field_prefix}_sds", result.sds)
 
@@ -1160,7 +1179,9 @@ def measure_must_have_date_and_value(date_field, date_field_name, field_list):
                     }
                 )
     field_name_list = ", ".join(field_name_list)
-    if date_field is None and any(value is not None for field in field_list for value in field.values()):
+    if date_field is None and any(
+        value is not None for field in field_list for value in field.values()
+    ):
         # If the date is None and any of the values are not None, we raise an error
         errors.update(
             {

@@ -4,7 +4,9 @@ from django.core.exceptions import PermissionDenied
 
 class PaediatricDiabetesUnitManager(models.Manager):
     def get_pdu_for_request(self, request):
-        can_view_all_data = request.user.is_superuser or request.user.is_rcpch_audit_team_member
+        can_view_all_data = (
+            request.user.is_superuser or request.user.is_rcpch_audit_team_member
+        )
 
         pz_code = request.resolver_match.kwargs["pz_code"]
 
@@ -27,6 +29,7 @@ class PaediatricDiabetesUnitManager(models.Manager):
                 )
 
         return pdu
+
 
 class PaediatricDiabetesUnit(models.Model):
     """

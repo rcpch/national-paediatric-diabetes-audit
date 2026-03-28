@@ -1,7 +1,6 @@
 import logging
 
 from django.apps import apps
-from django.core.exceptions import PermissionDenied
 from django.utils import timezone
 
 # NPDA Imports

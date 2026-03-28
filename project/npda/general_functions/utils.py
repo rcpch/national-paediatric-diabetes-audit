@@ -1,5 +1,5 @@
-from random import randint
 from datetime import date
+from random import randint
 
 
 def random_date(start_date: date, end_date: date) -> date:

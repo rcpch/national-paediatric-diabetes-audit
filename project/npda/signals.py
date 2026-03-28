@@ -9,15 +9,19 @@ from django.contrib.auth.signals import (
     user_logged_out,
     user_login_failed,
 )
-from django.db.models.signals import pre_save, post_save, post_delete, pre_delete
+from django.db.models.signals import post_save, pre_delete, pre_save
 from django.dispatch import receiver
 
 # third party imports
 from two_factor.signals import user_verified
 
 # RCPCH
-from .general_functions import create_session_object, send_email_to_recipients, get_client_ip
-from .models import VisitActivity, NPDAUser, OrganisationEmployer
+from .general_functions import (
+    create_session_object,
+    get_client_ip,
+    send_email_to_recipients,
+)
+from .models import NPDAUser, OrganisationEmployer, VisitActivity
 
 # Logging setup
 logger = logging.getLogger(__name__)
@@ -35,45 +39,48 @@ This file contains signals that are triggered when:
 
 # Fields that should trigger email notifications when changed
 EMAIL_TRIGGER_FIELDS = [
-    'is_superuser',
-    'is_rcpch_audit_team_member',
-    'is_rcpch_staff',
-    'is_superuser',
-    'is_staff',
-    'email'
+    "is_superuser",
+    "is_rcpch_audit_team_member",
+    "is_rcpch_staff",
+    "is_superuser",
+    "is_staff",
+    "email",
 ]
 
 # Fields that should be logged when changed
 LOGGED_FIELDS = [
-    'role',
-    'is_active',
-    'is_rcpch_audit_team_member', 
-    'is_rcpch_staff',
-    'is_staff',
-    'email',
-    'first_name',
-    'surname',
+    "role",
+    "is_active",
+    "is_rcpch_audit_team_member",
+    "is_rcpch_staff",
+    "is_staff",
+    "email",
+    "first_name",
+    "surname",
 ]
 
 ACTIVITY = (
-        (1, "Successful login"), # SUCCESSFUL_LOGIN
-        (2, "Login failed"), # UNSUCCESSFUL_LOGIN
-        (3, "Logout"), # LOGOUT
-        (4, "Password reset link sent"), # PASSWORD_RESET_LINK_SENT
-        (5, "Password reset successfully"), # PASSWORD_RESET
-        (6, "Password lockout"), # PASSWORD_LOCKOUT
-        (7, "Two factor authentication set up"), # SETUP_TWO_FACTOR_AUTHENTICATION
-        (8, "Uploaded CSV"), # UPLOADED_CSV
-        (9, "Touched patient record"), #  - This is not implemented yet # TOUCHED_PATIENT_RECORD
-        (10, "Created a user record"),  # CREATED_USER_RECORD
-        (11, "User record changed"), # CHANGED_USER_RECORD
-        (12, "User role changed"), # CHANGED_USER_ROLE
-        (13, "Superuser or admin status changed"), # CHANGED_ADMIN_FLAG
-        (14, "User record deleted"), # DELETED_USER_RECORD
-        (15, "User assigned to PDU"),      # ASSIGNED_USER_TO_PDU
-        (16, "User removed from PDU"),     # REMOVED_USER_FROM_PDU
-        (17, "User PDU role changed"),     # USER_PDU_ROLE_CHANGED
-    )
+    (1, "Successful login"),  # SUCCESSFUL_LOGIN
+    (2, "Login failed"),  # UNSUCCESSFUL_LOGIN
+    (3, "Logout"),  # LOGOUT
+    (4, "Password reset link sent"),  # PASSWORD_RESET_LINK_SENT
+    (5, "Password reset successfully"),  # PASSWORD_RESET
+    (6, "Password lockout"),  # PASSWORD_LOCKOUT
+    (7, "Two factor authentication set up"),  # SETUP_TWO_FACTOR_AUTHENTICATION
+    (8, "Uploaded CSV"),  # UPLOADED_CSV
+    (
+        9,
+        "Touched patient record",
+    ),  #  - This is not implemented yet # TOUCHED_PATIENT_RECORD
+    (10, "Created a user record"),  # CREATED_USER_RECORD
+    (11, "User record changed"),  # CHANGED_USER_RECORD
+    (12, "User role changed"),  # CHANGED_USER_ROLE
+    (13, "Superuser or admin status changed"),  # CHANGED_ADMIN_FLAG
+    (14, "User record deleted"),  # DELETED_USER_RECORD
+    (15, "User assigned to PDU"),  # ASSIGNED_USER_TO_PDU
+    (16, "User removed from PDU"),  # REMOVED_USER_FROM_PDU
+    (17, "User PDU role changed"),  # USER_PDU_ROLE_CHANGED
+)
 
 
 @receiver(user_logged_in)
@@ -81,9 +88,7 @@ def log_user_login(sender, request, user, **kwargs):
     new_session_object = create_session_object(user)
     request.session.update(new_session_object)
 
-    logger.info(
-        f"{user} ({user.email}) logged in from {get_client_ip(request)}."
-    )
+    logger.info(f"{user} ({user.email}) logged in from {get_client_ip(request)}.")
 
     VisitActivity.objects.create(
         activity=1, ip_address=get_client_ip(request), npdauser=user
@@ -140,6 +145,7 @@ def two_factor_auth_setup(request, user, device, **kwargs):
             activity=7, ip_address=get_client_ip(request), npdauser=user
         )  # Two factor authentication set up
 
+
 @receiver(pre_save, sender=NPDAUser)
 def capture_user_changes(sender, instance, **kwargs):
     """
@@ -158,38 +164,41 @@ def capture_user_changes(sender, instance, **kwargs):
         # New user creation
         instance._original_values = {}
 
+
 @receiver(post_save, sender=NPDAUser)
 def log_and_notify_user_changes(sender, instance, created, **kwargs):
     """
     Log changes and send notifications after user is saved.
     """
     from .logging import get_current_user
+
     current_user = get_current_user()
-    
+
     if created:
         # Log user creation
         _log_user_activity(
             user=instance,
             activity_type=10,  # CREATED_USER_RECORD
             details=f"User created by {current_user.email if current_user else 'system'}",
-            current_user=current_user
+            current_user=current_user,
         )
-        
+
         # Send email notification to admins
         _send_user_creation_notification(instance, current_user)
-        
+
     else:
         # Handle user updates
-        original_values = getattr(instance, '_original_values', {})
+        original_values = getattr(instance, "_original_values", {})
         if original_values:
             changes = _detect_changes(instance, original_values)
-            
+
             if changes:
                 # Log all changes
                 _log_user_changes(instance, changes, current_user)
-                
+
                 # Send email notifications for critical changes
                 _send_change_notifications(instance, changes, current_user)
+
 
 @receiver(post_save, sender=OrganisationEmployer)
 def log_user_pdu_assignment(sender, instance, created, **kwargs):
@@ -197,35 +206,40 @@ def log_user_pdu_assignment(sender, instance, created, **kwargs):
     Log when a user is assigned to or updated in a PDU.
     """
     from .logging import get_current_user
+
     current_user = get_current_user()
-    
+
     if created:
         # New PDU assignment
         details = f"User {instance.npda_user.email} assigned to PDU {instance.paediatric_diabetes_unit.pz_code} ({instance.paediatric_diabetes_unit.lead_organisation_name}) by {current_user.email if current_user else 'system'}"
-        
+
         _log_user_activity(
             user=instance.npda_user,
             activity_type=15,  # USER_ASSIGNED_TO_PDU
             details=details,
-            current_user=current_user
+            current_user=current_user,
         )
-        
+
         # Send notification to admins about new PDU assignment
         _send_pdu_assignment_notification(instance, current_user, is_new=True)
-        
-        logger.info(f"User {instance.npda_user.email} assigned to PDU {instance.paediatric_diabetes_unit.pz_code}")
+
+        logger.info(
+            f"User {instance.npda_user.email} assigned to PDU {instance.paediatric_diabetes_unit.pz_code}"
+        )
     else:
         # PDU assignment updated (is_primary change, etc.)
         details = f"PDU assignment updated for user {instance.npda_user.email} at PDU {instance.paediatric_diabetes_unit.pz_code} by {current_user.email if current_user else 'system'}"
-        
+
         _log_user_activity(
             user=instance.npda_user,
             activity_type=17,  # PDU_ROLE_CHANGED
             details=details,
-            current_user=current_user
+            current_user=current_user,
         )
-        
-        logger.info(f"PDU assignment updated for user {instance.npda_user.email} at PDU {instance.paediatric_diabetes_unit.pz_code}")
+
+        logger.info(
+            f"PDU assignment updated for user {instance.npda_user.email} at PDU {instance.paediatric_diabetes_unit.pz_code}"
+        )
 
 
 @receiver(pre_delete, sender=OrganisationEmployer)
@@ -234,35 +248,39 @@ def log_user_pdu_removal(sender, instance, **kwargs):
     Log when a user is removed from a PDU.
     """
     from .logging import get_current_user
+
     current_user = get_current_user()
-    
+
     details = f"User {instance.npda_user.email} removed from PDU {instance.paediatric_diabetes_unit.pz_code} ({instance.paediatric_diabetes_unit.lead_organisation_name}) by {current_user.email if current_user else 'system'}"
-    
+
     # _log_user_activity(
     #     user=instance.npda_user,
     #     activity_type=16,  # REMOVED_USER_FROM_PDU
     #     details=details,
     #     current_user=current_user
     # )
-    
+
     # Send notification to admins about PDU removal
-    _send_pdu_assignment_notification(instance, current_user, is_new=False, is_removal=True)
-    
+    _send_pdu_assignment_notification(
+        instance, current_user, is_new=False, is_removal=True
+    )
+
     logger.info(details)
+
 
 @receiver(pre_save, sender=OrganisationEmployer)
 def capture_pdu_assignment_changes(sender, instance, **kwargs):
     """
     Capture the original state before save to compare changes.
     """
-    OrganisationEmployer = apps.get_model('npda', 'OrganisationEmployer')
+    OrganisationEmployer = apps.get_model("npda", "OrganisationEmployer")
     if instance.pk:  # Only for existing assignments (updates)
         try:
             original = OrganisationEmployer.objects.get(pk=instance.pk)
             instance._original_values = {
-                'paediatric_diabetes_unit': original.paediatric_diabetes_unit,
-                'npda_user': original.npda_user,
-                'is_primary_employer': getattr(original, 'is_primary_employer', None),
+                "paediatric_diabetes_unit": original.paediatric_diabetes_unit,
+                "npda_user": original.npda_user,
+                "is_primary_employer": getattr(original, "is_primary_employer", None),
                 # Add other fields you want to track
             }
         except OrganisationEmployer.DoesNotExist:
@@ -270,26 +288,27 @@ def capture_pdu_assignment_changes(sender, instance, **kwargs):
     else:
         instance._original_values = {}
 
+
 """
 Helper functions
 """
+
+
 def _detect_changes(instance, original_values):
     """
     Compare current instance with original values to detect changes.
     """
     changes = {}
-    
+
     for field in LOGGED_FIELDS:
         original_value = original_values.get(field)
         current_value = getattr(instance, field)
-        
+
         if original_value != current_value:
-            changes[field] = {
-                'old': original_value,
-                'new': current_value
-            }
-    
+            changes[field] = {"old": original_value, "new": current_value}
+
     return changes
+
 
 def _log_user_activity(user, activity_type, details, current_user=None):
     """
@@ -299,76 +318,86 @@ def _log_user_activity(user, activity_type, details, current_user=None):
         from .logging import get_current_request
 
         current_request = get_current_request()
-        
+
         ip_address = get_client_ip(current_request) if current_request else None
-        
+
         VisitActivity.objects.create(
             activity=activity_type,
             ip_address=ip_address,
             npdauser=user,
             npdauser_admin=current_user,
-            details=details
+            details=details,
         )
     except Exception as e:
         logging.error(f"Failed to log user activity for {user.email}: {e}")
         return
-    
+
     activity_type_name = dict(ACTIVITY).get(activity_type, "Unknown activity")
-    logging.info(f"Logging user activity: {activity_type_name} for user {user.email}: {details}. Current user: {current_user.email if current_user else 'system'}")
+    logging.info(
+        f"Logging user activity: {activity_type_name} for user {user.email}: {details}. Current user: {current_user.email if current_user else 'system'}"
+    )
+
 
 def _log_user_changes(user, changes, current_user):
     """
     Log specific field changes for a user.
     """
     change_details = []
-    
+
     for field, change in changes.items():
         change_detail = f"{field}: '{change['old']}' → '{change['new']}'"
         change_details.append(change_detail)
-    
+
     details = f"User updated by {current_user.email if current_user else 'system'}: {'; '.join(change_details)}"
 
     activity_type = _map_changes_to_visit_activity(changes)
-    
+
     _log_user_activity(
         user=user,
-        activity_type=activity_type, 
+        activity_type=activity_type,
         details=details,
-        current_user=current_user
+        current_user=current_user,
     )
+
 
 def _send_change_notifications(user, changes, current_user):
     """
     Send email notifications for critical field changes.
     """
     email_worthy_changes = {
-        field: change for field, change in changes.items() 
+        field: change
+        for field, change in changes.items()
         if field in EMAIL_TRIGGER_FIELDS
     }
-    
+
     if not email_worthy_changes:
         return
-    
+
     # Send notification to user if email changed
-    if 'email' in email_worthy_changes:
-        _send_email_change_notification(user, email_worthy_changes['email'], current_user)
-    
+    if "email" in email_worthy_changes:
+        _send_email_change_notification(
+            user, email_worthy_changes["email"], current_user
+        )
+
     # Send notification to admins for role/permission changes
     role_permission_changes = {
-        field: change for field, change in email_worthy_changes.items()
-        if field in ['role', 'is_rcpch_audit_team_member', 'is_rcpch_staff', 'is_active']
+        field: change
+        for field, change in email_worthy_changes.items()
+        if field
+        in ["role", "is_rcpch_audit_team_member", "is_rcpch_staff", "is_active"]
     }
-    
+
     if role_permission_changes:
         _send_admin_notification(user, role_permission_changes, current_user)
+
 
 def _send_email_change_notification(user, email_change, current_user):
     """
     Notify user when their email address is changed.
     """
-    old_email = email_change['old']
-    new_email = email_change['new']
-    
+    old_email = email_change["old"]
+    new_email = email_change["new"]
+
     subject = "NPDA Account Email Address Changed"
     message = f"""
     Your NPDA account email address has been changed.
@@ -379,19 +408,20 @@ def _send_email_change_notification(user, email_change, current_user):
     
     If you did not request this change, please contact the NPDA team immediately.
     """
-    
+
     # Send to both old and new email addresses
     recipients = [old_email, new_email] if old_email != new_email else [new_email]
-    
+
     try:
         send_email_to_recipients(
-            recipients=recipients,
-            subject=subject,
-            message=message
+            recipients=recipients, subject=subject, message=message
         )
         logger.info(f"Email change notification sent for user {user.email}")
     except Exception as e:
-        logger.error(f"Failed to send email change notification for user {user.email}: {e}")
+        logger.error(
+            f"Failed to send email change notification for user {user.email}: {e}"
+        )
+
 
 def _send_admin_notification(user, changes, current_user):
     """
@@ -400,7 +430,7 @@ def _send_admin_notification(user, changes, current_user):
     change_details = []
     for field, change in changes.items():
         change_details.append(f"{field}: '{change['old']}' → '{change['new']}'")
-    
+
     subject = f"NPDA User Permission Changes - {user.get_full_name()}"
     message = f"""
     User permissions have been modified:
@@ -417,11 +447,12 @@ def _send_admin_notification(user, changes, current_user):
             send_email_to_recipients(
                 recipients=settings.CHANGE_NOTIFICATION_EMAILS,
                 subject=subject,
-                message=message
+                message=message,
             )
             logger.info(f"Admin notification sent for user changes: {user.email}")
     except Exception as e:
         logger.error(f"Failed to send admin notification for user {user.email}: {e}")
+
 
 def _send_user_creation_notification(user, current_user):
     """
@@ -435,18 +466,19 @@ def _send_user_creation_notification(user, current_user):
     Role: {user.get_role_display()}
     Created by: {current_user.email if current_user else 'System'}
     """
-    
-    # Send to audit team members  
+
+    # Send to audit team members
     try:
         if settings.CHANGE_NOTIFICATION_EMAILS:
             send_email_to_recipients(
                 recipients=settings.CHANGE_NOTIFICATION_EMAILS,
                 subject=subject,
-                message=message
+                message=message,
             )
             logger.info(f"User creation notification sent for: {user.email}")
     except Exception as e:
         logger.error(f"Failed to send user creation notification for {user.email}: {e}")
+
 
 def _map_changes_to_visit_activity(changes):
     """
@@ -461,7 +493,7 @@ def _map_changes_to_visit_activity(changes):
         (SETUP_TWO_FACTOR_AUTHENTICATION, "Two factor authentication set up"),
         (UPLOADED_CSV, "Uploaded CSV"),
         (TOUCHED_PATIENT_RECORD, "Touched patient record"), #  - This is not implemented yet
-        (CREATED_USER_RECORD, "Created a user record"), 
+        (CREATED_USER_RECORD, "Created a user record"),
         (CHANGED_USER_RECORD, "User record changed"),
         (CHANGED_USER_ROLE, "User role changed"),
         (CHANGED_ADMIN_FLAG, "Superuser or admin status changed"),
@@ -472,26 +504,29 @@ def _map_changes_to_visit_activity(changes):
     )
     """
 
-    ADMIN_FLAGS = ['is_active', 'is_rcpch_audit_team_member', 'is_rcpch_staff']
-    USER_RECORD_FIELDS = ['email', 'first_name', 'surname']
-    
-    if 'role' in changes:
+    ADMIN_FLAGS = ["is_active", "is_rcpch_audit_team_member", "is_rcpch_staff"]
+    USER_RECORD_FIELDS = ["email", "first_name", "surname"]
+
+    if "role" in changes:
         return 12  # CHANGED_USER_ROLE
     elif any(field in changes for field in ADMIN_FLAGS):
         return 13  # CHANGED_ADMIN_FLAG
     elif any(field in changes for field in USER_RECORD_FIELDS):
-        return 11   # CHANGED_USER_RECORD
+        return 11  # CHANGED_USER_RECORD
     else:
         # Default to a generic user update activity
         return 11
 
-def _send_pdu_assignment_notification(organisation_employer_instance, current_user, is_new=False, is_removal=False):
+
+def _send_pdu_assignment_notification(
+    organisation_employer_instance, current_user, is_new=False, is_removal=False
+):
     """
     Send notification when user PDU assignments change.
     """
     user = organisation_employer_instance.npda_user
     pdu = organisation_employer_instance.paediatric_diabetes_unit
-    
+
     if is_removal:
         action = "removed from"
         subject = f"NPDA User Removed from PDU - {user.get_full_name()}"
@@ -501,7 +536,7 @@ def _send_pdu_assignment_notification(organisation_employer_instance, current_us
     else:
         action = "updated in"
         subject = f"NPDA User PDU Assignment Updated - {user.get_full_name()}"
-    
+
     message = f"""
     A user's PDU assignment has been modified:
     
@@ -518,25 +553,28 @@ def _send_pdu_assignment_notification(organisation_employer_instance, current_us
             send_email_to_recipients(
                 recipients=settings.CHANGE_NOTIFICATION_EMAILS,
                 subject=subject,
-                message=message
+                message=message,
             )
             logger.info(f"PDU assignment notification sent for user {user.email}")
     except Exception as e:
-        logger.error(f"Failed to send PDU assignment notification for user {user.email}: {e}")
+        logger.error(
+            f"Failed to send PDU assignment notification for user {user.email}: {e}"
+        )
+
 
 def _send_user_deletion_notification(user_instance, current_user):
     """
     Send notification when a user is deleted.
     """
     # Get the deletion data we captured in pre_delete
-    deletion_data = getattr(user_instance, '_deletion_data', {})
-    
+    deletion_data = getattr(user_instance, "_deletion_data", {})
+
     subject = f"NPDA User Deleted - {deletion_data.get('full_name', 'Unknown User')}"
-    
+
     pdu_info = ""
-    if deletion_data.get('pdu_names'):
+    if deletion_data.get("pdu_names"):
         pdu_info = f"\nPDU Memberships: {', '.join(deletion_data['pdu_names'])}"
-    
+
     message = f"""
     An NPDA user has been DELETED:
     
@@ -552,15 +590,17 @@ def _send_user_deletion_notification(user_instance, current_user):
     
     ⚠️ This action cannot be undone. All user data has been permanently removed.
     """
-    
+
     # Send to audit team members
     try:
         if CHANGE_NOTIFICATION_EMAILS:
             send_email_to_recipients(
                 recipients=settings.CHANGE_NOTIFICATION_EMAILS,
                 subject=subject,
-                message=message
+                message=message,
             )
-            logger.info(f"User deletion notification sent for: {deletion_data.get('email', 'Unknown')}")
+            logger.info(
+                f"User deletion notification sent for: {deletion_data.get('email', 'Unknown')}"
+            )
     except Exception as e:
         logger.error(f"Failed to send user deletion notification: {e}")

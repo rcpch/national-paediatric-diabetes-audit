@@ -1,14 +1,16 @@
 """Factory function to create new OrganisationEmployerFactory."""
 
 # Standard imports
-import factory
 import logging
+
+import factory
 
 # Project imports
 from project.npda.models import OrganisationEmployer
 
 # Logging
 logger = logging.getLogger(__name__)
+
 
 class OrganisationEmployerFactory(factory.django.DjangoModelFactory):
     """Dependency for creating a minimum viable NPDAUser.
@@ -27,4 +29,3 @@ class OrganisationEmployerFactory(factory.django.DjangoModelFactory):
 
     # Once an NPDAUser is created, it will attach to this attribute
     npda_user = None
-    

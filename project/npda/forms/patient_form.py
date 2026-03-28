@@ -1,13 +1,11 @@
 # python imports
-from asgiref.sync import sync_to_async, async_to_sync
-from channels.db import database_sync_to_async
-
 import logging
 from datetime import date
 
+
 # project imports
 import nhs_number
-import httpx
+from channels.db import database_sync_to_async
 
 # third-party imports
 from dateutil.relativedelta import relativedelta
@@ -17,8 +15,8 @@ from django import forms
 from django.apps import apps
 from django.core.exceptions import ValidationError
 
-from ...constants.styles.form_styles import *
 from ...constants import LEAVE_PDU_REASONS
+from ...constants.styles.form_styles import *
 from ..models import Patient, Transfer
 from ..validators import not_in_the_future_validator
 from .external_patient_validators import validate_patient_sync
@@ -114,7 +112,7 @@ class PatientForm(forms.ModelForm):
         self.audit_period = kwargs.pop("audit_period", None)
         self.paediatric_diabetes_unit = kwargs.pop("paediatric_diabetes_unit", None)
         self.override_postcode = kwargs.pop("override_postcode", False)
-    
+
         super().__init__(*args, **kwargs)
         if self.instance.pk:
             try:
@@ -174,7 +172,11 @@ class PatientForm(forms.ModelForm):
     def handle_async_validation_result(self, key):
         value = getattr(self.async_validation_results, key)
         # override the invalid postcode error if the user has sanctioned the postcode
-        if key == "postcode" and type(value) is ValidationError and self.override_postcode:
+        if (
+            key == "postcode"
+            and type(value) is ValidationError
+            and self.override_postcode
+        ):
             postcode = self.cleaned_data["postcode"]
             if postcode:
                 self.cleaned_data[key] = postcode
@@ -372,7 +374,11 @@ class PatientForm(forms.ModelForm):
 
         @database_sync_to_async
         def get_submissions_count(filter_kwargs, exclude_kwargs):
-            return PatientSubmission.objects.filter(**filter_kwargs).exclude(**exclude_kwargs).count()
+            return (
+                PatientSubmission.objects.filter(**filter_kwargs)
+                .exclude(**exclude_kwargs)
+                .count()
+            )
 
         filter_kwargs = {
             "submission__submission_active": True,
@@ -406,7 +412,7 @@ class PatientForm(forms.ModelForm):
 
         if unique_reference_number:
             self._validate_field_uniqueness(
-               value=unique_reference_number,
+                value=unique_reference_number,
                 field_name="unique_reference_number",
                 filter_field="patient__unique_reference_number",
                 error_message="Unique Reference Number must be unique within this submission.",
@@ -416,8 +422,13 @@ class PatientForm(forms.ModelForm):
         self, value, field_name, filter_field, error_message
     ):
         PatientSubmission = apps.get_model("npda", "PatientSubmission")
+
         def get_submissions_count(filter_kwargs, exclude_kwargs):
-            return PatientSubmission.objects.filter(**filter_kwargs).exclude(**exclude_kwargs).count()
+            return (
+                PatientSubmission.objects.filter(**filter_kwargs)
+                .exclude(**exclude_kwargs)
+                .count()
+            )
 
         filter_kwargs = {
             "submission__submission_active": True,

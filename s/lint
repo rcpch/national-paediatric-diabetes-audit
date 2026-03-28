@@ -17,16 +17,16 @@ if [[ "$1" == "--check" ]]; then
 fi
 
 echo "▶ black"
-docker compose run --rm django black ${CHECK_FLAG} .
+black ${CHECK_FLAG} .
 
 echo "▶ isort"
-docker compose run --rm django isort ${ISORT_FLAG} .
+isort ${ISORT_FLAG} .
 
 echo "▶ ruff"
 if [[ "$1" == "--check" ]]; then
-    docker compose run --rm django ruff check .
+    ruff check .
 else
-    docker compose run --rm django ruff check --fix .
+    ruff check --fix .
 fi
 
 echo "✅ lint complete"

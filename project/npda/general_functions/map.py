@@ -1,45 +1,45 @@
 # python imports
-import logging
 import json
+import logging
 import os
 from functools import cache
+
+# third-party imports
+import geopandas as gpd
+import pandas as pd
+import plotly.graph_objects as go
+from django.apps import apps
 
 # django imports
 from django.conf import settings
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
 from django.db.models import Q
-from django.apps import apps
-
-# third-party imports
-import geopandas as gpd
-import pandas as pd
-import plotly.graph_objects as go
 
 # RCPCH imports
 from project.constants import (
-    RCPCH_PINK_DARK_TINT,
-    RCPCH_PINK,
-    RCPCH_PINK_LIGHT_TINT3,
-    RCPCH_PINK_LIGHT_TINT2,
-    RCPCH_PINK_LIGHT_TINT1,
-    RCPCH_LIGHT_BLUE_TINT3,
-    RCPCH_LIGHT_BLUE_TINT2,
-    RCPCH_LIGHT_BLUE_TINT1,
+    RCPCH_CHARCOAL,
+    RCPCH_DARK_BLUE,
     RCPCH_LIGHT_BLUE,
     RCPCH_LIGHT_BLUE_DARK_TINT,
-    RCPCH_DARK_BLUE,
-    RCPCH_CHARCOAL,
-    RCPCH_RED_DARK_TINT,
+    RCPCH_LIGHT_BLUE_TINT1,
+    RCPCH_LIGHT_BLUE_TINT2,
+    RCPCH_LIGHT_BLUE_TINT3,
+    RCPCH_PINK,
+    RCPCH_PINK_DARK_TINT,
+    RCPCH_PINK_LIGHT_TINT1,
+    RCPCH_PINK_LIGHT_TINT2,
+    RCPCH_PINK_LIGHT_TINT3,
     RCPCH_RED,
-    RCPCH_RED_LIGHT_TINT3,
-    RCPCH_RED_LIGHT_TINT2,
+    RCPCH_RED_DARK_TINT,
     RCPCH_RED_LIGHT_TINT1,
-    RCPCH_STRONG_GREEN_LIGHT_TINT3,
-    RCPCH_STRONG_GREEN_LIGHT_TINT2,
-    RCPCH_STRONG_GREEN_LIGHT_TINT1,
+    RCPCH_RED_LIGHT_TINT2,
+    RCPCH_RED_LIGHT_TINT3,
     RCPCH_STRONG_GREEN,
     RCPCH_STRONG_GREEN_DARK_TINT,
+    RCPCH_STRONG_GREEN_LIGHT_TINT1,
+    RCPCH_STRONG_GREEN_LIGHT_TINT2,
+    RCPCH_STRONG_GREEN_LIGHT_TINT3,
 )
 from project.npda.general_functions.rcpch_nhs_organisations import (
     fetch_local_authorities_within_radius,
@@ -330,12 +330,16 @@ def generate_distance_from_organisation_scatterplot_figure(
     if not geo_df.empty:
         # Build identifier string: show NHS Number if exists, otherwise show URN
         geo_df["identifier_str"] = geo_df.apply(
-            lambda row: f"NHS Number: {row['nhs_number']}"
-            if pd.notna(row["nhs_number"]) and row["nhs_number"] != ""
-            else f"URN: {row['unique_reference_number']}"
-            if pd.notna(row["unique_reference_number"])
-            and row["unique_reference_number"] != ""
-            else "No identifier",
+            lambda row: (
+                f"NHS Number: {row['nhs_number']}"
+                if pd.notna(row["nhs_number"]) and row["nhs_number"] != ""
+                else (
+                    f"URN: {row['unique_reference_number']}"
+                    if pd.notna(row["unique_reference_number"])
+                    and row["unique_reference_number"] != ""
+                    else "No identifier"
+                )
+            ),
             axis=1,
         )
 

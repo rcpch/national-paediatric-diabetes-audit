@@ -1,54 +1,48 @@
-from datetime import datetime, timedelta
 import logging
 import unicodedata
+from datetime import datetime, timedelta
 
 from django.apps import apps
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import login, authenticate
+from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.contrib.auth.views import PasswordResetView
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import PermissionDenied
-
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.html import strip_tags
-from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
-
-# third party imports
-from two_factor.views import LoginView as TwoFactorLoginView
+from django.views.generic.edit import CreateView, UpdateView
 from django_filters.views import FilterView
 from django_otp import devices_for_user, user_has_device
 
+# third party imports
+from two_factor.views import LoginView as TwoFactorLoginView
+
 from project.constants.user import AUDIT_CENTRE_COORDINATOR
-from .decorators import login_and_otp_required
 from project.npda.filtersets.npdauser_filterset import NPDAUserFilterSet
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 
-# RCPCH imports
-from ..models import (
-    NPDAUser,
-    VisitActivity,
-    OrganisationEmployer,
-    AuditPeriod
-)
-from ..forms.npda_user_form import NPDAUserForm, CaptchaAuthenticationForm
+from ...constants import AUDIT_CENTRE_EDITOR, AUDIT_CENTRE_READER, RCPCH_AUDIT_TEAM
+from ..forms.npda_user_form import CaptchaAuthenticationForm, NPDAUserForm
 from ..general_functions import (
     construct_confirm_email,
-    send_email_to_recipients,
     group_for_role,
     organisations_adapter,
+    send_email_to_recipients,
 )
-from .mixins import LoginAndOTPRequiredMixin
-from .mixins import LoginAndOTPRequiredMixin
-from ...constants import RCPCH_AUDIT_TEAM, AUDIT_CENTRE_READER, AUDIT_CENTRE_EDITOR
+
+# RCPCH imports
+from ..models import AuditPeriod, NPDAUser, OrganisationEmployer, VisitActivity
 from ..signals import get_client_ip
+from .decorators import login_and_otp_required
+from .mixins import LoginAndOTPRequiredMixin
 
 # from ..signals import password_reset_sent
 
@@ -66,26 +60,33 @@ def _unicode_ci_compare(s1, s2):
         == unicodedata.normalize("NFKC", s2).casefold()
     )
 
+
 def get_user_home_page(audit_period_slug, user):
     if not user.is_authenticated:
         return reverse("home")
 
-    if user.is_superuser or user.is_rcpch_audit_team_member or user.paediatric_diabetes_units.count() > 1:
+    if (
+        user.is_superuser
+        or user.is_rcpch_audit_team_member
+        or user.paediatric_diabetes_units.count() > 1
+    ):
         return reverse("new-home", kwargs={"audit_period": audit_period_slug})
-    
-    return reverse("pdu-dashboard", kwargs={
-        "audit_period": audit_period_slug,
-        "pz_code": user.primary_pdu().pz_code,
-    })
+
+    return reverse(
+        "pdu-dashboard",
+        kwargs={
+            "audit_period": audit_period_slug,
+            "pz_code": user.primary_pdu().pz_code,
+        },
+    )
+
 
 """
 NPDAUser list and NPDAUser creation, deletion and update
 """
 
 
-class NPDAUserListView(
-    LoginAndOTPRequiredMixin, PermissionRequiredMixin, FilterView
-):
+class NPDAUserListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, FilterView):
     permission_required = "npda.view_npdauser"
     permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
     template_name = "npda_users.html"
@@ -101,10 +102,12 @@ class NPDAUserListView(
 
         if not self.request.user.is_rcpch_audit_team_member:
             queryset = queryset.filter(
-                organisation_employers__in= self.request.user.organisation_employers.all()
+                organisation_employers__in=self.request.user.organisation_employers.all()
             )
 
-        if "hide_users_other_than_test" in self.request.session.get("feature_flags", []):
+        if "hide_users_other_than_test" in self.request.session.get(
+            "feature_flags", []
+        ):
             queryset = queryset.filter(email__icontains="test")
 
         queryset = queryset.order_by("-is_active", "surname")
@@ -112,11 +115,11 @@ class NPDAUserListView(
         if self.request.user.is_rcpch_audit_team_member:
             # Distinct required to remove duplicates that come from the __in query
             queryset = queryset.distinct()
-        
+
         return queryset
 
     def get_context_data(self, **kwargs):
-        context = super(NPDAUserListView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
         context["title"] = "NPDA Users"
         return context
 
@@ -177,33 +180,51 @@ class NPDAUserCreateView(
     def form_valid(self, form):
         PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
 
-        new_user_pz_code = form.cleaned_data["add_employer"] or self.request.user.primary_pdu().pz_code
+        new_user_pz_code = (
+            form.cleaned_data["add_employer"] or self.request.user.primary_pdu().pz_code
+        )
 
-        my_pz_codes = self.request.user.organisation_employers.values_list("pz_code", flat=True)
+        my_pz_codes = self.request.user.organisation_employers.values_list(
+            "pz_code", flat=True
+        )
 
-        if new_user_pz_code not in my_pz_codes and not (self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member):
+        if new_user_pz_code not in my_pz_codes and not (
+            self.request.user.is_superuser
+            or self.request.user.is_rcpch_audit_team_member
+        ):
             raise PermissionDenied(
                 f"You do not have permission to add users to {new_user_pz_code}. Contact the NPDA for assistance."
             )
-        
+
         new_user_pdu = PaediatricDiabetesUnit.objects.get(pz_code=new_user_pz_code)
 
-        if not new_user_pdu.active and not (self.request.user.is_rcpch_audit_team_member or self.request.user.is_superuser):
+        if not new_user_pdu.active and not (
+            self.request.user.is_rcpch_audit_team_member
+            or self.request.user.is_superuser
+        ):
             raise PermissionDenied(
                 f"{new_user_pz_code} is inactive. Contact the NPDA for assistance."
             )
-        
-        if form.cleaned_data["role"] == RCPCH_AUDIT_TEAM and not (self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member):
+
+        if form.cleaned_data["role"] == RCPCH_AUDIT_TEAM and not (
+            self.request.user.is_superuser
+            or self.request.user.is_rcpch_audit_team_member
+        ):
             raise PermissionDenied(
                 "You do not have permission to add a user with RCPCH Audit Team role."
             )
 
-        if form.cleaned_data["is_rcpch_audit_team_member"] and not (self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member):
+        if form.cleaned_data["is_rcpch_audit_team_member"] and not (
+            self.request.user.is_superuser
+            or self.request.user.is_rcpch_audit_team_member
+        ):
             raise PermissionDenied(
                 "You do not have permission to add a user with the is_rcpch_audit_team_member flag."
             )
 
-        if form.cleaned_data["is_rcpch_staff"] and not (self.request.user.is_superuser or self.request.user.is_rcpch_staff):
+        if form.cleaned_data["is_rcpch_staff"] and not (
+            self.request.user.is_superuser or self.request.user.is_rcpch_staff
+        ):
             raise PermissionDenied(
                 "You do not have permission to add a user with the is_rcpch_staff flag."
             )
@@ -264,19 +285,26 @@ class NPDAUserUpdateView(
     success_url = reverse_lazy("npda_users")
 
     def user_in_exactly_the_same_pdus_as_requesting_user(self):
-        my_pz_codes = set(self.request.user.organisation_employers.values_list("pz_code", flat=True))
-        their_pz_codes = set(self.get_object().organisation_employers.values_list("pz_code", flat=True))
+        my_pz_codes = set(
+            self.request.user.organisation_employers.values_list("pz_code", flat=True)
+        )
+        their_pz_codes = set(
+            self.get_object().organisation_employers.values_list("pz_code", flat=True)
+        )
 
         return my_pz_codes == their_pz_codes
-
 
     def get_restricted_fields(self):
         # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1159
         # A coordinator can only change the role or email of a user if they share exactly the same PDU assignments
         # This prevents a coordinator accessing other PDUs by changing the email to one they control and doing a password reset
-        if self.user_in_exactly_the_same_pdus_as_requesting_user() or self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member:
+        if (
+            self.user_in_exactly_the_same_pdus_as_requesting_user()
+            or self.request.user.is_superuser
+            or self.request.user.is_rcpch_audit_team_member
+        ):
             return []
-        
+
         return ["role", "email"]
 
     def get_form_kwargs(self):
@@ -291,7 +319,7 @@ class NPDAUserUpdateView(
             )
         )
         kwargs["restricted_fields"] = self.get_restricted_fields()
-        
+
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -320,7 +348,10 @@ class NPDAUserUpdateView(
 
         two_factor_devices = devices_for_user(user)
         # The name doesn't describe the method used
-        two_factor_devices = [f"{device.name} ({str(type(device).__name__)})" for device in two_factor_devices]
+        two_factor_devices = [
+            f"{device.name} ({str(type(device).__name__)})"
+            for device in two_factor_devices
+        ]
         context["two_factor_devices"] = two_factor_devices
 
         return context
@@ -330,37 +361,51 @@ class NPDAUserUpdateView(
             raise PermissionDenied(
                 "You do not have permission to edit this user. Contact the NPDA for assistance."
             )
-        
-        if form.cleaned_data["role"] == RCPCH_AUDIT_TEAM and not (self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member):
+
+        if form.cleaned_data["role"] == RCPCH_AUDIT_TEAM and not (
+            self.request.user.is_superuser
+            or self.request.user.is_rcpch_audit_team_member
+        ):
             raise PermissionDenied(
                 "You do not have permission to grant the RCPCH Audit Team role."
             )
 
-        if form.cleaned_data["is_rcpch_audit_team_member"] and not (self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member):
+        if form.cleaned_data["is_rcpch_audit_team_member"] and not (
+            self.request.user.is_superuser
+            or self.request.user.is_rcpch_audit_team_member
+        ):
             raise PermissionDenied(
                 "You do not have permission to set the is_rcpch_audit_team_member flag."
             )
 
-        if form.cleaned_data["is_rcpch_staff"] and not (self.request.user.is_superuser or self.request.user.is_rcpch_staff):
+        if form.cleaned_data["is_rcpch_staff"] and not (
+            self.request.user.is_superuser or self.request.user.is_rcpch_staff
+        ):
             raise PermissionDenied(
                 "You do not have permission to set the is_rcpch_staff flag."
             )
-        
-        changed_restricted_fields = [field for field in self.get_restricted_fields() if field in form.changed_data]
+
+        changed_restricted_fields = [
+            field
+            for field in self.get_restricted_fields()
+            if field in form.changed_data
+        ]
 
         # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1159
         # A coordinator can only change the role or email of a user if they share exactly the same PDU assignments
         # This prevents a coordinator accessing other PDUs by changing the email to one they control and doing a password reset
         if len(changed_restricted_fields) > 0:
             # if the user is changing their role or email, they must be in the same PDU as the logged in user
-            logger.warning(f"User {self.request.user.email} tried to change {", ".join(changed_restricted_fields)} of user {self.get_object().email} but they do not have exactly the same PDU assignments")
+            logger.warning(
+                f"User {self.request.user.email} tried to change {", ".join(changed_restricted_fields)} of user {self.get_object().email} but they do not have exactly the same PDU assignments"
+            )
 
             raise PermissionDenied(
                 "You do not have permission to edit this user. Contact the NPDA for assistance."
             )
-        
+
         user = form.save(commit=False)
-        user.save() # save the user first to ensure the user instance is updated and the updated_by and updated_at fields are set
+        user.save()  # save the user first to ensure the user instance is updated and the updated_by and updated_at fields are set
         form.save_m2m()  # save the m2m fields (groups, employers, etc.)
         # remove all groups and add the user to the right group
         user.groups.clear()
@@ -368,7 +413,6 @@ class NPDAUserUpdateView(
         if group:
             user.groups.add(group)
         return super().form_valid(form)
-    
 
     def post(self, request: HttpRequest, *args: str, **kwargs) -> HttpResponse:
         """
@@ -403,57 +447,59 @@ class NPDAUserUpdateView(
             npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
 
             if npda_user == request.user:
-                logger.warning("User %s is trying to activate/deactivate themselves", request.user)
+                logger.warning(
+                    "User %s is trying to activate/deactivate themselves", request.user
+                )
                 raise PermissionDenied()
-            
-            is_admin = self.request.user.is_superuser or self.request.user.is_rcpch_audit_team_member
+
+            is_admin = (
+                self.request.user.is_superuser
+                or self.request.user.is_rcpch_audit_team_member
+            )
 
             if not request.user.has_perm("npda.delete_npdauser") and not is_admin:
                 logger.warning(
                     "User %s is trying to activate/deactivate user %s but does not have delete permission",
                     request.user.email,
-                    npda_user.email
+                    npda_user.email,
                 )
                 raise PermissionDenied()
 
             if self.user_in_exactly_the_same_pdus_as_requesting_user() or is_admin:
                 success_message = f"{npda_user.email} deactivated successfully."
-                
+
                 if "activate" in request.POST:
                     success_message = f"{npda_user.email} successfully reactivated."
                     npda_user.is_active = True
                 else:
                     success_message = f"{npda_user.email} successfully deactivated."
                     npda_user.is_active = False
-                
+
                 npda_user.save()
 
                 if "activate" in request.POST:
-                    logger.info("User %s reactivated %s",
-                        request.user.email,
-                        npda_user.email
+                    logger.info(
+                        "User %s reactivated %s", request.user.email, npda_user.email
                     )
                 else:
-                    logger.warning("User %s deactivated %s",
-                        request.user.email,
-                        npda_user.email
+                    logger.warning(
+                        "User %s deactivated %s", request.user.email, npda_user.email
                     )
 
-                messages.success(
-                    request,
-                    success_message
-                )
+                messages.success(request, success_message)
                 return redirect(reverse("npda_users"))
             else:
-                logger.warning("User %s is trying to activate/deactivate %s who is not in exactly the same PDUs as themselves",
-                               request.user.email,
-                               npda_user.email)
+                logger.warning(
+                    "User %s is trying to activate/deactivate %s who is not in exactly the same PDUs as themselves",
+                    request.user.email,
+                    npda_user.email,
+                )
                 raise PermissionDenied()
 
         elif "reset-two-factor" in request.POST:
             if request.user.is_superuser or request.user.is_rcpch_audit_team_member:
                 npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
-                
+
                 devices = devices_for_user(user=npda_user)
                 for device in devices:
                     device.delete()
@@ -467,10 +513,13 @@ class NPDAUserUpdateView(
                 )
                 return redirect(redirect_url)
             else:
-                raise PermissionDenied("You do not have permission to reset two-factor authentication.")
+                raise PermissionDenied(
+                    "You do not have permission to reset two-factor authentication."
+                )
 
         else:
             return super().post(request, *args, **kwargs)
+
 
 @login_and_otp_required()
 @permission_required("npda.can_transfer_npda_lead_centre", raise_exception=True)
@@ -498,31 +547,33 @@ def npdauser_pdu_update(request, pk):
         # set the selected employer as the primary employer. Reset all other employers to False before setting the selected employer to True since only one employer can be primary
         # set all employers to False
         template = "partials/employers.html"
-        OrganisationEmployer.objects.filter(
-            npda_user=selected_npda_user
-        ).update(is_primary_employer=False)
+        OrganisationEmployer.objects.filter(npda_user=selected_npda_user).update(
+            is_primary_employer=False
+        )
         # set the selected employer to True
         selected_employer = OrganisationEmployer.objects.filter(
             pk=request.POST.get("organisation_employer_id")
         ).get()
-        selected_employer.is_primary_employer=True
+        selected_employer.is_primary_employer = True
         selected_employer.save()
 
     elif request.POST.get("add_employer"):
         template = "partials/employers.html"
-        PaediatricDiabetesUnit = apps.get_model(
-            "npda", "PaediatricDiabetesUnit"
-        )
+        PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
         # add to new employer to the users employer list after setting any existing employers is_primary_employer to False
-        OrganisationEmployer.objects.filter(
-            npda_user=selected_npda_user
-        ).update(is_primary_employer=False)
+        OrganisationEmployer.objects.filter(npda_user=selected_npda_user).update(
+            is_primary_employer=False
+        )
         # add the user to the appropriate organisation
         new_employer_pz_code = request.POST.get("add_employer")
         if new_employer_pz_code:
-            my_pz_codes = request.user.organisation_employers.values_list("pz_code", flat=True)
+            my_pz_codes = request.user.organisation_employers.values_list(
+                "pz_code", flat=True
+            )
 
-            if new_employer_pz_code not in my_pz_codes and not (request.user.is_superuser or request.user.is_rcpch_audit_team_member):
+            if new_employer_pz_code not in my_pz_codes and not (
+                request.user.is_superuser or request.user.is_rcpch_audit_team_member
+            ):
                 raise PermissionDenied(
                     f"You do not have permission to add users to {new_employer_pz_code}. Contact the NPDA for assistance."
                 )
@@ -532,7 +583,9 @@ def npdauser_pdu_update(request, pk):
                 pz_code=new_employer_pz_code
             )
 
-            if not selected_pdu.active and not (request.user.is_rcpch_audit_team_member or request.user.is_superuser):
+            if not selected_pdu.active and not (
+                request.user.is_rcpch_audit_team_member or request.user.is_superuser
+            ):
                 raise PermissionDenied(
                     f"{selected_pdu} is inactive. Contact the NPDA for assistance."
                 )
@@ -548,7 +601,6 @@ def npdauser_pdu_update(request, pk):
             # return the partial view of the employers list
             # if the a new employer has been added to the user, the new employer needs to be removed from the add_employer select list
             # the add_employer select list is repopulated with the remaining organisations - this happens by calling the get_form method
-
 
     return render(
         request=request,
@@ -566,6 +618,7 @@ def npdauser_pdu_update(request, pk):
             "editable": request.user.has_perm("npda.change_npdauser"),
         },
     )
+
 
 class NPDAUserLogsListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, ListView):
     template_name = "npda_user_logs.html"
@@ -615,7 +668,6 @@ class NPDAUserLogsListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Li
                 f"Reader or Editor user {logged_in_user.email} tried to view logs for another user {npda_user.email}"
             )
             return False
-        
 
         # Coordinators can view logs for any user in their PDU
         if logged_in_user.role == AUDIT_CENTRE_COORDINATOR:
@@ -623,7 +675,7 @@ class NPDAUserLogsListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Li
                 npda_users_pdu_list = npda_user.organisation_employers.filter(
                     pz_code__in=logged_in_user.organisation_employers.all().values_list(
                         "pz_code", flat=True
-                    ), 
+                    ),
                 )
             except PaediatricDiabetesUnit.DoesNotExist:
                 logger.warning(f"Requested PDU for user {npda_user.email} not found")
@@ -634,7 +686,9 @@ class NPDAUserLogsListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Li
                 )
                 return False
 
-            if not set(npda_user.organisation_employers.all()) & set(npda_users_pdu_list):
+            if not set(npda_user.organisation_employers.all()) & set(
+                npda_users_pdu_list
+            ):
                 # if any of the user's employers are not in the logged in user's PDU list, deny access
                 logger.warning(
                     f"Coordinator user {logged_in_user.email} tried to view logs for another user {npda_user.email} in a different PDU {npda_users_pdu_list}"
@@ -647,19 +701,21 @@ class NPDAUserLogsListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Li
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         npdauser_id = self.kwargs.get("npdauser_id")
-        
+
         try:
             npdauser = NPDAUser.objects.get(pk=npdauser_id)
             context["npdauser"] = npdauser
         except NPDAUser.DoesNotExist:
             context["npdauser"] = None
-        
+
         return context
 
 
 """
 Authentication and password change
 """
+
+
 class ResetPasswordForm(PasswordResetForm):
     def get_users(self, email):
         """Override Django's default behaviour to allow users with unusable passwords
@@ -683,6 +739,7 @@ class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
     """
     Custom password reset view that sends a password reset email to the user
     """
+
     form_class = ResetPasswordForm
     template_name = "registration/password_reset.html"
     html_email_template_name = "registration/password_reset_email.html"
@@ -747,7 +804,7 @@ class RCPCHLoginView(TwoFactorLoginView):
         if self.request.user:
             audit_period = AuditPeriod.objects.get_default_audit_period()
             return get_user_home_page(audit_period.slug, self.request.user)
-        
+
         return reverse(settings.LOGIN_REDIRECT_URL)
 
     def _done(self, response, user):
@@ -759,7 +816,7 @@ class RCPCHLoginView(TwoFactorLoginView):
             messages.add_message(
                 self.request,
                 messages.ERROR,
-                f"Your password has expired. Please reset it.",
+                "Your password has expired. Please reset it.",
             )
             return redirect(reverse("password_reset"))
 
@@ -778,7 +835,7 @@ class RCPCHLoginView(TwoFactorLoginView):
                 messages.INFO,
                 f"You are now logged in as {user.email}. Welcome to the National Paediatric Diabetes Audit platform! This is your first time logging in ({timezone.localtime(last_logged_in[0].activity_datetime).strftime('%H:%M %p on %A, %d %B %Y')} from {last_logged_in[0].ip_address}).",
             )
-        
+
         return response
 
     def done(self, form_list, **kwargs):

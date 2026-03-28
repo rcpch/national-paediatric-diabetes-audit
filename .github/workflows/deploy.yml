@@ -24,6 +24,9 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: 'Install linting tools'
+        run: pip install black isort ruff
+
       - name: 'Run CI script'
         env:
           AZURE_REGISTRY_NAME: ${{ secrets.AZURE_REGISTRY_NAME }}

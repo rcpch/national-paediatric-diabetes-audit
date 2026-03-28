@@ -1,65 +1,63 @@
+import collections
+import csv
 import dataclasses
 import datetime
 import tempfile
-import csv
-import collections
-from io import StringIO
 from decimal import Decimal
+from io import StringIO
 from unittest.mock import AsyncMock, patch
 
-from asgiref.sync import async_to_sync
-
 import nhs_number
-import pandas as pd
 import numpy as np
+import pandas as pd
 import pytest
+from asgiref.sync import async_to_sync
 from dateutil.relativedelta import relativedelta
 from django.apps import apps
-from django.core.exceptions import ValidationError
 from django.contrib.gis.geos import Point
 from django.contrib.messages import get_messages
+from django.core.exceptions import ValidationError
 from django.urls import reverse
 
+from project.constants import (
+    ALL_VISIT_DATES,
+    DIABETES_TYPES,
+    ETHNICITIES,
+    LEAVE_PDU_REASONS,
+    SEX_TYPE,
+    csv_definition_for,
+)
 from project.constants.user import RCPCH_AUDIT_TEAM
+from project.npda.forms.external_patient_validators import (
+    PatientExternalValidationResult,
+)
+from project.npda.forms.external_visit_validators import (
+    CentileAndSDS,
+    VisitExternalValidationResult,
+)
 from project.npda.general_functions.csv import (
-    csv_upload,
-    csv_parse,
     create_csv_submission,
+    csv_parse,
+    csv_upload,
 )
 from project.npda.general_functions.quarter_for_date import (
     current_audit_year_start_date,
 )
-from project.constants import (
-    csv_definition_for,
-    ALL_VISIT_DATES,
-    SEX_TYPE,
-    ETHNICITIES,
-    LEAVE_PDU_REASONS,
-    DIABETES_TYPES
-)
 from project.npda.models import (
-    NPDAUser,
-    Patient,
-    Visit,
-    PaediatricDiabetesUnit,
     AuditPeriod,
+    NPDAUser,
+    PaediatricDiabetesUnit,
+    Patient,
     Submission,
-    Transfer
+    Transfer,
+    Visit,
 )
 from project.npda.tests.factories.patient_factory import (
     INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
     TODAY,
     VALID_FIELDS,
 )
-from project.npda.forms.external_patient_validators import (
-    PatientExternalValidationResult,
-)
-from project.npda.forms.external_visit_validators import (
-    VisitExternalValidationResult,
-    CentileAndSDS,
-)
 from project.npda.tests.utils import login_and_verify_user
-
 
 MOCK_PATIENT_EXTERNAL_VALIDATION_RESULT = PatientExternalValidationResult(
     postcode=VALID_FIELDS["postcode"],
@@ -170,12 +168,15 @@ def test_user(seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixtur
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE
     ).first()
 
+
 @pytest.fixture
-def test_rcpch_user(seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture):
+def test_rcpch_user(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
+):
     return NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
-        role=RCPCH_AUDIT_TEAM
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE, role=RCPCH_AUDIT_TEAM
     ).first()
+
 
 # The database is not rolled back if we used the built in async support for pytest
 # https://github.com/pytest-dev/pytest-asyncio/issues/226
@@ -195,7 +196,7 @@ def csv_upload_sync(
         submission_active=True,
         user=user,
         ip_address=None,
-        new_dataframe= dataframe
+        new_dataframe=dataframe,
     )
 
     return async_to_sync(csv_upload)(
@@ -206,7 +207,7 @@ def csv_upload_sync(
             else errors_to_return
         ),
         csv_file_name=None,
-        submission=new_submission
+        submission=new_submission,
     )
 
 
@@ -243,6 +244,7 @@ def modify_raw_csv(csv_str, start=None, end=None, replacements={}):
     writer.writerows(rows)
 
     return output.getvalue()
+
 
 @pytest.mark.django_db
 def test_create_patient(test_user, single_row_valid_df):
@@ -407,7 +409,9 @@ def test_error_in_multiple_visits(test_user, one_patient_two_visits):
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=df["Visit/Appointment Date"][1].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=df["Visit/Appointment Date"][1].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, df, _audit_period=audit_period)
@@ -445,7 +449,9 @@ def test_multiple_patients_where_one_has_visit_errors_and_the_other_does_not(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=df["Visit/Appointment Date"][1].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=df["Visit/Appointment Date"][1].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     # # set all the visit dates to be the same so we can test the treatment error
@@ -739,7 +745,9 @@ def test_error_validating_postcode(test_user, single_row_valid_df):
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -779,7 +787,9 @@ def test_error_validating_gp_ods_code(test_user, single_row_valid_df):
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -805,7 +815,10 @@ def test_gp_ods_code_trailing_space(test_user, dummy_sheet_csv):
         csv_upload_sync(test_user, df)
 
         assert mock_validate_patient_async.call_count == 1
-        assert mock_validate_patient_async.mock_calls[0].kwargs['gp_practice_ods_code'] == "G85023"
+        assert (
+            mock_validate_patient_async.mock_calls[0].kwargs["gp_practice_ods_code"]
+            == "G85023"
+        )
 
 
 @pytest.mark.django_db
@@ -919,7 +932,7 @@ def test_additional_columns_causes_error(
     single_row_valid_df["extra_one"] = "ada"
     single_row_valid_df["extra_two"] = "lovelace"
 
-    Submission.objects.all().delete() # Clear any previous submissions
+    Submission.objects.all().delete()  # Clear any previous submissions
 
     # write back into temp
     tmp_csv_path = tmp_path / "dummy_sheet_test.csv"
@@ -928,26 +941,27 @@ def test_additional_columns_causes_error(
     # Log in user
     client = login_and_verify_user(client, test_rcpch_user)
 
-    url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
+    url = reverse(
+        "pdu-upload-csv",
+        kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"},
+    )
 
     # Feed file to view
     with open(tmp_csv_path, "rb") as csv_file:
-        response = client.post(
-            url,
-            {
-                'csv_upload': csv_file
-            },
-            format='multipart'
-        )
+        response = client.post(url, {"csv_upload": csv_file}, format="multipart")
 
     assert response.status_code == 200
     assert "Warning: Column errors detected!" in response.content.decode("utf-8")
 
-    assert Submission.objects.count() == 0, "No submission should be created if there are column errors"
+    assert (
+        Submission.objects.count() == 0
+    ), "No submission should be created if there are column errors"
 
 
 @pytest.mark.django_db
-def test_duplicate_columns_causes_error(single_row_valid_df, client, test_rcpch_user, tmp_path):
+def test_duplicate_columns_causes_error(
+    single_row_valid_df, client, test_rcpch_user, tmp_path
+):
     single_row_valid_df["NHS Number_2"] = single_row_valid_df["NHS Number"]
     single_row_valid_df["NHS Number_3"] = single_row_valid_df["NHS Number"]
     single_row_valid_df["Date of Birth_2"] = single_row_valid_df["Date of Birth"]
@@ -961,34 +975,33 @@ def test_duplicate_columns_causes_error(single_row_valid_df, client, test_rcpch_
     client = login_and_verify_user(client, test_rcpch_user)
 
     # Feed file and re-duplicate columns to the CSV
-    with open(tmp_csv_path, "r") as csv_file:
+    with open(tmp_csv_path) as csv_file:
         csv = csv_file.read()
         csv = csv.replace("NHS Number_2", "NHS Number")
         csv = csv.replace("NHS Number_3", "NHS Number")
         csv = csv.replace("Date of Birth_2", "Date of Birth")
         # Reset the file pointer to the beginning of the file
         csv_file.seek(0)
-    
-        url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
 
-        response = client.post(
-            url,
-            {
-                'csv_upload': csv_file
-            },
-            format='multipart'
+        url = reverse(
+            "pdu-upload-csv",
+            kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"},
         )
+
+        response = client.post(url, {"csv_upload": csv_file}, format="multipart")
 
     assert response.status_code == 200
     assert "Warning: Column errors detected!" in response.content.decode("utf-8")
 
-    assert Submission.objects.count() == 0, "No submission should be created if there are column errors"
-    
-    
+    assert (
+        Submission.objects.count() == 0
+    ), "No submission should be created if there are column errors"
 
 
 @pytest.mark.django_db
-def test_missing_columns_causes_error(test_rcpch_user, single_row_valid_df, client, tmp_path):
+def test_missing_columns_causes_error(
+    test_rcpch_user, single_row_valid_df, client, tmp_path
+):
     df = single_row_valid_df.drop(
         columns=["Urinary Albumin Level (ACR)", "Total Cholesterol Level (mmol/l)"]
     )
@@ -1001,22 +1014,21 @@ def test_missing_columns_causes_error(test_rcpch_user, single_row_valid_df, clie
     # Log in user
     client = login_and_verify_user(client, test_rcpch_user)
 
-    url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
+    url = reverse(
+        "pdu-upload-csv",
+        kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"},
+    )
 
     # Feed file into view
     with open(tmp_csv_path, "rb") as csv_file:
-        response = client.post(
-            url,
-            {
-                'csv_upload': csv_file
-            },
-            format='multipart'
-        )
+        response = client.post(url, {"csv_upload": csv_file}, format="multipart")
 
     assert response.status_code == 200
     assert "Warning: Column errors detected!" in response.content.decode("utf-8")
 
-    assert Submission.objects.count() == 0, "No submission should be created if there are column errors"
+    assert (
+        Submission.objects.count() == 0
+    ), "No submission should be created if there are column errors"
 
 
 @pytest.mark.django_db
@@ -1032,7 +1044,9 @@ def test_case_insensitive_column_headers(test_user, dummy_sheet_csv):
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=parsed_csv.df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=parsed_csv.df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, parsed_csv.df, _audit_period=audit_period)
@@ -1047,6 +1061,7 @@ def test_mixed_case_column_headers(test_user, dummy_sheet_csv):
 
     assert df.columns[0] == "NHS Number"
 
+
 @pytest.mark.django_db
 def test_column_headers_with_quotes(test_user, dummy_sheet_csv):
     csv = dummy_sheet_csv.replace("NHS Number", '"NHS Number"')
@@ -1057,35 +1072,39 @@ def test_column_headers_with_quotes(test_user, dummy_sheet_csv):
 
 
 @pytest.mark.django_db
-def test_invalid_nhs_number_column_name(single_row_valid_df, client, test_rcpch_user, tmp_path):
-    single_row_valid_df = single_row_valid_df.rename(columns={"NHS Number": "NHS Nunberxns"})
-    
+def test_invalid_nhs_number_column_name(
+    single_row_valid_df, client, test_rcpch_user, tmp_path
+):
+    single_row_valid_df = single_row_valid_df.rename(
+        columns={"NHS Number": "NHS Nunberxns"}
+    )
+
     tmp_csv_path = tmp_path / "dummy_sheet_test.csv"
     single_row_valid_df.to_csv(tmp_csv_path, index=False)
-    
+
     # Log in user
     client = login_and_verify_user(client, test_rcpch_user)
 
-    url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
+    url = reverse(
+        "pdu-upload-csv",
+        kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"},
+    )
 
     # Feed file into view
     with open(tmp_csv_path, "rb") as csv_file:
-        response = client.post(
-            url,
-            {
-                'csv_upload': csv_file
-            },
-            format='multipart'
-        )
+        response = client.post(url, {"csv_upload": csv_file}, format="multipart")
 
     assert response.status_code == 302
     assert response.url == url
-    
+
     error_messages = list(get_messages(response.wsgi_request))
 
     assert len(error_messages) == 1
     assert error_messages[0].tags == "error"
-    assert error_messages[0].message == "Invalid CSV format: No unique identifier column is present. Please ensure one of Unique Reference Number or NHS Number is present in the file."
+    assert (
+        error_messages[0].message
+        == "Invalid CSV format: No unique identifier column is present. Please ensure one of Unique Reference Number or NHS Number is present in the file."
+    )
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/741
@@ -1113,8 +1132,8 @@ def test_old_template_headers(test_user, dummy_sheet_csv_old_headers):
 
     csv_upload_sync(test_user, results.df)
 
-    assert(Patient.objects.count() > 0)
-    assert(Visit.objects.count() > 0)
+    assert Patient.objects.count() > 0
+    assert Visit.objects.count() > 0
 
 
 @pytest.mark.django_db
@@ -1193,7 +1212,9 @@ def test_upload_without_headers(test_user, one_patient_two_visits):
 
 @pytest.mark.django_db
 def test_jersey_csv(test_user, one_patient_two_visits):
-    df = one_patient_two_visits.rename(columns={"NHS Number": "Unique Reference Number"})
+    df = one_patient_two_visits.rename(
+        columns={"NHS Number": "Unique Reference Number"}
+    )
     csv = df.to_csv(index=False, date_format="%d/%m/%Y")
 
     parsed_csv = read_csv_from_str(csv)
@@ -1201,7 +1222,9 @@ def test_jersey_csv(test_user, one_patient_two_visits):
 
 
 @pytest.mark.django_db
-def test_missing_identifier_columns(test_rcpch_user, one_patient_two_visits, client, tmp_path):
+def test_missing_identifier_columns(
+    test_rcpch_user, one_patient_two_visits, client, tmp_path
+):
     df = one_patient_two_visits.drop(["NHS Number"], axis=1)
 
     tmp_csv_path = tmp_path / "dummy_sheet_test.csv"
@@ -1210,22 +1233,19 @@ def test_missing_identifier_columns(test_rcpch_user, one_patient_two_visits, cli
     # Log in user
     client = login_and_verify_user(client, test_rcpch_user)
 
-    url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
+    url = reverse(
+        "pdu-upload-csv",
+        kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"},
+    )
 
     # Feed file into view
     with open(tmp_csv_path, "rb") as csv_file:
 
-        response = client.post(
-            url,
-            {
-                'csv_upload': csv_file
-            },
-            format='multipart'
-        )
+        response = client.post(url, {"csv_upload": csv_file}, format="multipart")
 
     assert response.status_code == 302
     assert response.url == url
-    
+
     error_messages = list(get_messages(response.wsgi_request))
     assert len(error_messages) == 1
     assert error_messages[0].tags == "error"
@@ -1237,32 +1257,31 @@ def test_missing_identifier_columns(test_rcpch_user, one_patient_two_visits, cli
 
 
 @pytest.mark.django_db
-def test_both_identifier_columns_causes_an_error(test_rcpch_user, one_patient_two_visits, client, tmp_path):
+def test_both_identifier_columns_causes_an_error(
+    test_rcpch_user, one_patient_two_visits, client, tmp_path
+):
     df = one_patient_two_visits
     df = df.assign(**{"Unique Reference Number": np.arange(df.shape[0])})
-    
+
     tmp_csv_path = tmp_path / "dummy_sheet_test.csv"
     df.to_csv(tmp_csv_path, index=False)
 
     # Log in user
     client = login_and_verify_user(client, test_rcpch_user)
 
-    url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
+    url = reverse(
+        "pdu-upload-csv",
+        kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"},
+    )
 
     # Feed file into view
     with open(tmp_csv_path, "rb") as csv_file:
 
-        response = client.post(
-            url,
-            {
-                'csv_upload': csv_file
-            },
-            format='multipart'
-        )
+        response = client.post(url, {"csv_upload": csv_file}, format="multipart")
 
     assert response.status_code == 302
     assert response.url == url
-    
+
     error_messages = list(get_messages(response.wsgi_request))
     assert len(error_messages) == 1
     assert error_messages[0].tags == "error"
@@ -1479,7 +1498,9 @@ def test_hba1c_value_ifcc_less_than_20(test_user, single_row_valid_df):
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -1501,7 +1522,9 @@ def test_hba1c_value_ifcc_more_than_195(test_user, single_row_valid_df):
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
@@ -1522,7 +1545,9 @@ def test_hba1c_value_dcct_more_than_20(test_user, single_row_valid_df):
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -1544,7 +1569,9 @@ def test_hba1c_value_dcct_less_than_3(test_user, single_row_valid_df):
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
@@ -1565,7 +1592,9 @@ def test_hba1c_missing(test_user, single_row_valid_df):
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
@@ -1596,7 +1625,9 @@ def test_treatment_closed_loop_passes_validation(test_user, single_row_valid_df)
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -1622,7 +1653,9 @@ def test_treatment_missing_closed_loop_form_fails_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -1650,7 +1683,9 @@ def test_treatment_mdi_but_closed_loop_selected_form_fails_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -1680,7 +1715,9 @@ def test_blood_pressure_values_passes_validation(test_user, single_row_valid_df)
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -1704,7 +1741,9 @@ def test_blood_pressure_missing_values_fails_validation(test_user, single_row_va
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -1733,7 +1772,9 @@ def test_blood_pressure_missing_date_form_fails_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -1769,7 +1810,9 @@ def test_systolic_blood_pressure_over_240_form_fails_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -1805,7 +1848,9 @@ def test_systolic_blood_pressure_below_50_form_fails_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -1841,7 +1886,9 @@ def test_diastolic_blood_pressure_over_120_form_fails_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -1877,7 +1924,9 @@ def test_diastolic_blood_pressure_below_20_form_fails_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -1912,7 +1961,9 @@ def test_decs_value_form_passes_validation(test_user, single_row_valid_df):
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -1940,14 +1991,16 @@ def test_decs_value_none_form_fails_validation(test_user, single_row_valid_df):
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert (
         "retinal_screening_result" in errors[0]
-    ), f"Retinal screening result should fail validation due to missing result, but passed."
+    ), "Retinal screening result should fail validation due to missing result, but passed."
 
     visit = Visit.objects.first()
     assert visit.retinal_screening_observation_date == datetime.date(
@@ -1968,14 +2021,16 @@ def test_decs_date_none_form_fails_validation(test_user, single_row_valid_df):
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert (
         "retinal_screening_observation_date" in errors[0]
-    ), f"Retinal screening date should fail validation due to missing date, but passed."
+    ), "Retinal screening date should fail validation due to missing date, but passed."
 
     visit = Visit.objects.first()
     assert (
@@ -2002,7 +2057,9 @@ def test_urine_albumin_value_form_passes_validation(test_user, single_row_valid_
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -2035,14 +2092,16 @@ def test_urine_albumin_value_below_range_form_fails_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert (
         "albumin_creatinine_ratio" in errors[0]
-    ), f"Urine albumin creatinine ratio should fail validation as < 3, but passed."
+    ), "Urine albumin creatinine ratio should fail validation as < 3, but passed."
 
     visit = Visit.objects.first()
 
@@ -2070,14 +2129,16 @@ def test_urine_albumin_value_above_range_form_fails_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert (
         "albumin_creatinine_ratio" in errors[0]
-    ), f"Urine albumin creatinine ratio should fail validation as > 50, but passed."
+    ), "Urine albumin creatinine ratio should fail validation as > 50, but passed."
 
     visit = Visit.objects.first()
 
@@ -2105,14 +2166,16 @@ def test_urine_albumin_value_missing_form_fails_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert (
         "albumin_creatinine_ratio" in errors[0]
-    ), f"Urine albumin creatinine level should fail validation as None, but passed."
+    ), "Urine albumin creatinine level should fail validation as None, but passed."
 
     visit = Visit.objects.first()
 
@@ -2140,14 +2203,16 @@ def test_urine_albumin_stage_missing_form_fails_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert (
         "albuminuria_stage" in errors[0]
-    ), f"Urine albumin creatinine stage should fail validation as None, but passed."
+    ), "Urine albumin creatinine stage should fail validation as None, but passed."
 
     visit = Visit.objects.first()
 
@@ -2175,14 +2240,16 @@ def test_urine_albumin_date_missing_form_fails_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert (
         "albumin_creatinine_ratio_date" in errors[0]
-    ), f"Urine albumin creatinine date should fail validation as None, but passed."
+    ), "Urine albumin creatinine date should fail validation as None, but passed."
 
     visit = Visit.objects.first()
 
@@ -2214,7 +2281,9 @@ def test_total_cholesterol_value_form_passes_validation(test_user, single_row_va
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -2245,14 +2314,16 @@ def test_total_cholesterol_value_above_reference_form_fails_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert (
         "total_cholesterol" in errors[0]
-    ), f"Total cholesterol should fail validation as above reference range, but passed."
+    ), "Total cholesterol should fail validation as above reference range, but passed."
 
     visit = Visit.objects.first()
 
@@ -2278,14 +2349,16 @@ def test_total_cholesterol_value_below_reference_form_fails_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert (
         "total_cholesterol" in errors[0]
-    ), f"Total cholesterol should fail validation as impossible, but passed."
+    ), "Total cholesterol should fail validation as impossible, but passed."
 
     visit = Visit.objects.first()
 
@@ -2311,14 +2384,16 @@ def test_total_cholesterol_value_missing_form_fails_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert (
         "total_cholesterol" in errors[0]
-    ), f"Total cholesterol should fail validation as None, but passed."
+    ), "Total cholesterol should fail validation as None, but passed."
 
     visit = Visit.objects.first()
 
@@ -2342,14 +2417,16 @@ def test_total_cholesterol_date_missing_form_fails_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert (
         "total_cholesterol_date" in errors[0]
-    ), f"Total cholesterol date should fail validation as None, but passed."
+    ), "Total cholesterol date should fail validation as None, but passed."
 
     visit = Visit.objects.first()
 
@@ -2379,7 +2456,9 @@ def test_thyroid_treatment_passes_validation(test_user, single_row_valid_df):
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -2405,7 +2484,9 @@ def test_thyroid_treatment_missing_fails_validation(test_user, single_row_valid_
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -2433,7 +2514,9 @@ def test_thyroid_treatment_date_missing_passes_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -2465,7 +2548,9 @@ def test_coeliac_screening_passes_validation(test_user, single_row_valid_df):
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -2490,7 +2575,9 @@ def test_coeliac_screening_missing_fails_validation(test_user, single_row_valid_
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -2515,7 +2602,9 @@ def test_coeliac_screening_date_missing_passes_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -2548,7 +2637,9 @@ def test_psychological_support_passes_validation(test_user, single_row_valid_df)
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -2576,7 +2667,9 @@ def test_psychological_support_missing_fails_validation(test_user, single_row_va
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -2606,7 +2699,9 @@ def test_psychological_support_date_missing_fails_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -2634,7 +2729,9 @@ def test_psychological_support_date_missing_fails_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -2665,7 +2762,9 @@ def test_smoking_status_passes_validation(test_user, single_row_valid_df):
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -2691,7 +2790,9 @@ def test_smoking_status_non_smoker_passes_validation(test_user, single_row_valid
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -2719,7 +2820,9 @@ def test_smoking_status_non_smoker_referral_date_provided_fails_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -2745,7 +2848,9 @@ def test_smoking_status_missing_fails_validation(test_user, single_row_valid_df)
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -2774,7 +2879,9 @@ def test_smoking_status_smoker_does_not_require_cessation_referral_date(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -2809,7 +2916,9 @@ def test_dietician_referral_status_additional_offered_form_passes_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -2837,7 +2946,9 @@ def test_dietician_no_additional_offered_form_passes_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -2867,7 +2978,9 @@ def test_dietician_no_additional_offered_date_provided_fail_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -2896,7 +3009,9 @@ def test_dietician_additional_offered_date_missing_passes_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -2926,7 +3041,9 @@ def test_dietician_additional_offered_no_but_date_offered_fail_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -2968,7 +3085,9 @@ def test_inpatient_admission_stabilisation_passes_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -3016,7 +3135,9 @@ def test_inpatient_admission_stabilisation_missing_date_fails_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -3056,7 +3177,9 @@ def test_inpatient_admission_stabilisation_discharge_date_before_admission_date_
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -3097,7 +3220,9 @@ def test_inpatient_admission_stabilisation_discharge_date_before_diagnosis_date_
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -3149,7 +3274,9 @@ def test_inpatient_admission_stabilisation_discharge_date_after_date_of_death_fa
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -3202,7 +3329,9 @@ def test_inpatient_admission_stabilisation_dka_additional_therapies_provided_fai
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -3252,7 +3381,9 @@ def test_inpatient_admission_stabilisation_hospital_admission_other_provided_fai
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -3300,7 +3431,9 @@ def test_inpatient_admission_dka_passes_validation(test_user, single_row_valid_d
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -3350,7 +3483,9 @@ def test_inpatient_admission_dka_additional_therapies_missing_fails_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -3400,7 +3535,9 @@ def test_inpatient_admission_dka_additional_therapies_hospital_admission_also_pr
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -3448,7 +3585,9 @@ def test_inpatient_admission_other_passes_validation(test_user, single_row_valid
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -3499,7 +3638,9 @@ def test_inpatient_admission_other_missing_fails_validation(
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -3539,7 +3680,9 @@ def test_visit_date_provided_passes_validation(test_user, single_row_valid_df):
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -3562,7 +3705,7 @@ def test_visit_date_missing_fails_validation(test_user, single_row_valid_df):
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=None)
 
-    assert "visit_date" in errors[0], f"Expected error in visit_date, but got None"
+    assert "visit_date" in errors[0], "Expected error in visit_date, but got None"
 
     visit = Visit.objects.first()
 
@@ -3581,7 +3724,9 @@ def test_visit_date_not_before_date_of_birth(test_user, single_row_valid_df):
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -3608,7 +3753,9 @@ def test_visit_date_not_after_date_of_death(test_user, single_row_valid_df):
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -3637,7 +3784,9 @@ def test_visit_date_not_before_diagnosis_date(test_user, single_row_valid_df):
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
@@ -3677,7 +3826,9 @@ def test_alternative_formats_for_sex(test_user, dummy_sheet_csv, alternative, ex
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, df, _audit_period=audit_period)
@@ -3700,7 +3851,9 @@ def test_mix_of_standard_and_alternative_formats_for_sex(test_user, dummy_sheet_
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     # Double check we do have different patients
@@ -3813,7 +3966,6 @@ def test_bad_data_for_positive_small_integer_fields(
             assert model_field in instance.errors
 
 
-
 @pytest.mark.parametrize(
     "model_field",
     [
@@ -3838,7 +3990,9 @@ def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, df, _audit_period=audit_period)
@@ -3936,7 +4090,9 @@ def test_bad_data_for_decimal_fields(test_user, dummy_sheet_csv, model_field):
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, df, _audit_period=audit_period)
@@ -3948,6 +4104,7 @@ def test_bad_data_for_decimal_fields(test_user, dummy_sheet_csv, model_field):
 
     assert getattr(instance, model_field) == None
     assert model_field in instance.errors
+
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/999
 @pytest.mark.django_db
@@ -3965,12 +4122,15 @@ def test_non_breaking_space_in_iso_8859_1_csv(test_user, dummy_sheet_csv):
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, df, _audit_period=audit_period)
 
     assert len(errors) == 0
+
 
 @pytest.mark.django_db
 def test_remove_empty_spaces_from_empty_fields(test_user, dummy_sheet_csv):
@@ -3980,14 +4140,22 @@ def test_remove_empty_spaces_from_empty_fields(test_user, dummy_sheet_csv):
     one_row_csv = modify_raw_csv(
         dummy_sheet_csv,
         end=2,  # exclusive
-        replacements=[{"row": 1, "column": "Only complete if DKA selected in previous question: During this DKA admission did the patient receive any of the following therapies?", "value": "   "}],
+        replacements=[
+            {
+                "row": 1,
+                "column": "Only complete if DKA selected in previous question: During this DKA admission did the patient receive any of the following therapies?",
+                "value": "   ",
+            }
+        ],
     )
 
     df = read_csv_from_str(one_row_csv).df
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, df, _audit_period=audit_period)
@@ -3995,7 +4163,10 @@ def test_remove_empty_spaces_from_empty_fields(test_user, dummy_sheet_csv):
     assert len(errors) == 0
 
     patient = Patient.objects.first()
-    assert Visit.objects.filter(patient=patient).first().dka_additional_therapies == None, f"Expected empty string for DKA additional therapies, but got {Visit.objects.filter(patient=patient).first().dka_additional_therapies}"
+    assert (
+        Visit.objects.filter(patient=patient).first().dka_additional_therapies == None
+    ), f"Expected empty string for DKA additional therapies, but got {Visit.objects.filter(patient=patient).first().dka_additional_therapies}"
+
 
 @pytest.mark.django_db
 def test_remove_empty_spaces_in_empty_date_fields(test_user, dummy_sheet_csv):
@@ -4006,19 +4177,31 @@ def test_remove_empty_spaces_in_empty_date_fields(test_user, dummy_sheet_csv):
     )
 
     parsed_csv = read_csv_from_str(one_row_csv)
-    assert len(parsed_csv.errors_to_return) == 0, f"Expected no errors when parsing CSV, got {parsed_csv.errors_to_return}"
+    assert (
+        len(parsed_csv.errors_to_return) == 0
+    ), f"Expected no errors when parsing CSV, got {parsed_csv.errors_to_return}"
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=parsed_csv.df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=parsed_csv.df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
-    errors = csv_upload_sync(test_user, parsed_csv.df, _audit_period=audit_period, errors_to_return=parsed_csv.errors_to_return)
+    errors = csv_upload_sync(
+        test_user,
+        parsed_csv.df,
+        _audit_period=audit_period,
+        errors_to_return=parsed_csv.errors_to_return,
+    )
 
     assert len(errors) == 0, f"Expected no errors when uploading CSV, got {errors}"
 
+
 @pytest.mark.django_db
-def test_csv_height_weight_fields_with_units_have_units_removed(test_user, dummy_sheet_csv):
+def test_csv_height_weight_fields_with_units_have_units_removed(
+    test_user, dummy_sheet_csv
+):
     """
     Test that height and weight fields with units have the units removed
     """
@@ -4035,7 +4218,9 @@ def test_csv_height_weight_fields_with_units_have_units_removed(test_user, dummy
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     errors = csv_upload_sync(test_user, df, _audit_period=audit_period)
@@ -4045,8 +4230,13 @@ def test_csv_height_weight_fields_with_units_have_units_removed(test_user, dummy
     patient = Patient.objects.first()
     visit = Visit.objects.filter(patient=patient).first()
 
-    assert visit.height == Decimal("150.0"), f"Expected height to be 150.0, but got {visit.height}"
-    assert visit.weight == Decimal("50.0"), f"Expected weight to be 50.0, but got {visit.weight}"
+    assert visit.height == Decimal(
+        "150.0"
+    ), f"Expected height to be 150.0, but got {visit.height}"
+    assert visit.weight == Decimal(
+        "50.0"
+    ), f"Expected weight to be 50.0, but got {visit.weight}"
+
 
 @pytest.mark.django_db
 def test_submission_has_audit_period_attached(test_user, single_row_valid_df):
@@ -4059,7 +4249,10 @@ def test_submission_has_audit_period_attached(test_user, single_row_valid_df):
     assert Submission.objects.count() == 1, "Expected one submission to be created"
     submission = Submission.objects.first()
 
-    assert submission.audit_period == audit_period, f"Expected submission to have audit period {audit_period}, but got {submission.audit_period}"
+    assert (
+        submission.audit_period == audit_period
+    ), f"Expected submission to have audit period {audit_period}, but got {submission.audit_period}"
+
 
 @pytest.mark.django_db
 def test_visit_with_too_big_decimal_number_still_saves(test_user, dummy_sheet_csv):
@@ -4070,50 +4263,76 @@ def test_visit_with_too_big_decimal_number_still_saves(test_user, dummy_sheet_cs
     )
 
     parsed_csv = read_csv_from_str(one_row_csv)
-    assert len(parsed_csv.errors_to_return) == 0, f"Expected no errors when parsing CSV, got {parsed_csv.errors_to_return}"
+    assert (
+        len(parsed_csv.errors_to_return) == 0
+    ), f"Expected no errors when parsing CSV, got {parsed_csv.errors_to_return}"
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=parsed_csv.df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=parsed_csv.df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
-    errors = csv_upload_sync(test_user, parsed_csv.df, _audit_period=audit_period, errors_to_return=parsed_csv.errors_to_return)
-    
+    errors = csv_upload_sync(
+        test_user,
+        parsed_csv.df,
+        _audit_period=audit_period,
+        errors_to_return=parsed_csv.errors_to_return,
+    )
+
     assert "weight" in errors[0], f"Expected weight to be in errors, but got {errors}"
 
     assert Visit.objects.count() == 1, "Expected one visit to be created"
     visit = Visit.objects.first()
 
     assert visit.weight == Decimal(0)
-    assert "weight" in visit.errors, f"Expected weight to have an error, but got {visit.errors}"
+    assert (
+        "weight" in visit.errors
+    ), f"Expected weight to have an error, but got {visit.errors}"
+
 
 @pytest.mark.django_db
 def test_visit_with_too_precise_decimal_number_is_rounded(test_user, dummy_sheet_csv):
     one_row_csv = modify_raw_csv(
         dummy_sheet_csv,
         end=2,  # exclusive
-        replacements=[{"row": 1, "column": "Patient Weight (kg)", "value": "34.12345612"}],
+        replacements=[
+            {"row": 1, "column": "Patient Weight (kg)", "value": "34.12345612"}
+        ],
     )
 
     parsed_csv = read_csv_from_str(one_row_csv)
-    assert len(parsed_csv.errors_to_return) == 0, f"Expected no errors when parsing CSV, got {parsed_csv.errors_to_return}"
+    assert (
+        len(parsed_csv.errors_to_return) == 0
+    ), f"Expected no errors when parsing CSV, got {parsed_csv.errors_to_return}"
 
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=parsed_csv.df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=parsed_csv.df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
-    errors = csv_upload_sync(test_user, parsed_csv.df, errors_to_return=parsed_csv.errors_to_return, _audit_period=audit_period)
+    errors = csv_upload_sync(
+        test_user,
+        parsed_csv.df,
+        errors_to_return=parsed_csv.errors_to_return,
+        _audit_period=audit_period,
+    )
     assert len(errors) == 0, f"Expected no errors when uploading CSV, got {errors}"
 
     assert Visit.objects.count() == 1, "Expected one visit to be created"
     visit = Visit.objects.first()
 
-    assert visit.weight == Decimal('34.1')
+    assert visit.weight == Decimal("34.1")
+
 
 # testing dates outside of the range of the audit period
 @pytest.mark.django_db
-def test_visit_form_dates_outside_of_audit_period(test_user, single_row_valid_df, seed_audit_periods_fixture):
+def test_visit_form_dates_outside_of_audit_period(
+    test_user, single_row_valid_df, seed_audit_periods_fixture
+):
     """
     Test that all dates outside in a visit of the audit period are flagged as errors, but the visit is still created
     2024 / 2025 audit period is seeded in the fixture
@@ -4137,47 +4356,68 @@ def test_visit_form_dates_outside_of_audit_period(test_user, single_row_valid_df
         hospital_admission_date
         **hospital_discharge_date NOT INCLUDED AS IT IS POSSIBLE TO BE DISCHARGED AFTER THE AUDIT ENDS**
     """
-    audit_period = AuditPeriod.objects.first() # this will be 2024 / 2025
+    audit_period = AuditPeriod.objects.first()  # this will be 2024 / 2025
     # set date of birth to 01/01/2015 as this cannot be after the other mocked dates
     single_row_valid_df.loc[0, "Date of Birth"] = "01/01/2015"
     # set date of diabetes diagnosis to 01/01/2018 as this cannot be after the other mocked dates
     single_row_valid_df.loc[0, "Date of Diabetes Diagnosis"] = "01/01/2018"
     # set a smoking cessation outcome
-    single_row_valid_df.loc[0, "Does the patient smoke?"] = 2 # Current smoker
+    single_row_valid_df.loc[0, "Does the patient smoke?"] = 2  # Current smoker
     # set reason for admission to 1 (stabilisation) as this is required for the hospital admission dates
-    single_row_valid_df.loc[0, "Reason for admission"] = 1 # Stabilisation
+    single_row_valid_df.loc[0, "Reason for admission"] = 1  # Stabilisation
 
     # set all the dates associated with the visit to 01/01/2020
     for date_field in ALL_VISIT_DATES:
         single_row_valid_df.loc[0, date_field] = "01/01/2020"
-    
-    # Remove the dates not included in the test
-    ALL_VISIT_DATES.remove(("carbohydrate_counting_level_three_education_date", "Date of Level 3 carbohydrate counting education received"))
-    ALL_VISIT_DATES.remove(("hospital_discharge_date", "Discharge date (Hospital provider spell)"))
 
-    assert Visit.objects.count() == 0, "Expected no visits to be created before the test"
-    
+    # Remove the dates not included in the test
+    ALL_VISIT_DATES.remove(
+        (
+            "carbohydrate_counting_level_three_education_date",
+            "Date of Level 3 carbohydrate counting education received",
+        )
+    )
+    ALL_VISIT_DATES.remove(
+        ("hospital_discharge_date", "Discharge date (Hospital provider spell)")
+    )
+
+    assert (
+        Visit.objects.count() == 0
+    ), "Expected no visits to be created before the test"
+
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
     for date_field in ALL_VISIT_DATES:
-        assert date_field[0] in errors[0], f"Expected {date_field} to be in errors, but got {errors}"
-    assert Visit.objects.count() == 1, "Expected the visit still to be created even though visit date outside of audit period"
+        assert (
+            date_field[0] in errors[0]
+        ), f"Expected {date_field} to be in errors, but got {errors}"
+    assert (
+        Visit.objects.count() == 1
+    ), "Expected the visit still to be created even though visit date outside of audit period"
 
 
 @pytest.mark.django_db
-def test_thyroid_and_coeliac_dates_within_90_days_before_diagnosis_pass_validation(test_user, single_row_valid_df):
+def test_thyroid_and_coeliac_dates_within_90_days_before_diagnosis_pass_validation(
+    test_user, single_row_valid_df
+):
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     diagnosis_date = audit_period.start_date + datetime.timedelta(days=100)
     single_row_valid_df.loc[0, "Date of Diabetes Diagnosis"] = diagnosis_date
 
     coeliac_screening_date = diagnosis_date - datetime.timedelta(days=56)
-    single_row_valid_df.loc[0, "Observation Date: Coeliac Disease Screening"] = coeliac_screening_date
+    single_row_valid_df.loc[0, "Observation Date: Coeliac Disease Screening"] = (
+        coeliac_screening_date
+    )
 
     thyroid_function_date = diagnosis_date - datetime.timedelta(days=89)
-    single_row_valid_df.loc[0, "Observation Date: Thyroid Function"] = thyroid_function_date
+    single_row_valid_df.loc[0, "Observation Date: Thyroid Function"] = (
+        thyroid_function_date
+    )
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
@@ -4186,20 +4426,28 @@ def test_thyroid_and_coeliac_dates_within_90_days_before_diagnosis_pass_validati
 
 
 @pytest.mark.django_db
-def test_thyroid_and_coeliac_dates_earlier_than_90_days_before_diagnosis_fail_validation(test_user, single_row_valid_df):
+def test_thyroid_and_coeliac_dates_earlier_than_90_days_before_diagnosis_fail_validation(
+    test_user, single_row_valid_df
+):
     # Set the audit period to be valid for the visit date at the outset
     audit_period = AuditPeriod.objects.first()
-    audit_period.start_date = current_audit_year_start_date(date_instance=single_row_valid_df["Visit/Appointment Date"][0].date())
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=single_row_valid_df["Visit/Appointment Date"][0].date()
+    )
     audit_period.end_date = audit_period.start_date + relativedelta(years=1)
 
     diagnosis_date = audit_period.start_date + datetime.timedelta(days=100)
     single_row_valid_df.loc[0, "Date of Diabetes Diagnosis"] = diagnosis_date
 
     coeliac_screening_date = diagnosis_date - datetime.timedelta(days=91)
-    single_row_valid_df.loc[0, "Observation Date: Coeliac Disease Screening"] = coeliac_screening_date
+    single_row_valid_df.loc[0, "Observation Date: Coeliac Disease Screening"] = (
+        coeliac_screening_date
+    )
 
     thyroid_function_date = diagnosis_date - datetime.timedelta(days=100)
-    single_row_valid_df.loc[0, "Observation Date: Thyroid Function"] = thyroid_function_date
+    single_row_valid_df.loc[0, "Observation Date: Thyroid Function"] = (
+        thyroid_function_date
+    )
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
@@ -4209,74 +4457,72 @@ def test_thyroid_and_coeliac_dates_earlier_than_90_days_before_diagnosis_fail_va
 
 @pytest.mark.django_db
 def test_uploading_csv_against_incorrect_pdu(
-    single_row_valid_df,
-    tmp_path,
-    client,
-    test_rcpch_user
+    single_row_valid_df, tmp_path, client, test_rcpch_user
 ):
     single_row_valid_df["PDU Number"] = RCPCH_PZ_CODE
 
     # write back into temp
-    tmp_csv_path = tmp_path / "dummy_sheet_test_csv_upload_test_uploading_csv_against_incorrect_pdu.csv"
+    tmp_csv_path = (
+        tmp_path
+        / "dummy_sheet_test_csv_upload_test_uploading_csv_against_incorrect_pdu.csv"
+    )
     single_row_valid_df.to_csv(tmp_csv_path, index=False)
 
     # Log in user
     client = login_and_verify_user(client, test_rcpch_user)
 
-    url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
+    url = reverse(
+        "pdu-upload-csv",
+        kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"},
+    )
 
     # Feed file to view
     with open(tmp_csv_path, "rb") as csv_file:
-        response = client.post(
-            url,
-            {
-                'csv_upload': csv_file
-            },
-            format='multipart'
-        )
+        response = client.post(url, {"csv_upload": csv_file}, format="multipart")
 
     assert response.status_code == 302
 
     error_messages = list(get_messages(response.wsgi_request))
     assert error_messages[0].level_tag == "error"
 
-    assert Submission.objects.count() == 0, "No submission should be created for incorrect PDU"
+    assert (
+        Submission.objects.count() == 0
+    ), "No submission should be created for incorrect PDU"
 
 
 @pytest.mark.django_db
 def test_uploading_csv_with_conflicting_pdu_numbers(
-    two_patients_with_one_visit_each,
-    tmp_path,
-    client,
-    test_rcpch_user
+    two_patients_with_one_visit_each, tmp_path, client, test_rcpch_user
 ):
     two_patients_with_one_visit_each.at[0, "PDU Number"] = RCPCH_PZ_CODE
 
     # write back into temp
-    tmp_csv_path = tmp_path / "dummy_sheet_test_csv_upload_test_uploading_csv_with_conflicting_pdu_numbers.csv"
+    tmp_csv_path = (
+        tmp_path
+        / "dummy_sheet_test_csv_upload_test_uploading_csv_with_conflicting_pdu_numbers.csv"
+    )
     two_patients_with_one_visit_each.to_csv(tmp_csv_path, index=False)
 
     # Log in user
     client = login_and_verify_user(client, test_rcpch_user)
 
-    url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
+    url = reverse(
+        "pdu-upload-csv",
+        kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"},
+    )
 
     # Feed file to view
     with open(tmp_csv_path, "rb") as csv_file:
-        response = client.post(
-            url,
-            {
-                'csv_upload': csv_file
-            },
-            format='multipart'
-        )
+        response = client.post(url, {"csv_upload": csv_file}, format="multipart")
 
     assert response.status_code == 302
 
     error_messages = list(get_messages(response.wsgi_request))
     assert error_messages[0].level_tag == "error"
 
-    assert Submission.objects.count() == 0, "No submission should be created for incorrect PDU"
+    assert (
+        Submission.objects.count() == 0
+    ), "No submission should be created for incorrect PDU"
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1344
@@ -4285,150 +4531,165 @@ def test_uploading_csv_with_multiple_pdu_numbers_including_one_missing(
     two_patients_first_with_two_visits_second_with_one,
     tmp_path,
     client,
-    test_rcpch_user
+    test_rcpch_user,
 ):
     two_patients_first_with_two_visits_second_with_one.at[0, "PDU Number"] = None
-    two_patients_first_with_two_visits_second_with_one.at[1, "PDU Number"] = RCPCH_PZ_CODE
-    two_patients_first_with_two_visits_second_with_one.at[2, "PDU Number"] = ALDER_HEY_PZ_CODE
+    two_patients_first_with_two_visits_second_with_one.at[1, "PDU Number"] = (
+        RCPCH_PZ_CODE
+    )
+    two_patients_first_with_two_visits_second_with_one.at[2, "PDU Number"] = (
+        ALDER_HEY_PZ_CODE
+    )
 
     # write back into temp
-    tmp_csv_path = tmp_path / "dummy_sheet_test_csv_upload_test_uploading_csv_with_multiple_pdu_numbers_including_one_missing.csv"
+    tmp_csv_path = (
+        tmp_path
+        / "dummy_sheet_test_csv_upload_test_uploading_csv_with_multiple_pdu_numbers_including_one_missing.csv"
+    )
     two_patients_first_with_two_visits_second_with_one.to_csv(tmp_csv_path, index=False)
 
     # Log in user
     client = login_and_verify_user(client, test_rcpch_user)
 
-    url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
+    url = reverse(
+        "pdu-upload-csv",
+        kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"},
+    )
 
     # Feed file to view
     with open(tmp_csv_path, "rb") as csv_file:
-        response = client.post(
-            url,
-            {
-                'csv_upload': csv_file
-            },
-            format='multipart'
-        )
+        response = client.post(url, {"csv_upload": csv_file}, format="multipart")
 
     assert response.status_code == 302
 
     error_messages = list(get_messages(response.wsgi_request))
     assert error_messages[0].level_tag == "error"
 
-    assert Submission.objects.count() == 0, "No submission should be created for incorrect PDU"
+    assert (
+        Submission.objects.count() == 0
+    ), "No submission should be created for incorrect PDU"
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1344
 # Found as part of debugging the above issue so including for maximum regression proofing hopefully
 @pytest.mark.django_db
 def test_uploading_csv_with_first_row_missing_pdu_number(
-    two_patients_with_one_visit_each,
-    tmp_path,
-    client,
-    test_rcpch_user
+    two_patients_with_one_visit_each, tmp_path, client, test_rcpch_user
 ):
-    two_patients_with_one_visit_each = two_patients_with_one_visit_each.assign(**{"PDU Number": "PZ004"})
+    two_patients_with_one_visit_each = two_patients_with_one_visit_each.assign(
+        **{"PDU Number": "PZ004"}
+    )
     two_patients_with_one_visit_each.at[0, "PDU Number"] = None
 
     # write back into temp
-    tmp_csv_path = tmp_path / "dummy_sheet_test_csv_upload_test_uploading_csv_with_first_row_missing_pdu_number.csv"
+    tmp_csv_path = (
+        tmp_path
+        / "dummy_sheet_test_csv_upload_test_uploading_csv_with_first_row_missing_pdu_number.csv"
+    )
     two_patients_with_one_visit_each.to_csv(tmp_csv_path, index=False)
 
     # Log in user
     client = login_and_verify_user(client, test_rcpch_user)
 
-    url = reverse("pdu-upload-csv", kwargs={ "pz_code": "PZ004", "audit_period": "2025-2026"})
+    url = reverse(
+        "pdu-upload-csv", kwargs={"pz_code": "PZ004", "audit_period": "2025-2026"}
+    )
 
     # Feed file to view
     with open(tmp_csv_path, "rb") as csv_file:
-        response = client.post(
-            url,
-            {
-                'csv_upload': csv_file
-            },
-            format='multipart'
-        )
+        response = client.post(url, {"csv_upload": csv_file}, format="multipart")
 
     assert response.status_code == 302
 
-    redirect_url = reverse("pdu-upload-csv-in-progress", kwargs={ "pz_code": "PZ004", "audit_period": "2025-2026"})
+    redirect_url = reverse(
+        "pdu-upload-csv-in-progress",
+        kwargs={"pz_code": "PZ004", "audit_period": "2025-2026"},
+    )
     assert response.url == redirect_url
-    
-    assert Submission.objects.count() == 1, "Submission should be created for upload where first row is missing PDU number but subsequent rows have correct PDU number"
+
+    assert (
+        Submission.objects.count() == 1
+    ), "Submission should be created for upload where first row is missing PDU number but subsequent rows have correct PDU number"
     assert Submission.objects.first().paediatric_diabetes_unit.pz_code == "PZ004"
 
 
 @pytest.mark.django_db
 def test_uploading_csv_with_pdu_number_missing_leading_pz(
-    two_patients_with_one_visit_each,
-    tmp_path,
-    client,
-    test_rcpch_user
+    two_patients_with_one_visit_each, tmp_path, client, test_rcpch_user
 ):
-    two_patients_with_one_visit_each = two_patients_with_one_visit_each.assign(**{"PDU Number": "004"})
+    two_patients_with_one_visit_each = two_patients_with_one_visit_each.assign(
+        **{"PDU Number": "004"}
+    )
 
     # write back into temp
-    tmp_csv_path = tmp_path / "dummy_sheet_test_csv_upload_test_uploading_csv_with_pdu_number_missing_leading_pz.csv"
+    tmp_csv_path = (
+        tmp_path
+        / "dummy_sheet_test_csv_upload_test_uploading_csv_with_pdu_number_missing_leading_pz.csv"
+    )
     two_patients_with_one_visit_each.to_csv(tmp_csv_path, index=False)
 
     # Log in user
     client = login_and_verify_user(client, test_rcpch_user)
 
-    url = reverse("pdu-upload-csv", kwargs={ "pz_code": "PZ004", "audit_period": "2025-2026"})
+    url = reverse(
+        "pdu-upload-csv", kwargs={"pz_code": "PZ004", "audit_period": "2025-2026"}
+    )
 
     # Feed file to view
     with open(tmp_csv_path, "rb") as csv_file:
-        response = client.post(
-            url,
-            {
-                'csv_upload': csv_file
-            },
-            format='multipart'
-        )
+        response = client.post(url, {"csv_upload": csv_file}, format="multipart")
 
     assert response.status_code == 302
 
-    redirect_url = reverse("pdu-upload-csv-in-progress", kwargs={ "pz_code": "PZ004", "audit_period": "2025-2026"})
+    redirect_url = reverse(
+        "pdu-upload-csv-in-progress",
+        kwargs={"pz_code": "PZ004", "audit_period": "2025-2026"},
+    )
     assert response.url == redirect_url
-    
-    assert Submission.objects.count() == 1, "Submission should be created for PDU with missing leading PZ"
+
+    assert (
+        Submission.objects.count() == 1
+    ), "Submission should be created for PDU with missing leading PZ"
     assert Submission.objects.first().paediatric_diabetes_unit.pz_code == "PZ004"
 
 
 @pytest.mark.django_db
 def test_uploading_csv_with_pdu_number_missing_leading_zeros(
-    two_patients_with_one_visit_each,
-    tmp_path,
-    client,
-    test_rcpch_user
+    two_patients_with_one_visit_each, tmp_path, client, test_rcpch_user
 ):
-    two_patients_with_one_visit_each = two_patients_with_one_visit_each.assign(**{"PDU Number": "4"})
+    two_patients_with_one_visit_each = two_patients_with_one_visit_each.assign(
+        **{"PDU Number": "4"}
+    )
 
     # write back into temp
-    tmp_csv_path = tmp_path / "dummy_sheet_test_csv_upload_ttest_uploading_csv_with_pdu_number_missing_leading_zeros.csv"
+    tmp_csv_path = (
+        tmp_path
+        / "dummy_sheet_test_csv_upload_ttest_uploading_csv_with_pdu_number_missing_leading_zeros.csv"
+    )
     two_patients_with_one_visit_each.to_csv(tmp_csv_path, index=False)
 
     # Log in user
     client = login_and_verify_user(client, test_rcpch_user)
 
-    url = reverse("pdu-upload-csv", kwargs={ "pz_code": "PZ004", "audit_period": "2025-2026"})
+    url = reverse(
+        "pdu-upload-csv", kwargs={"pz_code": "PZ004", "audit_period": "2025-2026"}
+    )
 
     # Feed file to view
     with open(tmp_csv_path, "rb") as csv_file:
-        response = client.post(
-            url,
-            {
-                'csv_upload': csv_file
-            },
-            format='multipart'
-        )
+        response = client.post(url, {"csv_upload": csv_file}, format="multipart")
 
     assert response.status_code == 302
 
-    redirect_url = reverse("pdu-upload-csv-in-progress", kwargs={ "pz_code": "PZ004", "audit_period": "2025-2026"})
+    redirect_url = reverse(
+        "pdu-upload-csv-in-progress",
+        kwargs={"pz_code": "PZ004", "audit_period": "2025-2026"},
+    )
     assert response.url == redirect_url
 
-    assert Submission.objects.count() == 1, "Submission should be created for PDU with missing leading zeroes"
+    assert (
+        Submission.objects.count() == 1
+    ), "Submission should be created for PDU with missing leading zeroes"
     assert Submission.objects.first().paediatric_diabetes_unit.pz_code == "PZ004"
 
 
@@ -4467,7 +4728,9 @@ def test_conflicting_ethnicity(test_user, one_patient_with_four_visits):
 
 
 @pytest.mark.django_db
-def test_conflicting_ethnicity_where_null_is_the_most_common_value(test_user, one_patient_with_four_visits):
+def test_conflicting_ethnicity_where_null_is_the_most_common_value(
+    test_user, one_patient_with_four_visits
+):
     df = one_patient_with_four_visits
 
     df.loc[0, "Ethnic Category"] = ETHNICITIES[0][0]
@@ -4505,7 +4768,8 @@ def test_conflicting_date_of_birth_where_null_is_the_only_value(
     seed_groups_per_function_fixture,
     seed_users_per_function_fixture,
     seed_audit_periods_per_function_fixture,
-    one_patient_with_four_visits):
+    one_patient_with_four_visits,
+):
     # As this test needs full transaction support we can't use our session fixtures
     test_user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE
@@ -4550,7 +4814,9 @@ def test_conflicting_leaving_reason(test_user, one_patient_with_four_visits):
 
 
 @pytest.mark.django_db
-def test_conflict_resolved_leaving_reason_must_have_date_attached(test_user, one_patient_with_four_visits):
+def test_conflict_resolved_leaving_reason_must_have_date_attached(
+    test_user, one_patient_with_four_visits
+):
     df = one_patient_with_four_visits
 
     df.loc[0, "Reason for leaving service"] = LEAVE_PDU_REASONS[0][0]
@@ -4588,7 +4854,9 @@ def test_conflicting_diagnosis_date(test_user, one_patient_with_four_visits):
 
 
 @pytest.mark.django_db
-def test_conflicting_diabetes_type_where_last_row_is_null(test_user, one_patient_with_four_visits):
+def test_conflicting_diabetes_type_where_last_row_is_null(
+    test_user, one_patient_with_four_visits
+):
     df = one_patient_with_four_visits
 
     df.loc[0, "Diabetes Type"] = DIABETES_TYPES[0][0]

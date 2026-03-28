@@ -8,7 +8,7 @@ from datetime import date, datetime, timedelta
 # Python imports
 from decimal import Decimal
 from pprint import pformat
-from typing import Literal, Optional, Tuple, Union
+from typing import Literal
 
 from dateutil.relativedelta import relativedelta
 
@@ -16,6 +16,7 @@ from dateutil.relativedelta import relativedelta
 from django.db.models import (
     Case,
     Count,
+    DecimalField,
     Exists,
     F,
     IntegerField,
@@ -25,7 +26,6 @@ from django.db.models import (
     Subquery,
     Sum,
     When,
-    DecimalField,
 )
 
 # NPDA Imports
@@ -250,7 +250,7 @@ class CalculateKPIS:
 
     def _run_kpi_calculation_method(
         self, kpi_method_name: str
-    ) -> Union[KPIResult | str]:
+    ) -> KPIResult | str:
         """Will find and run kpi calculation method
         (name schema is calculation_KPI_NAME_MAP_VALUE)
         """
@@ -275,9 +275,9 @@ class CalculateKPIS:
         self,
         eligible: QuerySet[Patient],
         passed: QuerySet[Patient],
-        ineligible: Optional[QuerySet[Patient]] = None,
-        failed: Optional[QuerySet[Patient]] = None,
-    ) -> Optional[dict[str, QuerySet[Patient]]]:
+        ineligible: QuerySet[Patient] | None = None,
+        failed: QuerySet[Patient] | None = None,
+    ) -> dict[str, QuerySet[Patient]] | None:
         """Helper method to get a dictionary of querysets for patients.
 
         if `self.return_pt_querysets` is False, will return None
@@ -332,7 +332,7 @@ class CalculateKPIS:
 
         # Set the query set as an attribute to be used in subsequent KPI calculations
         self.total_kpi_1_eligible_pts_base_query_set = self.patients.filter(
-            (
+
                 # Valid attributes
                 (Q(nhs_number__isnull=False) | Q(unique_reference_number__isnull=False))
                 & Q(date_of_birth__isnull=False)
@@ -340,7 +340,7 @@ class CalculateKPIS:
                 & Q(visit__visit_date__range=(self.AUDIT_DATE_RANGE))
                 # Below the age of 25 at the start of the audit period
                 & Q(date_of_birth__gt=self.audit_start_date - relativedelta(years=25))
-            )
+
         ).distinct()  # When you filter on a related model field
         # (visit__visit_date__range), Django performs a join between the
         # Patient model and the Visit model. If a patient has multiple visits
@@ -565,7 +565,7 @@ class CalculateKPIS:
 
     def _get_kpi_3_total_t1dm_pts_and_count(
         self,
-    ) -> Tuple[QuerySet, int]:
+    ) -> tuple[QuerySet, int]:
         """
         Returns the base query set for KPI 3 and the total count of eligible patients
         """
@@ -819,7 +819,7 @@ class CalculateKPIS:
         # (additionally specifies visit date). So we need to make a new
         # query set
         eligible_patients = self.patients.filter(
-            (
+
                 # Valid attributes
                 (Q(nhs_number__isnull=False) | Q(unique_reference_number__isnull=False))
                 & Q(date_of_birth__isnull=False)
@@ -868,7 +868,7 @@ class CalculateKPIS:
                         )
                     )
                 )
-            )
+
         ).distinct()  # the reason for distinct is same as KPI1 (see comments).
         # This time, was failing tests for KPI 41-42.
 
@@ -4232,11 +4232,11 @@ class CalculateKPIS:
             del item["postcode"]
             logger.debug(pformat(item) + "\n")
 
-        logger.debug(f"====================")
+        logger.debug("====================")
 
     def _get_total_kpi_1_pts_and_count(
         self,
-    ) -> Tuple[QuerySet[Patient], int]:
+    ) -> tuple[QuerySet[Patient], int]:
         """Enables reuse of the base query set for KPI 1
 
         If running calculation methods in order, this attribute will be set in calculate_kpi_1_total_eligible().
@@ -4258,7 +4258,7 @@ class CalculateKPIS:
 
     def _get_total_kpi_2_pts_and_count(
         self,
-    ) -> Tuple[QuerySet[Patient], int]:
+    ) -> tuple[QuerySet[Patient], int]:
         """Enables reuse of the base query set for KPI 2
 
         If running calculation methods in order, this attribute will be set in calculate_kpi_2_total_new_diagnoses().
@@ -4280,7 +4280,7 @@ class CalculateKPIS:
 
     def _get_total_kpi_5_total_t1dm_complete_year_pts_and_count(
         self,
-    ) -> Tuple[QuerySet, int]:
+    ) -> tuple[QuerySet, int]:
         """Enables reuse of the base query set for KPI 5
 
         If running calculation methods in order, this attribute will be set in calculate_kpi_5_total_t1dm_complete_year().
@@ -4302,7 +4302,7 @@ class CalculateKPIS:
 
     def _get_total_kpi_6_total_t1dm_complete_year_gte_12yo_pts_and_count(
         self,
-    ) -> Tuple[QuerySet, int]:
+    ) -> tuple[QuerySet, int]:
         """Enables reuse of the base query set for KPI 6
 
         If running calculation methods in order, this attribute will be set in calculate_kpi_6_total_t1dm_complete_year_gte_12yo().
@@ -4324,7 +4324,7 @@ class CalculateKPIS:
 
     def _get_total_kpi_7_pts_and_count(
         self,
-    ) -> Tuple[QuerySet, int]:
+    ) -> tuple[QuerySet, int]:
         """Enables reuse of the base query set for KPI 7
 
         If running calculation methods in order, this attribute will be set in calculate_kpi_7_total_t1dm_complete_year_gte_12yo().
@@ -4346,7 +4346,7 @@ class CalculateKPIS:
 
     def _get_total_pts_t1dm_diag_90D_before_audit_end_base_query_set_and_total_count(
         self,
-    ) -> Tuple[QuerySet, int]:
+    ) -> tuple[QuerySet, int]:
         """Enables reuse of the base query set for denominator in KPIS 41-43
         (patients with T1DM, diagnosed at least 90 days before audit end
         date).

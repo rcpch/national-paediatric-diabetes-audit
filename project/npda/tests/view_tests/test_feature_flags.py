@@ -1,14 +1,13 @@
 import pytest
-
 from django.urls import reverse
 
 from project.npda.models import NPDAUser
+from project.npda.tests.constants_for_tests import ALDER_HEY_PZ_CODE
+from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
 from project.npda.tests.UserDataClasses import (
     test_user_audit_centre_editor_data,
     test_user_rcpch_audit_team_data,
 )
-from project.npda.tests.constants_for_tests import ALDER_HEY_PZ_CODE
-from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
 from project.npda.tests.utils import login_and_verify_user
 
 

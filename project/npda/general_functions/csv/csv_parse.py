@@ -1,26 +1,26 @@
 # python imports
-from dataclasses import dataclass
+import collections
 import logging
 import re
-import collections
+from dataclasses import dataclass
 
-# Django imports
-from django.core.exceptions import ValidationError
+import numpy as np
 
 # Third-party imports
 import pandas as pd
-import numpy as np
+
+# Django imports
 
 # RCPCH imports
 from project.constants import (
     ALL_DATES,
     CSV_DATA_TYPES_MINUS_DATES,
+    CSV_HEADING_OBJECTS,
+    ENGLAND_CSV_DATA_TYPES,
+    JERSEY_CSV_DATA_TYPES,
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
-    CSV_HEADING_OBJECTS,
     csv_definition_for,
-    JERSEY_CSV_DATA_TYPES,
-    ENGLAND_CSV_DATA_TYPES,
 )
 
 # Logging setup
@@ -60,7 +60,9 @@ def csv_parse(csv_file):
 
     errors_to_return = collections.defaultdict(lambda: collections.defaultdict(list))
 
-    HEADINGS_OBJECTS = UNIQUE_IDENTIFIER_ENGLAND + UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
+    HEADINGS_OBJECTS = (
+        UNIQUE_IDENTIFIER_ENGLAND + UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
+    )
     HEADINGS_LIST = [obj["heading"] for obj in HEADINGS_OBJECTS]
 
     # Convert the predefined column names to lowercase
@@ -92,7 +94,7 @@ def csv_parse(csv_file):
     df.columns = df.columns.str.strip()
 
     # issue #1038 - Twinkle users inexplicably submit CSV files with headings that are in quotes.
-    df.columns = df.columns.str.strip('\'"')
+    df.columns = df.columns.str.strip("'\"")
 
     # Replace headings which were different from in the old NPDA template with the new
     for column in df.columns:
@@ -100,7 +102,9 @@ def csv_parse(csv_file):
 
         for heading in HEADINGS_OBJECTS:
             if "alternative_headings" in heading:
-                lowercase_alternative_headings = [h.lower() for h in heading["alternative_headings"]]
+                lowercase_alternative_headings = [
+                    h.lower() for h in heading["alternative_headings"]
+                ]
 
                 if lowercase_col in lowercase_alternative_headings:
                     df = df.rename(columns={column: heading["heading"]})
@@ -117,7 +121,7 @@ def csv_parse(csv_file):
 
     # Accept columns case insensitively but replace them with their official version to make life easier later
     for column in df.columns:
-        if not column in HEADINGS_LIST and column.lower() in lowercase_headings_list:
+        if column not in HEADINGS_LIST and column.lower() in lowercase_headings_list:
             normalised_column = next(
                 c for c in HEADINGS_LIST if c.lower() == column.lower()
             )
@@ -139,14 +143,18 @@ def csv_parse(csv_file):
     # Set the identifier column
     if identifier_jersey in df.columns:
         identifier_column = identifier_jersey
-        _headings_list = [heading for heading in HEADINGS_LIST if heading != identifier_england]
+        _headings_list = [
+            heading for heading in HEADINGS_LIST if heading != identifier_england
+        ]
 
         # Gather missing / additional columns
         missing_columns = list(set(_headings_list) - set(df.columns))
         additional_columns = list(set(df.columns) - set(_headings_list))
     else:
         identifier_column = identifier_england
-        _headings_list = [heading for heading in HEADINGS_LIST if heading != identifier_jersey]
+        _headings_list = [
+            heading for heading in HEADINGS_LIST if heading != identifier_jersey
+        ]
 
         # Gather missing / additional columns
         missing_columns = list(set(_headings_list) - set(df.columns))
@@ -187,7 +195,11 @@ def csv_parse(csv_file):
                 zip(column_before, column_after)
             ):
                 # Handle empty strings (including spaces) for optional date columns
-                if not pd.isna(value_before) and pd.isna(value_after) and not (type(value_before) is str and value_before.strip() == ""):
+                if (
+                    not pd.isna(value_before)
+                    and pd.isna(value_after)
+                    and not (type(value_before) is str and value_before.strip() == "")
+                ):
                     model_field = csv_definition_for(column)["model_field"]
                     errors_to_return[row_index][model_field].append(
                         "Date format is incorrect (expected DD/MM/YYYY)"
@@ -205,7 +217,7 @@ def csv_parse(csv_file):
         try:
             if column in df.columns:
                 df[column] = df[column].astype(dtype)
-        except (ValueError, TypeError) as e:
+        except (ValueError, TypeError):
             parse_type_error_columns.append(column)
             continue
 
@@ -233,7 +245,9 @@ def csv_parse(csv_file):
             else:
                 parse_type_error_columns.append(column)
 
-    template_columns = [identifier_column] + [obj["heading"] for obj in CSV_HEADING_OBJECTS]
+    template_columns = [identifier_column] + [
+        obj["heading"] for obj in CSV_HEADING_OBJECTS
+    ]
 
     return ParsedCSVFile(
         df,

@@ -1,6 +1,5 @@
 """Tests for the 7 Key Processes KPIs."""
 
-from typing import List
 
 import pytest
 from dateutil.relativedelta import relativedelta
@@ -1072,11 +1071,11 @@ def test_kpi_calculation_40(
 
     # Create Patients and Visits that should be ineligble (KPI1)
     # Visit date before audit period
-    ineligible_patients_visit_date: List[Patient] = PatientFactory(
+    ineligible_patients_visit_date: list[Patient] = PatientFactory(
         visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
     )
     # Above age 25 at start of audit period
-    ineligible_patients_too_old: List[Patient] = PatientFactory(
+    ineligible_patients_too_old: list[Patient] = PatientFactory(
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
     )
 

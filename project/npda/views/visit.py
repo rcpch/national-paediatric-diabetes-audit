@@ -1,9 +1,7 @@
 # python imports
-import datetime
 import logging
 
 # Django imports
-from django.apps import apps
 from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
@@ -12,18 +10,16 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import ListView
 from django.views.generic.edit import CreateView, DeleteView, UpdateView
-from django.urls import reverse
 
 # RCPCH imports
 from ..forms.visit_form import VisitForm
 from ..general_functions import (
     get_visit_categories,
     get_visit_tabs,
-    visit_falls_within_audit_period_Q_object,
-    data_breadcrumbs,
     patient_breadcrumbs,
+    visit_falls_within_audit_period_Q_object,
 )
-from ..models import Patient, Transfer, Visit, AuditPeriod
+from ..models import AuditPeriod, Patient, Visit
 from .mixins import (
     CheckCanCompleteQuestionnaireMixin,
     CheckCurrentAuditYearMixin,
@@ -66,7 +62,7 @@ class PatientVisitsListView(
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
-        context = super(PatientVisitsListView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
         context["audit_period"] = self.audit_period
         context["pdu"] = self.pdu
         context["pz_code"] = self.pz_code
@@ -201,7 +197,7 @@ class VisitCreateView(
         self.object.is_valid = True
         self.object.save()
 
-        super(VisitCreateView, self).form_valid(form)
+        super().form_valid(form)
         return HttpResponseRedirect(self.get_success_url())
 
     def form_invalid(self, form):

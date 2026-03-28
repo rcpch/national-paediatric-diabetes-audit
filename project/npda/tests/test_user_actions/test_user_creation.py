@@ -1,11 +1,13 @@
 """Tests for creating users."""
 
 # python imports
-import pytest
 import logging
+
+import pytest
 
 # 3rd party imports
 from django.urls import reverse
+
 from project.constants.user import TITLES
 
 # E12 imports

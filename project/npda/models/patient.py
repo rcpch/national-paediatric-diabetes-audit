@@ -1,7 +1,6 @@
 # python imports
-from datetime import date
 import logging
-from datetime import timedelta
+from datetime import date
 
 # django imports
 from django.apps import apps
@@ -9,11 +8,10 @@ from django.contrib.gis.db import models
 from django.contrib.gis.db.models import (
     CharField,
     DateField,
-    PositiveSmallIntegerField,
     PointField,
+    PositiveSmallIntegerField,
 )
 from django.core.exceptions import ValidationError
-from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 
 from project.npda.models.custom_validators import (
@@ -23,12 +21,12 @@ from project.npda.models.custom_validators import (
 
 # npda imports
 from ...constants import (
-    ETHNICITIES,
-    DIABETES_TYPES,
-    SEX_TYPE,
     CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING,
-    CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING,
     CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
+    CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING,
+    DIABETES_TYPES,
+    ETHNICITIES,
+    SEX_TYPE,
 )
 from ..general_functions import stringify_time_elapsed
 
@@ -226,11 +224,11 @@ class Patient(models.Model):
             app_label="npda", model_name="PatientSubmission"
         )
 
-        audit_period = apps.get_model(
-            app_label="npda", model_name="AuditPeriod"
-        ).objects.filter(
-            start_date__year=current_audit_year
-        ).first()
+        audit_period = (
+            apps.get_model(app_label="npda", model_name="AuditPeriod")
+            .objects.filter(start_date__year=current_audit_year)
+            .first()
+        )
 
         return (
             PatientSubmission.objects.filter(
@@ -254,11 +252,11 @@ class Patient(models.Model):
             app_label="npda", model_name="PatientSubmission"
         )
 
-        audit_period = apps.get_model(
-            app_label="npda", model_name="AuditPeriod"
-        ).objects.filter(
-            start_date__year=current_audit_year
-        ).first()
+        audit_period = (
+            apps.get_model(app_label="npda", model_name="AuditPeriod")
+            .objects.filter(start_date__year=current_audit_year)
+            .first()
+        )
 
         all_submissions = (
             PatientSubmission.objects.filter(

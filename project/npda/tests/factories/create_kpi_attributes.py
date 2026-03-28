@@ -7,7 +7,7 @@ class CreateKPIAttributes:
 
 
     # KPIs for Patients Aged 12 and Above
-    
+
     These KPIs focus on patients aged 12 and above, generally involving more specific care processes or additional screenings:
 
     KPI 4: Number of patients aged 12+ with Type 1 diabetes
@@ -18,7 +18,7 @@ class CreateKPIAttributes:
     KPI 31: Foot Examination (%)
     KPI 35: Smoking status screened (%)
     KPI 36: Referral to smoking cessation service (%)
-    
+
 
 
     # KPIs for Patients Below 25 Years
@@ -28,9 +28,9 @@ class CreateKPIAttributes:
     KPI 3: Total number of eligible patients with Type 1 diabetes
     KPI 5: Number of patients with Type 1 diabetes with a complete year of care in the audit period
     KPI 7: Number of patients with Type 1 diabetes who were diagnosed within the audit period
-    
-    
-    
+
+
+
     # Other KPIs without Specific Age Eligibility
 
     KPI 8: Number of patients who died within the audit period

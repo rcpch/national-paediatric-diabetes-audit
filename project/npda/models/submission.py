@@ -1,9 +1,6 @@
-from django.db import models
 from django.core.exceptions import ValidationError
-from django.conf import settings
+from django.db import models
 
-from .audit_period import AuditPeriod
-from .paediatric_diabetes_unit import PaediatricDiabetesUnit
 
 
 class SubmissionManager(models.Manager):
@@ -11,7 +8,7 @@ class SubmissionManager(models.Manager):
         return self.filter(
             audit_period=audit_period,
             paediatric_diabetes_unit=pdu,
-            submission_active=True
+            submission_active=True,
         ).first()
 
 
@@ -37,7 +34,7 @@ class Submission(models.Model):
     audit_period = models.ForeignKey(
         on_delete=models.RESTRICT,
         to="npda.AuditPeriod",
-        null=True # for compatibility as we migrate from the old audit_year field
+        null=True,  # for compatibility as we migrate from the old audit_year field
     )
 
     submission_date = models.DateTimeField(
@@ -65,7 +62,7 @@ class Submission(models.Model):
         "CSV file name",
         help_text="Name of the uploaded CSV file",
         null=True,
-        blank=True
+        blank=True,
     )
 
     errors = models.JSONField(
@@ -118,4 +115,3 @@ class Submission(models.Model):
         if self.submission_active:
             raise ValidationError("Cannot delete an active submission.")
         super().delete(*args, **kwargs)
-

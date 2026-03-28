@@ -1,12 +1,16 @@
-import logging
 import io
+import logging
 
-from celery import shared_task
 from asgiref.sync import async_to_sync
+from celery import shared_task
 
+from project.npda.general_functions.csv import (
+    csv_parse,
+    csv_upload,
+    tidy_up_old_submissions,
+)
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 from project.npda.models.submission import Submission
-from project.npda.general_functions.csv import csv_parse, csv_upload, tidy_up_old_submissions
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +33,7 @@ def upload_csv_task(submission_id):
     logger.info(f"This is the submission to process: {submission} [{submission.id}]")
 
     # CSV parsing errors are done inline in the route that handles the file upload
-    parsed_csv = csv_parse(
-        io.BytesIO(submission.csv_file)
-    )
+    parsed_csv = csv_parse(io.BytesIO(submission.csv_file))
 
     csv_upload_sync = async_to_sync(csv_upload)
 

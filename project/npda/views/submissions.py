@@ -1,10 +1,15 @@
 # Python imports
-from datetime import datetime, timezone
-import json
-from typing import Any, Iterable
-import logging
 import io
 import itertools
+import json
+import logging
+from datetime import datetime, UTC
+from typing import Any
+from collections.abc import Iterable
+
+# Third party imports
+import pandas as pd
+import plotly.graph_objects as go
 
 # Django imports
 from django.apps import apps
@@ -12,49 +17,47 @@ from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.db.models import Count, Case, When, Value, IntegerField, OuterRef, Subquery, Exists, Q
+from django.db.models import (
+    Case,
+    Count,
+    Exists,
+    IntegerField,
+    OuterRef,
+    Q,
+    Subquery,
+    Value,
+    When,
+)
 from django.db.models.functions import Concat, ExtractMonth, ExtractYear
 from django.http import HttpResponse
-from django.shortcuts import render, redirect
-from django.views.generic import ListView
+from django.shortcuts import redirect, render
 from django.urls import reverse
-
-
-# Third party imports
-import pandas as pd
-import plotly.graph_objects as go
-
-from project.npda.views.decorators import login_and_otp_required, check_data_permissions
+from django.views.generic import ListView
 
 # RCPCH imports
 from project.constants.colors import RCPCH_LIGHT_BLUE
-from ..general_functions.session import save_csv_uploading_user_to_visitactivity
+from project.npda.views.decorators import check_data_permissions, login_and_otp_required
+
+from ..forms.upload import UploadFileForm
+from ..general_functions.breadcrumbs import data_breadcrumbs
 from ..general_functions.csv import (
+    create_csv_submission,
+    csv_parse,
     download_csv_file,
     download_xlsx,
     export_as_csv,
-    csv_parse,
-    create_csv_submission,
-    gather_unique_patient_and_visit_counts
 )
-from ..general_functions.breadcrumbs import data_breadcrumbs
-from .mixins import (
-    LoginAndOTPRequiredMixin,
-    PDUPermissionMixin
-)
+from ..general_functions.session import save_csv_uploading_user_to_visitactivity
 from ..models import (
-    Submission,
-    OrganisationEmployer,
     PaediatricDiabetesUnit,
-    AuditPeriod,
     Patient,
     PatientSubmission,
-    Transfer
+    Submission,
+    Transfer,
 )
-from ..forms.upload import UploadFileForm
-from ..tasks import upload_csv_task
 from ..signals import get_client_ip
-
+from ..tasks import upload_csv_task
+from .mixins import LoginAndOTPRequiredMixin, PDUPermissionMixin
 
 logger = logging.getLogger(__name__)
 
@@ -85,8 +88,7 @@ class SubmissionsListView(
             ).all()
         else:
             base_queryset = self.model.objects.filter(
-                paediatric_diabetes_unit=self.pdu,
-                audit_period=self.audit_period
+                paediatric_diabetes_unit=self.pdu, audit_period=self.audit_period
             )
 
         # Avoid N+1 query problem, especially painful on national view
@@ -98,7 +100,9 @@ class SubmissionsListView(
                 "submission_by__first_name", Value(" "), "submission_by__surname"
             ),
             latest_patient_visit_date=Subquery(
-                Patient.objects.filter(submissions=OuterRef("pk"), visit__visit_date__isnull=False)
+                Patient.objects.filter(
+                    submissions=OuterRef("pk"), visit__visit_date__isnull=False
+                )
                 .order_by("-visit__visit_date")
                 .values("visit__visit_date")[:1]
             ),
@@ -106,7 +110,7 @@ class SubmissionsListView(
             "audit_year",
             "-submission_active",
             "-submission_date",
-            "-latest_patient_visit_date"
+            "-latest_patient_visit_date",
         )
 
         return final
@@ -139,46 +143,44 @@ class SubmissionsListView(
                 visit_error_count=Count(Case(When(visit__is_valid=False, then=1))),
                 visit_count=Count("visit"),
             )
-        
+
         if self.request.user.is_rcpch_audit_team_member:
             selected_audit_period = self.audit_period
             # Start with ALL active PDUs, not just those with submissions
-            chart_data = PaediatricDiabetesUnit.objects.filter(
-                active=True
-            ).annotate(
-                # Get the latest visit date from active submissions (if any)
-                latest_patient_visit_date=Subquery(
-                    self.get_queryset().filter(
-                        paediatric_diabetes_unit=OuterRef('pk'),
-                        submission_active=True,
-                        latest_patient_visit_date__isnull=False
-                    ).values('latest_patient_visit_date')[:1]
-                ),
-                # Extract month and year from the latest visit date
-                visit_month=ExtractMonth("latest_patient_visit_date"),
-                visit_year_raw=ExtractYear("latest_patient_visit_date"),
-                # Calculate quarter based on visit date (None for PDUs with no submissions)
-                latest_visit_quarter=Case(
-                    When(visit_month__in=[4, 5, 6], then=Value(1)),
-                    When(visit_month__in=[7, 8, 9], then=Value(2)),
-                    When(visit_month__in=[10, 11, 12], then=Value(3)),
-                    When(visit_month__in=[1, 2, 3], then=Value(4)),
-                    default=Value(0),  # 0 for PDUs with no submissions
-                    output_field=IntegerField(),
+            chart_data = (
+                PaediatricDiabetesUnit.objects.filter(active=True)
+                .annotate(
+                    # Get the latest visit date from active submissions (if any)
+                    latest_patient_visit_date=Subquery(
+                        self.get_queryset()
+                        .filter(
+                            paediatric_diabetes_unit=OuterRef("pk"),
+                            submission_active=True,
+                            latest_patient_visit_date__isnull=False,
+                        )
+                        .values("latest_patient_visit_date")[:1]
+                    ),
+                    # Extract month and year from the latest visit date
+                    visit_month=ExtractMonth("latest_patient_visit_date"),
+                    visit_year_raw=ExtractYear("latest_patient_visit_date"),
+                    # Calculate quarter based on visit date (None for PDUs with no submissions)
+                    latest_visit_quarter=Case(
+                        When(visit_month__in=[4, 5, 6], then=Value(1)),
+                        When(visit_month__in=[7, 8, 9], then=Value(2)),
+                        When(visit_month__in=[10, 11, 12], then=Value(3)),
+                        When(visit_month__in=[1, 2, 3], then=Value(4)),
+                        default=Value(0),  # 0 for PDUs with no submissions
+                        output_field=IntegerField(),
+                    ),
                 )
-            ).values(
-                "pz_code",
-                "lead_organisation_name", 
-                "latest_visit_quarter"
+                .values("pz_code", "lead_organisation_name", "latest_visit_quarter")
             )
 
-            
             column_chart = create_column_chart(chart_data, selected_audit_period)
             context["column_chart"] = column_chart.to_html(full_html=False)
-            context['non_submission_pdus'] = chart_data.filter(latest_visit_quarter=0).values_list(
-                "pz_code",
-                "lead_organisation_name"
-            )
+            context["non_submission_pdus"] = chart_data.filter(
+                latest_visit_quarter=0
+            ).values_list("pz_code", "lead_organisation_name")
             context["audit_period"] = selected_audit_period
             context["submission_statistics"] = submission_stats(selected_audit_period)
 
@@ -188,7 +190,7 @@ class SubmissionsListView(
             [
                 ("Patient Data", "pdu-patients"),
                 ("Submissions", "pdu-submissions"),
-            ]
+            ],
         )
 
         return context
@@ -200,7 +202,7 @@ class SubmissionsListView(
         queryset = self.get_queryset().order_by("-submission_date")
         self.object_list = queryset
         context = self.get_context_data(object_list=self.object_list)
-        
+
         template = self.template_name
 
         if request.htmx:
@@ -220,11 +222,11 @@ class SubmissionsListView(
             # HTMX request
             template = "partials/submission_history.html"
             queryset = self.get_queryset().order_by("-submission_date")
-            toggle_result = request.POST.get('toggle_inactive_submissions', "off")
+            toggle_result = request.POST.get("toggle_inactive_submissions", "off")
 
             # If toggle is OFF (not submitted/unchecked), only show active submissions
             # If toggle is ON (checked), show all submissions
-            if toggle_result != 'on':
+            if toggle_result != "on":
                 toggle_result = "off"
             else:
                 toggle_result = "on"  # Keep it "on" if it was sent as "on"
@@ -235,7 +237,6 @@ class SubmissionsListView(
             context["toggle_inactive_submissions"] = toggle_result
             return render(request=request, template_name=template, context=context)
 
-        
         button_name = request.POST.get("submit-data")
         if button_name == "delete-data":
             # check if the user has permission to delete submissions
@@ -279,7 +280,11 @@ class SubmissionsListView(
             submission = Submission.objects.filter(
                 pk=request.POST.get("audit_id")
             ).get()
-            if request.user.is_rcpch_audit_team_member or submission.paediatric_diabetes_unit in request.user.organisation_employers.all():
+            if (
+                request.user.is_rcpch_audit_team_member
+                or submission.paediatric_diabetes_unit
+                in request.user.organisation_employers.all()
+            ):
                 if submission.csv_file_name:
                     return download_csv_file(request, submission.id)
                 else:
@@ -288,7 +293,6 @@ class SubmissionsListView(
                 raise PermissionDenied(
                     f"User {request.user.email} does not have permission to download data for PDU {submission.paediatric_diabetes_unit.pz_code}.",
                 )
-            
 
         if button_name == "download-report":
             # check if the user has permission to download submissions
@@ -299,31 +303,43 @@ class SubmissionsListView(
             submission = Submission.objects.filter(
                 pk=request.POST.get("audit_id")
             ).get()
-            if request.user.is_rcpch_audit_team_member or submission.paediatric_diabetes_unit in request.user.organisation_employers.all():
+            if (
+                request.user.is_rcpch_audit_team_member
+                or submission.paediatric_diabetes_unit
+                in request.user.organisation_employers.all()
+            ):
                 return download_xlsx(request, submission.id)
             else:
                 raise PermissionDenied(
                     f"User {request.user.email} does not have permission to download data for PDU {submission.paediatric_diabetes_unit.pz_code}.",
                 )
-        
 
         if button_name == "start-questionnaire-submission":
             previous_audit_period = self.audit_period.previous_audit_period()
 
-            next_submission = Submission.objects.get_submission_for_request(self.pdu, self.audit_period)
-            last_submission = Submission.objects.get_submission_for_request(self.pdu, previous_audit_period)
+            next_submission = Submission.objects.get_submission_for_request(
+                self.pdu, self.audit_period
+            )
+            last_submission = Submission.objects.get_submission_for_request(
+                self.pdu, previous_audit_period
+            )
 
             if next_submission:
-                raise RuntimeError(f"Cannot start questionnaire submission. Active submission already exists for this audit period. audit_period={self.audit_period}, previous_audit_period={previous_audit_period}, pdu={self.pdu.pz_code}")
-            
-            last_patients = last_submission.patients.all() if last_submission else Patient.objects.none()
+                raise RuntimeError(
+                    f"Cannot start questionnaire submission. Active submission already exists for this audit period. audit_period={self.audit_period}, previous_audit_period={previous_audit_period}, pdu={self.pdu.pz_code}"
+                )
 
-            last_patients = last_patients.exclude(
-                death_date__isnull=False
-            ).exclude(
+            last_patients = (
+                last_submission.patients.all()
+                if last_submission
+                else Patient.objects.none()
+            )
+
+            last_patients = last_patients.exclude(death_date__isnull=False).exclude(
                 Exists(
                     Transfer.objects.filter(
-                        Q(patient=OuterRef("pk")) & Q(reason_leaving_service__isnull=False)
+                        Q(patient=OuterRef("pk"))
+                        & Q(reason_leaving_service__isnull=False)
                     )
                 )
             )
@@ -331,7 +347,7 @@ class SubmissionsListView(
             # Clone
             for patient in last_patients:
                 patient.pk = None
-            
+
             with transaction.atomic():
                 next_submission = Submission.objects.create(
                     paediatric_diabetes_unit=self.pdu,
@@ -339,22 +355,28 @@ class SubmissionsListView(
                     audit_year=self.audit_period.audit_year(),
                     submission_active=True,
                     submission_by=request.user,
-                    submission_date=datetime.now(timezone.utc),
+                    submission_date=datetime.now(UTC),
                 )
 
                 next_patients = Patient.objects.bulk_create(last_patients)
-                
-                next_patient_transfers = [Transfer(patient=patient, paediatric_diabetes_unit=self.pdu) for patient in next_patients]
+
+                next_patient_transfers = [
+                    Transfer(patient=patient, paediatric_diabetes_unit=self.pdu)
+                    for patient in next_patients
+                ]
                 Transfer.objects.bulk_create(next_patient_transfers)
 
-                next_patient_subs = [PatientSubmission(patient=patient, submission=next_submission) for patient in next_patients]
+                next_patient_subs = [
+                    PatientSubmission(patient=patient, submission=next_submission)
+                    for patient in next_patients
+                ]
                 PatientSubmission.objects.bulk_create(next_patient_subs)
 
-            return redirect("pdu-patients",
+            return redirect(
+                "pdu-patients",
                 pz_code=self.pdu.pz_code,
-                audit_period=self.audit_period.slug
+                audit_period=self.audit_period.slug,
             )
-            
 
         # POST is not supported for this view
         # Must therefore return the queryset as an obect_list and context
@@ -380,25 +402,31 @@ def upload_csv(request, audit_period, pdu):
             request=request,
             message=message,
         )
-        return redirect("pdu-upload-csv",
-            pz_code=pdu.pz_code,
-            audit_period=audit_period.slug
+        return redirect(
+            "pdu-upload-csv", pz_code=pdu.pz_code, audit_period=audit_period.slug
         )
 
-    previous_submission = Submission.objects.get_submission_for_request(pdu, audit_period)
+    previous_submission = Submission.objects.get_submission_for_request(
+        pdu, audit_period
+    )
 
     if previous_submission and not previous_submission.csv_file_name:
         # PDU is submitting via questionnaire
-        return redirect(reverse("pdu-dashboard", kwargs={
-            "audit_period": audit_period.slug,
-            "pz_code": pdu.pz_code,
-        }))
+        return redirect(
+            reverse(
+                "pdu-dashboard",
+                kwargs={
+                    "audit_period": audit_period.slug,
+                    "pz_code": pdu.pz_code,
+                },
+            )
+        )
 
     if request.method == "POST":
         has_perm = request.user.has_perm("npda.can_submit_csv")
         if not has_perm:
             raise PermissionDenied("You do not have permission to upload CSV files.")
-        
+
         form = UploadFileForm(request.POST, request.FILES)
 
         user_csv = request.FILES["csv_upload"]
@@ -408,7 +436,7 @@ def upload_csv(request, audit_period, pdu):
 
         pz_code = pdu.pz_code
         is_jersey = pz_code == "PZ248"
-    
+
         # check to see if the CSV is valid - cannot accept CSVs with no header. All other header errors are non-lethal but are reported back to the user
         try:
             parsed_csv = csv_parse(io.BytesIO(user_csv_bytes))
@@ -417,26 +445,40 @@ def upload_csv(request, audit_period, pdu):
 
         missing_columns = parsed_csv.missing_columns
         if not parsed_csv.identifier_column:
-            missing_columns.append("Unique Reference Number" if is_jersey else "NHS Number")
+            missing_columns.append(
+                "Unique Reference Number" if is_jersey else "NHS Number"
+            )
 
         if (
             missing_columns
             or parsed_csv.additional_columns
             or parsed_csv.duplicate_columns
         ):
-            return render(request, "upload_csv/file_upload.html", context = {
-                "csv_and_template_columns": list(itertools.zip_longest(parsed_csv.template_columns, parsed_csv.df.columns)),
-                "missing_columns": parsed_csv.missing_columns,
-                "additional_columns": parsed_csv.additional_columns,
-                "duplicate_columns": parsed_csv.duplicate_columns,
-            })
-        
+            return render(
+                request,
+                "upload_csv/file_upload.html",
+                context={
+                    "csv_and_template_columns": list(
+                        itertools.zip_longest(
+                            parsed_csv.template_columns, parsed_csv.df.columns
+                        )
+                    ),
+                    "missing_columns": parsed_csv.missing_columns,
+                    "additional_columns": parsed_csv.additional_columns,
+                    "duplicate_columns": parsed_csv.duplicate_columns,
+                },
+            )
+
         if parsed_csv.identifier_column == "Unique Reference Number" and not is_jersey:
-            return upload_error("CSV file must use NHS number as the identifier column unless uploading for Jersey")
-        
+            return upload_error(
+                "CSV file must use NHS number as the identifier column unless uploading for Jersey"
+            )
+
         #  the same must be true for the Jersey upload
         if parsed_csv.identifier_column == "NHS Number" and is_jersey:
-            return upload_error("CSV file must use Unique Reference Number as the identifier column unless uploading for Jersey")
+            return upload_error(
+                "CSV file must use Unique Reference Number as the identifier column unless uploading for Jersey"
+            )
 
         # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1344
         # Gracefully handle missing values in the "PDU Number" column
@@ -448,13 +490,19 @@ def upload_csv(request, audit_period, pdu):
 
         # 1316 - Twinkle/Diamond outputs PDU number without leading PZ and zeros
         expected_pdu_number = pdu.pz_code.lstrip("PZ").lstrip("0")
-        pdu_number_in_csv = unique_pdu_numbers[0].lstrip("PZ").lstrip("0") if len(unique_pdu_numbers) > 0 else None
+        pdu_number_in_csv = (
+            unique_pdu_numbers[0].lstrip("PZ").lstrip("0")
+            if len(unique_pdu_numbers) > 0
+            else None
+        )
 
         if pdu_number_in_csv != expected_pdu_number:
             message = f"PDU Number in CSV file ({unique_pdu_numbers[0]}) does not match the PDU you are looking at ({pdu.pz_code}). Please upload a file with the correct PDU Number."
             return upload_error(message)
 
-        if not audit_period.is_open and not (request.user.is_superuser or request.user.is_rcpch_audit_team_member):
+        if not audit_period.is_open and not (
+            request.user.is_superuser or request.user.is_rcpch_audit_team_member
+        ):
             raise PermissionDenied(f"Upload is closed for {audit_period}.")
 
         new_submission = create_csv_submission(
@@ -466,46 +514,63 @@ def upload_csv(request, audit_period, pdu):
             submission_active=False,
             user=request.user,
             ip_address=get_client_ip(request),
-            new_dataframe=parsed_csv.df
+            new_dataframe=parsed_csv.df,
         )
-        
+
         upload_csv_task.delay(new_submission.id)
 
         save_csv_uploading_user_to_visitactivity(request=request)
-        
-        return redirect("pdu-upload-csv-in-progress",
+
+        return redirect(
+            "pdu-upload-csv-in-progress",
             pz_code=pdu.pz_code,
-            audit_period=audit_period.slug
+            audit_period=audit_period.slug,
         )
 
-    return render(request, "upload_csv/file_upload.html", context={
-        "pdu": pdu,
-        "breadcrumbs": data_breadcrumbs(pdu, audit_period, [
-            ("Patient Data", "pdu-patients"),
-            ("Upload CSV", "pdu-upload-csv"),
-        ])
-    })
+    return render(
+        request,
+        "upload_csv/file_upload.html",
+        context={
+            "pdu": pdu,
+            "breadcrumbs": data_breadcrumbs(
+                pdu,
+                audit_period,
+                [
+                    ("Patient Data", "pdu-patients"),
+                    ("Upload CSV", "pdu-upload-csv"),
+                ],
+            ),
+        },
+    )
+
 
 @login_and_otp_required()
 @check_data_permissions()
 def upload_csv_in_progress(request, audit_period, pdu):
-    last_submission = Submission.objects.filter(
-        paediatric_diabetes_unit=pdu,
-        audit_period=audit_period
-    ).order_by("-submission_date").first()
+    last_submission = (
+        Submission.objects.filter(
+            paediatric_diabetes_unit=pdu, audit_period=audit_period
+        )
+        .order_by("-submission_date")
+        .first()
+    )
 
-    seconds_since_submission = (datetime.now(timezone.utc) - last_submission.submission_date).seconds
+    seconds_since_submission = (
+        datetime.now(UTC) - last_submission.submission_date
+    ).seconds
 
     timeout = seconds_since_submission > 120
-    
+
     total_patients = last_submission.total_unique_patients
     total_rows = last_submission.total_unique_visits
     patients_so_far = Patient.objects.filter(submissions=last_submission).count()
-    visits_so_far = Patient.objects.filter(submissions=last_submission).aggregate(Count("visit"))["visit__count"]
+    visits_so_far = Patient.objects.filter(submissions=last_submission).aggregate(
+        Count("visit")
+    )["visit__count"]
     upload_complete = total_rows == visits_so_far and total_patients == patients_so_far
     csv_file_name = last_submission.csv_file_name
     if timeout:
-        upload_complete = True # if timeout, we assume the upload is complete as this triggers redirect to upload_complete template
+        upload_complete = True  # if timeout, we assume the upload is complete as this triggers redirect to upload_complete template
         if not last_submission:
             # here there is an error with the headers or the csv file is empty
             # we return an error message to the user and redirect them to the patients page
@@ -514,28 +579,36 @@ def upload_csv_in_progress(request, audit_period, pdu):
                 "The upload has timed out. Please try again.",
             )
             return redirect("patients")
-    
+
     context = {
         "csv_file_name": csv_file_name,
         "patients_so_far": patients_so_far,
         "visits_so_far": visits_so_far,
         "total_patients": total_patients,
         "total_rows": total_rows,
-        "patient_progress": patients_so_far / total_patients * 100 if total_patients else 0,
+        "patient_progress": (
+            patients_so_far / total_patients * 100 if total_patients else 0
+        ),
         "upload_complete": upload_complete,
         "timeout": timeout,
-        "breadcrumbs": data_breadcrumbs(pdu, audit_period, [
-            ("Patient Data", "pdu-patients"),
-            ("Uploading CSV", "pdu-upload-csv-in-progress"),
-        ])
+        "breadcrumbs": data_breadcrumbs(
+            pdu,
+            audit_period,
+            [
+                ("Patient Data", "pdu-patients"),
+                ("Uploading CSV", "pdu-upload-csv-in-progress"),
+            ],
+        ),
     }
 
     if request.htmx:
-        response = render(request, "upload_csv/upload_in_progress_wrapper.html", context=context)
+        response = render(
+            request, "upload_csv/upload_in_progress_wrapper.html", context=context
+        )
         return response
-            
 
     return render(request, "upload_csv/upload_in_progress.html", context=context)
+
 
 def create_column_chart(pdus_by_latest_submission, selected_audit_period):
     """
@@ -544,63 +617,61 @@ def create_column_chart(pdus_by_latest_submission, selected_audit_period):
     # Create a Pandas DataFrame
     df = pd.DataFrame(pdus_by_latest_submission)
 
-     # Create horizontal bar chart (quarters on x-axis, PDUs on y-axis)
-    fig = go.Figure(data=[
-        go.Bar(
-            x=df['latest_visit_quarter'],  # Quarter values on x-axis
-            y=df['pz_code'],  # PZ codes on y-axis (creates horizontal bars)
-            customdata=df['lead_organisation_name'],  # Use lead_organisation_name for hover text
-            orientation='h',  # Horizontal orientation
-            marker_color= RCPCH_LIGHT_BLUE,
-            text=[f"Q{q}" if q > 0 else "No Data" for q in df['latest_visit_quarter']],
-            textposition='inside',  # Text inside bars for horizontal layout
-            hovertemplate='<b>%{y} (%{customdata})</b><br>Quarter: %{text}<extra></extra>',
-            textfont=dict(
-                color='white', 
-                size=12,
-                family='Montserrat' # Change font family
-            ),
-            hoverlabel=dict(
-                bgcolor=RCPCH_LIGHT_BLUE,  
-                bordercolor=RCPCH_LIGHT_BLUE, 
-                font=dict(
-                    color='white',
-                    size=14,
-                    family='Montserrat'
-                )
-        ))
-    ])
+    # Create horizontal bar chart (quarters on x-axis, PDUs on y-axis)
+    fig = go.Figure(
+        data=[
+            go.Bar(
+                x=df["latest_visit_quarter"],  # Quarter values on x-axis
+                y=df["pz_code"],  # PZ codes on y-axis (creates horizontal bars)
+                customdata=df[
+                    "lead_organisation_name"
+                ],  # Use lead_organisation_name for hover text
+                orientation="h",  # Horizontal orientation
+                marker_color=RCPCH_LIGHT_BLUE,
+                text=[
+                    f"Q{q}" if q > 0 else "No Data" for q in df["latest_visit_quarter"]
+                ],
+                textposition="inside",  # Text inside bars for horizontal layout
+                hovertemplate="<b>%{y} (%{customdata})</b><br>Quarter: %{text}<extra></extra>",
+                textfont=dict(
+                    color="white", size=12, family="Montserrat"  # Change font family
+                ),
+                hoverlabel=dict(
+                    bgcolor=RCPCH_LIGHT_BLUE,
+                    bordercolor=RCPCH_LIGHT_BLUE,
+                    font=dict(color="white", size=14, family="Montserrat"),
+                ),
+            )
+        ]
+    )
 
     # Update layout for horizontal bars
     fig.update_layout(
         title=dict(
             text=f"Latest Submission Data by Quarter (using latest visit date) against PZ Code (Audit Period: {selected_audit_period.slug})",
-            font=dict(
-                family='Montserrat',
-                size=16,
-                color='black'
-            ),
+            font=dict(family="Montserrat", size=16, color="black"),
             x=0.5,  # Center the title horizontally
-            xanchor='center'  # Anchor the title at its center
+            xanchor="center",  # Anchor the title at its center
         ),
         xaxis_title="Latest Quarter (by Latest Visit Date)",
         yaxis_title="PZ Code",
         xaxis=dict(
             tickvals=[0, 1, 2, 3, 4],
             ticktext=["No Data", "Q1", "Q2", "Q3", "Q4"],
-            range=[0, 4.5]  # Ensure all values are visible
+            range=[0, 4.5],  # Ensure all values are visible
         ),
         yaxis=dict(
-            tickfont=dict(color='black', size=10),  # Smaller font for many PDUs
-            automargin=True  # Auto-adjust margins for long PDU names
+            tickfont=dict(color="black", size=10),  # Smaller font for many PDUs
+            automargin=True,  # Auto-adjust margins for long PDU names
         ),
-        paper_bgcolor='white',
+        paper_bgcolor="white",
         height=max(400, len(df) * 25),  # Dynamic height based on number of PDUs
         margin=dict(l=100, r=50, t=80, b=50),  # Adjust margins for PDU labels
-        showlegend=False
+        showlegend=False,
     )
 
     return fig
+
 
 def submission_stats(selected_audit_period):
     """
@@ -615,59 +686,66 @@ def submission_stats(selected_audit_period):
     latest_submission_data = Submission.objects.filter(
         audit_period=selected_audit_period,
         paediatric_diabetes_unit__active=True,
-        submission_active=True
-    ).order_by(
-        '-submission_date'
-    )
+        submission_active=True,
+    ).order_by("-submission_date")
     if latest_submission_data.exists():
         latest_submission_data = latest_submission_data.first()
     else:
         latest_submission_data = None
 
-    fewest_errors = Submission.objects.filter(
-        audit_period = selected_audit_period,
-        submission_active=True,
-        paediatric_diabetes_unit__active=True
-    ).annotate(
-        error_count=Count('errors')
-    ).order_by(
-        'error_count'
+    fewest_errors = (
+        Submission.objects.filter(
+            audit_period=selected_audit_period,
+            submission_active=True,
+            paediatric_diabetes_unit__active=True,
+        )
+        .annotate(error_count=Count("errors"))
+        .order_by("error_count")
     )
     if fewest_errors.exists():
         fewest_errors = fewest_errors.first()
     else:
         fewest_errors = None
 
-    most_patients = Submission.objects.filter(
-        audit_period = selected_audit_period,
-        submission_active=True,
-        paediatric_diabetes_unit__active=True
-    ).annotate(
-        patient_count=Count('patients')
-    ).order_by(
-        '-patient_count'
+    most_patients = (
+        Submission.objects.filter(
+            audit_period=selected_audit_period,
+            submission_active=True,
+            paediatric_diabetes_unit__active=True,
+        )
+        .annotate(patient_count=Count("patients"))
+        .order_by("-patient_count")
     )
     if most_patients.exists():
         most_patients = most_patients.first()
     else:
         most_patients = None
 
-    most_visits = Submission.objects.filter(
-        audit_period = selected_audit_period,
-        submission_active=True,
-        paediatric_diabetes_unit__active=True
-    ).annotate(
-        visit_count=Count('patients__visit'),
-        visits_per_patient=Count('patients')/Count('patients__visit')
-    ).order_by(
-        '-visits_per_patient'
+    most_visits = (
+        Submission.objects.filter(
+            audit_period=selected_audit_period,
+            submission_active=True,
+            paediatric_diabetes_unit__active=True,
+        )
+        .annotate(
+            visit_count=Count("patients__visit"),
+            visits_per_patient=Count("patients") / Count("patients__visit"),
+        )
+        .order_by("-visits_per_patient")
     )
 
-
-    latest_submission_paediatric_diabetes_unit, submission_date = getattr(latest_submission_data, "paediatric_diabetes_unit", None), getattr(latest_submission_data,"submission_date", None)
-    fewest_errors_paediatric_diabetes_unit, error_number = getattr(fewest_errors, "paediatric_diabetes_unit", None), getattr(fewest_errors,"error_count", None)
-    most_patients_paediatric_diabetes_unit, patient_number = getattr(most_patients, "paediatric_diabetes_unit", None), getattr(most_patients,"patient_count", None)
-    most_visits_paediatric_diabetes_unit, visit_number = getattr(most_visits, "paediatric_diabetes_unit", None), getattr(most_visits,"visits_per_patient", None)
+    latest_submission_paediatric_diabetes_unit, submission_date = getattr(
+        latest_submission_data, "paediatric_diabetes_unit", None
+    ), getattr(latest_submission_data, "submission_date", None)
+    fewest_errors_paediatric_diabetes_unit, error_number = getattr(
+        fewest_errors, "paediatric_diabetes_unit", None
+    ), getattr(fewest_errors, "error_count", None)
+    most_patients_paediatric_diabetes_unit, patient_number = getattr(
+        most_patients, "paediatric_diabetes_unit", None
+    ), getattr(most_patients, "patient_count", None)
+    most_visits_paediatric_diabetes_unit, visit_number = getattr(
+        most_visits, "paediatric_diabetes_unit", None
+    ), getattr(most_visits, "visits_per_patient", None)
 
     # Create a dictionary to store the statistics
     submission_statistics = {
@@ -689,6 +767,3 @@ def submission_stats(selected_audit_period):
         },
     }
     return submission_statistics
-
-
-    

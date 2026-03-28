@@ -187,13 +187,13 @@ Suggested tests for the Visit model:
 - A visit cannot be created if it is associated with more than one patient.
 """
 
-import datetime
+
 import pytest
 from dateutil.relativedelta import relativedelta
-from django.apps import apps
 from django.utils import timezone
-from project.npda.models import Patient, Visit
+
 from project.constants import DIABETES_TYPES, HBA1C_FORMATS
+from project.npda.models import Patient, Visit
 
 
 @pytest.mark.django_db

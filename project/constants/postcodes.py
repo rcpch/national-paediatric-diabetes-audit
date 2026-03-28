@@ -3,8 +3,8 @@ Constants for 'unknown' postcodes
 These are Office for National Statistics (ONS) codes for where a postcode is not known
 ZZ99 3VZ No fixed abode
 ZZ99 3WZ Not known
-ZZ99 3CZ England/U.K not otherwise specified 
-ZZ99 3GZ Wales not otherwise specified 
+ZZ99 3CZ England/U.K not otherwise specified
+ZZ99 3GZ Wales not otherwise specified
 ZZ99 1WZ Scotland not otherwise specified
 ZZ99 2WZ Northern Ireland not otherwise specified
 
@@ -17,7 +17,7 @@ UNKNOWN_POSTCODES_NO_SPACES = [
     "ZZ993CZ",
     "ZZ993GZ",
     "ZZ991WZ",
-    "ZZ992WZ"
+    "ZZ992WZ",
 ]
 
 
@@ -86,18 +86,23 @@ RECIPROCAL_POSTCODES_NO_SPACES = [
     "ZZ997ZZ",  # Uzbekistan
 ]
 
+
 def skip_api_validation_for_postcode(postcode: str | None):
     if not postcode:
         return True
 
     to_check = postcode.replace(" ", "").upper()
 
-    return to_check in UNKNOWN_POSTCODES_NO_SPACES or to_check in RECIPROCAL_POSTCODES_NO_SPACES
+    return (
+        to_check in UNKNOWN_POSTCODES_NO_SPACES
+        or to_check in RECIPROCAL_POSTCODES_NO_SPACES
+    )
+
 
 def is_jersey_postcode(postcode: str | None):
     if not postcode:
         return False
-    
+
     to_check = postcode.replace(" ", "").upper()
-    
+
     return to_check.startswith("JE")

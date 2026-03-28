@@ -60,13 +60,10 @@ Options:
 
 from datetime import datetime
 
-from django.utils import timezone
 from django.core.management.base import BaseCommand
-from django.core.files.uploadedfile import SimpleUploadedFile
+from django.utils import timezone
 
-from project.npda.general_functions.audit_period import (
-    get_audit_period_for_date,
-)
+from project.npda.general_functions.audit_period import get_audit_period_for_date
 from project.npda.general_functions.data_generator_extended import (
     AgeRange,
     FakePatientCreator,
@@ -74,11 +71,10 @@ from project.npda.general_functions.data_generator_extended import (
     VisitType,
 )
 from project.npda.models import (
+    AuditPeriod,
     NPDAUser,
-    Patient,
-    Submission,
     OrganisationEmployer,
-    AuditPeriod
+    Submission,
 )
 
 letter_name_map = {
@@ -105,6 +101,7 @@ age_range_map = {
 CYAN = "\033[96m"
 RESET = "\033[0m"
 GREEN = "\033[92m"
+
 
 class Command(BaseCommand):
     help = "Seeds submission with specific user, submission date, number of patients, and visit types."
@@ -183,25 +180,17 @@ class Command(BaseCommand):
         )
 
         # Print out the parsed values
-        self.print_info(
-            f"Using user_pk: {CYAN}{user_pk} ({submission_by}){RESET}\n"
-        )
-        self.print_info(
-            f"Submission PDU: {CYAN}{primary_pdu_for_user}{RESET}\n"
-        )
+        self.print_info(f"Using user_pk: {CYAN}{user_pk} ({submission_by}){RESET}\n")
+        self.print_info(f"Submission PDU: {CYAN}{primary_pdu_for_user}{RESET}\n")
         self.print_info(
             f"Using submission_date: {CYAN}{submission_date}{RESET}\n"
             f"Audit period: Start Date - {CYAN}{audit_start_date}{RESET}, "
             f"End Date - {CYAN}{audit_end_date}{RESET}\n"
         )
-        self.print_info(
-            f"Number of patients to seed: {CYAN}{n_pts_to_seed}{RESET}\n"
-        )
+        self.print_info(f"Number of patients to seed: {CYAN}{n_pts_to_seed}{RESET}\n")
         formatted_visits = "\n    ".join(
             f"{CYAN}{visit_type}{RESET}"
-            for visit_type in self._map_visit_type_letters_to_names(
-                visits
-            ).split("\n")
+            for visit_type in self._map_visit_type_letters_to_names(visits).split("\n")
         )
         self.print_info(f"Visit types provided:\n    {formatted_visits}\n")
         # Now create the submission
@@ -229,11 +218,11 @@ class Command(BaseCommand):
 
         new_submission = Submission.objects.create(
             paediatric_diabetes_unit=primary_pdu_for_user,
-            audit_year=audit_start_date.year, # compatibility
+            audit_year=audit_start_date.year,  # compatibility
             audit_period=audit_period,
             submission_date=submission_date,
             submission_by=submission_by,
-            submission_active=True
+            submission_active=True,
         )
 
         # Add patients to submission
@@ -268,16 +257,12 @@ class Command(BaseCommand):
                     datetime.strptime(submission_date_str, "%Y-%m-%d")
                 ).date()
             except ValueError:
-                self.print_error(
-                    "Invalid submission_date format. Use YYYY-MM-DD."
-                )
+                self.print_error("Invalid submission_date format. Use YYYY-MM-DD.")
                 return
         else:
             submission_date = timezone.now().date()
 
-        audit_start_date, audit_end_date = get_audit_period_for_date(
-            submission_date
-        )
+        audit_start_date, audit_end_date = get_audit_period_for_date(submission_date)
 
         # Number of patients to seed (pts)
         n_pts_to_seed = options["pts"]
@@ -295,7 +280,7 @@ class Command(BaseCommand):
 
         # hba1c target
         hba1c_target = hb_target_map[options["hb_target"]]
-        
+
         # Age range
         age_range = age_range_map[options["age_range"]]
 

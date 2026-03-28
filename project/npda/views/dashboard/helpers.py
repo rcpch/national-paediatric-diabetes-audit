@@ -3,11 +3,9 @@
 # Python imports
 import logging
 
-from project.npda.kpi_class.kpis import CalculateKPIS
 
 # LOGGING
 logger = logging.getLogger(__name__)
-
 
 
 def convert_value_counts_dict_to_pct(value_counts_dict: dict):
