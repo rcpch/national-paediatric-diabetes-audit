@@ -22,17 +22,17 @@ jobs:
         with:
           fetch-depth: 0 # to allow git_context_processor.py to still work
 
-      - name: 'Login via Azure CLI'
+      - name: "Login via Azure CLI"
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: 'Install linting tools'
+      - name: "Install linting tools"
         run: pip install black isort ruff
 
-      - name: 'Run PR check script'
+      - name: "Run PR check script"
         env:
           AZURE_CONFIG_STORAGE_ACCOUNT: ${{ secrets.AZURE_CONFIG_STORAGE_ACCOUNT }}
           AZURE_CONFIG_FILE_SHARE: ${{ secrets.AZURE_CONFIG_FILE_SHARE }}
