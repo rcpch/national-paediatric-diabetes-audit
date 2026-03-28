@@ -28,11 +28,7 @@ from project.constants.colors import (
 )
 
 # Project imports
-from project.npda.models import (
-    Patient,
-    Submission,
-    Visit,
-)
+from project.npda.models import Patient, Submission, Visit
 from project.npda.views.decorators import check_data_permissions, login_and_otp_required
 
 

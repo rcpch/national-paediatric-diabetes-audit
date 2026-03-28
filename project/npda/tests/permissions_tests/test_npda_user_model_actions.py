@@ -500,7 +500,9 @@ def test_audit_team_can_add_employers_outside_of_their_pdu(
         npdauser=ah_coordinator,
         activity=15,  # Assigned to a new PDU
         npdauser_admin=audit_team_user,  # The user who made the change
-    ).exists(), "Expected a VisitActivity to be created when a coordinator tries to change their PDU."
+    ).exists(), (
+        "Expected a VisitActivity to be created when a coordinator tries to change their PDU."
+    )
 
 
 @pytest.mark.django_db
@@ -670,7 +672,7 @@ def test_users_can_download_csv(
         "pdu-submissions",
         kwargs={
             "pz_code": test_user.organisation_employers.first().pz_code,
-            "audit_period": f"{audit_start_date.year}-{audit_start_date.year +1}",
+            "audit_period": f"{audit_start_date.year}-{audit_start_date.year + 1}",
         },
     )
 
@@ -733,7 +735,7 @@ def test_reader_cannot_download_csv(
         "pdu-submissions",
         kwargs={
             "pz_code": editor_user.organisation_employers.first().pz_code,
-            "audit_period": f"{audit_start_date.year}-{audit_start_date.year +1}",
+            "audit_period": f"{audit_start_date.year}-{audit_start_date.year + 1}",
         },
     )
 
@@ -803,7 +805,7 @@ def test_users_can_download_report(
         "pdu-submissions",
         kwargs={
             "pz_code": test_user.organisation_employers.first().pz_code,
-            "audit_period": f"{audit_start_date.year}-{audit_start_date.year +1}",
+            "audit_period": f"{audit_start_date.year}-{audit_start_date.year + 1}",
         },
     )
 
@@ -870,7 +872,7 @@ def test_rcpch_audit_team_can_delete_submission(
         "pdu-submissions",
         kwargs={
             "pz_code": audit_team_user.organisation_employers.first().pz_code,
-            "audit_period": f"{audit_start_date.year}-{audit_start_date.year +1}",
+            "audit_period": f"{audit_start_date.year}-{audit_start_date.year + 1}",
         },
     )
 
@@ -937,7 +939,7 @@ def test_non_rcpch_audit_team_cannot_delete_submission(
         "pdu-submissions",
         kwargs={
             "pz_code": non_deleting_user.organisation_employers.first().pz_code,
-            "audit_period": f"{audit_start_date.year}-{audit_start_date.year +1}",
+            "audit_period": f"{audit_start_date.year}-{audit_start_date.year + 1}",
         },
     )
 
@@ -1024,9 +1026,9 @@ def test_editors_and_readers_can_only_view_their_own_logs(
         # Check they can see their own logs
         url = reverse("npdauser-logs", kwargs={"npdauser_id": user.pk})
         response = client.get(url)
-        assert (
-            response.status_code == HTTPStatus.OK
-        ), f"User {user.first_name} ({user.organisation_employers.first().pz_code}) should be able to see their own logs"
+        assert response.status_code == HTTPStatus.OK, (
+            f"User {user.first_name} ({user.organisation_employers.first().pz_code}) should be able to see their own logs"
+        )
 
         # Make a GET request to the other user's logs
         # NOTE: though the test_users_cant_see_user_logs_for_different_pdus_users already checks that
@@ -1042,18 +1044,18 @@ def test_editors_and_readers_can_only_view_their_own_logs(
                     other_user.organisation_employers.first().pz_code
                     == user.organisation_employers.first().pz_code
                 ):
-                    assert (
-                        response.status_code == HTTPStatus.OK
-                    ), f"User {user.first_name} ({user.organisation_employers.first().pz_code}) should be able to see logs for user {other_user.first_name} ({other_user.organisation_employers.first().pz_code})"
+                    assert response.status_code == HTTPStatus.OK, (
+                        f"User {user.first_name} ({user.organisation_employers.first().pz_code}) should be able to see logs for user {other_user.first_name} ({other_user.organisation_employers.first().pz_code})"
+                    )
                 else:
-                    assert (
-                        response.status_code == HTTPStatus.FORBIDDEN
-                    ), f"User {user.first_name} ({user.organisation_employers.first().pz_code}) should not be able to see logs for user {other_user.first_name} ({other_user.organisation_employers.first().pz_code})"
+                    assert response.status_code == HTTPStatus.FORBIDDEN, (
+                        f"User {user.first_name} ({user.organisation_employers.first().pz_code}) should not be able to see logs for user {other_user.first_name} ({other_user.organisation_employers.first().pz_code})"
+                    )
             else:
                 # Readers and editors CANNOT see any other logs
-                assert (
-                    response.status_code == HTTPStatus.FORBIDDEN
-                ), f"User {user.first_name} ({user.organisation_employers.first().pz_code}) should not be able to see logs for user {other_user.first_name} ({other_user.organisation_employers.first().pz_code})"
+                assert response.status_code == HTTPStatus.FORBIDDEN, (
+                    f"User {user.first_name} ({user.organisation_employers.first().pz_code}) should not be able to see logs for user {other_user.first_name} ({other_user.organisation_employers.first().pz_code})"
+                )
 
     # Also check the other users can see all logs
     rcpch_audit_team_user = NPDAUser.objects.filter(
@@ -1071,25 +1073,25 @@ def test_editors_and_readers_can_only_view_their_own_logs(
             "npdauser-logs", kwargs={"npdauser_id": user_should_see_all_logs.pk}
         )
         response = client.get(url)
-        assert (
-            response.status_code == HTTPStatus.OK
-        ), f"User {user_should_see_all_logs.first_name} ({user_should_see_all_logs.organisation_employers.first().pz_code}) should be able to see their own logs"
+        assert response.status_code == HTTPStatus.OK, (
+            f"User {user_should_see_all_logs.first_name} ({user_should_see_all_logs.organisation_employers.first().pz_code}) should be able to see their own logs"
+        )
 
         # Other users in same PDU
         for other_user in [another_user_same_pdu, another_user_different_pdu]:
             url = reverse("npdauser-logs", kwargs={"npdauser_id": other_user.pk})
             response = client.get(url)
-            assert (
-                response.status_code == HTTPStatus.OK
-            ), f"User {user_should_see_all_logs.first_name} ({user_should_see_all_logs.organisation_employers.first().pz_code}) should be able to see logs for user {other_user.first_name} ({other_user.organisation_employers.first().pz_code})"
+            assert response.status_code == HTTPStatus.OK, (
+                f"User {user_should_see_all_logs.first_name} ({user_should_see_all_logs.organisation_employers.first().pz_code}) should be able to see logs for user {other_user.first_name} ({other_user.organisation_employers.first().pz_code})"
+            )
 
         # Other users in different PDU
         for other_user in [another_user_different_pdu]:
             url = reverse("npdauser-logs", kwargs={"npdauser_id": other_user.pk})
             response = client.get(url)
-            assert (
-                response.status_code == HTTPStatus.OK
-            ), f"User {user_should_see_all_logs.first_name} ({user_should_see_all_logs.organisation_employers.first().pz_code}) should be able to see logs for user {other_user.first_name} ({other_user.organisation_employers.first().pz_code})"
+            assert response.status_code == HTTPStatus.OK, (
+                f"User {user_should_see_all_logs.first_name} ({user_should_see_all_logs.organisation_employers.first().pz_code}) should be able to see logs for user {other_user.first_name} ({other_user.organisation_employers.first().pz_code})"
+            )
 
 
 @pytest.mark.django_db
@@ -1207,12 +1209,12 @@ def test_coordinators_cannot_activate_or_deactivate_users_with_multiple_employer
 
     initial_status = test_user_multiple_employers.is_active
 
-    assert (
-        test_user_multiple_employers.has_perm("npda.delete_npdauser") is False
-    ), f"User {test_user_multiple_employers.first_name} ({test_user_multiple_employers.pz_code}) should not be able to change the active status of user {test_user_multiple_employers.first_name} ({test_user_multiple_employers.organisation_employers.first().pz_code})"
-    assert (
-        test_user_multiple_employers.organisation_employers.count() > 1
-    ), f"User {test_user_multiple_employers.first_name} ({test_user_multiple_employers.pz_code}) should have multiple employers"
+    assert test_user_multiple_employers.has_perm("npda.delete_npdauser") is False, (
+        f"User {test_user_multiple_employers.first_name} ({test_user_multiple_employers.pz_code}) should not be able to change the active status of user {test_user_multiple_employers.first_name} ({test_user_multiple_employers.organisation_employers.first().pz_code})"
+    )
+    assert test_user_multiple_employers.organisation_employers.count() > 1, (
+        f"User {test_user_multiple_employers.first_name} ({test_user_multiple_employers.pz_code}) should have multiple employers"
+    )
 
     # Login user
     client = login_and_verify_user(client, test_coordinator)
@@ -1225,9 +1227,9 @@ def test_coordinators_cannot_activate_or_deactivate_users_with_multiple_employer
     assert response.status_code == HTTPStatus.FORBIDDEN
 
     test_user_multiple_employers.refresh_from_db()
-    assert (
-        test_user_multiple_employers.is_active == initial_status
-    ), f"User {test_user_multiple_employers.first_name} ({test_user_multiple_employers.pz_code}) should not be able to change the active status of user {test_user_multiple_employers.first_name} ({test_user_multiple_employers.organisation_employers.first().pz_code})"
+    assert test_user_multiple_employers.is_active == initial_status, (
+        f"User {test_user_multiple_employers.first_name} ({test_user_multiple_employers.pz_code}) should not be able to change the active status of user {test_user_multiple_employers.first_name} ({test_user_multiple_employers.organisation_employers.first().pz_code})"
+    )
 
 
 @pytest.mark.django_db
@@ -1297,15 +1299,15 @@ def test_rcpch_audit_team_and_superusers_can_toggle_is_active_for_users_with_mul
     response = client.post(url, data)
 
     # Should not be forbidden
-    assert (
-        response.status_code != HTTPStatus.FORBIDDEN
-    ), f"Audit team member should be able to {action_label} user {user.first_name}."
+    assert response.status_code != HTTPStatus.FORBIDDEN, (
+        f"Audit team member should be able to {action_label} user {user.first_name}."
+    )
 
     # Refresh and check outcome
     user.refresh_from_db()
-    assert (
-        user.is_active == expected_active
-    ), f"After {action_label}, user.is_active should be {expected_active} but got {user.is_active}."
+    assert user.is_active == expected_active, (
+        f"After {action_label}, user.is_active should be {expected_active} but got {user.is_active}."
+    )
 
 
 @pytest.mark.django_db
@@ -1445,9 +1447,7 @@ def test_coordinators_with_multiple_employers_cannot_view_user_logs_with_multipl
     OrganisationEmployer.objects.filter(
         npda_user=test_coordinator,
         paediatric_diabetes_unit__pz_code=KINGS_COLLEGE,
-    ).update(
-        is_primary_employer=False
-    )  # can't have 2 primary employers
+    ).update(is_primary_employer=False)  # can't have 2 primary employers
 
     # Create a test user with multiple employers
     test_user_multiple_employers = NPDAUser.objects.filter(
@@ -1629,9 +1629,9 @@ def test_coordinator_cannot_change_email_for_user_with_multiple_pdus(
 
     victim_reader.refresh_from_db()
 
-    assert (
-        victim_reader.email == email_before
-    ), "Malicious coordinator should not be able to change email of user in multiple PDUs."
+    assert victim_reader.email == email_before, (
+        "Malicious coordinator should not be able to change email of user in multiple PDUs."
+    )
 
 
 @pytest.mark.django_db
@@ -1684,6 +1684,6 @@ def test_coordinator_cannot_change_role_for_user_with_multiple_pdus(
 
     victim_reader.refresh_from_db()
 
-    assert (
-        victim_reader.role == AUDIT_CENTRE_READER
-    ), "Malicious coordinator should not be able to change role of user in multiple PDUs."
+    assert victim_reader.role == AUDIT_CENTRE_READER, (
+        "Malicious coordinator should not be able to change role of user in multiple PDUs."
+    )

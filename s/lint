@@ -1,32 +1,23 @@
 #!/bin/bash -e
 
-# lint - runs black, isort, and ruff on the codebase
+# lint - runs ruff (formatter + linter) in the django container
 #
 # Usage:
 #   s/lint           fix mode: applies formatting and auto-fixes in place
 #   s/lint --check   check mode: exits non-zero if anything is not clean (used in CI)
 
-CHECK_FLAG=""
-ISORT_FLAG=""
-RUFF_FLAG=""
-
 if [[ "$1" == "--check" ]]; then
-    CHECK_FLAG="--check"
-    ISORT_FLAG="--check-only"
-    RUFF_FLAG=""  # ruff check is always check-only unless --fix is passed
-fi
+    echo "▶ ruff format (check)"
+    docker compose run --rm django ruff format --check .
 
-echo "▶ black"
-black ${CHECK_FLAG} .
-
-echo "▶ isort"
-isort ${ISORT_FLAG} .
-
-echo "▶ ruff"
-if [[ "$1" == "--check" ]]; then
-    ruff check .
+    echo "▶ ruff check"
+    docker compose run --rm django ruff check .
 else
-    ruff check --fix .
+    echo "▶ ruff format"
+    docker compose run --rm django ruff format .
+
+    echo "▶ ruff check"
+    docker compose run --rm django ruff check --fix .
 fi
 
 echo "✅ lint complete"

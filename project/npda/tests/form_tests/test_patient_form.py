@@ -629,12 +629,12 @@ def test_pass_validation_if_same_patient_twice_in_same_submission_but_different_
 
     # Create a new form with the same patient but in a different PDU
     new_form = PatientForm(VALID_FIELDS, paediatric_diabetes_unit=another_pdu)
-    assert (
-        new_form.is_valid()
-    ), "Form should be valid even with the same patient in a different PDU"
-    assert (
-        "nhs_number" not in new_form.errors.as_data()
-    ), "There should be no error for nhs_number when the patient is in a different PDU"
+    assert new_form.is_valid(), (
+        "Form should be valid even with the same patient in a different PDU"
+    )
+    assert "nhs_number" not in new_form.errors.as_data(), (
+        "There should be no error for nhs_number when the patient is in a different PDU"
+    )
 
 
 @pytest.mark.django_db

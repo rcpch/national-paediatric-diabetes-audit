@@ -18,9 +18,7 @@ from project.constants import (
     TREATMENT_TYPES,
     YES_NO_UNKNOWN,
 )
-from project.npda.general_functions.audit_period import (
-    get_quarters_for_audit_period,
-)
+from project.npda.general_functions.audit_period import get_quarters_for_audit_period
 from project.npda.general_functions.random_date import get_random_date
 from project.npda.models.patient import Patient
 from project.npda.models.visit import Visit
@@ -63,7 +61,6 @@ class HbA1cTargetRange(Enum):
 
 
 class FakePatientCreator:
-
     DEFAULT_VISIT_TYPE = [
         VisitType.CLINIC,
         VisitType.CLINIC,

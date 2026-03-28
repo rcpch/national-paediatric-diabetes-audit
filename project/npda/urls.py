@@ -29,6 +29,7 @@ from project.npda.views import (
     upload_csv,
     upload_csv_in_progress,
 )
+
 from .views.dashboard import dashboard, partials
 from .views.dashboard.patient_characteristics import all_patient_charts, patient_ages
 from .views.dashboard.patient_measurements import patient_measurements

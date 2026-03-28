@@ -1,6 +1,5 @@
 """Tests for the 7 Key Processes KPIs."""
 
-
 import pytest
 from dateutil.relativedelta import relativedelta
 

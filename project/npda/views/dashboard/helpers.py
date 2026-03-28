@@ -3,7 +3,6 @@
 # Python imports
 import logging
 
-
 # LOGGING
 logger = logging.getLogger(__name__)
 

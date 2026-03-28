@@ -205,9 +205,7 @@ def test_get_number_of_transitioned_to_adult_service(
     )
 
     # Create a submission (BEFORE calculating KPIs)
-    eligible_pz_code = (
-        eligible_patient_leaving_date_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code
-    )
+    eligible_pz_code = eligible_patient_leaving_date_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code
     submission = utils.create_submission(
         current_month_start,
         pz_code=eligible_pz_code,
@@ -282,9 +280,7 @@ def test_get_number_of_moved_out_of_area_this_year(
     )
 
     # Create a submission (BEFORE calculating KPIs)
-    eligible_pz_code = (
-        eligible_patient_leaving_date_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code
-    )
+    eligible_pz_code = eligible_patient_leaving_date_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code
     submission = utils.create_submission(
         AUDIT_START_DATE,
         pz_code=eligible_pz_code,

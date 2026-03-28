@@ -15,20 +15,19 @@ from pytest_factoryboy import register
 from project.npda.models import AuditPeriod
 
 # rcpch imports
-from project.npda.tests.factories import (
+from project.npda.tests.factories import (  # noqa: F401  # Fixtures must be imported here so pytest can discover them  # noqa: F401
     NPDAUserFactory,
     OrganisationEmployerFactory,
     PaediatricsDiabetesUnitFactory,
     PatientFactory,
     TransferFactory,
     VisitFactory,
-    # Fixtures must be imported here so pytest can discover them  # noqa: F401
     dummy_sheet_csv,  # noqa: F401
     dummy_sheet_csv_jersey,  # noqa: F401
     dummy_sheet_csv_old_headers,  # noqa: F401
     dummy_sheets_folder,  # noqa: F401
     seed_audit_periods_fixture,  # noqa: F401
-    seed_audit_periods_per_function_fixture,  # noqa: F401
+    seed_audit_periods_per_function_fixture,
     seed_groups_fixture,  # noqa: F401
     seed_groups_per_function_fixture,  # noqa: F401
     seed_users_fixture,  # noqa: F401

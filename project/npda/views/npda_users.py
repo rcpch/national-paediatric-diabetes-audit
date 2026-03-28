@@ -397,7 +397,7 @@ class NPDAUserUpdateView(
         if len(changed_restricted_fields) > 0:
             # if the user is changing their role or email, they must be in the same PDU as the logged in user
             logger.warning(
-                f"User {self.request.user.email} tried to change {", ".join(changed_restricted_fields)} of user {self.get_object().email} but they do not have exactly the same PDU assignments"
+                f"User {self.request.user.email} tried to change {', '.join(changed_restricted_fields)} of user {self.get_object().email} but they do not have exactly the same PDU assignments"
             )
 
             raise PermissionDenied(
@@ -827,7 +827,7 @@ class RCPCHLoginView(TwoFactorLoginView):
             messages.add_message(
                 self.request,
                 messages.INFO,
-                f"You are now logged in as {user.email}. You last logged in at {timezone.localtime(last_logged_in[1].activity_datetime).strftime('%H:%M %p on %A, %d %B %Y')} from {last_logged_in[1].ip_address}.\nYou have {90-delta.days} days remaining until your password needs resetting.",
+                f"You are now logged in as {user.email}. You last logged in at {timezone.localtime(last_logged_in[1].activity_datetime).strftime('%H:%M %p on %A, %d %B %Y')} from {last_logged_in[1].ip_address}.\nYou have {90 - delta.days} days remaining until your password needs resetting.",
             )
         else:
             messages.add_message(

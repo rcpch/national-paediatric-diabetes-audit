@@ -187,7 +187,6 @@ Suggested tests for the Visit model:
 - A visit cannot be created if it is associated with more than one patient.
 """
 
-
 import pytest
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
@@ -238,6 +237,6 @@ def test_visit_hba1c_mmol_mol_conversion(hba1c, hba1c_format, expected_hba1c_mmo
     patient = Patient.objects.create(**eligible_criteria)
     visit = Visit.objects.create(patient=patient, **eligible_visit_criteria)
 
-    assert (
-        visit._hba1c_mmol_mol() == expected_hba1c_mmol_mol
-    ), "HbA1c conversion from mmol/mol to % failed"
+    assert visit._hba1c_mmol_mol() == expected_hba1c_mmol_mol, (
+        "HbA1c conversion from mmol/mol to % failed"
+    )

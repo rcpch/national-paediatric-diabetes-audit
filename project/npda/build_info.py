@@ -8,7 +8,10 @@ _build_info = None
 
 def get_build_info_from_dot_git_folder():
     try:
-        result = subprocess.run("s/get-build-info", stdout=subprocess.PIPE)  # noqa: S607
+        result = subprocess.run(
+            "s/get-build-info",  # noqa: S603, S607
+            stdout=subprocess.PIPE,
+        )
         return json.loads(result.stdout)
     except Exception:
         logger.exception("Error getting git data from repository")

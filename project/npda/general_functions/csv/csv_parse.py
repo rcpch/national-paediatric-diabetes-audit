@@ -9,8 +9,6 @@ import numpy as np
 # Third-party imports
 import pandas as pd
 
-# Django imports
-
 # RCPCH imports
 from project.constants import (
     ALL_DATES,
@@ -22,6 +20,9 @@ from project.constants import (
     UNIQUE_IDENTIFIER_JERSEY,
     csv_definition_for,
 )
+
+# Django imports
+
 
 # Logging setup
 logger = logging.getLogger(__name__)

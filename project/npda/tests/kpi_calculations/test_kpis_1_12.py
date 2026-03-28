@@ -1,6 +1,5 @@
 """Tests for the Patient Characteristics KPIS."""
 
-
 import pytest
 from dateutil.relativedelta import relativedelta
 

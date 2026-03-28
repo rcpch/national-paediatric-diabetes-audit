@@ -108,7 +108,6 @@ def get_metric_scatter_plot(request, audit_period, pdu):
     Must have request.GET data -> template responsible for handling empty data"""
 
     try:
-
         if not request.htmx:
             return HttpResponseBadRequest("This view is only accessible via HTMX")
 
@@ -152,7 +151,10 @@ def get_metric_scatter_plot(request, audit_period, pdu):
                 y=incremental_passed,
                 marker={
                     "color": colors.RCPCH_LIGHT_GREY,  # Change to desired color
-                    "line": {"color": colors.RCPCH_LIGHT_GREY, "width": 1},  # Add border
+                    "line": {
+                        "color": colors.RCPCH_LIGHT_GREY,
+                        "width": 1,
+                    },  # Add border
                     "symbol": "square",
                     "size": 12,
                 },

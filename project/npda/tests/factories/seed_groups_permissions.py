@@ -10,7 +10,6 @@ def _seed_groups_fixture(django_db_setup, django_db_blocker):
     verbose=False
     """
     with django_db_blocker.unblock():
-
         if not Group.objects.all().exists():
             groups_seeder(
                 run_create_groups=True,

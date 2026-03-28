@@ -27,13 +27,25 @@ from project.npda.general_functions.csv import gather_unique_patient_and_visit_c
 # Logging setup
 logger = logging.getLogger(__name__)
 
-from project.npda.forms.external_patient_validators import validate_patient_async  # noqa: E402
-from project.npda.forms.external_visit_validators import validate_visit_async  # noqa: E402
+from project.npda.forms.external_patient_validators import (  # noqa: E402
+    validate_patient_async,
+)
+from project.npda.forms.external_visit_validators import (  # noqa: E402
+    validate_visit_async,
+)
 from project.npda.forms.patient_form import PatientForm  # noqa: E402
 from project.npda.forms.visit_form import VisitForm  # noqa: E402
 from project.npda.general_functions.csv.csv_clean import csv_clean  # noqa: E402
-from project.npda.general_functions.csv.csv_merge import merge_rows_for_patient  # noqa: E402
-from project.npda.models import Patient, Submission, Transfer, Visit, VisitActivity  # noqa: E402
+from project.npda.general_functions.csv.csv_merge import (  # noqa: E402
+    merge_rows_for_patient,
+)
+from project.npda.models import (  # noqa: E402
+    Patient,
+    Submission,
+    Transfer,
+    Visit,
+    VisitActivity,
+)
 
 
 def create_csv_submission(

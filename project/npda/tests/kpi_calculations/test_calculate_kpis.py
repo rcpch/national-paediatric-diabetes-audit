@@ -76,7 +76,6 @@ def assert_kpi_result_equal(
             # For each pt queryset in expected, check if the actual queryset is
             # the same
             for key, expected_queryset in expected.patient_querysets.items():
-
                 actual_queryset = actual.patient_querysets.get(key)
 
                 # Convert to list and order by id to compare
@@ -100,12 +99,12 @@ def test_ensure_mocked_audit_date_range_is_correct(AUDIT_START_DATE):
     """Ensure that the mocked audit date range is correct."""
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
 
-    assert calc_kpis.audit_start_date == date(
-        2024, 4, 1
-    ), "Mocked audit start date incorrect!"
-    assert calc_kpis.audit_end_date == date(
-        2025, 3, 31
-    ), "Mocked audit end date incorrect!"
+    assert calc_kpis.audit_start_date == date(2024, 4, 1), (
+        "Mocked audit start date incorrect!"
+    )
+    assert calc_kpis.audit_end_date == date(2025, 3, 31), (
+        "Mocked audit end date incorrect!"
+    )
 
 
 @pytest.mark.parametrize(
@@ -147,8 +146,8 @@ def test_kpi_calculations_dont_break_when_no_patients(
         # if this is one of measures 1-12, the pass and failed keys will contain None - remove them
         assert all(
             isinstance(value, int) or isinstance(value, float)
-                for value in values
-                if value is not None
+            for value in values
+            if value is not None
         ), f"KPI {kpi} has non-integer values: {results}"
 
 
@@ -180,14 +179,14 @@ def test_calculate_kpis_return_obj_has_correct_kpi_labels(AUDIT_START_DATE):
 
         EXPECTED_KPI_NAMES = kpi_registry.get_kpi(kpi_number)
 
-        assert (
-            actual_kpi_attribute_name == EXPECTED_KPI_NAMES.attribute_name
-        ), f"KPI {actual_kpi_attribute_name} has incorrect attribute name: "
+        assert actual_kpi_attribute_name == EXPECTED_KPI_NAMES.attribute_name, (
+            f"KPI {actual_kpi_attribute_name} has incorrect attribute name: "
+        )
         "{actual_kpi_attribute_name}"
 
-        assert (
-            actual_kpi_label == EXPECTED_KPI_NAMES.rendered_label
-        ), f"KPI {actual_kpi_attribute_name} has incorrect label: {actual_kpi_label}"
+        assert actual_kpi_label == EXPECTED_KPI_NAMES.rendered_label, (
+            f"KPI {actual_kpi_attribute_name} has incorrect label: {actual_kpi_label}"
+        )
 
 
 @pytest.mark.django_db

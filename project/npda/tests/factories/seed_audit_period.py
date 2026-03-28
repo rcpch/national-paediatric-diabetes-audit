@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 def _seed_audit_periods_fixture(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
-
         if AuditPeriod.objects.exists():
             logger.info("NOTE: Test audit periods already seeded! Not re-seeding.")
             return

@@ -1,5 +1,3 @@
-
-
 def validate_date(
     date_under_examination_field_name,
     date_under_examination_label_name,
@@ -56,7 +54,7 @@ def validate_date(
         ):
             error = {
                 f"{date_under_examination_field_name}": [
-                    f"'{date_under_examination_label_name}' must be within the audit period {audit_period.start_date.strftime("%d %b %Y")} to {audit_period.end_date.strftime("%d %b %Y")}."
+                    f"'{date_under_examination_label_name}' must be within the audit period {audit_period.start_date.strftime('%d %b %Y')} to {audit_period.end_date.strftime('%d %b %Y')}."
                 ]
             }
             errors.append(error)

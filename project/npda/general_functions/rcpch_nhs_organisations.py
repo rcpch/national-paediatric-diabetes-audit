@@ -18,9 +18,9 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
-def get_all_pz_codes_with_their_trust_and_primary_organisation() -> (
-    list[tuple[str, str]]
-):
+def get_all_pz_codes_with_their_trust_and_primary_organisation() -> list[
+    tuple[str, str]
+]:
     """
     This function returns all NHS organisations from the RCPCH dataset that are affiliated with a paediatric diabetes unit.
 

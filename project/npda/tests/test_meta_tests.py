@@ -47,7 +47,6 @@ def test__multiple_PaediatricsDiabetesUnitFactory_instances_not_created():
     GOSH_PZ_CODE = "PZ196"
 
     for _ in range(2):
-
         # User factory with no organisation employer specified
         new_user_default_pdu = NPDAUserFactory(
             first_name="test",
@@ -86,12 +85,12 @@ def test__multiple_PaediatricsDiabetesUnitFactory_instances_not_created():
         )
 
     # Check that only one PDU exists in the db for the default PDU user and new patient
-    assert (
-        PaediatricDiabetesUnit.objects.filter(pz_code="PZ130").count() == 1
-    ), "Multiple PDUs created with PZ130"
+    assert PaediatricDiabetesUnit.objects.filter(pz_code="PZ130").count() == 1, (
+        "Multiple PDUs created with PZ130"
+    )
 
     # For the specified PDU user at GOSH
     gosh_pdus_filterset = PaediatricDiabetesUnit.objects.filter(pz_code=GOSH_PZ_CODE)
-    assert (
-        gosh_pdus_filterset.count() == 1
-    ), f"Multiple GOSH PDU created: \n{'\n'.join([str(item) for item in gosh_pdus_filterset.values_list()])}"
+    assert gosh_pdus_filterset.count() == 1, (
+        f"Multiple GOSH PDU created: \n{'\n'.join([str(item) for item in gosh_pdus_filterset.values_list()])}"
+    )

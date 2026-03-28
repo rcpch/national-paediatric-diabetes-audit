@@ -70,12 +70,7 @@ from project.npda.general_functions.data_generator_extended import (
     HbA1cTargetRange,
     VisitType,
 )
-from project.npda.models import (
-    AuditPeriod,
-    NPDAUser,
-    OrganisationEmployer,
-    Submission,
-)
+from project.npda.models import AuditPeriod, NPDAUser, OrganisationEmployer, Submission
 
 letter_name_map = {
     "C": VisitType.CLINIC,

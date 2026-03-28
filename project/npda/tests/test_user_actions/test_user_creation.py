@@ -27,7 +27,6 @@ def test_user_creation(
 
     # For each test user, create a user in the same organisation
     for test_user in test_users:
-
         data = {
             "title": TITLES[0][0],  # Mr
             "first_name": "Test",

@@ -50,9 +50,7 @@ watchdog==6.0.0
 
 # code linting and formatting
 autopep8==2.0.4
-black>=24.3.0
 djlint==1.36.3
-isort==5.13.2
 ruff>=0.4.0
 
 # testing and code analysis

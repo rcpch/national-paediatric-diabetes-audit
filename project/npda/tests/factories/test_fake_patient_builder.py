@@ -6,9 +6,7 @@ from datetime import date, timedelta
 
 import pytest
 
-from project.npda.general_functions.audit_period import (
-    get_audit_period_for_date,
-)
+from project.npda.general_functions.audit_period import get_audit_period_for_date
 from project.npda.general_functions.data_generator_extended import (
     FakePatientCreator,
     HbA1cTargetRange,
@@ -110,9 +108,9 @@ def test_fake_patient_creator_ages_all_appropriate(age_range_enum):
         patient_age_years = patient_age_days / 365.25
 
         # Assert the age in years falls within the given range
-        assert (
-            min_age <= patient_age_years <= max_age
-        ), f"Patient {pt.id} is out of the age range: {patient_age_years:.2f} years"
+        assert min_age <= patient_age_years <= max_age, (
+            f"Patient {pt.id} is out of the age range: {patient_age_years:.2f} years"
+        )
 
 
 @pytest.mark.django_db

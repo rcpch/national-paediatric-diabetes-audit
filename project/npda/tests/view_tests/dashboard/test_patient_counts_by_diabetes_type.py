@@ -121,9 +121,9 @@ def test_patient_ages_age_band_assignment(
         "nineteen_twenty_five",
     }
     for band in detail_bands - {expected_band}:
-        assert (
-            patients_by_age[band] == 0
-        ), f"Expected {band} to be 0, got {patients_by_age[band]}"
+        assert patients_by_age[band] == 0, (
+            f"Expected {band} to be 0, got {patients_by_age[band]}"
+        )
 
 
 @pytest.mark.django_db

@@ -16,7 +16,6 @@ class DateInput(forms.DateInput):
 
 
 class VisitForm(forms.ModelForm):
-
     patient = None
 
     class Meta:
@@ -1137,10 +1136,7 @@ class VisitForm(forms.ModelForm):
         # I haven't implemented it here. The risk is that future versions of Django will add more
         # behaviour that we miss out on.
 
-        if (
-            self.async_validation_results
-            and not self.override_height_weight
-        ):
+        if self.async_validation_results and not self.override_height_weight:
             self.instance.bmi = self.async_validation_results.bmi
 
             for field_prefix in ["height", "weight", "bmi"]:

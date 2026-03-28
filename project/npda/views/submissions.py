@@ -3,9 +3,9 @@ import io
 import itertools
 import json
 import logging
-from datetime import datetime, UTC
-from typing import Any
 from collections.abc import Iterable
+from datetime import UTC, datetime
+from typing import Any
 
 # Third party imports
 import pandas as pd
@@ -634,7 +634,9 @@ def create_column_chart(pdus_by_latest_submission, selected_audit_period):
                 textposition="inside",  # Text inside bars for horizontal layout
                 hovertemplate="<b>%{y} (%{customdata})</b><br>Quarter: %{text}<extra></extra>",
                 textfont={
-                    "color": "white", "size": 12, "family": "Montserrat"  # Change font family
+                    "color": "white",
+                    "size": 12,
+                    "family": "Montserrat",  # Change font family
                 },
                 hoverlabel={
                     "bgcolor": RCPCH_LIGHT_BLUE,
@@ -734,18 +736,22 @@ def submission_stats(selected_audit_period):
         .order_by("-visits_per_patient")
     )
 
-    latest_submission_paediatric_diabetes_unit, submission_date = getattr(
-        latest_submission_data, "paediatric_diabetes_unit", None
-    ), getattr(latest_submission_data, "submission_date", None)
-    fewest_errors_paediatric_diabetes_unit, error_number = getattr(
-        fewest_errors, "paediatric_diabetes_unit", None
-    ), getattr(fewest_errors, "error_count", None)
-    most_patients_paediatric_diabetes_unit, patient_number = getattr(
-        most_patients, "paediatric_diabetes_unit", None
-    ), getattr(most_patients, "patient_count", None)
-    most_visits_paediatric_diabetes_unit, visit_number = getattr(
-        most_visits, "paediatric_diabetes_unit", None
-    ), getattr(most_visits, "visits_per_patient", None)
+    latest_submission_paediatric_diabetes_unit, submission_date = (
+        getattr(latest_submission_data, "paediatric_diabetes_unit", None),
+        getattr(latest_submission_data, "submission_date", None),
+    )
+    fewest_errors_paediatric_diabetes_unit, error_number = (
+        getattr(fewest_errors, "paediatric_diabetes_unit", None),
+        getattr(fewest_errors, "error_count", None),
+    )
+    most_patients_paediatric_diabetes_unit, patient_number = (
+        getattr(most_patients, "paediatric_diabetes_unit", None),
+        getattr(most_patients, "patient_count", None),
+    )
+    most_visits_paediatric_diabetes_unit, visit_number = (
+        getattr(most_visits, "paediatric_diabetes_unit", None),
+        getattr(most_visits, "visits_per_patient", None),
+    )
 
     # Create a dictionary to store the statistics
     submission_statistics = {

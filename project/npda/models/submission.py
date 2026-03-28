@@ -2,7 +2,6 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 
-
 class SubmissionManager(models.Manager):
     def get_submission_for_request(self, pdu, audit_period):
         return self.filter(

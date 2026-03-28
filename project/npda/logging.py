@@ -83,7 +83,7 @@ class NPDARequestLoggingMiddleware:
             username_to_log = "-" if request.user.is_anonymous else request.user.email
 
             request_logger.info(
-                f"{request.META.get('HTTP_X_FORWARDED_FOR', '')} - {username_to_log} [{gunicorn_formatted_datetime}] \"{request.method} {request.get_full_path()}\" {response.status_code} {response.get('Content-Length', "-")} \"{request.META.get('HTTP_REFERER', '-')}\" \"{request.META.get('HTTP_USER_AGENT', '-')}\" {duration_ms}"
+                f'{request.META.get("HTTP_X_FORWARDED_FOR", "")} - {username_to_log} [{gunicorn_formatted_datetime}] "{request.method} {request.get_full_path()}" {response.status_code} {response.get("Content-Length", "-")} "{request.META.get("HTTP_REFERER", "-")}" "{request.META.get("HTTP_USER_AGENT", "-")}" {duration_ms}'
             )
 
         return response

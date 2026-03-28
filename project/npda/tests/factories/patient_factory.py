@@ -10,8 +10,6 @@ import factory
 import nhs_number
 from dateutil.relativedelta import relativedelta
 
-# third-party imports
-
 from project.constants import DIABETES_TYPES, ETHNICITIES, SEX_TYPE
 
 # rcpch imports
@@ -25,6 +23,9 @@ from project.npda.models import Patient
 from project.npda.tests.factories.visit_factory import VisitFactory
 
 from .transfer_factory import TransferFactory
+
+# third-party imports
+
 
 # Logging
 logger = logging.getLogger(__name__)

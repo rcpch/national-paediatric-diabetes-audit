@@ -38,7 +38,6 @@ def test_kpi_calculation_24(AUDIT_START_DATE):
         "date_of_birth": AUDIT_START_DATE - relativedelta(days=365 * 10),
     }
     for treatment_val in (3, 6):
-
         # Now create the passing patients
         passing_closed_loop_2 = PatientFactory(
             postcode=f"passing_closed_loop_2_{treatment_val}",

@@ -27,10 +27,7 @@ from project.npda.general_functions import audit_period
 
 # NPDA imports
 from project.npda.models import AuditPeriod, NPDAUser, Submission, Transfer
-from project.npda.tests.factories import (
-    PaediatricsDiabetesUnitFactory,
-    PatientFactory,
-)
+from project.npda.tests.factories import PaediatricsDiabetesUnitFactory, PatientFactory
 from project.npda.tests.utils import login_and_verify_user
 
 logger = logging.getLogger(__name__)

@@ -11,7 +11,6 @@ from django.contrib.auth.forms import AuthenticationForm, SetPasswordForm
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
-
 # RCPCH imports
 from ...constants.styles.form_styles import *
 from ..models import NPDAUser, VisitActivity
@@ -22,7 +21,6 @@ logger = logging.getLogger(__name__)
 
 
 class NPDAUserForm(forms.ModelForm):
-
     add_employer = forms.ChoiceField(
         choices=[],  # Initially empty, will be populated dynamically
         required=False,
@@ -167,9 +165,7 @@ class CaptchaAuthenticationForm(AuthenticationForm):
 
         # If in DEBUG -> don't require captch, pre fill fields
         if settings.DEBUG:
-            logger.warning(
-                "IN LOCAL DEVELOPMENT, BYPASSING LOGIN BY PREFILLING FIELDS"
-            )
+            logger.warning("IN LOCAL DEVELOPMENT, BYPASSING LOGIN BY PREFILLING FIELDS")
             self.fields["username"].widget.attrs["value"] = (
                 settings.LOCAL_DEV_ADMIN_EMAIL
                 or "SET LOCAL DEV ADMIN EMAIL IN ENVIRONMENT VARIABLES"
@@ -201,10 +197,10 @@ class CaptchaAuthenticationForm(AuthenticationForm):
             if failed_login_activities:
                 first_activity = failed_login_activities[-1]
 
-                if len(
-                    failed_login_activities
-                ) >= 5 and timezone.now() <= first_activity.activity_datetime + timezone.timedelta(
-                    minutes=5
+                if (
+                    len(failed_login_activities) >= 5
+                    and timezone.now()
+                    <= first_activity.activity_datetime + timezone.timedelta(minutes=5)
                 ):
                     VisitActivity.objects.create(
                         activity=6,

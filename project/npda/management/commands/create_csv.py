@@ -418,7 +418,6 @@ class Command(BaseCommand):
                 visit_dict = {}
 
                 for model, field_heading_mappings in csv_map.items():
-
                     for (
                         model_field,
                         csv_heading,
@@ -590,7 +589,7 @@ class Command(BaseCommand):
                         df[column]
                         .replace({np.nan: pd.NA, None: pd.NA})  # Replace missing values
                         .apply(
-                            lambda x: (int(x) if pd.notna(x) and x == int(x) else pd.NA)
+                            lambda x: int(x) if pd.notna(x) and x == int(x) else pd.NA
                         )  # Ensure valid integers
                         .astype(dtype)  # Cast to nullable Int dtype
                     )
@@ -736,7 +735,7 @@ class Command(BaseCommand):
 
         output_path = os.path.join(
             output_path,
-            f"{building_str}{datetime.now().strftime("%Y%m%d%H%M%S")}-npda-seed-data-{pz_code}-{n_pts_to_seed}pts-{age_range.name}-{hb_target.name}-{visits.replace(' ', '')}.csv",
+            f"{building_str}{datetime.now().strftime('%Y%m%d%H%M%S')}-npda-seed-data-{pz_code}-{n_pts_to_seed}pts-{age_range.name}-{hb_target.name}-{visits.replace(' ', '')}.csv",
         )
         return output_path
 

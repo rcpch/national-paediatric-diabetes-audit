@@ -2,7 +2,6 @@
 import logging
 from datetime import date
 
-
 # project imports
 import nhs_number
 from channels.db import database_sync_to_async
@@ -117,12 +116,12 @@ class PatientForm(forms.ModelForm):
         if self.instance.pk:
             try:
                 patient_transfer = Transfer.objects.filter(patient=self.instance).get()
-                self.fields["date_leaving_service"].initial = (
-                    patient_transfer.date_leaving_service
-                )
-                self.fields["reason_leaving_service"].initial = (
-                    patient_transfer.reason_leaving_service
-                )
+                self.fields[
+                    "date_leaving_service"
+                ].initial = patient_transfer.date_leaving_service
+                self.fields[
+                    "reason_leaving_service"
+                ].initial = patient_transfer.reason_leaving_service
             except Transfer.DoesNotExist:
                 pass
 

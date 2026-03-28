@@ -32,7 +32,6 @@ def _seed_users_fixture(django_db_setup, django_db_blocker, test_pz_codes_fixtur
     ]
 
     with django_db_blocker.unblock():
-
         if NPDAUser.objects.exists():
             logger.info("NOTE: Test users already seeded! Not re-seeding.")
             return

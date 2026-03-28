@@ -443,21 +443,25 @@ def test_kpi_calculation_47(AUDIT_START_DATE):
     }
 
     # Create passing pts
-    passing_valid_dka_admission_reason_and_admission_within_audit_range = PatientFactory(
-        # KPI1 eligible
-        **eligible_criteria,
-        # valid dka admission reason
-        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[1][0],
-        # admission date within audit range
-        visit__hospital_admission_date=AUDIT_START_DATE + relativedelta(days=2),
+    passing_valid_dka_admission_reason_and_admission_within_audit_range = (
+        PatientFactory(
+            # KPI1 eligible
+            **eligible_criteria,
+            # valid dka admission reason
+            visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[1][0],
+            # admission date within audit range
+            visit__hospital_admission_date=AUDIT_START_DATE + relativedelta(days=2),
+        )
     )
-    passing_valid_dka_admission_reason_and_discharge_within_audit_range = PatientFactory(
-        # KPI1 eligible
-        **eligible_criteria,
-        # valid dka admission reason
-        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[1][0],
-        # discharge date within audit range
-        visit__hospital_discharge_date=AUDIT_START_DATE + relativedelta(days=2),
+    passing_valid_dka_admission_reason_and_discharge_within_audit_range = (
+        PatientFactory(
+            # KPI1 eligible
+            **eligible_criteria,
+            # valid dka admission reason
+            visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[1][0],
+            # discharge date within audit range
+            visit__hospital_discharge_date=AUDIT_START_DATE + relativedelta(days=2),
+        )
     )
 
     # Create failing pts
