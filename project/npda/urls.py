@@ -4,23 +4,36 @@ from django.urls import include, path
 
 from project.npda.forms.npda_user_form import NPDAUpdatePasswordForm
 from project.npda.views import (
+    NPDAUserCreateView,
+    NPDAUserListView,
+    NPDAUserLogsListView,
+    NPDAUserUpdateView,
+    PatientCreateView,
+    PatientDeleteView,
     PatientListView,
+    PatientUpdateView,
     PatientVisitsListView,
+    ResetPasswordView,
     SubmissionsListView,
     VisitCreateView,
     VisitDeleteView,
     VisitUpdateView,
-    npdauser_pdu_update
+    celery_test_task,
+    csrf_fail,
+    download_template,
+    feature_flags,
+    home,
+    index,
+    new_home,
+    npdauser_pdu_update,
+    upload_csv,
+    upload_csv_in_progress,
 )
 
-from .views import *
 from .views.dashboard import dashboard, partials
+from .views.dashboard.patient_characteristics import all_patient_charts, patient_ages
 from .views.dashboard.patient_measurements import patient_measurements
 from .views.patient_report import patient_report
-from .views.dashboard.patient_characteristics import (
-    patient_ages,
-    all_patient_charts,
-)
 
 data_prefix = "period/<str:audit_period>/pdu/<str:pz_code>"
 
@@ -34,7 +47,11 @@ urlpatterns = [
         name="pdu-download-template",
     ),
     path(f"{data_prefix}/upload_csv", view=upload_csv, name="pdu-upload-csv"),
-    path(f"{data_prefix}/upload_csv_in_progress", view=upload_csv_in_progress, name="pdu-upload-csv-in-progress"),
+    path(
+        f"{data_prefix}/upload_csv_in_progress",
+        view=upload_csv_in_progress,
+        name="pdu-upload-csv-in-progress",
+    ),
     path("feature_flags", view=feature_flags, name="feature-flags"),
     path(
         f"{data_prefix}/submissions",
@@ -47,7 +64,11 @@ urlpatterns = [
         view=PatientListView.as_view(),
         name="pdu-patients",
     ),
-    path(f"{data_prefix}/patient/add/", PatientCreateView.as_view(), name="pdu-patient-add"),
+    path(
+        f"{data_prefix}/patient/add/",
+        PatientCreateView.as_view(),
+        name="pdu-patient-add",
+    ),
     path(
         f"{data_prefix}/patient/<int:pk>/update",
         PatientUpdateView.as_view(),
@@ -200,8 +221,8 @@ patient_report_urlpatterns = [
     path(
         f"{data_prefix}/patient_report/download",
         view=patient_report.download_patient_report,
-        name="pdu-patient-report-download"
-    )
+        name="pdu-patient-report-download",
+    ),
 ]
 
 # Collate all URL patterns

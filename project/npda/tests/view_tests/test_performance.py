@@ -9,7 +9,11 @@ import pytest
 from bs4 import BeautifulSoup
 
 from project.npda.general_functions.data_generator_extended import (
-    AgeRange, FakePatientCreator, HbA1cTargetRange, VisitType)
+    AgeRange,
+    FakePatientCreator,
+    HbA1cTargetRange,
+    VisitType,
+)
 from project.npda.models.npda_user import NPDAUser
 from project.npda.models.submission import Submission
 from project.npda.tests.test_csv_upload import ALDER_HEY_PZ_CODE
@@ -53,7 +57,9 @@ def test_dashboard_view_response_time(
             audit_start_date=AUDIT_START_DATE,
             audit_end_date=AUDIT_END_DATE,
         )
-        logger.info(f'Seeding {N_PATIENTS} patients with {len(VISIT_TYPES)} visit types...')
+        logger.info(
+            f"Seeding {N_PATIENTS} patients with {len(VISIT_TYPES)} visit types..."
+        )
         new_pts = fake_patient_creator.create_and_save_fake_patients(
             n=N_PATIENTS,
             age_range=AgeRange.AGE_11_15,
@@ -64,8 +70,8 @@ def test_dashboard_view_response_time(
             visit_types=VISIT_TYPES,
             visit_kwargs={"is_valid": True},
         )
-        logger.info('DONE!')
-        logger.info('Creating submission...')
+        logger.info("DONE!")
+        logger.info("Creating submission...")
         new_submission = Submission.objects.create(
             paediatric_diabetes_unit=ah_user.organisation_employers.first(),
             audit_year=AUDIT_START_DATE.year,
@@ -76,7 +82,7 @@ def test_dashboard_view_response_time(
 
         # Add patients to submission
         new_submission.patients.add(*new_pts)
-        logger.info('DONE!')
+        logger.info("DONE!")
 
     def get_top_level_dashboard_view_response():
         start_dashboard = time.time()
@@ -84,7 +90,11 @@ def test_dashboard_view_response_time(
         response = client.get("/dashboard")
         elapsed_dashboard = time.time() - start_dashboard
 
-        logger.info(f"N_PATIENTS: {N_PATIENTS} * VISIT_TYPES: {len(VISIT_TYPES)}".center(80, "*"))
+        logger.info(
+            f"N_PATIENTS: {N_PATIENTS} * VISIT_TYPES: {len(VISIT_TYPES)}".center(
+                80, "*"
+            )
+        )
 
         # Check valid overall response within some leeway upperbound
         assert response.status_code == 200

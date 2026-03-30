@@ -7,16 +7,16 @@ import pytest
 from dateutil.relativedelta import relativedelta
 
 from project.constants.albuminuria_stage import ALBUMINURIA_STAGES
-from project.constants.hospital_admission_reasons import \
-    HOSPITAL_ADMISSION_REASONS
+from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
 from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
 from project.npda.tests import utils
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.tests.kpi_calculations.test_calculate_kpis import \
-    assert_kpi_result_equal
+from project.npda.tests.kpi_calculations.test_calculate_kpis import (
+    assert_kpi_result_equal,
+)
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -106,7 +106,9 @@ def test_kpi_calculation_44(seed_groups_fixture, seed_users_fixture, AUDIT_START
     )
     # This measurement should NOT be counted as it's exactly 90 days after diagnosis
     # even though it's within the audit period
-    pt_2_invalid_hba1c_date_wihtin_90_days_diagnosis = AUDIT_START_DATE + relativedelta(days=1)
+    pt_2_invalid_hba1c_date_wihtin_90_days_diagnosis = AUDIT_START_DATE + relativedelta(
+        days=1
+    )
     VisitFactory(
         patient=passing_pt_2_median_48,
         visit_date=pt_2_invalid_hba1c_date_wihtin_90_days_diagnosis,
@@ -252,7 +254,9 @@ def test_kpi_calculation_45(AUDIT_START_DATE):
     )
     # This measurement should NOT be counted as it's exactly 90 days after diagnosis
     # even though it's within the audit period
-    pt_2_invalid_hba1c_date_wihtin_90_days_diagnosis = AUDIT_START_DATE + relativedelta(days=1)
+    pt_2_invalid_hba1c_date_wihtin_90_days_diagnosis = AUDIT_START_DATE + relativedelta(
+        days=1
+    )
     VisitFactory(
         patient=passing_pt_2_median_48,
         visit_date=pt_2_invalid_hba1c_date_wihtin_90_days_diagnosis,
@@ -439,21 +443,25 @@ def test_kpi_calculation_47(AUDIT_START_DATE):
     }
 
     # Create passing pts
-    passing_valid_dka_admission_reason_and_admission_within_audit_range = PatientFactory(
-        # KPI1 eligible
-        **eligible_criteria,
-        # valid dka admission reason
-        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[1][0],
-        # admission date within audit range
-        visit__hospital_admission_date=AUDIT_START_DATE + relativedelta(days=2),
+    passing_valid_dka_admission_reason_and_admission_within_audit_range = (
+        PatientFactory(
+            # KPI1 eligible
+            **eligible_criteria,
+            # valid dka admission reason
+            visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[1][0],
+            # admission date within audit range
+            visit__hospital_admission_date=AUDIT_START_DATE + relativedelta(days=2),
+        )
     )
-    passing_valid_dka_admission_reason_and_discharge_within_audit_range = PatientFactory(
-        # KPI1 eligible
-        **eligible_criteria,
-        # valid dka admission reason
-        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[1][0],
-        # discharge date within audit range
-        visit__hospital_discharge_date=AUDIT_START_DATE + relativedelta(days=2),
+    passing_valid_dka_admission_reason_and_discharge_within_audit_range = (
+        PatientFactory(
+            # KPI1 eligible
+            **eligible_criteria,
+            # valid dka admission reason
+            visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[1][0],
+            # discharge date within audit range
+            visit__hospital_discharge_date=AUDIT_START_DATE + relativedelta(days=2),
+        )
     )
 
     # Create failing pts

@@ -1,7 +1,5 @@
 """Tests for the Patient Characteristics KPIS."""
 
-from typing import List
-
 import pytest
 from dateutil.relativedelta import relativedelta
 
@@ -11,8 +9,9 @@ from project.npda.models import Patient
 from project.npda.tests import utils
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.tests.kpi_calculations.test_calculate_kpis import \
-    assert_kpi_result_equal
+from project.npda.tests.kpi_calculations.test_calculate_kpis import (
+    assert_kpi_result_equal,
+)
 
 
 @pytest.mark.django_db
@@ -30,7 +29,7 @@ def test_kpi_calculation_1(
     N_PATIENTS_INELIGIBLE = N_PATIENTS_FAIL = 4
 
     # Create  Patients and Visits that should PASS KPI1
-    eligible_patients: List[Patient] = PatientFactory.create_batch(
+    eligible_patients: list[Patient] = PatientFactory.create_batch(
         size=N_PATIENTS_ELIGIBLE,
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=1),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
@@ -39,13 +38,13 @@ def test_kpi_calculation_1(
 
     # Create Patients and Visits that should FAIL KPI1
     # Visit date before audit period
-    ineligible_patients_visit_date: List[Patient] = PatientFactory.create_batch(
+    ineligible_patients_visit_date: list[Patient] = PatientFactory.create_batch(
         size=N_PATIENTS_INELIGIBLE,
         visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
         postcode="ineligible_patients_visit_date",
     )
     # Above age 25 at start of audit period
-    ineligible_patients_too_old: List[Patient] = PatientFactory.create_batch(
+    ineligible_patients_too_old: list[Patient] = PatientFactory.create_batch(
         size=N_PATIENTS_INELIGIBLE,
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
         postcode="ineligible_patients_too_old",
@@ -76,7 +75,9 @@ def test_kpi_calculation_1(
         # Check correct patient querysets are returned
         patient_querysets={
             "eligible": Patient.objects.filter(postcode="eligible_patients"),
-            "ineligible": Patient.objects.filter(postcode__startswith="ineligible_patients"),
+            "ineligible": Patient.objects.filter(
+                postcode__startswith="ineligible_patients"
+            ),
             "passed": Patient.objects.filter(postcode="eligible_patients"),
             "failed": Patient.objects.filter(postcode="eligible_patients"),
         },
@@ -105,7 +106,7 @@ def test_kpi_calculation_2(AUDIT_START_DATE):
     N_PATIENTS_INELIGIBLE = N_PATIENTS_FAIL = 4
 
     # Create  Patients and Visits that should PASS KPI2
-    eligible_patients: List[Patient] = PatientFactory.create_batch(
+    eligible_patients: list[Patient] = PatientFactory.create_batch(
         size=N_PATIENTS_ELIGIBLE,
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 10),
@@ -114,17 +115,17 @@ def test_kpi_calculation_2(AUDIT_START_DATE):
 
     # Create Patients and Visits that should FAIL KPI2
     # Visit date before audit period
-    ineligible_patients_visit_date: List[Patient] = PatientFactory.create_batch(
+    ineligible_patients_visit_date: list[Patient] = PatientFactory.create_batch(
         size=N_PATIENTS_INELIGIBLE,
         visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
     )
     # Diagnosis date before audit period
-    ineligible_patients_diagnosis_date: List[Patient] = PatientFactory.create_batch(
+    ineligible_patients_diagnosis_date: list[Patient] = PatientFactory.create_batch(
         size=N_PATIENTS_INELIGIBLE,
         diagnosis_date=AUDIT_START_DATE - relativedelta(days=10),
     )
     # Above age 25 at start of audit period
-    ineligible_patients_too_old: List[Patient] = PatientFactory.create_batch(
+    ineligible_patients_too_old: list[Patient] = PatientFactory.create_batch(
         size=N_PATIENTS_INELIGIBLE,
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
     )
@@ -170,7 +171,7 @@ def test_kpi_calculation_3(AUDIT_START_DATE):
     N_PATIENTS_INELIGIBLE = N_PATIENTS_FAIL = 4
 
     # Create  Patients and Visits that should PASS KPI3
-    eligible_patients: List[Patient] = PatientFactory.create_batch(
+    eligible_patients: list[Patient] = PatientFactory.create_batch(
         size=N_PATIENTS_ELIGIBLE,
         # KPI1 eligible
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
@@ -181,17 +182,17 @@ def test_kpi_calculation_3(AUDIT_START_DATE):
 
     # Create Patients and Visits that should FAIL KPI3
     # Visit date before audit period
-    ineligible_patients_visit_date: List[Patient] = PatientFactory.create_batch(
+    ineligible_patients_visit_date: list[Patient] = PatientFactory.create_batch(
         size=N_PATIENTS_INELIGIBLE,
         visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
     )
     # Above age 25 at start of audit period
-    ineligible_patients_too_old: List[Patient] = PatientFactory.create_batch(
+    ineligible_patients_too_old: list[Patient] = PatientFactory.create_batch(
         size=N_PATIENTS_INELIGIBLE,
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
     )
     # Diab type is not T1DM before audit period
-    ineligible_patients_diab_type: List[Patient] = PatientFactory.create_batch(
+    ineligible_patients_diab_type: list[Patient] = PatientFactory.create_batch(
         size=N_PATIENTS_INELIGIBLE, diabetes_type=DIABETES_TYPES[-1][0]
     )
 
@@ -238,7 +239,7 @@ def test_kpi_calculation_4(AUDIT_START_DATE):
     N_PATIENTS_INELIGIBLE = N_PATIENTS_FAIL = 4
 
     # Create  Patients and Visits that should PASS KPI4
-    eligible_patients: List[Patient] = PatientFactory.create_batch(
+    eligible_patients: list[Patient] = PatientFactory.create_batch(
         size=N_PATIENTS_ELIGIBLE,
         # KPI1 eligible
         visit__visit_date=AUDIT_START_DATE + relativedelta(days=2),
@@ -250,21 +251,21 @@ def test_kpi_calculation_4(AUDIT_START_DATE):
 
     # Create Patients and Visits that should FAIL KPI4
     # Visit date before audit period
-    ineligible_patients_visit_date: List[Patient] = PatientFactory.create_batch(
+    ineligible_patients_visit_date: list[Patient] = PatientFactory.create_batch(
         size=N_PATIENTS_INELIGIBLE,
         visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
     )
     # Above age 25 at start of audit period
-    ineligible_patients_too_old: List[Patient] = PatientFactory.create_batch(
+    ineligible_patients_too_old: list[Patient] = PatientFactory.create_batch(
         size=N_PATIENTS_INELIGIBLE,
         date_of_birth=AUDIT_START_DATE - relativedelta(years=26),
     )
     # Diab type is not T1DM before audit period
-    ineligible_patients_diab_type: List[Patient] = PatientFactory.create_batch(
+    ineligible_patients_diab_type: list[Patient] = PatientFactory.create_batch(
         size=N_PATIENTS_INELIGIBLE, diabetes_type=DIABETES_TYPES[-1][0]
     )
     # age 1day less than 12yo at start of audit period
-    ineligible_patients_lt_12yo: List[Patient] = PatientFactory.create_batch(
+    ineligible_patients_lt_12yo: list[Patient] = PatientFactory.create_batch(
         size=N_PATIENTS_INELIGIBLE,
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 11),
     )
@@ -352,13 +353,13 @@ def test_kpi_calculation_5(AUDIT_START_DATE):
 
     # Create Patients and Visits that should FAIL KPI1 (ineligible)
     # Visit date before audit period
-    ineligible_patient_visit_date: List[Patient] = PatientFactory(
+    ineligible_patient_visit_date: list[Patient] = PatientFactory(
         postcode="ineligible_patient_visit_date",
         visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
         diabetes_type=DIABETES_TYPES[0][0],  # T1DM
     )
     # Above age 25 at start of audit period
-    ineligible_patient_too_old: List[Patient] = PatientFactory(
+    ineligible_patient_too_old: list[Patient] = PatientFactory(
         postcode="ineligible_patient_too_old",
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
         diabetes_type=DIABETES_TYPES[0][0],  # T1DM
@@ -476,7 +477,7 @@ def test_kpi_calculation_6(AUDIT_START_DATE):
             # an observation within the audit period
             **{
                 f"visit__{field_name}": AUDIT_START_DATE + relativedelta(days=2),
-                f"visit__visit_date": AUDIT_START_DATE + relativedelta(days=2),
+                "visit__visit_date": AUDIT_START_DATE + relativedelta(days=2),
             },
         )
 
@@ -507,7 +508,8 @@ def test_kpi_calculation_6(AUDIT_START_DATE):
         patient=eligible_patient_second_visit_observation,
         visit_date=AUDIT_START_DATE + relativedelta(months=2),
         height_weight_observation_date=AUDIT_START_DATE + relativedelta(months=2),
-        psychological_screening_assessment_date=AUDIT_START_DATE + relativedelta(months=2),
+        psychological_screening_assessment_date=AUDIT_START_DATE
+        + relativedelta(months=2),
     )
 
     # Create Patients and Visits that should FAIL KPI3
@@ -675,12 +677,12 @@ def test_kpi_calculation_8(AUDIT_START_DATE):
 
     # Create Patients and Visits that should be excluded
     # Visit date before audit period
-    ineligible_patient_visit_date: List[Patient] = PatientFactory(
+    ineligible_patient_visit_date: list[Patient] = PatientFactory(
         postcode="ineligible_patient_visit_date",
         visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
     )
     # Above age 25 at start of audit period
-    ineligible_patient_too_old: List[Patient] = PatientFactory(
+    ineligible_patient_too_old: list[Patient] = PatientFactory(
         postcode="ineligible_patient_too_old",
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
     )
@@ -745,12 +747,12 @@ def test_kpi_calculation_9(AUDIT_START_DATE):
 
     # Create Patients and Visits that should be excluded
     # Visit date before audit period
-    ineligible_patient_visit_date: List[Patient] = PatientFactory(
+    ineligible_patient_visit_date: list[Patient] = PatientFactory(
         postcode="ineligible_patient_visit_date",
         visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
     )
     # Above age 25 at start of audit period
-    ineligible_patient_too_old: List[Patient] = PatientFactory(
+    ineligible_patient_too_old: list[Patient] = PatientFactory(
         postcode="ineligible_patient_too_old",
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
     )
@@ -824,12 +826,12 @@ def test_kpi_calculation_10(AUDIT_START_DATE):
 
     # Create Patients and Visits that should be excluded
     # Visit date before audit period
-    ineligible_patient_visit_date: List[Patient] = PatientFactory(
+    ineligible_patient_visit_date: list[Patient] = PatientFactory(
         postcode="ineligible_patient_visit_date",
         visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
     )
     # Above age 25 at start of audit period
-    ineligible_patient_too_old: List[Patient] = PatientFactory(
+    ineligible_patient_too_old: list[Patient] = PatientFactory(
         postcode="ineligible_patient_too_old",
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
     )
@@ -904,12 +906,12 @@ def test_kpi_calculation_11(AUDIT_START_DATE):
 
     # Create Patients and Visits that should be excluded
     # Visit date before audit period
-    ineligible_patient_visit_date: List[Patient] = PatientFactory(
+    ineligible_patient_visit_date: list[Patient] = PatientFactory(
         postcode="ineligible_patient_visit_date",
         visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
     )
     # Above age 25 at start of audit period
-    ineligible_patient_too_old: List[Patient] = PatientFactory(
+    ineligible_patient_too_old: list[Patient] = PatientFactory(
         postcode="ineligible_patient_too_old",
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
     )
@@ -975,12 +977,12 @@ def test_kpi_calculation_12(AUDIT_START_DATE):
 
     # Create Patients and Visits that should be excluded
     # Visit date before audit period
-    ineligible_patient_visit_date: List[Patient] = PatientFactory(
+    ineligible_patient_visit_date: list[Patient] = PatientFactory(
         postcode="ineligible_patient_visit_date",
         visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
     )
     # Above age 25 at start of audit period
-    ineligible_patient_too_old: List[Patient] = PatientFactory(
+    ineligible_patient_too_old: list[Patient] = PatientFactory(
         postcode="ineligible_patient_too_old",
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
     )

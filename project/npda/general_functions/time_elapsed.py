@@ -25,7 +25,7 @@ def stringify_time_elapsed(start_date, end_date):
         if elapsed.years >= 1:
             string_delta += handle_interval(elapsed.years, "year")
             if elapsed.months > 0:
-                string_delta += f', {handle_interval(elapsed.months, "month")}'
+                string_delta += f", {handle_interval(elapsed.months, 'month')}"
             return string_delta
 
         # 0 years, 0 - 12 months

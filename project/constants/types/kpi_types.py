@@ -1,7 +1,7 @@
 # Object types
 from dataclasses import asdict, dataclass
 from datetime import date, datetime
-from typing import Dict, Literal, Optional, TypedDict, Union
+from typing import Literal, TypedDict
 
 from django.db.models import QuerySet
 
@@ -39,10 +39,10 @@ class KPIResult:
 
     total_eligible: int
     total_ineligible: int
-    total_passed: Union[int | None]  # E.g. KPIs 1-12 would be None as counts
-    total_failed: Union[int | None]  # E.g. KPIs 1-12 would be None as counts
+    total_passed: int | None  # E.g. KPIs 1-12 would be None as counts
+    total_failed: int | None  # E.g. KPIs 1-12 would be None as counts
     kpi_label: str = "KPI Name not found"
-    patient_querysets: Union[Dict[str, QuerySet[Patient]], None] = None
+    patient_querysets: dict[str, QuerySet[Patient]] | None = None
 
 
 @dataclass
@@ -56,15 +56,13 @@ class IndividualPtKPIResults:
     kpi_25_hba1c: bool
     kpi_26_bmi: bool
     kpi_27_thyroid_screen: bool
-    kpi_28_blood_pressure: Optional[bool]
-    kpi_29_urinary_albumin: Optional[bool]
-    kpi_30_retinal_screening: Optional[bool]
-    kpi_31_foot_examination: Optional[bool]
+    kpi_28_blood_pressure: bool | None
+    kpi_29_urinary_albumin: bool | None
+    kpi_30_retinal_screening: bool | None
+    kpi_31_foot_examination: bool | None
 
-    def get_total_passed(self)->int:
-        return sum(
-            value for value in asdict(self).values() if value is not None
-        )
+    def get_total_passed(self) -> int:
+        return sum(value for value in asdict(self).values() if value is not None)
 
 
 @dataclass
@@ -97,10 +95,11 @@ class KPICalculationsObject:
     audit_start_date: date
     audit_end_date: date
     total_patients_count: int
-    calculated_kpi_values: Dict[
+    calculated_kpi_values: dict[
         str,
         KPIResult,
     ]
+
 
 # TypedDict using dataclass as base
 class IndividualPtKPIResultsDict(TypedDict):
@@ -112,6 +111,7 @@ class IndividualPtKPIResultsDict(TypedDict):
     kpi_30_retinal_screening: bool
     kpi_31_foot_examination: bool
 
+
 class IndividualPtKPICalculationsDict(TypedDict):
     calculation_datetime: str  # Use ISO 8601 format for datetime
     audit_start_date: str
@@ -121,6 +121,7 @@ class IndividualPtKPICalculationsDict(TypedDict):
     died_in_period: int
     transfer_in_period: int
     kpi_results: IndividualPtKPIResultsDict
+
 
 """
 Hard coding these for simplicty and readability
@@ -376,7 +377,7 @@ class KPIRegistry:
         -> 'Care processes in patients ≥ 12 years old'
     """
 
-    def __init__(self, kpi_data: Dict[int, Dict[str, str]]):
+    def __init__(self, kpi_data: dict[int, dict[str, str]]):
         self.kpi_map = {
             number: KPINames(data["attribute_name"], data["rendered_label"])
             for number, data in kpi_data.items()

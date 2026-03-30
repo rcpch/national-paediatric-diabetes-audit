@@ -1,65 +1,63 @@
+import collections
+import csv
 import dataclasses
 import datetime
 import tempfile
-import csv
-import collections
-from io import StringIO
 from decimal import Decimal
+from io import StringIO
 from unittest.mock import AsyncMock, patch
 
-from asgiref.sync import async_to_sync
-
 import nhs_number
-import pandas as pd
 import numpy as np
+import pandas as pd
 import pytest
+from asgiref.sync import async_to_sync
 from dateutil.relativedelta import relativedelta
 from django.apps import apps
-from django.core.exceptions import ValidationError
 from django.contrib.gis.geos import Point
 from django.contrib.messages import get_messages
+from django.core.exceptions import ValidationError
 from django.urls import reverse
 
+from project.constants import (
+    ALL_VISIT_DATES,
+    DIABETES_TYPES,
+    ETHNICITIES,
+    LEAVE_PDU_REASONS,
+    SEX_TYPE,
+    csv_definition_for,
+)
 from project.constants.user import RCPCH_AUDIT_TEAM
+from project.npda.forms.external_patient_validators import (
+    PatientExternalValidationResult,
+)
+from project.npda.forms.external_visit_validators import (
+    CentileAndSDS,
+    VisitExternalValidationResult,
+)
 from project.npda.general_functions.csv import (
-    csv_upload,
-    csv_parse,
     create_csv_submission,
+    csv_parse,
+    csv_upload,
 )
 from project.npda.general_functions.quarter_for_date import (
     current_audit_year_start_date,
 )
-from project.constants import (
-    csv_definition_for,
-    ALL_VISIT_DATES,
-    SEX_TYPE,
-    ETHNICITIES,
-    LEAVE_PDU_REASONS,
-    DIABETES_TYPES,
-)
 from project.npda.models import (
-    NPDAUser,
-    Patient,
-    Visit,
-    PaediatricDiabetesUnit,
     AuditPeriod,
+    NPDAUser,
+    PaediatricDiabetesUnit,
+    Patient,
     Submission,
     Transfer,
+    Visit,
 )
 from project.npda.tests.factories.patient_factory import (
     INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
     TODAY,
     VALID_FIELDS,
 )
-from project.npda.forms.external_patient_validators import (
-    PatientExternalValidationResult,
-)
-from project.npda.forms.external_visit_validators import (
-    VisitExternalValidationResult,
-    CentileAndSDS,
-)
 from project.npda.tests.utils import login_and_verify_user
-
 
 MOCK_PATIENT_EXTERNAL_VALIDATION_RESULT = PatientExternalValidationResult(
     postcode=VALID_FIELDS["postcode"],
@@ -221,11 +219,13 @@ def read_csv_from_str(contents, encoding="utf-8"):
         return csv_parse(f)
 
 
-def modify_raw_csv(csv_str, start=None, end=None, replacements={}):
+def modify_raw_csv(csv_str, start=None, end=None, replacements=None):
     # Sometimes we have to alter the CSV directly to test values
     # of the wrong type.
+    if replacements is None:
+        replacements = {}
     reader = csv.reader(StringIO(csv_str))
-    [header, *rows] = [row for row in reader]
+    [header, *rows] = list(reader)
 
     start_ix = 0 if start is None else start - 1
     end_ix = len(rows) if end is None else end - 1
@@ -518,10 +518,10 @@ def test_multiple_patients_with_visit_errors(
     visit_for_first_patient = Visit.objects.filter(patient=patient_one).first()
     visit_for_second_patient = Visit.objects.filter(patient=patient_two).first()
 
-    assert visit_for_first_patient.treatment == None
+    assert visit_for_first_patient.treatment is None
     assert "treatment" in visit_for_first_patient.errors
 
-    assert visit_for_second_patient.treatment == None
+    assert visit_for_second_patient.treatment is None
     assert "treatment" in visit_for_second_patient.errors
 
 
@@ -624,7 +624,7 @@ def test_invalid_sex(test_user, single_row_valid_df):
 
     patient = Patient.objects.first()
 
-    assert patient.sex == None
+    assert patient.sex is None
     assert "sex" in patient.errors
 
 
@@ -977,7 +977,7 @@ def test_duplicate_columns_causes_error(
     client = login_and_verify_user(client, test_rcpch_user)
 
     # Feed file and re-duplicate columns to the CSV
-    with open(tmp_csv_path, "r") as csv_file:
+    with open(tmp_csv_path) as csv_file:
         csv = csv_file.read()
         csv = csv.replace("NHS Number_2", "NHS Number")
         csv = csv.replace("NHS Number_3", "NHS Number")
@@ -1603,7 +1603,7 @@ def test_hba1c_missing(test_user, single_row_valid_df):
     visit = Visit.objects.first()
 
     # This would be rejected in the questionnaire but saved if it was a csv upload
-    assert visit.hba1c == None
+    assert visit.hba1c is None
     assert "hba1c" in visit.errors
 
 
@@ -1752,7 +1752,7 @@ def test_blood_pressure_missing_values_fails_validation(test_user, single_row_va
     )
 
     visit = Visit.objects.first()
-    assert visit.systolic_blood_pressure == None
+    assert visit.systolic_blood_pressure is None
     assert visit.diastolic_blood_pressure == 80
 
 
@@ -1999,14 +1999,14 @@ def test_decs_value_none_form_fails_validation(test_user, single_row_valid_df):
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "retinal_screening_result" in errors[0], (
-        f"Retinal screening result should fail validation due to missing result, but passed."
+        "Retinal screening result should fail validation due to missing result, but passed."
     )
 
     visit = Visit.objects.first()
     assert visit.retinal_screening_observation_date == datetime.date(2023, 1, 1), (
         f"Saved Retinal screening date should be 1/1/2023, but was {visit.retinal_screening_observation_date}"
     )
-    assert visit.retinal_screening_result == None, (
+    assert visit.retinal_screening_result is None, (
         f"Saved Retinal screening result should be None, but was {visit.retinal_screening_result}"
     )
 
@@ -2029,11 +2029,11 @@ def test_decs_date_none_form_fails_validation(test_user, single_row_valid_df):
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "retinal_screening_observation_date" in errors[0], (
-        f"Retinal screening date should fail validation due to missing date, but passed."
+        "Retinal screening date should fail validation due to missing date, but passed."
     )
 
     visit = Visit.objects.first()
-    assert visit.retinal_screening_observation_date == None, (
+    assert visit.retinal_screening_observation_date is None, (
         f"Saved Retinal screening date should be None, but was {visit.retinal_screening_observation_date}"
     )
     assert visit.retinal_screening_result == 1, (
@@ -2154,7 +2154,7 @@ def test_urine_albumin_value_below_range_form_fails_validation(
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "albumin_creatinine_ratio" in errors[0], (
-        f"Urine albumin creatinine ratio should fail validation as < 3, but passed."
+        "Urine albumin creatinine ratio should fail validation as < 3, but passed."
     )
 
     visit = Visit.objects.first()
@@ -2191,7 +2191,7 @@ def test_urine_albumin_value_above_range_form_fails_validation(
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "albumin_creatinine_ratio" in errors[0], (
-        f"Urine albumin creatinine ratio should fail validation as > 50, but passed."
+        "Urine albumin creatinine ratio should fail validation as > 50, but passed."
     )
 
     visit = Visit.objects.first()
@@ -2228,7 +2228,7 @@ def test_urine_albumin_value_missing_form_fails_validation(
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "albumin_creatinine_ratio" in errors[0], (
-        f"Urine albumin creatinine level should fail validation as None, but passed."
+        "Urine albumin creatinine level should fail validation as None, but passed."
     )
 
     visit = Visit.objects.first()
@@ -2265,7 +2265,7 @@ def test_urine_albumin_stage_missing_form_fails_validation(
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "albuminuria_stage" in errors[0], (
-        f"Urine albumin creatinine stage should fail validation as None, but passed."
+        "Urine albumin creatinine stage should fail validation as None, but passed."
     )
 
     visit = Visit.objects.first()
@@ -2273,7 +2273,7 @@ def test_urine_albumin_stage_missing_form_fails_validation(
     assert visit.albumin_creatinine_ratio == 10, (
         f"Saved urine albumin should be 10, but was {visit.albumin_creatinine_ratio}"
     )
-    assert visit.albuminuria_stage == None, (
+    assert visit.albuminuria_stage is None, (
         f"Saved urine albumin stage should be None, but was {visit.albuminuria_stage}"
     )
     assert visit.albumin_creatinine_ratio_date == datetime.date(2023, 1, 1), (
@@ -2302,7 +2302,7 @@ def test_urine_albumin_date_missing_form_fails_validation(
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "albumin_creatinine_ratio_date" in errors[0], (
-        f"Urine albumin creatinine date should fail validation as None, but passed."
+        "Urine albumin creatinine date should fail validation as None, but passed."
     )
 
     visit = Visit.objects.first()
@@ -2313,7 +2313,7 @@ def test_urine_albumin_date_missing_form_fails_validation(
     assert visit.albuminuria_stage == 1, (
         f"Saved urine albumin stage should be 1 (Normal), but was {visit.albuminuria_stage}"
     )
-    assert visit.albumin_creatinine_ratio_date == None, (
+    assert visit.albumin_creatinine_ratio_date is None, (
         f"Saved urine albumin observation date should be None, but was {visit.albumin_creatinine_ratio_date}"
     )
 
@@ -2376,7 +2376,7 @@ def test_total_cholesterol_value_above_reference_form_fails_validation(
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "total_cholesterol" in errors[0], (
-        f"Total cholesterol should fail validation as above reference range, but passed."
+        "Total cholesterol should fail validation as above reference range, but passed."
     )
 
     visit = Visit.objects.first()
@@ -2411,7 +2411,7 @@ def test_total_cholesterol_value_below_reference_form_fails_validation(
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "total_cholesterol" in errors[0], (
-        f"Total cholesterol should fail validation as impossible, but passed."
+        "Total cholesterol should fail validation as impossible, but passed."
     )
 
     visit = Visit.objects.first()
@@ -2446,7 +2446,7 @@ def test_total_cholesterol_value_missing_form_fails_validation(
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "total_cholesterol" in errors[0], (
-        f"Total cholesterol should fail validation as None, but passed."
+        "Total cholesterol should fail validation as None, but passed."
     )
 
     visit = Visit.objects.first()
@@ -2479,7 +2479,7 @@ def test_total_cholesterol_date_missing_form_fails_validation(
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=audit_period)
 
     assert "total_cholesterol_date" in errors[0], (
-        f"Total cholesterol date should fail validation as None, but passed."
+        "Total cholesterol date should fail validation as None, but passed."
     )
 
     visit = Visit.objects.first()
@@ -2487,7 +2487,7 @@ def test_total_cholesterol_date_missing_form_fails_validation(
     assert visit.total_cholesterol == 5, (
         f"Saved total cholesterol should be 5, but was {visit.total_cholesterol}"
     )
-    assert visit.total_cholesterol_date == None, (
+    assert visit.total_cholesterol_date is None, (
         f"Saved total cholesterol observation date should be None, but was {visit.total_cholesterol_date}"
     )
 
@@ -2770,7 +2770,7 @@ def test_psychological_support_date_missing_fails_validation(
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/628
 @pytest.mark.django_db
-def test_psychological_support_date_missing_fails_validation(
+def test_psychological_support_date_missing_with_unknown_status_passes_validation(
     test_user, single_row_valid_df
 ):
     single_row_valid_df.loc[
@@ -3159,10 +3159,10 @@ def test_inpatient_admission_stabilisation_passes_validation(
     assert visit.hospital_admission_reason == 1, (
         f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
     )
-    assert visit.dka_additional_therapies == None, (
+    assert visit.dka_additional_therapies is None, (
         f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
     )
-    assert visit.hospital_admission_other == None, (
+    assert visit.hospital_admission_other is None, (
         f"Admission other should be None, but was {visit.hospital_admission_other}"
     )
 
@@ -3200,11 +3200,11 @@ def test_inpatient_admission_stabilisation_missing_date_fails_validation(
 
     visit = Visit.objects.first()
 
-    assert visit.hospital_admission_date == None
+    assert visit.hospital_admission_date is None
     assert visit.hospital_discharge_date == datetime.date(year=2024, month=1, day=2)
     assert visit.hospital_admission_reason == 1
-    assert visit.dka_additional_therapies == None
-    assert visit.hospital_admission_other == None
+    assert visit.dka_additional_therapies is None
+    assert visit.hospital_admission_other is None
 
 
 @pytest.mark.django_db
@@ -3245,8 +3245,8 @@ def test_inpatient_admission_stabilisation_discharge_date_before_admission_date_
     assert visit.hospital_admission_date == datetime.date(year=2022, month=1, day=8)
     assert visit.hospital_discharge_date == datetime.date(year=2023, month=1, day=1)
     assert visit.hospital_admission_reason == 1
-    assert visit.dka_additional_therapies == None
-    assert visit.hospital_admission_other == None
+    assert visit.dka_additional_therapies is None
+    assert visit.hospital_admission_other is None
 
 
 @pytest.mark.django_db
@@ -3297,10 +3297,10 @@ def test_inpatient_admission_stabilisation_discharge_date_before_diagnosis_date_
     assert visit.hospital_admission_reason == 1, (
         f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
     )
-    assert visit.dka_additional_therapies == None, (
+    assert visit.dka_additional_therapies is None, (
         f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
     )
-    assert visit.hospital_admission_other == None, (
+    assert visit.hospital_admission_other is None, (
         f"Admission other should be None, but was {visit.hospital_admission_other}"
     )
 
@@ -3351,10 +3351,10 @@ def test_inpatient_admission_stabilisation_discharge_date_after_date_of_death_fa
     assert visit.hospital_admission_reason == 1, (
         f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
     )
-    assert visit.dka_additional_therapies == None, (
+    assert visit.dka_additional_therapies is None, (
         f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
     )
-    assert visit.hospital_admission_other == None, (
+    assert visit.hospital_admission_other is None, (
         f"Admission other should be None, but was {visit.hospital_admission_other}"
     )
 
@@ -3406,7 +3406,7 @@ def test_inpatient_admission_stabilisation_dka_additional_therapies_provided_fai
     assert visit.dka_additional_therapies == 1, (
         f"DKA additional therapies should be 1 (hypertonic saline), but was {visit.dka_additional_therapies}"
     )
-    assert visit.hospital_admission_other == None, (
+    assert visit.hospital_admission_other is None, (
         f"Admission other should be None, but was {visit.hospital_admission_other}"
     )
 
@@ -3458,7 +3458,7 @@ def test_inpatient_admission_stabilisation_hospital_admission_other_provided_fai
     assert visit.dka_additional_therapies == 1, (
         f"DKA additional therapies should be 1 (hypertonic saline), but was {visit.dka_additional_therapies}"
     )
-    assert visit.hospital_admission_other == None, (
+    assert visit.hospital_admission_other is None, (
         f"Admission other should be None, but was {visit.hospital_admission_other}"
     )
 
@@ -3508,7 +3508,7 @@ def test_inpatient_admission_dka_passes_validation(test_user, single_row_valid_d
     assert visit.dka_additional_therapies == 1, (
         f"DKA additional therapies should be 1 (hypertonic saline), but was {visit.dka_additional_therapies}"
     )
-    assert visit.hospital_admission_other == None, (
+    assert visit.hospital_admission_other is None, (
         f"Admission other should be None, but was {visit.hospital_admission_other}"
     )
 
@@ -3557,10 +3557,10 @@ def test_inpatient_admission_dka_additional_therapies_missing_fails_validation(
     assert visit.hospital_admission_reason == 2, (
         f"Admission reason should be 2 (DKA), but was {visit.hospital_admission_reason}"
     )
-    assert visit.dka_additional_therapies == None, (
+    assert visit.dka_additional_therapies is None, (
         f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
     )
-    assert visit.hospital_admission_other == None, (
+    assert visit.hospital_admission_other is None, (
         f"Admission other should be None, but was {visit.hospital_admission_other}"
     )
 
@@ -3659,7 +3659,7 @@ def test_inpatient_admission_other_passes_validation(test_user, single_row_valid
     assert visit.hospital_admission_reason == 6, (
         f"Admission reason should be 6 (other), but was {visit.hospital_admission_reason}"
     )
-    assert visit.dka_additional_therapies == None, (
+    assert visit.dka_additional_therapies is None, (
         f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
     )
     assert visit.hospital_admission_other == "Other reason", (
@@ -3712,10 +3712,10 @@ def test_inpatient_admission_other_missing_fails_validation(
     assert visit.hospital_admission_reason == 6, (
         f"Admission reason should be 6 (other), but was {visit.hospital_admission_reason}"
     )
-    assert visit.dka_additional_therapies == None, (
+    assert visit.dka_additional_therapies is None, (
         f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
     )
-    assert visit.hospital_admission_other == None, (
+    assert visit.hospital_admission_other is None, (
         f"Admission other should be None, but was {visit.hospital_admission_other}"
     )
 
@@ -3759,11 +3759,11 @@ def test_visit_date_missing_fails_validation(test_user, single_row_valid_df):
 
     errors = csv_upload_sync(test_user, single_row_valid_df, _audit_period=None)
 
-    assert "visit_date" in errors[0], f"Expected error in visit_date, but got None"
+    assert "visit_date" in errors[0], "Expected error in visit_date, but got None"
 
     visit = Visit.objects.first()
 
-    assert visit.visit_date == None, (
+    assert visit.visit_date is None, (
         f"Visit/Appointment Date should be None, but was {visit.visit_date}"
     )
 
@@ -3944,7 +3944,7 @@ def test_bad_data_for_ethnic_category(test_user, dummy_sheet_csv, value):
 
     patient = Patient.objects.first()
 
-    assert patient.ethnicity == None
+    assert patient.ethnicity is None
     assert "ethnicity" in patient.errors
 
 
@@ -4056,7 +4056,7 @@ def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
 
     instance = model.objects.first()
 
-    assert getattr(instance, model_field) == None
+    assert getattr(instance, model_field) is None
     assert model_field in instance.errors
 
 
@@ -4114,7 +4114,7 @@ def test_bad_data_for_date_fields(test_user, dummy_sheet_csv, model_field):
     assert model.objects.count() == 1
 
     instance = model.objects.first()
-    assert getattr(instance, model_field) == None
+    assert getattr(instance, model_field) is None
 
 
 @pytest.mark.parametrize(
@@ -4156,7 +4156,7 @@ def test_bad_data_for_decimal_fields(test_user, dummy_sheet_csv, model_field):
 
     instance = model.objects.first()
 
-    assert getattr(instance, model_field) == None
+    assert getattr(instance, model_field) is None
     assert model_field in instance.errors
 
 
@@ -4218,7 +4218,7 @@ def test_remove_empty_spaces_from_empty_fields(test_user, dummy_sheet_csv):
 
     patient = Patient.objects.first()
     assert (
-        Visit.objects.filter(patient=patient).first().dka_additional_therapies == None
+        Visit.objects.filter(patient=patient).first().dka_additional_therapies is None
     ), (
         f"Expected empty string for DKA additional therapies, but got {Visit.objects.filter(patient=patient).first().dka_additional_therapies}"
     )

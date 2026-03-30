@@ -1,14 +1,11 @@
 # Python imports
-from os import path
 import csv
 import logging
+from os import path
 
 # Django import
-from django.apps import apps
-from django.core.management.base import BaseCommand, CommandError
-from django.utils import timezone
 from django.contrib.auth import get_user_model
-
+from django.core.management.base import BaseCommand, CommandError
 
 logger = logging.getLogger(__name__)
 
@@ -34,12 +31,12 @@ class Command(BaseCommand):
 
         if not path.exists(file_path):
             raise CommandError(f"File does not exist: {file_path}")
-        
+
         user_model = get_user_model()
 
-        with open(file_path, "r") as file:
+        with open(file_path) as file:
             reader = csv.DictReader(file)
-            
+
             index = 0
             unique_emails = set()
 
@@ -60,14 +57,16 @@ class Command(BaseCommand):
                     first_name=first_name,
                     surname=surname,
                     # primary employer is the first row we see for that email
-                    is_primary_employer=not email in unique_emails,
+                    is_primary_employer=email not in unique_emails,
                 )
-                
+
                 index += 1
                 unique_emails.add(email)
 
                 logger.info(
                     f"User {email} successfully created in {pz_code}. Groups: {[group.name for group in user.groups.all()]}"
                 )
-        
-        logger.info(f"🔥 {index} rows processed, {len(unique_emails)} users successfully created or updated.")
+
+        logger.info(
+            f"🔥 {index} rows processed, {len(unique_emails)} users successfully created or updated."
+        )

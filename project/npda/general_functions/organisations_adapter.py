@@ -1,19 +1,14 @@
 # python imports
-from django.apps import apps
-from django.db.models import F, Value, Case, When, CharField, Q
-from django.db.models.functions import Concat, Upper
-
 # RCPCH imports
 import logging
 
+from django.apps import apps
 
 # Logging
 logger = logging.getLogger(__name__)
 
 
-def paediatric_diabetes_units_for_user(
-    requesting_user, user_instance=None
-):
+def paediatric_diabetes_units_for_user(requesting_user, user_instance=None):
     PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
 
     if user_instance:
@@ -68,7 +63,8 @@ def paediatric_diabetes_units_to_populate_select_field(
     )
 
     pdu_choices = [
-        (pdu.pz_code, f"{pdu.lead_organisation_name} - {pdu.parent_name}") for pdu in filtered_pdus
+        (pdu.pz_code, f"{pdu.lead_organisation_name} - {pdu.parent_name}")
+        for pdu in filtered_pdus
     ]
 
     return pdu_choices

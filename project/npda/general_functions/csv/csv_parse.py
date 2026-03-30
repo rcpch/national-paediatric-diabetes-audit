@@ -1,27 +1,28 @@
 # python imports
-from dataclasses import dataclass
+import collections
 import logging
 import re
-import collections
+from dataclasses import dataclass
 
-# Django imports
-from django.core.exceptions import ValidationError
+import numpy as np
 
 # Third-party imports
 import pandas as pd
-import numpy as np
 
 # RCPCH imports
 from project.constants import (
     ALL_DATES,
     CSV_DATA_TYPES_MINUS_DATES,
+    CSV_HEADING_OBJECTS,
+    ENGLAND_CSV_DATA_TYPES,
+    JERSEY_CSV_DATA_TYPES,
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
-    CSV_HEADING_OBJECTS,
     csv_definition_for,
-    JERSEY_CSV_DATA_TYPES,
-    ENGLAND_CSV_DATA_TYPES,
 )
+
+# Django imports
+
 
 # Logging setup
 logger = logging.getLogger(__name__)
@@ -192,7 +193,7 @@ def csv_parse(csv_file):
             )
 
             for row_index, (value_before, value_after) in enumerate(
-                zip(column_before, column_after)
+                zip(column_before, column_after, strict=False)
             ):
                 # Handle empty strings (including spaces) for optional date columns
                 if (
@@ -253,7 +254,7 @@ def csv_parse(csv_file):
                         dtype=object,
                     )
                 df[column] = df[column].astype(dtype)
-        except (ValueError, TypeError) as e:
+        except (ValueError, TypeError):
             parse_type_error_columns.append(column)
             continue
 

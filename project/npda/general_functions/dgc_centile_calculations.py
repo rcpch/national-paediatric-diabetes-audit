@@ -1,7 +1,4 @@
-import datetime
-import json
 import logging
-import httpx
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -10,7 +7,12 @@ logger = logging.getLogger(__name__)
 
 
 async def calculate_centiles_z_scores(
-    birth_date, observation_date, sex, observation_value, measurement_method, async_client
+    birth_date,
+    observation_date,
+    sex,
+    observation_value,
+    measurement_method,
+    async_client,
 ):
     """
     Calculate the centiles and z-scores for height and weight for a given patient.
@@ -72,8 +74,8 @@ def calculate_bmi(height, weight):
     :return: The BMI of the patient.
     """
     bmi = round(weight / (height / 100) ** 2, 1)
-    
+
     if bmi > 99:
         return None
-    
+
     return bmi

@@ -1,30 +1,31 @@
-"""Factory fn to create new Patient.
-"""
+"""Factory fn to create new Patient."""
 
 # standard imports
-from datetime import date, datetime
-from enum import Enum
 import logging
 import random
+from datetime import date
+from enum import Enum
 
-# third-party imports
-from django.contrib.gis.geos import Point
 import factory
 import nhs_number
 from dateutil.relativedelta import relativedelta
 
+from project.constants import DIABETES_TYPES, ETHNICITIES, SEX_TYPE
+
 # rcpch imports
 from project.npda.general_functions.audit_period import get_audit_period_for_date
 from project.npda.general_functions.random_date import get_random_date
+from project.npda.general_functions.validate_postcode import (
+    ValidatedPostcode,
+    random_postcode_under_outcode_sync,
+)
 from project.npda.models import Patient
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.general_functions.validate_postcode import ValidatedPostcode, random_postcode_under_outcode_sync
+
 from .transfer_factory import TransferFactory
-from project.constants import (
-    ETHNICITIES,
-    DIABETES_TYPES,
-    SEX_TYPE,
-)
+
+# third-party imports
+
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -37,18 +38,14 @@ GP_POSTCODE_NO_SPACES = "SE135PJ"
 GP_POSTCODE_WITH_SPACES = "SE13 5PJ"
 
 VALID_GP_POSTCODE = ValidatedPostcode(
-    normalised_postcode=GP_POSTCODE_WITH_SPACES,
-    lon=0.004522,
-    lat=51.458513
+    normalised_postcode=GP_POSTCODE_WITH_SPACES, lon=0.004522, lat=51.458513
 )
 
 JERSEY_GP_POSTCODE_NO_SPACES = "JE27LA"
 JERSEY_GP_POSTCODE_WITH_SPACES = "JE2 7LA"
 
 VALID_JERSEY_GP_POSTCODE = ValidatedPostcode(
-    normalised_postcode=JERSEY_GP_POSTCODE_WITH_SPACES,
-    lon=-2.0968,
-    lat=49.1909
+    normalised_postcode=JERSEY_GP_POSTCODE_WITH_SPACES, lon=-2.0968, lat=49.1909
 )
 
 PATIENT_POSTCODE_WITH_SPACES = "NW1 2DB"
@@ -64,9 +61,7 @@ JERSEY_PATIENT_POSTCODE_NO_SPACES = "JE17XP"
 JERSEY_PATIENT_POSTCODE_WITH_SPACES = "JE1 7XP"
 
 VALID_JERSEY_PATIENT_POSTCODE = ValidatedPostcode(
-    normalised_postcode=JERSEY_PATIENT_POSTCODE_WITH_SPACES,
-    lon=-2.0955,
-    lat=49.1908
+    normalised_postcode=JERSEY_PATIENT_POSTCODE_WITH_SPACES, lon=-2.0955, lat=49.1908
 )
 
 VALID_FIELDS = {
@@ -106,6 +101,7 @@ class Sex(Enum):
     """
     Enum class to represent sexes for children
     """
+
     MALE = SEX_TYPE[0][0]
     FEMALE = SEX_TYPE[1][0]
     # Removed not known and unspecified just to make demo files map clearer
@@ -181,14 +177,17 @@ class PatientFactory(factory.django.DjangoModelFactory):
     def diagnosis_date(self):
         """Set diagnosis_date between date_of_birth and audit end date."""
         ret = get_random_date(
-            start_date=self.date_of_birth, end_date=self.latest_diagnosis_date or self.audit_start_date
+            start_date=self.date_of_birth,
+            end_date=self.latest_diagnosis_date or self.audit_start_date,
         )
         return ret
-    
+
     @factory.lazy_attribute
     def postcode(self):
         if self.postcode_outcode:
-            return random_postcode_under_outcode_sync(self.postcode_outcode).normalised_postcode
+            return random_postcode_under_outcode_sync(
+                self.postcode_outcode
+            ).normalised_postcode
 
         return VALID_FIELDS["postcode"]
 
@@ -209,7 +208,7 @@ class PatientFactory(factory.django.DjangoModelFactory):
         audit_end_date = get_audit_period_for_date(TODAY)[
             1
         ]  # Default audit_end_date; can be overridden
-        
+
         # Opt in to generating patients diagnosed in audit year
         # Can't reference audit_end_date as a default in case overridden
         latest_diagnosis_date = None

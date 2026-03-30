@@ -1,20 +1,18 @@
-from dataclasses import dataclass
-from decimal import Decimal
-from datetime import date
-import logging
-
 import asyncio
-from asgiref.sync import async_to_sync
+import logging
+from dataclasses import dataclass
+from datetime import date
+from decimal import Decimal
 
-from django.core.exceptions import ValidationError
-from httpx import HTTPError, AsyncClient
+from asgiref.sync import async_to_sync
 from dateutil.relativedelta import relativedelta
+from django.core.exceptions import ValidationError
+from httpx import AsyncClient, HTTPError
 
 from ..general_functions.dgc_centile_calculations import (
-    calculate_centiles_z_scores,
     calculate_bmi,
+    calculate_centiles_z_scores,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +32,12 @@ class VisitExternalValidationResult:
 
 
 async def _calculate_centiles_z_scores(
-    birth_date: date, observation_date: date, sex: int, measurement_method: str, observation_value: Decimal | None, async_client: AsyncClient
+    birth_date: date,
+    observation_date: date,
+    sex: int,
+    measurement_method: str,
+    observation_value: Decimal | None,
+    async_client: AsyncClient,
 ) -> CentileAndSDS | None:
     if observation_value is None or observation_value <= 0:
         return None
@@ -51,9 +54,14 @@ async def _calculate_centiles_z_scores(
 
         return CentileAndSDS(centile, sds)
     except HTTPError as err:
-        logger.warning(f"Error calculating centiles and z-scores for {measurement_method} {err}", exc_info=True)
+        logger.warning(
+            f"Error calculating centiles and z-scores for {measurement_method} {err}",
+            exc_info=True,
+        )
+
 
 # TODO: test questionnaire missing height, weight and observation_date. Do we get blank values for them?
+
 
 async def validate_visit_async(
     birth_date: date | None,
@@ -61,21 +69,25 @@ async def validate_visit_async(
     sex: int | None,
     height: Decimal | None,
     weight: Decimal | None,
-    async_client: AsyncClient
+    async_client: AsyncClient,
 ) -> VisitExternalValidationResult:
     ret = VisitExternalValidationResult(None, None, None, None)
 
     if not birth_date:
-        logger.warning("Birth date is not specified. Cannot calculate centiles and z-scores.")
+        logger.warning(
+            "Birth date is not specified. Cannot calculate centiles and z-scores."
+        )
         return ret
 
     if not observation_date:
         # We expect visits without height and weight, but those that have them and not an obs date are unexpected
         if height is not None or weight is not None:
-            logger.warning("Observation date is not specified. Cannot calculate centiles and z-scores.")
-        
+            logger.warning(
+                "Observation date is not specified. Cannot calculate centiles and z-scores."
+            )
+
         return ret
-    
+
     # Growth charts stop at 20 years old. The NPDA also stops around there but with the transition to adult care
     # sometimes 20 year olds can appear in the dataset.
     twentieth_bithday = birth_date + relativedelta(years=20)
@@ -98,44 +110,44 @@ async def validate_visit_async(
     valid_weight = weight is not None
 
     if valid_height and height <= 0:
-        logger.warning(
-            "Height is <=0. Cannot calculate centiles and z-scores."
-        )
+        logger.warning("Height is <=0. Cannot calculate centiles and z-scores.")
         valid_height = False
-    
+
     if valid_weight and weight <= 0:
-        logger.warning(
-            "Weight is <=0. Cannot calculate centiles and z-scores."
-        )
+        logger.warning("Weight is <=0. Cannot calculate centiles and z-scores.")
         valid_weight = False
 
     if valid_height and valid_weight:
         bmi = calculate_bmi(height, weight)
         ret.bmi = bmi
 
-    validate_height_task = _calculate_centiles_z_scores(birth_date, observation_date, sex, "height", height, async_client)
-    validate_weight_task = _calculate_centiles_z_scores(birth_date, observation_date, sex, "weight", weight, async_client)
-    validate_bmi_task = _calculate_centiles_z_scores(birth_date, observation_date, sex, "bmi", bmi, async_client)
+    validate_height_task = _calculate_centiles_z_scores(
+        birth_date, observation_date, sex, "height", height, async_client
+    )
+    validate_weight_task = _calculate_centiles_z_scores(
+        birth_date, observation_date, sex, "weight", weight, async_client
+    )
+    validate_bmi_task = _calculate_centiles_z_scores(
+        birth_date, observation_date, sex, "bmi", bmi, async_client
+    )
 
     # This is the Python equivalent of Promise.allSettled
     # Run all the lookups in parallel but retain exceptions per job rather than returning the first one
-    [height_result, weight_result, bmi_result] = (
-        await asyncio.gather(
-            validate_height_task,
-            validate_weight_task,
-            validate_bmi_task,
-            return_exceptions=True,
-        )
+    [height_result, weight_result, bmi_result] = await asyncio.gather(
+        validate_height_task,
+        validate_weight_task,
+        validate_bmi_task,
+        return_exceptions=True,
     )
 
     for [result, result_field] in [
         [height_result, "height_result"],
         [weight_result, "weight_result"],
-        [bmi_result, "bmi_result"]
+        [bmi_result, "bmi_result"],
     ]:
-        if isinstance(result, Exception) and not type(result) is ValidationError:
+        if isinstance(result, Exception) and type(result) is not ValidationError:
             raise result
-    
+
         setattr(ret, result_field, result)
 
     return ret
@@ -146,11 +158,13 @@ def validate_visit_sync(
     observation_date: date | None,
     sex: int | None,
     height: Decimal | None,
-    weight: Decimal | None
+    weight: Decimal | None,
 ) -> VisitExternalValidationResult:
     async def wrapper():
         async with AsyncClient() as client:
-            ret = await validate_visit_async(birth_date, observation_date, sex, height, weight, client)
+            ret = await validate_visit_async(
+                birth_date, observation_date, sex, height, weight, client
+            )
             return ret
 
     return async_to_sync(wrapper)()

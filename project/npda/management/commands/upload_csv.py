@@ -1,21 +1,19 @@
-import json
 import collections
 
-from asgiref.sync import async_to_sync
 import numpy as np
-
+from asgiref.sync import async_to_sync
 from django.apps import apps
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from project.constants.csv_headings import csv_definition_for
-from project.npda.models import NPDAUser, PaediatricDiabetesUnit, Submission
 from project.npda.general_functions.csv import (
-    csv_upload,
-    csv_parse,
     create_csv_submission,
+    csv_parse,
+    csv_upload,
     tidy_up_old_submissions,
 )
+from project.npda.models import NPDAUser, PaediatricDiabetesUnit, Submission
 
 
 class Command(BaseCommand):
@@ -99,7 +97,7 @@ class Command(BaseCommand):
         tidy_up_old_submissions(pdu=pdu, new_submission=submission)
 
         if errors:
-            print(f"Errors during upload:")
+            print("Errors during upload:")
             self.print_errors(errors)
 
     def upload_as_questionnaire_entries(
@@ -114,7 +112,7 @@ class Command(BaseCommand):
         df = parsed_csv.df
 
         if parsed_csv.errors_to_return:
-            print(f"Errors during parsing:")
+            print("Errors during parsing:")
             self.print_errors(parsed_csv.errors_to_return)
 
         # Remember the row from the original CSV file, even though we are about to slice it by PDU
@@ -134,8 +132,8 @@ class Command(BaseCommand):
         for pz_code in df["PDU Number"].unique():
             try:
                 pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
-            except PaediatricDiabetesUnit.DoesNotExist:
-                raise ValueError(f"Invalid PDU Number: {pz_code}")
+            except PaediatricDiabetesUnit.DoesNotExist as e:
+                raise ValueError(f"Invalid PDU Number: {pz_code}") from e
 
             try:
                 submission = Submission.objects.get(
@@ -193,14 +191,14 @@ class Command(BaseCommand):
 
             if existing_patient_identifiers:
                 print(
-                    f"Skipping the following patients as they are already in the submission:"
+                    "Skipping the following patients as they are already in the submission:"
                 )
                 for identifier in existing_patient_identifiers:
                     print(f"\t{identifier}")
                     pdu_df = pdu_df[pdu_df[identifier_column] != identifier]
 
             # HACK: eagerly load paediatric_diabetes_unit to avoid crash doing it later from the async context in csv_upload
-            submission.paediatric_diabetes_unit
+            submission.paediatric_diabetes_unit  # noqa: B018
 
             errors = async_to_sync(csv_upload)(
                 dataframe=pdu_df,

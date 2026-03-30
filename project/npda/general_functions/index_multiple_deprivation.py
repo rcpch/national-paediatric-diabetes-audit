@@ -4,9 +4,8 @@ Calculates the index of multiple deprivation for a given postcode
 
 # Standard imports
 import logging
-import httpx
 
-from asgiref.sync import async_to_sync
+import httpx
 
 # Third party imports
 from django.conf import settings
@@ -32,7 +31,8 @@ async def imd_for_postcode(user_postcode: str, async_client: httpx.AsyncClient) 
 
     if response.status_code != 200:
         logger.error(
-            f"Could not get deprivation score for {user_postcode}. Response status %s", response.status_code
+            f"Could not get deprivation score for {user_postcode}. Response status %s",
+            response.status_code,
         )
         return None
 

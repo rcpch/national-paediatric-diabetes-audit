@@ -1,7 +1,7 @@
 import logging
-import pytest
 from datetime import date
-from dateutil.relativedelta import relativedelta
+
+import pytest
 
 from project.npda.general_functions import get_audit_period_for_date
 from project.npda.general_functions.audit_period import get_quarters_for_audit_period

@@ -1,22 +1,19 @@
 """Defines custom mixins used throughout our Class Based Views"""
 
-from datetime import datetime
 import logging
 
-from django.apps import apps
 from django.conf import settings
-from django.core.exceptions import PermissionDenied
 from django.contrib.auth.mixins import AccessMixin
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
-
-from project.npda.models.npda_user import NPDAUser
-from project.npda.models.patient import Patient
-from project.npda.models.audit_period import AuditPeriod
-from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
-from project.npda.models.transfer import Transfer
-from project.npda.models.submission import Submission
 from django.urls import reverse
 
+from project.npda.models.audit_period import AuditPeriod
+from project.npda.models.npda_user import NPDAUser
+from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
+from project.npda.models.patient import Patient
+from project.npda.models.submission import Submission
+from project.npda.models.transfer import Transfer
 
 logger = logging.getLogger(__name__)
 
@@ -59,10 +56,12 @@ class LoginAndOTPRequiredMixin(AccessMixin):
 
 
 class PDUPermissionMixin(AccessMixin):
-    def data_reverse(self, viewname, kwargs={}):
+    def data_reverse(self, viewname, kwargs=None):
+        if kwargs is None:
+            kwargs = {}
         next_kwargs = kwargs | {
             "audit_period": self.audit_period.slug,
-            "pz_code": self.pdu.pz_code
+            "pz_code": self.pdu.pz_code,
         }
 
         return reverse(viewname, kwargs=next_kwargs)
@@ -78,8 +77,10 @@ class PDUPermissionMixin(AccessMixin):
         patient = get_object_or_404(Patient, pk=pk)
         transfer = Transfer.objects.get(patient=patient)
 
-        if not transfer.paediatric_diabetes_unit in user.organisation_employers.all():
-            raise PermissionDenied(f"User {user} does not have permission to view patient for PDU {pdu.pz_code} in audit period {audit_period.slug}")
+        if transfer.paediatric_diabetes_unit not in user.organisation_employers.all():
+            raise PermissionDenied(
+                f"User {user} does not have permission to view patient for PDU {pdu.pz_code} in audit period {audit_period.slug}"
+            )
 
     def dispatch(self, request, *args, **kwargs):
         # Check if the user is authenticated
@@ -91,20 +92,31 @@ class PDUPermissionMixin(AccessMixin):
 
         model = self.get_model().__name__
 
-        if not request.user.is_superuser and not request.user.is_rcpch_audit_team_member:
+        if (
+            not request.user.is_superuser
+            and not request.user.is_rcpch_audit_team_member
+        ):
             match model:
                 # PDU level permission checked in the request helpers above. This is to prevent access to models by guessing their pk.
                 case "Patient" if "pk" in self.kwargs:
-                    self.check_patient_permissions(pdu, audit_period, request.user, self.kwargs["pk"])
+                    self.check_patient_permissions(
+                        pdu, audit_period, request.user, self.kwargs["pk"]
+                    )
 
                 case "Visit":
-                    self.check_patient_permissions(pdu, audit_period, request.user, self.kwargs["patient_id"])
+                    self.check_patient_permissions(
+                        pdu, audit_period, request.user, self.kwargs["patient_id"]
+                    )
 
                 # PDU level permission checked in the request helpers above. This is to prevent access to models by guessing their pk.
                 case "NPDAUser" if "pk" in self.kwargs:
-                    requested_user = get_object_or_404(NPDAUser, pk=self.kwargs['pk'])
-                    if not requested_user.organisation_employers.filter(pz_code=pdu.pz_code).exists():
-                        raise PermissionDenied(f"User {request.user} does not have permission to view {model} for PDU {pdu.pz_code} in audit period {audit_period.slug}")
+                    requested_user = get_object_or_404(NPDAUser, pk=self.kwargs["pk"])
+                    if not requested_user.organisation_employers.filter(
+                        pz_code=pdu.pz_code
+                    ).exists():
+                        raise PermissionDenied(
+                            f"User {request.user} does not have permission to view {model} for PDU {pdu.pz_code} in audit period {audit_period.slug}"
+                        )
 
         self.audit_period = audit_period
         self.pdu = pdu
@@ -120,15 +132,18 @@ class CheckCurrentAuditYearMixin(AccessMixin):
 
     def dispatch(self, request, *args, **kwargs):
         audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
-        
+
         if not audit_period:
             logger.warning(
                 f"User {request.user} tried to create/edit or delete data in an unknown audit period."
             )
             raise PermissionDenied()
-        
+
         if request.method != "GET" and not audit_period.is_open:
-            if not request.user.is_superuser and not request.user.is_rcpch_audit_team_member:
+            if (
+                not request.user.is_superuser
+                and not request.user.is_rcpch_audit_team_member
+            ):
                 logger.warning(
                     f"User {request.user} tried to create/edit or delete data in a closed audit year."
                 )
@@ -148,16 +163,21 @@ class QuestionnaireContextMixin(AccessMixin):
         is_csv_upload = submission and submission.csv_file_name is not None
         is_questionnaire = not is_csv_upload if submission else True
 
-        can_override_data_upload_rules = self.request.user.is_superuser or getattr(self.request.user, "is_rcpch_audit_team_member", False)
-        data_upload_rules_overridden = can_override_data_upload_rules and self.request.GET.get("unlock", False)
-        
+        can_override_data_upload_rules = self.request.user.is_superuser or getattr(
+            self.request.user, "is_rcpch_audit_team_member", False
+        )
+        data_upload_rules_overridden = (
+            can_override_data_upload_rules and self.request.GET.get("unlock", False)
+        )
+
         return context | {
             "is_csv_upload": is_csv_upload,
             "is_questionnaire": is_questionnaire,
             "can_override_data_upload_rules": can_override_data_upload_rules,
             "data_upload_rules_overridden": data_upload_rules_overridden,
-            "can_use_questionnaire": data_upload_rules_overridden or (is_questionnaire and pdu.active),
-        }  
+            "can_use_questionnaire": data_upload_rules_overridden
+            or (is_questionnaire and pdu.active),
+        }
 
 
 class CheckCanCompleteQuestionnaireMixin(QuestionnaireContextMixin, AccessMixin):
@@ -167,10 +187,14 @@ class CheckCanCompleteQuestionnaireMixin(QuestionnaireContextMixin, AccessMixin)
             return super().dispatch(request, *args, **kwargs)
 
         if request.method != "GET":
-            audit_period = AuditPeriod.objects.get_audit_period_for_request(self.request)
+            audit_period = AuditPeriod.objects.get_audit_period_for_request(
+                self.request
+            )
             pdu = PaediatricDiabetesUnit.objects.get_pdu_for_request(self.request)
 
-            submission = Submission.objects.get_submission_for_request(pdu, audit_period)
+            submission = Submission.objects.get_submission_for_request(
+                pdu, audit_period
+            )
             is_questionnaire = not submission.csv_file_name if submission else True
 
             if not is_questionnaire:

@@ -1,7 +1,7 @@
-from django.core.exceptions import ValidationError
-import nhs_number
-
 import logging
+
+import nhs_number
+from django.core.exceptions import ValidationError
 
 # Logging
 logger = logging.getLogger(__name__)

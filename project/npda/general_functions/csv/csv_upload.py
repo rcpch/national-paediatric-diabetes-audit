@@ -1,21 +1,21 @@
 # python imports
-from asgiref.sync import sync_to_async
 import asyncio
 import collections
 import json
 import logging
-import io
 
-# django imports
-from django.apps import apps
-from django.db import models as django_models
-from django.utils import timezone
-from django.core.exceptions import FieldDoesNotExist
+import httpx
+import numpy as np
 
 # third part imports
 import pandas as pd
-import numpy as np
-import httpx
+from asgiref.sync import sync_to_async
+
+# django imports
+from django.apps import apps
+from django.core.exceptions import FieldDoesNotExist
+from django.db import models as django_models
+from django.utils import timezone
 
 # RCPCH imports
 from project.constants import (
@@ -23,21 +23,30 @@ from project.constants import (
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
 )
-from project.npda.general_functions.csv.csv_parse import csv_parse
-from project.npda.general_functions.csv import (
-    gather_unique_patient_and_visit_counts,
-)
+from project.npda.general_functions.csv import gather_unique_patient_and_visit_counts
 
 # Logging setup
 logger = logging.getLogger(__name__)
 
-from project.npda.forms.patient_form import PatientForm
-from project.npda.forms.visit_form import VisitForm
-from project.npda.forms.external_patient_validators import validate_patient_async
-from project.npda.forms.external_visit_validators import validate_visit_async
-from project.npda.general_functions.csv.csv_clean import csv_clean
-from project.npda.general_functions.csv.csv_merge import merge_rows_for_patient
-from project.npda.models import Patient, Transfer, Visit, Submission, VisitActivity
+from project.npda.forms.external_patient_validators import (  # noqa: E402
+    validate_patient_async,
+)
+from project.npda.forms.external_visit_validators import (  # noqa: E402
+    validate_visit_async,
+)
+from project.npda.forms.patient_form import PatientForm  # noqa: E402
+from project.npda.forms.visit_form import VisitForm  # noqa: E402
+from project.npda.general_functions.csv.csv_clean import csv_clean  # noqa: E402
+from project.npda.general_functions.csv.csv_merge import (  # noqa: E402
+    merge_rows_for_patient,
+)
+from project.npda.models import (  # noqa: E402
+    Patient,
+    Submission,
+    Transfer,
+    Visit,
+    VisitActivity,
+)
 
 
 def create_csv_submission(
@@ -338,7 +347,7 @@ async def csv_upload(
                 save_errors_and_retain_valid_fields(visit_row_index, visit_form)
                 visit_form.instance.patient = patient
 
-                await sync_to_async(lambda: visit_form.save())()
+                await sync_to_async(lambda vf=visit_form: vf.save())()
             except Exception as error:
                 logger.exception(
                     f"Error saving visit for {pdu.pz_code} from {csv_file_name}[{visit_row_index}]: {error}"

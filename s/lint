@@ -1,0 +1,23 @@
+#!/bin/bash -e
+
+# lint - runs ruff (formatter + linter) in the django container
+#
+# Usage:
+#   s/lint           fix mode: applies formatting and auto-fixes in place
+#   s/lint --check   check mode: exits non-zero if anything is not clean (used in CI)
+
+if [[ "$1" == "--check" ]]; then
+    echo "▶ ruff format (check)"
+    docker compose run --rm django ruff format --check .
+
+    echo "▶ ruff check"
+    docker compose run --rm django ruff check .
+else
+    echo "▶ ruff format"
+    docker compose run --rm django ruff format .
+
+    echo "▶ ruff check"
+    docker compose run --rm django ruff check --fix .
+fi
+
+echo "✅ lint complete"
