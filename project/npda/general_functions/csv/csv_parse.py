@@ -213,10 +213,46 @@ def csv_parse(csv_file):
     else:
         datatypes = ENGLAND_CSV_DATA_TYPES | CSV_DATA_TYPES_MINUS_DATES
 
+    nullable_int_types = {
+        "Int8",
+        "Int16",
+        "Int32",
+        "Int64",
+        "UInt8",
+        "UInt16",
+        "UInt32",
+        "UInt64",
+    }
+
     # Apply the dtype to non-date columns
     for column, dtype in datatypes.items():
         try:
             if column in df.columns:
+                if dtype in nullable_int_types and pd.api.types.is_float_dtype(
+                    df[column]
+                ):
+                    # pandas 2 refuses to cast float64 → nullable int when NaN is present
+                    # because numpy's safe-cast rules see NaN as non-representable.
+                    # Pre-process the column via a list comprehension:
+                    #   - NaN          → None  (becomes pd.NA in the Int64 series)
+                    #   - integer-valued float (1.0, 2.0)  → int(v)  (valid; stored as float because of NaN elsewhere in column)
+                    #   - non-integer float (99.5)          → kept as-is (bad data)
+                    # When bad data is present the subsequent astype() will still raise,
+                    # routing the column through parse_type_error_columns as before so
+                    # that downstream validation can flag it properly.
+                    # Use pd.NA (not None) so pd.Series doesn't infer float64.
+                    # pd.Series([1, None]) → float64 in pandas 2.x;
+                    # pd.Series([1, pd.NA]) stays object, astype('Int64') works.
+                    df[column] = pd.Series(
+                        [
+                            pd.NA
+                            if pd.isna(v)
+                            else (int(v) if float(v).is_integer() else v)
+                            for v in df[column]
+                        ],
+                        index=df.index,
+                        dtype=object,
+                    )
                 df[column] = df[column].astype(dtype)
         except (ValueError, TypeError):
             parse_type_error_columns.append(column)
@@ -224,11 +260,11 @@ def csv_parse(csv_file):
 
         # Convert NaN to None-y for nullable fields
         if column in df.columns:
-            # For string dtypes, use pd.NA
             if dtype == "string":
                 df[column] = df[column].fillna(pd.NA)
-            # For other dtypes, convert nulls to None after dtype conversion
-            else:
+            elif dtype not in nullable_int_types:
+                # nullable int columns already have pd.NA set correctly above;
+                # applying where(..., None) on an Int64 series upcasts to object dtype
                 df[column] = df[column].where(pd.notnull(df[column]), None)
         # round height and weight if provided to 1 decimal place
         if (

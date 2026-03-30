@@ -312,7 +312,6 @@ class VisitForm(forms.ModelForm):
         data = self.cleaned_data["retinal_screening_result"]
         # Convert the list of tuples to a dictionary
         retinal_screening_result_dict = dict(RETINAL_SCREENING_RESULTS)
-
         if data is None or data in retinal_screening_result_dict:
             return data
         else:

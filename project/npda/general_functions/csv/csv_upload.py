@@ -14,6 +14,7 @@ from asgiref.sync import sync_to_async
 # django imports
 from django.apps import apps
 from django.core.exceptions import FieldDoesNotExist
+from django.db import models as django_models
 from django.utils import timezone
 
 # RCPCH imports
@@ -145,7 +146,22 @@ async def csv_upload(
 
         # Pass Django forms native Python values not numpy ones
         # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/425
-        return value.item() if isinstance(value, np.generic) else value
+        python_value = value.item() if isinstance(value, np.generic) else value
+
+        # pandas 2.x iterrows() converts Int64 (nullable int) columns to float64
+        # when constructing the per-row Series, so 1 becomes np.float64(1.0).
+        # .item() then gives Python float 1.0. Django's TypedChoiceField
+        # stringifies that as "1.0" which doesn't match choice "1", causing
+        # "Select a valid choice. 1.0 is not one of the available choices."
+        # Cast integer-valued floats back to int for integer model fields.
+        if (
+            isinstance(python_value, float)
+            and python_value.is_integer()
+            and isinstance(model_field, django_models.IntegerField)
+        ):
+            return int(python_value)
+
+        return python_value
 
     def row_to_dict(row, model):
         ret = {}

@@ -2041,6 +2041,60 @@ def test_decs_date_none_form_fails_validation(test_user, single_row_valid_df):
     )
 
 
+@pytest.mark.django_db
+def test_decs_float_value_cast_to_int(test_user, dummy_sheet_csv):
+    """
+    Regression test: when pandas reads a CSV column that has blank cells elsewhere,
+    it stores integer values as float64 (e.g. 1 → 1.0). Ensure that a Retinal
+    Screening Result of 1.0 in the raw CSV is correctly cast to the integer 1 and
+    passes validation rather than being dropped or causing a type error.
+    """
+    one_row_csv = modify_raw_csv(
+        dummy_sheet_csv,
+        end=2,  # exclusive
+        replacements=[
+            {"row": 1, "column": "Retinal Screening Result", "value": 1.0},
+            {"row": 1, "column": "Retinal Screening date", "value": "01/01/2023"},
+        ],
+    )
+
+    parsed = read_csv_from_str(one_row_csv)
+
+    # The column must have been cast to a nullable integer – not left as float64
+    assert parsed.df["Retinal Screening Result"].dtype.name in (
+        "Int8",
+        "Int16",
+        "Int32",
+        "Int64",
+    ), (
+        f"Expected Retinal Screening Result to be a nullable integer dtype after CSV parse, "
+        f"got {parsed.df['Retinal Screening Result'].dtype}"
+    )
+
+    assert parsed.df.loc[0, "Retinal Screening Result"] == 1, (
+        f"Expected Retinal Screening Result 1.0 to be cast to int 1, "
+        f"got {parsed.df.loc[0, 'Retinal Screening Result']!r}"
+    )
+
+    audit_period = AuditPeriod.objects.first()
+    audit_period.start_date = current_audit_year_start_date(
+        date_instance=parsed.df["Visit/Appointment Date"][0].date()
+    )
+    audit_period.end_date = audit_period.start_date + relativedelta(years=1)
+
+    errors = csv_upload_sync(test_user, parsed.df, _audit_period=audit_period)
+
+    assert len(errors) == 0, (
+        f"Retinal Screening Result of 1.0 (float) should pass validation as integer 1, "
+        f"but failed with errors: {errors}"
+    )
+
+    visit = Visit.objects.first()
+    assert visit.retinal_screening_result == 1, (
+        f"Saved Retinal screening result should be 1, but was {visit.retinal_screening_result!r}"
+    )
+
+
 """
 Urine albumin tests
 """
