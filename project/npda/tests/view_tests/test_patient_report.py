@@ -1678,11 +1678,11 @@ def test_smoking_cessation_referral_column_denominator_is_smokers_only(
 
     start = audit_period.start_date
 
-    base_criteria = dict(
+    base_criteria = {
         diabetes_type=DIABETES_TYPES[0][0],  # T1DM
         diagnosis_date=start - relativedelta(years=2),
         transfer__date_leaving_service=None,
-    )
+    }
 
     # ≥12 yo, smoker, has cessation referral → should PASS
     patient_smoker_referred = PatientFactory(
