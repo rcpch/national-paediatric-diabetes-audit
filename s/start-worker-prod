@@ -1,4 +1,4 @@
 #!/bin/bash -e
 
 python manage.py write_azure_pg_password_file
-s/start-celery
+s/start-worker

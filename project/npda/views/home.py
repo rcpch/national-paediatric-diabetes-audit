@@ -105,8 +105,8 @@ def download_template(request, audit_period, pdu):
 
 
 @login_and_otp_required()
-def celery_test_task(request):
-    test_task.delay()
+def run_test_task(request):
+    test_task.enqueue()
 
     return HttpResponse(status=204)
 

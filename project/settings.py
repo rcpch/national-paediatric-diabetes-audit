@@ -138,6 +138,9 @@ INSTALLED_APPS = [
     "silk",
     # application
     "project.npda",
+    # Background tasks
+    "django_tasks",
+    "django_tasks.backends.database",
 ]
 
 MIDDLEWARE = [
@@ -362,20 +365,11 @@ USE_I18N = True
 
 USE_TZ = True
 
-REDIS_HOSTNAME = os.getenv("REDIS_HOSTNAME")
-REDIS_PORT = os.getenv("REDIS_PORT")
-REDIS_DATABASE_NUMBER = os.getenv("REDIS_DATABASE_NUMBER")
-REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD")
-
-REDIS_USE_SSL = os.environ.get("REDIS_USE_SSL")
-
-redis_protocol = "rediss" if REDIS_USE_SSL else "redis"
-redis_auth = f":{REDIS_PASSWORD}@" if REDIS_PASSWORD else ""
-redis_params = "?ssl_cert_reqs=required" if REDIS_USE_SSL else ""
-
-CELERY_BROKER_URL = f"{redis_protocol}://{redis_auth}{REDIS_HOSTNAME}:{REDIS_PORT}/{REDIS_DATABASE_NUMBER}{redis_params}"
-
-CELERY_RESULT_BACKEND = CELERY_BROKER_URL
+TASKS = {
+    "default": {
+        "BACKEND": "django_tasks.backends.database.DatabaseTaskBackend",
+    }
+}
 
 # Required for STS to work - see https://docs.djangoproject.com/en/5.2/ref/middleware/#http-strict-transport-security
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

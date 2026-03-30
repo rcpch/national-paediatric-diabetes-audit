@@ -18,7 +18,7 @@ from project.npda.views import (
     VisitCreateView,
     VisitDeleteView,
     VisitUpdateView,
-    celery_test_task,
+    run_test_task,
     csrf_fail,
     download_template,
     feature_flags,
@@ -136,7 +136,7 @@ urlpatterns = [
     ),
     path("csrf_fail/", csrf_fail, name="csrf_fail"),
     # Debugging
-    path("celery_test_task/", celery_test_task, name="celery_test_task"),
+    path("run_test_task/", run_test_task, name="run_test_task"),
 ]
 
 dashboard_urlpatterns = [

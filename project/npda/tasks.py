@@ -2,7 +2,7 @@ import io
 import logging
 
 from asgiref.sync import async_to_sync
-from celery import shared_task
+from django_tasks import task
 
 from project.npda.general_functions.csv import (
     csv_parse,
@@ -11,21 +11,22 @@ from project.npda.general_functions.csv import (
 )
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 from project.npda.models.submission import Submission
+
 logger = logging.getLogger(__name__)
 
 
-@shared_task
+@task()
 def test_task():
-    logger.info("Hello from the Celery test task!")
+    logger.info("Hello from the Django test task!")
     logger.info("These are the PDUs registered in the database:")
 
     for pdu in PaediatricDiabetesUnit.objects.all():
         logger.info(f"\t{pdu.lead_organisation_name} [{pdu.pz_code}]")
 
 
-@shared_task
+@task()
 def upload_csv_task(submission_id):
-    logger.info("Hello from the Celery upload csv task!")
+    logger.info("Hello from the Django upload csv task!")
 
     submission = Submission.objects.get(id=submission_id)
 

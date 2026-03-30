@@ -47,7 +47,7 @@
         <li>
           <a href="{% url 'admin:index' %}"><i class="fa-solid fa-toolbox"></i>Django Admin</a>
         </li>
-        <form method="post" action="{% url 'celery_test_task' %}">
+        <form method="post" action="{% url 'run_test_task' %}">
           <li>
               {% csrf_token %}
               <button type="submit">

@@ -510,14 +510,14 @@ def upload_csv(request, audit_period, pdu):
             audit_period=audit_period,
             csv_file_bytes=user_csv_bytes,
             csv_file_name=user_csv_filename,
-            # The celery task will flip it to active once complete
+            # The background task will flip it to active once complete
             submission_active=False,
             user=request.user,
             ip_address=get_client_ip(request),
             new_dataframe=parsed_csv.df,
         )
 
-        upload_csv_task.delay(new_submission.id)
+        upload_csv_task.enqueue(new_submission.id)
 
         save_csv_uploading_user_to_visitactivity(request=request)
 

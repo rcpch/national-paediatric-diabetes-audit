@@ -14,8 +14,8 @@ DOCKER_BUILDKIT=0 docker compose build django
 # Lint checks (fails fast if code is not clean)
 s/lint --check
 
-# Only services needed for tests (avoids running flower/mkdocs/etc)
-DOCKER_BUILDKIT=0 docker compose up -d postgis redis
+# Only services needed for tests (avoids running mkdocs/etc)
+DOCKER_BUILDKIT=0 docker compose up -d postgis
 
 # Regenerate static files manifest in the mounted volume (volume overrides the
 # baked-in staticfiles from the Docker build, so manifest can be stale)

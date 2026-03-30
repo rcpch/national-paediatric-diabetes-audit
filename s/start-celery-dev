@@ -1,3 +1,0 @@
-#!/bin/bash -e
-
-watchmedo auto-restart -R --patterns='*.py' s/start-celery
