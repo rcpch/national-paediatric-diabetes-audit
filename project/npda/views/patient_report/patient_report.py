@@ -536,6 +536,15 @@ class PatientReportView(
                 - relativedelta(years=12),
             )
 
+            # Smoking cessation denominator: only smokers ≥12 (non-smokers are
+            # "not required" and must not inflate the column header count)
+            complete_year_smokers_12plus = get_patient_ids_and_count(
+                is_complete_year_of_care=True,
+                date_of_birth__lte=self.audit_period.start_date
+                - relativedelta(years=12),
+                smoking_cessation_referral__in=["True", "False"],
+            )
+
             for kpi_name, kpi_result, (patient_ids, patient_count) in [
                 (
                     "hba1c_4plus",
@@ -575,7 +584,7 @@ class PatientReportView(
                 (
                     "smoking_cessation_referral",
                     self.calculate_kpis.calculate_kpi_36_referral_to_smoking_cessation_service(),
-                    complete_year_12plus,
+                    complete_year_smokers_12plus,
                 ),
             ]:
                 add_kpi_total(context, kpi_name, kpi_result, patient_ids, patient_count)
