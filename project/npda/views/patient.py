@@ -1,45 +1,35 @@
 # python imports
-import logging
 import json
-from datetime import date
-
-# Django imports
-from django.apps import apps
-from django.contrib import messages
-from django.contrib.gis.db.models.functions import Distance
-from django.contrib.gis.geos import Point
-from django.contrib.messages.views import SuccessMessageMixin
-from django.contrib.auth.mixins import PermissionRequiredMixin
-from django.db.models import Count, Case, When, Max, Q, F
-from django.forms import BaseForm
-from django.forms import BaseForm
-from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import get_object_or_404, render, redirect, reverse
-from django.urls import reverse_lazy
-from django.utils import timezone
-from django.views.generic.edit import CreateView, UpdateView, DeleteView
-from django.views.generic import ListView
-
+import logging
 
 # Third party imports
 import nhs_number
 
+# Django imports
+from django.apps import apps
+from django.contrib import messages
+from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.contrib.gis.db.models.functions import Distance
+from django.contrib.gis.geos import Point
+from django.contrib.messages.views import SuccessMessageMixin
+from django.db.models import Case, Count, F, Max, Q, When
+from django.forms import BaseForm
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse_lazy
+from django.utils import timezone
+from django.views.generic import ListView
+from django.views.generic.edit import CreateView, DeleteView, UpdateView
+
 # Project imports
 from project.npda.general_functions import (
-    organisations_adapter,
+    data_breadcrumbs,
     fetch_organisation_by_ods_code,
+    patient_breadcrumbs,
     retrieve_quarter_for_date,
     visit_falls_within_audit_period_Q_object,
-    data_breadcrumbs,
-    patient_breadcrumbs
 )
-from project.npda.models import (
-    NPDAUser,
-    Patient,
-    Submission,
-    AuditPeriod
-)
-from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
+from project.npda.models import NPDAUser, Patient, Submission
 
 # RCPCH imports
 from ..forms.patient_form import PatientForm
@@ -48,7 +38,7 @@ from .mixins import (
     CheckCurrentAuditYearMixin,
     LoginAndOTPRequiredMixin,
     PDUPermissionMixin,
-    QuestionnaireContextMixin
+    QuestionnaireContextMixin,
 )
 
 logger = logging.getLogger(__name__)
@@ -113,10 +103,10 @@ class PatientListView(
                 srid=4326,
             )
             self.pdu.save()
-        
+
         filtered_patients = Q(
             submissions__submission_active=True,
-            submissions__audit_period=self.audit_period
+            submissions__audit_period=self.audit_period,
         )
 
         # filter by contents of the search bar
@@ -186,22 +176,22 @@ class PatientListView(
         context["pdu"] = self.pdu
 
         context["breadcrumbs"] = [
-            {
-                "label": "Patient Data",
-                "href": self.data_reverse("pdu-patients")
-            }
+            {"label": "Patient Data", "href": self.data_reverse("pdu-patients")}
         ]
 
         submission = None
         submission_error_count = 0
 
-        submission = Submission.objects.get_submission_for_request(self.pdu, self.audit_period)
-        last_submission = Submission.objects.get_submission_for_request(self.pdu, self.audit_period.previous_audit_period())
+        submission = Submission.objects.get_submission_for_request(
+            self.pdu, self.audit_period
+        )
+        last_submission = Submission.objects.get_submission_for_request(
+            self.pdu, self.audit_period.previous_audit_period()
+        )
 
         if submission and submission.errors:
             submission_errors = json.loads(submission.errors)
 
-            error_count = 0
             for errors_for_visit in submission_errors.values():
                 for errors_for_field in errors_for_visit.values():
                     submission_error_count += len(errors_for_field)
@@ -221,7 +211,6 @@ class PatientListView(
         seen_first_error = False
         seen_first_valid = False
         seen_first_valid_incomplete_full_year = False
-        seen_first_died = False
 
         context["search_input_list"] = self.split_search_string(
             search_string=self.request.GET.get("search-input", "")
@@ -298,7 +287,7 @@ class PatientCreateView(
     model = Patient
     form_class = PatientForm
     success_message = "New child record created successfully"
-    
+
     def get_success_url(self):
         return self.data_reverse("pdu-patients")
 
@@ -307,24 +296,32 @@ class PatientCreateView(
         kwargs["paediatric_diabetes_unit"] = self.pdu
         kwargs["audit_period"] = self.audit_period
         # Get override_postcode from POST data if available
-        if self.request.method in ('POST', 'PUT'):
-            kwargs['override_postcode'] = self.request.POST.get('override_postcode', 'false') == 'true'
+        if self.request.method in ("POST", "PUT"):
+            kwargs["override_postcode"] = (
+                self.request.POST.get("override_postcode", "false") == "true"
+            )
         return kwargs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        title = f"Add New Child to {self.pdu.lead_organisation_name}  ({self.pdu.pz_code})"
+        title = (
+            f"Add New Child to {self.pdu.lead_organisation_name}  ({self.pdu.pz_code})"
+        )
         context["pdu"] = self.pdu
         context["title"] = title
         context["button_title"] = "Create New Child Patient Record"
         context["form_method"] = "create"
         context["override_postcode"] = False
-        context["breadcrumbs"] = data_breadcrumbs(self.pdu, self.audit_period, [
-            ("Patient Data", "pdu-patients"),
-            ("Add patient", "pdu-patient-add"),
-        ])
+        context["breadcrumbs"] = data_breadcrumbs(
+            self.pdu,
+            self.audit_period,
+            [
+                ("Patient Data", "pdu-patients"),
+                ("Add patient", "pdu-patient-add"),
+            ],
+        )
         return context
-    
+
     def form_invalid(self, form):
         context = self.get_context_data()
         if "postcode" in form.errors:
@@ -337,8 +334,8 @@ class PatientCreateView(
                 )
                 form.postcode = form.cleaned_data["postcode"]
             else:
-                context['button_title'] = "Save Changes with Invalid Postcode Anyway"
-                context['override_postcode'] = True
+                context["button_title"] = "Save Changes with Invalid Postcode Anyway"
+                context["override_postcode"] = True
                 messages.error(
                     self.request,
                     "The postcode you have entered is invalid. Please check the postcode and try again.",
@@ -386,9 +383,8 @@ class PatientCreateView(
             submission_active=True,
             defaults={
                 "submission_by": NPDAUser.objects.get(pk=self.request.user.pk),
-                "submission_by": NPDAUser.objects.get(pk=self.request.user.pk),
                 "submission_date": timezone.now(),
-                "audit_period": audit_period
+                "audit_period": audit_period,
             },
         )
         submission.patients.add(patient)
@@ -425,7 +421,7 @@ class PatientUpdateView(
     def get_context_data(self, **kwargs):
         Transfer = apps.get_model("npda", "Transfer")
         patient = get_object_or_404(Patient, pk=self.kwargs["pk"])
-        transfer = Transfer.objects.get(patient=patient)
+        Transfer.objects.get(patient=patient)
         context = super().get_context_data(**kwargs)
         context["pdu"] = self.pdu
         context["title"] = "Edit Child Details"
@@ -433,22 +429,32 @@ class PatientUpdateView(
         context["form_method"] = "update"
         context["patient_id"] = self.kwargs["pk"]
         context["override_postcode"] = False
-        context["breadcrumbs"] = patient_breadcrumbs(self.pdu, self.audit_period, patient, [])
+        context["breadcrumbs"] = patient_breadcrumbs(
+            self.pdu, self.audit_period, patient, []
+        )
         return context
 
     def form_valid(self, form: BaseForm) -> HttpResponse:
         if "delete" in self.request.POST:
-            return redirect(self.data_reverse("pdu-patient-delete", kwargs={"pk": self.kwargs["pk"]}))
+            return redirect(
+                self.data_reverse(
+                    "pdu-patient-delete", kwargs={"pk": self.kwargs["pk"]}
+                )
+            )
         patient = form.save(commit=False)
         patient.is_valid = True
         patient.errors = None
         # TODO MRB: this calls patient.save twice. super.form_valid calls it too (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/335)
         patient.save()
         return super().form_valid(form)
-    
+
     def form_invalid(self, form):
         if "delete" in self.request.POST:
-            return redirect(self.data_reverse("pdu-patient-delete", kwargs={"pk": self.kwargs["pk"]}))
+            return redirect(
+                self.data_reverse(
+                    "pdu-patient-delete", kwargs={"pk": self.kwargs["pk"]}
+                )
+            )
         context = self.get_context_data()
         if "postcode" in form.errors:
             # if the postcode is invalid, we want to allow the user to save the record anyway
@@ -460,8 +466,8 @@ class PatientUpdateView(
                 )
                 form.postcode = form.cleaned_data["postcode"]
             else:
-                context['button_title'] = "Save Changes with Invalid Postcode Anyway"
-                context['override_postcode'] = True
+                context["button_title"] = "Save Changes with Invalid Postcode Anyway"
+                context["override_postcode"] = True
                 messages.error(
                     self.request,
                     "The postcode you have entered is invalid. Please check the postcode and try again.",
@@ -469,16 +475,17 @@ class PatientUpdateView(
                 form.override_postcode = True
             return self.render_to_response(context)
         return super().form_invalid(form)
-    
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["paediatric_diabetes_unit"] = self.pdu
         kwargs["audit_period"] = self.audit_period
         # Get override_postcode from POST data if available
-        if self.request.method in ('POST', 'PUT'):
-            kwargs['override_postcode'] = self.request.POST.get('override_postcode', 'false') == 'true'
+        if self.request.method in ("POST", "PUT"):
+            kwargs["override_postcode"] = (
+                self.request.POST.get("override_postcode", "false") == "true"
+            )
         return kwargs
-    
 
 
 class PatientDeleteView(
@@ -504,8 +511,10 @@ class PatientDeleteView(
         context = super().get_context_data(*args, **kwargs)
         patient = self.get_object()
 
-        context["breadcrumbs"] = patient_breadcrumbs(self.pdu, self.audit_period, patient, [])
-        
+        context["breadcrumbs"] = patient_breadcrumbs(
+            self.pdu, self.audit_period, patient, []
+        )
+
         return context
 
     def get_success_url(self):
@@ -513,5 +522,9 @@ class PatientDeleteView(
 
     def post(self, request, *args, **kwargs):
         if "cancel" in request.POST:
-            return redirect(self.data_reverse("pdu-patient-update", kwargs={"pk": self.kwargs["pk"]}))
+            return redirect(
+                self.data_reverse(
+                    "pdu-patient-update", kwargs={"pk": self.kwargs["pk"]}
+                )
+            )
         return super().post(request, *args, **kwargs)

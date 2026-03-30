@@ -6,13 +6,12 @@ import pytest
 from dateutil.relativedelta import relativedelta
 from django.urls import reverse
 
-from project.npda.models import NPDAUser, AuditPeriod, Submission
+from project.constants.diabetes_types import DIABETES_TYPES
+from project.npda.models import AuditPeriod, NPDAUser, Submission
 from project.npda.tests.constants_for_tests import ALDER_HEY_PZ_CODE
 from project.npda.tests.factories import test_user_audit_centre_editor_data
-from project.npda.tests.utils import login_and_verify_user
 from project.npda.tests.factories.patient_factory import PatientFactory
-from project.constants.diabetes_types import DIABETES_TYPES
-
+from project.npda.tests.utils import login_and_verify_user
 
 # ---------------------------------------------------------------------------
 # Helpers

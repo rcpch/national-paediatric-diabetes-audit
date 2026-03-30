@@ -11,6 +11,9 @@ az storage file download \
 # Build app image explicitly so services that reference it don't try to pull it
 DOCKER_BUILDKIT=0 docker compose build django
 
+# Lint checks (fails fast if code is not clean)
+s/lint --check
+
 # Only services needed for tests (avoids running flower/mkdocs/etc)
 DOCKER_BUILDKIT=0 docker compose up -d postgis redis
 

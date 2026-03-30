@@ -1,8 +1,6 @@
-"""Factory fn to create new Visit, related to a Patient.
-"""
+"""Factory fn to create new Visit, related to a Patient."""
 
 # standard imports
-from datetime import timedelta
 
 # third-party imports
 import factory

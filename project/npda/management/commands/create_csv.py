@@ -16,7 +16,7 @@ Example use:
         --pz_code="PZ999" \
         --imd=2 \
         --build
-    
+
     # Jersey
 
     python manage.py create_csv \
@@ -242,10 +242,8 @@ class Command(BaseCommand):
         mutex_group.add_argument(
             "--postcode_outcode",
             type=str,
-            help="Use random postcodes with the given outcode (eg W1A for W1A 1AA)"
+            help="Use random postcodes with the given outcode (eg W1A for W1A 1AA)",
         )
-
-
 
     def handle(self, *args, **options):
 
@@ -310,7 +308,10 @@ class Command(BaseCommand):
             ["Diabetes Types", ", ".join(diabetes_type_strs)],
             ["Age Range", f"{age_range.name}"],
             ["IMD Value", imd],
-            ["Postcode Outcode" if postcode_outcode else "Postcode", postcode or postcode_outcode],
+            [
+                "Postcode Outcode" if postcode_outcode else "Postcode",
+                postcode or postcode_outcode,
+            ],
             ["PZ Code", pdu],
         ]
 
@@ -322,7 +323,9 @@ class Command(BaseCommand):
         self.print_info("\n--- Visit Types Provided ---\n")
 
         # Divide the list into chunks of 4 for a compact table
-        visit_types_chunks = [visit_types[i : i + 4] for i in range(0, len(visit_types), 4)]
+        visit_types_chunks = [
+            visit_types[i : i + 4] for i in range(0, len(visit_types), 4)
+        ]
         for chunk in visit_types_chunks:
             self.print_info("    ".join(f"{CYAN}{visit}{RESET}" for visit in chunk))
 
@@ -339,7 +342,7 @@ class Command(BaseCommand):
             output_path,
             build_flag,
             postcode,
-            postcode_outcode
+            postcode_outcode,
         )
         self.print_success(f"✨ CSV generated successfully at {self.csv_name}.\n")
         if build_flag:
@@ -359,7 +362,7 @@ class Command(BaseCommand):
         output_path,
         build_flag,
         postcode,
-        postcode_outcode
+        postcode_outcode,
     ):
 
         # Start csv logic
@@ -369,14 +372,14 @@ class Command(BaseCommand):
             audit_end_date=audit_end_date,
             # either postcode or postcode_outcode
             postcode=postcode,
-            postcode_outcode=postcode_outcode
+            postcode_outcode=postcode_outcode,
         )
 
         new_pts = fake_patient_creator.build_fake_patients(
             n=n_pts_to_seed,
             age_range=age_range,
             latest_diagnosis_date=audit_end_date,
-            diabetes_types=diabetes_types
+            diabetes_types=diabetes_types,
         )
 
         # For each pt, add visits
@@ -384,7 +387,7 @@ class Command(BaseCommand):
             patients=new_pts,
             age_range=age_range,
             hb1ac_target_range=hba1c_target,
-            visit_types=visit_types
+            visit_types=visit_types,
         )
 
         # `CSV_HEADINGS` is a tuple for csv headings and model fields
@@ -415,7 +418,6 @@ class Command(BaseCommand):
                 visit_dict = {}
 
                 for model, field_heading_mappings in csv_map.items():
-
                     for (
                         model_field,
                         csv_heading,
@@ -587,12 +589,16 @@ class Command(BaseCommand):
                         df[column]
                         .replace({np.nan: pd.NA, None: pd.NA})  # Replace missing values
                         .apply(
-                            lambda x: (int(x) if pd.notna(x) and x == int(x) else pd.NA)
+                            lambda x: int(x) if pd.notna(x) and x == int(x) else pd.NA
                         )  # Ensure valid integers
                         .astype(dtype)  # Cast to nullable Int dtype
                     )
                 elif dtype == "string":  # Handle strings
-                    df[column] = df[column].replace({np.nan: pd.NA, None: pd.NA}).astype("string")
+                    df[column] = (
+                        df[column]
+                        .replace({np.nan: pd.NA, None: pd.NA})
+                        .astype("string")
+                    )
                 elif dtype.startswith("float"):  # Handle floats
                     df[column] = df[column].replace({None: np.nan}).astype(dtype)
                 else:
@@ -603,7 +609,9 @@ class Command(BaseCommand):
         # Cant continue
         except Exception as e:
             logger.error(f"ERROR in clean_and_cast: {e}")
-            logger.error(f"CSV_DATA_TYPES_MINUS_DATES {column=} {dtype=}\n{df[column].dtype=}")
+            logger.error(
+                f"CSV_DATA_TYPES_MINUS_DATES {column=} {dtype=}\n{df[column].dtype=}"
+            )
             raise e
 
         return df
@@ -632,12 +640,7 @@ class Command(BaseCommand):
         visits: str = options["visits"]
         # Map to actual VisitType
         # NOTE: `_map_visit_type_letters_to_names` already did some basic validation
-        visit_types = list(
-            map(
-                lambda letter: letter_name_map[letter],
-                visits.replace(" ", ""),
-            )
-        )
+        visit_types = [letter_name_map[letter] for letter in visits.replace(" ", "")]
 
         # hba1c target
         hba1c_target = hb_target_map[options["hb_target"]]
@@ -645,22 +648,24 @@ class Command(BaseCommand):
         if options.get("diabetes_types"):
             diabetes_type_strs = options["diabetes_types"].upper().split(" ")
 
-            invalid_diabetes_type_strs = [dt for dt in diabetes_type_strs if dt not in {"T1", "T2"}]
+            invalid_diabetes_type_strs = [
+                dt for dt in diabetes_type_strs if dt not in {"T1", "T2"}
+            ]
             if invalid_diabetes_type_strs:
                 self.print_error(
                     f"Invalid diabetes_types provided. Must be one of 'T1', 'T2'. Invalid values: {', '.join(invalid_diabetes_type_strs)}"
                 )
                 return
-        
+
             diabetes_types = []
 
             if "T1" in diabetes_type_strs:
                 diabetes_types.append(DIABETES_TYPES[0][0])
-            
+
             if "T2" in diabetes_type_strs:
                 diabetes_types.append(DIABETES_TYPES[1][0])
         else:
-            diabetes_types = [DIABETES_TYPES[0][0]] # T1 default
+            diabetes_types = [DIABETES_TYPES[0][0]]  # T1 default
 
         # age range
         age_range = age_range_map[options["age_range"]]
@@ -678,7 +683,7 @@ class Command(BaseCommand):
             postcode = None
         else:
             imd = 1
-            postcode = IMD_POSTCODE_MAP[1] 
+            postcode = IMD_POSTCODE_MAP[1]
 
         # pdu
         pz_code = options["pz_code"]
@@ -721,14 +726,16 @@ class Command(BaseCommand):
         building_str = ""
         if build:
             # First count the number of existing files to use this as filename prefix
-            existing_files = [f for f in os.listdir(output_path) if f.startswith("build")]
+            existing_files = [
+                f for f in os.listdir(output_path) if f.startswith("build")
+            ]
 
             # Set the building string filename prefix
             building_str = f"build__{len(existing_files) + 1}_"
 
         output_path = os.path.join(
             output_path,
-            f"{building_str}{datetime.now().strftime("%Y%m%d%H%M%S")}-npda-seed-data-{pz_code}-{n_pts_to_seed}pts-{age_range.name}-{hb_target.name}-{visits.replace(' ', '')}.csv",
+            f"{building_str}{datetime.now().strftime('%Y%m%d%H%M%S')}-npda-seed-data-{pz_code}-{n_pts_to_seed}pts-{age_range.name}-{hb_target.name}-{visits.replace(' ', '')}.csv",
         )
         return output_path
 

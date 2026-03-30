@@ -4,7 +4,9 @@ from django.core.exceptions import PermissionDenied
 
 class PaediatricDiabetesUnitManager(models.Manager):
     def get_pdu_for_request(self, request):
-        can_view_all_data = request.user.is_superuser or request.user.is_rcpch_audit_team_member
+        can_view_all_data = (
+            request.user.is_superuser or request.user.is_rcpch_audit_team_member
+        )
 
         pz_code = request.resolver_match.kwargs["pz_code"]
 
@@ -12,7 +14,7 @@ class PaediatricDiabetesUnitManager(models.Manager):
             pdu = PaediatricDiabetesUnit.objects.get(pz_code=pz_code)
         except PaediatricDiabetesUnit.DoesNotExist as e:
             if not can_view_all_data:
-                raise PermissionDenied(f"PDU {pz_code} does not exist")
+                raise PermissionDenied(f"PDU {pz_code} does not exist") from e
 
             raise e
 
@@ -27,6 +29,7 @@ class PaediatricDiabetesUnitManager(models.Manager):
                 )
 
         return pdu
+
 
 class PaediatricDiabetesUnit(models.Model):
     """

@@ -1,16 +1,11 @@
 # python imports
-from datetime import date
 import logging
 from decimal import Decimal
 
 # django imports
 from django.contrib.gis.db import models
 
-# npda imports
-from .help_text_mixin import HelpTextMixin
-from .categorised_formfield_mixin import *
 from ...constants import (
-    ALL_VISIT_DATES,
     ALBUMINURIA_STAGES,
     CLOSED_LOOP_TYPES,
     DKA_ADDITIONAL_THERAPIES,
@@ -23,7 +18,10 @@ from ...constants import (
     TREATMENT_TYPES,
     YES_NO_UNKNOWN,
 )
-from ..general_functions import calculate_bmi
+from .categorised_formfield_mixin import *
+
+# npda imports
+from .help_text_mixin import HelpTextMixin
 
 logger = logging.getLogger(__name__)
 

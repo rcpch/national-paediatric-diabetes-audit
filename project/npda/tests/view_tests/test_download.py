@@ -1,14 +1,18 @@
 import pytest
-
 from django.urls import reverse
 
-from project.npda.models import NPDAUser, Submission, AuditPeriod
-from project.npda.tests.test_csv_upload import mock_remote_calls
-from project.npda.tests.model_tests.test_submissions import ALDER_HEY_PZ_CODE, GOSH_PZ_CODE
-from project.npda.tests.UserDataClasses import AUDIT_CENTRE_EDITOR, AUDIT_CENTRE_COORDINATOR, AUDIT_CENTRE_READER, RCPCH_AUDIT_TEAM
-from project.npda.tests.utils import login_and_verify_user
-from project.npda.tests.utils import create_submission
-from project.npda.tests.factories.csv_file_fixtures import dummy_sheet_csv
+from project.npda.models import AuditPeriod, NPDAUser, Submission
+from project.npda.tests.model_tests.test_submissions import (
+    ALDER_HEY_PZ_CODE,
+    GOSH_PZ_CODE,
+)
+from project.npda.tests.UserDataClasses import (
+    AUDIT_CENTRE_COORDINATOR,
+    AUDIT_CENTRE_EDITOR,
+    AUDIT_CENTRE_READER,
+    RCPCH_AUDIT_TEAM,
+)
+from project.npda.tests.utils import create_submission, login_and_verify_user
 
 
 @pytest.mark.django_db
@@ -19,10 +23,16 @@ def setup(
     seed_audit_periods_fixture,
     django_db_setup,
     django_db_blocker,
-    request
+    request,
 ):
-    file = request.config.rootdir / 'project' / 'npda' / 'dummy_sheets' / 'dummy_sheet_test.csv'
-    with open(file, 'r') as f:
+    file = (
+        request.config.rootdir
+        / "project"
+        / "npda"
+        / "dummy_sheets"
+        / "dummy_sheet_test.csv"
+    )
+    with open(file) as f:
         csv_file_data = f.read()
 
     with django_db_blocker.unblock():
@@ -31,7 +41,7 @@ def setup(
                 AuditPeriod.objects.get_default_audit_period(),
                 pz_code=pz_code,
                 csv_file_name="test_download.csv",
-                csv_file=csv_file_data.encode("utf-8")
+                csv_file=csv_file_data.encode("utf-8"),
             )
 
 
@@ -42,15 +52,10 @@ def setup(
         pytest.param(f"{AUDIT_CENTRE_EDITOR}", "download-data"),
         pytest.param(f"{AUDIT_CENTRE_COORDINATOR}", "download-report"),
         pytest.param(f"{AUDIT_CENTRE_COORDINATOR}", "download-data"),
-    ]
+    ],
 )
 @pytest.mark.django_db
-def test_uploaders_can_download_data_for_their_pdu(
-    client,
-    setup,
-    role,
-    action
-):
+def test_uploaders_can_download_data_for_their_pdu(client, setup, role, action):
     coordinator_user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
         role=role,
@@ -63,29 +68,41 @@ def test_uploaders_can_download_data_for_their_pdu(
         paediatric_diabetes_unit__pz_code=ALDER_HEY_PZ_CODE,
     ).first()
 
-    download_url = reverse("pdu-submissions", kwargs={
-        "pz_code": ALDER_HEY_PZ_CODE,
-        "audit_period": sub.audit_period.slug,
-    })
+    download_url = reverse(
+        "pdu-submissions",
+        kwargs={
+            "pz_code": ALDER_HEY_PZ_CODE,
+            "audit_period": sub.audit_period.slug,
+        },
+    )
 
     response = client.post(
         download_url,
         {
-            'submit-data': action,
-            'audit_id': sub.id,
-        }
+            "submit-data": action,
+            "audit_id": sub.id,
+        },
     )
 
     assert response.status_code == 200
-    
+
     match action:
         case "download-report":
-            assert response["Content-Type"] == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            assert response["Content-Disposition"] == 'attachment; filename="test_download_data_quality_report.xlsx"'
+            assert (
+                response["Content-Type"]
+                == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            assert (
+                response["Content-Disposition"]
+                == 'attachment; filename="test_download_data_quality_report.xlsx"'
+            )
 
         case "download-data":
             assert response["Content-Type"] == "text/csv"
-            assert response["Content-Disposition"] == 'attachment; filename="test_download.csv"'
+            assert (
+                response["Content-Disposition"]
+                == 'attachment; filename="test_download.csv"'
+            )
 
 
 @pytest.mark.parametrize(
@@ -95,7 +112,7 @@ def test_uploaders_can_download_data_for_their_pdu(
         pytest.param(f"{AUDIT_CENTRE_EDITOR}", "download-data"),
         pytest.param(f"{AUDIT_CENTRE_COORDINATOR}", "download-report"),
         pytest.param(f"{AUDIT_CENTRE_COORDINATOR}", "download-data"),
-    ]
+    ],
 )
 @pytest.mark.django_db
 def test_uploaders_cannot_download_data_for_other_pdu(
@@ -119,43 +136,41 @@ def test_uploaders_cannot_download_data_for_other_pdu(
         paediatric_diabetes_unit__pz_code=ALDER_HEY_PZ_CODE,
     ).first()
 
-    download_url = reverse("pdu-submissions", kwargs={
-        "pz_code": ALDER_HEY_PZ_CODE,
-        "audit_period": sub.audit_period.slug,
-    })
+    download_url = reverse(
+        "pdu-submissions",
+        kwargs={
+            "pz_code": ALDER_HEY_PZ_CODE,
+            "audit_period": sub.audit_period.slug,
+        },
+    )
 
     client = login_and_verify_user(client, gosh_coordinator_user)
 
     response = client.post(
         download_url,
         {
-            'submit-data': action,
-            'audit_id': sub.id,
-        }
+            "submit-data": action,
+            "audit_id": sub.id,
+        },
     )
 
     assert response.status_code == 403
     assert "Content-Disposition" not in response
 
 
-
 @pytest.mark.parametrize(
     "action,home_pdu,requested_pdu",
     [
-        pytest.param(*list([action] + params)) for params in [
+        pytest.param(*list([action] + params))
+        for params in [
             [
                 ALDER_HEY_PZ_CODE,
                 ALDER_HEY_PZ_CODE,
             ],
-            [
-                ALDER_HEY_PZ_CODE,
-                GOSH_PZ_CODE
-            ]
-        ] for action in [
-            "download-report",
-            "download-data"
+            [ALDER_HEY_PZ_CODE, GOSH_PZ_CODE],
         ]
-    ]
+        for action in ["download-report", "download-data"]
+    ],
 )
 @pytest.mark.django_db
 def test_readers_cannot_download_data_for_any_pdu(
@@ -185,19 +200,22 @@ def test_readers_cannot_download_data_for_any_pdu(
         paediatric_diabetes_unit__pz_code=requested_pdu,
     ).first()
 
-    download_url = reverse("pdu-submissions", kwargs={
-        "pz_code": requested_pdu,
-        "audit_period": sub.audit_period.slug,
-    })
+    download_url = reverse(
+        "pdu-submissions",
+        kwargs={
+            "pz_code": requested_pdu,
+            "audit_period": sub.audit_period.slug,
+        },
+    )
 
     client = login_and_verify_user(client, home_pdu_user)
 
     response = client.post(
         download_url,
         {
-            'submit-data': action,
-            'audit_id': sub.id,
-        }
+            "submit-data": action,
+            "audit_id": sub.id,
+        },
     )
 
     assert response.status_code == 403
@@ -208,9 +226,9 @@ def test_readers_cannot_download_data_for_any_pdu(
     response = client.post(
         download_url,
         {
-            'submit-data': action,
-            'audit_id': sub.id,
-        }
+            "submit-data": action,
+            "audit_id": sub.id,
+        },
     )
 
     assert response.status_code == 403
@@ -223,16 +241,11 @@ def test_readers_cannot_download_data_for_any_pdu(
         pytest.param("download-report", ALDER_HEY_PZ_CODE),
         pytest.param("download-data", ALDER_HEY_PZ_CODE),
         pytest.param("download-report", GOSH_PZ_CODE),
-        pytest.param("download-data", GOSH_PZ_CODE)
-    ]
+        pytest.param("download-data", GOSH_PZ_CODE),
+    ],
 )
 @pytest.mark.django_db
-def test_rcpch_audit_team_can_download_data_for_any_pdu(
-    client,
-    setup,
-    action,
-    pz_code
-):
+def test_rcpch_audit_team_can_download_data_for_any_pdu(client, setup, action, pz_code):
     rcpch_user = NPDAUser.objects.filter(
         organisation_employers__pz_code=pz_code,
         role=RCPCH_AUDIT_TEAM,
@@ -245,26 +258,38 @@ def test_rcpch_audit_team_can_download_data_for_any_pdu(
         paediatric_diabetes_unit__pz_code=pz_code,
     ).first()
 
-    download_url = reverse("pdu-submissions", kwargs={
-        "pz_code": pz_code,
-        "audit_period": sub.audit_period.slug,
-    })
+    download_url = reverse(
+        "pdu-submissions",
+        kwargs={
+            "pz_code": pz_code,
+            "audit_period": sub.audit_period.slug,
+        },
+    )
 
     response = client.post(
         download_url,
         {
-            'submit-data': action,
-            'audit_id': sub.id,
-        }
+            "submit-data": action,
+            "audit_id": sub.id,
+        },
     )
 
     assert response.status_code == 200
 
     match action:
         case "download-report":
-            assert response["Content-Type"] == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            assert response["Content-Disposition"] == 'attachment; filename="test_download_data_quality_report.xlsx"'
+            assert (
+                response["Content-Type"]
+                == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            assert (
+                response["Content-Disposition"]
+                == 'attachment; filename="test_download_data_quality_report.xlsx"'
+            )
 
         case "download-data":
             assert response["Content-Type"] == "text/csv"
-            assert response["Content-Disposition"] == 'attachment; filename="test_download.csv"'
+            assert (
+                response["Content-Disposition"]
+                == 'attachment; filename="test_download.csv"'
+            )

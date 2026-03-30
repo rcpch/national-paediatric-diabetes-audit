@@ -1,5 +1,7 @@
 import urllib.parse
+
 from ...constants.visit_categories import VISIT_CATEGORIES_BY_TAB
+
 
 def get_visit_categories(instance, form):
     """
@@ -20,7 +22,7 @@ def get_visit_categories(instance, form):
                 for field in form:
                     if field.name in fields:
                         present = True
-                        
+
                         if field.errors:
                             errors[field.name] = field.errors
 
@@ -33,7 +35,9 @@ def get_visit_categories(instance, form):
                 if instance.errors:
                     for field in instance.errors.keys():
                         if field in fields:
-                            errors[field] = [error["message"] for error in instance.errors[field]]
+                            errors[field] = [
+                                error["message"] for error in instance.errors[field]
+                            ]
 
             categories.append(
                 {
@@ -41,7 +45,7 @@ def get_visit_categories(instance, form):
                     "present": present,
                     "errors": errors,
                     "anchor": urllib.parse.quote_plus(category_name),
-                    "colour": category["colour"]
+                    "colour": category["colour"],
                 }
             )
 
@@ -65,11 +69,7 @@ def get_visit_tabs(form):
             for field, field_errors in category["errors"].items():
                 errors[field] = field_errors
 
-        tab = {
-            "name": tab_name,
-            "categories": categories,
-            "errors": errors
-        }
+        tab = {"name": tab_name, "categories": categories, "errors": errors}
 
         # Show the first tab with errors
         if errors and not assigned_active_tab:
@@ -77,7 +77,7 @@ def get_visit_tabs(form):
             assigned_active_tab = True
 
         tabs.append(tab)
-    
+
     # Otherwise show the first one
     if not assigned_active_tab:
         tabs[0]["active"] = True

@@ -1,6 +1,5 @@
 from project.constants import colors
 
-
 ETHNICITIES = (
     ("A", "White - British"),
     ("B", "White - Irish"),

@@ -8,10 +8,10 @@ from django.urls import reverse
 from project.npda.models.audit_period import AuditPeriod
 from project.npda.models.npda_user import NPDAUser
 from project.npda.tests.model_tests.test_submissions import ALDER_HEY_PZ_CODE
-from project.npda.tests.UserDataClasses import \
-    test_user_audit_centre_coordinator_data
+from project.npda.tests.test_csv_upload import mock_remote_calls  # noqa: F401
+from project.npda.tests.UserDataClasses import test_user_audit_centre_coordinator_data
 from project.npda.tests.utils import login_and_verify_user
-from project.npda.tests.test_csv_upload import mock_remote_calls
+
 
 @pytest.mark.django_db
 def test_generate_csv_upload_to_view(
@@ -84,12 +84,13 @@ def test_generate_csv_upload_to_view(
     assert os.path.exists(coalesced_csv_path), "CSV file not generated"
 
     with open(coalesced_csv_path, "rb") as f:
-        csv_file = SimpleUploadedFile(
-            f.name, f.read(), content_type="text/csv"
-        )
+        csv_file = SimpleUploadedFile(f.name, f.read(), content_type="text/csv")
 
     # Send POST request with CSV file
-    url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
+    url = reverse(
+        "pdu-upload-csv",
+        kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"},
+    )
     response = client.post(url, {"csv_upload": csv_file})
 
     # Assert the response to ensure no error
@@ -103,7 +104,7 @@ def test_coordinator_cannot_upload_csv_to_closed_audit_year(
     seed_audit_periods_fixture,
     client,
     mock_remote_calls,
-    dummy_sheet_csv
+    dummy_sheet_csv,
 ):
     ah_coordinator_user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -114,18 +115,21 @@ def test_coordinator_cannot_upload_csv_to_closed_audit_year(
     audit_period = AuditPeriod.objects.get_default_audit_period()
     audit_period.is_open = False
     audit_period.save()
-    
+
     # Fix this test now PDU number must match (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1063)
     csv_to_upload = dummy_sheet_csv.replace("PZ041", ALDER_HEY_PZ_CODE)
 
     csv_file = SimpleUploadedFile(
         "test_coordinator_cannot_upload_csv_to_closed_audit_year.csv",
         csv_to_upload.encode(),
-        content_type="text/csv"
+        content_type="text/csv",
     )
 
     # Send POST request with CSV file
-    url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": audit_period.slug})
+    url = reverse(
+        "pdu-upload-csv",
+        kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": audit_period.slug},
+    )
     response = client.post(url, {"csv_upload": csv_file})
 
     # Assert the response to ensure no error

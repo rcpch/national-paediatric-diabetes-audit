@@ -1,5 +1,4 @@
-from django.contrib.gis.db.models import Model, BooleanField, CASCADE, ForeignKey
-from django.utils.translation import gettext_lazy as _
+from django.contrib.gis.db.models import CASCADE, BooleanField, ForeignKey, Model
 
 
 class OrganisationEmployer(Model):

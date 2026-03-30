@@ -1,5 +1,5 @@
-from django.contrib.gis.db import models
 from django.conf import settings
+from django.contrib.gis.db import models
 
 
 # TODO #12 Mixin breaks build currently

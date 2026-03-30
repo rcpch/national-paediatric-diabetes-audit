@@ -4,14 +4,12 @@ These test those other methods."""
 
 import logging
 from datetime import date
-from typing import List
 
 import pytest
 from dateutil.relativedelta import relativedelta
 from freezegun import freeze_time
 
-from project.constants.hospital_admission_reasons import \
-    HOSPITAL_ADMISSION_REASONS
+from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
 from project.constants.leave_pdu_reasons import LEAVE_PDU_REASONS
 from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.models import Patient
@@ -178,12 +176,12 @@ def test_get_number_of_transitioned_to_adult_service(
 
     # Create Patients and Visits that should be excluded
     # Visit date before audit period
-    ineligible_patient_visit_date: List[Patient] = PatientFactory(
+    ineligible_patient_visit_date: list[Patient] = PatientFactory(
         postcode="ineligible_patient_visit_date",
         visit__visit_date=current_month_start - relativedelta(days=10),
     )
     # Above age 25 at start of audit period
-    ineligible_patient_too_old: List[Patient] = PatientFactory(
+    ineligible_patient_too_old: list[Patient] = PatientFactory(
         postcode="ineligible_patient_too_old",
         date_of_birth=current_month_start - relativedelta(days=365 * 26),
     )
@@ -207,9 +205,7 @@ def test_get_number_of_transitioned_to_adult_service(
     )
 
     # Create a submission (BEFORE calculating KPIs)
-    eligible_pz_code = (
-        eligible_patient_leaving_date_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code
-    )
+    eligible_pz_code = eligible_patient_leaving_date_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code
     submission = utils.create_submission(
         current_month_start,
         pz_code=eligible_pz_code,
@@ -255,12 +251,12 @@ def test_get_number_of_moved_out_of_area_this_year(
 
     # Create Patients and Visits that should be excluded
     # Visit date before audit period
-    ineligible_patient_visit_date: List[Patient] = PatientFactory(
+    ineligible_patient_visit_date: list[Patient] = PatientFactory(
         postcode="ineligible_patient_visit_date",
         visit__visit_date=AUDIT_START_DATE - relativedelta(days=10),
     )
     # Above age 25 at start of audit period
-    ineligible_patient_too_old: List[Patient] = PatientFactory(
+    ineligible_patient_too_old: list[Patient] = PatientFactory(
         postcode="ineligible_patient_too_old",
         date_of_birth=AUDIT_START_DATE - relativedelta(days=365 * 26),
     )
@@ -284,9 +280,7 @@ def test_get_number_of_moved_out_of_area_this_year(
     )
 
     # Create a submission (BEFORE calculating KPIs)
-    eligible_pz_code = (
-        eligible_patient_leaving_date_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code
-    )
+    eligible_pz_code = eligible_patient_leaving_date_within_audit_period.paediatric_diabetes_units.first().paediatric_diabetes_unit.pz_code
     submission = utils.create_submission(
         AUDIT_START_DATE,
         pz_code=eligible_pz_code,

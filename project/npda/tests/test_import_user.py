@@ -1,8 +1,9 @@
 import os
 import tempfile
+
 import pytest
-from django.core.management import call_command
 from django.apps import apps
+from django.core.management import call_command
 
 # Factories
 from project.npda.tests.factories import PaediatricsDiabetesUnitFactory
@@ -12,11 +13,11 @@ PaediatricDiabetesUnit = apps.get_model("npda", "PaediatricDiabetesUnit")
 OrganisationEmployer = apps.get_model("npda", "OrganisationEmployer")
 NPDAUser = apps.get_model("npda", "NPDAUser")
 
-from project.constants import (
-    DR,
-    MS,
+from project.constants import (  # noqa: E402
     AUDIT_CENTRE_COORDINATOR,
     AUDIT_CENTRE_EDITOR,
+    DR,
+    MS,
 )
 
 

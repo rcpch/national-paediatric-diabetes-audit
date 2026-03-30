@@ -14,17 +14,17 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: 'Checkout GitHub Action'
+      - name: "Checkout GitHub Action"
         uses: actions/checkout@main
-      
-      - name: 'Login via Azure CLI'
+
+      - name: "Login via Azure CLI"
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: 'Run CI script'
+      - name: "Run CI script"
         env:
           AZURE_REGISTRY_NAME: ${{ secrets.AZURE_REGISTRY_NAME }}
           AZURE_CONFIG_STORAGE_ACCOUNT: ${{ secrets.AZURE_CONFIG_STORAGE_ACCOUNT }}
@@ -36,12 +36,12 @@ jobs:
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
-      
+
       - name: Upload docs artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'staticdocs'
-      
+          path: "staticdocs"
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

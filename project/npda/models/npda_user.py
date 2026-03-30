@@ -1,14 +1,13 @@
 # django
-from django.contrib.auth.models import AbstractUser, PermissionsMixin
+import citext
+from django.apps import apps
 from django.contrib.auth.base_user import BaseUserManager
+from django.contrib.auth.models import AbstractUser, PermissionsMixin
+from django.contrib.gis.db import models
+from django.contrib.gis.db.models import UniqueConstraint
+from django.db.models.functions import Lower
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from django.contrib.gis.db import models
-from django.db.models.functions import Lower
-from django.contrib.gis.db.models import UniqueConstraint
-from django.apps import apps
-
-import citext
 
 from ...constants import *
 from ..general_functions import *

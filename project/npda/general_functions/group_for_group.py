@@ -3,19 +3,17 @@
 from django.contrib.auth.models import Group
 
 # rcpch
-from project.constants import (
-    # groups
+from project.constants import (  # groups; permissions
+    AUDIT_CENTRE_COORDINATOR,
     AUDIT_CENTRE_EDITOR,
     AUDIT_CENTRE_READER,
-    AUDIT_CENTRE_COORDINATOR,
-    RCPCH_AUDIT_TEAM,
-    RCPCH_AUDIT_PATIENT_FAMILY,
-    # permissions
-    TRUST_AUDIT_TEAM_VIEW_ONLY,
-    TRUST_AUDIT_TEAM_EDIT_ACCESS,
-    TRUST_AUDIT_TEAM_COORDINATOR_ACCESS,
     NPDA_AUDIT_TEAM_FULL_ACCESS,
     PATIENT_ACCESS,
+    RCPCH_AUDIT_PATIENT_FAMILY,
+    RCPCH_AUDIT_TEAM,
+    TRUST_AUDIT_TEAM_COORDINATOR_ACCESS,
+    TRUST_AUDIT_TEAM_EDIT_ACCESS,
+    TRUST_AUDIT_TEAM_VIEW_ONLY,
 )
 
 
@@ -39,5 +37,5 @@ def group_for_role(role_key):
     else:
         # no group
         group = Group.objects.get(name=TRUST_AUDIT_TEAM_VIEW_ONLY)
-    
+
     return group

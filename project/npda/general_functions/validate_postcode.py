@@ -1,14 +1,13 @@
 # python
 import logging
-from asgiref.sync import async_to_sync
 from dataclasses import dataclass
+
+# third party libraries
+import httpx
 
 # django
 from django.conf import settings
 from django.contrib.gis.geos import Point
-
-# third party libraries
-import httpx
 
 # npda imports
 logger = logging.getLogger(__name__)
@@ -30,30 +29,44 @@ class ValidatedPostcode:
         """
         return Point(self.lon, self.lat, srid=4326)
 
-    @property    
+    @property
     def location_bng(self) -> Point:
         return self.location_wgs84.transform(27700, clone=True)
 
 
-async def lookup_postcode(postcode: str, async_client: httpx.AsyncClient) -> ValidatedPostcode | None:
+async def lookup_postcode(
+    postcode: str, async_client: httpx.AsyncClient
+) -> ValidatedPostcode | None:
     response = await make_postcode_api_request(f"postcodes/{postcode}", async_client)
     return handle_postcode_api_response(response)
 
-async def lookup_terminated_postcode(postcode: str, async_client: httpx.AsyncClient) -> ValidatedPostcode | None:
-    response = await make_postcode_api_request(f"terminated_postcodes/{postcode}", async_client)
+
+async def lookup_terminated_postcode(
+    postcode: str, async_client: httpx.AsyncClient
+) -> ValidatedPostcode | None:
+    response = await make_postcode_api_request(
+        f"terminated_postcodes/{postcode}", async_client
+    )
     return handle_postcode_api_response(response)
+
 
 def random_postcode_under_outcode_sync(outcode: str) -> ValidatedPostcode | None:
     with httpx.Client() as client:
-        response = make_postcode_api_request(f"random/postcodes?outcode={outcode}", client)
+        response = make_postcode_api_request(
+            f"random/postcodes?outcode={outcode}", client
+        )
         return handle_postcode_api_response(response)
 
-def make_postcode_api_request(path: str, client: httpx.Client | httpx.AsyncClient) -> httpx.Response:
+
+def make_postcode_api_request(
+    path: str, client: httpx.Client | httpx.AsyncClient
+) -> httpx.Response:
     return client.get(
         url=f"{settings.POSTCODES_IO_API_URL}/{path}",
         headers={"Ocp-Apim-Subscription-Key": settings.POSTCODES_IO_API_KEY},
         timeout=10,  # times out after 10 seconds
     )
+
 
 def handle_postcode_api_response(response: httpx.Response) -> ValidatedPostcode | None:
     if response.status_code == 404:
@@ -66,5 +79,5 @@ def handle_postcode_api_response(response: httpx.Response) -> ValidatedPostcode 
     return ValidatedPostcode(
         normalised_postcode=result["postcode"],
         lon=result["longitude"],
-        lat=result["latitude"]
+        lat=result["latitude"],
     )

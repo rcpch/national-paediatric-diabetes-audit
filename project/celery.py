@@ -1,11 +1,11 @@
-import os
 import logging
+import os
 from logging.config import dictConfig
 
 import django
-from django.conf import settings
 from celery import Celery, Task
 from celery.signals import setup_logging
+from django.conf import settings
 
 # Logging setup
 logger = logging.getLogger(__name__)
@@ -21,19 +21,17 @@ app.conf.update(
     # Hacks to work around the lack of built in support for Redis cluster.
     # We don't use a cluster directly but Azure Managed Redis acts like one.
     # https://github.com/celery/celery/issues/8276#issuecomment-2082176893
-    broker_transport_options={
-        "global_keyprefix": "{queue}:"
-    },
-    result_backend_transport_options={
-        "global_keyprefix": "{rest}:"
-    }
+    broker_transport_options={"global_keyprefix": "{queue}:"},
+    result_backend_transport_options={"global_keyprefix": "{rest}:"},
 )
 
 app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
 
+
 @setup_logging.connect
 def setup_celery_logging(*args, **kwargs):
     dictConfig(settings.LOGGING)
+
 
 class NPDATask(Task):
     def on_failure(self, exc, task_id, args, kwargs, einfo):

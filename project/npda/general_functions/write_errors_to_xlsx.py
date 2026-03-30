@@ -1,25 +1,24 @@
 # import types
 import io
 
-# import functions
-from project.npda.general_functions.csv.csv_parse import csv_parse
-
 # import third-party libaries
 import pandas as pd
 from openpyxl import Workbook, load_workbook
 from openpyxl.comments import Comment
-from openpyxl.styles import PatternFill, Font, Alignment
+from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
 from pandas.api.types import is_datetime64_any_dtype
+
+# import functions
+from project.npda.general_functions.csv.csv_parse import csv_parse
 
 # import csv mappings
 from ...constants.csv_headings import csv_definition_for
 
 
 def write_errors_to_xlsx(
-    errors: dict[str, dict[str, list[str]]],
-    original_csv_file_bytes: bytes
+    errors: dict[str, dict[str, list[str]]], original_csv_file_bytes: bytes
 ) -> bytes:
     """
     Write errors to an Excel file. Highlight invalid cells in the source CSV.
@@ -32,9 +31,7 @@ def write_errors_to_xlsx(
     xlsx_file = io.BytesIO()
 
     # Get original data
-    parsed_csv = csv_parse(
-        io.BytesIO(initial_bytes=original_csv_file_bytes)
-    )
+    parsed_csv = csv_parse(io.BytesIO(initial_bytes=original_csv_file_bytes))
 
     df = parsed_csv.df
 
@@ -80,8 +77,8 @@ def write_errors_to_xlsx(
 
         column_index = find_column_index_by_name(field_name, styled_sheet)
         if column_index:
-            styled_sheet.cell(row=row_index, column=column_index).fill = (
-                PatternFill(patternType="solid", fgColor="FFC9C9")
+            styled_sheet.cell(row=row_index, column=column_index).fill = PatternFill(
+                patternType="solid", fgColor="FFC9C9"
             )  # Change color to red.
             styled_sheet.cell(row=row_index, column=column_index).comment = Comment(
                 field_errors,
@@ -97,10 +94,13 @@ def write_errors_to_xlsx(
         wb["Errors - Overview"],
     ]
 
-     # Auto-size columns to widest word (max 30 chars) and enable wrapping
-    for sheet_name in ["Uploaded data (raw)", "Uploaded data (comments)", "Errors - Overview"]:
+    # Auto-size columns to widest word (max 30 chars) and enable wrapping
+    for sheet_name in [
+        "Uploaded data (raw)",
+        "Uploaded data (comments)",
+        "Errors - Overview",
+    ]:
         set_column_widths_and_wrapping(wb[sheet_name], max_width=30)
-
 
     # Save the styled sheet.
     xlsx_file = io.BytesIO()
@@ -118,6 +118,7 @@ def find_column_index_by_name(column_name: str, ws: Worksheet) -> int | None:
             column_index = col[0].column  # Get the column index
             break
     return column_index
+
 
 def set_column_widths_and_wrapping(ws: Worksheet, max_width: int = 50) -> None:
     """
@@ -145,6 +146,7 @@ def set_column_widths_and_wrapping(ws: Worksheet, max_width: int = 50) -> None:
             if cell.value is not None:
                 cell.alignment = Alignment(wrapText=True)
 
+
 def strip_time_in_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """
     Convert any datetime64 columns to date (removing time component).
@@ -156,11 +158,12 @@ def strip_time_in_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             df[col] = pd.to_datetime(df[col]).dt.date
     return df
 
+
 def flatten_errors(
     #  {row_number: {field_name: [error_messages]}}
     errors: dict[int, dict[str, list[str]]],
     original_data: pd.DataFrame,
-    identifier_column: str
+    identifier_column: str,
 ) -> pd.DataFrame:
     rows = []
 
@@ -170,17 +173,18 @@ def flatten_errors(
             csv_definition = csv_definition_for(field)
             column = csv_definition["heading"] if csv_definition else identifier_column
 
-            rows.append({
-                # 0 based indexing and the column header. So + 2
-                "Original CSV Row": int(row_ix) + 2,
-                identifier_column: original_data.loc[int(row_ix), identifier_column],
-                "Column": column,
-                "Errors": "; ".join(errors),
-            })
+            rows.append(
+                {
+                    # 0 based indexing and the column header. So + 2
+                    "Original CSV Row": int(row_ix) + 2,
+                    identifier_column: original_data.loc[
+                        int(row_ix), identifier_column
+                    ],
+                    "Column": column,
+                    "Errors": "; ".join(errors),
+                }
+            )
 
-    return pd.DataFrame(rows, columns=[
-        "Original CSV Row",
-        identifier_column,
-        "Column",
-        "Errors"
-    ])
+    return pd.DataFrame(
+        rows, columns=["Original CSV Row", identifier_column, "Column", "Errors"]
+    )

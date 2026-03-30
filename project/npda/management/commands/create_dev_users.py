@@ -1,8 +1,7 @@
 import os
 
-from django.apps import apps
-from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
 
 from project.constants.user import (
     AUDIT_CENTRE_COORDINATOR,
@@ -10,13 +9,22 @@ from project.constants.user import (
     AUDIT_CENTRE_READER,
     RCPCH_AUDIT_TEAM,
 )
+from project.npda.models import OrganisationEmployer, PaediatricDiabetesUnit
 
-from project.npda.models import PaediatricDiabetesUnit, OrganisationEmployer
 
 class Command(BaseCommand):
     help = "Create test users using the base set in environment variables: LOCAL_DEV_ADMIN_EMAIL and LOCAL_DEV_ADMIN_PASSWORD."
 
-    def create_user_if_not_exists(self, pz_code, email, first_name, surname, password, role, is_rcpch_audit_team_member=False):
+    def create_user_if_not_exists(
+        self,
+        pz_code,
+        email,
+        first_name,
+        surname,
+        password,
+        role,
+        is_rcpch_audit_team_member=False,
+    ):
         user_model = get_user_model()
 
         if not user_model.objects.filter(email=email).exists():
@@ -29,16 +37,16 @@ class Command(BaseCommand):
                 is_active=True,
                 pz_code=pz_code,
                 is_primary_employer=True,
-                is_rcpch_audit_team_member=is_rcpch_audit_team_member
+                is_rcpch_audit_team_member=is_rcpch_audit_team_member,
             )
-            
+
             self.stdout.write(self.style.SUCCESS(f"Successfully created {email}."))
             created = True
         else:
             self.stdout.write(self.style.WARNING(f"{email} already exists."))
             user = user_model.objects.get(email=email)
             created = False
-        
+
         return (user, created)
 
     def handle(self, *args, **kwargs):
@@ -49,27 +57,35 @@ class Command(BaseCommand):
         password = os.environ.get("LOCAL_DEV_ADMIN_PASSWORD", None)
 
         if not local_dev_admin_email or not password:
-            self.stdout.write(self.style.WARNING("LOCAL_DEV_ADMIN_EMAIL or LOCAL_DEV_ADMIN_PASSWORD not set. Not creating any test users."))
+            self.stdout.write(
+                self.style.WARNING(
+                    "LOCAL_DEV_ADMIN_EMAIL or LOCAL_DEV_ADMIN_PASSWORD not set. Not creating any test users."
+                )
+            )
 
-        (local_part, domain) = local_dev_admin_email.split("@")
+        local_part, domain = local_dev_admin_email.split("@")
 
         coordinator_dev_email = f"{local_part}+coordinator@{domain}"
         editor_dev_email = f"{local_part}+editor@{domain}"
         reader_dev_email = f"{local_part}+reader@{domain}"
         rcpch_audit_team_email = f"{local_part}+rcpch_audit_team@{domain}"
-        
+
         if not user_model.objects.filter(email=local_dev_admin_email).exists():
             user_model.objects.create_superuser(
                 first_name="SuperuserAda",
                 surname="Lovelace",
                 email=local_dev_admin_email,
-                password=password
+                password=password,
             )
-            
-            self.stdout.write(self.style.SUCCESS(f"Successfully created {local_dev_admin_email}."))
+
+            self.stdout.write(
+                self.style.SUCCESS(f"Successfully created {local_dev_admin_email}.")
+            )
         else:
-            self.stdout.write(self.style.WARNING(f"{local_dev_admin_email} already exists."))
-        
+            self.stdout.write(
+                self.style.WARNING(f"{local_dev_admin_email} already exists.")
+            )
+
         self.create_user_if_not_exists(
             pz_code="PZ999",
             email=coordinator_dev_email,
@@ -104,12 +120,12 @@ class Command(BaseCommand):
             surname="Lovelace",
             password=password,
             role=RCPCH_AUDIT_TEAM,
-            is_rcpch_audit_team_member=True
+            is_rcpch_audit_team_member=True,
         )
 
         # Test inactive split unit (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/924)
         # PZ003 was split into PZ251 and PZ252
-        (split_user, created) = self.create_user_if_not_exists(
+        split_user, created = self.create_user_if_not_exists(
             pz_code="PZ251",
             email=f"{local_part}+split@{domain}",
             first_name="SplitUnitAda",
@@ -120,10 +136,9 @@ class Command(BaseCommand):
 
         if created:
             OrganisationEmployer.objects.create(
-                paediatric_diabetes_unit=PaediatricDiabetesUnit.objects.get(pz_code="PZ003"),
+                paediatric_diabetes_unit=PaediatricDiabetesUnit.objects.get(
+                    pz_code="PZ003"
+                ),
                 npda_user=split_user,
                 is_primary_employer=False,
             )
-
-
-

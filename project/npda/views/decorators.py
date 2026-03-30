@@ -1,8 +1,9 @@
+import logging
 from functools import wraps
-from django.shortcuts import redirect
+
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-import logging
+from django.shortcuts import redirect
 
 from ..models import AuditPeriod, PaediatricDiabetesUnit
 
@@ -58,6 +59,7 @@ def login_and_otp_required():
 
     return decorator
 
+
 def check_data_permissions():
     def _check_data_permissions(request, *args, **kwargs):
         audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
@@ -68,12 +70,9 @@ def check_data_permissions():
     def decorator(view):
         @wraps(view)
         def sync_check_data_permissions(request, *args, **kwargs):
-            (audit_period, pdu) = _check_data_permissions(request, *args, **kwargs)
+            audit_period, pdu = _check_data_permissions(request, *args, **kwargs)
 
-            next_kwargs = kwargs | {
-                "audit_period": audit_period,
-                "pdu": pdu
-            }
+            next_kwargs = kwargs | {"audit_period": audit_period, "pdu": pdu}
 
             if "pz_code" in next_kwargs:
                 del next_kwargs["pz_code"]

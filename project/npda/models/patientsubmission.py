@@ -1,7 +1,4 @@
 from django.db import models
-from django.db.models import Q
-from django.core.exceptions import ValidationError
-from django.conf import settings
 
 
 class PatientSubmission(models.Model):

@@ -1,28 +1,25 @@
 from django.contrib.auth.management import create_permissions
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
-from ....constants import (
+
+from project.npda.models import NPDAUser, Patient, Submission, Transfer, Visit
+
+from ....constants import (  # group names; custom permissions
+    CAN_ALLOCATE_NPDA_LEAD_CENTRE,
+    CAN_CONSENT_TO_AUDIT_PARTICIPATION,
+    CAN_DELETE_NPDA_LEAD_CENTRE,
+    CAN_EDIT_NPDA_LEAD_CENTRE,
+    CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING,
+    CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
+    CAN_TRANSFER_NPDA_LEAD_CENTRE,
+    CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING,
     GROUPS,
-    # group names
     NPDA_AUDIT_TEAM_FULL_ACCESS,
     PATIENT_ACCESS,
-    TRUST_AUDIT_TEAM_EDIT_ACCESS,
     TRUST_AUDIT_TEAM_COORDINATOR_ACCESS,
+    TRUST_AUDIT_TEAM_EDIT_ACCESS,
     TRUST_AUDIT_TEAM_VIEW_ONLY,
-    # custom permissions
-    CAN_CONSENT_TO_AUDIT_PARTICIPATION,
-    CAN_ALLOCATE_NPDA_LEAD_CENTRE,
-    CAN_TRANSFER_NPDA_LEAD_CENTRE,
-    CAN_EDIT_NPDA_LEAD_CENTRE,
-    CAN_DELETE_NPDA_LEAD_CENTRE,
-    CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING,
-    CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING,
-    CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
-    CAN_PUBLISH_NPDA_DATA,
-    CAN_SUBMIT_CSV,
-    CAN_DOWNLOAD_CSV,
 )
-from project.npda.models import NPDAUser, Patient, Visit, Transfer, Submission
 
 
 def groups_seeder(
@@ -38,7 +35,7 @@ def groups_seeder(
     Note view permissions include viewing users, but not creating, updating or deleting them
     View permissions include viewing but NOT updating or deleting case audit records
 
-    NOTE Additional constraints are applied in view decorators to prevent users accessing 
+    NOTE Additional constraints are applied in view decorators to prevent users accessing
     records of users or children in organisations other than their own
     """
 
@@ -59,7 +56,6 @@ def groups_seeder(
         {"codename": "delete_npdauser", "content_type": npdauserContentType},
         # submission
         {"codename": "view_submission", "content_type": submissionContentType},
-        
     ]
 
     READER_PERMISSIONS = [
@@ -121,7 +117,6 @@ def groups_seeder(
         {"codename": "change_submission", "content_type": submissionContentType},
         {"codename": "add_submission", "content_type": submissionContentType},
         {"codename": "delete_submission", "content_type": submissionContentType},
-
     ]
 
     PATIENT_PERMISSIONS = [
@@ -146,7 +141,6 @@ def groups_seeder(
             "codename": CAN_ALLOCATE_NPDA_LEAD_CENTRE[0],
             "content_type": transferContentType,
         },
-
         {"codename": "can_submit_csv", "content_type": npdauserContentType},
         {"codename": "can_download_csv", "content_type": npdauserContentType},
     ]
@@ -155,7 +149,7 @@ def groups_seeder(
     Full access inherit all editor permissions
     - transfer to another lead NPDA centre
 
-    NOTE Additional constraints are applied in view decorators to prevent users accessing 
+    NOTE Additional constraints are applied in view decorators to prevent users accessing
     records of users or children in organisations other than their own
     """
 
@@ -173,7 +167,6 @@ def groups_seeder(
             "codename": CAN_TRANSFER_NPDA_LEAD_CENTRE[0],
             "content_type": transferContentType,
         },
-
         {"codename": "can_submit_csv", "content_type": npdauserContentType},
         {"codename": "can_download_csv", "content_type": npdauserContentType},
     ]
@@ -207,6 +200,21 @@ def groups_seeder(
             app_config.models_module = True
             create_permissions(app_config, verbosity=0)
             app_config.models_module = None
+
+    def add_permissions_to_group(permissions_list, group_to_add):
+        for permission in permissions_list:
+            codename = permission.get("codename")
+            content_type = permission.get("content_type")
+            newPermission = Permission.objects.get(
+                codename=codename, content_type=content_type
+            )
+            if group_to_add.permissions.filter(codename=codename).exists():
+                if verbose:
+                    print(f"{codename} already exists for this group. Skipping...")
+            else:
+                if verbose:
+                    print(f"...Adding {codename}")
+                group_to_add.permissions.add(newPermission)
 
     if add_permissions_to_existing_groups:
         for group in GROUPS:
@@ -250,21 +258,6 @@ def groups_seeder(
             else:
                 if verbose:
                     print("Error: group does not exist!")
-
-    def add_permissions_to_group(permissions_list, group_to_add):
-        for permission in permissions_list:
-            codename = permission.get("codename")
-            content_type = permission.get("content_type")
-            newPermission = Permission.objects.get(
-                codename=codename, content_type=content_type
-            )
-            if group_to_add.permissions.filter(codename=codename).exists():
-                if verbose:
-                    print(f"{codename} already exists for this group. Skipping...")
-            else:
-                if verbose:
-                    print(f"...Adding {codename}")
-                group_to_add.permissions.add(newPermission)
 
     if run_create_groups:
         for group in GROUPS:
