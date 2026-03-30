@@ -12,9 +12,11 @@ from django.db.models import (
     Count,
     DateField,
     DecimalField,
+    DurationField,
     Exists,
     ExpressionWrapper,
     F,
+    Func,
     IntegerField,
     OuterRef,
     Q,
@@ -22,14 +24,13 @@ from django.db.models import (
     Value,
     When,
 )
-from django.db.models import DurationField, Func
 
+from project.constants import TREATMENT_TYPES
 from project.constants.diabetes_types import DIABETES_TYPES
+from project.constants.glucose_monitoring_types import GLUCOSE_MONITORING_TYPES
 from project.constants.hba1c_format import HBA1C_FORMATS
 from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
-from project.constants.glucose_monitoring_types import GLUCOSE_MONITORING_TYPES
-from project.constants import TREATMENT_TYPES
-from project.npda.models import Patient, Submission, Transfer, Visit
+from project.npda.models import Patient, Transfer, Visit
 from project.npda.models.db_functions import Round
 
 
@@ -194,7 +195,9 @@ def annotate_health_checks(qs, audit_period):
                 Q(is_gte_12yo=True) & Q(dx_over_1y=True) & retinal_exists,
                 then=Value("complete"),
             ),
-            When(Q(is_gte_12yo=False) | Q(dx_over_1y=False), then=Value("not_required")),
+            When(
+                Q(is_gte_12yo=False) | Q(dx_over_1y=False), then=Value("not_required")
+            ),
             default=Value(""),
             output_field=CharField(),
         ),
@@ -780,15 +783,19 @@ def calculate_hba1c_values(qs, audit_period):
             patient["kpi_44_mean_hba1c"] = round(mean_val)
             patient["kpi_45_median_hba1c"] = round(median_val)
             patient["mean_hba1c_pct"] = round(
-                (Decimal("0.09148") * mean_val) + Decimal("2.152")
-                if mean_val > 0
-                else None,
+                (
+                    (Decimal("0.09148") * mean_val) + Decimal("2.152")
+                    if mean_val > 0
+                    else None
+                ),
                 1,
             )
             patient["median_hba1c_pct"] = round(
-                (Decimal("0.09148") * median_val) + Decimal("2.152")
-                if median_val > 0
-                else None,
+                (
+                    (Decimal("0.09148") * median_val) + Decimal("2.152")
+                    if median_val > 0
+                    else None
+                ),
                 1,
             )
         else:

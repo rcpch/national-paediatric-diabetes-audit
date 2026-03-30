@@ -1,6 +1,8 @@
-import pytest
-from project.npda.general_functions import retrieve_quarter_for_date
 from datetime import date
+
+import pytest
+
+from project.npda.general_functions import retrieve_quarter_for_date
 
 
 # Test cases for retrieve_quarter_for_date function

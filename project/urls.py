@@ -1,10 +1,11 @@
+from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path, include
-from django.views.generic import TemplateView
+from django.urls import include, path
 from two_factor.urls import urlpatterns as tf_urls
-from .npda.views.npda_users import RCPCHLoginView
+
 from .npda.views import *
+from .npda.views.npda_users import RCPCHLoginView
 
 # Custom error pages
 handler400 = "project.npda.views.error_400"
@@ -14,7 +15,7 @@ handler500 = "project.npda.views.error_500"
 
 # OVERRIDE TWO_FACTOR LOGIN URL TO CAPTCHA LOGIN
 for item in tf_urls:
-    if type(item) == list:
+    if isinstance(item, list):
         for url_pattern in item:
             if vars(url_pattern).get("name") == "login":
                 url_pattern.callback = RCPCHLoginView.as_view()
@@ -22,7 +23,7 @@ for item in tf_urls:
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path('silk/', include('silk.urls', namespace='silk')),
+    path("silk/", include("silk.urls", namespace="silk")),
     path("", include(tf_urls)),
     path("", include("project.npda.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

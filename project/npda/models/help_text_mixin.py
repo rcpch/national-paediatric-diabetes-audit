@@ -1,7 +1,7 @@
 from functools import partial as curry
 
 
-class HelpTextMixin(object):
+class HelpTextMixin:
     """
     Thanks https://bradmontgomery.net/blog/django-hack-help-text-modal-instance/ for this snippet
     Returns the help text methods to the template
@@ -22,12 +22,12 @@ class HelpTextMixin(object):
                 return field.help_text["reference"]
 
     def __init__(self, *args, **kwargs):
-        super(HelpTextMixin, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         # Again, iterate over all of our field objects.
         for field in self._meta.fields:
             # Create a string, get_FIELDNAME_help text
-            label_method_name = "get_{0}_help_label_text".format(field.name)
-            reference_method_name = "get_{0}_help_reference_text".format(field.name)
+            label_method_name = f"get_{field.name}_help_label_text"
+            reference_method_name = f"get_{field.name}_help_reference_text"
 
             # We can use curry to create the method with a pre-defined argument
             label_curried_method = curry(

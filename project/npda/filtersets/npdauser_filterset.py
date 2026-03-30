@@ -1,8 +1,8 @@
-from django.forms import TextInput
 from django.db.models import Q
+from django.forms import TextInput
+from django_filters import CharFilter, FilterSet
 
 from project.npda.models import NPDAUser
-from django_filters import FilterSet, CharFilter
 
 
 class NPDAUserFilterSet(FilterSet):

@@ -1,45 +1,45 @@
 # python imports
-import logging
 import json
+import logging
 import os
 from functools import cache
+
+# third-party imports
+import geopandas as gpd
+import pandas as pd
+import plotly.graph_objects as go
+from django.apps import apps
 
 # django imports
 from django.conf import settings
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
 from django.db.models import Q
-from django.apps import apps
-
-# third-party imports
-import geopandas as gpd
-import pandas as pd
-import plotly.graph_objects as go
 
 # RCPCH imports
 from project.constants import (
-    RCPCH_PINK_DARK_TINT,
-    RCPCH_PINK,
-    RCPCH_PINK_LIGHT_TINT3,
-    RCPCH_PINK_LIGHT_TINT2,
-    RCPCH_PINK_LIGHT_TINT1,
-    RCPCH_LIGHT_BLUE_TINT3,
-    RCPCH_LIGHT_BLUE_TINT2,
-    RCPCH_LIGHT_BLUE_TINT1,
+    RCPCH_CHARCOAL,
+    RCPCH_DARK_BLUE,
     RCPCH_LIGHT_BLUE,
     RCPCH_LIGHT_BLUE_DARK_TINT,
-    RCPCH_DARK_BLUE,
-    RCPCH_CHARCOAL,
-    RCPCH_RED_DARK_TINT,
+    RCPCH_LIGHT_BLUE_TINT1,
+    RCPCH_LIGHT_BLUE_TINT2,
+    RCPCH_LIGHT_BLUE_TINT3,
+    RCPCH_PINK,
+    RCPCH_PINK_DARK_TINT,
+    RCPCH_PINK_LIGHT_TINT1,
+    RCPCH_PINK_LIGHT_TINT2,
+    RCPCH_PINK_LIGHT_TINT3,
     RCPCH_RED,
-    RCPCH_RED_LIGHT_TINT3,
-    RCPCH_RED_LIGHT_TINT2,
+    RCPCH_RED_DARK_TINT,
     RCPCH_RED_LIGHT_TINT1,
-    RCPCH_STRONG_GREEN_LIGHT_TINT3,
-    RCPCH_STRONG_GREEN_LIGHT_TINT2,
-    RCPCH_STRONG_GREEN_LIGHT_TINT1,
+    RCPCH_RED_LIGHT_TINT2,
+    RCPCH_RED_LIGHT_TINT3,
     RCPCH_STRONG_GREEN,
     RCPCH_STRONG_GREEN_DARK_TINT,
+    RCPCH_STRONG_GREEN_LIGHT_TINT1,
+    RCPCH_STRONG_GREEN_LIGHT_TINT2,
+    RCPCH_STRONG_GREEN_LIGHT_TINT3,
 )
 from project.npda.general_functions.rcpch_nhs_organisations import (
     fetch_local_authorities_within_radius,
@@ -179,24 +179,24 @@ def generate_distance_from_organisation_scatterplot_figure(
     # set the labels for the IMD deciles
 
     annotations = [
-        dict(
-            x=0.95,
-            y=1,
-            xref="paper",
-            yref="paper",
-            text="Least Deprived",
-            showarrow=False,
-            font=dict(size=12, color="black", family="montserrat"),
-        ),
-        dict(
-            x=0.95,
-            y=0,
-            xref="paper",
-            yref="paper",
-            text="Most Deprived",
-            showarrow=False,
-            font=dict(size=12, color="black", family="montserrat"),
-        ),
+        {
+            "x": 0.95,
+            "y": 1,
+            "xref": "paper",
+            "yref": "paper",
+            "text": "Least Deprived",
+            "showarrow": False,
+            "font": {"size": 12, "color": "black", "family": "montserrat"},
+        },
+        {
+            "x": 0.95,
+            "y": 0,
+            "xref": "paper",
+            "yref": "paper",
+            "text": "Most Deprived",
+            "showarrow": False,
+            "font": {"size": 12, "color": "black", "family": "montserrat"},
+        },
     ]
 
     # Create a Plotly choropleth map with the filtered English LSOAs coloured by IMD Rank
@@ -213,16 +213,16 @@ def generate_distance_from_organisation_scatterplot_figure(
                 ["LSOA name (2011)", "Index of Multiple Deprivation (IMD) Decile"]
             ].to_numpy(),
             hovertemplate="<b>%{customdata[0]}</b><br>IMD Decile: %{customdata[1]}<extra></extra>",  # Custom hover template
-            colorbar=dict(
-                title=dict(
-                    text="English IMD Rank",
-                    font=dict(size=12, color="black", family="montserrat"),
-                    side="right",  # Position the title above the colorbar
-                ),
-                tickfont=dict(size=10, color="black", family="montserrat"),
-                x=0.88,  # Position the English color scale on the right
-                len=0.9,  # Length of the color bar
-            ),
+            colorbar={
+                "title": {
+                    "text": "English IMD Rank",
+                    "font": {"size": 12, "color": "black", "family": "montserrat"},
+                    "side": "right",  # Position the title above the colorbar
+                },
+                "tickfont": {"size": 10, "color": "black", "family": "montserrat"},
+                "x": 0.88,  # Position the English color scale on the right
+                "len": 0.9,  # Length of the color bar
+            },
         )
     )
 
@@ -240,16 +240,16 @@ def generate_distance_from_organisation_scatterplot_figure(
                 ["LSOA11NM", "Index of Multiple Deprivation (IMD) Decile"]
             ].to_numpy(),
             hovertemplate="<b>%{customdata[0]}</b><br>IMD Decile: %{customdata[1]}<extra></extra>",  # Custom hover template
-            colorbar=dict(
-                title=dict(
-                    text="Welsh IMD Rank",
-                    font=dict(size=12, color="black", family="montserrat"),
-                    side="right",  # Position the title above the colorbar
-                ),
-                tickfont=dict(size=10, color="black", family="montserrat"),
-                x=0.95,  # Position the Welsh color scale to the right of the English one
-                len=0.9,  # Length of the color bar
-            ),
+            colorbar={
+                "title": {
+                    "text": "Welsh IMD Rank",
+                    "font": {"size": 12, "color": "black", "family": "montserrat"},
+                    "side": "right",  # Position the title above the colorbar
+                },
+                "tickfont": {"size": 10, "color": "black", "family": "montserrat"},
+                "x": 0.95,  # Position the Welsh color scale to the right of the English one
+                "len": 0.9,  # Length of the color bar
+            },
         )
     )
 
@@ -330,12 +330,16 @@ def generate_distance_from_organisation_scatterplot_figure(
     if not geo_df.empty:
         # Build identifier string: show NHS Number if exists, otherwise show URN
         geo_df["identifier_str"] = geo_df.apply(
-            lambda row: f"NHS Number: {row['nhs_number']}"
-            if pd.notna(row["nhs_number"]) and row["nhs_number"] != ""
-            else f"URN: {row['unique_reference_number']}"
-            if pd.notna(row["unique_reference_number"])
-            and row["unique_reference_number"] != ""
-            else "No identifier",
+            lambda row: (
+                f"NHS Number: {row['nhs_number']}"
+                if pd.notna(row["nhs_number"]) and row["nhs_number"] != ""
+                else (
+                    f"URN: {row['unique_reference_number']}"
+                    if pd.notna(row["unique_reference_number"])
+                    and row["unique_reference_number"] != ""
+                    else "No identifier"
+                )
+            ),
             axis=1,
         )
 
@@ -366,21 +370,21 @@ def generate_distance_from_organisation_scatterplot_figure(
 
     fig.update_layout(
         margin={"r": 0, "t": 0, "l": 0, "b": 0},
-        font=dict(family="Montserrat-Regular", color="#FFFFFF"),
-        hoverlabel=dict(
-            bgcolor=RCPCH_LIGHT_BLUE,
-            font_size=12,
-            font=dict(color="white", family="montserrat"),
-            bordercolor=RCPCH_LIGHT_BLUE,
-        ),
-        mapbox=dict(
-            style="carto-positron",
-            zoom=10,
-            center=dict(
-                lat=pdu_lead_organisation["latitude"],
-                lon=pdu_lead_organisation["longitude"],
-            ),
-        ),
+        font={"family": "Montserrat-Regular", "color": "#FFFFFF"},
+        hoverlabel={
+            "bgcolor": RCPCH_LIGHT_BLUE,
+            "font_size": 12,
+            "font": {"color": "white", "family": "montserrat"},
+            "bordercolor": RCPCH_LIGHT_BLUE,
+        },
+        mapbox={
+            "style": "carto-positron",
+            "zoom": 10,
+            "center": {
+                "lat": pdu_lead_organisation["latitude"],
+                "lon": pdu_lead_organisation["longitude"],
+            },
+        },
         mapbox_layers=[
             {
                 "below": "traces",
@@ -419,7 +423,7 @@ def generate_dataframe_and_aggregated_distance_data_from_cases(filtered_cases):
                         _ = row["location_wgs84"].x
                         _ = row["location_wgs84"].y
                         valid_geometries.append(idx)
-                except (AttributeError, Exception):
+                except (AttributeError, Exception):  # noqa: S112
                     # Skip rows with invalid geometries
                     continue
 

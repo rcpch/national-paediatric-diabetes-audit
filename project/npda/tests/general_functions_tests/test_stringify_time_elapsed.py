@@ -1,6 +1,7 @@
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
+
 import pytest
+
 from project.npda.general_functions import stringify_time_elapsed
 
 

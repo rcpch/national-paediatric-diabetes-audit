@@ -1,10 +1,15 @@
 # Python imports
-from datetime import datetime, timezone
-import json
-from typing import Any, Iterable
-import logging
 import io
 import itertools
+import json
+import logging
+from collections.abc import Iterable
+from datetime import UTC, datetime
+from typing import Any
+
+# Third party imports
+import pandas as pd
+import plotly.graph_objects as go
 
 # Django imports
 from django.apps import apps
@@ -13,55 +18,46 @@ from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import (
-    Count,
     Case,
-    When,
-    Value,
+    Count,
+    Exists,
     IntegerField,
     OuterRef,
-    Subquery,
-    Exists,
     Q,
+    Subquery,
+    Value,
+    When,
 )
 from django.db.models.functions import Concat, ExtractMonth, ExtractYear
 from django.http import HttpResponse
-from django.shortcuts import render, redirect
-from django.views.generic import ListView
+from django.shortcuts import redirect, render
 from django.urls import reverse
-
-
-# Third party imports
-import pandas as pd
-import plotly.graph_objects as go
-
-from project.npda.views.decorators import login_and_otp_required, check_data_permissions
+from django.views.generic import ListView
 
 # RCPCH imports
 from project.constants.colors import RCPCH_LIGHT_BLUE
-from ..general_functions.session import save_csv_uploading_user_to_visitactivity
+from project.npda.views.decorators import check_data_permissions, login_and_otp_required
+
+from ..forms.upload import UploadFileForm
+from ..general_functions.breadcrumbs import data_breadcrumbs
 from ..general_functions.csv import (
+    create_csv_submission,
+    csv_parse,
     download_csv_file,
     download_xlsx,
     export_as_csv,
-    csv_parse,
-    create_csv_submission,
-    gather_unique_patient_and_visit_counts,
 )
-from ..general_functions.breadcrumbs import data_breadcrumbs
-from .mixins import LoginAndOTPRequiredMixin, PDUPermissionMixin
+from ..general_functions.session import save_csv_uploading_user_to_visitactivity
 from ..models import (
-    Submission,
-    OrganisationEmployer,
     PaediatricDiabetesUnit,
-    AuditPeriod,
     Patient,
     PatientSubmission,
+    Submission,
     Transfer,
 )
-from ..forms.upload import UploadFileForm
-from ..tasks import upload_csv_task
 from ..signals import get_client_ip
-
+from ..tasks import upload_csv_task
+from .mixins import LoginAndOTPRequiredMixin, PDUPermissionMixin
 
 logger = logging.getLogger(__name__)
 
@@ -359,7 +355,7 @@ class SubmissionsListView(
                     audit_year=self.audit_period.audit_year(),
                     submission_active=True,
                     submission_by=request.user,
-                    submission_date=datetime.now(timezone.utc),
+                    submission_date=datetime.now(UTC),
                 )
 
                 next_patients = Patient.objects.bulk_create(last_patients)
@@ -431,7 +427,7 @@ def upload_csv(request, audit_period, pdu):
         if not has_perm:
             raise PermissionDenied("You do not have permission to upload CSV files.")
 
-        form = UploadFileForm(request.POST, request.FILES)
+        UploadFileForm(request.POST, request.FILES)
 
         user_csv = request.FILES["csv_upload"]
         user_csv_filename = user_csv.name
@@ -560,7 +556,7 @@ def upload_csv_in_progress(request, audit_period, pdu):
     )
 
     seconds_since_submission = (
-        datetime.now(timezone.utc) - last_submission.submission_date
+        datetime.now(UTC) - last_submission.submission_date
     ).seconds
 
     timeout = seconds_since_submission > 120
@@ -590,9 +586,9 @@ def upload_csv_in_progress(request, audit_period, pdu):
         "visits_so_far": visits_so_far,
         "total_patients": total_patients,
         "total_rows": total_rows,
-        "patient_progress": patients_so_far / total_patients * 100
-        if total_patients
-        else 0,
+        "patient_progress": (
+            patients_so_far / total_patients * 100 if total_patients else 0
+        ),
         "upload_complete": upload_complete,
         "timeout": timeout,
         "breadcrumbs": data_breadcrumbs(
@@ -637,42 +633,42 @@ def create_column_chart(pdus_by_latest_submission, selected_audit_period):
                 ],
                 textposition="inside",  # Text inside bars for horizontal layout
                 hovertemplate="<b>%{y} (%{customdata})</b><br>Quarter: %{text}<extra></extra>",
-                textfont=dict(
-                    color="white",
-                    size=12,
-                    family="Montserrat",  # Change font family
-                ),
-                hoverlabel=dict(
-                    bgcolor=RCPCH_LIGHT_BLUE,
-                    bordercolor=RCPCH_LIGHT_BLUE,
-                    font=dict(color="white", size=14, family="Montserrat"),
-                ),
+                textfont={
+                    "color": "white",
+                    "size": 12,
+                    "family": "Montserrat",  # Change font family
+                },
+                hoverlabel={
+                    "bgcolor": RCPCH_LIGHT_BLUE,
+                    "bordercolor": RCPCH_LIGHT_BLUE,
+                    "font": {"color": "white", "size": 14, "family": "Montserrat"},
+                },
             )
         ]
     )
 
     # Update layout for horizontal bars
     fig.update_layout(
-        title=dict(
-            text=f"Latest Submission Data by Quarter (using latest visit date) against PZ Code (Audit Period: {selected_audit_period.slug})",
-            font=dict(family="Montserrat", size=16, color="black"),
-            x=0.5,  # Center the title horizontally
-            xanchor="center",  # Anchor the title at its center
-        ),
+        title={
+            "text": f"Latest Submission Data by Quarter (using latest visit date) against PZ Code (Audit Period: {selected_audit_period.slug})",
+            "font": {"family": "Montserrat", "size": 16, "color": "black"},
+            "x": 0.5,  # Center the title horizontally
+            "xanchor": "center",  # Anchor the title at its center
+        },
         xaxis_title="Latest Quarter (by Latest Visit Date)",
         yaxis_title="PZ Code",
-        xaxis=dict(
-            tickvals=[0, 1, 2, 3, 4],
-            ticktext=["No Data", "Q1", "Q2", "Q3", "Q4"],
-            range=[0, 4.5],  # Ensure all values are visible
-        ),
-        yaxis=dict(
-            tickfont=dict(color="black", size=10),  # Smaller font for many PDUs
-            automargin=True,  # Auto-adjust margins for long PDU names
-        ),
+        xaxis={
+            "tickvals": [0, 1, 2, 3, 4],
+            "ticktext": ["No Data", "Q1", "Q2", "Q3", "Q4"],
+            "range": [0, 4.5],  # Ensure all values are visible
+        },
+        yaxis={
+            "tickfont": {"color": "black", "size": 10},  # Smaller font for many PDUs
+            "automargin": True,  # Auto-adjust margins for long PDU names
+        },
         paper_bgcolor="white",
         height=max(400, len(df) * 25),  # Dynamic height based on number of PDUs
-        margin=dict(l=100, r=50, t=80, b=50),  # Adjust margins for PDU labels
+        margin={"l": 100, "r": 50, "t": 80, "b": 50},  # Adjust margins for PDU labels
         showlegend=False,
     )
 

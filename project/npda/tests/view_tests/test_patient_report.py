@@ -1,17 +1,20 @@
 """Tests for the patient report view"""
 
-from decimal import Decimal
 import logging
+from decimal import Decimal
 from http import HTTPStatus
 
-# Python imports
-from project.constants.smoking_status import SMOKING_STATUS
 import pytest
-from django.db.models import Count
+from dateutil.relativedelta import relativedelta
 
 # 3rd party imports
 from django.urls import reverse
 
+from project.constants.diabetes_types import DIABETES_TYPES
+from project.constants.hba1c_format import HBA1C_FORMATS
+
+# Python imports
+from project.constants.smoking_status import SMOKING_STATUS
 from project.npda.general_functions.data_generator_extended import (
     AgeRange,
     FakePatientCreator,
@@ -26,17 +29,14 @@ from project.npda.models.patient import Patient
 from project.npda.models.submission import Submission
 from project.npda.tests.constants_for_tests import ALDER_HEY_PZ_CODE
 from project.npda.tests.factories import (
-    test_user_rcpch_audit_team_data,
     test_user_audit_centre_editor_data,
+    test_user_rcpch_audit_team_data,
 )
-from project.npda.tests.utils import login_and_verify_user
-from project.npda.urls import patient_report_urlpatterns
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.constants.diabetes_types import DIABETES_TYPES
-from project.constants.hba1c_format import HBA1C_FORMATS
+from project.npda.tests.utils import login_and_verify_user
+from project.npda.urls import patient_report_urlpatterns
 from project.npda.views.patient_report.patient_report import TableCategories
-from dateutil.relativedelta import relativedelta
 
 logger = logging.getLogger(__name__)
 
@@ -124,9 +124,9 @@ def test_no_duplicate_patients_in_report(
     assert len(response.context["patients"]) == N_PATIENTS
 
     # Check that there are no duplicate patients
-    duplicates = set(
+    duplicates = {
         patient["patient_identifier"] for patient in response.context["patients"]
-    )
+    }
     assert len(duplicates) == N_PATIENTS
 
 

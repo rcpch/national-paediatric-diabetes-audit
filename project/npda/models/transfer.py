@@ -1,18 +1,17 @@
 # python imports
 
 # django imports
-from django.utils.translation import gettext_lazy as _
 from django.contrib.gis.db import models
 from django.contrib.gis.db.models import DateField, PositiveSmallIntegerField
-from ...constants import *
 
 # npda imports
+from ...constants import *
 from ...constants import (
-    LEAVE_PDU_REASONS,
     CAN_ALLOCATE_NPDA_LEAD_CENTRE,
     CAN_DELETE_NPDA_LEAD_CENTRE,
     CAN_EDIT_NPDA_LEAD_CENTRE,
     CAN_TRANSFER_NPDA_LEAD_CENTRE,
+    LEAVE_PDU_REASONS,
 )
 
 

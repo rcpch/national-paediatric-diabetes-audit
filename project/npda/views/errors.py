@@ -1,7 +1,5 @@
 from django.shortcuts import render
 
-from django.core.exceptions import SuspiciousOperation
-
 
 def error_400(request, exception):
     context = {}

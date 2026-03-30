@@ -1,12 +1,11 @@
 # python
 import logging
-from typing import Optional
-
-# django
-from django.conf import settings
 
 # third party libraries
 import httpx
+
+# django
+from django.conf import settings
 
 # npda imports
 
@@ -14,7 +13,9 @@ import httpx
 logger = logging.getLogger(__name__)
 
 
-async def gp_ods_code_for_postcode(postcode: str, async_client: httpx.AsyncClient) -> Optional[str]:
+async def gp_ods_code_for_postcode(
+    postcode: str, async_client: httpx.AsyncClient
+) -> str | None:
     """
     Returns GP practice as an object from NHS API against a postcode
     """
@@ -36,7 +37,9 @@ async def gp_ods_code_for_postcode(postcode: str, async_client: httpx.AsyncClien
         return organisations[0]["OrgId"]
 
 
-async def gp_details_for_ods_code(ods_code: str, async_client: httpx.AsyncClient) -> Optional[dict]:
+async def gp_details_for_ods_code(
+    ods_code: str, async_client: httpx.AsyncClient
+) -> dict | None:
     """
     Returns address, name and long/lat for ods code
     """
@@ -47,7 +50,7 @@ async def gp_details_for_ods_code(ods_code: str, async_client: httpx.AsyncClient
         url=url,
         timeout=10,  # times out after 10 seconds
     )
-    
+
     if response.status_code == 404:
         return None
 

@@ -8,8 +8,9 @@ from project.npda.models import Patient
 from project.npda.tests import utils
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.tests.kpi_calculations.test_calculate_kpis import \
-    assert_kpi_result_equal
+from project.npda.tests.kpi_calculations.test_calculate_kpis import (
+    assert_kpi_result_equal,
+)
 
 
 @pytest.mark.django_db
@@ -37,7 +38,6 @@ def test_kpi_calculation_24(AUDIT_START_DATE):
         "date_of_birth": AUDIT_START_DATE - relativedelta(days=365 * 10),
     }
     for treatment_val in (3, 6):
-
         # Now create the passing patients
         passing_closed_loop_2 = PatientFactory(
             postcode=f"passing_closed_loop_2_{treatment_val}",

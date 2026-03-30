@@ -1,11 +1,13 @@
 """Tests for creating users."""
 
 # python imports
-import pytest
 import logging
+
+import pytest
 
 # 3rd party imports
 from django.urls import reverse
+
 from project.constants.user import TITLES
 
 # E12 imports
@@ -25,7 +27,6 @@ def test_user_creation(
 
     # For each test user, create a user in the same organisation
     for test_user in test_users:
-
         data = {
             "title": TITLES[0][0],  # Mr
             "first_name": "Test",

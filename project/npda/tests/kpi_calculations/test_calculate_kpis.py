@@ -13,11 +13,11 @@ from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult, kpi_registry
 from project.npda.models.patient import Patient
 from project.npda.models.submission import Submission
 from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
-from project.npda.tests.factories.paediatrics_diabetes_unit_factory import \
-    PaediatricsDiabetesUnitFactory
+from project.npda.tests.factories.paediatrics_diabetes_unit_factory import (
+    PaediatricsDiabetesUnitFactory,
+)
 from project.npda.tests.factories.patient_factory import PatientFactory
-from project.npda.tests.UserDataClasses import \
-    test_user_audit_centre_reader_data
+from project.npda.tests.UserDataClasses import test_user_audit_centre_reader_data
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -37,7 +37,9 @@ def assert_kpi_result_equal(
     :raises AssertionError: If the fields in the KPIResult objects differ.
     """
     if isinstance(expected, KPIResult) is False:
-        raise TypeError(f"expected must be of type KPIResult (current: {type(expected)}")
+        raise TypeError(
+            f"expected must be of type KPIResult (current: {type(expected)}"
+        )
     if isinstance(actual, KPIResult) is False:
         raise TypeError(f"actual must be of type KPIResult (current: {type(actual)}")
 
@@ -67,12 +69,13 @@ def assert_kpi_result_equal(
     if expected.patient_querysets is not None:
         # If actual.patient_querysets is None, we can't compare the querysets
         if actual.patient_querysets is None:
-            mismatches.append(f"patient_querysets: expected {expected.patient_querysets}, got None")
+            mismatches.append(
+                f"patient_querysets: expected {expected.patient_querysets}, got None"
+            )
         else:
             # For each pt queryset in expected, check if the actual queryset is
             # the same
             for key, expected_queryset in expected.patient_querysets.items():
-
                 actual_queryset = actual.patient_querysets.get(key)
 
                 # Convert to list and order by id to compare
@@ -96,8 +99,12 @@ def test_ensure_mocked_audit_date_range_is_correct(AUDIT_START_DATE):
     """Ensure that the mocked audit date range is correct."""
     calc_kpis = CalculateKPIS(calculation_date=AUDIT_START_DATE)
 
-    assert calc_kpis.audit_start_date == date(2024, 4, 1), f"Mocked audit start date incorrect!"
-    assert calc_kpis.audit_end_date == date(2025, 3, 31), f"Mocked audit end date incorrect!"
+    assert calc_kpis.audit_start_date == date(2024, 4, 1), (
+        "Mocked audit start date incorrect!"
+    )
+    assert calc_kpis.audit_end_date == date(2025, 3, 31), (
+        "Mocked audit end date incorrect!"
+    )
 
 
 @pytest.mark.parametrize(
@@ -138,11 +145,9 @@ def test_kpi_calculations_dont_break_when_no_patients(
 
         # if this is one of measures 1-12, the pass and failed keys will contain None - remove them
         assert all(
-            [
-                isinstance(value, int) or isinstance(value, float)
-                for value in values
-                if value is not None
-            ]
+            isinstance(value, int) or isinstance(value, float)
+            for value in values
+            if value is not None
         ), f"KPI {kpi} has non-integer values: {results}"
 
 
@@ -174,14 +179,14 @@ def test_calculate_kpis_return_obj_has_correct_kpi_labels(AUDIT_START_DATE):
 
         EXPECTED_KPI_NAMES = kpi_registry.get_kpi(kpi_number)
 
-        assert (
-            actual_kpi_attribute_name == EXPECTED_KPI_NAMES.attribute_name
-        ), f"KPI {actual_kpi_attribute_name} has incorrect attribute name: "
+        assert actual_kpi_attribute_name == EXPECTED_KPI_NAMES.attribute_name, (
+            f"KPI {actual_kpi_attribute_name} has incorrect attribute name: "
+        )
         "{actual_kpi_attribute_name}"
 
-        assert (
-            actual_kpi_label == EXPECTED_KPI_NAMES.rendered_label
-        ), f"KPI {actual_kpi_attribute_name} has incorrect label: {actual_kpi_label}"
+        assert actual_kpi_label == EXPECTED_KPI_NAMES.rendered_label, (
+            f"KPI {actual_kpi_attribute_name} has incorrect label: {actual_kpi_label}"
+        )
 
 
 @pytest.mark.django_db
@@ -247,9 +252,9 @@ def test_calculate_kpis_only_includes_patients_with_an_active_submission(
 
     kpi_calculator.set_patients_for_calculation(pz_codes=[submission_pdu.pz_code])
 
-    kpi_1_patients: QuerySet[Patient] = kpi_calculator._calculate_kpis()["calculated_kpi_values"][
-        kpi_calculator.kpi_name_registry.get_attribute_name(1)
-    ]["patient_querysets"]
+    kpi_1_patients: QuerySet[Patient] = kpi_calculator._calculate_kpis()[
+        "calculated_kpi_values"
+    ][kpi_calculator.kpi_name_registry.get_attribute_name(1)]["patient_querysets"]
 
     # Ensure correct pts
     assert (

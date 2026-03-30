@@ -1,9 +1,7 @@
-"""Factory fn to create new Visit, related to a Patient.
-"""
+"""Factory fn to create new Visit, related to a Patient."""
 
 # standard imports
 import logging
-from django.apps import apps
 
 # third-party imports
 import factory
