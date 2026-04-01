@@ -3,11 +3,13 @@ Seeds NPDA Users in test db once per session.
 """
 
 import logging
+from datetime import date
 
 # Standard imports
 import pytest
 
 # NPDA Imports
+from project.npda.general_functions.audit_period import get_audit_period_for_date
 from project.npda.models import AuditPeriod
 
 logger = logging.getLogger(__name__)
@@ -15,11 +17,29 @@ logger = logging.getLogger(__name__)
 
 def _seed_audit_periods_fixture(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
+        current_audit_start, _ = get_audit_period_for_date(date.today())
+        current_audit_year = current_audit_start.year
+
         if AuditPeriod.objects.exists():
-            logger.info("NOTE: Test audit periods already seeded! Not re-seeding.")
+            # DB was reused — ensure the current audit year exists even if it wasn't seeded before
+            if not AuditPeriod.objects.filter(
+                slug=f"{current_audit_year}-{current_audit_year + 1}"
+            ).exists():
+                logger.info(
+                    f"Seeding missing current audit period {current_audit_year}-{current_audit_year + 1}."
+                )
+                AuditPeriod.objects.create(
+                    is_open=True,
+                    is_visible=True,
+                    start_date=f"{current_audit_year}-04-01",
+                    end_date=f"{current_audit_year + 1}-03-31",
+                    slug=f"{current_audit_year}-{current_audit_year + 1}",
+                )
+            else:
+                logger.info("NOTE: Test audit periods already seeded! Not re-seeding.")
             return
 
-        for start_year in [2024, 2025]:
+        for start_year in range(2024, current_audit_year + 1):
             end_year = start_year + 1
 
             logger.info(f"Seeding test audit period {start_year}-{end_year}.")

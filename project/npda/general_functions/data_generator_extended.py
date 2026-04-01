@@ -233,6 +233,8 @@ class FakePatientCreator:
             patients = PatientFactory.create_batch(
                 size=n,
                 age_range=age_range,
+                audit_start_date=self.audit_start_date,
+                audit_end_date=self.audit_end_date,
                 # We're going to manually create visits for each patient
                 visit=None,
                 **patient_kwargs,
