@@ -19,11 +19,11 @@ from pathlib import Path
 from django.core.management.utils import get_random_secret_key
 from dotenv import load_dotenv
 
-# no it is not an unused import, it pulls LOGGING into the settings file
-from .logging_settings import LOGGING  # noqa: F401
-
 # Has to be before logging_settings as that reads ENABLE_REQUEST_LOGGING
-load_dotenv("envs/.env")
+load_dotenv("envs/.env")  # noqa:E402
+
+# no it is not an unused import, it pulls LOGGING into the settings file
+from .logging_settings import LOGGING  # noqa:F401,E402
 
 # RCPCH imports
 
