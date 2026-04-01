@@ -21,36 +21,20 @@ def _seed_audit_periods_fixture(django_db_setup, django_db_blocker):
         current_audit_year = current_audit_start.year
 
         if AuditPeriod.objects.exists():
-            # DB was reused — ensure the current audit year exists even if it wasn't seeded before
-            if not AuditPeriod.objects.filter(
-                slug=f"{current_audit_year}-{current_audit_year + 1}"
-            ).exists():
-                logger.info(
-                    f"Seeding missing current audit period {current_audit_year}-{current_audit_year + 1}."
-                )
+            logger.info("NOTE: Test audit periods already seeded! Not re-seeding.")
+        else:
+            for start_year in range(2024, current_audit_year + 1):
+                end_year = start_year + 1
+
+                logger.info(f"Seeding test audit period {start_year}-{end_year}.")
+
                 AuditPeriod.objects.create(
                     is_open=True,
                     is_visible=True,
-                    start_date=f"{current_audit_year}-04-01",
-                    end_date=f"{current_audit_year + 1}-03-31",
-                    slug=f"{current_audit_year}-{current_audit_year + 1}",
+                    start_date=f"{start_year}-04-01",
+                    end_date=f"{end_year}-03-31",
+                    slug=f"{start_year}-{end_year}",
                 )
-            else:
-                logger.info("NOTE: Test audit periods already seeded! Not re-seeding.")
-            return
-
-        for start_year in range(2024, current_audit_year + 1):
-            end_year = start_year + 1
-
-            logger.info(f"Seeding test audit period {start_year}-{end_year}.")
-
-            AuditPeriod.objects.create(
-                is_open=True,
-                is_visible=True,
-                start_date=f"{start_year}-04-01",
-                end_date=f"{end_year}-03-31",
-                slug=f"{start_year}-{end_year}",
-            )
 
 
 @pytest.fixture(scope="session")
