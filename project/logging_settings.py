@@ -37,6 +37,8 @@ if os.getenv("ENABLE_REQUEST_LOGGING", "False") == "True":
         }
     }
 
+print(f"Request logging enabled: {bool(request_loggers)}")
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
