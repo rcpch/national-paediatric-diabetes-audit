@@ -12,7 +12,24 @@ from project.npda.forms.external_visit_validators import (
 )
 from project.npda.forms.visit_form import VisitForm
 from project.npda.models import AuditPeriod
-from project.npda.tests.factories.patient_factory import PatientFactory
+from project.npda.tests.factories.patient_factory import (
+    PatientFactory as _PatientFactoryBase,
+)
+
+
+def PatientFactory():
+    """Wrapper that always creates a patient with stable historical dates.
+
+    Prevents sporadic CI failures caused by the real factory generating a
+    diagnosis_date close to today (based on the current audit period), which
+    can land after the hardcoded visit/observation dates used in these tests.
+    Any test that needs specific dates can still override them after creation.
+    """
+    return _PatientFactoryBase(
+        date_of_birth=datetime.date(2000, 1, 1),
+        diagnosis_date=datetime.date(2010, 1, 1),
+    )
+
 
 MOCK_EXTERNAL_VALIDATION_RESULT = VisitExternalValidationResult(None, None, None, None)
 
