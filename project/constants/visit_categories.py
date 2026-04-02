@@ -10,20 +10,11 @@ VISIT_CATEGORIES_BY_TAB = {
         },
         "Treatment": {
             "colour": "rcpch_strong_green_light_tint1",
-            "fields": [
-                "treatment",
-                "closed_loop_system",
-                "insulin_regimen",
-                "non_insulin_medication",
-                "dietary_lifestyle_modification",
-            ],
+            "fields": ["treatment", "closed_loop_system"],
         },
         "CGM": {
             "colour": "rcpch_aqua_green_light_tint1",
-            "fields": [
-                "glucose_monitoring",
-                "cgm_use",
-            ],
+            "fields": ["glucose_monitoring"],
         },
         "BP": {
             "colour": "rcpch_orange_light_tint1",
@@ -71,16 +62,11 @@ VISIT_CATEGORIES_BY_TAB = {
             "fields": [
                 "psychological_screening_assessment_date",
                 "psychological_additional_support_status",
-                "psychological_support_outcome",
             ],
         },
         "Smoking": {
             "colour": "rcpch_strong_green_dark_tint",
-            "fields": [
-                "smoking_status",
-                "smoking_cessation_referral_date",
-                "smoking_vaping_status",
-            ],
+            "fields": ["smoking_status", "smoking_cessation_referral_date"],
         },
         "Dietician": {
             "colour": "rcpch_aqua_green_dark_tint",
@@ -108,8 +94,6 @@ VISIT_CATEGORIES_BY_TAB = {
                 "hospital_admission_reason",
                 "dka_additional_therapies",
                 "hospital_admission_other",
-                "blood_gas_ph",
-                "blood_gas_bicarbonate",
             ],
         }
     },

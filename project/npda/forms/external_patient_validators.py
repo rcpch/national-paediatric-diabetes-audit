@@ -1,24 +1,20 @@
+import asyncio
 import logging
 from dataclasses import dataclass
-from datetime import date
 
-import asyncio
 from asgiref.sync import async_to_sync
-
 from django.core.exceptions import ValidationError
-from httpx import HTTPError, AsyncClient
+from httpx import AsyncClient, HTTPError
 
+from ...constants.postcodes import is_jersey_postcode, skip_api_validation_for_postcode
 from ..general_functions import (
+    ValidatedPostcode,
     gp_details_for_ods_code,
     gp_ods_code_for_postcode,
-    lookup_postcode,
     imd_for_postcode,
-    calculate_centiles_z_scores,
-    ValidatedPostcode,
+    lookup_postcode,
     lookup_terminated_postcode,
 )
-
-from ...constants.postcodes import skip_api_validation_for_postcode, is_jersey_postcode
 
 logger = logging.getLogger(__name__)
 

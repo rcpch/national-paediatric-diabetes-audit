@@ -1,28 +1,29 @@
 # python imports
-from dataclasses import dataclass
+import collections
 import logging
 import re
-import collections
+from dataclasses import dataclass
 
-# Django imports
-from django.core.exceptions import ValidationError
+import numpy as np
 
 # Third-party imports
 import pandas as pd
-import numpy as np
 
 # RCPCH imports
 from project.constants import (
     CSV_DATA_TYPES_MINUS_DATES,
-    UNIQUE_IDENTIFIER_ENGLAND,
-    UNIQUE_IDENTIFIER_JERSEY,
     CSV_HEADING_OBJECTS,
     CSV_HEADING_OBJECTS_2026,
-    csv_definition_for,
-    JERSEY_CSV_DATA_TYPES,
     ENGLAND_CSV_DATA_TYPES,
+    JERSEY_CSV_DATA_TYPES,
+    UNIQUE_IDENTIFIER_ENGLAND,
+    UNIQUE_IDENTIFIER_JERSEY,
+    csv_definition_for,
     get_all_dates,
 )
+
+# Django imports
+
 
 # Logging setup
 logger = logging.getLogger(__name__)
@@ -198,7 +199,7 @@ def csv_parse(csv_file, dataset_year=2021):
             )
 
             for row_index, (value_before, value_after) in enumerate(
-                zip(column_before, column_after)
+                zip(column_before, column_after, strict=False)
             ):
                 # Handle empty strings (including spaces) for optional date columns
                 if (
@@ -224,22 +225,58 @@ def csv_parse(csv_file, dataset_year=2021):
     else:
         datatypes = ENGLAND_CSV_DATA_TYPES | CSV_DATA_TYPES_MINUS_DATES
 
+    nullable_int_types = {
+        "Int8",
+        "Int16",
+        "Int32",
+        "Int64",
+        "UInt8",
+        "UInt16",
+        "UInt32",
+        "UInt64",
+    }
+
     # Apply the dtype to non-date columns
     for column, dtype in datatypes.items():
         try:
             if column in df.columns:
+                if dtype in nullable_int_types and pd.api.types.is_float_dtype(
+                    df[column]
+                ):
+                    # pandas 2 refuses to cast float64 → nullable int when NaN is present
+                    # because numpy's safe-cast rules see NaN as non-representable.
+                    # Pre-process the column via a list comprehension:
+                    #   - NaN          → None  (becomes pd.NA in the Int64 series)
+                    #   - integer-valued float (1.0, 2.0)  → int(v)  (valid; stored as float because of NaN elsewhere in column)
+                    #   - non-integer float (99.5)          → kept as-is (bad data)
+                    # When bad data is present the subsequent astype() will still raise,
+                    # routing the column through parse_type_error_columns as before so
+                    # that downstream validation can flag it properly.
+                    # Use pd.NA (not None) so pd.Series doesn't infer float64.
+                    # pd.Series([1, None]) → float64 in pandas 2.x;
+                    # pd.Series([1, pd.NA]) stays object, astype('Int64') works.
+                    df[column] = pd.Series(
+                        [
+                            pd.NA
+                            if pd.isna(v)
+                            else (int(v) if float(v).is_integer() else v)
+                            for v in df[column]
+                        ],
+                        index=df.index,
+                        dtype=object,
+                    )
                 df[column] = df[column].astype(dtype)
-        except (ValueError, TypeError) as e:
+        except (ValueError, TypeError):
             parse_type_error_columns.append(column)
             continue
 
         # Convert NaN to None-y for nullable fields
         if column in df.columns:
-            # For string dtypes, use pd.NA
             if dtype == "string":
                 df[column] = df[column].fillna(pd.NA)
-            # For other dtypes, convert nulls to None after dtype conversion
-            else:
+            elif dtype not in nullable_int_types:
+                # nullable int columns already have pd.NA set correctly above;
+                # applying where(..., None) on an Int64 series upcasts to object dtype
                 df[column] = df[column].where(pd.notnull(df[column]), None)
         # round height and weight if provided to 1 decimal place
         if (

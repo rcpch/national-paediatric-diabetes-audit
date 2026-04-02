@@ -1,33 +1,31 @@
 """Factory fn to create new Patient."""
 
 # standard imports
-from datetime import date, datetime
-from enum import Enum
 import logging
 import random
+from datetime import date
+from enum import Enum
 
-# third-party imports
-from django.contrib.gis.geos import Point
 import factory
 import nhs_number
 from dateutil.relativedelta import relativedelta
 
+from project.constants import DIABETES_TYPES, ETHNICITIES, SEX_TYPE
+
 # rcpch imports
-from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 from project.npda.general_functions.audit_period import get_audit_period_for_date
 from project.npda.general_functions.random_date import get_random_date
-from project.npda.models import Patient
-from project.npda.tests.factories.visit_factory import VisitFactory
 from project.npda.general_functions.validate_postcode import (
     ValidatedPostcode,
     random_postcode_under_outcode_sync,
 )
+from project.npda.models import Patient
+from project.npda.tests.factories.visit_factory import VisitFactory
+
 from .transfer_factory import TransferFactory
-from project.constants import (
-    ETHNICITIES,
-    DIABETES_TYPES,
-    SEX_TYPE,
-)
+
+# third-party imports
+
 
 # Logging
 logger = logging.getLogger(__name__)

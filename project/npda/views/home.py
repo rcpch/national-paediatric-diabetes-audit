@@ -1,12 +1,11 @@
 # Python imports
-from urllib.parse import urlparse
 import logging
 
 # Django imports
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
-from django.shortcuts import redirect, render
 from django.http import HttpResponse
+from django.shortcuts import redirect, render
 
 from project.constants.feature_flags import FEATURE_FLAGS
 from project.npda.general_functions.csv import csv_header
@@ -14,15 +13,13 @@ from project.npda.general_functions.organisations_adapter import (
     paediatric_diabetes_units_for_user,
 )
 from project.npda.general_functions.session import get_user_feature_flags
+from project.npda.models.audit_period import AuditPeriod
+from project.npda.models.submission import Submission
+from project.npda.tasks import test_task
 from project.npda.views.npda_users import get_user_home_page
 
 # RCPCH imports
-from .decorators import login_and_otp_required, check_data_permissions
-
-from project.npda.tasks import test_task
-from project.npda.models.audit_period import AuditPeriod
-from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
-from project.npda.models.submission import Submission
+from .decorators import check_data_permissions, login_and_otp_required
 
 # Logging
 logger = logging.getLogger(__name__)

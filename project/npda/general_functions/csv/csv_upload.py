@@ -1,43 +1,53 @@
 # python imports
-from asgiref.sync import sync_to_async
 import asyncio
 import collections
 import json
 import logging
-import io
 
-# django imports
-from django.apps import apps
-from django.utils import timezone
-from django.core.exceptions import FieldDoesNotExist
+import httpx
+import numpy as np
 
 # third part imports
 import pandas as pd
-import numpy as np
-import httpx
+from asgiref.sync import sync_to_async
+
+# django imports
+from django.apps import apps
+from django.core.exceptions import FieldDoesNotExist
+from django.db import models as django_models
+from django.utils import timezone
 
 # RCPCH imports
 from project.constants import (
     CSV_HEADING_OBJECTS,
+    CSV_HEADING_OBJECTS_2026,
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
-    CSV_HEADING_OBJECTS_2026,
 )
-from project.npda.general_functions.csv.csv_parse import csv_parse
-from project.npda.general_functions.csv import (
-    gather_unique_patient_and_visit_counts,
-)
+from project.npda.general_functions.csv import gather_unique_patient_and_visit_counts
 
 # Logging setup
 logger = logging.getLogger(__name__)
 
-from project.npda.forms.patient_form import PatientForm
-from project.npda.forms.visit_form import VisitForm
-from project.npda.forms.external_patient_validators import validate_patient_async
-from project.npda.forms.external_visit_validators import validate_visit_async
-from project.npda.general_functions.csv.csv_clean import csv_clean
-from project.npda.general_functions.csv.csv_merge import merge_rows_for_patient
-from project.npda.models import Patient, Transfer, Visit, Submission, VisitActivity
+from project.npda.forms.external_patient_validators import (  # noqa: E402
+    validate_patient_async,
+)
+from project.npda.forms.external_visit_validators import (  # noqa: E402
+    validate_visit_async,
+)
+from project.npda.forms.patient_form import PatientForm  # noqa: E402
+from project.npda.forms.visit_form import VisitForm  # noqa: E402
+from project.npda.general_functions.csv.csv_clean import csv_clean  # noqa: E402
+from project.npda.general_functions.csv.csv_merge import (  # noqa: E402
+    merge_rows_for_patient,
+)
+from project.npda.models import (  # noqa: E402
+    Patient,
+    Submission,
+    Transfer,
+    Visit,
+    VisitActivity,
+)
 
 
 def create_csv_submission(
@@ -141,8 +151,9 @@ async def csv_upload(
         elif get_field_heading("sex", 2021) in dataframe.columns:
             dataset_year = 2021
     except Exception:
-        # If any issue accessing headings, fall back to submission-derived year
-        pass
+        logger.debug(
+            "Could not determine dataset year from headings, falling back to submission-derived year"
+        )
 
     if pdu.pz_code == "PZ248":
         if dataset_year == 2026:
@@ -167,7 +178,22 @@ async def csv_upload(
 
         # Pass Django forms native Python values not numpy ones
         # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/425
-        return value.item() if isinstance(value, np.generic) else value
+        python_value = value.item() if isinstance(value, np.generic) else value
+
+        # pandas 2.x iterrows() converts Int64 (nullable int) columns to float64
+        # when constructing the per-row Series, so 1 becomes np.float64(1.0).
+        # .item() then gives Python float 1.0. Django's TypedChoiceField
+        # stringifies that as "1.0" which doesn't match choice "1", causing
+        # "Select a valid choice. 1.0 is not one of the available choices."
+        # Cast integer-valued floats back to int for integer model fields.
+        if (
+            isinstance(python_value, float)
+            and python_value.is_integer()
+            and isinstance(model_field, django_models.IntegerField)
+        ):
+            return int(python_value)
+
+        return python_value
 
     def row_to_dict(row, model):
         # Use the resolved CSV_HEADINGS (depends on dataset_year and PDU)
@@ -354,7 +380,7 @@ async def csv_upload(
                 save_errors_and_retain_valid_fields(visit_row_index, visit_form)
                 visit_form.instance.patient = patient
 
-                await sync_to_async(lambda: visit_form.save())()
+                await sync_to_async(lambda vf=visit_form: vf.save())()
             except Exception as error:
                 logger.exception(
                     f"Error saving visit for {pdu.pz_code} from {csv_file_name}[{visit_row_index}]: {error}"

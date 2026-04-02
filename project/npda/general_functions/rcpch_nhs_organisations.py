@@ -2,13 +2,13 @@
 This module contains functions that are used to extract NHS organisations from the RCPCH dataset.
 """
 
+import logging
+from typing import Any
+
 # python imports
 import requests
-import logging
-from typing import Dict, Any, List, Tuple
 
 # django imports
-from django.apps import apps
 from django.conf import settings
 
 # RCPCH imports
@@ -18,9 +18,9 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
-def get_all_pz_codes_with_their_trust_and_primary_organisation() -> (
-    List[Tuple[str, str]]
-):
+def get_all_pz_codes_with_their_trust_and_primary_organisation() -> list[
+    tuple[str, str]
+]:
     """
     This function returns all NHS organisations from the RCPCH dataset that are affiliated with a paediatric diabetes unit.
 
@@ -40,7 +40,7 @@ def get_all_pz_codes_with_their_trust_and_primary_organisation() -> (
     return response.json()
 
 
-def fetch_organisation_by_ods_code(ods_code: str) -> Dict[str, Any]:
+def fetch_organisation_by_ods_code(ods_code: str) -> dict[str, Any]:
     """
     This function returns an NHS organisation from the RCPCH dataset that is affiliated with a paediatric diabetes unit.
 
@@ -65,7 +65,7 @@ def fetch_organisation_by_ods_code(ods_code: str) -> Dict[str, Any]:
 
 def fetch_local_authorities_within_radius(
     longitude: float, latitude: float, radius: int
-) -> List[str]:
+) -> list[str]:
     """
     This function returns all local authorities within a given radius of a point, including boundary geometries.
     """

@@ -14,8 +14,8 @@ Tests for NPDAUser model actions.
 - NPDAUser can be reactivated.
 """
 
-from datetime import date
 import logging
+from datetime import date
 from http import HTTPStatus
 
 # Python imports
@@ -27,24 +27,23 @@ from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
 
-from project.npda.models.audit_period import AuditPeriod
-
 from project.constants.user import (
     AUDIT_CENTRE_COORDINATOR,
+    AUDIT_CENTRE_READER,
     RCPCH_AUDIT_TEAM,
     TRUST_AUDIT_TEAM_COORDINATOR_ACCESS,
-    AUDIT_CENTRE_READER,
 )
 
 # E12 imports
 from project.npda.general_functions.audit_period import get_audit_period_for_date
 from project.npda.general_functions.csv import csv_parse
 from project.npda.models import NPDAUser, Submission
+from project.npda.models.audit_period import AuditPeriod
 from project.npda.models.organisation_employer import OrganisationEmployer
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
+from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
 from project.npda.tests.UserDataClasses import (
     test_user_audit_centre_coordinator_data,
     test_user_audit_centre_editor_data,
@@ -103,7 +102,7 @@ def check_all_users_in_pdu(user, users, pz_code):
     for user in users:
         pz_codes = [org["pz_code"] for org in user.organisation_employers.values()]
 
-        if not pz_code in pz_codes:
+        if pz_code not in pz_codes:
             pytest.fail(
                 f"{user} in {pz_code} should not be able to see {user} in {pz_codes}"
             )
@@ -679,7 +678,7 @@ def test_users_can_download_csv(
 
     client = login_and_verify_user(client, test_user)
 
-    (audit_start_date, _) = get_audit_period_for_date(timezone.now())
+    audit_start_date, _ = get_audit_period_for_date(timezone.now())
 
     # Create a test submission
     submission = Submission.objects.create(
@@ -742,7 +741,7 @@ def test_reader_cannot_download_csv(
 
     client = login_and_verify_user(client, editor_user)
 
-    (audit_start_date, _) = get_audit_period_for_date(timezone.now())
+    audit_start_date, _ = get_audit_period_for_date(timezone.now())
 
     # Create a test submission
     submission = Submission.objects.create(
@@ -813,7 +812,7 @@ def test_users_can_download_report(
 
     client = login_and_verify_user(client, test_user)
 
-    (audit_start_date, _) = get_audit_period_for_date(timezone.now())
+    audit_start_date, _ = get_audit_period_for_date(timezone.now())
 
     # Create a test submission
     submission = Submission.objects.create(
@@ -880,7 +879,7 @@ def test_rcpch_audit_team_can_delete_submission(
 
     client = login_and_verify_user(client, audit_team_user)
 
-    (audit_start_date, _) = get_audit_period_for_date(timezone.now())
+    audit_start_date, _ = get_audit_period_for_date(timezone.now())
 
     # Create a test submission
     submission = Submission.objects.create(
@@ -947,7 +946,7 @@ def test_non_rcpch_audit_team_cannot_delete_submission(
 
     client = login_and_verify_user(client, non_deleting_user)
 
-    (audit_start_date, _) = get_audit_period_for_date(timezone.now())
+    audit_start_date, _ = get_audit_period_for_date(timezone.now())
 
     # Create a test submission
     submission = Submission.objects.create(
@@ -1373,7 +1372,7 @@ def test_coordinators_cannot_activate_or_deactivate_themselves(
     response = client.post(url, data={action: "true"})
     assert response.status_code == HTTPStatus.FORBIDDEN
     test_coordinator.refresh_from_db()
-    assert test_coordinator.is_active == True  # Should remain active
+    assert test_coordinator.is_active  # Should remain active
 
 
 @pytest.mark.django_db
@@ -1667,7 +1666,7 @@ def test_coordinator_cannot_change_email_for_user_with_multiple_pdus(
     victim_reader.refresh_from_db()
 
     assert victim_reader.email == email_before, (
-        f"Malicious coordinator should not be able to change email of user in multiple PDUs."
+        "Malicious coordinator should not be able to change email of user in multiple PDUs."
     )
 
 
@@ -1722,5 +1721,5 @@ def test_coordinator_cannot_change_role_for_user_with_multiple_pdus(
     victim_reader.refresh_from_db()
 
     assert victim_reader.role == AUDIT_CENTRE_READER, (
-        f"Malicious coordinator should not be able to change role of user in multiple PDUs."
+        "Malicious coordinator should not be able to change role of user in multiple PDUs."
     )

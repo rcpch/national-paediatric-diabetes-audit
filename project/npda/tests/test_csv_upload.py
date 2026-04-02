@@ -1,77 +1,72 @@
+import collections
+import csv
 import dataclasses
 import datetime
-from datetime import date
-import tempfile
-import csv
 import re
+import tempfile
 import unicodedata
-import collections
-from io import StringIO
+from datetime import date
 from decimal import Decimal
+from io import StringIO
 from unittest.mock import AsyncMock, patch
 
-from asgiref.sync import async_to_sync
-
 import nhs_number
-import pandas as pd
 import numpy as np
+import pandas as pd
 import pytest
+from asgiref.sync import async_to_sync
 from dateutil.relativedelta import relativedelta
 from django.apps import apps
-from django.core.exceptions import ValidationError
 from django.contrib.gis.geos import Point
 from django.contrib.messages import get_messages
+from django.core.exceptions import ValidationError
 from django.urls import reverse
 from freezegun import freeze_time
 
+from project.constants import (
+    ALL_VISIT_DATES,
+    DIABETES_TYPES,
+    ETHNICITIES,
+    LEAVE_PDU_REASONS,
+    SEX_TYPE,
+    csv_definition_for,
+    get_all_visit_dates,
+)
 from project.constants.user import RCPCH_AUDIT_TEAM
+from project.npda.forms.external_patient_validators import (
+    PatientExternalValidationResult,
+)
+from project.npda.forms.external_visit_validators import (
+    CentileAndSDS,
+    VisitExternalValidationResult,
+)
 from project.npda.general_functions.csv import (
-    csv_upload,
-    csv_parse,
     create_csv_submission,
     csv_clean,
+    csv_parse,
+    csv_upload,
 )
 from project.npda.general_functions.headings import (
     get_field_heading,
-    VISIT_FIELD_HEADINGS_2021,
-    VISIT_FIELD_HEADINGS_2026,
 )
 from project.npda.general_functions.quarter_for_date import (
     current_audit_year_start_date,
 )
-from project.constants import (
-    csv_definition_for,
-    get_all_visit_dates,
-    ALL_VISIT_DATES,
-    SEX_TYPE,
-    ETHNICITIES,
-    LEAVE_PDU_REASONS,
-    DIABETES_TYPES,
-)
 from project.npda.models import (
-    NPDAUser,
-    Patient,
-    Visit,
-    PaediatricDiabetesUnit,
     AuditPeriod,
+    NPDAUser,
+    PaediatricDiabetesUnit,
+    Patient,
     Submission,
     Transfer,
+    Visit,
 )
 from project.npda.tests.factories.patient_factory import (
     INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE,
     TODAY,
     VALID_FIELDS,
 )
-from project.npda.forms.external_patient_validators import (
-    PatientExternalValidationResult,
-)
-from project.npda.forms.external_visit_validators import (
-    VisitExternalValidationResult,
-    CentileAndSDS,
-)
 from project.npda.tests.utils import login_and_verify_user
-from project.npda.tests.factories.patient_factory import PatientFactory
-
 
 MOCK_PATIENT_EXTERNAL_VALIDATION_RESULT = PatientExternalValidationResult(
     postcode=VALID_FIELDS["postcode"],
@@ -160,6 +155,17 @@ def valid_df(dummy_sheets_folder):
 @pytest.fixture(params=[2021, 2026])
 def dataset_year(request):
     return request.param
+
+
+@pytest.fixture
+def dummy_sheet_csv(dummy_sheets_folder, dataset_year):
+    """Override the conftest fixture to return the correct CSV for the dataset year."""
+    filename = (
+        "dummy_sheet_2026_test.csv" if dataset_year == 2026 else "dummy_sheet_test.csv"
+    )
+    file = dummy_sheets_folder / filename
+    with open(file) as f:
+        return f.read()
 
 
 @pytest.fixture
@@ -379,11 +385,13 @@ def read_csv_from_str(contents, encoding="utf-8", dataset_year=None):
         return csv_parse(f, dataset_year=dataset_year)
 
 
-def modify_raw_csv(csv_str, start=None, end=None, replacements={}):
+def modify_raw_csv(csv_str, start=None, end=None, replacements=None):
     # Sometimes we have to alter the CSV directly to test values
     # of the wrong type.
+    if replacements is None:
+        replacements = {}
     reader = csv.reader(StringIO(csv_str))
-    [header, *rows] = [row for row in reader]
+    [header, *rows] = list(reader)
 
     start_ix = 0 if start is None else start - 1
     end_ix = len(rows) if end is None else end - 1
@@ -413,7 +421,9 @@ def modify_raw_csv(csv_str, start=None, end=None, replacements={}):
             if norm in normalized_index:
                 column_ix = normalized_index[norm]
             else:
-                raise ValueError(f"Column '{column}' not found in CSV headers")
+                raise ValueError(
+                    f"Column '{column}' not found in CSV headers"
+                ) from None
 
         rows[row_ix][column_ix] = value
 
@@ -857,7 +867,7 @@ def test_invalid_sex(test_user, single_row_valid_df, audit_period_for_dataset_ye
 
     patient = Patient.objects.first()
 
-    assert patient.sex == None
+    assert patient.sex is None
     assert "sex" in patient.errors
 
 
@@ -1253,7 +1263,7 @@ def test_duplicate_columns_causes_error(
     client = login_and_verify_user(client, test_rcpch_user)
 
     # Feed file and re-duplicate columns to the CSV
-    with open(tmp_csv_path, "r") as csv_file:
+    with open(tmp_csv_path) as csv_file:
         csv = csv_file.read()
         csv = csv.replace("NHS Number_2", "NHS Number")
         csv = csv.replace("NHS Number_3", "NHS Number")
@@ -1611,7 +1621,7 @@ def test_urine_albumin_value_is_rounded_to_one_decimal(
     if hba_col in df.columns:
         print("hba1c_date dtype:", df[hba_col].dtype)
         for i, v in enumerate(df[hba_col].tolist()[:5]):
-            print("hba1c_date[{}]:".format(i), repr(v), type(v))
+            print(f"hba1c_date[{i}]:", repr(v), type(v))
     else:
         print(hba_col, "not found in parsed dataframe columns")
 
@@ -2383,7 +2393,7 @@ def test_decs_value_none_form_fails_validation(
     )
 
     assert "retinal_screening_result" in errors[0], (
-        f"Retinal screening result should fail validation due to missing result, but passed."
+        "Retinal screening result should fail validation due to missing result, but passed."
     )
 
     visit = Visit.objects.first()
@@ -2418,7 +2428,7 @@ def test_decs_date_none_form_fails_validation(
         test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
     )
     assert "retinal_screening_observation_date" in errors[0], (
-        f"Retinal screening date should fail validation due to missing date, but passed."
+        "Retinal screening date should fail validation due to missing date, but passed."
     )
 
     visit = Visit.objects.first()
@@ -2494,7 +2504,7 @@ def test_urine_albumin_value_below_range_form_fails_validation(
     )
 
     assert "albumin_creatinine_ratio" in errors[0], (
-        f"Urine albumin creatinine ratio should fail validation as < 3, but passed."
+        "Urine albumin creatinine ratio should fail validation as < 3, but passed."
     )
 
     visit = Visit.objects.first()
@@ -2534,7 +2544,7 @@ def test_urine_albumin_value_above_range_form_fails_validation(
     )
 
     assert "albumin_creatinine_ratio" in errors[0], (
-        f"Urine albumin creatinine ratio should fail validation as > 50, but passed."
+        "Urine albumin creatinine ratio should fail validation as > 50, but passed."
     )
 
     visit = Visit.objects.first()
@@ -2574,7 +2584,7 @@ def test_urine_albumin_value_missing_form_fails_validation(
     )
 
     assert "albumin_creatinine_ratio" in errors[0], (
-        f"Urine albumin creatinine level should fail validation as None, but passed."
+        "Urine albumin creatinine level should fail validation as None, but passed."
     )
 
     visit = Visit.objects.first()
@@ -2614,7 +2624,7 @@ def test_urine_albumin_stage_missing_form_fails_validation(
     )
 
     assert "albuminuria_stage" in errors[0], (
-        f"Urine albumin creatinine stage should fail validation as None, but passed."
+        "Urine albumin creatinine stage should fail validation as None, but passed."
     )
 
     visit = Visit.objects.first()
@@ -2622,7 +2632,7 @@ def test_urine_albumin_stage_missing_form_fails_validation(
     assert visit.albumin_creatinine_ratio == 10, (
         f"Saved urine albumin should be 10, but was {visit.albumin_creatinine_ratio}"
     )
-    assert visit.albuminuria_stage == None, (
+    assert visit.albuminuria_stage is None, (
         f"Saved urine albumin stage should be None, but was {visit.albuminuria_stage}"
     )
     assert (
@@ -2652,7 +2662,7 @@ def test_urine_albumin_date_missing_form_fails_validation(
     )
 
     assert "albumin_creatinine_ratio_date" in errors[0], (
-        f"Urine albumin creatinine date should fail validation as None, but passed."
+        "Urine albumin creatinine date should fail validation as None, but passed."
     )
 
     visit = Visit.objects.first()
@@ -2725,7 +2735,7 @@ def test_total_cholesterol_value_above_reference_form_fails_validation(
     )
 
     assert "total_cholesterol" in errors[0], (
-        f"Total cholesterol should fail validation as above reference range, but passed."
+        "Total cholesterol should fail validation as above reference range, but passed."
     )
 
     visit = Visit.objects.first()
@@ -2760,7 +2770,7 @@ def test_total_cholesterol_value_below_reference_form_fails_validation(
     )
 
     assert "total_cholesterol" in errors[0], (
-        f"Total cholesterol should fail validation as impossible, but passed."
+        "Total cholesterol should fail validation as impossible, but passed."
     )
 
     visit = Visit.objects.first()
@@ -2795,7 +2805,7 @@ def test_total_cholesterol_value_missing_form_fails_validation(
     )
 
     assert "total_cholesterol" in errors[0], (
-        f"Total cholesterol should fail validation as None, but passed."
+        "Total cholesterol should fail validation as None, but passed."
     )
 
     visit = Visit.objects.first()
@@ -2828,7 +2838,7 @@ def test_total_cholesterol_date_missing_form_fails_validation(
     )
 
     assert "total_cholesterol_date" in errors[0], (
-        f"Total cholesterol date should fail validation as None, but passed."
+        "Total cholesterol date should fail validation as None, but passed."
     )
 
     visit = Visit.objects.first()
@@ -3132,7 +3142,7 @@ def test_psychological_support_date_missing_fails_validation(
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/628
 @pytest.mark.django_db
-def test_psychological_support_date_missing_fails_validation(
+def test_psychological_support_date_missing_with_unknown_status_passes_validation(
     test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
     psychological_screening_assessment_date = get_field_heading(
@@ -4349,7 +4359,7 @@ def test_visit_date_missing_fails_validation(
         test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
     )
 
-    assert "visit_date" in errors[0], f"Expected error in visit_date, but got None"
+    assert "visit_date" in errors[0], "Expected error in visit_date, but got None"
 
     visit = Visit.objects.first()
 
@@ -4455,8 +4465,15 @@ def test_visit_date_not_before_diagnosis_date(
     Test that a Visit/Appointment Date before the date of diagnosis is rejected
     """
     # If the audit period starts in the future relative to today, skip this parametrisation
+    # Also skip if the diagnosis date (start + 6 months) would be in the future, since that
+    # triggers a "Cannot be in the future" error before the visit-before-diagnosis check.
     if audit_period_for_dataset_year.start_date > datetime.date.today():
         pytest.skip("Audit period start is in the future; skip this parametrisation")
+    if (
+        audit_period_for_dataset_year.start_date + relativedelta(months=6)
+        > datetime.date.today()
+    ):
+        pytest.skip("Diagnosis date would be in the future; skip this parametrisation")
     diagnosis_date = get_field_heading("diagnosis_date", dataset_year)
     visit_date = get_field_heading("visit_date", dataset_year)
     single_row_valid_df.loc[0, diagnosis_date] = (
@@ -4738,7 +4755,7 @@ def test_bad_data_for_integer_fields(test_user, dummy_sheet_csv, model_field):
 
     instance = model.objects.first()
 
-    assert getattr(instance, model_field) == None
+    assert getattr(instance, model_field) is None
     assert model_field in instance.errors
 
 
@@ -4844,7 +4861,7 @@ def test_bad_data_for_decimal_fields(test_user, dummy_sheet_csv, model_field):
 
     instance = model.objects.first()
 
-    assert getattr(instance, model_field) == None
+    assert getattr(instance, model_field) is None
     assert model_field in instance.errors
 
 
@@ -5304,85 +5321,6 @@ def test_uploading_csv_with_conflicting_pdu_numbers(
     )
 
 
-# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1344
-@pytest.mark.django_db
-def test_uploading_csv_with_multiple_pdu_numbers_including_one_missing(
-    two_patients_first_with_two_visits_second_with_one,
-    tmp_path,
-    client,
-    test_rcpch_user
-):
-    two_patients_first_with_two_visits_second_with_one.at[0, "PDU Number"] = None
-    two_patients_first_with_two_visits_second_with_one.at[1, "PDU Number"] = RCPCH_PZ_CODE
-    two_patients_first_with_two_visits_second_with_one.at[2, "PDU Number"] = ALDER_HEY_PZ_CODE
-
-    # write back into temp
-    tmp_csv_path = tmp_path / "dummy_sheet_test_csv_upload_test_uploading_csv_with_multiple_pdu_numbers_including_one_missing.csv"
-    two_patients_first_with_two_visits_second_with_one.to_csv(tmp_csv_path, index=False)
-
-    # Log in user
-    client = login_and_verify_user(client, test_rcpch_user)
-
-    url = reverse("pdu-upload-csv", kwargs={ "pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"})
-
-    # Feed file to view
-    with open(tmp_csv_path, "rb") as csv_file:
-        response = client.post(
-            url,
-            {
-                'csv_upload': csv_file
-            },
-            format='multipart'
-        )
-
-    assert response.status_code == 302
-
-    error_messages = list(get_messages(response.wsgi_request))
-    assert error_messages[0].level_tag == "error"
-
-    assert Submission.objects.count() == 0, "No submission should be created for incorrect PDU"
-
-
-# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1344
-# Found as part of debugging the above issue so including for maximum regression proofing hopefully
-@pytest.mark.django_db
-def test_uploading_csv_with_first_row_missing_pdu_number(
-    two_patients_with_one_visit_each,
-    tmp_path,
-    client,
-    test_rcpch_user
-):
-    two_patients_with_one_visit_each = two_patients_with_one_visit_each.assign(**{"PDU Number": "PZ004"})
-    two_patients_with_one_visit_each.at[0, "PDU Number"] = None
-
-    # write back into temp
-    tmp_csv_path = tmp_path / "dummy_sheet_test_csv_upload_test_uploading_csv_with_first_row_missing_pdu_number.csv"
-    two_patients_with_one_visit_each.to_csv(tmp_csv_path, index=False)
-
-    # Log in user
-    client = login_and_verify_user(client, test_rcpch_user)
-
-    url = reverse("pdu-upload-csv", kwargs={ "pz_code": "PZ004", "audit_period": "2025-2026"})
-
-    # Feed file to view
-    with open(tmp_csv_path, "rb") as csv_file:
-        response = client.post(
-            url,
-            {
-                'csv_upload': csv_file
-            },
-            format='multipart'
-        )
-
-    assert response.status_code == 302
-
-    redirect_url = reverse("pdu-upload-csv-in-progress", kwargs={ "pz_code": "PZ004", "audit_period": "2025-2026"})
-    assert response.url == redirect_url
-    
-    assert Submission.objects.count() == 1, "Submission should be created for upload where first row is missing PDU number but subsequent rows have correct PDU number"
-    assert Submission.objects.first().paediatric_diabetes_unit.pz_code == "PZ004"
-
-
 @pytest.mark.django_db
 def test_uploading_csv_with_pdu_number_missing_leading_pz(
     two_patients_with_one_visit_each, tmp_path, client, test_rcpch_user
@@ -5640,3 +5578,91 @@ def test_conflicting_diabetes_type_where_last_row_is_null(
     assert Patient.objects.count() == 1
     # Most recent by visit date
     assert Patient.objects.first().diabetes_type == DIABETES_TYPES[1][0]
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1344
+@pytest.mark.django_db
+def test_uploading_csv_with_multiple_pdu_numbers_including_one_missing(
+    two_patients_first_with_two_visits_second_with_one,
+    tmp_path,
+    client,
+    test_rcpch_user,
+):
+    two_patients_first_with_two_visits_second_with_one.at[0, "PDU Number"] = None
+    two_patients_first_with_two_visits_second_with_one.at[1, "PDU Number"] = (
+        RCPCH_PZ_CODE
+    )
+    two_patients_first_with_two_visits_second_with_one.at[2, "PDU Number"] = (
+        ALDER_HEY_PZ_CODE
+    )
+
+    # write back into temp
+    tmp_csv_path = (
+        tmp_path
+        / "dummy_sheet_test_csv_upload_test_uploading_csv_with_multiple_pdu_numbers_including_one_missing.csv"
+    )
+    two_patients_first_with_two_visits_second_with_one.to_csv(tmp_csv_path, index=False)
+
+    # Log in user
+    client = login_and_verify_user(client, test_rcpch_user)
+
+    url = reverse(
+        "pdu-upload-csv",
+        kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"},
+    )
+
+    # Feed file to view
+    with open(tmp_csv_path, "rb") as csv_file:
+        response = client.post(url, {"csv_upload": csv_file}, format="multipart")
+
+    assert response.status_code == 302
+
+    error_messages = list(get_messages(response.wsgi_request))
+    assert error_messages[0].level_tag == "error"
+
+    assert Submission.objects.count() == 0, (
+        "No submission should be created for incorrect PDU"
+    )
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1344
+# Found as part of debugging the above issue so including for maximum regression proofing hopefully
+@pytest.mark.django_db
+def test_uploading_csv_with_first_row_missing_pdu_number(
+    two_patients_with_one_visit_each, tmp_path, client, test_rcpch_user
+):
+    two_patients_with_one_visit_each = two_patients_with_one_visit_each.assign(
+        **{"PDU Number": "PZ004"}
+    )
+    two_patients_with_one_visit_each.at[0, "PDU Number"] = None
+
+    # write back into temp
+    tmp_csv_path = (
+        tmp_path
+        / "dummy_sheet_test_csv_upload_test_uploading_csv_with_first_row_missing_pdu_number.csv"
+    )
+    two_patients_with_one_visit_each.to_csv(tmp_csv_path, index=False)
+
+    # Log in user
+    client = login_and_verify_user(client, test_rcpch_user)
+
+    url = reverse(
+        "pdu-upload-csv", kwargs={"pz_code": "PZ004", "audit_period": "2025-2026"}
+    )
+
+    # Feed file to view
+    with open(tmp_csv_path, "rb") as csv_file:
+        response = client.post(url, {"csv_upload": csv_file}, format="multipart")
+
+    assert response.status_code == 302
+
+    redirect_url = reverse(
+        "pdu-upload-csv-in-progress",
+        kwargs={"pz_code": "PZ004", "audit_period": "2025-2026"},
+    )
+    assert response.url == redirect_url
+
+    assert Submission.objects.count() == 1, (
+        "Submission should be created for upload where first row is missing PDU number but subsequent rows have correct PDU number"
+    )
+    assert Submission.objects.first().paediatric_diabetes_unit.pz_code == "PZ004"

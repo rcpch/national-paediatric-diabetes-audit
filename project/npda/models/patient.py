@@ -1,45 +1,45 @@
 # python imports
-from datetime import date
 import logging
-from datetime import timedelta
+from datetime import date
 
 # django imports
 from django.apps import apps
 from django.contrib.gis.db import models
 from django.contrib.gis.db.models import (
-    CharField,
-    DateField,
-    PositiveSmallIntegerField,
     PointField,
 )
 from django.core.exceptions import ValidationError
-from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 
+# project imports
 from project.constants.adhd_asd import ADHD_ASD
 from project.constants.yes_no_unknown import YES_NO_UNKNOWN
+from project.npda.general_functions.headings import get_field_heading
+from project.npda.general_functions.justification_or_standard import (
+    get_field_justification_standard,
+    get_field_notes,
+)
 from project.npda.models.custom_validators import (
     validate_nhs_number,
     validate_unique_reference_number,
 )
 from project.npda.models.help_text_mixin import HelpTextMixin
-from project.npda.general_functions.headings import get_field_heading
-from project.npda.general_functions.justification_or_standard import (
-    get_field_notes,
-    get_field_justification_standard,
-)
 
-# npda imports
+# local imports
 from ...constants import (
+    CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING,
+    CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
+    CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING,
     DIABETES_TYPES,
     ETHNICITIES,
     SEX_TYPE,
-    CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING,
-    CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING,
-    CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
 )
 from ..general_functions import stringify_time_elapsed
-from .categorised_formfield_mixin import *
+from .categorised_formfield_mixin import (
+    CategorisedCharField,
+    CategorisedDateField,
+    CategorisedPositiveSmallIntegerField,
+)
 
 # Logging
 logger = logging.getLogger(__name__)

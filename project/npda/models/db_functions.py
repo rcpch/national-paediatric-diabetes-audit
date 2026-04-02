@@ -1,4 +1,4 @@
-from django.db.models import Func, F, DecimalField
+from django.db.models import DecimalField, Func
 
 
 class Round(Func):

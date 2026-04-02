@@ -946,6 +946,13 @@ CSV_DATA_TYPES_MINUS_DATES = {
     "Only complete if OTHER selected: Reason for admission (free text)": "string",
 }
 
+NONNULL_FIELDS = [
+    "Date of Birth",
+    "Diabetes Type",
+    "PDU Number",
+    "Visit/Appointment Date",
+]
+
 
 def get_csv_heading_objects_for_year_and_unique_identifier(
     dataset_year=2021, unique_identifier="england"
@@ -968,11 +975,3 @@ def get_csv_heading_objects_for_year_and_unique_identifier(
         return UNIQUE_IDENTIFIER_JERSEY + csv_heading_objects
     else:
         raise ValueError("unique_identifier must be either 'england' or 'jersey'")
-
-
-def get_all_visit_dates(dataset_year=None):
-    """Returns all the field headings for a the given dataset year vists. Used in test_all_visit_dates"""
-    if dataset_year and dataset_year >= 2026:
-        return ALL_VISIT_DATES_2026
-    else:
-        return ALL_VISIT_DATES_2021

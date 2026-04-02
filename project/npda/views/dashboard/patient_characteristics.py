@@ -1,35 +1,35 @@
 # Python imports
-from datetime import date, timedelta
+from datetime import timedelta
 from decimal import Decimal
 
-# Django imports
-from django.db.models import Q, F, Case, When, DecimalField, Func, Subquery, OuterRef
-from django.db.models.functions import Round
-from django.shortcuts import render
-
-# Third party imports
-from dateutil.relativedelta import relativedelta
 import pandas as pd
 import plotly.graph_objects as go
 
-# Project imports
-from project.npda.general_functions.audit_period import audit_period_for_audit_year
-from project.npda.models import Submission, Patient
+# Third party imports
+from dateutil.relativedelta import relativedelta
+
+# Django imports
+from django.db.models import Case, DecimalField, F, Q, When
+from django.db.models.functions import Round
+from django.shortcuts import render
+
+from project.constants import HBA1C_FORMATS
 from project.constants.colors import (
+    RCPCH_DARK_BLUE,
     RCPCH_LIGHT_BLUE,
     RCPCH_LIGHT_BLUE_TINT1,
-    RCPCH_YELLOW,
-    RCPCH_YELLOW_LIGHT_TINT1,
+    RCPCH_LIGHT_GREY,
+    RCPCH_LIGHTEST_GREY,
+    RCPCH_MID_GREY,
     RCPCH_PINK,
     RCPCH_PINK_LIGHT_TINT1,
-    RCPCH_MID_GREY,
-    RCPCH_LIGHT_GREY,
-    RCPCH_DARK_BLUE,
-    RCPCH_LIGHTEST_GREY,
+    RCPCH_YELLOW,
+    RCPCH_YELLOW_LIGHT_TINT1,
 )
-from project.constants import HBA1C_FORMATS
-from project.npda.models import Visit, AuditPeriod, PaediatricDiabetesUnit
-from project.npda.views.decorators import login_and_otp_required, check_data_permissions
+
+# Project imports
+from project.npda.models import Patient, Submission, Visit
+from project.npda.views.decorators import check_data_permissions, login_and_otp_required
 
 
 @login_and_otp_required()
@@ -120,12 +120,14 @@ def patient_ages(request, audit_period, pdu):
 
     number_of_patients = 0
 
-    current_submission = Submission.objects.get_submission_for_request(pdu, audit_period)
+    current_submission = Submission.objects.get_submission_for_request(
+        pdu, audit_period
+    )
 
     if current_submission:
-        all_patients_in_this_submission = current_submission.patients.all() 
+        all_patients_in_this_submission = current_submission.patients.all()
 
-        comparison_date = audit_period.kpi_calculation_date()
+        comparison_date = audit_period.start_date
 
         filter = Q()
         if request.POST.get("diabetes_type"):
@@ -234,7 +236,9 @@ def all_patient_charts(request, audit_period, pdu):
         "Unknown": 0,
     }
 
-    current_submission = Submission.objects.get_submission_for_request(pdu, audit_period)
+    current_submission = Submission.objects.get_submission_for_request(
+        pdu, audit_period
+    )
 
     if current_submission:
         all_patients_in_this_submission = current_submission.patients.all()
@@ -246,7 +250,6 @@ def all_patient_charts(request, audit_period, pdu):
             "index_of_multiple_deprivation_quintile",
             "diabetes_type",
         ):
-
             # Count the patients by IMD
             if patient["index_of_multiple_deprivation_quintile"] == 1:
                 imd_counts["1 (most deprived)"] += 1
@@ -288,7 +291,9 @@ def all_patient_charts(request, audit_period, pdu):
     else:
         # visits = return_eligible_visits(all_patients_in_this_submission, audit_year)
         visits = get_median_hba1c_by_patient(
-            audit_period.start_date, audit_period.end_date, all_patients_in_this_submission
+            audit_period.start_date,
+            audit_period.end_date,
+            all_patients_in_this_submission,
         )
         # Create a Pandas DataFrame
     df = pd.DataFrame(visits)
@@ -299,13 +304,9 @@ def all_patient_charts(request, audit_period, pdu):
     imd_hba1c_mmol_mol_box_plot = None
     if not df.empty:
         # We may not have IMD for all patients (invalid postcodes, ZZ99 etc)
-        df_all_with_imd = df.dropna(
-            subset=["index_of_multiple_deprivation_quintile"]
-        )
+        df_all_with_imd = df.dropna(subset=["index_of_multiple_deprivation_quintile"])
         # We may not have IMD for all patients (invalid postcodes, ZZ99 etc)
-        df_all_with_imd = df.dropna(
-            subset=["index_of_multiple_deprivation_quintile"]
-        )
+        df_all_with_imd = df.dropna(subset=["index_of_multiple_deprivation_quintile"])
         imd_hba1c_mmol_mol_box_plot = create_box_plot(
             df_all_with_imd,
             "index_of_multiple_deprivation_quintile",
@@ -447,7 +448,7 @@ def create_piechart(dict_counts, field):
                 "family": "Montserrat",
             },
         },
-        margin=dict(l=20, r=20, t=50, b=20),  # minimal margins
+        margin={"l": 20, "r": 20, "t": 50, "b": 20},  # minimal margins
         height=500,
         width=600,
     )
@@ -458,16 +459,17 @@ def create_piechart(dict_counts, field):
 def counts_are_zero(counts):
     return all(count == 0 for count in counts.values())
 
+
 def get_median_hba1c_by_patient(audit_start, audit_end, patients):
     """
     Retrieves the median HbA1c (mmol/mol) for each patient within the audit period,
     along with other patient demographics for plotting.
-    Somewhat duplicate code from the KPI class so could be rationalized. 
+    Somewhat duplicate code from the KPI class so could be rationalized.
     This filters all the visits for the patients in the audit period and then annotates
     the hba1c values to convert them to mmol/mol if they are in percent and vice versa.
     It then calculates the median of the visits per patient and returns the data.
     This is all now done in Python rather than SQL as it was getting too complex.
-    The function returns a list of dictionaries with the patient ID and their median HbA1c values as 
+    The function returns a list of dictionaries with the patient ID and their median HbA1c values as
     well as their demographics important for the box whisker plots.
     """
     visits_annotated = (
@@ -476,7 +478,8 @@ def get_median_hba1c_by_patient(audit_start, audit_end, patients):
             hba1c_date__gt=F("patient__diagnosis_date") + timedelta(days=90),
             patient__in=patients,
             hba1c__isnull=False,
-        ).annotate(
+        )
+        .annotate(
             hba1c_mmol_mol=Case(
                 When(
                     hba1c_format=HBA1C_FORMATS[0][0],
@@ -489,19 +492,20 @@ def get_median_hba1c_by_patient(audit_start, audit_end, patients):
                 default=F("hba1c"),
                 output_field=DecimalField(max_digits=5, decimal_places=2, null=True),
             ),
-        ).order_by("patient")
+        )
+        .order_by("patient")
     )
 
     # calculate medians in Python
     patient_hba1cs = {}
-    for visit in visits_annotated.values('patient', 'hba1c_mmol_mol'):
-        patient_id = visit['patient']
-        hba1c = visit['hba1c_mmol_mol']
+    for visit in visits_annotated.values("patient", "hba1c_mmol_mol"):
+        patient_id = visit["patient"]
+        hba1c = visit["hba1c_mmol_mol"]
         if hba1c is not None:
             if patient_id not in patient_hba1cs:
                 patient_hba1cs[patient_id] = []
             patient_hba1cs[patient_id].append(hba1c)
-    
+
     # Calculate median for each patient
     patient_medians = []
     for patient_id, hba1cs in patient_hba1cs.items():
@@ -510,34 +514,41 @@ def get_median_hba1c_by_patient(audit_start, audit_end, patients):
         if n == 0:
             continue
         if n % 2 == 0:
-            median = (sorted_hba1cs[n//2 - 1] + sorted_hba1cs[n//2]) / 2
+            median = (sorted_hba1cs[n // 2 - 1] + sorted_hba1cs[n // 2]) / 2
         else:
-            median = sorted_hba1cs[n//2]
-        patient_medians.append({'patient': patient_id, 'median_hba1c_mmol_mol': median})
-    
+            median = sorted_hba1cs[n // 2]
+        patient_medians.append({"patient": patient_id, "median_hba1c_mmol_mol": median})
+
     # Filter patients to only those with medians
-    patient_ids = [p['patient'] for p in patient_medians]
-    
+    patient_ids = [p["patient"] for p in patient_medians]
+
     # Create a dictionary mapping patient IDs to their median values for quicker lookup
-    median_map = {p['patient']: p['median_hba1c_mmol_mol'] for p in patient_medians}
-    
+    median_map = {p["patient"]: p["median_hba1c_mmol_mol"] for p in patient_medians}
+
     # Then get patient data and attach medians
-    patients_with_medians = list(Patient.objects.filter(pk__in=patient_ids).values(
-        'pk', 'nhs_number', 'sex', 'diabetes_type', 'index_of_multiple_deprivation_quintile'
-    ))
-    
+    patients_with_medians = list(
+        Patient.objects.filter(pk__in=patient_ids).values(
+            "pk",
+            "nhs_number",
+            "sex",
+            "diabetes_type",
+            "index_of_multiple_deprivation_quintile",
+        )
+    )
+
     # Attach median values and calculate percentage equivalent
     final_data = []
     for patient in patients_with_medians:
-        median_mmol_mol = median_map[patient['pk']]
-        median_percent = round(median_mmol_mol * Decimal("0.09148") + Decimal("2.152"), 1)
-        
-        patient['median_hba1c_mmol_mol'] = median_mmol_mol
-        patient['median_hba1c_percent'] = median_percent
+        median_mmol_mol = median_map[patient["pk"]]
+        median_percent = round(
+            median_mmol_mol * Decimal("0.09148") + Decimal("2.152"), 1
+        )
+
+        patient["median_hba1c_mmol_mol"] = median_mmol_mol
+        patient["median_hba1c_percent"] = median_percent
         final_data.append(patient)
-    
+
     return final_data
-    
 
 
 def _build_box_plot(
@@ -558,7 +569,7 @@ def _build_box_plot(
                     name=item,
                     marker_color="rgba(200, 200, 200, 0.5)",  # Light grey
                     fillcolor="rgba(220, 220, 220, 0.5)",  # Lighter grey
-                    line=dict(width=1, color="rgba(200, 200, 200, 0.5)"),
+                    line={"width": 1, "color": "rgba(200, 200, 200, 0.5)"},
                     boxpoints=False,  # Don't show outlier points
                     hoverinfo="name",
                     hovertemplate=f"{item}: No data available<extra></extra>",
@@ -568,9 +579,7 @@ def _build_box_plot(
     # For each category in the specified order, add a trace
     for item in category_order:
         # Find rows where patient field equals the current category
-        subset = (
-            df[df[f"{field}"] == item] if not df.empty else pd.DataFrame()
-        )
+        subset = df[df[f"{field}"] == item] if not df.empty else pd.DataFrame()
 
         if len(subset) > 0:
             # Category has data - add normal box plot
@@ -581,7 +590,7 @@ def _build_box_plot(
                     marker_color=line_colors[item],
                     fillcolor=fill_colors[item],
                     boxmean=True,
-                    hoverlabel=dict(bgcolor=fill_colors[item]),
+                    hoverlabel={"bgcolor": fill_colors[item]},
                     hoverinfo="y",
                 )
             )
@@ -594,7 +603,7 @@ def _build_box_plot(
                     x=[item] * len(subset),  # Position scatter points over the box
                     y=subset["median_hba1c_mmol_mol"],
                     mode="markers",
-                    marker=dict(color="black", size=3, opacity=0.6),
+                    marker={"color": "black", "size": 3, "opacity": 0.6},
                     name=f"{item} mmol/mol",
                     showlegend=False,  # Don't duplicate legend entries
                     customdata=custom_data,
@@ -609,7 +618,7 @@ def _build_box_plot(
                     name=item,
                     marker_color="rgba(200, 200, 200, 0.5)",  # Light grey
                     fillcolor="rgba(220, 220, 220, 0.5)",  # Lighter grey
-                    line=dict(width=1, color="rgba(200, 200, 200, 0.5)"),
+                    line={"width": 1, "color": "rgba(200, 200, 200, 0.5)"},
                     boxpoints=False,  # Don't show outlier points
                     hoverinfo="name",
                     hovertemplate=f"{item}: No data available<extra></extra>",
@@ -621,11 +630,11 @@ def _build_box_plot(
         title=title,
         yaxis_title="HbA1c (mmol/mol)",
         xaxis_title=xaxis_title,
-        xaxis=dict(
-            categoryorder="array",
-            categoryarray=category_order,
-        ),
-        legend=dict(traceorder="normal"),
+        xaxis={
+            "categoryorder": "array",
+            "categoryarray": category_order,
+        },
+        legend={"traceorder": "normal"},
     )
 
     fig.update_layout(
@@ -637,7 +646,7 @@ def _build_box_plot(
                 "family": "Montserrat",
             },
         },
-        margin=dict(l=20, r=20, t=50, b=20),  # minimal margins
+        margin={"l": 20, "r": 20, "t": 50, "b": 20},  # minimal margins
     )
 
     return fig

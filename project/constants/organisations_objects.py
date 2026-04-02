@@ -1,6 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional, Dict, Any
-
 
 # @dataclass
 # class PaediatricDiabetesUnit:
@@ -16,10 +14,10 @@ class Trust:
     town: str
     postcode: str
     country: str
-    telephone: Optional[str]
-    website: Optional[str]
+    telephone: str | None
+    website: str | None
     active: bool
-    published_at: Optional[str]
+    published_at: str | None
 
 
 @dataclass

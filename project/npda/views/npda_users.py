@@ -1,49 +1,55 @@
-from datetime import datetime, timedelta
 import logging
 import unicodedata
+from datetime import datetime, timedelta
 
 from django.apps import apps
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import login, authenticate
+from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.contrib.auth.views import PasswordResetView
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import PermissionDenied
-
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.html import strip_tags
-from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
-
-# third party imports
-from two_factor.views import LoginView as TwoFactorLoginView
+from django.views.generic.edit import CreateView, UpdateView
 from django_filters.views import FilterView
 from django_otp import devices_for_user, user_has_device
 
-from project.constants.user import AUDIT_CENTRE_COORDINATOR
-from .decorators import login_and_otp_required
+# third party imports
+from two_factor.views import LoginView as TwoFactorLoginView
+
 from project.npda.filtersets.npdauser_filterset import NPDAUserFilterSet
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 
-# RCPCH imports
-from ..models import NPDAUser, VisitActivity, OrganisationEmployer, AuditPeriod
-from ..forms.npda_user_form import NPDAUserForm, CaptchaAuthenticationForm
+from ...constants import (
+    AUDIT_CENTRE_COORDINATOR,
+    AUDIT_CENTRE_EDITOR,
+    AUDIT_CENTRE_READER,
+    RCPCH_AUDIT_TEAM,
+)
+from ..forms.npda_user_form import CaptchaAuthenticationForm, NPDAUserForm
 from ..general_functions import (
     construct_confirm_email,
-    send_email_to_recipients,
     group_for_role,
     organisations_adapter,
+    send_email_to_recipients,
 )
-from .mixins import LoginAndOTPRequiredMixin
-from .mixins import LoginAndOTPRequiredMixin
-from ...constants import RCPCH_AUDIT_TEAM, AUDIT_CENTRE_READER, AUDIT_CENTRE_EDITOR
+
+# RCPCH imports
+from ..models import AuditPeriod, NPDAUser, OrganisationEmployer, VisitActivity
+
+# RCPCH imports
+# RCPCH imports
 from ..signals import get_client_ip
+from .decorators import login_and_otp_required
+from .mixins import LoginAndOTPRequiredMixin
 
 # from ..signals import password_reset_sent
 
@@ -120,7 +126,7 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Filter
         return queryset
 
     def get_context_data(self, **kwargs):
-        context = super(NPDAUserListView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
         context["title"] = "NPDA Users"
         return context
 
@@ -725,7 +731,7 @@ class ResetPasswordForm(PasswordResetForm):
         email_field_name = NPDAUser.get_email_field_name()
         active_users = NPDAUser._default_manager.filter(
             **{
-                "%s__iexact" % email_field_name: email,
+                f"{email_field_name}__iexact": email,
                 "is_active": True,
             }
         )
@@ -821,7 +827,7 @@ class RCPCHLoginView(TwoFactorLoginView):
             messages.add_message(
                 self.request,
                 messages.ERROR,
-                f"Your password has expired. Please reset it.",
+                "Your password has expired. Please reset it.",
             )
             return redirect(reverse("password_reset"))
 

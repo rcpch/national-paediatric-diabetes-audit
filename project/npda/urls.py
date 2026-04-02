@@ -4,8 +4,16 @@ from django.urls import include, path
 
 from project.npda.forms.npda_user_form import NPDAUpdatePasswordForm
 from project.npda.views import (
+    NPDAUserCreateView,
+    NPDAUserListView,
+    NPDAUserLogsListView,
+    NPDAUserUpdateView,
+    PatientCreateView,
+    PatientDeleteView,
     PatientListView,
+    PatientUpdateView,
     PatientVisitsListView,
+    ResetPasswordView,
     SubmissionsListView,
     VisitCreateView,
     VisitDeleteView,
@@ -13,24 +21,21 @@ from project.npda.views import (
     npdauser_pdu_update,
 )
 
-from .views import *
-from .views.dashboard import dashboard, partials
-from .views.dashboard.patient_measurements import patient_measurements
-from .views.patient_report import patient_report
-from .views.dashboard.patient_characteristics import (
-    patient_ages,
-    all_patient_charts,
-)
-from .views.home import (
+from .tasks import test_task as celery_test_task
+from .views import (
+    csrf_fail,
     download_template,
-    new_home,
     feature_flags,
-    celery_test_task,
     home,
     index,
+    new_home,
+    upload_csv,
+    upload_csv_in_progress,
 )
-from .views.submissions import upload_csv, upload_csv_in_progress
-from .views.errors import csrf_fail
+from .views.dashboard import dashboard, partials
+from .views.dashboard.patient_characteristics import all_patient_charts, patient_ages
+from .views.dashboard.patient_measurements import patient_measurements
+from .views.patient_report import patient_report
 
 data_prefix = "period/<str:audit_period>/pdu/<str:pz_code>"
 

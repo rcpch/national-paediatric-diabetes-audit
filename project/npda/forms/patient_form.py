@@ -1,13 +1,10 @@
 # python imports
-from asgiref.sync import sync_to_async, async_to_sync
-from channels.db import database_sync_to_async
-
 import logging
 from datetime import date
 
 # project imports
 import nhs_number
-import httpx
+from channels.db import database_sync_to_async
 
 # third-party imports
 from dateutil.relativedelta import relativedelta
@@ -17,24 +14,25 @@ from django import forms
 from django.apps import apps
 from django.core.exceptions import ValidationError
 
-from ...constants.styles.form_styles import *
-from ...constants import LEAVE_PDU_REASONS, ADHD_ASD, YES_NO_UNKNOWN
-from ..models import Patient, Transfer
-from ..validators import not_in_the_future_validator
-from .external_patient_validators import validate_patient_sync
+from project.constants.patient_categories import (
+    PATIENT_CATEGORIES_2021,
+    PATIENT_CATEGORIES_2026,
+)
 from project.npda.general_functions.headings import (
-    get_field_heading,
     PATIENT_FIELD_HEADINGS_2021,
     PATIENT_FIELD_HEADINGS_2026,
+    get_field_heading,
 )
 from project.npda.general_functions.justification_or_standard import (
     get_field_justification_standard,
     get_field_notes,
 )
-from project.constants.patient_categories import (
-    PATIENT_CATEGORIES_2021,
-    PATIENT_CATEGORIES_2026,
-)
+
+from ...constants import ADHD_ASD, LEAVE_PDU_REASONS, YES_NO_UNKNOWN
+from ...constants.styles.form_styles import *
+from ..models import Patient, Transfer
+from ..validators import not_in_the_future_validator
+from .external_patient_validators import validate_patient_sync
 
 logger = logging.getLogger(__name__)
 
@@ -126,9 +124,7 @@ class PatientForm(forms.ModelForm):
         self.audit_period = kwargs.pop("audit_period", None)
         self.paediatric_diabetes_unit = kwargs.pop("paediatric_diabetes_unit", None)
         self.override_postcode = kwargs.pop("override_postcode", False)
-        self.dataset_year = (
-            self.audit_period.get_dataset_year() if self.audit_period else 2021
-        )
+
         super().__init__(*args, **kwargs)
         self._init_fields_by_dataset_year()
 

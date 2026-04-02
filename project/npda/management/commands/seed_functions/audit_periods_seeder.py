@@ -1,8 +1,7 @@
 import logging
-from datetime import datetime, date
+from datetime import date, datetime
 
 from django.apps import apps
-
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +20,7 @@ def audit_periods_seeder():
         )
     else:
         # 2023 was the last year with the old system
-        # we uploaded data from then to test this one 
+        # we uploaded data from then to test this one
         for year in range(2023, next_year + 1):
             audit_start_date = date(year, 4, 1)
             audit_end_date = date(year + 1, 3, 31)
@@ -31,5 +30,5 @@ def audit_periods_seeder():
                 is_visible=year <= this_year and audit_start_date <= now.date(),
                 start_date=audit_start_date,
                 end_date=audit_end_date,
-                slug=f"{audit_start_date.year}-{audit_end_date.year}"
+                slug=f"{audit_start_date.year}-{audit_end_date.year}",
             )

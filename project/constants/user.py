@@ -63,10 +63,10 @@ GROUPS = (
 
 READABLE_GROUPNAMES = {
     "trust_audit_team_coordinator_access": "Audit Centre Coordinator",
-    "trust_audit_team_edit_access": "Audit Centre Editor", 
+    "trust_audit_team_edit_access": "Audit Centre Editor",
     "trust_audit_team_view_only": "Audit Centre Reader",
     "npda_audit_team_full_access": "RCPCH Audit Team",
-    "patient_access": "RCPCH Audit Children and Family"
+    "patient_access": "RCPCH Audit Children and Family",
 }
 
 """

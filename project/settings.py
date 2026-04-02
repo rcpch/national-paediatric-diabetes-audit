@@ -10,23 +10,22 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+import logging
+import os
 from datetime import timedelta
 from pathlib import Path
-import os
-import logging
-
-from dotenv import load_dotenv
 
 #  django imports
 from django.core.management.utils import get_random_secret_key
+from dotenv import load_dotenv
 
 # Has to be before logging_settings as that reads ENABLE_REQUEST_LOGGING
-load_dotenv("envs/.env")
+load_dotenv("envs/.env")  # noqa:E402
+
+# no it is not an unused import, it pulls LOGGING into the settings file
+from .logging_settings import LOGGING  # noqa:F401,E402
 
 # RCPCH imports
-from .logging_settings import (
-    LOGGING,
-)  # no it is not an unused import, it pulls LOGGING into the settings file
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +82,9 @@ if DEBUG is True:
     LOCAL_DEV_ADMIN_EMAIL = os.getenv("LOCAL_DEV_ADMIN_EMAIL")
     LOCAL_DEV_ADMIN_PASSWORD = os.getenv("LOCAL_DEV_ADMIN_PASSWORD")
 
-    if os.environ.get("RUN_MAIN") == "true":  # Prevent double execution during reloading
+    if (
+        os.environ.get("RUN_MAIN") == "true"
+    ):  # Prevent double execution during reloading
         import debugpy
 
         DEBUGPY_PORT = os.getenv("DEBUGPY_PORT", None)
@@ -92,12 +93,16 @@ if DEBUG is True:
         else:
             try:
                 DEBUGPY_PORT = int(DEBUGPY_PORT)  # Convert to integer
-                debugpy.listen(("0.0.0.0", DEBUGPY_PORT))  # Ensure port matches in VSCode config
+                debugpy.listen(
+                    ("0.0.0.0", DEBUGPY_PORT)
+                )  # Ensure port matches in VSCode config
                 logger.debug(
                     f"Debugging is enabled on port {DEBUGPY_PORT}, waiting for debugger to attach..."
                 )
             except ValueError:
-                logger.error(f"Invalid DEBUGPY_PORT value: {DEBUGPY_PORT}. Must be an integer.")
+                logger.error(
+                    f"Invalid DEBUGPY_PORT value: {DEBUGPY_PORT}. Must be an integer."
+                )
 
 INSTANCE_LABEL = os.getenv("INSTANCE_LABEL")
 
@@ -198,7 +203,9 @@ SESSION_COOKIE_HTTPONLY = True  # cannot access session cookie on client-side us
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # session expires on browser close
 
 # Auto-logout
-if not (env_auto_logout_idle_time_seconds := os.environ.get("AUTO_LOGOUT_IDLE_TIME_SECONDS")):
+if not (
+    env_auto_logout_idle_time_seconds := os.environ.get("AUTO_LOGOUT_IDLE_TIME_SECONDS")
+):
     env_auto_logout_idle_time_seconds = 60 * 30  # Default: 30 minutes
     logger.warning(
         "ENV VAR AUTO_LOGOUT_IDLE_TIME_SECONDS MISSING: SETTING DEFAULT TIME: "
@@ -233,7 +240,9 @@ else:
 
 DATABASES = {"default": database_config}
 
-AUTHENTICATION_BACKENDS = ("django.contrib.auth.backends.ModelBackend",)  # this is default
+AUTHENTICATION_BACKENDS = (
+    "django.contrib.auth.backends.ModelBackend",
+)  # this is default
 
 
 # Password validation
@@ -241,7 +250,7 @@ AUTHENTICATION_BACKENDS = ("django.contrib.auth.backends.ModelBackend",)  # this
 
 AUTH_USER_MODEL = "npda.NPDAUser"
 LOGIN_URL = "two_factor:login"  # change LOGIN_URL to the 2fa one
-LOGIN_REDIRECT_URL = "home" # not used in practice, see RCPCHLoginView.get_success_url
+LOGIN_REDIRECT_URL = "home"  # not used in practice, see RCPCHLoginView.get_success_url
 LOGOUT_REDIRECT_URL = "two_factor:login"
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -300,13 +309,13 @@ PASSWORD_RESET_TIMEOUT = os.environ.get(
 
 SITE_CONTACT_EMAIL = os.environ.get("SITE_CONTACT_EMAIL")
 
-ADMINS = os.environ.get("ADMINS", '')
+ADMINS = os.environ.get("ADMINS", "")
 
 CHANGE_NOTIFICATION_EMAILS = os.getenv("CHANGE_NOTIFICATION_EMAILS", "").split(",")
 
 # Set the ADMINS variable to a list of tuples (name, email)
 if ADMINS:
-    ADMINS = [e.split(":") for e in  ADMINS.split(",")]
+    ADMINS = [e.split(":") for e in ADMINS.split(",")]
 
 
 # Static files (CSS, JavaScript, Images)
@@ -363,9 +372,9 @@ REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD")
 
 REDIS_USE_SSL = os.environ.get("REDIS_USE_SSL")
 
-redis_protocol = 'rediss' if REDIS_USE_SSL else 'redis'
+redis_protocol = "rediss" if REDIS_USE_SSL else "redis"
 redis_auth = f":{REDIS_PASSWORD}@" if REDIS_PASSWORD else ""
-redis_params = f"?ssl_cert_reqs=required" if REDIS_USE_SSL else ""
+redis_params = "?ssl_cert_reqs=required" if REDIS_USE_SSL else ""
 
 CELERY_BROKER_URL = f"{redis_protocol}://{redis_auth}{REDIS_HOSTNAME}:{REDIS_PORT}/{REDIS_DATABASE_NUMBER}{redis_params}"
 
@@ -382,6 +391,7 @@ ENABLE_REQUEST_LOGGING = os.getenv("ENABLE_REQUEST_LOGGING", "False") == "True"
 SILKY_AUTHENTICATION = True  # User must login
 SILKY_AUTHORISATION = True  # User must have permissions
 
+
 def silky_permissions(user):
     if user.is_superuser:
         # 2fa bypass for local dev
@@ -393,6 +403,7 @@ def silky_permissions(user):
 
     return False
 
+
 SILKY_PERMISSIONS = silky_permissions
 
 SILKY_MAX_REQUEST_BODY_SIZE = -1  # Silk takes anything <0 as no limit
@@ -401,11 +412,13 @@ SILKY_MAX_RESPONSE_BODY_SIZE = 1024  # If response body>1024 bytes, ignore
 SILKY_MAX_RECORDED_REQUESTS = 10**4
 SILKY_MAX_RECORDED_REQUESTS_CHECK_PERCENT = 1
 
+
 def silky_intercept_func(request):
     # Only profile NPDA routes (not login, captcha etc)
     if request.path.startswith("/period"):
         return True
 
     return False
+
 
 SILKY_INTERCEPT_FUNC = silky_intercept_func

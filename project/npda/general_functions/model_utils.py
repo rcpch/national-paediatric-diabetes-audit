@@ -45,5 +45,5 @@ def print_instance_field_attrs(instance):
     fields_dict = get_model_field_attrs_and_vals(instance)
     if fields_dict:
         logger.debug(
-            f"%s instance:\n%s", {instance.__class__}, pformat(fields_dict, indent=2)
+            "%s instance:\n%s", {instance.__class__}, pformat(fields_dict, indent=2)
         )

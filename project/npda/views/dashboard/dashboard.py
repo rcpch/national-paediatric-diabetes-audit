@@ -1,14 +1,14 @@
 # Python imports
-import logging
 import json
-from datetime import datetime, date
+import logging
+from datetime import date, datetime
 
 from django.shortcuts import render
 
-from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
 from project.npda.general_functions.breadcrumbs import data_breadcrumbs
+from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
 from project.npda.kpi_class.kpis import CalculateKPIS
-from project.npda.views.decorators import login_and_otp_required, check_data_permissions
+from project.npda.views.decorators import check_data_permissions, login_and_otp_required
 
 # LOGGING
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ def dashboard(request, audit_period, pdu):
     template = "dashboard.html"
     if request.htmx:
         template = "dashboard/dashboard_base.html"
-    
+
     current_date = date.today()
     current_datetime = datetime.now()
 
@@ -32,7 +32,9 @@ def dashboard(request, audit_period, pdu):
     if audit_period.start_date > current_date:
         # Future audit period - likely no data yet but you can still select it
         current_quarter = None
-        days_remaining_until_audit_end_date = (audit_period.end_date - current_date).days
+        days_remaining_until_audit_end_date = (
+            audit_period.end_date - current_date
+        ).days
     elif current_date > audit_period.end_date:
         # Past audit period
         current_quarter = None
@@ -40,8 +42,10 @@ def dashboard(request, audit_period, pdu):
     else:
         # Current audit period
         current_quarter = retrieve_quarter_for_date(current_date)
-        days_remaining_until_audit_end_date = (audit_period.end_date - current_date).days
-    
+        days_remaining_until_audit_end_date = (
+            audit_period.end_date - current_date
+        ).days
+
     calculate_kpis = CalculateKPIS(
         calculation_date=calculation_date, return_pt_querysets=True
     )
@@ -74,9 +78,9 @@ def dashboard(request, audit_period, pdu):
         # TODO: this should be an enum but we're currently not doing benchmarking so can update
         # at that point
         "aggregation_level": "pdu",
-        "breadcrumbs": data_breadcrumbs(pdu, audit_period, [
-            ("Unit Report", "pdu-dashboard")
-        ])
+        "breadcrumbs": data_breadcrumbs(
+            pdu, audit_period, [("Unit Report", "pdu-dashboard")]
+        ),
     }
 
     return render(request, template_name=template, context=context)

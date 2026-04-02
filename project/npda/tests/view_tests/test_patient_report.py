@@ -1,17 +1,20 @@
 """Tests for the patient report view"""
 
-from decimal import Decimal
 import logging
+from decimal import Decimal
 from http import HTTPStatus
 
-# Python imports
-from project.constants.smoking_status import SMOKING_STATUS
 import pytest
-from django.db.models import Count
+from dateutil.relativedelta import relativedelta
 
 # 3rd party imports
 from django.urls import reverse
 
+from project.constants.diabetes_types import DIABETES_TYPES
+from project.constants.hba1c_format import HBA1C_FORMATS
+
+# Python imports
+from project.constants.smoking_status import SMOKING_STATUS
 from project.npda.general_functions.data_generator_extended import (
     AgeRange,
     FakePatientCreator,
@@ -26,17 +29,14 @@ from project.npda.models.patient import Patient
 from project.npda.models.submission import Submission
 from project.npda.tests.constants_for_tests import ALDER_HEY_PZ_CODE
 from project.npda.tests.factories import (
-    test_user_rcpch_audit_team_data,
     test_user_audit_centre_editor_data,
+    test_user_rcpch_audit_team_data,
 )
-from project.npda.tests.utils import login_and_verify_user
-from project.npda.urls import patient_report_urlpatterns
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-from project.constants.diabetes_types import DIABETES_TYPES
-from project.constants.hba1c_format import HBA1C_FORMATS
+from project.npda.tests.utils import login_and_verify_user
+from project.npda.urls import patient_report_urlpatterns
 from project.npda.views.patient_report.patient_report import TableCategories
-from dateutil.relativedelta import relativedelta
 
 logger = logging.getLogger(__name__)
 
@@ -124,9 +124,9 @@ def test_no_duplicate_patients_in_report(
     assert len(response.context["patients"]) == N_PATIENTS
 
     # Check that there are no duplicate patients
-    duplicates = set(
+    duplicates = {
         patient["patient_identifier"] for patient in response.context["patients"]
-    )
+    }
     assert len(duplicates) == N_PATIENTS
 
 
@@ -1643,3 +1643,130 @@ def test_smoker_with_two_visits_one_with_smoking_cessation_referral_one_without_
     assert patient["patient_identifier"] == "4444444444"
     assert patient["smoking_status"] is True  # from the first visit
     assert patient["smoking_cessation_referral"] == "True"  # from the first visit
+
+
+@pytest.mark.django_db
+def test_smoking_cessation_referral_column_denominator_is_smokers_only(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    The 'Referral to smoking cessation service' column header facet should
+    show X / <smokers ≥ 12>, NOT X / <all T1 patients ≥ 12>.
+
+    Non-smokers are 'not required' for this measure, so they must not be
+    counted in the denominator.
+
+    Setup:
+        patient_smoker_referred   – ≥12, T1DM, smoker, cessation referral  → passes
+        patient_smoker_no_ref     – ≥12, T1DM, smoker, no cessation referral → fails
+        patient_non_smoker        – ≥12, T1DM, non-smoker                  → not required
+        patient_under_12          – <12, T1DM                               → not required (age)
+
+    Expected column header:  1 / 2  (only the two smokers are the denominator)
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    Patient.objects.all().delete()
+
+    start = audit_period.start_date
+
+    base_criteria = {
+        "diabetes_type": DIABETES_TYPES[0][0],  # T1DM
+        "diagnosis_date": start - relativedelta(years=2),
+        "transfer__date_leaving_service": None,
+    }
+
+    # ≥12 yo, smoker, has cessation referral → should PASS
+    patient_smoker_referred = PatientFactory(
+        nhs_number="1111111111",
+        date_of_birth=start - relativedelta(years=14),
+        **base_criteria,
+    )
+    VisitFactory(
+        patient=patient_smoker_referred,
+        visit_date=start + relativedelta(days=10),
+        height_weight_observation_date=start + relativedelta(days=10),
+        smoking_status=SMOKING_STATUS[1][0],  # current smoker
+        smoking_cessation_referral_date=start + relativedelta(days=10),
+    )
+
+    # ≥12 yo, smoker, no cessation referral → should FAIL (still in denominator)
+    patient_smoker_no_ref = PatientFactory(
+        nhs_number="2222222222",
+        date_of_birth=start - relativedelta(years=14),
+        **base_criteria,
+    )
+    VisitFactory(
+        patient=patient_smoker_no_ref,
+        visit_date=start + relativedelta(days=10),
+        height_weight_observation_date=start + relativedelta(days=10),
+        smoking_status=SMOKING_STATUS[1][0],  # current smoker
+        smoking_cessation_referral_date=None,
+    )
+
+    # ≥12 yo, non-smoker → NOT required, must NOT be counted in denominator
+    patient_non_smoker = PatientFactory(
+        nhs_number="3333333333",
+        date_of_birth=start - relativedelta(years=14),
+        **base_criteria,
+    )
+    VisitFactory(
+        patient=patient_non_smoker,
+        visit_date=start + relativedelta(days=10),
+        smoking_status=SMOKING_STATUS[0][0],  # non-smoker
+        smoking_cessation_referral_date=None,
+    )
+
+    # <12 yo → NOT required (age), must NOT be counted in denominator
+    patient_under_12 = PatientFactory(
+        nhs_number="4444444444",
+        date_of_birth=start - relativedelta(years=10),
+        **base_criteria,
+    )
+    VisitFactory(
+        patient=patient_under_12,
+        visit_date=start + relativedelta(days=10),
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
+        submission_date=start,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(
+        patient_smoker_referred,
+        patient_smoker_no_ref,
+        patient_non_smoker,
+        patient_under_12,
+    )
+
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": audit_period.slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
+    response = client.get(
+        url + f"?category={TableCategories.ADDITIONAL_CARE_PROCESSES.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    # Only the two smokers should be in the denominator
+    assert response.context["total_eligible_smoking_cessation_referral"] == 2, (
+        "Denominator should be smokers ≥12 only, not all T1 patients ≥12"
+    )
+    # Only the one with a referral should pass
+    assert response.context["total_passed_smoking_cessation_referral"] == 1

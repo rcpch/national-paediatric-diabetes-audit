@@ -1,8 +1,8 @@
 import pandas as pd
 
 from project.constants.csv_headings import CSV_HEADING_OBJECTS, CSV_HEADING_OBJECTS_2026
-from project.constants.sex_types import SEX_TYPE
 from project.constants.ethnicities import ETHNICITIES
+from project.constants.sex_types import SEX_TYPE
 
 
 def most_recent_modal_value_by_visit_date(values_by_date, unknown_value):

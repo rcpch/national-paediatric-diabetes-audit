@@ -1,35 +1,29 @@
+import random
 from datetime import date, timedelta
 from enum import Enum
-import random
 
 from django.db import transaction
-from project.npda.general_functions.audit_period import (
-    get_audit_period_for_date,
-    get_quarters_for_audit_period,
+
+# Importing constants
+from project.constants import (
+    ALBUMINURIA_STAGES,
+    CLOSED_LOOP_TYPES,
+    DKA_ADDITIONAL_THERAPIES,
+    GLUCOSE_MONITORING_TYPES,
+    HBA1C_FORMATS,
+    HOSPITAL_ADMISSION_REASONS,
+    RETINAL_SCREENING_RESULTS,
+    SMOKING_STATUS,
+    THYROID_TREATMENT_STATUS,
+    TREATMENT_TYPES,
+    YES_NO_UNKNOWN,
 )
+from project.npda.general_functions.audit_period import get_quarters_for_audit_period
 from project.npda.general_functions.random_date import get_random_date
 from project.npda.models.patient import Patient
 from project.npda.models.visit import Visit
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-
-# Importing constants
-from project.constants import (
-    SEX_TYPE,
-    DIABETES_TYPES,
-    ETHNICITIES,
-    HBA1C_FORMATS,
-    GLUCOSE_MONITORING_TYPES,
-    TREATMENT_TYPES,
-    YES_NO_UNKNOWN,
-    RETINAL_SCREENING_RESULTS,
-    ALBUMINURIA_STAGES,
-    THYROID_TREATMENT_STATUS,
-    SMOKING_STATUS,
-    HOSPITAL_ADMISSION_REASONS,
-    DKA_ADDITIONAL_THERAPIES,
-    CLOSED_LOOP_TYPES,
-)
 
 
 class AgeRange(Enum):
@@ -67,7 +61,6 @@ class HbA1cTargetRange(Enum):
 
 
 class FakePatientCreator:
-
     DEFAULT_VISIT_TYPE = [
         VisitType.CLINIC,
         VisitType.CLINIC,
@@ -104,10 +97,10 @@ class FakePatientCreator:
         `gp_practice_ods_code="SE13 5PJ". Values not explicity passed in will be set to defaults
         defined in the PatientFactory.
         """
-        if self.postcode_outcode and not "postcode" in patient_kwargs:
-            patient_kwargs['postcode_outcode'] = self.postcode_outcode
-        elif self.postcode and not "postcode" in patient_kwargs:
-            patient_kwargs['postcode'] = self.postcode
+        if self.postcode_outcode and "postcode" not in patient_kwargs:
+            patient_kwargs["postcode_outcode"] = self.postcode_outcode
+        elif self.postcode and "postcode" not in patient_kwargs:
+            patient_kwargs["postcode"] = self.postcode
 
         new_pts = PatientFactory.build_batch(
             size=n,
@@ -156,7 +149,10 @@ class FakePatientCreator:
                 for period in visit_periods:
                     # patient.diagnosis_date >= period.start_date and patient.diagnosis_date <= period.end_date
                     # NB dates are inclusive! (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1248)
-                    if patient.diagnosis_date >= period[0] and patient.diagnosis_date <= period[1]:
+                    if (
+                        patient.diagnosis_date >= period[0]
+                        and patient.diagnosis_date <= period[1]
+                    ):
                         start = max(patient.diagnosis_date, period[0])
                         usable_visit_periods.append((start, period[1]))
 
@@ -167,7 +163,9 @@ class FakePatientCreator:
             for visit_type in visit_types:
                 visit_period = visit_periods[visit_period_ix]
                 # get_random_date is exclusive of end date (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1248)
-                visit_date = get_random_date(visit_period[0], visit_period[1] + timedelta(days=1))
+                visit_date = get_random_date(
+                    visit_period[0], visit_period[1] + timedelta(days=1)
+                )
 
                 # Get the correct kwarg measurements for the visit type
                 # These will be fed into this VisitFactory's.build() call
@@ -189,7 +187,7 @@ class FakePatientCreator:
                 visits.append(visit)
 
                 visit_period_ix = (visit_period_ix + 1) % len(visit_periods)
-                    
+
         return visits
 
     def create_and_save_fake_patients(
@@ -235,6 +233,8 @@ class FakePatientCreator:
             patients = PatientFactory.create_batch(
                 size=n,
                 age_range=age_range,
+                audit_start_date=self.audit_start_date,
+                audit_end_date=self.audit_end_date,
                 # We're going to manually create visits for each patient
                 visit=None,
                 **patient_kwargs,
@@ -433,7 +433,9 @@ class FakePatientCreator:
             dietician_additional_appointment_date: date
         """
         dietician_additional_appointment_offered = random.choice(YES_NO_UNKNOWN)[0]
-        dietician_additional_appointment_date = visit_date if dietician_additional_appointment_offered == 1 else None
+        dietician_additional_appointment_date = (
+            visit_date if dietician_additional_appointment_offered == 1 else None
+        )
         return {
             "dietician_additional_appointment_offered": dietician_additional_appointment_offered,
             "dietician_additional_appointment_date": dietician_additional_appointment_date,
@@ -468,8 +470,14 @@ class FakePatientCreator:
         hospital_admission_date = visit_date
         hospital_discharge_date = visit_date
         hospital_admission_reason = random.choice(HOSPITAL_ADMISSION_REASONS)[0]
-        dka_additional_therapies = random.choice(DKA_ADDITIONAL_THERAPIES)[0] if hospital_admission_reason == 2 else None
-        hospital_admission_other = "test admission description" if hospital_admission_reason == 6 else None
+        dka_additional_therapies = (
+            random.choice(DKA_ADDITIONAL_THERAPIES)[0]
+            if hospital_admission_reason == 2
+            else None
+        )
+        hospital_admission_other = (
+            "test admission description" if hospital_admission_reason == 6 else None
+        )
         return {
             "hospital_admission_date": hospital_admission_date,
             "hospital_discharge_date": hospital_discharge_date,

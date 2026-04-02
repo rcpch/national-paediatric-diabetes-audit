@@ -1,7 +1,7 @@
 from datetime import date
 
 from django.contrib.gis.db import models
-from django.core.exceptions import ValidationError, PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 
 
 class AuditPeriodManager(models.Manager):
@@ -29,7 +29,7 @@ class AuditPeriodManager(models.Manager):
             audit_period = AuditPeriod.objects.get(slug=slug)
         except AuditPeriod.DoesNotExist as e:
             if not can_view_all_data:
-                raise PermissionDenied(f"Audit period {slug} does not exist")
+                raise PermissionDenied(f"Audit period {slug} does not exist") from e
 
             raise e
 
@@ -85,9 +85,13 @@ class AuditPeriod(models.Model):
     def clean(self):
         if self.end_date <= self.start_date:
             raise ValidationError("Audit start date must be before the audit end date.")
-    
+
     def previous_audit_period(self):
-        return AuditPeriod.objects.filter(end_date__lt=self.start_date).order_by("-end_date").first()
+        return (
+            AuditPeriod.objects.filter(end_date__lt=self.start_date)
+            .order_by("-end_date")
+            .first()
+        )
 
     def __str__(self):
         return f"AuditPeriod {self.start_date} - {self.end_date}"

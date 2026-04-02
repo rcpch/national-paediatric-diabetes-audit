@@ -1,40 +1,35 @@
 # python imports
-import logging
 import json
-from datetime import date
-
-# Django imports
-from django.apps import apps
-from django.contrib import messages
-from django.contrib.gis.db.models.functions import Distance
-from django.contrib.gis.geos import Point
-from django.contrib.messages.views import SuccessMessageMixin
-from django.contrib.auth.mixins import PermissionRequiredMixin
-from django.db.models import Count, Case, When, Max, Q, F
-from django.forms import BaseForm
-from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, render, redirect
-from django.urls import reverse_lazy
-from django.utils import timezone
-from django.views.generic.edit import CreateView, UpdateView, DeleteView
-from django.views.generic import ListView
-from project.npda.general_functions.categories import get_tabs
-
+import logging
 
 # Third party imports
 import nhs_number
 
+# Django imports
+from django.apps import apps
+from django.contrib import messages
+from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.contrib.gis.db.models.functions import Distance
+from django.contrib.gis.geos import Point
+from django.contrib.messages.views import SuccessMessageMixin
+from django.db.models import Case, Count, F, Max, Q, When
+from django.forms import BaseForm
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse_lazy
+from django.utils import timezone
+from django.views.generic import CreateView, DeleteView, ListView, UpdateView
+
+# Third party imports
 # Project imports
 from project.npda.general_functions import (
-    organisations_adapter,
+    data_breadcrumbs,
     fetch_organisation_by_ods_code,
+    patient_breadcrumbs,
     retrieve_quarter_for_date,
     visit_falls_within_audit_period_Q_object,
-    data_breadcrumbs,
-    patient_breadcrumbs,
 )
-from project.npda.models import NPDAUser, Patient, Submission, AuditPeriod
-from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
+from project.npda.models import NPDAUser, Patient, Submission
 
 # RCPCH imports
 from ..forms.patient_form import PatientForm
@@ -197,7 +192,6 @@ class PatientListView(
         if submission and submission.errors:
             submission_errors = json.loads(submission.errors)
 
-            error_count = 0
             for errors_for_visit in submission_errors.values():
                 for errors_for_field in errors_for_visit.values():
                     submission_error_count += len(errors_for_field)
@@ -217,7 +211,6 @@ class PatientListView(
         seen_first_error = False
         seen_first_valid = False
         seen_first_valid_incomplete_full_year = False
-        seen_first_died = False
 
         context["search_input_list"] = self.split_search_string(
             search_string=self.request.GET.get("search-input", "")
@@ -327,7 +320,6 @@ class PatientCreateView(
                 ("Add patient", "pdu-patient-add"),
             ],
         )
-        context["audit_period"] = self.audit_period
         return context
 
     def form_invalid(self, form):
@@ -429,7 +421,7 @@ class PatientUpdateView(
     def get_context_data(self, **kwargs):
         Transfer = apps.get_model("npda", "Transfer")
         patient = get_object_or_404(Patient, pk=self.kwargs["pk"])
-        transfer = Transfer.objects.get(patient=patient)
+        Transfer.objects.get(patient=patient)
         context = super().get_context_data(**kwargs)
         context["pdu"] = self.pdu
         context["title"] = "Edit Child Details"
@@ -440,10 +432,6 @@ class PatientUpdateView(
         context["breadcrumbs"] = patient_breadcrumbs(
             self.pdu, self.audit_period, patient, []
         )
-        context["audit_period"] = self.audit_period
-        context["date_leaving_service"] = transfer.date_leaving_service
-        context["reason_leaving_service"] = transfer.reason_leaving_service
-        # Provide tabs structure for patient form
         return context
 
     def form_valid(self, form: BaseForm) -> HttpResponse:

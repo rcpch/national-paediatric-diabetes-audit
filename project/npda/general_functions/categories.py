@@ -1,4 +1,5 @@
 import urllib.parse
+
 from ...constants.visit_categories import VISIT_CATEGORIES_BY_TAB
 
 
@@ -34,6 +35,9 @@ def get_categories(instance, form):
                 if instance.errors:
                     for field in instance.errors.keys():
                         if field in fields:
+                            errors[field] = [
+                                error["message"] for error in instance.errors[field]
+                            ]
                             errors[field] = [
                                 error["message"] for error in instance.errors[field]
                             ]

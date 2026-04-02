@@ -3,14 +3,12 @@ Seeds NPDA Users in test db once per session.
 """
 
 # Standard imports
+import logging
+
 import pytest
-
-from django.apps import apps
-
 
 # NPDA Imports
 from project.npda.models import AuditPeriod
-import logging
 
 logger = logging.getLogger(__name__)
 

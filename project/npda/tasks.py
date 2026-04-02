@@ -1,16 +1,16 @@
-import logging
 import io
+import logging
 
-from celery import shared_task
 from asgiref.sync import async_to_sync
+from celery import shared_task
 
-from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
-from project.npda.models.submission import Submission
 from project.npda.general_functions.csv import (
     csv_parse,
     csv_upload,
     tidy_up_old_submissions,
 )
+from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
+from project.npda.models.submission import Submission
 
 logger = logging.getLogger(__name__)
 

@@ -1,30 +1,25 @@
-import logging
 import io
-
+import logging
 from collections import defaultdict
 from datetime import datetime, timedelta
 from enum import Enum
 
-from dateutil.relativedelta import relativedelta
 import pandas as pd
-from django.db.models import (
-    F,
-    Q,
-    Value,
-)
+from dateutil.relativedelta import relativedelta
+from django.db.models import QuerySet
 
 # Django imports
 from django.http import HttpResponse
 from django.views.generic import ListView
+
 from project.npda.general_functions.breadcrumbs import data_breadcrumbs
-from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.general_functions.patient_report import (
     queries as patient_report_queries,
 )
-from project.npda.models import Patient, AuditPeriod
+from project.npda.kpi_class.kpis import CalculateKPIS
+from project.npda.models import AuditPeriod, Patient
 from project.npda.views.decorators import check_data_permissions, login_and_otp_required
-from project.npda.views.mixins import PDUPermissionMixin, LoginAndOTPRequiredMixin
-from django.db.models import QuerySet
+from project.npda.views.mixins import LoginAndOTPRequiredMixin, PDUPermissionMixin
 
 logger = logging.getLogger(__name__)
 
@@ -257,9 +252,7 @@ def calculate_queryset(
         return pt_qs, calculate_kpis, patient_identifier
 
     if selected_category == TableCategories.TREATMENT.value:
-        pt_qs = patient_report_queries.annotate_treatment(
-            base_qs, audit_period
-        ).values(
+        pt_qs = patient_report_queries.annotate_treatment(base_qs, audit_period).values(
             "pk",
             "patient_identifier",
             "is_complete_year_of_care",
@@ -453,9 +446,10 @@ class PatientReportView(
 
             def get_patient_ids_and_count(**kwargs):
                 patient_queryset = self.object_list.filter(**kwargs)
-                return patient_queryset.values_list(
-                    "pk", flat=True
-                ), patient_queryset.count()
+                return (
+                    patient_queryset.values_list("pk", flat=True),
+                    patient_queryset.count(),
+                )
 
             def add_kpi_total(
                 context, kpi_name, kpi_result, patient_ids, patient_count
@@ -518,9 +512,10 @@ class PatientReportView(
 
             def get_patient_ids_and_count(**kwargs):
                 patient_queryset = self.object_list.filter(**kwargs)
-                return patient_queryset.values_list(
-                    "pk", flat=True
-                ), patient_queryset.count()
+                return (
+                    patient_queryset.values_list("pk", flat=True),
+                    patient_queryset.count(),
+                )
 
             def add_kpi_total(
                 context, kpi_name, kpi_result, patient_ids, patient_count
@@ -539,6 +534,15 @@ class PatientReportView(
                 is_complete_year_of_care=True,
                 date_of_birth__lte=self.audit_period.start_date
                 - relativedelta(years=12),
+            )
+
+            # Smoking cessation denominator: only smokers ≥12 (non-smokers are
+            # "not required" and must not inflate the column header count)
+            complete_year_smokers_12plus = get_patient_ids_and_count(
+                is_complete_year_of_care=True,
+                date_of_birth__lte=self.audit_period.start_date
+                - relativedelta(years=12),
+                smoking_cessation_referral__in=["True", "False"],
             )
 
             for kpi_name, kpi_result, (patient_ids, patient_count) in [
@@ -580,7 +584,7 @@ class PatientReportView(
                 (
                     "smoking_cessation_referral",
                     self.calculate_kpis.calculate_kpi_36_referral_to_smoking_cessation_service(),
-                    complete_year_12plus,
+                    complete_year_smokers_12plus,
                 ),
             ]:
                 add_kpi_total(context, kpi_name, kpi_result, patient_ids, patient_count)
