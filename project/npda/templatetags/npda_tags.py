@@ -9,10 +9,8 @@ from django.contrib.gis.measure import D
 from django.urls import reverse
 from django.utils.html import conditional_escape, mark_safe
 
-from ...constants import (  # VisitCategories,
-    CSV_HEADING_OBJECTS,
-    UNIQUE_IDENTIFIER_ENGLAND,
-    UNIQUE_IDENTIFIER_JERSEY,
+from ...constants import (
+    get_csv_heading_objects_for_year_and_unique_identifier,
 )
 
 register = template.Library()
@@ -40,18 +38,14 @@ class_re = re.compile(r'(?<=class=["\'])(.*)(?=["\'])')
 
 
 @register.simple_tag
-def heading_for_field(pz_code, field):
+def heading_for_field(pz_code, field, dataset_year=2021):
     """
     Returns the heading for a given field
     """
-    if pz_code == "PZ248":
-        # Jersey
-        CSV_HEADINGS = CSV_HEADING_OBJECTS + UNIQUE_IDENTIFIER_JERSEY
-    else:
-        # England
-        CSV_HEADINGS = CSV_HEADING_OBJECTS + UNIQUE_IDENTIFIER_ENGLAND
-
-    CSV_HEADINGS = [item["heading"] for item in CSV_HEADINGS]
+    unique_identifier = "jersey" if pz_code == "PZ248" else "england"
+    CSV_HEADINGS = get_csv_heading_objects_for_year_and_unique_identifier(
+        dataset_year=dataset_year, unique_identifier=unique_identifier
+    )
     for item in CSV_HEADINGS:
         if field == item["model_field"]:
             return item["heading"]

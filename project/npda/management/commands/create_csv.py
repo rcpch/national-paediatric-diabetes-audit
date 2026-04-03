@@ -97,13 +97,8 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from project.constants.csv_headings import (
-    ALL_DATES,
-    CSV_DATA_TYPES_MINUS_DATES,
-    CSV_HEADING_OBJECTS,
     ENGLAND_CSV_DATA_TYPES,
     JERSEY_CSV_DATA_TYPES,
-    UNIQUE_IDENTIFIER_ENGLAND,
-    UNIQUE_IDENTIFIER_JERSEY,
 )
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.npda.general_functions.audit_period import get_audit_period_for_date
@@ -218,6 +213,12 @@ class Command(BaseCommand):
             choices=["0_4", "5_10", "11_15", "16_19", "20_25"],
             help="Age range for patients to be seeded.",
         )
+        parser.add_argument(
+            "--audit_year",
+            type=int,
+            help="Audit year for the data.",
+            default="2024",
+        )
 
         # Mutually exclusive group for --build and --coalesce
         mutex_group = parser.add_mutually_exclusive_group(required=True)
@@ -277,6 +278,7 @@ class Command(BaseCommand):
         pdu = parsed_values["pz_code"]
         output_path = parsed_values["output_path"]
         build_flag = parsed_values["build_flag"]
+        dataset_year = parsed_values["dataset_year"]
 
         # PRINT INFORMATION
         # Header
@@ -288,7 +290,9 @@ class Command(BaseCommand):
             ["Submission Date", submission_date],
             ["Audit Start Date", audit_start_date],
             ["Audit End Date", audit_end_date],
+            ["Audit Year", dataset_year],
         ]
+
         for item in build_info:
             self.print_info(f"{CYAN}{item[0]:<30}{RESET} {item[1]}")
 
@@ -313,6 +317,7 @@ class Command(BaseCommand):
                 postcode or postcode_outcode,
             ],
             ["PZ Code", pdu],
+            ["Audit Year", dataset_year],
         ]
 
         self.print_info("-" * 45)
@@ -343,6 +348,7 @@ class Command(BaseCommand):
             build_flag,
             postcode,
             postcode_outcode,
+            dataset_year,
         )
         self.print_success(f"✨ CSV generated successfully at {self.csv_name}.\n")
         if build_flag:
@@ -363,6 +369,7 @@ class Command(BaseCommand):
         build_flag,
         postcode,
         postcode_outcode,
+        dataset_year=2021,
     ):
 
         # Start csv logic
@@ -401,7 +408,9 @@ class Command(BaseCommand):
         else:
             is_jersey = False
 
-        csv_map = self._get_map_model_csv_heading_field(is_jersey=is_jersey)
+        csv_map = self._get_map_model_csv_heading_field(
+            is_jersey=is_jersey, dataset_year=dataset_year
+        )
 
         # Initialise data list, where each item is a dict relating to a row in the csv
         # Each dict will have keys as csv headings and values as the data
@@ -444,7 +453,9 @@ class Command(BaseCommand):
 
         is_jersey = True if pdu == "PZ248" else False
 
-        df = self._set_valid_dtypes(pd.DataFrame(data), is_jersey)
+        df = self._set_valid_dtypes(
+            pd.DataFrame(data), is_jersey=is_jersey, dataset_year=dataset_year
+        )
 
         self.csv_name = self._get_file_name(
             n_pts_to_seed=n_pts_to_seed,
@@ -534,31 +545,26 @@ class Command(BaseCommand):
 
         return
 
-    def _set_valid_dtypes(self, df: pd.DataFrame, is_jersey=False) -> pd.DataFrame:
+    def _set_valid_dtypes(
+        self, df: pd.DataFrame, is_jersey=False, dataset_year=2021
+    ) -> pd.DataFrame:
         """Sets the correct data types for the dataframe, making them same as original
         dummy_sheet_invalid.csv file (to ensure we handle errors).
         """
+        all_dates = get_all_dates(dataset_year)
+        unique_identifier = "jersey" if is_jersey else "england"
+        heading_objects = get_csv_heading_objects_for_year_and_unique_identifier(
+            dataset_year=dataset_year, unique_identifier=unique_identifier
+        )
+        TEMPLATE_HEADERS = [obj["heading"] for obj in heading_objects]
+        column_types = get_csv_data_types_minus_dates(dataset_year)
         if is_jersey:
-            CSV_DATA_TYPES_MINUS_DATES.update(JERSEY_CSV_DATA_TYPES)
-            TEMPLATE_HEADERS = pd.read_csv(
-                "project/npda/dummy_sheets/npda_csv_submission_template_for_use_from_april_2025.csv"
-            ).columns
+            column_types = JERSEY_CSV_DATA_TYPES | column_types
         else:
-            CSV_DATA_TYPES_MINUS_DATES.update(ENGLAND_CSV_DATA_TYPES)
-            TEMPLATE_HEADERS = pd.read_csv(
-                "project/npda/dummy_sheets/npda_csv_submission_template_for_use_from_april_2021.csv"
-            ).columns
-
-        for header in df.columns:
-            if header in ALL_DATES:
-                continue
-            print(
-                f"Column: {header}, dtype: {df[header].dtype}, unique values: {df[header].unique()}"
-            )
-            print(f"Original dtype: {CSV_DATA_TYPES_MINUS_DATES[header]}")
+            column_types = ENGLAND_CSV_DATA_TYPES | column_types
 
         # Set dtypes for non-date columns
-        df = self.clean_and_cast(df, CSV_DATA_TYPES_MINUS_DATES)
+        df = self.clean_and_cast(df, column_types)
 
         df = (
             df.assign(
@@ -567,7 +573,7 @@ class Command(BaseCommand):
                     date_header: lambda x, date_header=date_header: pd.to_datetime(
                         x[date_header], format="%d/%m/%Y", errors="coerce"
                     )
-                    for date_header in ALL_DATES
+                    for date_header in all_dates
                 },
             )
             # # Reorder columns
@@ -576,7 +582,7 @@ class Command(BaseCommand):
         df = df[TEMPLATE_HEADERS]
 
         # Ensure the formatting is right for validation
-        for date_header in ALL_DATES:
+        for date_header in all_dates:
             df[date_header] = df[date_header].dt.strftime("%d/%m/%Y")
 
         return df
@@ -584,6 +590,8 @@ class Command(BaseCommand):
     def clean_and_cast(self, df, column_types):
         try:
             for column, dtype in column_types.items():
+                if column not in df.columns:
+                    continue
                 if dtype.startswith("Int"):  # Handle nullable integers
                     df[column] = (
                         df[column]
@@ -603,15 +611,13 @@ class Command(BaseCommand):
                     df[column] = df[column].replace({None: np.nan}).astype(dtype)
                 else:
                     raise ValueError(
-                        f"Unsupported dtype from CSV_DATA_TYPES_MINUS_DATES: {dtype}\n (for {column=} {df[column].dtype=})"
+                        f"Unsupported dtype: {dtype}\n (for {column=} {df[column].dtype=})"
                     )
         # Catch and throw error again to log the column and dtype
         # Cant continue
         except Exception as e:
             logger.error(f"ERROR in clean_and_cast: {e}")
-            logger.error(
-                f"CSV_DATA_TYPES_MINUS_DATES {column=} {dtype=}\n{df[column].dtype=}"
-            )
+            logger.error(f"column_types {column=} {dtype=}\n{df[column].dtype=}")
             raise e
 
         return df
@@ -710,6 +716,7 @@ class Command(BaseCommand):
             "postcode": postcode,
             "postcode_outcode": postcode_outcode,
             "build_flag": build_flag,
+            "dataset_year": audit_start_date.year,
         }
 
     def _get_file_name(
@@ -753,7 +760,7 @@ class Command(BaseCommand):
 
         return "".join(rendered_vt_names)
 
-    def _get_map_model_csv_heading_field(self, is_jersey) -> dict:
+    def _get_map_model_csv_heading_field(self, is_jersey, dataset_year=2021) -> dict:
         """Generates dict that looks like:
 
         {
@@ -775,10 +782,10 @@ class Command(BaseCommand):
 
         map_model_csv_heading_field = defaultdict(dict)
 
-        if is_jersey:
-            CSV_HEADINGS = UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
-        else:
-            CSV_HEADINGS = UNIQUE_IDENTIFIER_ENGLAND + CSV_HEADING_OBJECTS
+        unique_identifier = "jersey" if is_jersey else "england"
+        CSV_HEADINGS = get_csv_heading_objects_for_year_and_unique_identifier(
+            dataset_year=dataset_year, unique_identifier=unique_identifier
+        )
 
         for item in CSV_HEADINGS:
             # pdu no longer has model defined

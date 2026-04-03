@@ -1393,8 +1393,7 @@ def return_heading_model_field(field):
     """
     Return the heading for a given model field
     """
-
-    for heading in CSV_HEADING_OBJECTS:
-        if heading["model_field"] == field:
-            return heading["heading"]
+    definition = csv_definition_for(field)
+    if definition:
+        return definition["heading"]
     return None

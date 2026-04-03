@@ -7,9 +7,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 
 from ....constants.csv_headings import (
-    CSV_HEADING_OBJECTS,
-    UNIQUE_IDENTIFIER_ENGLAND,
-    UNIQUE_IDENTIFIER_JERSEY,
+    get_csv_heading_objects_for_year_and_unique_identifier,
 )
 from ....npda.models.visit import Visit
 from ..write_errors_to_xlsx import write_errors_to_xlsx
@@ -60,11 +58,14 @@ def export_as_csv(request, submission):
 
     pz_code = submission.paediatric_diabetes_unit.pz_code
     is_jersey = pz_code == "PZ248"
+    dataset_year = (
+        submission.audit_period.get_dataset_year() if submission.audit_period else 2021
+    )
 
-    if is_jersey:
-        HEADINGS_LIST = UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
-    else:
-        HEADINGS_LIST = UNIQUE_IDENTIFIER_ENGLAND + CSV_HEADING_OBJECTS
+    unique_identifier = "jersey" if is_jersey else "england"
+    HEADINGS_LIST = get_csv_heading_objects_for_year_and_unique_identifier(
+        dataset_year=dataset_year, unique_identifier=unique_identifier
+    )
 
     header = [row["heading"] for row in HEADINGS_LIST]
     writer.writerow(header)
