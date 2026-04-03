@@ -707,155 +707,24 @@ def csv_definition_for(model_field_or_column: str, dataset_year=None):
     return None
 
 
-# Date field lists
-ALL_DATES_2021 = [
-    "Date of Birth",
-    "Date of Diabetes Diagnosis",
-    "Date of leaving service",
-    "Death Date",
-    "Visit/Appointment Date",
-    "Observation Date (Height and weight)",
-    "Observation Date: Hba1c Value",
-    "Observation Date (Blood Pressure)",
-    "Foot Assessment / Examination Date",
-    "Retinal Screening date",
-    "Observation Date: Urinary Albumin Level",
-    "Observation Date: Total Cholesterol Level",
-    "Observation Date: Thyroid Function",
-    "Observation Date: Coeliac Disease Screening",
-    "Observation Date - Psychological Screening Assessment",
-    "Date of offer of referral to smoking cessation service (if patient is a current smoker)",
-    "Date of Level 3 carbohydrate counting education received",
-    "Date of additional appointment with dietitian",
-    "Date that influenza immunisation was recommended",
-    "Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia",
-    "Start date (Hospital Provider Spell)",
-    "Discharge date (Hospital provider spell)",
-]
+# Date field lists — derived from ALL_HEADINGS (single source of truth)
+def get_all_dates(dataset_year=None):
+    """Returns all date field headings for the given dataset year."""
+    year = dataset_year if dataset_year is not None else 2021
+    return [
+        obj["heading"]
+        for obj in get_csv_heading_objects(year)
+        if obj.get("data_type") == "date"
+    ]
 
-ALL_DATES_2026 = [
-    "Date of Birth",
-    "Date of Diabetes Diagnosis",
-    "Date of leaving service",
-    "Death Date",
-    "Date immunotherapy started",
-    "Visit/Appointment Date",
-    "Observation Date (Height and weight)",
-    "Observation Date: HbA1c Value",
-    "Observation Date (Blood Pressure)",
-    "Foot Assessment / Examination Date",
-    "Retinal Screening date",
-    "Observation Date: Urinary Albumin Level",
-    "Observation Date: Total Cholesterol Level",
-    "Observation Date: Thyroid Function",
-    "Observation Date: Coeliac Disease Screening",
-    "Date of Annual Psychological Screening Assessment",
-    "Date of offer of smoking cessation advice (if patient is a current smoker)",
-    "Date of Level 3 carbohydrate counting education received",
-    "Date of additional appointment with dietitian",
-    "Date that influenza immunisation was recommended",
-    "Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia",
-    "Date immunotherapy started",
-    "Start date (Hospital Provider Spell)",
-    "Discharge date (Hospital provider spell)",
-]
 
-# For backward compatibility
+# Backward-compat aliases
+ALL_DATES_2021 = get_all_dates(2021)
+ALL_DATES_2026 = get_all_dates(2026)
 ALL_DATES = ALL_DATES_2021
 
 
-def get_all_dates(dataset_year=None):
-    """Returns all date field headings for the given dataset year."""
-    if dataset_year and dataset_year >= 2026:
-        return ALL_DATES_2026
-    return ALL_DATES_2021
-
-
-# Visit date field mappings
-# These static lists are retained for backward compatibility (e.g. visit_filters.py).
-# For new code prefer get_all_visit_dates(dataset_year), which derives from ALL_HEADINGS.
-ALL_VISIT_DATES_2021 = [
-    ("visit_date", "Visit/Appointment Date"),
-    ("height_weight_observation_date", "Observation Date (Height and weight)"),
-    ("hba1c_date", "Observation Date: HbA1c Value"),  # canonical capitalisation
-    ("blood_pressure_observation_date", "Observation Date (Blood Pressure)"),
-    ("foot_examination_observation_date", "Foot Assessment / Examination Date"),
-    ("retinal_screening_observation_date", "Retinal Screening date"),
-    ("albumin_creatinine_ratio_date", "Observation Date: Urinary Albumin Level"),
-    ("total_cholesterol_date", "Observation Date: Total Cholesterol Level"),
-    ("thyroid_function_date", "Observation Date: Thyroid Function"),
-    ("coeliac_screen_date", "Observation Date: Coeliac Disease Screening"),
-    (
-        "psychological_screening_assessment_date",
-        "Observation Date - Psychological Screening Assessment",
-    ),
-    (
-        "smoking_cessation_referral_date",
-        "Date of offer of referral to smoking cessation service (if patient is a current smoker)",
-    ),
-    (
-        "carbohydrate_counting_level_three_education_date",
-        "Date of Level 3 carbohydrate counting education received",
-    ),
-    (
-        "dietician_additional_appointment_date",
-        "Date of additional appointment with dietitian",
-    ),
-    (
-        "flu_immunisation_recommended_date",
-        "Date that influenza immunisation was recommended",
-    ),
-    (
-        "sick_day_rules_training_date",
-        "Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia",
-    ),
-    ("hospital_admission_date", "Start date (Hospital Provider Spell)"),
-    ("hospital_discharge_date", "Discharge date (Hospital provider spell)"),
-]
-
-ALL_VISIT_DATES_2026 = [
-    ("visit_date", "Visit/Appointment Date"),
-    ("height_weight_observation_date", "Observation Date (Height and weight)"),
-    ("hba1c_date", "Observation Date: HbA1c Value"),
-    ("blood_pressure_observation_date", "Observation Date (Blood Pressure)"),
-    ("foot_examination_observation_date", "Foot Assessment / Examination Date"),
-    ("retinal_screening_observation_date", "Retinal Screening date"),
-    ("albumin_creatinine_ratio_date", "Observation Date: Urinary Albumin Level"),
-    ("total_cholesterol_date", "Observation Date: Total Cholesterol Level"),
-    ("thyroid_function_date", "Observation Date: Thyroid Function"),
-    ("coeliac_screen_date", "Observation Date: Coeliac Disease Screening"),
-    (
-        "psychological_screening_assessment_date",
-        "Date of Annual Psychological Screening Assessment",
-    ),
-    (
-        "smoking_cessation_referral_date",
-        "Date of offer of smoking cessation advice (if patient is a current smoker)",
-    ),
-    (
-        "carbohydrate_counting_level_three_education_date",
-        "Date of Level 3 carbohydrate counting education received",
-    ),
-    (
-        "dietician_additional_appointment_date",
-        "Date of additional appointment with dietitian",
-    ),
-    (
-        "flu_immunisation_recommended_date",
-        "Date that influenza immunisation was recommended",
-    ),
-    (
-        "sick_day_rules_training_date",
-        "Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia",
-    ),
-    ("hospital_admission_date", "Start date (Hospital Provider Spell)"),
-    ("hospital_discharge_date", "Discharge date (Hospital provider spell)"),
-]
-
-# For backward compatibility
-ALL_VISIT_DATES = ALL_VISIT_DATES_2021
-
-
+# Visit date field mappings — derived from ALL_HEADINGS (single source of truth)
 def get_all_visit_dates(dataset_year=None):
     """
     Returns all visit date field mappings for the given dataset year as (model_field, heading) tuples.
@@ -867,6 +736,12 @@ def get_all_visit_dates(dataset_year=None):
         for obj in get_csv_heading_objects(year)
         if obj.get("data_type") == "date" and obj.get("model") == "Visit"
     ]
+
+
+# Backward-compat aliases
+ALL_VISIT_DATES_2021 = get_all_visit_dates(2021)
+ALL_VISIT_DATES_2026 = get_all_visit_dates(2026)
+ALL_VISIT_DATES = ALL_VISIT_DATES_2021
 
 
 # CSV data types
