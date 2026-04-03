@@ -124,7 +124,9 @@ class PatientForm(forms.ModelForm):
         self.audit_period = kwargs.pop("audit_period", None)
         self.paediatric_diabetes_unit = kwargs.pop("paediatric_diabetes_unit", None)
         self.override_postcode = kwargs.pop("override_postcode", False)
-
+        self.dataset_year = (
+            self.audit_period.get_dataset_year() if self.audit_period else 2021
+        )
         super().__init__(*args, **kwargs)
         self._init_fields_by_dataset_year()
 
