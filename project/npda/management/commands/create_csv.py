@@ -99,6 +99,7 @@ from django.utils import timezone
 from project.constants.csv_headings import (
     ENGLAND_CSV_DATA_TYPES,
     JERSEY_CSV_DATA_TYPES,
+    get_csv_heading_objects_for_year_and_unique_identifier,
 )
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.npda.general_functions.audit_period import get_audit_period_for_date
@@ -218,6 +219,12 @@ class Command(BaseCommand):
             type=int,
             help="Audit year for the data.",
             default="2024",
+        )
+        parser.add_argument(
+            "--dataset_year",
+            type=int,
+            help="Dataset year (e.g. 2021 or 2026). Defaults to audit_year if not supplied.",
+            default=None,
         )
 
         # Mutually exclusive group for --build and --coalesce
@@ -504,9 +511,15 @@ class Command(BaseCommand):
 
         # Concatenate the dataframes
         df = pd.concat(dfs, axis=0, join="outer").reset_index(drop=True)
+        # Detect dataset year from columns (2026 CSVs have "Sex assigned at birth";
+        # 2021 CSVs have "Stated gender"). Explicit --dataset_year overrides the sniff.
+        dataset_year = options.get("dataset_year") or (
+            2026 if "Sex assigned at birth" in df.columns else 2021
+        )
         df = self._set_valid_dtypes(
             df,
             is_jersey=is_jersey,
+            dataset_year=dataset_year,
         )
 
         df.info()
@@ -550,14 +563,26 @@ class Command(BaseCommand):
     ) -> pd.DataFrame:
         """Sets the correct data types for the dataframe, making them same as original
         dummy_sheet_invalid.csv file (to ensure we handle errors).
+        Derived from ALL_HEADINGS — single source of truth for headings and dtypes.
         """
-        all_dates = get_all_dates(dataset_year)
         unique_identifier = "jersey" if is_jersey else "england"
         heading_objects = get_csv_heading_objects_for_year_and_unique_identifier(
             dataset_year=dataset_year, unique_identifier=unique_identifier
         )
         TEMPLATE_HEADERS = [obj["heading"] for obj in heading_objects]
-        column_types = get_csv_data_types_minus_dates(dataset_year)
+        all_dates = [
+            obj["heading"] for obj in heading_objects if obj.get("data_type") == "date"
+        ]
+        # Build dtype map from non-date headings, normalising int64 -> Int64
+        column_types = {
+            obj["heading"]: (
+                "Int64"
+                if obj.get("data_type") == "int64"
+                else obj.get("data_type", "string")
+            )
+            for obj in heading_objects
+            if obj.get("data_type") != "date"
+        }
         if is_jersey:
             column_types = JERSEY_CSV_DATA_TYPES | column_types
         else:
@@ -700,6 +725,9 @@ class Command(BaseCommand):
         # flags
         build_flag = options["build"]
 
+        # dataset_year defaults to the audit start year unless explicitly overridden
+        dataset_year = options.get("dataset_year") or audit_start_date.year
+
         return {
             "n_pts_to_seed": n_pts_to_seed,
             "audit_start_date": audit_start_date,
@@ -716,7 +744,7 @@ class Command(BaseCommand):
             "postcode": postcode,
             "postcode_outcode": postcode_outcode,
             "build_flag": build_flag,
-            "dataset_year": audit_start_date.year,
+            "dataset_year": dataset_year,
         }
 
     def _get_file_name(

@@ -86,9 +86,12 @@ def test_generate_csv_upload_to_view(
         csv_file = SimpleUploadedFile(f.name, f.read(), content_type="text/csv")
 
     # Send POST request with CSV file
+    # The audit period slug must match the dataset year inferred from today's date.
+    # create_csv defaults submission_date to today; get_audit_period_for_date(today)
+    # returns the current audit period (2026-2027 from April 2026 onwards).
     url = reverse(
         "pdu-upload-csv",
-        kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"},
+        kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2026-2027"},
     )
     response = client.post(url, {"csv_upload": csv_file})
 
