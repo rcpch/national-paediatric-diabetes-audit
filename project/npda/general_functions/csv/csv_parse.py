@@ -11,15 +11,9 @@ import pandas as pd
 
 # RCPCH imports
 from project.constants import (
-    CSV_DATA_TYPES_MINUS_DATES,
-    CSV_HEADING_OBJECTS,
-    CSV_HEADING_OBJECTS_2026,
-    ENGLAND_CSV_DATA_TYPES,
-    JERSEY_CSV_DATA_TYPES,
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
-    csv_definition_for,
-    get_all_dates,
+    get_csv_heading_objects_for_year_and_unique_identifier,
 )
 
 # Django imports
@@ -61,16 +55,11 @@ def csv_parse(csv_file, dataset_year=2021):
     # The exception is if the first row of the csv file does not match any of the predefined column names, in which case we will reject the csv
     errors_to_return = collections.defaultdict(lambda: collections.defaultdict(list))
 
-    if dataset_year >= 2026:
-        HEADINGS_OBJECTS = (
-            UNIQUE_IDENTIFIER_ENGLAND
-            + UNIQUE_IDENTIFIER_JERSEY
-            + CSV_HEADING_OBJECTS_2026
-        )
-    else:
-        HEADINGS_OBJECTS = (
-            UNIQUE_IDENTIFIER_ENGLAND + UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
-        )
+    HEADINGS_OBJECTS = get_csv_heading_objects_for_year_and_unique_identifier(
+        dataset_year, "all"
+    )  # unique_identifier "all" to include both England and Jersey identifiers, as the CSV may contain either and we will detect which one based on the headers present
+
+    # Extract the heading names into a list for easier comparison with the csv file headers.
     HEADINGS_LIST = [obj["heading"] for obj in HEADINGS_OBJECTS]
 
     # Convert the predefined column names to lowercase
@@ -190,40 +179,45 @@ def csv_parse(csv_file, dataset_year=2021):
         if result and result.group(1) not in duplicate_columns:
             duplicate_columns.append(result.group(1))
 
-    for column in get_all_dates(dataset_year=dataset_year):
-        if column in df.columns:
-            column_before = df[column].copy()
-            # Support DD/MM/YYYY and DD/MM/YY
-            column_after = pd.to_datetime(
-                df[column], format="mixed", dayfirst=True, errors="coerce"
-            )
+    for obj in HEADINGS_OBJECTS:
+        if obj.get("data_type") != "date":
+            continue
+        column = obj["heading"]
+        if column not in df.columns:
+            continue
+        column_before = df[column].copy()
+        # Support DD/MM/YYYY and DD/MM/YY
+        column_after = pd.to_datetime(
+            df[column], format="mixed", dayfirst=True, errors="coerce"
+        )
 
-            for row_index, (value_before, value_after) in enumerate(
-                zip(column_before, column_after, strict=False)
+        for row_index, (value_before, value_after) in enumerate(
+            zip(column_before, column_after, strict=False)
+        ):
+            # Handle empty strings (including spaces) for optional date columns
+            if (
+                not pd.isna(value_before)
+                and pd.isna(value_after)
+                and not (type(value_before) is str and value_before.strip() == "")
             ):
-                # Handle empty strings (including spaces) for optional date columns
-                if (
-                    not pd.isna(value_before)
-                    and pd.isna(value_after)
-                    and not (type(value_before) is str and value_before.strip() == "")
-                ):
-                    try:
-                        model_field = csv_definition_for(
-                            column, dataset_year=dataset_year
-                        )["model_field"]
-                    except Exception:
-                        logger.debug("Unknown date heading")
-                        continue
-                    errors_to_return[row_index][model_field].append(
-                        "Date format is incorrect (expected DD/MM/YYYY)",
-                    )
+                errors_to_return[row_index][obj["model_field"]].append(
+                    "Date format is incorrect (expected DD/MM/YYYY)",
+                )
 
-            df[column] = column_after
+        df[column] = column_after
 
-    if identifier_column == identifier_jersey:
-        datatypes = JERSEY_CSV_DATA_TYPES | CSV_DATA_TYPES_MINUS_DATES
-    else:
-        datatypes = ENGLAND_CSV_DATA_TYPES | CSV_DATA_TYPES_MINUS_DATES
+    # Build dtype map from HEADINGS_OBJECTS — automatically year-correct and
+    # identifier-aware. Normalise "int64" → "Int64" so pandas uses its nullable
+    # integer type (numpy int64 cannot represent NA, common in optional fields).
+    datatypes = {
+        obj["heading"]: (
+            "Int64"
+            if obj.get("data_type") == "int64"
+            else obj.get("data_type", "string")
+        )
+        for obj in HEADINGS_OBJECTS
+        if obj.get("data_type") != "date"
+    }
 
     nullable_int_types = {
         "Int8",
@@ -294,8 +288,16 @@ def csv_parse(csv_file, dataset_year=2021):
             else:
                 parse_type_error_columns.append(column)
 
-    template_columns = [identifier_column] + [
-        obj["heading"] for obj in CSV_HEADING_OBJECTS
+    # HEADINGS_OBJECTS includes both identifiers ("all"); exclude the unused one.
+    unused_identifier = (
+        identifier_jersey
+        if identifier_column == identifier_england
+        else identifier_england
+    )
+    template_columns = [
+        obj["heading"]
+        for obj in HEADINGS_OBJECTS
+        if obj["heading"] != unused_identifier
     ]
 
     return ParsedCSVFile(

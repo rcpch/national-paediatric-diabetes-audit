@@ -151,23 +151,24 @@ FIELD_HEADINGS_2026 = {**PATIENT_FIELD_HEADINGS_2026, **VISIT_FIELD_HEADINGS_202
 
 def get_field_heading(field_name, dataset_year):
     """
-    Returns the official heading for a field based on dataset year.
-    Works for both Patient and Visit models.
+    Returns the canonical CSV heading for a model field based on dataset year.
+    Delegates to csv_definition_for — ALL_HEADINGS is the single source of truth.
+    Falls back to field_name if not found (matching previous dict.get() behaviour).
 
     Args:
-        field_name: Name of the field to get heading for
+        field_name: Name of the model field
         dataset_year: The dataset year (e.g., 2021, 2026)
 
     Returns:
-        str: The official heading for the field, or the field_name if not found
+        str: The canonical CSV heading for the field, or field_name if not found
 
     Example:
         >>> get_field_heading('sex', 2021)
         'Stated gender'
-        >>> get_field_heading('sex_assigned_at_birth', 2026)
+        >>> get_field_heading('sex', 2026)
         'Sex assigned at birth'
     """
-    if dataset_year and dataset_year >= 2026:
-        return FIELD_HEADINGS_2026.get(field_name, field_name)
-    else:
-        return FIELD_HEADINGS_2021.get(field_name, field_name)
+    from project.constants.csv_headings import csv_definition_for
+
+    defn = csv_definition_for(field_name, dataset_year)
+    return defn["heading"] if defn else field_name

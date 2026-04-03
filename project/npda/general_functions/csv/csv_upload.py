@@ -19,10 +19,9 @@ from django.utils import timezone
 
 # RCPCH imports
 from project.constants import (
-    CSV_HEADING_OBJECTS,
-    CSV_HEADING_OBJECTS_2026,
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
+    get_csv_heading_objects_for_year_and_unique_identifier,
 )
 from project.npda.general_functions.csv import gather_unique_patient_and_visit_counts
 
@@ -156,17 +155,15 @@ async def csv_upload(
         )
 
     if pdu.pz_code == "PZ248":
-        if dataset_year == 2026:
-            CSV_HEADINGS = UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS_2026
-        else:
-            CSV_HEADINGS = UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
+        unique_identifier = "jersey"
         identifier_heading = UNIQUE_IDENTIFIER_JERSEY[0]["heading"]
     else:
-        if dataset_year == 2026:
-            CSV_HEADINGS = UNIQUE_IDENTIFIER_ENGLAND + CSV_HEADING_OBJECTS_2026
-        else:
-            CSV_HEADINGS = UNIQUE_IDENTIFIER_ENGLAND + CSV_HEADING_OBJECTS
+        unique_identifier = "england"
         identifier_heading = UNIQUE_IDENTIFIER_ENGLAND[0]["heading"]
+
+    CSV_HEADINGS = get_csv_heading_objects_for_year_and_unique_identifier(
+        dataset_year=dataset_year, unique_identifier=unique_identifier
+    )
 
     # Helper functions
     def csv_value_to_model_value(model_field, value):
