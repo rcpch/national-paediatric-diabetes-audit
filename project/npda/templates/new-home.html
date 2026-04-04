@@ -9,20 +9,28 @@
       <div>
         <h3 class="font-bold font-montserrat">A new audit year has started — {{ current_audit_period.display_name }}</h3>
         <p class="text-sm">
-          Select the <strong>{{ current_audit_period.display_name }}</strong> audit year from the dropdown below to begin a new submission.
+          {% if perms.npda.can_submit_csv %}
+            Select the <strong>{{ current_audit_period.display_name }}</strong> audit year from the dropdown below to begin a new submission.
+          {% else %}
+            Select the <strong>{{ current_audit_period.display_name }}</strong> audit year from the dropdown below. Contact your coordinator to begin a new submission.
+          {% endif %}
         </p>
       </div>
     </div>
   {% endif %}
 
-  {% if not has_any_submission_in_period %}
+  {% if viewing_current_period and not has_any_submission_in_period %}
     <div role="alert" class="alert alert-warning shadow-lg mx-4 mt-4">
       <i class="fa-solid fa-circle-info fa-2xl"></i>
       <div>
         <h3 class="font-bold font-montserrat">No submissions yet for {{ selected_audit_period_display_name }}</h3>
         <p class="text-sm">
           There are no submissions yet in this audit year for any of your PDUs.
-          Select your PDU below and follow the directions to begin a new submission.
+          {% if perms.npda.can_submit_csv %}
+            Select your PDU below and follow the directions to begin a new submission.
+          {% else %}
+            Contact your coordinator to begin a new submission.
+          {% endif %}
         </p>
       </div>
     </div>
@@ -36,17 +44,25 @@
       class="font-montserrat text-white bg-rcpch_light_blue hover:bg-rcpch_dark_blue border-0 rounded-none px-4 py-2 cursor-pointer text-base"
       onchange="window.location.href = this.value;">
       {% for audit_period in audit_periods %}
-        <option value="{% url 'new-home' audit_period=audit_period.slug %}"
-          {% if audit_period.selected %}selected{% endif %}>
-          {{ audit_period.display_name }}
-        </option>
+        {% if current_audit_period and audit_period.slug == current_audit_period.slug and not has_submissions_for_current_period and not perms.npda.can_submit_csv %}
+          <option disabled
+                  title="You do not have permission to submit data and there are no submissions yet for this period"
+                  {% if audit_period.selected %}selected{% endif %}>
+            {{ audit_period.display_name }} (no data yet)
+          </option>
+        {% else %}
+          <option value="{% url 'new-home' audit_period=audit_period.slug %}"
+            {% if audit_period.selected %}selected{% endif %}>
+            {{ audit_period.display_name }}
+          </option>
+        {% endif %}
       {% endfor %}
     </select>
   </div>
 
   <div class="flex flex-row flex-wrap justify-center gap-4 p-4">
     {% for pdu in active_pdus %}
-      {% include "partials/pdu-card.html" with pdu=pdu %}
+      {% include "partials/pdu-card.html" with pdu=pdu pdus_with_submission_in_period=pdus_with_submission_in_period %}
     {% endfor %}
   </div>
 
@@ -54,7 +70,7 @@
     <h2 class="text-center text-xl font-montserrat text-rcpch_dark_blue mt-4">Inactive</h2>
     <div class="flex flex-row flex-wrap justify-center gap-4 p-4">
       {% for pdu in inactive_pdus %}
-        {% include "partials/pdu-card.html" with pdu=pdu %}
+        {% include "partials/pdu-card.html" with pdu=pdu pdus_with_submission_in_period=pdus_with_submission_in_period %}
       {% endfor %}
     </div>
   {% endif %}

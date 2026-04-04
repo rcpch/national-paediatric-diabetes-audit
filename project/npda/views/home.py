@@ -9,7 +9,10 @@ from django.http import HttpResponse
 from django.shortcuts import redirect, render
 
 from project.constants.feature_flags import FEATURE_FLAGS
-from project.npda.general_functions.audit_period import get_audit_period_for_date
+from project.npda.general_functions.audit_period import (
+    get_audit_period_for_date,
+    get_quarters_for_audit_period,
+)
 from project.npda.general_functions.csv import csv_header
 from project.npda.general_functions.organisations_adapter import (
     paediatric_diabetes_units_for_user,
@@ -86,9 +89,15 @@ def new_home(request, audit_period):
     except AuditPeriod.DoesNotExist:
         current_audit_period_obj = None
 
-    # Show new-year banner if we are in the first quarter (April–June) of a new audit period
-    # and the user is viewing it but we're not yet looking at that period
-    in_first_quarter = today.month in (4, 5, 6)
+    # Show new-year banner if we are in Q1 of a new audit period
+    # and the user is not already viewing that period
+    in_first_quarter = False
+    if current_audit_period_obj is not None:
+        q1_start, q1_end = get_quarters_for_audit_period(
+            current_audit_period_obj.start_date, current_audit_period_obj.end_date
+        )[0]
+        in_first_quarter = q1_start <= today <= q1_end
+
     viewing_current_period = (
         current_audit_period_obj is not None
         and audit_period_obj.slug == current_audit_period_obj.slug
@@ -99,13 +108,44 @@ def new_home(request, audit_period):
         and not viewing_current_period
     )
 
-    # Check whether any of the user's PDUs have a submission in the currently-viewed period
+    # Always ensure the calendar-current period appears in the dropdown even if
+    # it is not yet marked is_visible (e.g. very start of a new audit year).
+    if (
+        current_audit_period_obj is not None
+        and current_audit_period_obj not in audit_periods
+    ):
+        audit_periods.append(current_audit_period_obj)
+        audit_periods.sort(key=lambda p: p.start_date)
+
+    # For the current period, check whether any PDU has submitted yet and whether
+    # the user can upload — used to decide if the dropdown option should be disabled.
     all_pdu_codes = [pdu.pz_code for pdu in active_pdus]
+    has_submissions_for_current_period = (
+        Submission.objects.filter(
+            paediatric_diabetes_unit__pz_code__in=all_pdu_codes,
+            audit_period=current_audit_period_obj,
+            submission_active=True,
+        ).exists()
+        if current_audit_period_obj is not None
+        else False
+    )
+
+    # Check whether any of the user's PDUs have a submission in the currently-viewed period
     has_any_submission_in_period = Submission.objects.filter(
         paediatric_diabetes_unit__pz_code__in=all_pdu_codes,
         audit_period=audit_period_obj,
         submission_active=True,
     ).exists()
+
+    # Per-PDU set of pz_codes that have a submission for the viewed period —
+    # used in the card to hide the Patient data button for non-uploaders with no data
+    pdus_with_submission_in_period = set(
+        Submission.objects.filter(
+            paediatric_diabetes_unit__pz_code__in=all_pdu_codes,
+            audit_period=audit_period_obj,
+            submission_active=True,
+        ).values_list("paediatric_diabetes_unit__pz_code", flat=True)
+    )
 
     context = {
         "active_pdus": sorted_active_pdus,
@@ -114,8 +154,11 @@ def new_home(request, audit_period):
         "selected_audit_period_display_name": audit_period_obj.display_name(),
         "selected_audit_period": audit_period_obj,
         "current_audit_period": current_audit_period_obj,
+        "viewing_current_period": viewing_current_period,
         "show_new_year_banner": show_new_year_banner,
         "has_any_submission_in_period": has_any_submission_in_period,
+        "has_submissions_for_current_period": has_submissions_for_current_period,
+        "pdus_with_submission_in_period": pdus_with_submission_in_period,
     }
 
     template = "new-home.html"

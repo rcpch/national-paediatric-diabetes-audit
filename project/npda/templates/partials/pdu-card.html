@@ -3,11 +3,15 @@
         <h2 class="card-title">{{pdu.pz_code}}</h2>
         <p>{{pdu.lead_organisation_name}} - {{pdu.parent_name}}</p>
         <div class="card-actions justify-end">
+            {% with pdu_has_submission=pdus_with_submission_in_period|default_if_none:"" %}
+            {% if perms.npda.can_submit_csv or pdu.pz_code in pdu_has_submission %}
             <div>
                 <a class="btn bg-rcpch_pink text-white" href="{% url 'pdu-patients' audit_period=audit_period_slug pz_code=pdu.pz_code %}">
                 Patient data
                 </a>
             </div>
+            {% endif %}
+            {% endwith %}
             <div>
                 <a class="btn btn-info" href="{% url 'pdu-dashboard' audit_period=audit_period_slug pz_code=pdu.pz_code %}">
                 Unit Report
