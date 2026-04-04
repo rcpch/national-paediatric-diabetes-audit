@@ -15,6 +15,7 @@ from project.constants import (
     UNIQUE_IDENTIFIER_JERSEY,
     get_csv_heading_objects_for_year_and_unique_identifier,
 )
+from project.npda.general_functions.headings import get_field_heading
 
 # Django imports
 
@@ -135,6 +136,27 @@ def csv_parse(csv_file, dataset_year=2021):
         else:
             user_error_message = "No unique identifier column is present. Please ensure one of Unique Reference Number or NHS Number is present in the file."
         raise ValueError(user_error_message)
+
+    # Ensure a 2026 dataset is not uploaded with the old template and vice versa - we are using the smoking status field as a canary for this
+    # as smoking status changed to include vaping in the 2026 template and so the heading is different between the two templates.
+    _2026_smoking_heading = get_field_heading("smoking_vaping_status", 2026)
+    _2021_smoking_heading = get_field_heading("smoking_status", 2021)
+    if (
+        _2026_smoking_heading in df.columns
+        and _2021_smoking_heading not in df.columns
+        and dataset_year == 2021
+    ):
+        raise ValueError(
+            "This file appears to be using the 2026 template but you have selected 2021 as the dataset year. Please check your file and upload again."
+        )
+    if (
+        _2026_smoking_heading not in df.columns
+        and _2021_smoking_heading in df.columns
+        and dataset_year == 2026
+    ):
+        raise ValueError(
+            "This file appears to be using the 2021 template but you have selected 2026 as the dataset year. Please check your file and upload again."
+        )
 
     # Set the identifier column
     if identifier_jersey in df.columns:

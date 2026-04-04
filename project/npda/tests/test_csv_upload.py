@@ -1428,6 +1428,18 @@ def test_old_template_headers(
 
 
 @pytest.mark.django_db
+def test_csv_year_mismatch_raises_error(
+    test_user, dummy_sheet_csv, audit_period_for_dataset_year, dataset_year
+):
+    # dummy_sheet_csv returns the CSV matching dataset_year.
+    # Parsing it with the *opposite* year must raise a ValueError because
+    # csv_parse detects the header/year mismatch.
+    opposite_year = 2021 if dataset_year == 2026 else 2026
+    with pytest.raises(ValueError, match="Please check your file and upload again"):
+        read_csv_from_str(dummy_sheet_csv, dataset_year=opposite_year)
+
+
+@pytest.mark.django_db
 def test_first_row_with_extra_cell_at_the_start(test_user, single_row_valid_df):
     csv = single_row_valid_df.to_csv(index=False, date_format="%d/%m/%Y")
 
