@@ -2,24 +2,61 @@
 {% load static %}
 {% load npda_tags %}
 {% block content %}
-  <div class="text-center my-4">
-    <h1 class="text-xl">
-      {{selected_audit_period_display_name}}
-      <br />
+
+  {% if show_new_year_banner %}
+    <div role="alert" class="alert border-t-4 border-rcpch_light_blue shadow-lg mx-4 mt-4">
+      <i class="fa-solid fa-calendar-plus fa-2xl text-rcpch_light_blue"></i>
+      <div>
+        <h3 class="font-bold font-montserrat">A new audit year has started — {{ current_audit_period.display_name }}</h3>
+        <p class="text-sm">
+          Select the <strong>{{ current_audit_period.display_name }}</strong> audit year from the dropdown below to begin a new submission.
+        </p>
+      </div>
+    </div>
+  {% endif %}
+
+  {% if not has_any_submission_in_period %}
+    <div role="alert" class="alert alert-warning shadow-lg mx-4 mt-4">
+      <i class="fa-solid fa-circle-info fa-2xl"></i>
+      <div>
+        <h3 class="font-bold font-montserrat">No submissions yet for {{ selected_audit_period_display_name }}</h3>
+        <p class="text-sm">
+          There are no submissions yet in this audit year for any of your PDUs.
+          Select your PDU below and follow the directions to begin a new submission.
+        </p>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="flex flex-col items-center my-6 gap-2">
+    <h1 class="text-xl font-montserrat font-semibold text-rcpch_dark_blue">
       Select your paediatric diabetes unit
     </h1>
+    <select
+      class="font-montserrat text-white bg-rcpch_light_blue hover:bg-rcpch_dark_blue border-0 rounded-none px-4 py-2 cursor-pointer text-base"
+      onchange="window.location.href = this.value;">
+      {% for audit_period in audit_periods %}
+        <option value="{% url 'new-home' audit_period=audit_period.slug %}"
+          {% if audit_period.selected %}selected{% endif %}>
+          {{ audit_period.display_name }}
+        </option>
+      {% endfor %}
+    </select>
   </div>
+
   <div class="flex flex-row flex-wrap justify-center gap-4 p-4">
     {% for pdu in active_pdus %}
       {% include "partials/pdu-card.html" with pdu=pdu %}
     {% endfor %}
   </div>
+
   {% if inactive_pdus %}
-    <h2 class="text-center text-xl">Inactive</h2>
+    <h2 class="text-center text-xl font-montserrat text-rcpch_dark_blue mt-4">Inactive</h2>
     <div class="flex flex-row flex-wrap justify-center gap-4 p-4">
       {% for pdu in inactive_pdus %}
         {% include "partials/pdu-card.html" with pdu=pdu %}
       {% endfor %}
     </div>
   {% endif %}
+
 {% endblock %}

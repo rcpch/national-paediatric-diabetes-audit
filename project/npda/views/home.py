@@ -1,5 +1,6 @@
 # Python imports
 import logging
+from datetime import date
 
 # Django imports
 from django.conf import settings
@@ -8,6 +9,7 @@ from django.http import HttpResponse
 from django.shortcuts import redirect, render
 
 from project.constants.feature_flags import FEATURE_FLAGS
+from project.npda.general_functions.audit_period import get_audit_period_for_date
 from project.npda.general_functions.csv import csv_header
 from project.npda.general_functions.organisations_adapter import (
     paediatric_diabetes_units_for_user,
@@ -67,20 +69,53 @@ def new_home(request, audit_period):
     )
     sorted_inactive_pdus = sorted(inactive_pdus, key=lambda pdu: pdu.pz_code)
 
-    audit_period = AuditPeriod.objects.get_audit_period_for_request(request)
+    audit_period_obj = AuditPeriod.objects.get_audit_period_for_request(request)
     audit_periods = list(AuditPeriod.objects.all())
 
     if not request.user.is_rcpch_audit_team_member and not request.user.is_superuser:
         audit_periods = [p for p in audit_periods if p.is_visible]
 
     for p in audit_periods:
-        p.selected = p.slug == audit_period.slug
+        p.selected = p.slug == audit_period_obj.slug
+
+    # Determine the calendar-current audit period (based on today's date)
+    today = date.today()
+    current_start, _ = get_audit_period_for_date(today)
+    try:
+        current_audit_period_obj = AuditPeriod.objects.get(start_date=current_start)
+    except AuditPeriod.DoesNotExist:
+        current_audit_period_obj = None
+
+    # Show new-year banner if we are in the first quarter (April–June) of a new audit period
+    # and the user is viewing it but we're not yet looking at that period
+    in_first_quarter = today.month in (4, 5, 6)
+    viewing_current_period = (
+        current_audit_period_obj is not None
+        and audit_period_obj.slug == current_audit_period_obj.slug
+    )
+    show_new_year_banner = (
+        in_first_quarter
+        and current_audit_period_obj is not None
+        and not viewing_current_period
+    )
+
+    # Check whether any of the user's PDUs have a submission in the currently-viewed period
+    all_pdu_codes = [pdu.pz_code for pdu in active_pdus]
+    has_any_submission_in_period = Submission.objects.filter(
+        paediatric_diabetes_unit__pz_code__in=all_pdu_codes,
+        audit_period=audit_period_obj,
+        submission_active=True,
+    ).exists()
 
     context = {
         "active_pdus": sorted_active_pdus,
         "inactive_pdus": sorted_inactive_pdus,
         "audit_periods": audit_periods,
-        "selected_audit_period_display_name": audit_period.display_name,
+        "selected_audit_period_display_name": audit_period_obj.display_name(),
+        "selected_audit_period": audit_period_obj,
+        "current_audit_period": current_audit_period_obj,
+        "show_new_year_banner": show_new_year_banner,
+        "has_any_submission_in_period": has_any_submission_in_period,
     }
 
     template = "new-home.html"
