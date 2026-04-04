@@ -1215,7 +1215,12 @@ def test_different_column_order(test_user, single_row_valid_df):
 
 @pytest.mark.django_db
 def test_additional_columns_causes_error(
-    single_row_valid_df, tmp_path, client, test_rcpch_user, dataset_year
+    single_row_valid_df,
+    tmp_path,
+    client,
+    test_rcpch_user,
+    dataset_year,
+    audit_period_for_dataset_year,
 ):
     # Add additional columns
     single_row_valid_df["extra_one"] = "ada"
@@ -1232,7 +1237,10 @@ def test_additional_columns_causes_error(
 
     url = reverse(
         "pdu-upload-csv",
-        kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"},
+        kwargs={
+            "pz_code": ALDER_HEY_PZ_CODE,
+            "audit_period": audit_period_for_dataset_year.slug,
+        },
     )
 
     # Feed file to view
@@ -1248,7 +1256,11 @@ def test_additional_columns_causes_error(
 
 @pytest.mark.django_db
 def test_duplicate_columns_causes_error(
-    single_row_valid_df, client, test_rcpch_user, tmp_path
+    single_row_valid_df,
+    client,
+    test_rcpch_user,
+    tmp_path,
+    audit_period_for_dataset_year,
 ):
     single_row_valid_df["NHS Number_2"] = single_row_valid_df["NHS Number"]
     single_row_valid_df["NHS Number_3"] = single_row_valid_df["NHS Number"]
@@ -1273,7 +1285,10 @@ def test_duplicate_columns_causes_error(
 
         url = reverse(
             "pdu-upload-csv",
-            kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"},
+            kwargs={
+                "pz_code": ALDER_HEY_PZ_CODE,
+                "audit_period": audit_period_for_dataset_year.slug,
+            },
         )
 
         response = client.post(url, {"csv_upload": csv_file}, format="multipart")
@@ -1288,7 +1303,11 @@ def test_duplicate_columns_causes_error(
 
 @pytest.mark.django_db
 def test_missing_columns_causes_error(
-    test_rcpch_user, single_row_valid_df, client, tmp_path
+    test_rcpch_user,
+    single_row_valid_df,
+    client,
+    tmp_path,
+    audit_period_for_dataset_year,
 ):
     df = single_row_valid_df.drop(
         columns=["Urinary Albumin Level (ACR)", "Total Cholesterol Level (mmol/l)"]
@@ -1304,7 +1323,10 @@ def test_missing_columns_causes_error(
 
     url = reverse(
         "pdu-upload-csv",
-        kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"},
+        kwargs={
+            "pz_code": ALDER_HEY_PZ_CODE,
+            "audit_period": audit_period_for_dataset_year.slug,
+        },
     )
 
     # Feed file into view
@@ -1727,13 +1749,17 @@ def test_bad_date_format_on_date_of_diagnosis(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
-def test_bad_date_format_on_optional_column(one_patient_two_visits, dataset_year):
-    df = one_patient_two_visits
+def test_bad_date_format_on_optional_column(dummy_sheet_csv, dataset_year):
+    # Use the year-correct CSV to avoid the 2021/2026 header mismatch check.
+    # Both dummy CSVs have at least 2 rows with the same NHS number first.
+    lines = dummy_sheet_csv.splitlines()
+    csv_two_rows = "\n".join([lines[0]] + lines[1:3])
 
     column = get_field_heading(
         "carbohydrate_counting_level_three_education_date", dataset_year
     )
 
+    df = read_csv_from_str(csv_two_rows, dataset_year=dataset_year).df
     df[column] = df[column].astype(str)
     df[column] = "beep"
 
