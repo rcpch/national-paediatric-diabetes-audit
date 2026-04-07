@@ -5,6 +5,8 @@ import pytest
 def dummy_sheets_folder(request):
     return request.config.rootdir / "project" / "npda" / "dummy_sheets"
 
+    return request.config.rootdir / "project" / "npda" / "dummy_sheets"
+
 
 @pytest.fixture
 def dummy_sheet_csv(dummy_sheets_folder):

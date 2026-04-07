@@ -38,7 +38,6 @@ from django.views.generic import ListView
 from project.constants.colors import RCPCH_LIGHT_BLUE
 from project.npda.views.decorators import check_data_permissions, login_and_otp_required
 
-from ..forms.upload import UploadFileForm
 from ..general_functions.breadcrumbs import data_breadcrumbs
 from ..general_functions.csv import (
     create_csv_submission,
@@ -427,8 +426,6 @@ def upload_csv(request, audit_period, pdu):
         if not has_perm:
             raise PermissionDenied("You do not have permission to upload CSV files.")
 
-        UploadFileForm(request.POST, request.FILES)
-
         user_csv = request.FILES["csv_upload"]
         user_csv_filename = user_csv.name
         # We are eventually storing the CSV file as a BinaryField so have to hold it in memory
@@ -436,10 +433,13 @@ def upload_csv(request, audit_period, pdu):
 
         pz_code = pdu.pz_code
         is_jersey = pz_code == "PZ248"
+        dataset_year = audit_period.get_dataset_year()
 
         # check to see if the CSV is valid - cannot accept CSVs with no header. All other header errors are non-lethal but are reported back to the user
         try:
-            parsed_csv = csv_parse(io.BytesIO(user_csv_bytes))
+            parsed_csv = csv_parse(
+                io.BytesIO(user_csv_bytes), dataset_year=dataset_year
+            )
         except ValueError as e:
             return upload_error(f"Invalid CSV format: {e}")
 
@@ -586,9 +586,9 @@ def upload_csv_in_progress(request, audit_period, pdu):
         "visits_so_far": visits_so_far,
         "total_patients": total_patients,
         "total_rows": total_rows,
-        "patient_progress": (
-            patients_so_far / total_patients * 100 if total_patients else 0
-        ),
+        "patient_progress": patients_so_far / total_patients * 100
+        if total_patients
+        else 0,
         "upload_complete": upload_complete,
         "timeout": timeout,
         "breadcrumbs": data_breadcrumbs(

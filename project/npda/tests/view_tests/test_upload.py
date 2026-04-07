@@ -8,7 +8,6 @@ from django.urls import reverse
 from project.npda.models.audit_period import AuditPeriod
 from project.npda.models.npda_user import NPDAUser
 from project.npda.tests.model_tests.test_submissions import ALDER_HEY_PZ_CODE
-from project.npda.tests.test_csv_upload import mock_remote_calls  # noqa: F401
 from project.npda.tests.UserDataClasses import test_user_audit_centre_coordinator_data
 from project.npda.tests.utils import login_and_verify_user
 
@@ -87,9 +86,12 @@ def test_generate_csv_upload_to_view(
         csv_file = SimpleUploadedFile(f.name, f.read(), content_type="text/csv")
 
     # Send POST request with CSV file
+    # The audit period slug must match the dataset year inferred from today's date.
+    # create_csv defaults submission_date to today; get_audit_period_for_date(today)
+    # returns the current audit period (2026-2027 from April 2026 onwards).
     url = reverse(
         "pdu-upload-csv",
-        kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"},
+        kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2026-2027"},
     )
     response = client.post(url, {"csv_upload": csv_file})
 
@@ -124,6 +126,10 @@ def test_coordinator_cannot_upload_csv_to_closed_audit_year(
         csv_to_upload.encode(),
         content_type="text/csv",
     )
+
+    # Ensure the audit period is closed for this test
+    audit_period.is_open = False
+    audit_period.save()
 
     # Send POST request with CSV file
     url = reverse(

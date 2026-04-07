@@ -33,7 +33,11 @@ class AuditPeriodManager(models.Manager):
 
             raise e
 
-        if not audit_period.is_visible and not can_view_all_data:
+        if (
+            not audit_period.is_visible
+            and not audit_period.is_open
+            and not can_view_all_data
+        ):
             raise PermissionDenied(f"Audit period {slug} is not visible")
 
         return audit_period
@@ -53,6 +57,13 @@ class AuditPeriod(models.Model):
     # For compatibility with old code
     def audit_year(self):
         return self.start_date.year
+
+    def get_dataset_year(self):
+        """Return the dataset year for this audit period. This is either 2021 or 2026."""
+        if self.start_date >= date(2026, 4, 1):
+            return 2026
+        else:
+            return 2021
 
     def display_name(self):
         return f"{self.start_date.year} - {self.end_date.year}"

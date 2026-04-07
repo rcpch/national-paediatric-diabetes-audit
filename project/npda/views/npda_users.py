@@ -25,11 +25,15 @@ from django_otp import devices_for_user, user_has_device
 # third party imports
 from two_factor.views import LoginView as TwoFactorLoginView
 
-from project.constants.user import AUDIT_CENTRE_COORDINATOR
 from project.npda.filtersets.npdauser_filterset import NPDAUserFilterSet
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 
-from ...constants import AUDIT_CENTRE_EDITOR, AUDIT_CENTRE_READER, RCPCH_AUDIT_TEAM
+from ...constants import (
+    AUDIT_CENTRE_COORDINATOR,
+    AUDIT_CENTRE_EDITOR,
+    AUDIT_CENTRE_READER,
+    RCPCH_AUDIT_TEAM,
+)
 from ..forms.npda_user_form import CaptchaAuthenticationForm, NPDAUserForm
 from ..general_functions import (
     construct_confirm_email,
@@ -40,6 +44,9 @@ from ..general_functions import (
 
 # RCPCH imports
 from ..models import AuditPeriod, NPDAUser, OrganisationEmployer, VisitActivity
+
+# RCPCH imports
+# RCPCH imports
 from ..signals import get_client_ip
 from .decorators import login_and_otp_required
 from .mixins import LoginAndOTPRequiredMixin
@@ -812,7 +819,11 @@ class RCPCHLoginView(TwoFactorLoginView):
         delta = timezone.now() - user.password_last_set
         # if user has not renewed password in last 90 days, redirect to login page
         password_reset_date = user.password_last_set + timezone.timedelta(days=90)
-        if user.is_active and (password_reset_date <= timezone.now()):
+        if (
+            user.is_active
+            and (password_reset_date <= timezone.now())
+            and user.is_superuser is False
+        ):
             messages.add_message(
                 self.request,
                 messages.ERROR,

@@ -19,9 +19,9 @@ from django.utils import timezone
 
 # RCPCH imports
 from project.constants import (
-    CSV_HEADING_OBJECTS,
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
+    get_csv_heading_objects_for_year_and_unique_identifier,
 )
 from project.npda.general_functions.csv import gather_unique_patient_and_visit_counts
 
@@ -129,12 +129,41 @@ async def csv_upload(
     """
     pdu = submission.paediatric_diabetes_unit
 
+    # Infer dataset_year from submission.audit_period
+    try:
+        dataset_year = submission.audit_period.get_dataset_year()
+    except Exception:
+        dataset_year = 2021
+
+    # But the dataframe itself may contain 2026 headings; prefer detecting from the dataframe
+    # if present so tests that pass a dataframe directly don't rely on seeded AuditPeriod years.
+    from project.npda.general_functions.headings import get_field_heading
+
+    try:
+        # Check for clear 2026-only headings
+        if (
+            get_field_heading("sex", 2026) in dataframe.columns
+            or get_field_heading("blood_gas_ph", 2026) in dataframe.columns
+        ):
+            dataset_year = 2026
+        # Otherwise if the dataframe explicitly has 2021 sex heading, prefer 2021
+        elif get_field_heading("sex", 2021) in dataframe.columns:
+            dataset_year = 2021
+    except Exception:
+        logger.debug(
+            "Could not determine dataset year from headings, falling back to submission-derived year"
+        )
+
     if pdu.pz_code == "PZ248":
-        CSV_HEADINGS = UNIQUE_IDENTIFIER_JERSEY + CSV_HEADING_OBJECTS
+        unique_identifier = "jersey"
         identifier_heading = UNIQUE_IDENTIFIER_JERSEY[0]["heading"]
     else:
-        CSV_HEADINGS = UNIQUE_IDENTIFIER_ENGLAND + CSV_HEADING_OBJECTS
+        unique_identifier = "england"
         identifier_heading = UNIQUE_IDENTIFIER_ENGLAND[0]["heading"]
+
+    CSV_HEADINGS = get_csv_heading_objects_for_year_and_unique_identifier(
+        dataset_year=dataset_year, unique_identifier=unique_identifier
+    )
 
     # Helper functions
     def csv_value_to_model_value(model_field, value):
@@ -164,6 +193,7 @@ async def csv_upload(
         return python_value
 
     def row_to_dict(row, model):
+        # Use the resolved CSV_HEADINGS (depends on dataset_year and PDU)
         ret = {}
 
         for entry in CSV_HEADINGS:
@@ -302,7 +332,7 @@ async def csv_upload(
     """
     Process the csv file and validate and save the data in the tables, parsing any errors
     """
-    dataframe = csv_clean(dataframe)
+    dataframe = csv_clean(dataframe, dataset_year=dataset_year)
 
     # Remember the original row number to help users find where the problem was in the CSV
     # It may already be set if doing a bulk upload across multiple PDUs using the upload_csv command
@@ -356,11 +386,14 @@ async def csv_upload(
 
     async def process_rows_for_patient(rows, async_client):
         patient = None
-
         first_patient_row_index = int(rows.iloc[0]["row_index"])
 
         merge_rows_for_patient(
-            identifier_heading, rows, first_patient_row_index, errors_to_return
+            identifier_heading,
+            rows,
+            first_patient_row_index,
+            errors_to_return,
+            dataset_year,
         )
         patient_row = rows.iloc[0]
 

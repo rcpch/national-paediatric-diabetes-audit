@@ -15,6 +15,7 @@ Tests for NPDAUser model actions.
 """
 
 import logging
+from datetime import date
 from http import HTTPStatus
 
 # Python imports
@@ -37,6 +38,7 @@ from project.constants.user import (
 from project.npda.general_functions.audit_period import get_audit_period_for_date
 from project.npda.general_functions.csv import csv_parse
 from project.npda.models import NPDAUser, Submission
+from project.npda.models.audit_period import AuditPeriod
 from project.npda.models.organisation_employer import OrganisationEmployer
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
@@ -61,6 +63,39 @@ GOSH_PZ_CODE = "PZ196"
 def valid_df(dummy_sheets_folder):
     file = dummy_sheets_folder / "dummy_sheet_test.csv"
     return csv_parse(file).df
+
+
+@pytest.fixture(params=[2021, 2026])
+def dataset_year(request):
+    return request.param
+
+
+@pytest.fixture
+def audit_period_for_dataset_year(dataset_year):
+    """Create an AuditPeriod for the supplied dataset_year for tests.
+
+    Tests that need a matching audit period for the CSV can depend on this
+    fixture and pass it into `csv_upload_sync` as `_audit_period`.
+    """
+    slug = f"{dataset_year}-{dataset_year + 1}"
+    audit_period, _created = AuditPeriod.objects.get_or_create(
+        slug=slug,
+        defaults={
+            "is_open": True,
+            "is_visible": True,
+            "start_date": date(dataset_year, 4, 1),
+            "end_date": date(dataset_year + 1, 3, 31),
+        },
+    )
+
+    # Ensure dates/visibility are set to expected values even if the object existed
+    audit_period.is_open = True
+    audit_period.is_visible = True
+    audit_period.start_date = date(dataset_year, 4, 1)
+    audit_period.end_date = date(dataset_year + 1, 3, 31)
+    audit_period.save()
+
+    return audit_period
 
 
 def check_all_users_in_pdu(user, users, pz_code):
@@ -765,6 +800,7 @@ def test_users_can_download_report(
     user_data,
     valid_df,
     dummy_sheet_csv,
+    dataset_year,
 ):
     """Test that editor, coordinator, and RCPCH audit team users can download the validation report."""
 

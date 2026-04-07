@@ -2,5 +2,31 @@
 {% load static %}
 {% load npda_tags %}
 {% block content %}
+  {% if viewing_stale_period %}
+    <div role="alert" class="alert border-t-4 border-rcpch_light_blue shadow-lg mx-4 mt-4">
+      <i class="fa-solid fa-calendar-plus fa-2xl text-rcpch_light_blue"></i>
+      <div>
+        <h3 class="font-bold font-montserrat">
+          You are viewing {{ audit_period.display_name }}
+          {% if not previous_period_still_accepts %}(closed){% endif %}
+        </h3>
+        <p class="text-sm">
+          {% if previous_period_still_accepts %}
+            The <strong>{{ current_audit_period.display_name }}</strong> audit year has now started.
+            {% if perms.npda.can_submit_csv %}
+              <a href="{{ upload_url_for_current_period }}"
+                 class="font-semibold underline hover:text-rcpch_dark_blue">
+                Click here to submit data for {{ current_audit_period.display_name }}.
+              </a>
+            {% else %}
+              You do not have permission to submit data.
+            {% endif %}
+          {% else %}
+            This audit period is now closed and submissions are no longer accepted.
+          {% endif %}
+        </p>
+      </div>
+    </div>
+  {% endif %}
   {% include 'dashboard/dashboard_base.html' %}
 {% endblock content %}

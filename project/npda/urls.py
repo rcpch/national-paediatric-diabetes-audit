@@ -18,18 +18,20 @@ from project.npda.views import (
     VisitCreateView,
     VisitDeleteView,
     VisitUpdateView,
-    celery_test_task,
+    npdauser_pdu_update,
+)
+
+from .tasks import test_task as celery_test_task
+from .views import (
     csrf_fail,
     download_template,
     feature_flags,
     home,
     index,
     new_home,
-    npdauser_pdu_update,
     upload_csv,
     upload_csv_in_progress,
 )
-
 from .views.dashboard import dashboard, partials
 from .views.dashboard.patient_characteristics import all_patient_charts, patient_ages
 from .views.dashboard.patient_measurements import patient_measurements

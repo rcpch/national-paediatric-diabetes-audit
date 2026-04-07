@@ -1,6 +1,6 @@
 import pandas as pd
 
-from project.constants.csv_headings import CSV_HEADING_OBJECTS
+from project.constants.csv_headings import get_csv_heading_objects
 from project.constants.ethnicities import ETHNICITIES
 from project.constants.sex_types import SEX_TYPE
 
@@ -122,9 +122,9 @@ def merge_patient_rows_for_column(
 
 
 def merge_rows_for_patient(
-    identifier_heading, rows, patient_row_index, errors_to_return
+    identifier_heading, rows, patient_row_index, errors_to_return, dataset_year
 ):
-    for column in CSV_HEADING_OBJECTS:
+    for column in get_csv_heading_objects(dataset_year):
         merge_patient_rows_for_column(
             identifier_heading, column, rows, patient_row_index, errors_to_return
         )

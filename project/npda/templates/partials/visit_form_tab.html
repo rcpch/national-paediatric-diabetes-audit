@@ -48,15 +48,15 @@
                           <i class="fa-exclamation fa-stack-1x fa-inverse fas"></i>
                         </span>
                       {% endif %}
-                      {{ field.label }}
-                      {% if field.help_text.label %}
-                        <div class="tooltip" data-tip="{{ field.help_text.label }}">
+                      {{ field.field.label }}
+                      {% if field.field.help_text %}
+                        <div class="tooltip" data-tip="{{ field.field.help_text }}">
                           <i class="fa-solid fa-circle-question text-rcpch_pink"></i>
                         </div>
                       {% endif %}
-                      {% if field.help_text.reference %}
+                      {% if field.field.reference %}
                         <div class="tooltip tooltip-right"
-                             data-tip="{{ field.help_text.reference }}">
+                             data-tip="{{ field.field.reference }}">
                           <i class="fa fa-book text-rcpch_pink"></i>
                         </div>
                       {% endif %}

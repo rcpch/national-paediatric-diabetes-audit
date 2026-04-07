@@ -14,7 +14,21 @@ from django import forms
 from django.apps import apps
 from django.core.exceptions import ValidationError
 
-from ...constants import LEAVE_PDU_REASONS
+from project.constants.patient_categories import (
+    PATIENT_CATEGORIES_2021,
+    PATIENT_CATEGORIES_2026,
+)
+from project.npda.general_functions.headings import (
+    PATIENT_FIELD_HEADINGS_2021,
+    PATIENT_FIELD_HEADINGS_2026,
+    get_field_heading,
+)
+from project.npda.general_functions.justification_or_standard import (
+    get_field_justification_standard,
+    get_field_notes,
+)
+
+from ...constants import ADHD_ASD, LEAVE_PDU_REASONS, YES_NO_UNKNOWN
 from ...constants.styles.form_styles import *
 from ..models import Patient, Transfer
 from ..validators import not_in_the_future_validator
@@ -67,21 +81,16 @@ class PatientForm(forms.ModelForm):
     reason_leaving_service = forms.ChoiceField(
         required=False, choices=LEAVE_PDU_REASONS
     )
+    dataset_year = 2021
 
     class Meta:
         model = Patient
-        fields = [
-            "nhs_number",
-            "unique_reference_number",
-            "sex",
-            "date_of_birth",
-            "postcode",
-            "ethnicity",
-            "diabetes_type",
-            "diagnosis_date",
-            "death_date",
-            "gp_practice_ods_code",
-            "gp_practice_postcode",
+        fields = "__all__"
+        exclude = [
+            "index_of_multiple_deprivation_quintile",
+            "location_bng",
+            "location_wgs84",
+            "location_wgs",
         ]
         field_classes = {
             "nhs_number": NHSNumberField,
@@ -103,6 +112,10 @@ class PatientForm(forms.ModelForm):
             "diabetes_type": forms.Select(),
             "diagnosis_date": DateInput(),
             "death_date": DateInput(),
+            "immunotherapy_date": DateInput(),
+            "immunotherapy_received": forms.Select(),
+            "learning_disability_status": forms.Select(),
+            "adhd_asd_status": forms.Select(),
             "gp_practice_ods_code": forms.TextInput(attrs={"class": TEXT_INPUT}),
             "gp_practice_postcode": forms.TextInput(attrs={"class": TEXT_INPUT}),
         }
@@ -111,8 +124,106 @@ class PatientForm(forms.ModelForm):
         self.audit_period = kwargs.pop("audit_period", None)
         self.paediatric_diabetes_unit = kwargs.pop("paediatric_diabetes_unit", None)
         self.override_postcode = kwargs.pop("override_postcode", False)
-
+        self.dataset_year = (
+            self.audit_period.get_dataset_year() if self.audit_period else 2021
+        )
         super().__init__(*args, **kwargs)
+        self._init_fields_by_dataset_year()
+
+    def _init_fields_by_dataset_year(self):
+        """
+        Initialize form fields based on the dataset year.
+        """
+        # Determine which patient fields should be presented for this dataset year
+        if self.dataset_year == 2026:
+            allowed_fields = list(PATIENT_FIELD_HEADINGS_2026.keys())
+        else:
+            # Future-proofing for other dataset years
+            allowed_fields = list(PATIENT_FIELD_HEADINGS_2021.keys())
+
+        # Keep any explicit extra form fields (non-model) plus allowed model fields
+        extra_fields = {
+            "date_leaving_service",
+            "reason_leaving_service",
+            "gp_practice_postcode",
+            "unique_reference_number",
+        }
+        keep_fields = set(allowed_fields) | extra_fields
+
+        # Remove fields that are not relevant to this dataset year
+        for fname in list(self.fields.keys()):
+            if fname not in keep_fields:
+                del self.fields[fname]
+
+        # Set help texts and labels dynamically from model field and headings
+        for field_name in allowed_fields:
+            if field_name not in self.fields:
+                continue  # Skip if field is not present in the form
+            # Set help text from model field
+            # Set label from headings
+            label = get_field_heading(field_name, self.dataset_year)
+            note = get_field_notes(field_name, self.dataset_year)
+            reference = get_field_justification_standard(field_name, self.dataset_year)
+            self.fields[field_name].label = label
+            self.fields[field_name].help_text = note
+            self.fields[field_name].reference = reference
+
+        PATIENT_CATEGORIES = (
+            PATIENT_CATEGORIES_2021
+            if self.dataset_year == 2021
+            else PATIENT_CATEGORIES_2026
+        )
+
+        # Set initial values for transfer fields if editing an existing patient
+        # and ensure we process categories in priority order
+        sorted_categories = sorted(
+            PATIENT_CATEGORIES, key=lambda c: c.get("priority", 0)
+        )
+        for category in sorted_categories:
+            for field in category["fields"]:
+                if field not in self.fields:
+                    continue
+                self.fields[field].category = category["name"]
+                self.fields[field].category_colour = category["colour"]
+
+        # Reorder form fields so they appear grouped by the category order
+        # defined in PATIENT_CATEGORIES. We perform a stable sort based on
+        # category priority and preserve the original relative order for any
+        # fields that share the same priority or are uncategorised. This
+        # avoids popping items from `self.fields` which can be error-prone
+        # when the form is used in different contexts (UI vs CSV upload).
+        from collections import OrderedDict
+
+        # Record original order index for stability
+        original_keys = list(self.fields.keys())
+        original_index = {k: i for i, k in enumerate(original_keys)}
+
+        # Build a map of field -> (priority, within_category_index)
+        priority_map = {}
+        within_index = {}
+        for cat in sorted_categories:
+            pr = cat.get("priority", 0)
+            for idx, fname in enumerate(cat.get("fields", [])):
+                # Lower priority value sorts earlier (1 is high priority)
+                priority_map[fname] = pr
+                within_index[fname] = idx
+
+        # Define a key function that sorts by (priority, within_category_index, original_index)
+        def sort_key(fname):
+            return (
+                priority_map.get(fname, 9999),
+                within_index.get(fname, 9999),
+                original_index.get(fname, 9999),
+            )
+
+        ordered_keys = sorted(original_keys, key=sort_key)
+
+        new_fields = OrderedDict((k, self.fields[k]) for k in ordered_keys)
+
+        # Replace the form's fields with the reordered mapping
+        self.fields = new_fields
+
+        # Populate transfer-related initial values if editing an existing patient
         if self.instance.pk:
             try:
                 patient_transfer = Transfer.objects.filter(patient=self.instance).get()
@@ -168,6 +279,42 @@ class PatientForm(forms.ModelForm):
             return None
         return reason_leaving_service
 
+    def clean_adhd_asd_status(self):
+        data = self.cleaned_data["adhd_asd_status"]
+        # Convert the list of tuples to a dictionary
+        adhd_asd_status_dict = dict(ADHD_ASD)
+        if data is None or data in adhd_asd_status_dict:
+            return data
+        else:
+            options = str(ADHD_ASD).strip("[]").replace(")", "").replace("(", "")
+            raise ValidationError(
+                f"'{data}' is not a value for 'ADHD/ASD Status'. Please select one of {options}."
+            )
+
+    def clean_learning_disability_status(self):
+        data = self.cleaned_data["learning_disability_status"]
+        # Convert the list of tuples to a dictionary
+        learning_disability_status_dict = dict(YES_NO_UNKNOWN)
+        if data is None or data in learning_disability_status_dict:
+            return data
+        else:
+            options = str(YES_NO_UNKNOWN).strip("[]").replace(")", "").replace("(", "")
+            raise ValidationError(
+                f"'{data}' is not a value for 'Learning Disability Status'. Please select one of {options}."
+            )
+
+    def clean_immunotherapy_received(self):
+        data = self.cleaned_data["immunotherapy_received"]
+        # Convert the list of tuples to a dictionary
+        yes_no_unknown_dict = dict(YES_NO_UNKNOWN)
+        if data is None or data in yes_no_unknown_dict:
+            return data
+        else:
+            options = str(YES_NO_UNKNOWN).strip("[]").replace(")", "").replace("(", "")
+            raise ValidationError(
+                f"'{data}' is not a value for 'Immunotherapy Received'. Please select one of {options}."
+            )
+
     def handle_async_validation_result(self, key):
         value = getattr(self.async_validation_results, key)
         # override the invalid postcode error if the user has sanctioned the postcode
@@ -192,7 +339,8 @@ class PatientForm(forms.ModelForm):
         death_date = cleaned_data.get("death_date")
         gp_practice_ods_code = cleaned_data.get("gp_practice_ods_code")
         gp_practice_postcode = cleaned_data.get("gp_practice_postcode")
-
+        immunotherapy_date = cleaned_data.get("immunotherapy_date")
+        immunotherapy_received = cleaned_data.get("immunotherapy_received")
         nhs_number = cleaned_data.get("nhs_number")
         unique_reference_number = cleaned_data.get("unique_reference_number")
 
@@ -287,6 +435,56 @@ class PatientForm(forms.ModelForm):
                         "'Death Date' cannot be before 'Date of Diabetes Diagnosis'"
                     ),
                 )
+
+        if immunotherapy_date is not None and diagnosis_date is not None:
+            if immunotherapy_date < diagnosis_date:
+                self.add_error(
+                    "immunotherapy_date",
+                    ValidationError(
+                        "'Date Immunotherapy Started' cannot be before 'Date of Diabetes Diagnosis'"
+                    ),
+                )
+
+        if immunotherapy_date is not None and immunotherapy_date > date.today():
+            self.add_error(
+                "immunotherapy_date",
+                ValidationError("'Date Immunotherapy Started' cannot be in the future"),
+            )
+
+        if immunotherapy_date is not None and date_of_birth is not None:
+            if immunotherapy_date < date_of_birth:
+                self.add_error(
+                    "immunotherapy_date",
+                    ValidationError(
+                        "'Date Immunotherapy Started' cannot be before 'Date of Birth'"
+                    ),
+                )
+
+        if immunotherapy_date is not None and death_date is not None:
+            if immunotherapy_date > death_date:
+                self.add_error(
+                    "immunotherapy_date",
+                    ValidationError(
+                        "'Date Immunotherapy Started' cannot be after 'Death Date'"
+                    ),
+                )
+
+        if (immunotherapy_date is not None and immunotherapy_received is None) or (
+            immunotherapy_date is None
+            and immunotherapy_received == YES_NO_UNKNOWN[0][0]
+        ):
+            self.add_error(
+                "immunotherapy_date",
+                ValidationError(
+                    "'Immunotherapy Received' and 'Date Immunotherapy Started' must both be provided or both be empty"
+                ),
+            )
+            self.add_error(
+                "immunotherapy_received",
+                ValidationError(
+                    "'Immunotherapy Received' and 'Date Immunotherapy Started' must both be provided or both be empty"
+                ),
+            )
 
         if gp_practice_ods_code is None and gp_practice_postcode is None:
             self.add_error(

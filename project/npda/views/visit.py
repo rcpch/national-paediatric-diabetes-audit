@@ -14,8 +14,8 @@ from django.views.generic.edit import CreateView, DeleteView, UpdateView
 # RCPCH imports
 from ..forms.visit_form import VisitForm
 from ..general_functions import (
-    get_visit_categories,
-    get_visit_tabs,
+    get_categories,
+    get_tabs,
     patient_breadcrumbs,
     visit_falls_within_audit_period_Q_object,
 )
@@ -87,7 +87,7 @@ class PatientVisitsListView(
         )
         calculated_visits = []
         for visit in visits:
-            visit_categories = get_visit_categories(instance=visit, form=None)
+            visit_categories = get_categories(instance=visit, form=None)
             calculated_visits.append({"visit": visit, "categories": visit_categories})
         context["visits"] = calculated_visits
         context["patient"] = patient
@@ -136,10 +136,10 @@ class VisitCreateView(
         context["title"] = "Add New Visit"
         context["form_method"] = "create"
         context["button_title"] = "Create New Visit"
-        context["visit_tabs"] = get_visit_tabs(form=None)
+        context["visit_tabs"] = get_tabs(form=None)
         context["override_height_weight"] = False
-
-        context["pdu"] = self.pdu
+        context["audit_period"] = self.audit_period
+        context["paediatric_diabetes_unit"] = self.pdu
 
         context["breadcrumbs"] = patient_breadcrumbs(
             self.pdu,
@@ -174,12 +174,15 @@ class VisitCreateView(
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         # Get override_postcode from POST data if available
+        # Always provide the audit_period so the form can derive dataset year
+        kwargs["audit_period"] = AuditPeriod.objects.get_audit_period_for_request(
+            self.request
+        )
+
+        # Pass override flag only for modifying requests
         if self.request.method in ("POST", "PUT"):
             kwargs["override_height_weight"] = (
                 self.request.POST.get("override_height_weight", "false") == "true"
-            )
-            kwargs["audit_period"] = AuditPeriod.objects.get_audit_period_for_request(
-                self.request
             )
         return kwargs
 
@@ -245,11 +248,14 @@ class VisitUpdateView(
         context["title"] = "Edit/Update Visit Details"
         context["button_title"] = "Save Changes"
         context["form_method"] = "update"
-        context["visit_tabs"] = get_visit_tabs(form=context["form"])
+        context["visit_tabs"] = get_tabs(form=context["form"])
         visit = Visit.objects.get(pk=self.kwargs["pk"])
-
+        context["audit_period"] = self.audit_period
         patient = visit.patient
         context["patient"] = visit.patient
+        context["paediatric_diabetes_unit"] = (
+            patient.submissions.first().paediatric_diabetes_unit
+        )
 
         context["breadcrumbs"] = patient_breadcrumbs(
             self.pdu,
@@ -291,11 +297,13 @@ class VisitUpdateView(
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         # Get override_postcode from POST data if available
+        # Always pass the audit period for the form to use when rendering
+        kwargs["audit_period"] = self.audit_period
+
         if self.request.method in ("POST", "PUT"):
             kwargs["override_height_weight"] = (
                 self.request.POST.get("override_height_weight", "false") == "true"
             )
-            kwargs["audit_period"] = self.audit_period
         return kwargs
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:

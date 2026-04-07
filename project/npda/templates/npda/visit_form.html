@@ -9,7 +9,8 @@
     <div class="max-w-full lg:max-w-[75%] px-2 bg-white font-montserrat">
       {% if title %}
       <strong>
-        {{ title }} - NPDA ID {{ patient.pk }} ({% nhs_number_vs_urn pz_code %} {% nhs_number_vs_urn pz_code patient %}) at {{ pdu.lead_organisation_name }} ({{ pdu.pz_code }})
+        {{ title }} - NPDA ID {{ patient.pk }} ({% nhs_number_vs_urn pz_code %} {% nhs_number_vs_urn pz_code patient %})
+        at {{ paediatric_diabetes_unit.lead_organisation_name }} ({{ paediatric_diabetes_unit.pz_code }})
       </strong>
       {% endif %}
       <form id="update-form"
@@ -18,7 +19,7 @@
             {% if form_method == "create" %} action="{% data_url 'pdu-visit-create' patient_id=patient_id %}" {% else %} action="{% data_url 'pdu-visit-update' patient_id=patient_id pk=visit.pk %}" {% endif %}>
         {% csrf_token %}
         {% for field in form %}
-          {% if field.field.category is None %}
+          {% if field.id_for_label == "id_visit_date" %}
             <!-- visit date box -->
             <div class="md:flex md:items-center mb-6 mt-2 {% if background_colour %}bg-{{ background_colour }}{% endif %}">
               <div class="md:w-1/3">
@@ -46,13 +47,13 @@
                   </button>
                 {% endif %}
               </div>
-              {% if field.id_for_label == "id_visit_date" %}
+
                 {% for error in field.errors %}
                   <p class="flex flex-row flex-wrap my-2 mx-2">
                     <strong class="text-rcpch_red">{{ error|escape }}</strong>
                   </p>
                 {% endfor %}
-              {% endif %}
+
             </div>
           {% endif %}
         {% endfor %}

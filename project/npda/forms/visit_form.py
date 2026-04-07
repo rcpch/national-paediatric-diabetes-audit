@@ -4,9 +4,19 @@ from decimal import ROUND_HALF_UP, Decimal
 from django import forms
 from django.core.exceptions import ValidationError
 
+from project.npda.general_functions.headings import (
+    VISIT_FIELD_HEADINGS_2021,
+    VISIT_FIELD_HEADINGS_2026,
+    get_field_heading,
+)
+
 from ...constants import *
 from ...constants.styles import *
 from ..forms.external_visit_validators import validate_visit_sync
+from ..general_functions.justification_or_standard import (
+    get_field_justification_standard,
+    get_field_notes,
+)
 from ..general_functions.validate_dates import validate_date
 from ..models import Visit
 
@@ -20,49 +30,13 @@ class VisitForm(forms.ModelForm):
 
     class Meta:
         model = Visit
-        fields = [
-            "visit_date",
-            "height",
-            "weight",
-            "bmi",
-            "height_weight_observation_date",
-            "hba1c",
-            "hba1c_format",
-            "hba1c_date",
-            "treatment",
-            "closed_loop_system",
-            "glucose_monitoring",
-            "systolic_blood_pressure",
-            "diastolic_blood_pressure",
-            "blood_pressure_observation_date",
-            "foot_examination_observation_date",
-            "retinal_screening_observation_date",
-            "retinal_screening_result",
-            "albumin_creatinine_ratio",
-            "albumin_creatinine_ratio_date",
-            "albuminuria_stage",
-            "total_cholesterol",
-            "total_cholesterol_date",
-            "thyroid_function_date",
-            "thyroid_treatment_status",
-            "coeliac_screen_date",
-            "gluten_free_diet",
-            "psychological_screening_assessment_date",
-            "psychological_additional_support_status",
-            "smoking_status",
-            "smoking_cessation_referral_date",
-            "carbohydrate_counting_level_three_education_date",
-            "dietician_additional_appointment_offered",
-            "dietician_additional_appointment_date",
-            "flu_immunisation_recommended_date",
-            "ketone_meter_training",
-            "sick_day_rules_training_date",
-            "hospital_admission_date",
-            "hospital_discharge_date",
-            "hospital_admission_reason",
-            "dka_additional_therapies",
-            "hospital_admission_other",
-        ]
+        fields = "__all__"
+        exclude = (
+            "patient",
+            "dataset_year",
+            "created_at",
+            "updated_at",
+        )
 
         widgets = {
             "visit_date": DateInput(),
@@ -93,7 +67,9 @@ class VisitForm(forms.ModelForm):
             "gluten_free_diet": forms.Select(),
             "psychological_screening_assessment_date": DateInput(),
             "psychological_additional_support_status": forms.Select(),
+            "psychological_support_outcome": forms.Select(),
             "smoking_status": forms.Select(),
+            "smoking_vaping_status": forms.Select(),
             "smoking_cessation_referral_date": DateInput(),
             "carbohydrate_counting_level_three_education_date": DateInput(),
             "dietician_additional_appointment_offered": forms.Select(),
@@ -132,12 +108,30 @@ class VisitForm(forms.ModelForm):
         self.patient = kwargs["initial"].get("patient")
         self.override_height_weight = kwargs.pop("override_height_weight", False)
         self.audit_period = kwargs.pop("audit_period", None)
+        self.dataset_year = (
+            self.audit_period.get_dataset_year() if self.audit_period else 2021
+        )
         super().__init__(*args, **kwargs)
-        for field_name, field in self.fields.items():
-            model_field = Visit._meta.get_field(field_name)
+        if self.dataset_year == 2026:
+            allowed_fields = list(VISIT_FIELD_HEADINGS_2026.keys())
+        else:
+            # Future-proofing for other dataset years
+            allowed_fields = list(VISIT_FIELD_HEADINGS_2021.keys())
 
+        for field_name in allowed_fields:
+            if field_name not in self.fields:
+                continue  # Skip if field is not present in the form
+            model_field = Visit._meta.get_field(field_name)
+            # Set help text from model field
+            # Set label from headings
+            label = get_field_heading(field_name, self.dataset_year)
+            note = get_field_notes(field_name, self.dataset_year)
+            reference = get_field_justification_standard(field_name, self.dataset_year)
+            self.fields[field_name].label = label
+            self.fields[field_name].help_text = note
+            self.fields[field_name].reference = reference
             if hasattr(model_field, "category"):
-                field.category = model_field.category
+                self.fields[field_name].category = model_field.category
 
     """
     Custom clean method for all fields requiring choices
@@ -356,6 +350,80 @@ class VisitForm(forms.ModelForm):
                 f"'{data}' is not a value for 'Glucose Monitoring'. Please select one of {options}."
             )
 
+    def clean_insulin_regimen(self):
+        data = self.cleaned_data["insulin_regimen"]
+        # Convert the list of tuples to a dictionary
+        insulin_regimen_dict = dict(INSULIN_TREATMENT)
+
+        if data is None or data in insulin_regimen_dict:
+            return data
+        else:
+            options = (
+                str(INSULIN_TREATMENT).strip("[]").replace(")", "").replace("(", "")
+            )
+            raise ValidationError(
+                f"'{data}' is not a value for 'Insulin Regimen'. Please select one of {options}."
+            )
+
+    def clean_non_insulin_medication(self):
+        data = self.cleaned_data["non_insulin_medication"]
+        # Convert the list of tuples to a dictionary
+        non_insulin_medication_dict = dict(NON_INSULIN_TREATMENT)
+
+        if data is None or data in non_insulin_medication_dict:
+            return data
+        else:
+            options = (
+                str(NON_INSULIN_TREATMENT).strip("[]").replace(")", "").replace("(", "")
+            )
+            raise ValidationError(
+                f"'{data}' is not a value for 'Non-Insulin Medication'. Please select one of {options}."
+            )
+
+    def clean_dietary_lifestyle_modification(self):
+        data = self.cleaned_data["dietary_lifestyle_modification"]
+        # Convert the list of tuples to a dictionary
+        dietary_lifestyle_modification_dict = dict(YES_NO_UNKNOWN)
+
+        if data is None or data in dietary_lifestyle_modification_dict:
+            return data
+        else:
+            options = str(YES_NO_UNKNOWN).strip("[]").replace(")", "").replace("(", "")
+            raise ValidationError(
+                f"'{data}' is not a value for 'Dietary/Lifestyle Modification'. Please select one of {options}."
+            )
+
+    def clean_cgm_use(self):
+        data = self.cleaned_data["cgm_use"]
+        # Convert the list of tuples to a dictionary
+        cgm_use_dict = dict(YES_NO_UNKNOWN)
+
+        if data is None or data in cgm_use_dict:
+            return data
+        else:
+            options = str(YES_NO_UNKNOWN).strip("[]").replace(")", "").replace("(", "")
+            raise ValidationError(
+                f"'{data}' is not a value for 'CGM Use'. Please select one of {options}."
+            )
+
+    def clean_psychological_support_outcome(self):
+        data = self.cleaned_data["psychological_support_outcome"]
+        # Convert the list of tuples to a dictionary
+        psychological_support_outcome_dict = dict(PSYCHOLOGICAL_SUPPORT_OUTCOMES)
+
+        if data is None or data in psychological_support_outcome_dict:
+            return data
+        else:
+            options = (
+                str(PSYCHOLOGICAL_SUPPORT_OUTCOMES)
+                .strip("[]")
+                .replace(")", "")
+                .replace("(", "")
+            )
+            raise ValidationError(
+                f"'{data}' is not a value for 'Psychological Support Outcome'. Please select one of {options}."
+            )
+
     """
     Custom clean methods for all fields requiring numbers
     """
@@ -421,6 +489,32 @@ class VisitForm(forms.ModelForm):
                 )
 
         return total_cholesterol
+
+    def clean_blood_gas_ph(self):
+        blood_gas_ph = self.cleaned_data["blood_gas_ph"]
+
+        if blood_gas_ph:
+            if blood_gas_ph < 6.5:
+                raise ValidationError("Blood Gas pH out of range. Cannot be below 6.5")
+            elif blood_gas_ph > 7.8:
+                raise ValidationError("Blood Gas pH out of range. Cannot be above 7.8")
+
+        return blood_gas_ph
+
+    def clean_blood_gas_bicarbonate(self):
+        blood_gas_bicarbonate = self.cleaned_data["blood_gas_bicarbonate"]
+
+        if blood_gas_bicarbonate:
+            if blood_gas_bicarbonate < 5:
+                raise ValidationError(
+                    "Blood Gas Bicarbonate out of range. Cannot be below 5"
+                )
+            elif blood_gas_bicarbonate > 50:
+                raise ValidationError(
+                    "Blood Gas Bicarbonate out of range. Cannot be above 50"
+                )
+
+        return blood_gas_bicarbonate
 
     """
     Custom clean methods for all fields requiring dates
@@ -751,6 +845,22 @@ class VisitForm(forms.ModelForm):
 
         return self.cleaned_data["hospital_discharge_date"]
 
+    def clean_immunotherapy_date(self):
+        data = self.cleaned_data["immunotherapy_date"]
+        valid, error = validate_date(
+            date_under_examination_field_name="immunotherapy_date",
+            date_under_examination_label_name="Date Immunotherapy Started",
+            date_under_examination=data,
+            date_of_birth=self.patient.date_of_birth,
+            date_of_diagnosis=self.patient.diagnosis_date,
+            date_of_death=self.patient.death_date,
+            audit_period=self.audit_period,
+        )
+        if valid is False:
+            raise ValidationError(error)
+
+        return self.cleaned_data["immunotherapy_date"]
+
     def handle_async_validation_errors(self):
         # These are calculated fields but we handle them in the form because we want to add validation errors.
         # Conceptually we both "clean" weight and height and derive new fields from them. The actual data is
@@ -833,10 +943,20 @@ class VisitForm(forms.ModelForm):
         hba1c_format = cleaned_data.get("hba1c_format")
         hba1c_date = cleaned_data.get("hba1c_date")
 
+        # For dataset years >= 2026 the `hba1c_format` column may be absent;
+        # treat missing format as IFCC (1) for range validation in 2026+.
+        effective_hba1c_format = hba1c_format
+        if (
+            getattr(self, "dataset_year", 2026) >= 2026
+            and effective_hba1c_format is None
+        ):
+            effective_hba1c_format = 1
+
         if hba1c is not None:
-            if hba1c_format == 1:
+            if effective_hba1c_format == 1:
                 # mmol/mol
                 if hba1c < 20:
+                    # Debug: record when we trigger the low-IFCC validation branch
                     raise ValidationError(
                         {
                             "hba1c": [
@@ -866,13 +986,20 @@ class VisitForm(forms.ModelForm):
                             ]
                         }
                     )
-        if any([hba1c, hba1c_format, hba1c_date]):
-            # Validate all fields in a measure are present if any are present
-            measure_must_have_date_and_value(
-                hba1c_date,
-                "hba1c_date",
-                [{"hba1c": hba1c}, {"hba1c_format": hba1c_format}],
-            )
+        # Require the format field only for dataset years < 2026. For 2026+ we
+        # require the value and date only (format is assumed IFCC if missing).
+        if getattr(self, "dataset_year", 2026) < 2026:
+            if any([hba1c, hba1c_format, hba1c_date]):
+                measure_must_have_date_and_value(
+                    hba1c_date,
+                    "hba1c_date",
+                    [{"hba1c": hba1c}, {"hba1c_format": hba1c_format}],
+                )
+        else:
+            if any([hba1c, hba1c_date]):
+                measure_must_have_date_and_value(
+                    hba1c_date, "hba1c_date", [{"hba1c": hba1c}]
+                )
 
         treatment = cleaned_data.get("treatment")
         closed_loop_system = cleaned_data.get("closed_loop_system")
@@ -903,6 +1030,29 @@ class VisitForm(forms.ModelForm):
                         ]
                     }
                 )
+
+        insulin_regimen = cleaned_data.get("insulin_regimen")
+        non_insulin_medication = cleaned_data.get("non_insulin_medication")
+        dietary_lifestyle_modification = cleaned_data.get(
+            "dietary_lifestyle_modification"
+        )
+        if any(
+            [insulin_regimen, non_insulin_medication, dietary_lifestyle_modification]
+        ):
+            # These medication fields share the visit date rather than a dedicated
+            # observation date field. If any are present, require `visit_date`.
+            visit_date = cleaned_data.get("visit_date")
+            measure_must_have_date_and_value(
+                visit_date,
+                "visit_date",
+                [
+                    {"insulin_regimen": insulin_regimen},
+                    {"non_insulin_medication": non_insulin_medication},
+                    {"dietary_lifestyle_modification": dietary_lifestyle_modification},
+                ],
+            )
+
+        # Immunotherapy fields moved to Patient model (handled on patient form)
 
         blood_pressure_observation_date = cleaned_data.get(
             "blood_pressure_observation_date"
@@ -1002,12 +1152,25 @@ class VisitForm(forms.ModelForm):
             "smoking_cessation_referral_date"
         )
         smoking_status = cleaned_data.get("smoking_status")
+        smoking_vaping_status = cleaned_data.get("smoking_vaping_status")
         if smoking_status:
             if smoking_status != 2 and smoking_cessation_referral_date is not None:
                 raise ValidationError(
                     {
                         "smoking_cessation_referral_date": [
                             "Smoking Cessation Referral Date must be left empty if patient is not a current smoker or status is unknown."
+                        ]
+                    }
+                )
+        elif smoking_vaping_status:
+            if (
+                smoking_vaping_status not in [2, 3, 4]
+                and smoking_cessation_referral_date is not None
+            ):  # either smokes or vapes or both
+                raise ValidationError(
+                    {
+                        "smoking_cessation_referral_date": [
+                            "Smoking Cessation Referral Date must be left empty if patient is not a current smoker, vaper or status is unknown."
                         ]
                     }
                 )
@@ -1044,6 +1207,8 @@ class VisitForm(forms.ModelForm):
         hospital_admission_reason = cleaned_data.get("hospital_admission_reason")
         dka_additional_therapies = cleaned_data.get("dka_additional_therapies")
         hospital_admission_other = cleaned_data.get("hospital_admission_other")
+        blood_gas_ph = cleaned_data.get("blood_gas_ph")
+        blood_gas_bicarbonate = cleaned_data.get("blood_gas_bicarbonate")
         # clean hospital admission fields
         if hospital_admission_other == "None":
             hospital_admission_other = None
@@ -1053,17 +1218,26 @@ class VisitForm(forms.ModelForm):
                 hospital_admission_reason,
                 dka_additional_therapies,
                 hospital_admission_other,
+                blood_gas_ph,
+                blood_gas_bicarbonate,
             ]
         ):
             if hospital_admission_reason is not None:
                 if hospital_admission_reason == 2:  # DKA
-                    all_items_must_be_filled_in(
-                        [
-                            {"hospital_admission_date": hospital_admission_date},
-                            {"hospital_admission_reason": hospital_admission_reason},
-                            {"dka_additional_therapies": dka_additional_therapies},
-                        ]
-                    )
+                    items_to_include = [
+                        {"hospital_admission_date": hospital_admission_date},
+                        {"hospital_admission_reason": hospital_admission_reason},
+                        {"dka_additional_therapies": dka_additional_therapies},
+                    ]
+                    if self.dataset_year >= 2026:
+                        items_to_include.append(
+                            {"blood_gas_ph": blood_gas_ph},
+                        )
+                        items_to_include.append(
+                            {"blood_gas_bicarbonate": blood_gas_bicarbonate},
+                        )
+                    all_items_must_be_filled_in(items_to_include)
+
                 elif hospital_admission_reason == 6:  # Other
                     all_items_must_be_filled_in(
                         [
@@ -1164,12 +1338,13 @@ def measure_must_have_date_and_value(date_field, date_field_name, field_list):
     for field in field_list:
         for key, value in field.items():
             heading = return_heading_model_field(key)
-            field_name_list.append(heading)
+            display = heading or key.replace("_", " ").title()
+            field_name_list.append(display)
             if value is None:
                 errors.update(
                     {
                         f"{key}": [
-                            f"Missing item. {heading} and the associated date must all be completed."
+                            f"Missing item. {display} and the associated date must all be completed."
                         ]
                     }
                 )
@@ -1203,10 +1378,11 @@ def all_items_must_be_filled_in(field_list):
     for field in field_list:
         for key, value in field.items():
             heading = return_heading_model_field(key)
-            field_name_list.append(heading)
+            display = heading or key.replace("_", " ").title()
+            field_name_list.append(display)
             if value is None:
                 errors.update(
-                    {f"{key}": [f"Missing item. {heading} must also be completed."]}
+                    {f"{key}": [f"Missing item. {display} must also be completed."]}
                 )
     field_name_list = ", ".join(field_name_list)
     if errors:
@@ -1217,8 +1393,7 @@ def return_heading_model_field(field):
     """
     Return the heading for a given model field
     """
-
-    for heading in CSV_HEADING_OBJECTS:
-        if heading["model_field"] == field:
-            return heading["heading"]
+    definition = csv_definition_for(field)
+    if definition:
+        return definition["heading"]
     return None
