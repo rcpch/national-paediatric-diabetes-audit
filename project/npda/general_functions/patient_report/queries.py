@@ -547,6 +547,7 @@ def annotate_treatment(qs, audit_period):
         Visit.objects.filter(
             patient=OuterRef("pk"),
             visit_date__range=audit_range,
+            treatment__isnull=False,
         )
         .order_by("-visit_date")
         .values("treatment")[:1]
@@ -556,6 +557,7 @@ def annotate_treatment(qs, audit_period):
         Visit.objects.filter(
             patient=OuterRef("pk"),
             visit_date__range=audit_range,
+            glucose_monitoring__isnull=False,
         )
         .order_by("-visit_date")
         .values("glucose_monitoring")[:1]
@@ -565,6 +567,7 @@ def annotate_treatment(qs, audit_period):
         Visit.objects.filter(
             patient=OuterRef("pk"),
             visit_date__range=audit_range,
+            closed_loop_system__isnull=False,
         )
         .order_by("-visit_date")
         .values("closed_loop_system")[:1]

@@ -10,7 +10,10 @@ from dateutil.relativedelta import relativedelta
 # 3rd party imports
 from django.urls import reverse
 
+from project.constants.closed_loop_types import CLOSED_LOOP_TYPES
+from project.constants.diabetes_treatment import TREATMENT_TYPES
 from project.constants.diabetes_types import DIABETES_TYPES
+from project.constants.glucose_monitoring_types import GLUCOSE_MONITORING_TYPES
 from project.constants.hba1c_format import HBA1C_FORMATS
 
 # Python imports
@@ -1770,3 +1773,240 @@ def test_smoking_cessation_referral_column_denominator_is_smokers_only(
     )
     # Only the one with a referral should pass
     assert response.context["total_passed_smoking_cessation_referral"] == 1
+
+
+@pytest.mark.django_db
+def test_treatment_missing_penultimate_visit_counted(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    When the most recent visit has no treatment value, the treatment_regimen
+    annotation should fall back to the most recent visit that does have a value.
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    date_of_birth = audit_period.start_date - relativedelta(years=10)
+
+    patient = PatientFactory(
+        nhs_number="5555555555",
+        diabetes_type=DIABETES_TYPES[0][0],  # T1DM
+        date_of_birth=date_of_birth,
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
+    )
+
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    # Earlier visit WITH treatment data
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        treatment=TREATMENT_TYPES[2][0],  # 3 = "Insulin pump"
+    )
+
+    # Most recent visit WITHOUT treatment data — the earlier value should still be used
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date + relativedelta(days=30),
+        treatment=None,
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(patient)
+
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": audit_period.slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
+
+    response = client.get(
+        url + f"?category={TableCategories.TREATMENT.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    patients = response.context["patients"]
+    assert len(patients) == 1
+
+    patient_data = patients[0]
+    assert patient_data["patient_identifier"] == "5555555555"
+    # Should use the earlier visit's treatment, not "No treatment regimen"
+    assert patient_data["treatment_regimen"] == TREATMENT_TYPES[2][1]  # "Insulin pump"
+
+
+@pytest.mark.django_db
+def test_glucose_monitoring_missing_penultimate_visit_counted(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    When the most recent visit has no glucose_monitoring value, the annotation
+    should fall back to the most recent visit that does have a value.
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    date_of_birth = audit_period.start_date - relativedelta(years=10)
+
+    patient = PatientFactory(
+        nhs_number="5555555556",
+        diabetes_type=DIABETES_TYPES[0][0],  # T1DM
+        date_of_birth=date_of_birth,
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
+    )
+
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    # Earlier visit WITH glucose monitoring data
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        glucose_monitoring=GLUCOSE_MONITORING_TYPES[1][
+            0
+        ],  # 2 = "Flash glucose monitor"
+    )
+
+    # Most recent visit WITHOUT glucose monitoring data — the earlier value should still be used
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date + relativedelta(days=30),
+        glucose_monitoring=None,
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(patient)
+
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": audit_period.slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
+
+    response = client.get(
+        url + f"?category={TableCategories.TREATMENT.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    patients = response.context["patients"]
+    assert len(patients) == 1
+
+    patient_data = patients[0]
+    assert patient_data["patient_identifier"] == "5555555556"
+    # Should use the earlier visit's glucose monitoring, not "No glucose monitoring"
+    assert (
+        patient_data["glucose_monitoring"] == GLUCOSE_MONITORING_TYPES[1][1]
+    )  # "Flash glucose monitor"
+
+
+@pytest.mark.django_db
+def test_hcl_missing_penultimate_visit_counted(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    When the most recent visit has no closed_loop_system value, the hcl
+    annotation should fall back to the most recent visit that does have a value.
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    date_of_birth = audit_period.start_date - relativedelta(years=10)
+
+    patient = PatientFactory(
+        nhs_number="5555555557",
+        diabetes_type=DIABETES_TYPES[0][0],  # T1DM
+        date_of_birth=date_of_birth,
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
+    )
+
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    # Earlier visit WITH HCL data (value 2 = licenced closed loop → hcl = "Yes")
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        closed_loop_system=CLOSED_LOOP_TYPES[1][
+            0
+        ],  # 2 = "Closed loop system (licenced)"
+    )
+
+    # Most recent visit WITHOUT HCL data — the earlier value should still be used
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date + relativedelta(days=30),
+        closed_loop_system=None,
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(patient)
+
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": audit_period.slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
+
+    response = client.get(
+        url + f"?category={TableCategories.TREATMENT.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    patients = response.context["patients"]
+    assert len(patients) == 1
+
+    patient_data = patients[0]
+    assert patient_data["patient_identifier"] == "5555555557"
+    # Should use the earlier visit's closed loop value, not the default "No"
+    assert patient_data["hcl"] == "Yes"

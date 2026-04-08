@@ -108,8 +108,7 @@ In 2026 there are two extra fields here:
 - Glucose monitoring
 - HCL (hybrid closed loop)
 
-This reflects what treatment the patient is currently on - the latest visit (see issue #1299)
-Note that measures here are not scored with flags, but reflect the selection for that patient at their most recent visit. HCL (hybrid closed loop) is either a yes or a no or a don't know. Glucose monitoring.
+This reflects what treatment the patient is currently on. Note that measures here are not scored with flags, but reflect the most recent visit in the audit period where each field is not null. This means that if a patient's latest visit has no entry for treatment regimen, glucose monitoring, or HCL, the system looks back to the most recent earlier visit where that field was recorded. HCL (hybrid closed loop) is either a yes or a no. Glucose monitoring.
 
 Note the headings for these columns change between 2021 and 2026.
 
