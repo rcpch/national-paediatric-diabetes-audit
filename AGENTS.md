@@ -34,8 +34,10 @@ The patient report is driven by its own dedicated query layer — **do not reach
 |------|---------|
 | `project/npda/general_functions/patient_report/queries.py` | All ORM queries that power the patient report (health checks, additional care processes, care at diagnosis, admissions, treatment, outcomes) |
 | `project/npda/views/patient_report/patient_report.py` | View logic, context assembly, sorting, pagination, XLSX export |
-| `project/npda/views/patient_report/patient_report.md` | Design intent, column definitions, edge cases and known shortcomings — **read before making changes** |
+| `project/npda/views/patient_report/patient_report.md` | Design intent, column definitions, edge cases, known shortcomings, and **the authoritative 2021/2026 field mapping per category — read this before touching any patient report query** |
 | `project/npda/templates/patient_report/` | Jinja/Django templates per category (e.g. `treatment_table_partial.html`) |
+
+When working on patient report queries, always check `patient_report.md` for the correct field to use for the active dataset year. Several fields changed or were added in 2026 (e.g. `treatment` → `insulin_regimen`, `glucose_monitoring` → `cgm_use`, `smoking_status` → `smoking_vaping_status`). The `audit_period.get_dataset_year()` method is the single source of truth — never hardcode a year.
 
 ### KPI class
 
