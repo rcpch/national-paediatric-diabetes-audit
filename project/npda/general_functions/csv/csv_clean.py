@@ -5,7 +5,7 @@ import unicodedata
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 
-from project.constants import get_all_dates, ETHNICITIES
+from project.constants import ETHNICITIES, get_all_dates
 from project.npda.general_functions.headings import get_field_heading
 
 """
@@ -39,7 +39,7 @@ def clean_csv_ethnicity(value):
 
         if value in ETHNICITIES:
             return value
-    
+
     return value
 
 
@@ -92,6 +92,7 @@ def clean_date_value(v):
     s = re.sub(r"\s+", " ", s)
     return s
 
+
 # Helper normalisation to robustly match noisy incoming headings
 def normalise_heading(s: str) -> str:
     if not isinstance(s, str):
@@ -110,12 +111,12 @@ def csv_clean(df, dataset_year=2021):
             df[date_col] = pd.to_datetime(
                 cleaned, format="mixed", dayfirst=True, errors="coerce"
             )
-    
+
     fields_to_clean = {
         "sex": clean_csv_sex,
         "ethnicity": clean_csv_ethnicity,
         "height": clean_csv_measurement,
-        "weight": clean_csv_measurement
+        "weight": clean_csv_measurement,
     }
 
     for field, cleaner in fields_to_clean.items():
@@ -127,7 +128,7 @@ def csv_clean(df, dataset_year=2021):
                 if normalise_heading(column) == normalise_heading(heading):
                     df = df.rename(columns={column: heading})
                     break
-        
+
         if heading in df.columns and not is_numeric_dtype(df[heading]):
             df[heading] = df[heading].apply(cleaner)
 
