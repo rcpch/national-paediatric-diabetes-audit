@@ -5,7 +5,7 @@ import unicodedata
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 
-from project.constants import get_all_dates
+from project.constants import ETHNICITIES, get_all_dates
 from project.npda.general_functions.headings import get_field_heading
 
 """
@@ -31,6 +31,16 @@ def clean_csv_sex(value):
         case _:
             # Return Not Known. The patient won't save in the database without a numeric value.
             return 0
+
+
+def clean_csv_ethnicity(value):
+    if isinstance(value, str):
+        value = value.strip().upper()
+
+        if value in ETHNICITIES:
+            return value
+
+    return value
 
 
 def clean_csv_measurement(value):
@@ -66,74 +76,61 @@ def clean_whitespace(x):
     return x
 
 
+# Clean and parse date-like columns early so Django forms receive proper dates
+def clean_date_value(v):
+    if pd.isna(v):
+        return v
+    # Already a datetime-like
+    if isinstance(v, (pd.Timestamp, datetime.date)):
+        return v
+    s = str(v)
+    s = unicodedata.normalize("NFKD", s)
+    s = "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
+    s = s.replace("\u00a0", " ")
+    s = s.strip()
+    s = s.strip("'\"“”‘’`·†")
+    s = re.sub(r"\s+", " ", s)
+    return s
+
+
+# Helper normalisation to robustly match noisy incoming headings
+def normalise_heading(s: str) -> str:
+    if not isinstance(s, str):
+        return ""
+    s = unicodedata.normalize("NFKD", s)
+    s = "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
+    s = re.sub(r"[^0-9a-zA-Z]+", " ", s)
+    s = re.sub(r"\s+", " ", s).strip().lower()
+    return s
+
+
 def csv_clean(df, dataset_year=2021):
-    # Helper normalisation to robustly match noisy incoming headings
-    def _norm(s: str) -> str:
-        if not isinstance(s, str):
-            return ""
-        s = unicodedata.normalize("NFKD", s)
-        s = "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
-        s = re.sub(r"[^0-9a-zA-Z]+", " ", s)
-        s = re.sub(r"\s+", " ", s).strip().lower()
-        return s
-
-    sex_heading = get_field_heading("sex", dataset_year)
-
-    # Clean and parse date-like columns early so Django forms receive proper dates
-    def _clean_date_value(v):
-        if pd.isna(v):
-            return v
-        # Already a datetime-like
-        if isinstance(v, (pd.Timestamp, datetime.date)):
-            return v
-        s = str(v)
-        s = unicodedata.normalize("NFKD", s)
-        s = "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
-        s = s.replace("\u00a0", " ")
-        s = s.strip()
-        s = s.strip("'\"“”‘’`·†")
-        s = re.sub(r"\s+", " ", s)
-        return s
-
     for date_col in get_all_dates(dataset_year):
         if date_col in df.columns:
-            cleaned = df[date_col].apply(_clean_date_value)
+            cleaned = df[date_col].apply(clean_date_value)
             df[date_col] = pd.to_datetime(
                 cleaned, format="mixed", dayfirst=True, errors="coerce"
             )
 
-    # If the canonical heading isn't present, try to find a noisy match and rename it
-    if sex_heading not in df.columns:
-        match_col = next(
-            (c for c in df.columns if _norm(c) == _norm(sex_heading)), None
-        )
-        if match_col:
-            df = df.rename(columns={match_col: sex_heading})
+    fields_to_clean = {
+        "sex": clean_csv_sex,
+        "ethnicity": clean_csv_ethnicity,
+        "height": clean_csv_measurement,
+        "weight": clean_csv_measurement,
+    }
 
-    if sex_heading in df.columns and not is_numeric_dtype(df[sex_heading]):
-        df[sex_heading] = df[sex_heading].apply(clean_csv_sex)
+    for field, cleaner in fields_to_clean.items():
+        heading = get_field_heading(field, dataset_year)
 
-    # strip whitespace and convert height and weight to numeric, removing any non-numeric characters (eg, "cm", "kg")
-    height_heading = get_field_heading("height", dataset_year)
-    weight_heading = get_field_heading("weight", dataset_year)
+        # If the canonical heading isn't present, try to find a noisy match and rename it
+        if heading not in df.columns:
+            for column in df.columns:
+                if normalise_heading(column) == normalise_heading(heading):
+                    df = df.rename(columns={column: heading})
+                    break
 
-    if height_heading not in df.columns:
-        match_col = next(
-            (c for c in df.columns if _norm(c) == _norm(height_heading)), None
-        )
-        if match_col:
-            df = df.rename(columns={match_col: height_heading})
-    if weight_heading not in df.columns:
-        match_col = next(
-            (c for c in df.columns if _norm(c) == _norm(weight_heading)), None
-        )
-        if match_col:
-            df = df.rename(columns={match_col: weight_heading})
-
-    if height_heading in df.columns and not is_numeric_dtype(df[height_heading]):
-        df[height_heading] = df[height_heading].apply(clean_csv_measurement)
-    if weight_heading in df.columns and not is_numeric_dtype(df[weight_heading]):
-        df[weight_heading] = df[weight_heading].apply(clean_csv_measurement)
+        if heading in df.columns and not is_numeric_dtype(df[heading]):
+            df[heading] = df[heading].apply(cleaner)
 
     # Strip whitespace only fields of whitespaces
     for col in df.select_dtypes(include=["string", "object"]).columns:
