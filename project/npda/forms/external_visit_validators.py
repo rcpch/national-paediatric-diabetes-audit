@@ -94,16 +94,6 @@ async def validate_visit_async(
     if observation_date >= twentieth_bithday:
         observation_date = twentieth_bithday - relativedelta(days=1)
 
-    if sex == 1:
-        sex = "male"
-    elif sex == 2:
-        sex = "female"
-    else:
-        logger.warning(
-            "Sex is not known or not specified. Cannot calculate centiles and z-scores."
-        )
-        return ret
-
     bmi = None
 
     valid_height = height is not None
@@ -120,6 +110,16 @@ async def validate_visit_async(
     if valid_height and valid_weight:
         bmi = calculate_bmi(height, weight)
         ret.bmi = bmi
+
+    if sex == 1:
+        sex = "male"
+    elif sex == 2:
+        sex = "female"
+    else:
+        logger.warning(
+            "Sex is not known or not specified. Cannot calculate centiles and z-scores."
+        )
+        return ret
 
     validate_height_task = _calculate_centiles_z_scores(
         birth_date, observation_date, sex, "height", height, async_client

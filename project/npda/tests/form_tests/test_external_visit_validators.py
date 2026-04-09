@@ -49,23 +49,28 @@ async def test_missing_observation_date():
         assert not mock.called
 
 
-async def test_missing_sex():
+@pytest.mark.parametrize(
+    "sex",
+    [
+        pytest.param(None, id="None"),
+        pytest.param(999, id="Invalid"),
+        pytest.param(3, id="Not Specified"),
+        pytest.param(99, id="Unknown"),
+    ],
+)
+async def test_sex(sex):
     with patch(
         "project.npda.forms.external_visit_validators.calculate_centiles_z_scores"
     ) as mock:
-        result = await validate_visit_async(**(VALID_FIELDS | {"sex": None}))
+        result = await validate_visit_async(**(VALID_FIELDS | {"sex": sex}))
 
-        assert result == EMPTY_RESULT
-        assert not mock.called
+        assert result.height_result is None
+        assert result.weight_result is None
 
+        # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1354
+        assert result.bmi == 23.1
+        assert result.bmi_result is None
 
-async def test_invalid_sex():
-    with patch(
-        "project.npda.forms.external_visit_validators.calculate_centiles_z_scores"
-    ) as mock:
-        result = await validate_visit_async(**(VALID_FIELDS | {"sex": 999}))
-
-        assert result == EMPTY_RESULT
         assert not mock.called
 
 
