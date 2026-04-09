@@ -697,6 +697,7 @@ def annotate_treatment(qs, audit_period):
 
 def annotate_outcomes(qs, audit_period):
     audit_range = (audit_period.start_date, audit_period.end_date)
+    dataset_year = audit_period.get_dataset_year()
 
     latest_hba1c_date = Subquery(
         Visit.objects.filter(
@@ -718,53 +719,77 @@ def annotate_outcomes(qs, audit_period):
         .values("visit_date")[1:2]
     )
 
-    latest_hba1c_mmol_mol = Subquery(
-        Visit.objects.filter(
-            patient=OuterRef("pk"),
-            visit_date__range=audit_range,
-            hba1c__isnull=False,
-        )
-        .annotate(
-            hba1c_mmol_mol=Case(
-                When(
-                    Q(hba1c_format=HBA1C_FORMATS[0][0]),
-                    then=F("hba1c"),
-                ),
-                When(
-                    Q(hba1c_format=HBA1C_FORMATS[1][0]),
-                    then=(F("hba1c") - Round(Decimal("2.152"))) / Decimal("0.09148"),
-                ),
-                default=None,
-                output_field=DecimalField(max_digits=5, decimal_places=2),
+    if dataset_year == 2026:
+        # 2026: hba1c_format deprecated — values always stored as mmol/mol
+        latest_hba1c_mmol_mol = Subquery(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                hba1c__isnull=False,
             )
+            .annotate(hba1c_mmol_mol=F("hba1c"))
+            .order_by("-visit_date")
+            .values("hba1c_mmol_mol")[:1]
         )
-        .order_by("-visit_date")
-        .values("hba1c_mmol_mol")[:1]
-    )
 
-    previous_hba1c_mmol_mol = Subquery(
-        Visit.objects.filter(
-            patient=OuterRef("pk"),
-            visit_date__range=audit_range,
-            hba1c__isnull=False,
-        )
-        .annotate(
-            hba1c_mmol_mol=Case(
-                When(
-                    Q(hba1c_format=HBA1C_FORMATS[0][0]),
-                    then=F("hba1c"),
-                ),
-                When(
-                    Q(hba1c_format=HBA1C_FORMATS[1][0]),
-                    then=(F("hba1c") - Round(Decimal("2.152"))) / Decimal("0.09148"),
-                ),
-                default=None,
-                output_field=DecimalField(max_digits=5, decimal_places=2),
+        previous_hba1c_mmol_mol = Subquery(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                hba1c__isnull=False,
             )
+            .annotate(hba1c_mmol_mol=F("hba1c"))
+            .order_by("-visit_date")
+            .values("hba1c_mmol_mol")[1:2]
         )
-        .order_by("-visit_date")
-        .values("hba1c_mmol_mol")[1:2]
-    )
+    else:
+        latest_hba1c_mmol_mol = Subquery(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                hba1c__isnull=False,
+            )
+            .annotate(
+                hba1c_mmol_mol=Case(
+                    When(
+                        Q(hba1c_format=HBA1C_FORMATS[0][0]),
+                        then=F("hba1c"),
+                    ),
+                    When(
+                        Q(hba1c_format=HBA1C_FORMATS[1][0]),
+                        then=(F("hba1c") - Round(Decimal("2.152"))) / Decimal("0.09148"),
+                    ),
+                    default=None,
+                    output_field=DecimalField(max_digits=5, decimal_places=2),
+                )
+            )
+            .order_by("-visit_date")
+            .values("hba1c_mmol_mol")[:1]
+        )
+
+        previous_hba1c_mmol_mol = Subquery(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                hba1c__isnull=False,
+            )
+            .annotate(
+                hba1c_mmol_mol=Case(
+                    When(
+                        Q(hba1c_format=HBA1C_FORMATS[0][0]),
+                        then=F("hba1c"),
+                    ),
+                    When(
+                        Q(hba1c_format=HBA1C_FORMATS[1][0]),
+                        then=(F("hba1c") - Round(Decimal("2.152"))) / Decimal("0.09148"),
+                    ),
+                    default=None,
+                    output_field=DecimalField(max_digits=5, decimal_places=2),
+                )
+            )
+            .order_by("-visit_date")
+            .values("hba1c_mmol_mol")[1:2]
+        )
 
     return qs.annotate(
         latest_hba1c_date=latest_hba1c_date,
