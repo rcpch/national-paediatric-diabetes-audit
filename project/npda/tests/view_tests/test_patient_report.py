@@ -135,7 +135,7 @@ def test_no_duplicate_patients_in_report(
 
 
 @pytest.mark.django_db
-def _create_outcomes_test_setup(client):
+def _create_outcomes_test_setup(client, audit_period_slug=None):
     """Helper function to create common test setup for outcomes tests."""
     # Login as RCPCH Audit Team user
     ah_rcpch_audit_team_user = NPDAUser.objects.filter(
@@ -145,7 +145,10 @@ def _create_outcomes_test_setup(client):
     client = login_and_verify_user(client, ah_rcpch_audit_team_user)
 
     # Get audit period and ensure it's open
-    audit_period = AuditPeriod.objects.get_default_audit_period()
+    if audit_period_slug is not None:
+        audit_period = AuditPeriod.objects.get(slug=audit_period_slug)
+    else:
+        audit_period = AuditPeriod.objects.get_default_audit_period()
     audit_period.is_open = True
     audit_period.save()
 
@@ -165,12 +168,14 @@ def _create_outcomes_test_setup(client):
     return ah_rcpch_audit_team_user, audit_period, AUDIT_START_DATE, eligible_criteria
 
 
+@pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_outcomes_no_hba1c_measurements(
     seed_groups_fixture,
     seed_users_fixture,
     seed_audit_periods_fixture,
     client,
+    audit_period_slug,
 ):
     """
     Test outcomes view for patient with no HbA1c measurements.
@@ -179,7 +184,7 @@ def test_outcomes_no_hba1c_measurements(
     has visits but no HbA1c data recorded.
     """
     ah_rcpch_audit_team_user, audit_period, AUDIT_START_DATE, eligible_criteria = (
-        _create_outcomes_test_setup(client)
+        _create_outcomes_test_setup(client, audit_period_slug)
     )
 
     # Create patient with no HbA1c measurements (T1DM)
@@ -210,7 +215,7 @@ def test_outcomes_no_hba1c_measurements(
     url = reverse(
         "pdu-patient-report",
         kwargs={
-            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "audit_period": audit_period.slug,
             "pz_code": ALDER_HEY_PZ_CODE,
         },
     )
@@ -401,9 +406,10 @@ def test_outcomes_multiple_hba1c_measurements(
     assert patient_data["days_delta_between_latest_and_previous_hba1c"] == 10
 
 
+@pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_report_for_patients_turning_12_in_audit_year(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -412,7 +418,7 @@ def test_report_for_patients_turning_12_in_audit_year(
 
     client = login_and_verify_user(client, user)
 
-    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period = AuditPeriod.objects.get(slug=audit_period_slug)
     audit_period.is_open = True
     audit_period.save()
 
@@ -448,7 +454,7 @@ def test_report_for_patients_turning_12_in_audit_year(
     url = reverse(
         "pdu-patient-report",
         kwargs={
-            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "audit_period": audit_period.slug,
             "pz_code": ALDER_HEY_PZ_CODE,
         },
     )
@@ -475,7 +481,7 @@ def test_report_for_patients_turning_12_in_audit_year(
     url = reverse(
         "pdu-patient-report",
         kwargs={
-            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "audit_period": audit_period.slug,
             "pz_code": ALDER_HEY_PZ_CODE,
         },
     )
@@ -496,9 +502,10 @@ def test_report_for_patients_turning_12_in_audit_year(
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1197
+@pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_report_for_sick_day_rules(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -507,7 +514,7 @@ def test_report_for_sick_day_rules(
 
     client = login_and_verify_user(client, user)
 
-    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period = AuditPeriod.objects.get(slug=audit_period_slug)
     audit_period.is_open = True
     audit_period.save()
 
@@ -542,7 +549,7 @@ def test_report_for_sick_day_rules(
     url = reverse(
         "pdu-patient-report",
         kwargs={
-            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "audit_period": audit_period.slug,
             "pz_code": ALDER_HEY_PZ_CODE,
         },
     )
@@ -562,9 +569,10 @@ def test_report_for_sick_day_rules(
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1199
+@pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_care_at_diagnosis_for_type_1_patient(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -573,7 +581,7 @@ def test_care_at_diagnosis_for_type_1_patient(
 
     client = login_and_verify_user(client, user)
 
-    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period = AuditPeriod.objects.get(slug=audit_period_slug)
     audit_period.is_open = True
     audit_period.save()
 
@@ -608,7 +616,7 @@ def test_care_at_diagnosis_for_type_1_patient(
     url = reverse(
         "pdu-patient-report",
         kwargs={
-            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "audit_period": audit_period.slug,
             "pz_code": ALDER_HEY_PZ_CODE,
         },
     )
@@ -633,9 +641,10 @@ def test_care_at_diagnosis_for_type_1_patient(
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1301
+@pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_carb_counting_countdown_when_no_date_entered(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -644,7 +653,7 @@ def test_carb_counting_countdown_when_no_date_entered(
 
     client = login_and_verify_user(client, user)
 
-    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period = AuditPeriod.objects.get(slug=audit_period_slug)
     audit_period.is_open = True
     audit_period.save()
 
@@ -676,7 +685,7 @@ def test_carb_counting_countdown_when_no_date_entered(
     url = reverse(
         "pdu-patient-report",
         kwargs={
-            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "audit_period": audit_period.slug,
             "pz_code": ALDER_HEY_PZ_CODE,
         },
     )
@@ -696,9 +705,13 @@ def test_carb_counting_countdown_when_no_date_entered(
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1301
+# Note: uses 2025-2026 (not 2026-2027) as the second period — these tests derive
+# diagnosis_date from kpi_calculation_date() - N days, so they only work when the
+# period has been running for at least N days. 2025-2026 is always a completed period.
+@pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2025-2026"])
 @pytest.mark.django_db
 def test_coeliac_screening_countdown_when_no_date_entered(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -707,7 +720,7 @@ def test_coeliac_screening_countdown_when_no_date_entered(
 
     client = login_and_verify_user(client, user)
 
-    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period = AuditPeriod.objects.get(slug=audit_period_slug)
     audit_period.is_open = True
     audit_period.save()
 
@@ -739,7 +752,7 @@ def test_coeliac_screening_countdown_when_no_date_entered(
     url = reverse(
         "pdu-patient-report",
         kwargs={
-            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "audit_period": audit_period.slug,
             "pz_code": ALDER_HEY_PZ_CODE,
         },
     )
@@ -759,9 +772,11 @@ def test_coeliac_screening_countdown_when_no_date_entered(
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1301
+# Note: uses 2025-2026 (not 2026-2027) — same reason as test_coeliac_screening_countdown.
+@pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2025-2026"])
 @pytest.mark.django_db
 def test_thyroid_screening_overdue_when_threshold_passed(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -770,7 +785,7 @@ def test_thyroid_screening_overdue_when_threshold_passed(
 
     client = login_and_verify_user(client, user)
 
-    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period = AuditPeriod.objects.get(slug=audit_period_slug)
     audit_period.is_open = True
     audit_period.save()
 
@@ -802,7 +817,7 @@ def test_thyroid_screening_overdue_when_threshold_passed(
     url = reverse(
         "pdu-patient-report",
         kwargs={
-            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "audit_period": audit_period.slug,
             "pz_code": ALDER_HEY_PZ_CODE,
         },
     )
@@ -821,9 +836,10 @@ def test_thyroid_screening_overdue_when_threshold_passed(
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1301
+@pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_coeliac_and_thyroid_screening_on_time_when_dates_present(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -832,7 +848,7 @@ def test_coeliac_and_thyroid_screening_on_time_when_dates_present(
 
     client = login_and_verify_user(client, user)
 
-    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period = AuditPeriod.objects.get(slug=audit_period_slug)
     audit_period.is_open = True
     audit_period.save()
 
@@ -866,7 +882,7 @@ def test_coeliac_and_thyroid_screening_on_time_when_dates_present(
     url = reverse(
         "pdu-patient-report",
         kwargs={
-            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "audit_period": audit_period.slug,
             "pz_code": ALDER_HEY_PZ_CODE,
         },
     )
@@ -886,9 +902,10 @@ def test_coeliac_and_thyroid_screening_on_time_when_dates_present(
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1199
+@pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_non_type_1_patients_do_not_appear_in_care_at_diagnosis(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -897,7 +914,7 @@ def test_non_type_1_patients_do_not_appear_in_care_at_diagnosis(
 
     client = login_and_verify_user(client, user)
 
-    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period = AuditPeriod.objects.get(slug=audit_period_slug)
     audit_period.is_open = True
     audit_period.save()
 
@@ -932,7 +949,7 @@ def test_non_type_1_patients_do_not_appear_in_care_at_diagnosis(
     url = reverse(
         "pdu-patient-report",
         kwargs={
-            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "audit_period": audit_period.slug,
             "pz_code": ALDER_HEY_PZ_CODE,
         },
     )
@@ -947,9 +964,10 @@ def test_non_type_1_patients_do_not_appear_in_care_at_diagnosis(
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1242
+@pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_hba1c_healthcheck(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -958,7 +976,7 @@ def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_hba1c_he
 
     client = login_and_verify_user(client, user)
 
-    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period = AuditPeriod.objects.get(slug=audit_period_slug)
     audit_period.is_open = True
     audit_period.save()
 
@@ -995,7 +1013,7 @@ def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_hba1c_he
     url = reverse(
         "pdu-patient-report",
         kwargs={
-            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "audit_period": audit_period.slug,
             "pz_code": ALDER_HEY_PZ_CODE,
         },
     )
@@ -1015,9 +1033,10 @@ def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_hba1c_he
 
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1242
+@pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_influenza_immunisation_recommended(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -1026,7 +1045,7 @@ def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_influenz
 
     client = login_and_verify_user(client, user)
 
-    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period = AuditPeriod.objects.get(slug=audit_period_slug)
     audit_period.is_open = True
     audit_period.save()
 
@@ -1061,7 +1080,7 @@ def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_influenz
     url = reverse(
         "pdu-patient-report",
         kwargs={
-            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "audit_period": audit_period.slug,
             "pz_code": ALDER_HEY_PZ_CODE,
         },
     )
@@ -1213,9 +1232,10 @@ def test_patient_over_12yo_non_smoker_should_not_be_eligible_for_smoking_cessati
 # Retinal screening tests
 
 
+@pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_retinal_screening_under_12yo_shows_ineligible(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
 ):
     """
     Test that patients under 12 years old show as ineligible for retinal screening.
@@ -1228,7 +1248,7 @@ def test_retinal_screening_under_12yo_shows_ineligible(
 
     client = login_and_verify_user(client, user)
 
-    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period = AuditPeriod.objects.get(slug=audit_period_slug)
     audit_period.is_open = True
     audit_period.save()
 
@@ -1286,9 +1306,10 @@ def test_retinal_screening_under_12yo_shows_ineligible(
     assert patient_data["passed_retinal_screening"] == "not_required"
 
 
+@pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_retinal_screening_over_12yo_with_data_passes(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
 ):
     """
     Test that patients 12+ years old with valid retinal screening data show as passed.
@@ -1301,7 +1322,7 @@ def test_retinal_screening_over_12yo_with_data_passes(
 
     client = login_and_verify_user(client, user)
 
-    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period = AuditPeriod.objects.get(slug=audit_period_slug)
     audit_period.is_open = True
     audit_period.save()
 
@@ -1359,9 +1380,10 @@ def test_retinal_screening_over_12yo_with_data_passes(
     assert patient_data["passed_retinal_screening"] == "complete"
 
 
+@pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_retinal_screening_over_12yo_with_data_fails(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
 ):
     """
     Test that patients 12+ years old who are eligible but don't pass show as failed.
@@ -1374,7 +1396,7 @@ def test_retinal_screening_over_12yo_with_data_fails(
 
     client = login_and_verify_user(client, user)
 
-    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period = AuditPeriod.objects.get(slug=audit_period_slug)
     audit_period.is_open = True
     audit_period.save()
 
@@ -1432,9 +1454,10 @@ def test_retinal_screening_over_12yo_with_data_fails(
     assert patient_data["passed_retinal_screening"] == ""
 
 
+@pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_retinal_screening_over_12yo_without_data_shows_blank(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
 ):
     """
     Test that patients 12+ years old with NO retinal screening data show as blank.
@@ -1447,7 +1470,7 @@ def test_retinal_screening_over_12yo_without_data_shows_blank(
 
     client = login_and_verify_user(client, user)
 
-    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period = AuditPeriod.objects.get(slug=audit_period_slug)
     audit_period.is_open = True
     audit_period.save()
 
