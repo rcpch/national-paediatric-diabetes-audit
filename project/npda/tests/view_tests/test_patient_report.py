@@ -18,7 +18,7 @@ from project.constants.hba1c_format import HBA1C_FORMATS
 from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 
 # Python imports
-from project.constants.smoking_status import SMOKING_STATUS
+from project.constants.smoking_status import SMOKING_STATUS, SMOKING_VAPING_STATUS
 from project.npda.general_functions.data_generator_extended import (
     AgeRange,
     FakePatientCreator,
@@ -1099,9 +1099,17 @@ def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_influenz
     assert patient["influenza_immunisation_recommended"] is True
 
 
+@pytest.mark.parametrize(
+    "audit_period_slug, smoking_field, non_smoker_val, smoker_val",
+    [
+        ("2024-2025", "smoking_status", SMOKING_STATUS[0][0], SMOKING_STATUS[1][0]),
+        ("2026-2027", "smoking_vaping_status", SMOKING_VAPING_STATUS[0][0], SMOKING_VAPING_STATUS[1][0]),
+    ],
+)
 @pytest.mark.django_db
 def test_patient_under_12yo_should_show_as_ineligible_for_smoking_status_screened(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client,
+    audit_period_slug, smoking_field, non_smoker_val, smoker_val,
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -1110,7 +1118,7 @@ def test_patient_under_12yo_should_show_as_ineligible_for_smoking_status_screene
 
     client = login_and_verify_user(client, user)
 
-    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period = AuditPeriod.objects.get(slug=audit_period_slug)
     audit_period.is_open = True
     audit_period.save()
 
@@ -1128,7 +1136,7 @@ def test_patient_under_12yo_should_show_as_ineligible_for_smoking_status_screene
     VisitFactory(
         patient=patient,
         visit_date=visit_date,
-        smoking_status=SMOKING_STATUS[0][0],  # non smoker
+        **{smoking_field: non_smoker_val},
     )
 
     submission = Submission.objects.create(
@@ -1144,7 +1152,7 @@ def test_patient_under_12yo_should_show_as_ineligible_for_smoking_status_screene
     url = reverse(
         "pdu-patient-report",
         kwargs={
-            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "audit_period": audit_period.slug,
             "pz_code": ALDER_HEY_PZ_CODE,
         },
     )
@@ -1163,9 +1171,17 @@ def test_patient_under_12yo_should_show_as_ineligible_for_smoking_status_screene
     assert patient["smoking_status"] is None
 
 
+@pytest.mark.parametrize(
+    "audit_period_slug, smoking_field, non_smoker_val, smoker_val",
+    [
+        ("2024-2025", "smoking_status", SMOKING_STATUS[0][0], SMOKING_STATUS[1][0]),
+        ("2026-2027", "smoking_vaping_status", SMOKING_VAPING_STATUS[0][0], SMOKING_VAPING_STATUS[1][0]),
+    ],
+)
 @pytest.mark.django_db
 def test_patient_over_12yo_non_smoker_should_not_be_eligible_for_smoking_cessation_referral(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client,
+    audit_period_slug, smoking_field, non_smoker_val, smoker_val,
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -1174,7 +1190,7 @@ def test_patient_over_12yo_non_smoker_should_not_be_eligible_for_smoking_cessati
 
     client = login_and_verify_user(client, user)
 
-    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period = AuditPeriod.objects.get(slug=audit_period_slug)
     audit_period.is_open = True
     audit_period.save()
 
@@ -1192,8 +1208,8 @@ def test_patient_over_12yo_non_smoker_should_not_be_eligible_for_smoking_cessati
     VisitFactory(
         patient=patient,
         visit_date=visit_date,
-        smoking_status=SMOKING_STATUS[0][0],  # non smoker
         smoking_cessation_referral_date=None,
+        **{smoking_field: non_smoker_val},
     )
 
     submission = Submission.objects.create(
@@ -1209,7 +1225,7 @@ def test_patient_over_12yo_non_smoker_should_not_be_eligible_for_smoking_cessati
     url = reverse(
         "pdu-patient-report",
         kwargs={
-            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "audit_period": audit_period.slug,
             "pz_code": ALDER_HEY_PZ_CODE,
         },
     )
@@ -1528,9 +1544,17 @@ def test_retinal_screening_over_12yo_without_data_shows_blank(
     assert patient_data["passed_retinal_screening"] == ""
 
 
+@pytest.mark.parametrize(
+    "audit_period_slug, smoking_field, non_smoker_val, smoker_val",
+    [
+        ("2024-2025", "smoking_status", SMOKING_STATUS[0][0], SMOKING_STATUS[1][0]),
+        ("2026-2027", "smoking_vaping_status", SMOKING_VAPING_STATUS[0][0], SMOKING_VAPING_STATUS[1][0]),
+    ],
+)
 @pytest.mark.django_db
 def test_patient_with_two_visits_one_with_smoking_status_one_without_has_one_row_in_the_patient_report(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client,
+    audit_period_slug, smoking_field, non_smoker_val, smoker_val,
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -1539,7 +1563,7 @@ def test_patient_with_two_visits_one_with_smoking_status_one_without_has_one_row
 
     client = login_and_verify_user(client, user)
 
-    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period = AuditPeriod.objects.get(slug=audit_period_slug)
     audit_period.is_open = True
     audit_period.save()
 
@@ -1559,14 +1583,14 @@ def test_patient_with_two_visits_one_with_smoking_status_one_without_has_one_row
     VisitFactory(
         patient=patient,
         visit_date=visit_date_1,
-        smoking_status=None,
+        **{smoking_field: None},
     )
 
     # Second visit WITH smoking status
     VisitFactory(
         patient=patient,
         visit_date=visit_date_2,
-        smoking_status=SMOKING_STATUS[0][0],  # non smoker
+        **{smoking_field: non_smoker_val},
     )
 
     submission = Submission.objects.create(
@@ -1582,7 +1606,7 @@ def test_patient_with_two_visits_one_with_smoking_status_one_without_has_one_row
     url = reverse(
         "pdu-patient-report",
         kwargs={
-            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "audit_period": audit_period.slug,
             "pz_code": ALDER_HEY_PZ_CODE,
         },
     )
@@ -1601,9 +1625,17 @@ def test_patient_with_two_visits_one_with_smoking_status_one_without_has_one_row
     assert patient["smoking_status"] is True  # from the second visit
 
 
+@pytest.mark.parametrize(
+    "audit_period_slug, smoking_field, non_smoker_val, smoker_val",
+    [
+        ("2024-2025", "smoking_status", SMOKING_STATUS[0][0], SMOKING_STATUS[1][0]),
+        ("2026-2027", "smoking_vaping_status", SMOKING_VAPING_STATUS[0][0], SMOKING_VAPING_STATUS[1][0]),
+    ],
+)
 @pytest.mark.django_db
 def test_smoker_with_two_visits_one_with_smoking_cessation_referral_one_without_has_one_row_in_the_patient_report(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client,
+    audit_period_slug, smoking_field, non_smoker_val, smoker_val,
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -1612,7 +1644,7 @@ def test_smoker_with_two_visits_one_with_smoking_cessation_referral_one_without_
 
     client = login_and_verify_user(client, user)
 
-    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period = AuditPeriod.objects.get(slug=audit_period_slug)
     audit_period.is_open = True
     audit_period.save()
 
@@ -1632,8 +1664,8 @@ def test_smoker_with_two_visits_one_with_smoking_cessation_referral_one_without_
     VisitFactory(
         patient=patient,
         visit_date=visit_date_1,
-        smoking_status=SMOKING_STATUS[1][0],  # smoker
         smoking_cessation_referral_date=visit_date_1,
+        **{smoking_field: smoker_val},
     )
 
     # Second visit WITHOUT smoking data
@@ -1652,7 +1684,7 @@ def test_smoker_with_two_visits_one_with_smoking_cessation_referral_one_without_
     url = reverse(
         "pdu-patient-report",
         kwargs={
-            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "audit_period": audit_period.slug,
             "pz_code": ALDER_HEY_PZ_CODE,
         },
     )
@@ -1672,9 +1704,17 @@ def test_smoker_with_two_visits_one_with_smoking_cessation_referral_one_without_
     assert patient["smoking_cessation_referral"] == "True"  # from the first visit
 
 
+@pytest.mark.parametrize(
+    "audit_period_slug, smoking_field, non_smoker_val, smoker_val",
+    [
+        ("2024-2025", "smoking_status", SMOKING_STATUS[0][0], SMOKING_STATUS[1][0]),
+        ("2026-2027", "smoking_vaping_status", SMOKING_VAPING_STATUS[0][0], SMOKING_VAPING_STATUS[1][0]),
+    ],
+)
 @pytest.mark.django_db
 def test_smoking_cessation_referral_column_denominator_is_smokers_only(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client,
+    audit_period_slug, smoking_field, non_smoker_val, smoker_val,
 ):
     """
     The 'Referral to smoking cessation service' column header facet should
@@ -1697,7 +1737,7 @@ def test_smoking_cessation_referral_column_denominator_is_smokers_only(
     ).first()
     client = login_and_verify_user(client, user)
 
-    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period = AuditPeriod.objects.get(slug=audit_period_slug)
     audit_period.is_open = True
     audit_period.save()
 
@@ -1721,8 +1761,8 @@ def test_smoking_cessation_referral_column_denominator_is_smokers_only(
         patient=patient_smoker_referred,
         visit_date=start + relativedelta(days=10),
         height_weight_observation_date=start + relativedelta(days=10),
-        smoking_status=SMOKING_STATUS[1][0],  # current smoker
         smoking_cessation_referral_date=start + relativedelta(days=10),
+        **{smoking_field: smoker_val},
     )
 
     # ≥12 yo, smoker, no cessation referral → should FAIL (still in denominator)
@@ -1735,8 +1775,8 @@ def test_smoking_cessation_referral_column_denominator_is_smokers_only(
         patient=patient_smoker_no_ref,
         visit_date=start + relativedelta(days=10),
         height_weight_observation_date=start + relativedelta(days=10),
-        smoking_status=SMOKING_STATUS[1][0],  # current smoker
         smoking_cessation_referral_date=None,
+        **{smoking_field: smoker_val},
     )
 
     # ≥12 yo, non-smoker → NOT required, must NOT be counted in denominator
@@ -1748,8 +1788,8 @@ def test_smoking_cessation_referral_column_denominator_is_smokers_only(
     VisitFactory(
         patient=patient_non_smoker,
         visit_date=start + relativedelta(days=10),
-        smoking_status=SMOKING_STATUS[0][0],  # non-smoker
         smoking_cessation_referral_date=None,
+        **{smoking_field: non_smoker_val},
     )
 
     # <12 yo → NOT required (age), must NOT be counted in denominator
