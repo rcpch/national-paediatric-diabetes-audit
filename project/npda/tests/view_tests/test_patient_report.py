@@ -15,10 +15,10 @@ from project.constants.diabetes_treatment import INSULIN_TREATMENT, TREATMENT_TY
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.constants.glucose_monitoring_types import GLUCOSE_MONITORING_TYPES
 from project.constants.hba1c_format import HBA1C_FORMATS
-from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 
 # Python imports
 from project.constants.smoking_status import SMOKING_STATUS, SMOKING_VAPING_STATUS
+from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 from project.npda.general_functions.data_generator_extended import (
     AgeRange,
     FakePatientCreator,
@@ -242,12 +242,21 @@ def test_outcomes_no_hba1c_measurements(
     assert patient_data["days_delta_between_latest_and_previous_hba1c"] is None
 
 
+@pytest.mark.parametrize(
+    "audit_period_slug, hba1c_format_val",
+    [
+        ("2024-2025", HBA1C_FORMATS[0][0]),
+        ("2026-2027", None),  # 2026: hba1c_format deprecated, values always mmol/mol
+    ],
+)
 @pytest.mark.django_db
 def test_outcomes_single_hba1c_measurement(
     seed_groups_fixture,
     seed_users_fixture,
     seed_audit_periods_fixture,
     client,
+    audit_period_slug,
+    hba1c_format_val,
 ):
     """
     Test outcomes view for patient with single HbA1c measurement.
@@ -256,7 +265,7 @@ def test_outcomes_single_hba1c_measurement(
     previous values remain None, and no delta calculations are performed.
     """
     ah_rcpch_audit_team_user, audit_period, AUDIT_START_DATE, eligible_criteria = (
-        _create_outcomes_test_setup(client)
+        _create_outcomes_test_setup(client, audit_period_slug)
     )
 
     # Create patient with single HbA1c measurement (T2DM)
@@ -269,7 +278,7 @@ def test_outcomes_single_hba1c_measurement(
         patient=patient,
         visit_date=AUDIT_START_DATE + relativedelta(days=5),
         hba1c=50,  # 50 mmol/mol
-        hba1c_format=HBA1C_FORMATS[0][0],  # mmol/mol format
+        hba1c_format=hba1c_format_val,
         hba1c_date=AUDIT_START_DATE + relativedelta(days=5),
     )
 
@@ -287,7 +296,7 @@ def test_outcomes_single_hba1c_measurement(
     url = reverse(
         "pdu-patient-report",
         kwargs={
-            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "audit_period": audit_period.slug,
             "pz_code": ALDER_HEY_PZ_CODE,
         },
     )
@@ -316,12 +325,21 @@ def test_outcomes_single_hba1c_measurement(
     assert patient_data["days_delta_between_latest_and_previous_hba1c"] is None
 
 
+@pytest.mark.parametrize(
+    "audit_period_slug, hba1c_format_val",
+    [
+        ("2024-2025", HBA1C_FORMATS[0][0]),
+        ("2026-2027", None),  # 2026: hba1c_format deprecated, values always mmol/mol
+    ],
+)
 @pytest.mark.django_db
 def test_outcomes_multiple_hba1c_measurements(
     seed_groups_fixture,
     seed_users_fixture,
     seed_audit_periods_fixture,
     client,
+    audit_period_slug,
+    hba1c_format_val,
 ):
     """
     Test outcomes view for patient with multiple HbA1c measurements.
@@ -331,7 +349,7 @@ def test_outcomes_multiple_hba1c_measurements(
     percentage change between measurements.
     """
     ah_rcpch_audit_team_user, audit_period, AUDIT_START_DATE, eligible_criteria = (
-        _create_outcomes_test_setup(client)
+        _create_outcomes_test_setup(client, audit_period_slug)
     )
 
     # Create patient with multiple HbA1c measurements (Other/MODY)
@@ -345,7 +363,7 @@ def test_outcomes_multiple_hba1c_measurements(
         patient=patient,
         visit_date=AUDIT_START_DATE + relativedelta(days=10),
         hba1c=60,  # 60 mmol/mol
-        hba1c_format=HBA1C_FORMATS[0][0],  # mmol/mol format
+        hba1c_format=hba1c_format_val,
         hba1c_date=AUDIT_START_DATE + relativedelta(days=10),
     )
     # Latest hba1c
@@ -353,7 +371,7 @@ def test_outcomes_multiple_hba1c_measurements(
         patient=patient,
         visit_date=AUDIT_START_DATE + relativedelta(days=20),
         hba1c=45,  # 45 mmol/mol
-        hba1c_format=HBA1C_FORMATS[0][0],  # mmol/mol format
+        hba1c_format=hba1c_format_val,
         hba1c_date=AUDIT_START_DATE + relativedelta(days=20),
     )
 
@@ -371,7 +389,7 @@ def test_outcomes_multiple_hba1c_measurements(
     url = reverse(
         "pdu-patient-report",
         kwargs={
-            "audit_period": AuditPeriod.objects.get_default_audit_period().slug,
+            "audit_period": audit_period.slug,
             "pz_code": ALDER_HEY_PZ_CODE,
         },
     )
@@ -409,7 +427,11 @@ def test_outcomes_multiple_hba1c_measurements(
 @pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_report_for_patients_turning_12_in_audit_year(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    audit_period_slug,
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -505,7 +527,11 @@ def test_report_for_patients_turning_12_in_audit_year(
 @pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_report_for_sick_day_rules(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    audit_period_slug,
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -572,7 +598,11 @@ def test_report_for_sick_day_rules(
 @pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_care_at_diagnosis_for_type_1_patient(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    audit_period_slug,
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -644,7 +674,11 @@ def test_care_at_diagnosis_for_type_1_patient(
 @pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_carb_counting_countdown_when_no_date_entered(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    audit_period_slug,
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -711,7 +745,11 @@ def test_carb_counting_countdown_when_no_date_entered(
 @pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2025-2026"])
 @pytest.mark.django_db
 def test_coeliac_screening_countdown_when_no_date_entered(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    audit_period_slug,
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -776,7 +814,11 @@ def test_coeliac_screening_countdown_when_no_date_entered(
 @pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2025-2026"])
 @pytest.mark.django_db
 def test_thyroid_screening_overdue_when_threshold_passed(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    audit_period_slug,
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -839,7 +881,11 @@ def test_thyroid_screening_overdue_when_threshold_passed(
 @pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_coeliac_and_thyroid_screening_on_time_when_dates_present(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    audit_period_slug,
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -905,7 +951,11 @@ def test_coeliac_and_thyroid_screening_on_time_when_dates_present(
 @pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_non_type_1_patients_do_not_appear_in_care_at_diagnosis(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    audit_period_slug,
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -967,7 +1017,11 @@ def test_non_type_1_patients_do_not_appear_in_care_at_diagnosis(
 @pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_hba1c_healthcheck(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    audit_period_slug,
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -1036,7 +1090,11 @@ def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_hba1c_he
 @pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_influenza_immunisation_recommended(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    audit_period_slug,
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -1103,13 +1161,24 @@ def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_influenz
     "audit_period_slug, smoking_field, non_smoker_val, smoker_val",
     [
         ("2024-2025", "smoking_status", SMOKING_STATUS[0][0], SMOKING_STATUS[1][0]),
-        ("2026-2027", "smoking_vaping_status", SMOKING_VAPING_STATUS[0][0], SMOKING_VAPING_STATUS[1][0]),
+        (
+            "2026-2027",
+            "smoking_vaping_status",
+            SMOKING_VAPING_STATUS[0][0],
+            SMOKING_VAPING_STATUS[1][0],
+        ),
     ],
 )
 @pytest.mark.django_db
 def test_patient_under_12yo_should_show_as_ineligible_for_smoking_status_screened(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client,
-    audit_period_slug, smoking_field, non_smoker_val, smoker_val,
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    audit_period_slug,
+    smoking_field,
+    non_smoker_val,
+    smoker_val,
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -1175,13 +1244,24 @@ def test_patient_under_12yo_should_show_as_ineligible_for_smoking_status_screene
     "audit_period_slug, smoking_field, non_smoker_val, smoker_val",
     [
         ("2024-2025", "smoking_status", SMOKING_STATUS[0][0], SMOKING_STATUS[1][0]),
-        ("2026-2027", "smoking_vaping_status", SMOKING_VAPING_STATUS[0][0], SMOKING_VAPING_STATUS[1][0]),
+        (
+            "2026-2027",
+            "smoking_vaping_status",
+            SMOKING_VAPING_STATUS[0][0],
+            SMOKING_VAPING_STATUS[1][0],
+        ),
     ],
 )
 @pytest.mark.django_db
 def test_patient_over_12yo_non_smoker_should_not_be_eligible_for_smoking_cessation_referral(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client,
-    audit_period_slug, smoking_field, non_smoker_val, smoker_val,
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    audit_period_slug,
+    smoking_field,
+    non_smoker_val,
+    smoker_val,
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -1251,7 +1331,11 @@ def test_patient_over_12yo_non_smoker_should_not_be_eligible_for_smoking_cessati
 @pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_retinal_screening_under_12yo_shows_ineligible(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    audit_period_slug,
 ):
     """
     Test that patients under 12 years old show as ineligible for retinal screening.
@@ -1325,7 +1409,11 @@ def test_retinal_screening_under_12yo_shows_ineligible(
 @pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_retinal_screening_over_12yo_with_data_passes(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    audit_period_slug,
 ):
     """
     Test that patients 12+ years old with valid retinal screening data show as passed.
@@ -1399,7 +1487,11 @@ def test_retinal_screening_over_12yo_with_data_passes(
 @pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_retinal_screening_over_12yo_with_data_fails(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    audit_period_slug,
 ):
     """
     Test that patients 12+ years old who are eligible but don't pass show as failed.
@@ -1473,7 +1565,11 @@ def test_retinal_screening_over_12yo_with_data_fails(
 @pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db
 def test_retinal_screening_over_12yo_without_data_shows_blank(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, audit_period_slug
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    audit_period_slug,
 ):
     """
     Test that patients 12+ years old with NO retinal screening data show as blank.
@@ -1548,13 +1644,24 @@ def test_retinal_screening_over_12yo_without_data_shows_blank(
     "audit_period_slug, smoking_field, non_smoker_val, smoker_val",
     [
         ("2024-2025", "smoking_status", SMOKING_STATUS[0][0], SMOKING_STATUS[1][0]),
-        ("2026-2027", "smoking_vaping_status", SMOKING_VAPING_STATUS[0][0], SMOKING_VAPING_STATUS[1][0]),
+        (
+            "2026-2027",
+            "smoking_vaping_status",
+            SMOKING_VAPING_STATUS[0][0],
+            SMOKING_VAPING_STATUS[1][0],
+        ),
     ],
 )
 @pytest.mark.django_db
 def test_patient_with_two_visits_one_with_smoking_status_one_without_has_one_row_in_the_patient_report(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client,
-    audit_period_slug, smoking_field, non_smoker_val, smoker_val,
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    audit_period_slug,
+    smoking_field,
+    non_smoker_val,
+    smoker_val,
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -1629,13 +1736,24 @@ def test_patient_with_two_visits_one_with_smoking_status_one_without_has_one_row
     "audit_period_slug, smoking_field, non_smoker_val, smoker_val",
     [
         ("2024-2025", "smoking_status", SMOKING_STATUS[0][0], SMOKING_STATUS[1][0]),
-        ("2026-2027", "smoking_vaping_status", SMOKING_VAPING_STATUS[0][0], SMOKING_VAPING_STATUS[1][0]),
+        (
+            "2026-2027",
+            "smoking_vaping_status",
+            SMOKING_VAPING_STATUS[0][0],
+            SMOKING_VAPING_STATUS[1][0],
+        ),
     ],
 )
 @pytest.mark.django_db
 def test_smoker_with_two_visits_one_with_smoking_cessation_referral_one_without_has_one_row_in_the_patient_report(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client,
-    audit_period_slug, smoking_field, non_smoker_val, smoker_val,
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    audit_period_slug,
+    smoking_field,
+    non_smoker_val,
+    smoker_val,
 ):
     user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
@@ -1708,13 +1826,24 @@ def test_smoker_with_two_visits_one_with_smoking_cessation_referral_one_without_
     "audit_period_slug, smoking_field, non_smoker_val, smoker_val",
     [
         ("2024-2025", "smoking_status", SMOKING_STATUS[0][0], SMOKING_STATUS[1][0]),
-        ("2026-2027", "smoking_vaping_status", SMOKING_VAPING_STATUS[0][0], SMOKING_VAPING_STATUS[1][0]),
+        (
+            "2026-2027",
+            "smoking_vaping_status",
+            SMOKING_VAPING_STATUS[0][0],
+            SMOKING_VAPING_STATUS[1][0],
+        ),
     ],
 )
 @pytest.mark.django_db
 def test_smoking_cessation_referral_column_denominator_is_smokers_only(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client,
-    audit_period_slug, smoking_field, non_smoker_val, smoker_val,
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    audit_period_slug,
+    smoking_field,
+    non_smoker_val,
+    smoker_val,
 ):
     """
     The 'Referral to smoking cessation service' column header facet should
@@ -2163,7 +2292,9 @@ def test_insulin_regimen_2026_missing_penultimate_visit_counted(
     patient_data = patients[0]
     assert patient_data["patient_identifier"] == "6666666661"
     # Should use the earlier visit's insulin_regimen, not "No treatment regimen"
-    assert patient_data["treatment_regimen"] == INSULIN_TREATMENT[3][1]  # "Insulin pump (standalone)"
+    assert (
+        patient_data["treatment_regimen"] == INSULIN_TREATMENT[3][1]
+    )  # "Insulin pump (standalone)"
 
 
 @pytest.mark.django_db
