@@ -260,3 +260,41 @@ async def test_passes_through_unexpected_error():
     ) as mock:
         with pytest.raises(Exception):  # noqa: B017
             await validate_visit_async(**VALID_FIELDS)
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1354
+async def test_bmi_for_unknown_sex():
+    with patch(
+        "project.npda.forms.external_visit_validators.calculate_centiles_z_scores",
+        AsyncMock(return_value=(1, 2)),
+    ) as mock:
+        result = await validate_visit_async(**VALID_FIELDS | {
+            "sex": 99
+        })
+
+        assert result.height_result is None
+        assert result.weight_result is None
+
+        assert result.bmi == 23.1
+        assert result.bmi_result is None
+
+        assert mock.call_count == 0
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1354
+async def test_bmi_for_not_specified_sex():
+    with patch(
+        "project.npda.forms.external_visit_validators.calculate_centiles_z_scores",
+        AsyncMock(return_value=(1, 2)),
+    ) as mock:
+        result = await validate_visit_async(**VALID_FIELDS | {
+            "sex": 3
+        })
+
+        assert result.height_result is None
+        assert result.weight_result is None
+
+        assert result.bmi == 23.1
+        assert result.bmi_result is None
+
+        assert mock.call_count == 0
