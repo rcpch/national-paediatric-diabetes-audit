@@ -11,10 +11,11 @@ from dateutil.relativedelta import relativedelta
 from django.urls import reverse
 
 from project.constants.closed_loop_types import CLOSED_LOOP_TYPES
-from project.constants.diabetes_treatment import TREATMENT_TYPES
+from project.constants.diabetes_treatment import INSULIN_TREATMENT, TREATMENT_TYPES
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.constants.glucose_monitoring_types import GLUCOSE_MONITORING_TYPES
 from project.constants.hba1c_format import HBA1C_FORMATS
+from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 
 # Python imports
 from project.constants.smoking_status import SMOKING_STATUS
@@ -2009,4 +2010,255 @@ def test_hcl_missing_penultimate_visit_counted(
     patient_data = patients[0]
     assert patient_data["patient_identifier"] == "5555555557"
     # Should use the earlier visit's closed loop value, not the default "No"
+    assert patient_data["hcl"] == "Yes"
+
+
+# ── 2026 dataset treatment fallback tests ─────────────────────────────────────
+# These three tests cover the same "fall back to most recent non-null visit"
+# behaviour as the 2021 tests above, but for the 2026 dataset fields:
+#   treatment        → insulin_regimen
+#   glucose_monitoring → cgm_use  (YES_NO_UNKNOWN)
+#   closed_loop_system → insulin_regimen == 5  (HCL embedded in insulin regimen)
+#
+# They are expected to FAIL until annotate_treatment branches on dataset_year.
+
+
+@pytest.mark.django_db
+def test_insulin_regimen_2026_missing_penultimate_visit_counted(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    2026 dataset: when the most recent visit has no insulin_regimen value, the
+    treatment_regimen annotation should fall back to the most recent visit that
+    does have a value.
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get(slug="2026-2027")
+    audit_period.is_open = True
+    audit_period.save()
+
+    date_of_birth = audit_period.start_date - relativedelta(years=10)
+
+    patient = PatientFactory(
+        nhs_number="6666666661",
+        diabetes_type=DIABETES_TYPES[0][0],  # T1DM
+        date_of_birth=date_of_birth,
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
+    )
+
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    # Earlier visit WITH insulin_regimen data (4 = "Insulin pump (standalone)")
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        insulin_regimen=INSULIN_TREATMENT[3][0],  # 4 = "Insulin pump (standalone)"
+        treatment=None,
+    )
+
+    # Most recent visit WITHOUT insulin_regimen — earlier value should still be used
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date + relativedelta(days=30),
+        insulin_regimen=None,
+        treatment=None,
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(patient)
+
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": audit_period.slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
+
+    response = client.get(
+        url + f"?category={TableCategories.TREATMENT.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    patients = response.context["patients"]
+    assert len(patients) == 1
+
+    patient_data = patients[0]
+    assert patient_data["patient_identifier"] == "6666666661"
+    # Should use the earlier visit's insulin_regimen, not "No treatment regimen"
+    assert patient_data["treatment_regimen"] == INSULIN_TREATMENT[3][1]  # "Insulin pump (standalone)"
+
+
+@pytest.mark.django_db
+def test_cgm_use_2026_missing_penultimate_visit_counted(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    2026 dataset: when the most recent visit has no cgm_use value, the
+    glucose_monitoring annotation should fall back to the most recent visit that
+    does have a value.
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get(slug="2026-2027")
+    audit_period.is_open = True
+    audit_period.save()
+
+    date_of_birth = audit_period.start_date - relativedelta(years=10)
+
+    patient = PatientFactory(
+        nhs_number="6666666662",
+        diabetes_type=DIABETES_TYPES[0][0],  # T1DM
+        date_of_birth=date_of_birth,
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
+    )
+
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    # Earlier visit WITH cgm_use data (1 = "Yes")
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        cgm_use=YES_NO_UNKNOWN[0][0],  # 1 = "Yes"
+        glucose_monitoring=None,
+    )
+
+    # Most recent visit WITHOUT cgm_use — earlier value should still be used
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date + relativedelta(days=30),
+        cgm_use=None,
+        glucose_monitoring=None,
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(patient)
+
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": audit_period.slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
+
+    response = client.get(
+        url + f"?category={TableCategories.TREATMENT.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    patients = response.context["patients"]
+    assert len(patients) == 1
+
+    patient_data = patients[0]
+    assert patient_data["patient_identifier"] == "6666666662"
+    # Should use the earlier visit's cgm_use, not "No glucose monitoring"
+    assert patient_data["glucose_monitoring"] == YES_NO_UNKNOWN[0][1]  # "Yes"
+
+
+@pytest.mark.django_db
+def test_hcl_from_insulin_regimen_2026_missing_penultimate_visit_counted(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    2026 dataset: HCL is encoded as insulin_regimen == 5 ("Hybrid closed loop").
+    When the most recent visit has no insulin_regimen, the hcl annotation should
+    fall back to the most recent visit that does have a value, and derive
+    hcl="Yes" from insulin_regimen==5.
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get(slug="2026-2027")
+    audit_period.is_open = True
+    audit_period.save()
+
+    date_of_birth = audit_period.start_date - relativedelta(years=10)
+
+    patient = PatientFactory(
+        nhs_number="6666666663",
+        diabetes_type=DIABETES_TYPES[0][0],  # T1DM
+        date_of_birth=date_of_birth,
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
+    )
+
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    # Earlier visit WITH insulin_regimen == 5 (Hybrid closed loop → hcl = "Yes")
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        insulin_regimen=INSULIN_TREATMENT[4][0],  # 5 = "Hybrid closed loop"
+        treatment=None,
+    )
+
+    # Most recent visit WITHOUT insulin_regimen — earlier value should still be used
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date + relativedelta(days=30),
+        insulin_regimen=None,
+        treatment=None,
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(patient)
+
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": audit_period.slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
+
+    response = client.get(
+        url + f"?category={TableCategories.TREATMENT.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    patients = response.context["patients"]
+    assert len(patients) == 1
+
+    patient_data = patients[0]
+    assert patient_data["patient_identifier"] == "6666666663"
+    # insulin_regimen == 5 means HCL, should derive hcl = "Yes"
     assert patient_data["hcl"] == "Yes"

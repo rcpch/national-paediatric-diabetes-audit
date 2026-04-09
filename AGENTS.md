@@ -177,12 +177,14 @@ There are two datasets: **2021** and **2026**. The dataset year is derived from 
 ### Key differences between datasets
 
 **Patient model — 2026 only fields:**
+
 - `sex` heading changes from "Stated gender" → "Sex assigned at birth"
 - `adhd_asd_status` — ADHD/ASD diagnosis
 - `learning_disability_status` — learning disability diagnosis
 - `immunotherapy_received` / `immunotherapy_date` — immunotherapy for stage 3 T1DM
 
 **Visit model — 2021 only fields (replaced in 2026):**
+
 - `treatment` — combined treatment regimen (replaced by `insulin_regimen` + `non_insulin_medication` + `dietary_lifestyle_modification`)
 - `closed_loop_system` — closed loop flag (still present but linked to `treatment`; logic changes)
 - `glucose_monitoring` — other glucose monitoring method (replaced by `cgm_use`)
@@ -190,6 +192,7 @@ There are two datasets: **2021** and **2026**. The dataset year is derived from 
 - `smoking_status` — "Does the patient smoke?" (replaced by `smoking_vaping_status`)
 
 **Visit model — 2026 only fields:**
+
 - `insulin_regimen` — insulin type at time of visit
 - `non_insulin_medication` — other blood glucose lowering medication
 - `dietary_lifestyle_modification` — lifestyle/dietary modification recommended
@@ -201,6 +204,7 @@ There are two datasets: **2021** and **2026**. The dataset year is derived from 
 ### Adding new fields
 
 When adding a field that is dataset-year-specific:
+
 1. Add the model field to `Patient` or `Visit` (nullable)
 2. Add an entry to `ALL_HEADINGS` in `project/constants/csv_headings.py` with the correct `dataset_years` list
 3. Add the heading to `PATIENT_FIELD_HEADINGS_202x` / `VISIT_FIELD_HEADINGS_202x` in `project/npda/general_functions/headings.py`

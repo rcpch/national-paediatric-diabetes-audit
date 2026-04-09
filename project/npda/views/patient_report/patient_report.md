@@ -260,10 +260,10 @@ This should involve:
 
 ##### Treatment
 
-- Use the latest visit in the audit period to derive:
-   - Treatment regimen
-   - Glucose monitoring
-   - HCL (hybrid closed loop)
+- Use the latest `EXISTS` visit in the audit period to derive:
+  - Treatment regimen
+  - Glucose monitoring
+  - HCL (hybrid closed loop)
 - Column headings vary by audit period; apply conditional labeling by audit period year.
 
 ##### Outcomes
