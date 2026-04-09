@@ -49,23 +49,28 @@ async def test_missing_observation_date():
         assert not mock.called
 
 
-async def test_missing_sex():
+@pytest.mark.parametrize(
+    "sex",
+    [
+        pytest.param(None, id="None"),
+        pytest.param(999, id="Invalid"),
+        pytest.param(3, id="Not Specified"),
+        pytest.param(99, id="Unknown"),
+    ],
+)
+async def test_sex(sex):
     with patch(
         "project.npda.forms.external_visit_validators.calculate_centiles_z_scores"
     ) as mock:
-        result = await validate_visit_async(**(VALID_FIELDS | {"sex": None}))
+        result = await validate_visit_async(**(VALID_FIELDS | {"sex": sex}))
 
-        assert result == EMPTY_RESULT
-        assert not mock.called
+        assert result.height_result is None
+        assert result.weight_result is None
 
+        # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1354
+        assert result.bmi == 23.1
+        assert result.bmi_result is None
 
-async def test_invalid_sex():
-    with patch(
-        "project.npda.forms.external_visit_validators.calculate_centiles_z_scores"
-    ) as mock:
-        result = await validate_visit_async(**(VALID_FIELDS | {"sex": 999}))
-
-        assert result == EMPTY_RESULT
         assert not mock.called
 
 
@@ -260,41 +265,3 @@ async def test_passes_through_unexpected_error():
     ) as mock:
         with pytest.raises(Exception):  # noqa: B017
             await validate_visit_async(**VALID_FIELDS)
-
-
-# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1354
-async def test_bmi_for_unknown_sex():
-    with patch(
-        "project.npda.forms.external_visit_validators.calculate_centiles_z_scores",
-        AsyncMock(return_value=(1, 2)),
-    ) as mock:
-        result = await validate_visit_async(**VALID_FIELDS | {
-            "sex": 99
-        })
-
-        assert result.height_result is None
-        assert result.weight_result is None
-
-        assert result.bmi == 23.1
-        assert result.bmi_result is None
-
-        assert mock.call_count == 0
-
-
-# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1354
-async def test_bmi_for_not_specified_sex():
-    with patch(
-        "project.npda.forms.external_visit_validators.calculate_centiles_z_scores",
-        AsyncMock(return_value=(1, 2)),
-    ) as mock:
-        result = await validate_visit_async(**VALID_FIELDS | {
-            "sex": 3
-        })
-
-        assert result.height_result is None
-        assert result.weight_result is None
-
-        assert result.bmi == 23.1
-        assert result.bmi_result is None
-
-        assert mock.call_count == 0
