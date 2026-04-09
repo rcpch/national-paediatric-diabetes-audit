@@ -271,7 +271,10 @@ def annotate_additional_care_processes(qs, audit_period):
             Visit.objects.filter(
                 patient=OuterRef("pk"),
                 visit_date__range=audit_range,
-                smoking_vaping_status__in=[2, 4],  # current smoker (with or without vaping)
+                smoking_vaping_status__in=[
+                    2,
+                    4,
+                ],  # current smoker (with or without vaping)
             )
         )
         smoking_referral_exists = Exists(
@@ -757,7 +760,8 @@ def annotate_outcomes(qs, audit_period):
                     ),
                     When(
                         Q(hba1c_format=HBA1C_FORMATS[1][0]),
-                        then=(F("hba1c") - Round(Decimal("2.152"))) / Decimal("0.09148"),
+                        then=(F("hba1c") - Round(Decimal("2.152")))
+                        / Decimal("0.09148"),
                     ),
                     default=None,
                     output_field=DecimalField(max_digits=5, decimal_places=2),
@@ -781,7 +785,8 @@ def annotate_outcomes(qs, audit_period):
                     ),
                     When(
                         Q(hba1c_format=HBA1C_FORMATS[1][0]),
-                        then=(F("hba1c") - Round(Decimal("2.152"))) / Decimal("0.09148"),
+                        then=(F("hba1c") - Round(Decimal("2.152")))
+                        / Decimal("0.09148"),
                     ),
                     default=None,
                     output_field=DecimalField(max_digits=5, decimal_places=2),

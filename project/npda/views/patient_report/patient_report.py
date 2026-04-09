@@ -435,25 +435,37 @@ class PatientReportView(
             complete_year = qs.filter(is_complete_year_of_care=True)
             complete_year_12plus = complete_year.filter(is_gte_12yo=True)
 
-            context["total_passed_hba1c"] = complete_year.filter(passed_hba1c=True).count()
+            context["total_passed_hba1c"] = complete_year.filter(
+                passed_hba1c=True
+            ).count()
             context["total_eligible_hba1c"] = complete_year.count()
 
             context["total_passed_bmi"] = complete_year.filter(passed_bmi=True).count()
             context["total_eligible_bmi"] = complete_year.count()
 
-            context["total_passed_thyroid_screen"] = complete_year.filter(passed_thyroid_screen=True).count()
+            context["total_passed_thyroid_screen"] = complete_year.filter(
+                passed_thyroid_screen=True
+            ).count()
             context["total_eligible_thyroid_screen"] = complete_year.count()
 
-            context["total_passed_blood_pressure"] = complete_year_12plus.filter(passed_blood_pressure=True).count()
+            context["total_passed_blood_pressure"] = complete_year_12plus.filter(
+                passed_blood_pressure=True
+            ).count()
             context["total_eligible_blood_pressure"] = complete_year_12plus.count()
 
-            context["total_passed_urinary_albumin"] = complete_year_12plus.filter(passed_urinary_albumin=True).count()
+            context["total_passed_urinary_albumin"] = complete_year_12plus.filter(
+                passed_urinary_albumin=True
+            ).count()
             context["total_eligible_urinary_albumin"] = complete_year_12plus.count()
 
-            context["total_passed_foot_exam"] = complete_year_12plus.filter(passed_foot_exam=True).count()
+            context["total_passed_foot_exam"] = complete_year_12plus.filter(
+                passed_foot_exam=True
+            ).count()
             context["total_eligible_foot_exam"] = complete_year_12plus.count()
 
-            context["total_passed_retinal_screening"] = complete_year.filter(passed_retinal_screening="complete").count()
+            context["total_passed_retinal_screening"] = complete_year.filter(
+                passed_retinal_screening="complete"
+            ).count()
             context["total_eligible_retinal_screening"] = complete_year.count()
 
         elif self.selected_category == TableCategories.ADDITIONAL_CARE_PROCESSES.value:
@@ -473,29 +485,57 @@ class PatientReportView(
                 smoking_cessation_referral__in=["True", "False"]
             )
 
-            context["total_passed_hba1c_4plus"] = complete_year.filter(hba1c_4plus=True).count()
+            context["total_passed_hba1c_4plus"] = complete_year.filter(
+                hba1c_4plus=True
+            ).count()
             context["total_eligible_hba1c_4plus"] = complete_year.count()
 
-            context["total_passed_psychological_assessment"] = complete_year.filter(psychological_assessment=True).count()
+            context["total_passed_psychological_assessment"] = complete_year.filter(
+                psychological_assessment=True
+            ).count()
             context["total_eligible_psychological_assessment"] = complete_year.count()
 
-            context["total_passed_additional_dietetic_appt_offered"] = complete_year.filter(additional_dietetic_appt_offered=True).count()
-            context["total_eligible_additional_dietetic_appt_offered"] = complete_year.count()
+            context["total_passed_additional_dietetic_appt_offered"] = (
+                complete_year.filter(additional_dietetic_appt_offered=True).count()
+            )
+            context["total_eligible_additional_dietetic_appt_offered"] = (
+                complete_year.count()
+            )
 
-            context["total_passed_pts_attending_additional_dietetic_appt"] = complete_year.filter(pts_attending_additional_dietetic_appt=True).count()
-            context["total_eligible_pts_attending_additional_dietetic_appt"] = complete_year.count()
+            context["total_passed_pts_attending_additional_dietetic_appt"] = (
+                complete_year.filter(
+                    pts_attending_additional_dietetic_appt=True
+                ).count()
+            )
+            context["total_eligible_pts_attending_additional_dietetic_appt"] = (
+                complete_year.count()
+            )
 
-            context["total_passed_influenza_immunisation_recommended"] = complete_year.filter(influenza_immunisation_recommended=True).count()
-            context["total_eligible_influenza_immunisation_recommended"] = complete_year.count()
+            context["total_passed_influenza_immunisation_recommended"] = (
+                complete_year.filter(influenza_immunisation_recommended=True).count()
+            )
+            context["total_eligible_influenza_immunisation_recommended"] = (
+                complete_year.count()
+            )
 
-            context["total_passed_sick_day_rules_advice"] = complete_year.filter(sick_day_rules_advice=True).count()
+            context["total_passed_sick_day_rules_advice"] = complete_year.filter(
+                sick_day_rules_advice=True
+            ).count()
             context["total_eligible_sick_day_rules_advice"] = complete_year.count()
 
-            context["total_passed_smoking_status"] = complete_year_12plus.filter(smoking_status=True).count()
+            context["total_passed_smoking_status"] = complete_year_12plus.filter(
+                smoking_status=True
+            ).count()
             context["total_eligible_smoking_status"] = complete_year_12plus.count()
 
-            context["total_passed_smoking_cessation_referral"] = complete_year_smokers_12plus.filter(smoking_cessation_referral="True").count()
-            context["total_eligible_smoking_cessation_referral"] = complete_year_smokers_12plus.count()
+            context["total_passed_smoking_cessation_referral"] = (
+                complete_year_smokers_12plus.filter(
+                    smoking_cessation_referral="True"
+                ).count()
+            )
+            context["total_eligible_smoking_cessation_referral"] = (
+                complete_year_smokers_12plus.count()
+            )
 
         context["breadcrumbs"] = data_breadcrumbs(
             self.pdu, self.audit_period, [("Patient Report", "pdu-patient-report")]

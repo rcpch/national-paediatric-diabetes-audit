@@ -38,7 +38,6 @@ from project.npda.tests.factories import (
     test_user_rcpch_audit_team_data,
 )
 from project.npda.tests.factories.patient_factory import PatientFactory
-from project.npda.tests.factories.transfer_factory import TransferFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
 from project.npda.tests.utils import login_and_verify_user
 from project.npda.urls import patient_report_urlpatterns

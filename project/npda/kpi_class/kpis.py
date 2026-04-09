@@ -35,7 +35,7 @@ from project.constants.hba1c_format import HBA1C_FORMATS
 from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
 from project.constants.leave_pdu_reasons import LEAVE_PDU_REASONS
 from project.constants.retinal_screening_results import RETINAL_SCREENING_RESULTS
-from project.constants.smoking_status import SMOKING_STATUS, SMOKING_VAPING_STATUS
+from project.constants.smoking_status import SMOKING_STATUS
 from project.constants.types.kpi_types import (
     KPICalculationsObject,
     KPIResult,
@@ -3029,7 +3029,9 @@ class CalculateKPIS:
         # Get the visits that match the valid Smoking Cessation Referral date
         # 2026 dataset uses smoking_vaping_status; 2021 uses smoking_status
         if self.audit_start_date >= date(2026, 4, 1):
-            smoker_filter = Q(smoking_vaping_status__in=[2, 4])  # smoker (with or without vaping)
+            smoker_filter = Q(
+                smoking_vaping_status__in=[2, 4]
+            )  # smoker (with or without vaping)
         else:
             smoker_filter = Q(smoking_status=2)  # Current smoker
         smoke_cessation_visits = Visit.objects.filter(
