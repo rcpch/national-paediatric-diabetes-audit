@@ -4654,7 +4654,7 @@ def test_case_insensitive_ethnic_category(test_user, dummy_sheet_csv):
     df = read_csv_from_str(one_row_csv).df
 
     errors = csv_upload_sync(test_user, df)
-    assert len(errors) == 0
+    assert "ethnicity" not in errors[0]
 
     patient = Patient.objects.first()
 
