@@ -138,7 +138,6 @@ class TableCategories(Enum):
 def calculate_queryset(
     pdu, audit_period: AuditPeriod, selected_category: str
 ) -> QuerySet[Patient]:
-    pz_code = pdu.pz_code
     base_qs = patient_report_queries.build_base_queryset(pdu, audit_period)
     patient_identifier = patient_report_queries._patient_identifier_field(pdu)
 
