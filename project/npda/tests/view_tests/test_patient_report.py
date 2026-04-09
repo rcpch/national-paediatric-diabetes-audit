@@ -31,12 +31,14 @@ from project.npda.models import NPDAUser
 from project.npda.models.audit_period import AuditPeriod
 from project.npda.models.patient import Patient
 from project.npda.models.submission import Submission
+from project.npda.models.transfer import Transfer
 from project.npda.tests.constants_for_tests import ALDER_HEY_PZ_CODE
 from project.npda.tests.factories import (
     test_user_audit_centre_editor_data,
     test_user_rcpch_audit_team_data,
 )
 from project.npda.tests.factories.patient_factory import PatientFactory
+from project.npda.tests.factories.transfer_factory import TransferFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
 from project.npda.tests.utils import login_and_verify_user
 from project.npda.urls import patient_report_urlpatterns
@@ -1155,6 +1157,190 @@ def test_patient_with_incomplete_year_of_care_can_still_show_as_passing_influenz
 
     assert patient["patient_identifier"] == "4444444444"
     assert patient["influenza_immunisation_recommended"] is True
+
+
+@pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
+@pytest.mark.django_db
+def test_incomplete_year_patient_diagnosed_in_audit_year_excluded_from_totals(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    audit_period_slug,
+):
+    """
+    Patients diagnosed within the audit year have is_complete_year_of_care=False.
+    They should still appear as rows in the table, but must not be counted in the
+    column header totals (total_eligible_*, total_passed_*).
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get(slug=audit_period_slug)
+    audit_period.is_open = True
+    audit_period.save()
+
+    dob = audit_period.start_date - relativedelta(years=14)
+
+    # Complete-year patient: diagnosed before the audit period
+    complete_patient = PatientFactory(
+        nhs_number="5555555551",
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=dob,
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
+    )
+    visit_date = audit_period.start_date + relativedelta(days=10)
+    VisitFactory(
+        patient=complete_patient,
+        visit_date=visit_date,
+        hba1c=50,
+        hba1c_format=HBA1C_FORMATS[0][0],
+        hba1c_date=visit_date,
+    )
+
+    # Incomplete-year patient: diagnosed inside the audit year
+    incomplete_patient = PatientFactory(
+        nhs_number="5555555552",
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=dob,
+        diagnosis_date=audit_period.start_date + relativedelta(days=5),
+    )
+    visit_date2 = audit_period.start_date + relativedelta(days=15)
+    VisitFactory(
+        patient=incomplete_patient,
+        visit_date=visit_date2,
+        hba1c=60,
+        hba1c_format=HBA1C_FORMATS[0][0],
+        hba1c_date=visit_date2,
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(complete_patient, incomplete_patient)
+
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={"audit_period": audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE},
+    )
+    response = client.get(
+        url + f"?category={TableCategories.HEALTH_CHECKS.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    # Both patients appear as rows
+    assert len(response.context["patients"]) == 2
+
+    # Totals count only the complete-year patient
+    assert response.context["total_eligible_hba1c"] == 1, (
+        "Incomplete-year patient (diagnosed in audit year) must not count in total_eligible"
+    )
+    assert response.context["total_passed_hba1c"] == 1, (
+        "Incomplete-year patient (diagnosed in audit year) must not count in total_passed"
+    )
+
+
+@pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
+@pytest.mark.django_db
+def test_incomplete_year_patient_transferred_out_excluded_from_totals(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    audit_period_slug,
+):
+    """
+    Patients who transferred out during the audit year have is_complete_year_of_care=False.
+    They should still appear as rows in the table, but must not be counted in the
+    column header totals (total_eligible_*, total_passed_*).
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get(slug=audit_period_slug)
+    audit_period.is_open = True
+    audit_period.save()
+
+    dob = audit_period.start_date - relativedelta(years=14)
+
+    # Complete-year patient
+    complete_patient = PatientFactory(
+        nhs_number="5555555553",
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=dob,
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
+    )
+    visit_date = audit_period.start_date + relativedelta(days=10)
+    VisitFactory(
+        patient=complete_patient,
+        visit_date=visit_date,
+        hba1c=50,
+        hba1c_format=HBA1C_FORMATS[0][0],
+        hba1c_date=visit_date,
+    )
+
+    # Incomplete-year patient: transferred out within the audit year
+    transferred_patient = PatientFactory(
+        nhs_number="5555555554",
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=dob,
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
+    )
+    visit_date2 = audit_period.start_date + relativedelta(days=20)
+    VisitFactory(
+        patient=transferred_patient,
+        visit_date=visit_date2,
+        hba1c=60,
+        hba1c_format=HBA1C_FORMATS[0][0],
+        hba1c_date=visit_date2,
+    )
+    # Set the transfer date to within the audit year
+    Transfer.objects.filter(patient=transferred_patient).update(
+        date_leaving_service=audit_period.start_date + relativedelta(days=30)
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(complete_patient, transferred_patient)
+
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={"audit_period": audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE},
+    )
+    response = client.get(
+        url + f"?category={TableCategories.HEALTH_CHECKS.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    # Both patients appear as rows
+    assert len(response.context["patients"]) == 2
+
+    # Totals count only the complete-year patient
+    assert response.context["total_eligible_hba1c"] == 1, (
+        "Transferred-out patient must not count in total_eligible"
+    )
+    assert response.context["total_passed_hba1c"] == 1, (
+        "Transferred-out patient must not count in total_passed"
+    )
 
 
 @pytest.mark.parametrize(
