@@ -239,6 +239,7 @@ def annotate_health_checks(qs, audit_period):
 
 def annotate_additional_care_processes(qs, audit_period):
     audit_range = (audit_period.start_date, audit_period.end_date)
+    dataset_year = audit_period.get_dataset_year()
 
     hba1c_count = Count(
         "visit",
@@ -256,30 +257,55 @@ def annotate_additional_care_processes(qs, audit_period):
         )
     )
 
-    smoking_status_exists = Exists(
-        Visit.objects.filter(
-            patient=OuterRef("pk"),
-            visit_date__range=audit_range,
-            smoking_status__in=[1, 2],
+    if dataset_year == 2026:
+        # 2026: smoking_vaping_status replaces smoking_status
+        # Values: 1=non-smoker/non-vaper, 2=smoker/non-vaper, 3=vaper/non-smoker, 4=smoker+vaper
+        smoking_status_exists = Exists(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                smoking_vaping_status__in=[1, 2, 3, 4],
+            )
         )
-    )
-
-    smoker_exists = Exists(
-        Visit.objects.filter(
-            patient=OuterRef("pk"),
-            visit_date__range=audit_range,
-            smoking_status=2,
+        smoker_exists = Exists(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                smoking_vaping_status__in=[2, 4],  # current smoker (with or without vaping)
+            )
         )
-    )
-
-    smoking_referral_exists = Exists(
-        Visit.objects.filter(
-            patient=OuterRef("pk"),
-            visit_date__range=audit_range,
-            smoking_status=2,
-            smoking_cessation_referral_date__range=audit_range,
+        smoking_referral_exists = Exists(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                smoking_vaping_status__in=[2, 4],
+                smoking_cessation_referral_date__range=audit_range,
+            )
         )
-    )
+    else:
+        # 2021: smoking_status field
+        smoking_status_exists = Exists(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                smoking_status__in=[1, 2],
+            )
+        )
+        smoker_exists = Exists(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                smoking_status=2,
+            )
+        )
+        smoking_referral_exists = Exists(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                smoking_status=2,
+                smoking_cessation_referral_date__range=audit_range,
+            )
+        )
 
     dietetic_offered_exists = Exists(
         Visit.objects.filter(
