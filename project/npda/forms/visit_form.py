@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
 from django import forms
@@ -652,11 +652,18 @@ class VisitForm(forms.ModelForm):
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
             date_of_death=self.patient.death_date,
-            audit_period=self.audit_period,
         )
 
         if not valid:
             raise ValidationError(error)
+
+        if data and (
+            data < self.audit_period.start_date - timedelta(days=90)
+            or data > self.audit_period.end_date
+        ):
+            raise ValidationError(
+                "Expected thyroid function date from 90 days before the start of the audit period to the end of the audit period."
+            )
 
         return self.cleaned_data["thyroid_function_date"]
 
@@ -668,11 +675,18 @@ class VisitForm(forms.ModelForm):
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
             date_of_death=self.patient.death_date,
-            audit_period=self.audit_period,
         )
 
         if not valid:
             raise ValidationError(error)
+
+        if data and (
+            data < self.audit_period.start_date - timedelta(days=90)
+            or data > self.audit_period.end_date
+        ):
+            raise ValidationError(
+                "Expected coeliac screen date from 90 days before the start of the audit period to the end of the audit period."
+            )
 
         return self.cleaned_data["coeliac_screen_date"]
 
