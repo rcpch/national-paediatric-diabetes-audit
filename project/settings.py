@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+import gc
 import logging
 import os
 from datetime import timedelta
@@ -391,8 +392,7 @@ ENABLE_REQUEST_LOGGING = os.getenv("ENABLE_REQUEST_LOGGING", "False") == "True"
 ENABLE_MEMORY_LOGGING = os.getenv("ENABLE_MEMORY_LOGGING", "False") == "True"
 if ENABLE_MEMORY_LOGGING:
     logger.info("Memory logging is ENABLED")
-    # Deliberately don't use gc.DEBUG_LEAK so we don't do gc.DEBUG_SAVE_ALL
-    gc.set_debug(gc.DEBUG_COLLECTABLE | gc.DEBUG_UNCOLLECTABLE)
+    gc.set_debug(gc.DEBUG_UNCOLLECTABLE)
 
 SILKY_AUTHENTICATION = True  # User must login
 SILKY_AUTHORISATION = True  # User must have permissions
