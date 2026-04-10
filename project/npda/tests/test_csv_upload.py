@@ -5723,3 +5723,217 @@ def test_uploading_csv_with_first_row_missing_pdu_number(
         "Submission should be created for upload where first row is missing PDU number but subsequent rows have correct PDU number"
     )
     assert Submission.objects.first().paediatric_diabetes_unit.pz_code == "PZ004"
+
+
+@pytest.mark.django_db
+def test_transfer_date_and_reason_leaving_service_are_saved(
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
+):
+    """
+    Regression: both date_leaving_service and reason_leaving_service must be
+    persisted to the Transfer instance when both are present in the CSV.
+
+    This test sets pd.Timestamp directly — it verifies that csv_upload's
+    row_to_dict / PatientForm / get_valid_transfer_fields pipeline works
+    correctly given already-parsed dates.  For the full end-to-end path
+    (including the csv_parse string→Timestamp conversion) see
+    test_transfer_date_and_reason_leaving_service_saved_via_full_parse.
+    """
+    leave_date = date(2022, 6, 1)
+    leave_reason = LEAVE_PDU_REASONS[0][0]  # 1 = Transitioned to adult diabetes service
+
+    single_row_valid_df.loc[0, "Date of leaving service"] = pd.Timestamp(leave_date)
+    single_row_valid_df.loc[0, "Reason for leaving service"] = leave_reason
+
+    errors = csv_upload_sync(
+        test_user,
+        single_row_valid_df,
+        _audit_period=audit_period_for_dataset_year,
+    )
+
+    assert Transfer.objects.count() == 1
+    transfer = Transfer.objects.first()
+
+    assert transfer.date_leaving_service == leave_date, (
+        f"Expected date_leaving_service={leave_date}, got {transfer.date_leaving_service}"
+    )
+    assert transfer.reason_leaving_service == leave_reason, (
+        f"Expected reason_leaving_service={leave_reason}, got {transfer.reason_leaving_service}"
+    )
+
+
+@pytest.mark.django_db
+def test_transfer_date_leaving_service_resolved_from_later_row(
+    test_user, one_patient_with_four_visits
+):
+    """
+    Regression for PZ016: when a patient has multiple rows and only a later
+    row carries date_leaving_service + reason_leaving_service, both must still
+    be saved to the Transfer instance.
+
+    Previously merge_rows_for_patient had no case for date_leaving_service in
+    its match statement.  It correctly resolved reason_leaving_service (via
+    smallest_code_with_attached_date) and wrote the resolved value onto all
+    rows, but left date_leaving_service unmodified — so rows.iloc[0] still had
+    NaT.  PatientForm.clean() then saw reason supplied but no date, added an
+    "invalid"-code error, and get_valid_transfer_fields nulled the date out.
+    """
+    df = one_patient_with_four_visits
+
+    leave_date = date(2022, 6, 1)
+    leave_reason = LEAVE_PDU_REASONS[0][0]  # 1 = Transitioned to adult diabetes service
+
+    # Only the last row carries the transfer date and reason — earlier rows are empty
+    df.loc[0, "Date of leaving service"] = None
+    df.loc[0, "Reason for leaving service"] = None
+    df.loc[1, "Date of leaving service"] = None
+    df.loc[1, "Reason for leaving service"] = None
+    df.loc[2, "Date of leaving service"] = None
+    df.loc[2, "Reason for leaving service"] = None
+    df.loc[3, "Date of leaving service"] = pd.Timestamp(leave_date)
+    df.loc[3, "Reason for leaving service"] = leave_reason
+
+    errors = csv_upload_sync(test_user, df)
+
+    assert Transfer.objects.count() == 1
+    transfer = Transfer.objects.first()
+
+    assert transfer.date_leaving_service == leave_date, (
+        f"date_leaving_service was not resolved from the later row. "
+        f"Expected {leave_date}, got {transfer.date_leaving_service}. "
+        f"Upload errors: {dict(errors)}"
+    )
+    assert transfer.reason_leaving_service == leave_reason, (
+        f"Expected reason_leaving_service={leave_reason}, got {transfer.reason_leaving_service}"
+    )
+
+
+@pytest.mark.django_db
+def test_transfer_date_and_reason_leaving_service_saved_via_full_parse(
+    test_user, dummy_sheet_csv, audit_period_for_dataset_year, dataset_year
+):
+    """
+    Production-faithful regression test: both date_leaving_service and
+    reason_leaving_service must survive the full pipeline:
+      raw CSV string → csv_parse (string→pd.Timestamp) → csv_upload.
+
+    The previous test sets a pd.Timestamp directly, bypassing csv_parse.
+    This one uses modify_raw_csv + read_csv_from_str so the date string
+    "01/06/2022" must be parsed by csv_parse exactly as it would be in
+    production.  If csv_parse silently coerces date_leaving_service to NaT
+    (e.g. wrong format), PatientForm's cross-field validation adds an
+    "invalid" error → get_valid_transfer_fields nulls the field → Transfer
+    has date_leaving_service=None even though reason_leaving_service saved.
+    """
+    leave_date = date(2022, 6, 1)
+    leave_date_str = "01/06/2022"  # DD/MM/YYYY — the format the NPDA template uses
+    leave_reason = LEAVE_PDU_REASONS[0][0]  # 1 = Transitioned to adult diabetes service
+
+    modified_csv = modify_raw_csv(
+        dummy_sheet_csv,
+        replacements=[
+            {
+                "row": 1,
+                "column": "Date of leaving service",
+                "value": leave_date_str,
+            },
+            {
+                "row": 1,
+                "column": "Reason for leaving service",
+                "value": str(leave_reason),
+            },
+        ],
+    )
+
+    parsed = read_csv_from_str(modified_csv, dataset_year=dataset_year)
+    df = parsed.df.head(1)
+
+    errors = csv_upload_sync(
+        test_user,
+        df,
+        _audit_period=audit_period_for_dataset_year,
+    )
+
+    assert Transfer.objects.count() == 1, (
+        f"Expected 1 Transfer, got {Transfer.objects.count()}. Upload errors: {dict(errors)}"
+    )
+    transfer = Transfer.objects.first()
+
+    assert transfer.date_leaving_service == leave_date, (
+        f"date_leaving_service was dropped during csv_parse or csv_upload. "
+        f"Expected {leave_date}, got {transfer.date_leaving_service}. "
+        f"Upload errors: {dict(errors)}"
+    )
+    assert transfer.reason_leaving_service == leave_reason, (
+        f"Expected reason_leaving_service={leave_reason}, got {transfer.reason_leaving_service}"
+    )
+
+
+@pytest.mark.django_db
+def test_reason_leaving_service_without_date_is_silently_dropped(
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
+):
+    """
+    A reason_leaving_service with no attached date_leaving_service is silently
+    discarded by the merge step.
+
+    merge_rows_for_patient processes reason_leaving_service via
+    smallest_code_with_attached_date, which does dropna(subset=["Date of
+    leaving service"]).  When no row has a date, it returns None — so the
+    reason is nulled before PatientForm ever sees it.  Both fields arrive at
+    PatientForm as None, so no cross-field validation error is raised and the
+    Transfer is created with both fields null.
+
+    This is the intended gate-keeping behaviour: a reason without a date
+    carries no clinical meaning and is discarded rather than stored
+    inconsistently.
+    """
+    leave_reason = LEAVE_PDU_REASONS[0][0]
+
+    single_row_valid_df.loc[0, "Reason for leaving service"] = leave_reason
+    single_row_valid_df.loc[0, "Date of leaving service"] = None
+
+    errors = csv_upload_sync(
+        test_user,
+        single_row_valid_df,
+        _audit_period=audit_period_for_dataset_year,
+    )
+
+    # No cross-field error — the merge step already discarded the orphaned reason
+    assert "date_leaving_service" not in errors[0]
+    assert "reason_leaving_service" not in errors[0]
+
+    assert Transfer.objects.count() == 1
+    transfer = Transfer.objects.first()
+    assert transfer.date_leaving_service is None
+    assert transfer.reason_leaving_service is None
+
+
+@pytest.mark.django_db
+def test_date_leaving_service_without_reason_raises_error(
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
+):
+    """
+    A date_leaving_service supplied without a reason_leaving_service must raise a
+    validation error on reason_leaving_service.  PatientForm.clean() enforces this
+    cross-field rule and the error code is "invalid", so get_valid_transfer_fields
+    nulls reason_leaving_service in the Transfer (it was already None), but date
+    survives because there is no error on that field.
+    """
+    leave_date = date(2022, 6, 1)
+
+    single_row_valid_df.loc[0, "Date of leaving service"] = pd.Timestamp(leave_date)
+    single_row_valid_df.loc[0, "Reason for leaving service"] = None
+
+    errors = csv_upload_sync(
+        test_user,
+        single_row_valid_df,
+        _audit_period=audit_period_for_dataset_year,
+    )
+
+    assert "reason_leaving_service" in errors[0], (
+        "Expected a validation error on reason_leaving_service when date is set without a reason"
+    )
+
+    assert Transfer.objects.count() == 1
+    assert Transfer.objects.first().reason_leaving_service is None

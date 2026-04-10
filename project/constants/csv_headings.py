@@ -104,19 +104,19 @@ ALL_HEADINGS = [
         "dataset_years": [2026],
     },
     {
-        "heading": "Date of leaving service",
-        "model_field": "date_leaving_service",
-        "model": "Transfer",
-        "alternative_headings": [],
-        "data_type": "date",
-        "dataset_years": [2021, 2026],
-    },
-    {
         "heading": "Reason for leaving service",
         "model_field": "reason_leaving_service",
         "model": "Transfer",
         "alternative_headings": [],
         "data_type": "int64",
+        "dataset_years": [2021, 2026],
+    },
+    {
+        "heading": "Date of leaving service",
+        "model_field": "date_leaving_service",
+        "model": "Transfer",
+        "alternative_headings": [],
+        "data_type": "date",
         "dataset_years": [2021, 2026],
     },
     {

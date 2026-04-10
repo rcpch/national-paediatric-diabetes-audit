@@ -97,6 +97,13 @@ def merge_patient_rows_for_column(
                     values_by_date, unknown_value=ETHNICITIES[-1][0]
                 )
 
+            case "date_leaving_service":
+                # reason_leaving_service is processed first (see ALL_HEADINGS order),
+                # so rows with dates still have their original NaT/null values here.
+                # Pick the earliest non-null date across all rows for this patient.
+                rows[heading] = smallest(rows, heading)
+                flag_values = len(unique_values) > 1
+
             case "reason_leaving_service":
                 rows[heading] = smallest_code_with_attached_date(
                     rows, "Reason for leaving service", "Date of leaving service"
