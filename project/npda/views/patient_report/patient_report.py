@@ -583,7 +583,7 @@ def download_patient_report(request, audit_period, pdu):
 
     with pd.ExcelWriter(contents, engine="openpyxl") as writer:
         for category in TableCategories:
-            pt_qs, _, patient_identifier = calculate_queryset(
+            pt_qs, patient_identifier = calculate_queryset(
                 pdu=pdu,
                 audit_period=audit_period,
                 selected_category=category.value,
@@ -703,6 +703,7 @@ def download_patient_report(request, audit_period, pdu):
                         data["hba1c_percent_change"].append(row["hba1c_delta"])
 
             df = pd.DataFrame(data=data)
+
             df.to_excel(writer, sheet_name=category.value, index=False)
 
     timestamp = datetime.now().strftime("%y%m%d-%H%M")
