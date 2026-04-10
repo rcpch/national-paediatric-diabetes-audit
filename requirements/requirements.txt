@@ -36,6 +36,7 @@ nhs-number==1.3.6
 
 # profiling
 django-silk==5.4.3
+memray==1.19.3
 
 # live application server
 gunicorn>=22.0.0
