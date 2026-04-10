@@ -4495,49 +4495,6 @@ def test_visit_date_not_after_date_of_death(
     )
 
 
-@pytest.mark.django_db
-def test_visit_date_not_before_diagnosis_date(
-    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
-):
-    """
-    Test that a Visit/Appointment Date before the date of diagnosis is rejected
-    """
-    # If the audit period starts in the future relative to today, skip this parametrisation
-    # Also skip if the diagnosis date (start + 6 months) would be in the future, since that
-    # triggers a "Cannot be in the future" error before the visit-before-diagnosis check.
-    if audit_period_for_dataset_year.start_date > datetime.date.today():
-        pytest.skip("Audit period start is in the future; skip this parametrisation")
-    if (
-        audit_period_for_dataset_year.start_date + relativedelta(months=6)
-        > datetime.date.today()
-    ):
-        pytest.skip("Diagnosis date would be in the future; skip this parametrisation")
-    diagnosis_date = get_field_heading("diagnosis_date", dataset_year)
-    visit_date = get_field_heading("visit_date", dataset_year)
-    single_row_valid_df.loc[0, diagnosis_date] = (
-        audit_period_for_dataset_year.start_date + relativedelta(months=6)
-    )
-    single_row_valid_df.loc[0, visit_date] = audit_period_for_dataset_year.start_date
-
-    errors = csv_upload_sync(
-        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
-    )
-
-    assert "visit_date" in errors[0]
-
-    visit = Visit.objects.first()
-
-    assert visit.visit_date == audit_period_for_dataset_year.start_date, (
-        f"Visit date should be {audit_period_for_dataset_year.start_date}, but was {visit.visit_date}"
-    )
-    assert (
-        visit.patient.diagnosis_date
-        == audit_period_for_dataset_year.start_date + relativedelta(months=6)
-    ), (
-        f"Diagnosis date should be {audit_period_for_dataset_year.start_date + relativedelta(months=6)}, but was {visit.patient.diagnosis_date}"
-    )
-
-
 @pytest.mark.parametrize(
     "alternative,expected",
     [
@@ -5262,41 +5219,6 @@ def test_thyroid_and_coeliac_dates_within_90_days_before_diagnosis_pass_validati
 
     assert "coeliac_screen_date" not in errors[0]
     assert "thyroid_function_date" not in errors[0]
-
-
-@pytest.mark.django_db
-def test_thyroid_and_coeliac_dates_earlier_than_90_days_before_diagnosis_fail_validation(
-    freeze_for_audit,
-    test_user,
-    single_row_valid_df,
-    audit_period_for_dataset_year,
-    dataset_year,
-):
-    # Set the audit period to be valid for the visit date at the outset
-
-    diagnosis_date = get_field_heading("diagnosis_date", dataset_year)
-    single_row_valid_df.loc[0, diagnosis_date] = (
-        audit_period_for_dataset_year.start_date + datetime.timedelta(days=100)
-    )
-
-    coeliac_screening_date = (
-        audit_period_for_dataset_year.start_date + datetime.timedelta(days=9)
-    )
-    single_row_valid_df.loc[0, "Observation Date: Coeliac Disease Screening"] = (
-        coeliac_screening_date
-    )
-
-    thyroid_function_date = audit_period_for_dataset_year.start_date
-    single_row_valid_df.loc[0, "Observation Date: Thyroid Function"] = (
-        thyroid_function_date
-    )
-
-    errors = csv_upload_sync(
-        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
-    )
-
-    assert "coeliac_screen_date" in errors[0]
-    assert "thyroid_function_date" in errors[0]
 
 
 @pytest.mark.django_db

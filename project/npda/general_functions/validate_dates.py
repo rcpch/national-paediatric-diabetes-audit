@@ -3,7 +3,6 @@ def validate_date(
     date_under_examination_label_name,
     date_under_examination,
     date_of_birth,
-    date_of_diagnosis=None,
     date_of_death=None,
     audit_period=None,
 ):
@@ -22,16 +21,6 @@ def validate_date(
             error = {
                 f"{date_under_examination_field_name}": [
                     f"'{date_under_examination_label_name}' cannot be before date of birth."
-                ]
-            }
-            errors.append(error)
-            valid = False
-
-    if date_of_diagnosis is not None:
-        if date_under_examination < date_of_diagnosis:
-            error = {
-                f"{date_under_examination_field_name}": [
-                    f"'{date_under_examination_label_name}' cannot be before date of diagnosis."
                 ]
             }
             errors.append(error)

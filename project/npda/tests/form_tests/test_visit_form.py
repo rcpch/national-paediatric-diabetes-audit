@@ -1624,58 +1624,6 @@ def test_inpatient_admission_stabilisation_discharge_date_before_admission_date_
 
 
 @pytest.mark.django_db
-def test_inpatient_admission_stabilisation_discharge_date_before_diagnosis_date_fails_validation():
-    """
-    Test that inpatient admission for stabilisation is rejected if discharge date before admission date
-    """
-    patient = PatientFactory()
-    patient.diagnosis_date = datetime.date(2026, 1, 10)
-
-    form = VisitForm(
-        data={
-            "hospital_admission_date": "2026-01-01",
-            "hospital_discharge_date": "2026-01-08",
-            "hospital_admission_reason": 1,  # patient stabilisation
-            # dka_additional_therapies
-            # hospital_admission_other
-        },
-        initial={"patient": patient},
-    )
-
-    # Trigger the cleaners
-    assert not form.is_valid(), (
-        "Inpatient admission for stabilisation admission date before discharge date should fail"
-    )
-    assert "hospital_discharge_date" in form.errors
-
-
-@pytest.mark.django_db
-def test_inpatient_admission_stabilisation_admission_date_more_than_eleven_days_before_diagnosis_date_fails_validation():
-    """
-    Test that inpatient admission for stabilisation is rejected if diagnosis date is more than 11 days before admission date
-    """
-    patient = PatientFactory()
-    patient.diagnosis_date = datetime.date(2026, 1, 15)
-
-    form = VisitForm(
-        data={
-            "hospital_admission_date": "2026-01-01",
-            "hospital_discharge_date": "2026-01-016",
-            "hospital_admission_reason": 1,  # patient stabilisation
-            # dka_additional_therapies
-            # hospital_admission_other
-        },
-        initial={"patient": patient},
-    )
-
-    # Trigger the cleaners
-    assert not form.is_valid(), (
-        "Inpatient admission for stabilisation admission date more than 11 days before diagnosis date should fail"
-    )
-    assert "hospital_admission_date" in form.errors
-
-
-@pytest.mark.django_db
 def test_inpatient_admission_stabilisation_admission_date_less_than_eleven_days_before_diagnosis_date_passes_validation():
     """
     Test that inpatient admission for stabilisation passes if admission date is within 11 days of diagnosis date
@@ -2303,26 +2251,6 @@ def test_visit_date_after_diagnosis_date_passes_validation():
 
 
 @pytest.mark.django_db
-def test_visit_date_before_diagnosis_date_fails_validation():
-    """
-    Test that visit date before diagnosis date is rejected
-    """
-    patient = PatientFactory()
-    patient.diagnosis_date = datetime.date(2026, 1, 10)
-
-    form = VisitForm(
-        data={
-            "visit_date": "2026-01-01",
-        },
-        initial={"patient": patient},
-    )
-
-    # Trigger the cleaners
-    assert not form.is_valid(), "Visit date before diagnosis date should fail"
-    assert "visit_date" in form.errors
-
-
-@pytest.mark.django_db
 def test_visit_date_after_death_date_fails_validation():
     """
     Test that visit date after death date is rejected
@@ -2587,23 +2515,3 @@ def test_thyroid_and_coeliac_dates_within_90_days_before_diagnosis_pass_validati
     assert "thyroid_function_date" not in form.errors
     assert "coeliac_screen_date" not in form.errors
 
-
-@pytest.mark.django_db
-def test_thyroid_and_coeliac_dates_earlier_Than_90_days_before_diagnosis_fail_validation():
-    patient = PatientFactory()
-    patient.diagnosis_date = datetime.date(2026, 1, 10)
-    patient.save()
-
-    form = VisitForm(
-        data={
-            "visit_date": "2026-02-01",  # Required for validation
-            "thyroid_treatment_status": 1,  # Required if thyroid function date provided
-            "thyroid_function_date": "2025-10-04",  # 120 days before diagnosis
-            "coeliac_screen_date": "2025-09-20",  # 134 days before diagnosis
-        },
-        initial={"patient": patient},
-    )
-
-    assert not form.is_valid()
-    assert "thyroid_function_date" in form.errors
-    assert "coeliac_screen_date" in form.errors
