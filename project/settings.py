@@ -388,6 +388,12 @@ SECURE_HSTS_PRELOAD = os.environ.get("SECURE_HSTS_PRELOAD")
 
 ENABLE_REQUEST_LOGGING = os.getenv("ENABLE_REQUEST_LOGGING", "False") == "True"
 
+ENABLE_MEMORY_LOGGING = os.getenv("ENABLE_MEMORY_LOGGING", "False") == "True"
+if ENABLE_MEMORY_LOGGING:
+    logger.info("Memory logging is ENABLED")
+    # Deliberately don't use gc.DEBUG_LEAK so we don't do gc.DEBUG_SAVE_ALL
+    gc.set_debug(gc.DEBUG_COLLECTABLE | gc.DEBUG_UNCOLLECTABLE)
+
 SILKY_AUTHENTICATION = True  # User must login
 SILKY_AUTHORISATION = True  # User must have permissions
 
