@@ -26,10 +26,12 @@ from django.db.models import (
 )
 
 from project.constants import TREATMENT_TYPES
+from project.constants.diabetes_treatment import INSULIN_TREATMENT
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.constants.glucose_monitoring_types import GLUCOSE_MONITORING_TYPES
 from project.constants.hba1c_format import HBA1C_FORMATS
 from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
+from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 from project.npda.models import Patient, Transfer, Visit
 from project.npda.models.db_functions import Round
 
@@ -237,6 +239,7 @@ def annotate_health_checks(qs, audit_period):
 
 def annotate_additional_care_processes(qs, audit_period):
     audit_range = (audit_period.start_date, audit_period.end_date)
+    dataset_year = audit_period.get_dataset_year()
 
     hba1c_count = Count(
         "visit",
@@ -254,30 +257,58 @@ def annotate_additional_care_processes(qs, audit_period):
         )
     )
 
-    smoking_status_exists = Exists(
-        Visit.objects.filter(
-            patient=OuterRef("pk"),
-            visit_date__range=audit_range,
-            smoking_status__in=[1, 2],
+    if dataset_year == 2026:
+        # 2026: smoking_vaping_status replaces smoking_status
+        # Values: 1=non-smoker/non-vaper, 2=smoker/non-vaper, 3=vaper/non-smoker, 4=smoker+vaper
+        smoking_status_exists = Exists(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                smoking_vaping_status__in=[1, 2, 3, 4],
+            )
         )
-    )
-
-    smoker_exists = Exists(
-        Visit.objects.filter(
-            patient=OuterRef("pk"),
-            visit_date__range=audit_range,
-            smoking_status=2,
+        smoker_exists = Exists(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                smoking_vaping_status__in=[
+                    2,
+                    4,
+                ],  # current smoker (with or without vaping)
+            )
         )
-    )
-
-    smoking_referral_exists = Exists(
-        Visit.objects.filter(
-            patient=OuterRef("pk"),
-            visit_date__range=audit_range,
-            smoking_status=2,
-            smoking_cessation_referral_date__range=audit_range,
+        smoking_referral_exists = Exists(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                smoking_vaping_status__in=[2, 4],
+                smoking_cessation_referral_date__range=audit_range,
+            )
         )
-    )
+    else:
+        # 2021: smoking_status field
+        smoking_status_exists = Exists(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                smoking_status__in=[1, 2],
+            )
+        )
+        smoker_exists = Exists(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                smoking_status=2,
+            )
+        )
+        smoking_referral_exists = Exists(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                smoking_status=2,
+                smoking_cessation_referral_date__range=audit_range,
+            )
+        )
 
     dietetic_offered_exists = Exists(
         Visit.objects.filter(
@@ -533,83 +564,143 @@ def annotate_admissions(qs, audit_period):
 
 def annotate_treatment(qs, audit_period):
     audit_range = (audit_period.start_date, audit_period.end_date)
+    dataset_year = audit_period.get_dataset_year()
 
-    latest_visit = (
-        Visit.objects.filter(
-            patient=OuterRef("pk"),
-            visit_date__range=audit_range,
+    if dataset_year == 2026:
+        # 2026 dataset: insulin_regimen (INSULIN_TREATMENT), cgm_use (YES_NO_UNKNOWN)
+        # HCL is encoded as insulin_regimen == 5 (Hybrid closed loop)
+        latest_insulin_regimen = Subquery(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                insulin_regimen__isnull=False,
+            )
+            .order_by("-visit_date")
+            .values("insulin_regimen")[:1]
         )
-        .order_by("-visit_date")
-        .values("visit_date")
-    )
 
-    latest_treatment = Subquery(
-        Visit.objects.filter(
-            patient=OuterRef("pk"),
-            visit_date__range=audit_range,
-            treatment__isnull=False,
+        latest_cgm_use = Subquery(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                cgm_use__isnull=False,
+            )
+            .order_by("-visit_date")
+            .values("cgm_use")[:1]
         )
-        .order_by("-visit_date")
-        .values("treatment")[:1]
-    )
 
-    latest_glucose_monitoring = Subquery(
-        Visit.objects.filter(
-            patient=OuterRef("pk"),
-            visit_date__range=audit_range,
-            glucose_monitoring__isnull=False,
+        treatment_case = Case(
+            *[
+                When(latest_insulin_regimen=val, then=Value(label))
+                for val, label in INSULIN_TREATMENT
+            ],
+            default=Value("No treatment regimen"),
+            output_field=CharField(),
         )
-        .order_by("-visit_date")
-        .values("glucose_monitoring")[:1]
-    )
 
-    latest_closed_loop = Subquery(
-        Visit.objects.filter(
-            patient=OuterRef("pk"),
-            visit_date__range=audit_range,
-            closed_loop_system__isnull=False,
+        glucose_case = Case(
+            *[
+                When(latest_cgm_use=val, then=Value(label))
+                for val, label in YES_NO_UNKNOWN
+            ],
+            default=Value("No glucose monitoring"),
+            output_field=CharField(),
         )
-        .order_by("-visit_date")
-        .values("closed_loop_system")[:1]
-    )
 
-    treatment_case = Case(
-        *[
-            When(latest_treatment=val, then=Value(label))
-            for val, label in TREATMENT_TYPES
-        ],
-        default=Value("No treatment regimen"),
-        output_field=CharField(),
-    )
+        hcl_case = Case(
+            When(latest_insulin_regimen=5, then=Value("Yes")),  # 5 = Hybrid closed loop
+            default=Value("No"),
+            output_field=CharField(),
+        )
 
-    glucose_case = Case(
-        *[
-            When(latest_glucose_monitoring=val, then=Value(label))
-            for val, label in GLUCOSE_MONITORING_TYPES
-        ],
-        default=Value("No glucose monitoring"),
-        output_field=CharField(),
-    )
+        return qs.annotate(
+            latest_insulin_regimen=latest_insulin_regimen,
+            latest_cgm_use=latest_cgm_use,
+            treatment_regimen=treatment_case,
+            glucose_monitoring=glucose_case,
+            hcl=hcl_case,
+        )
 
-    hcl_case = Case(
-        When(latest_closed_loop__in=[2, 3, 4], then=Value("Yes")),
-        default=Value("No"),
-        output_field=CharField(),
-    )
+    else:
+        # 2021 dataset: treatment (TREATMENT_TYPES), glucose_monitoring (GLUCOSE_MONITORING_TYPES)
+        # HCL: closed_loop_system in [2, 3, 4]
+        latest_visit = (
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+            )
+            .order_by("-visit_date")
+            .values("visit_date")
+        )
 
-    return qs.annotate(
-        latest_visit_date=Subquery(latest_visit[:1]),
-        latest_treatment=latest_treatment,
-        latest_glucose_monitoring=latest_glucose_monitoring,
-        latest_closed_loop=latest_closed_loop,
-        treatment_regimen=treatment_case,
-        glucose_monitoring=glucose_case,
-        hcl=hcl_case,
-    )
+        latest_treatment = Subquery(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                treatment__isnull=False,
+            )
+            .order_by("-visit_date")
+            .values("treatment")[:1]
+        )
+
+        latest_glucose_monitoring = Subquery(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                glucose_monitoring__isnull=False,
+            )
+            .order_by("-visit_date")
+            .values("glucose_monitoring")[:1]
+        )
+
+        latest_closed_loop = Subquery(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                closed_loop_system__isnull=False,
+            )
+            .order_by("-visit_date")
+            .values("closed_loop_system")[:1]
+        )
+
+        treatment_case = Case(
+            *[
+                When(latest_treatment=val, then=Value(label))
+                for val, label in TREATMENT_TYPES
+            ],
+            default=Value("No treatment regimen"),
+            output_field=CharField(),
+        )
+
+        glucose_case = Case(
+            *[
+                When(latest_glucose_monitoring=val, then=Value(label))
+                for val, label in GLUCOSE_MONITORING_TYPES
+            ],
+            default=Value("No glucose monitoring"),
+            output_field=CharField(),
+        )
+
+        hcl_case = Case(
+            When(latest_closed_loop__in=[2, 3, 4], then=Value("Yes")),
+            default=Value("No"),
+            output_field=CharField(),
+        )
+
+        return qs.annotate(
+            latest_visit_date=Subquery(latest_visit[:1]),
+            latest_treatment=latest_treatment,
+            latest_glucose_monitoring=latest_glucose_monitoring,
+            latest_closed_loop=latest_closed_loop,
+            treatment_regimen=treatment_case,
+            glucose_monitoring=glucose_case,
+            hcl=hcl_case,
+        )
 
 
 def annotate_outcomes(qs, audit_period):
     audit_range = (audit_period.start_date, audit_period.end_date)
+    dataset_year = audit_period.get_dataset_year()
 
     latest_hba1c_date = Subquery(
         Visit.objects.filter(
@@ -631,53 +722,79 @@ def annotate_outcomes(qs, audit_period):
         .values("visit_date")[1:2]
     )
 
-    latest_hba1c_mmol_mol = Subquery(
-        Visit.objects.filter(
-            patient=OuterRef("pk"),
-            visit_date__range=audit_range,
-            hba1c__isnull=False,
-        )
-        .annotate(
-            hba1c_mmol_mol=Case(
-                When(
-                    Q(hba1c_format=HBA1C_FORMATS[0][0]),
-                    then=F("hba1c"),
-                ),
-                When(
-                    Q(hba1c_format=HBA1C_FORMATS[1][0]),
-                    then=(F("hba1c") - Round(Decimal("2.152"))) / Decimal("0.09148"),
-                ),
-                default=None,
-                output_field=DecimalField(max_digits=5, decimal_places=2),
+    if dataset_year == 2026:
+        # 2026: hba1c_format deprecated — values always stored as mmol/mol
+        latest_hba1c_mmol_mol = Subquery(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                hba1c__isnull=False,
             )
+            .annotate(hba1c_mmol_mol=F("hba1c"))
+            .order_by("-visit_date")
+            .values("hba1c_mmol_mol")[:1]
         )
-        .order_by("-visit_date")
-        .values("hba1c_mmol_mol")[:1]
-    )
 
-    previous_hba1c_mmol_mol = Subquery(
-        Visit.objects.filter(
-            patient=OuterRef("pk"),
-            visit_date__range=audit_range,
-            hba1c__isnull=False,
-        )
-        .annotate(
-            hba1c_mmol_mol=Case(
-                When(
-                    Q(hba1c_format=HBA1C_FORMATS[0][0]),
-                    then=F("hba1c"),
-                ),
-                When(
-                    Q(hba1c_format=HBA1C_FORMATS[1][0]),
-                    then=(F("hba1c") - Round(Decimal("2.152"))) / Decimal("0.09148"),
-                ),
-                default=None,
-                output_field=DecimalField(max_digits=5, decimal_places=2),
+        previous_hba1c_mmol_mol = Subquery(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                hba1c__isnull=False,
             )
+            .annotate(hba1c_mmol_mol=F("hba1c"))
+            .order_by("-visit_date")
+            .values("hba1c_mmol_mol")[1:2]
         )
-        .order_by("-visit_date")
-        .values("hba1c_mmol_mol")[1:2]
-    )
+    else:
+        latest_hba1c_mmol_mol = Subquery(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                hba1c__isnull=False,
+            )
+            .annotate(
+                hba1c_mmol_mol=Case(
+                    When(
+                        Q(hba1c_format=HBA1C_FORMATS[0][0]),
+                        then=F("hba1c"),
+                    ),
+                    When(
+                        Q(hba1c_format=HBA1C_FORMATS[1][0]),
+                        then=(F("hba1c") - Round(Decimal("2.152")))
+                        / Decimal("0.09148"),
+                    ),
+                    default=None,
+                    output_field=DecimalField(max_digits=5, decimal_places=2),
+                )
+            )
+            .order_by("-visit_date")
+            .values("hba1c_mmol_mol")[:1]
+        )
+
+        previous_hba1c_mmol_mol = Subquery(
+            Visit.objects.filter(
+                patient=OuterRef("pk"),
+                visit_date__range=audit_range,
+                hba1c__isnull=False,
+            )
+            .annotate(
+                hba1c_mmol_mol=Case(
+                    When(
+                        Q(hba1c_format=HBA1C_FORMATS[0][0]),
+                        then=F("hba1c"),
+                    ),
+                    When(
+                        Q(hba1c_format=HBA1C_FORMATS[1][0]),
+                        then=(F("hba1c") - Round(Decimal("2.152")))
+                        / Decimal("0.09148"),
+                    ),
+                    default=None,
+                    output_field=DecimalField(max_digits=5, decimal_places=2),
+                )
+            )
+            .order_by("-visit_date")
+            .values("hba1c_mmol_mol")[1:2]
+        )
 
     return qs.annotate(
         latest_hba1c_date=latest_hba1c_date,

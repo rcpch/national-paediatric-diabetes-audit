@@ -48,6 +48,18 @@ Note: Excludes Retinal Screening, which only needs to be completed every 2 years
 
 Note retinal screening is counted only every 2 years (see issue #1285) and only apply to patients over 12y who have more than 1 of diabetes.
 
+**Dataset field mapping — unchanged between 2021 and 2026:**
+
+| Column | Model field | Notes |
+|--------|-------------|-------|
+| HbA1c | `hba1c` + `hba1c_date` | Both datasets |
+| BMI | `bmi` + `height_weight_observation_date` | Both datasets |
+| Thyroid screen | `thyroid_function_date` | Both datasets |
+| Blood pressure | `systolic_blood_pressure` + `blood_pressure_observation_date` | Both datasets; ≥12 only |
+| Urinary albumin | `albumin_creatinine_ratio` + `albumin_creatinine_ratio_date` | Both datasets; ≥12 only |
+| Foot exam | `foot_examination_observation_date` | Both datasets; ≥12 only |
+| Eye screen | `retinal_screening_observation_date` + `retinal_screening_result` | Both datasets; ≥12, dx >1y, biannual |
+
 ### Additional Care Processes
 
 - NHS Number
@@ -60,12 +72,21 @@ Note retinal screening is counted only every 2 years (see issue #1285) and only 
 - Influenza immunisation recommended
 - Sick day rules advice
 
-These measures are all scored with flags, as in the Health Checks category. HbA1c 4+ reflects if a patient has had 4 HbA1c values (and associated date) within the audit period to get a complete. Incomplete is otherwise scored unless the patient has an incomplete year of care. Note that smoking status screened and referral to smoking status are only scored in children >= 12y. Smoking status is incomplete if they are scored as a smoker but a referral date is not provided. 
+These measures are all scored with flags, as in the Health Checks category. HbA1c 4+ reflects if a patient has had 4 HbA1c values (and associated date) within the audit period to get a complete. Incomplete is otherwise scored unless the patient has an incomplete year of care. Note that smoking status screened and referral to smoking status are only scored in children >= 12y. Smoking status is incomplete if they are scored as a smoker but a referral date is not provided.
 
-In the 2026 dataset changes include:
+**Dataset field mapping:**
 
-- smoking status is changed to Does the patient smoke and/or vape.
-- Following annual psychological screening, was the patient assessed as requiring additional psychological support outside of routine care? has been added
+| Column | 2021 field | 2026 field | Notes |
+|--------|------------|------------|-------|
+| HbA1c 4+ | `hba1c` + `hba1c_date` | same | Both datasets |
+| Psychological assessment | `psychological_screening_assessment_date` | same | Both datasets |
+| Smoking status screened | `smoking_status` (1=non-smoker, 2=smoker) | `smoking_vaping_status` (same integer values) | ≥12 only |
+| Referral to smoking cessation | `smoking_cessation_referral_date` (when smoker) | same field, same logic | ≥12, smokers only |
+| Additional dietetic appt offered | `dietician_additional_appointment_offered` | same | Both datasets |
+| Patients attending additional dietetic appt | `dietician_additional_appointment_date` | same | Both datasets |
+| Influenza immunisation | `flu_immunisation_recommended_date` | same | Both datasets |
+| Sick day rules advice | `sick_day_rules_training_date` | same | Both datasets |
+| Psychological support outcome | *(absent)* | `psychological_support_outcome` | 2026 only — new column |
 
 ### Care at Diagnosis
 
@@ -86,6 +107,14 @@ The same methodology applies to carbohydrate counting, though the threshold is 1
 - [ ] It is preferable for there to be an extra column here with a countdown in days til this measure is due. (see issue #1301)
 - [ ] It is also preferable that carbohydrate counting, coeliac and thyroid screening that are incomplete (that is where there is a date but not within the time frame) are rather labelled as 'missed' than 'incomplete'. (see issue #1301)
 
+**Dataset field mapping — unchanged between 2021 and 2026:**
+
+| Column | Model field | Notes |
+|--------|-------------|-------|
+| Carbohydrate counting | `carbohydrate_counting_level_three_education_date` | Both datasets; within 14 days of diagnosis |
+| Coeliac screening | `coeliac_screen_date` | Both datasets; within 90 days of diagnosis |
+| Thyroid screening | `thyroid_function_date` | Both datasets; within 90 days of diagnosis |
+
 ### Admissions
 
 - NHS Number
@@ -96,21 +125,28 @@ The same methodology applies to carbohydrate counting, though the threshold is 1
 
 This category relates only to patients that have had a hospital admission during the audit period, but excluding the first 90 days after diagnosis. There are no flags as seen in Health Checks, only the values listed. The counts are totals during the audit period.
 
-In 2026 there are two extra fields here:
+**Dataset field mapping:**
 
-- Initial pH at admission
-- Initial Standard bicarbonate at admission (mmol/l)
+| Column | 2021 field | 2026 field | Notes |
+|--------|------------|------------|-------|
+| Number of admissions | `hospital_admission_date` / `hospital_admission_reason` | same | Both datasets |
+| Number of DKA admissions | `hospital_admission_reason` (DKA value) | same | Both datasets |
+| Initial pH at admission | *(absent)* | `blood_gas_ph` | 2026 only; display value from DKA visit |
+| Initial bicarbonate at admission | *(absent)* | `blood_gas_bicarbonate` | 2026 only; display value from DKA visit |
 
 ### Treatment
 
-- NHS Number
-- Treatment regimen
-- Glucose monitoring
-- HCL (hybrid closed loop)
+This reflects what treatment the patient is currently on. Note that measures here are not scored with flags, but reflect the most recent visit in the audit period where each field is not null. This means that if a patient's latest visit has no entry for a field, the system looks back to the most recent earlier visit where that field was recorded.
 
-This reflects what treatment the patient is currently on. Note that measures here are not scored with flags, but reflect the most recent visit in the audit period where each field is not null. This means that if a patient's latest visit has no entry for treatment regimen, glucose monitoring, or HCL, the system looks back to the most recent earlier visit where that field was recorded. HCL (hybrid closed loop) is either a yes or a no. Glucose monitoring.
+**Dataset field mapping:**
 
-Note the headings for these columns change between 2021 and 2026.
+| Column | 2021 field | 2026 field | Notes |
+|--------|------------|------------|-------|
+| Treatment regimen | `treatment` (`TREATMENT_TYPES`) | `insulin_regimen` (`INSULIN_TREATMENT`) | Different constants |
+| Glucose monitoring | `glucose_monitoring` (`GLUCOSE_MONITORING_TYPES`) | `cgm_use` (`YES_NO_UNKNOWN`) | 2026 is a simpler yes/no/unknown |
+| HCL (hybrid closed loop) | `closed_loop_system in [2,3,4]` → "Yes" | `insulin_regimen == 5` → "Yes" | In 2026 HCL is encoded in the insulin regimen |
+| Non-insulin medication | *(absent)* | `non_insulin_medication` (`NON_INSULIN_TREATMENT`) | 2026 only — new column |
+| Dietary/lifestyle modification | *(absent)* | `dietary_lifestyle_modification` (`YES_NO_UNKNOWN`) | 2026 only — new column |
 
 ### Outcomes
 
@@ -122,6 +158,12 @@ Note the headings for these columns change between 2021 and 2026.
 - Mean HbA1c mmol/mol (%)
 
 This shows the mean and median HbA1c (both as IFCC and DCCT) of all visit HbA1cs in the audit period. The % change reflects the % change in the absolute value of the most recent from the penultimate HbA1c measured as either a positive or negative value, rounded to an integer. Negative is rendered green, positive is rendered amber.
+
+**Dataset field mapping:**
+
+| Column | 2021 field | 2026 field | Notes |
+|--------|------------|------------|-------|
+| All HbA1c values | `hba1c` + `hba1c_format` + `hba1c_date` | `hba1c` + `hba1c_date` | In 2026 `hba1c_format` is deprecated; values are always mmol/mol. Queries must not rely on `hba1c_format` being non-null for 2026 data. |
 
 ## Shortcomings of the current methodology
 
@@ -218,10 +260,10 @@ This should involve:
 
 ##### Treatment
 
-- Use the latest visit in the audit period to derive:
-   - Treatment regimen
-   - Glucose monitoring
-   - HCL (hybrid closed loop)
+- Use the latest `EXISTS` visit in the audit period to derive:
+  - Treatment regimen
+  - Glucose monitoring
+  - HCL (hybrid closed loop)
 - Column headings vary by audit period; apply conditional labeling by audit period year.
 
 ##### Outcomes
