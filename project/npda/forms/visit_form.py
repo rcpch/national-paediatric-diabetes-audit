@@ -776,10 +776,18 @@ class VisitForm(forms.ModelForm):
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
             date_of_death=self.patient.death_date,
-            audit_period=self.audit_period,
         )
+
         if not valid:
             raise ValidationError(error)
+
+        if data and (
+            data < self.audit_period.start_date - timedelta(days=7)
+            or data > self.audit_period.end_date
+        ):
+            raise ValidationError(
+                "Expected sick day rules training date from 7 days before the start of the audit period to the end of the audit period."
+            )
 
         return self.cleaned_data["sick_day_rules_training_date"]
 

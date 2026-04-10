@@ -2535,3 +2535,24 @@ def test_thyroid_and_coeliac_dates_within_90_days_before_audit_year_pass_validat
     assert form.is_valid(), f"Expected form to be valid but got errors: {form.errors}"
     assert "thyroid_function_date" not in form.errors
     assert "coeliac_screen_date" not in form.errors
+
+
+@pytest.mark.django_db
+def test_sick_day_rules_within_7_days_before_audit_year_pass_validation(
+    dataset_year, audit_period_for_dataset_year
+):
+    patient = PatientFactory()
+    patient.diagnosis_date = datetime.date(2025, 5, 1)
+    patient.save()
+
+    form = VisitForm(
+        data={
+            "visit_date": f"{dataset_year}-05-01",  # Required for validation
+            "sick_day_rules_training_date": f"{dataset_year}-03-28",
+        },
+        initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
+    )
+
+    assert form.is_valid(), f"Expected form to be valid but got errors: {form.errors}"
+    assert "sick_day_rules_training_date" not in form.errors
