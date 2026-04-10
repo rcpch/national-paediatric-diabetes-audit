@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+import gc
 import logging
 import os
 from datetime import timedelta
@@ -387,6 +388,11 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get("SECURE_HSTS_INCLUDE_SUBDOMAINS"
 SECURE_HSTS_PRELOAD = os.environ.get("SECURE_HSTS_PRELOAD")
 
 ENABLE_REQUEST_LOGGING = os.getenv("ENABLE_REQUEST_LOGGING", "False") == "True"
+
+ENABLE_MEMORY_LOGGING = os.getenv("ENABLE_MEMORY_LOGGING", "False") == "True"
+if ENABLE_MEMORY_LOGGING:
+    logger.info("Memory logging is ENABLED")
+    gc.set_debug(gc.DEBUG_UNCOLLECTABLE)
 
 SILKY_AUTHENTICATION = True  # User must login
 SILKY_AUTHORISATION = True  # User must have permissions

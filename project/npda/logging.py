@@ -3,6 +3,7 @@
 # the user in thread-local storage.
 
 import logging
+import resource
 from datetime import datetime
 from threading import local
 from timeit import default_timer as timer
@@ -66,12 +67,20 @@ class NPDARequestLoggingMiddleware:
     def __call__(self, request):
         start = timer()
 
+        rss_start = None
+        if settings.ENABLE_MEMORY_LOGGING:
+            rss_start = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+
         response = self.get_response(request)
 
         end = timer()
 
         duration = end - start
         duration_ms = round(duration * 1000)
+
+        rss_end = None
+        if settings.ENABLE_MEMORY_LOGGING:
+            rss_end = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 
         # The dev server already does request logging
         if settings.ENABLE_REQUEST_LOGGING:
@@ -82,8 +91,16 @@ class NPDARequestLoggingMiddleware:
 
             username_to_log = "-" if request.user.is_anonymous else request.user.email
 
+            rss_message = ""
+            if (
+                settings.ENABLE_MEMORY_LOGGING
+                and rss_start is not None
+                and rss_end is not None
+            ):
+                rss_message = f" rss_start={rss_start} rss_end={rss_end} rss_diff={rss_end - rss_start}"
+
             request_logger.info(
-                f'{request.META.get("HTTP_X_FORWARDED_FOR", "")} - {username_to_log} [{gunicorn_formatted_datetime}] "{request.method} {request.get_full_path()}" {response.status_code} {response.get("Content-Length", "-")} "{request.META.get("HTTP_REFERER", "-")}" "{request.META.get("HTTP_USER_AGENT", "-")}" {duration_ms}'
+                f'{request.META.get("HTTP_X_FORWARDED_FOR", "")} - {username_to_log} [{gunicorn_formatted_datetime}] "{request.method} {request.get_full_path()}" {response.status_code} {response.get("Content-Length", "-")} "{request.META.get("HTTP_REFERER", "-")}" "{request.META.get("HTTP_USER_AGENT", "-")}" {duration_ms}{rss_message}'
             )
 
         return response
