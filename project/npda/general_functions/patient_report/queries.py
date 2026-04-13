@@ -1034,22 +1034,18 @@ def count_admissions_by_quarter(pdu, audit_period) -> dict:
     today = date.today()
     valid_reasons = [choice[0] for choice in HOSPITAL_ADMISSION_REASONS]
 
-    base_qs = (
-        Patient.objects.filter(
-            submissions__submission_active=True,
-            submissions__audit_period=audit_period,
-            submissions__paediatric_diabetes_unit=pdu,
-            visit__visit_date__range=audit_range,
-            date_of_birth__gt=audit_period.start_date - relativedelta(years=25),
-        )
-        .distinct()
-    )
+    base_qs = Patient.objects.filter(
+        submissions__submission_active=True,
+        submissions__audit_period=audit_period,
+        submissions__paediatric_diabetes_unit=pdu,
+        visit__visit_date__range=audit_range,
+        date_of_birth__gt=audit_period.start_date - relativedelta(years=25),
+    ).distinct()
     total_eligible = base_qs.count()
 
     # Patients with at least one valid admission within the audit period
     admitted_qs = (
-        base_qs
-        .filter(visit__hospital_admission_reason__in=valid_reasons)
+        base_qs.filter(visit__hospital_admission_reason__in=valid_reasons)
         .filter(
             Q(visit__hospital_admission_date__range=audit_range)
             | Q(visit__hospital_discharge_date__range=audit_range)
@@ -1096,16 +1092,13 @@ def count_service_transitions_by_quarter(pdu, audit_period) -> dict:
     audit_range = (audit_period.start_date, audit_period.end_date)
     today = date.today()
 
-    base_qs = (
-        Patient.objects.filter(
-            submissions__submission_active=True,
-            submissions__audit_period=audit_period,
-            submissions__paediatric_diabetes_unit=pdu,
-            visit__visit_date__range=audit_range,
-            date_of_birth__gt=audit_period.start_date - relativedelta(years=25),
-        )
-        .distinct()
-    )
+    base_qs = Patient.objects.filter(
+        submissions__submission_active=True,
+        submissions__audit_period=audit_period,
+        submissions__paediatric_diabetes_unit=pdu,
+        visit__visit_date__range=audit_range,
+        date_of_birth__gt=audit_period.start_date - relativedelta(years=25),
+    ).distinct()
 
     transitioned_qs = base_qs.filter(
         paediatric_diabetes_units__date_leaving_service__range=audit_range,
@@ -1141,6 +1134,198 @@ def count_service_transitions_by_quarter(pdu, audit_period) -> dict:
         }
 
     return result
+
+
+def hba1c_stats_by_diabetes_type(pdu, audit_period) -> dict:
+    """Mean and median HbA1c stratified by diabetes type for the dashboard.
+
+    Mirrors CalculateKPIS.calculate_kpi_hba1c_vals_stratified_by_diabetes_type().
+
+    Returns:
+        {
+            "all":   {"mean_mmol_mol": int|None, "median_mmol_mol": int|None,
+                      "mean_percent": float|None, "median_percent": float|None},
+            "t1dm":  {...},
+            "t2dm":  {...},
+            "other": {...},
+        }
+
+    2021 dataset: normalises via hba1c_format (mmol/mol vs %).
+    2026 dataset: hba1c_format is absent; values are already in mmol/mol
+                  (format is inferred from magnitude, but we treat them as
+                  mmol/mol directly since the CSV pipeline stores them that way).
+    """
+    audit_range = (audit_period.start_date, audit_period.end_date)
+    dataset_year = audit_period.get_dataset_year()
+
+    base_qs = Patient.objects.filter(
+        submissions__submission_active=True,
+        submissions__audit_period=audit_period,
+        submissions__paediatric_diabetes_unit=pdu,
+        visit__visit_date__range=audit_range,
+        date_of_birth__gt=audit_period.start_date - relativedelta(years=25),
+    ).distinct()
+
+    t1dm_qs = base_qs.filter(diabetes_type=DIABETES_TYPES[0][0])
+    t2dm_qs = base_qs.filter(diabetes_type=DIABETES_TYPES[1][0])
+    other_qs = base_qs.exclude(
+        diabetes_type__in=[DIABETES_TYPES[0][0], DIABETES_TYPES[1][0]]
+    )
+
+    result = {}
+    for key, qs in (
+        ("all", base_qs),
+        ("t1dm", t1dm_qs),
+        ("t2dm", t2dm_qs),
+        ("other", other_qs),
+    ):
+        patient_ids = list(qs.values_list("pk", flat=True))
+
+        if dataset_year == 2026:
+            # 2026: no hba1c_format field; values stored as mmol/mol
+            valid_visits = Visit.objects.filter(
+                patient__pk__in=patient_ids,
+                visit_date__range=audit_range,
+                hba1c__isnull=False,
+                hba1c_date__gt=F("patient__diagnosis_date") + timedelta(days=90),
+            ).values("hba1c", "patient__pk")
+            hba1c_key = "hba1c"
+        else:
+            # 2021: normalise % → mmol/mol
+            valid_visits = (
+                Visit.objects.filter(
+                    patient__pk__in=patient_ids,
+                    visit_date__range=audit_range,
+                    hba1c__isnull=False,
+                    hba1c_date__gt=F("patient__diagnosis_date") + timedelta(days=90),
+                )
+                .annotate(
+                    hba1c_mmol_mol=Case(
+                        When(
+                            Q(hba1c_format=HBA1C_FORMATS[0][0]),
+                            then=F("hba1c"),
+                        ),
+                        When(
+                            Q(hba1c_format=HBA1C_FORMATS[1][0]),
+                            then=(F("hba1c") - Round(Decimal("2.152")))
+                            / Decimal("0.09148"),
+                        ),
+                        default=None,
+                        output_field=DecimalField(max_digits=5, decimal_places=2),
+                    )
+                )
+                .values("hba1c_mmol_mol", "patient__pk")
+                .filter(hba1c_mmol_mol__isnull=False)
+            )
+            hba1c_key = "hba1c_mmol_mol"
+
+        values_by_patient = defaultdict(list)
+        for visit in valid_visits:
+            values_by_patient[visit["patient__pk"]].append(visit[hba1c_key])
+
+        all_values = [v for vals in values_by_patient.values() for v in vals]
+
+        if all_values:
+            mean_mmol = float(sum(all_values) / len(all_values))
+            sorted_vals = sorted(float(v) for v in all_values)
+            mid = len(sorted_vals) // 2
+            median_mmol = (
+                (sorted_vals[mid - 1] + sorted_vals[mid]) / 2
+                if len(sorted_vals) % 2 == 0
+                else sorted_vals[mid]
+            )
+            result[key] = {
+                "mean_mmol_mol": round(mean_mmol),
+                "median_mmol_mol": round(median_mmol),
+                "mean_percent": round((0.09148 * mean_mmol) + 2.152, 1),
+                "median_percent": round((0.09148 * median_mmol) + 2.152, 1),
+            }
+        else:
+            result[key] = {
+                "mean_mmol_mol": None,
+                "median_mmol_mol": None,
+                "mean_percent": None,
+                "median_percent": None,
+            }
+
+    return result
+
+
+def dashboard_health_check_totals(pdu, audit_period) -> dict:
+    """Aggregate health-check pass/eligible counts for the measurements card.
+
+    Replaces the ~20-query patient_health_check_totals() in patient_measurements.py
+    with a single annotated aggregation.
+
+    Returns the same dict shape:
+        total_passed_bmi, total_eligible_bmi,
+        total_passed_thyroid_screen, total_eligible_thyroid_screen,
+        total_passed_blood_pressure, total_eligible_blood_pressure,
+        total_passed_urinary_albumin, total_eligible_urinary_albumin,
+        total_passed_foot_exam, total_eligible_foot_exam
+    """
+    qs = build_base_queryset(pdu, audit_period, type1_only=True)
+    qs = annotate_health_checks(qs, audit_period)
+
+    # Aggregate all counts in a single query
+    agg = qs.aggregate(
+        # BMI — all complete-year T1DM patients
+        total_passed_bmi=Count(
+            "pk",
+            filter=Q(passed_bmi=True, is_complete_year_of_care=True),
+        ),
+        total_eligible_bmi=Count(
+            "pk",
+            filter=Q(is_complete_year_of_care=True),
+        ),
+        # Thyroid — all complete-year T1DM patients
+        total_passed_thyroid_screen=Count(
+            "pk",
+            filter=Q(passed_thyroid_screen=True, is_complete_year_of_care=True),
+        ),
+        total_eligible_thyroid_screen=Count(
+            "pk",
+            filter=Q(is_complete_year_of_care=True),
+        ),
+        # Blood pressure — complete-year AND aged 12+ at audit start
+        total_passed_blood_pressure=Count(
+            "pk",
+            filter=Q(
+                passed_blood_pressure=True,
+                is_complete_year_of_care=True,
+                is_gte_12yo=True,
+            ),
+        ),
+        total_eligible_blood_pressure=Count(
+            "pk",
+            filter=Q(is_complete_year_of_care=True, is_gte_12yo=True),
+        ),
+        # Urinary albumin — same gate as BP
+        total_passed_urinary_albumin=Count(
+            "pk",
+            filter=Q(
+                passed_urinary_albumin=True,
+                is_complete_year_of_care=True,
+                is_gte_12yo=True,
+            ),
+        ),
+        total_eligible_urinary_albumin=Count(
+            "pk",
+            filter=Q(is_complete_year_of_care=True, is_gte_12yo=True),
+        ),
+        # Foot exam — same gate as BP
+        total_passed_foot_exam=Count(
+            "pk",
+            filter=Q(
+                passed_foot_exam=True, is_complete_year_of_care=True, is_gte_12yo=True
+            ),
+        ),
+        total_eligible_foot_exam=Count(
+            "pk",
+            filter=Q(is_complete_year_of_care=True, is_gte_12yo=True),
+        ),
+    )
+    return agg
 
 
 def calculate_hba1c_values(qs, audit_period):
