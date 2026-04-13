@@ -91,7 +91,10 @@ class SubmissionsListView(
             )
 
         # Avoid N+1 query problem, especially painful on national view
-        final = base_queryset.select_related("paediatric_diabetes_unit")
+        final = base_queryset.select_related(
+            "paediatric_diabetes_unit",
+            "submission_by",
+        )
 
         final = final.annotate(
             patient_count=Count("patients"),
