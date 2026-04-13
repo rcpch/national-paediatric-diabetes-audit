@@ -31,6 +31,7 @@ from project.constants.diabetes_types import DIABETES_TYPES
 from project.constants.glucose_monitoring_types import GLUCOSE_MONITORING_TYPES
 from project.constants.hba1c_format import HBA1C_FORMATS
 from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
+from project.constants.leave_pdu_reasons import LEAVE_PDU_REASONS
 from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 from project.npda.general_functions.audit_period import get_quarters_for_audit_period
 from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
@@ -901,16 +902,13 @@ def count_new_diagnoses_by_quarter(pdu, audit_period) -> dict:
     audit_range = (audit_period.start_date, audit_period.end_date)
     today = date.today()
 
-    eligible_qs = (
-        Patient.objects.filter(
-            submissions__submission_active=True,
-            submissions__audit_period=audit_period,
-            submissions__paediatric_diabetes_unit=pdu,
-            visit__visit_date__range=audit_range,
-            date_of_birth__gt=audit_period.start_date - relativedelta(years=25),
-        )
-        .distinct()
-    )
+    eligible_qs = Patient.objects.filter(
+        submissions__submission_active=True,
+        submissions__audit_period=audit_period,
+        submissions__paediatric_diabetes_unit=pdu,
+        visit__visit_date__range=audit_range,
+        date_of_birth__gt=audit_period.start_date - relativedelta(years=25),
+    ).distinct()
 
     new_diagnoses_qs = eligible_qs.filter(diagnosis_date__range=audit_range)
     total_eligible = new_diagnoses_qs.count()
@@ -934,6 +932,204 @@ def count_new_diagnoses_by_quarter(pdu, audit_period) -> dict:
         q_start = q_end_date - relativedelta(months=3)
         total_passed = new_diagnoses_qs.filter(
             diagnosis_date__range=(q_start, q_end_date)
+        ).count()
+        result[q] = {
+            "total_passed": total_passed,
+            "total_eligible": total_eligible,
+            "pct": round(
+                (total_passed / total_eligible * 100) if total_eligible else 0,
+                1,
+            ),
+        }
+
+    return result
+
+
+def count_hcl_use(pdu, audit_period) -> tuple[int, int]:
+    """Returns (passed, eligible) for hybrid closed-loop use among T1DM patients.
+
+    eligible = all T1DM patients in the submission.
+    passed   = those whose most recent treatment entry indicates HCL:
+        2021: closed_loop_system in [2, 3, 4]
+        2026: insulin_regimen = 5
+    """
+    qs = build_base_queryset(pdu, audit_period, type1_only=True)
+    qs = annotate_treatment(qs, audit_period)
+    eligible = qs.count()
+    passed = qs.filter(hcl="Yes").count()
+    return passed, eligible
+
+
+def count_pump_use(pdu, audit_period) -> tuple[int, int]:
+    """Returns (passed, eligible) for insulin pump use among T1DM patients.
+
+    eligible = all T1DM patients in the submission.
+    passed   = those whose most recent treatment entry is a pump:
+        2021: latest treatment in [3 (pump), 6 (pump + other)]
+        2026: latest insulin_regimen in [4 (standalone pump), 5 (HCL, which uses pump)]
+    """
+    qs = build_base_queryset(pdu, audit_period, type1_only=True)
+    qs = annotate_treatment(qs, audit_period)
+    eligible = qs.count()
+    if audit_period.get_dataset_year() == 2026:
+        passed = qs.filter(latest_insulin_regimen__in=[4, 5]).count()
+    else:
+        passed = qs.filter(latest_treatment__in=[3, 6]).count()
+    return passed, eligible
+
+
+def count_cgm_use(pdu, audit_period) -> tuple[int, int]:
+    """Returns (passed, eligible) for CGM use among T1DM patients.
+
+    eligible = all T1DM patients in the submission.
+    passed   = those on CGM at most recent entry:
+        2021: glucose_monitoring = 4 (real-time CGM with alarms)
+        2026: cgm_use = 1 (Yes)
+    """
+    qs = build_base_queryset(pdu, audit_period, type1_only=True)
+    qs = annotate_treatment(qs, audit_period)
+    eligible = qs.count()
+    if audit_period.get_dataset_year() == 2026:
+        passed = qs.filter(latest_cgm_use=1).count()
+    else:
+        passed = qs.filter(latest_glucose_monitoring=4).count()
+    return passed, eligible
+
+
+def count_admissions(pdu, audit_period) -> int:
+    """Count of patients with at least one valid hospital admission in the audit period.
+
+    Mirrors CalculateKPIS.calculate_kpi_46_number_of_admissions(). All diabetes types.
+    A valid admission has a recognised admission reason AND either admission or
+    discharge date within the audit period.
+    """
+    audit_range = (audit_period.start_date, audit_period.end_date)
+    valid_reasons = [choice[0] for choice in HOSPITAL_ADMISSION_REASONS]
+    return (
+        Patient.objects.filter(
+            submissions__submission_active=True,
+            submissions__audit_period=audit_period,
+            submissions__paediatric_diabetes_unit=pdu,
+            visit__visit_date__range=audit_range,
+            date_of_birth__gt=audit_period.start_date - relativedelta(years=25),
+        )
+        .filter(visit__hospital_admission_reason__in=valid_reasons)
+        .filter(
+            Q(visit__hospital_admission_date__range=audit_range)
+            | Q(visit__hospital_discharge_date__range=audit_range)
+        )
+        .distinct()
+        .count()
+    )
+
+
+def count_admissions_by_quarter(pdu, audit_period) -> dict:
+    """Hospital admissions split by quarter.
+
+    Mirrors calculate_kpi_46_number_of_admissions_stratified_by_quarter().
+    Returns {q: {total_passed, total_eligible, pct}}.
+    total_eligible is the count of all KPI-1-eligible patients (denominator).
+    """
+    audit_range = (audit_period.start_date, audit_period.end_date)
+    today = date.today()
+    valid_reasons = [choice[0] for choice in HOSPITAL_ADMISSION_REASONS]
+
+    base_qs = (
+        Patient.objects.filter(
+            submissions__submission_active=True,
+            submissions__audit_period=audit_period,
+            submissions__paediatric_diabetes_unit=pdu,
+            visit__visit_date__range=audit_range,
+            date_of_birth__gt=audit_period.start_date - relativedelta(years=25),
+        )
+        .distinct()
+    )
+    total_eligible = base_qs.count()
+
+    # Patients with at least one valid admission within the audit period
+    admitted_qs = (
+        base_qs
+        .filter(visit__hospital_admission_reason__in=valid_reasons)
+        .filter(
+            Q(visit__hospital_admission_date__range=audit_range)
+            | Q(visit__hospital_discharge_date__range=audit_range)
+        )
+        .distinct()
+    )
+
+    quarter_end_dates = [
+        q[1]
+        for q in get_quarters_for_audit_period(
+            audit_period.start_date, audit_period.end_date
+        )
+    ]
+    if today > audit_period.end_date:
+        current_quarter = retrieve_quarter_for_date(audit_period.end_date)
+    else:
+        current_quarter = retrieve_quarter_for_date(today)
+    quarter_end_dates = quarter_end_dates[:current_quarter]
+
+    result = {}
+    for q, q_end_date in enumerate(quarter_end_dates, start=1):
+        q_start = q_end_date - relativedelta(months=3)
+        total_passed = admitted_qs.filter(
+            visit__hospital_admission_date__range=(q_start, q_end_date)
+        ).count()
+        result[q] = {
+            "total_passed": total_passed,
+            "total_eligible": total_eligible,
+            "pct": round(
+                (total_passed / total_eligible * 100) if total_eligible else 0,
+                1,
+            ),
+        }
+
+    return result
+
+
+def count_service_transitions_by_quarter(pdu, audit_period) -> dict:
+    """Transitions to adult care split by quarter.
+
+    Mirrors calculate_total_service_transitions_to_adults_stratified_by_quarter().
+    Returns {q: {total_passed, total_eligible, pct}}.
+    """
+    audit_range = (audit_period.start_date, audit_period.end_date)
+    today = date.today()
+
+    base_qs = (
+        Patient.objects.filter(
+            submissions__submission_active=True,
+            submissions__audit_period=audit_period,
+            submissions__paediatric_diabetes_unit=pdu,
+            visit__visit_date__range=audit_range,
+            date_of_birth__gt=audit_period.start_date - relativedelta(years=25),
+        )
+        .distinct()
+    )
+
+    transitioned_qs = base_qs.filter(
+        paediatric_diabetes_units__date_leaving_service__range=audit_range,
+        paediatric_diabetes_units__reason_leaving_service=LEAVE_PDU_REASONS[0][0],
+    ).distinct()
+    total_eligible = transitioned_qs.count()
+
+    quarter_end_dates = [
+        q[1]
+        for q in get_quarters_for_audit_period(
+            audit_period.start_date, audit_period.end_date
+        )
+    ]
+    if today > audit_period.end_date:
+        current_quarter = retrieve_quarter_for_date(audit_period.end_date)
+    else:
+        current_quarter = retrieve_quarter_for_date(today)
+    quarter_end_dates = quarter_end_dates[:current_quarter]
+
+    result = {}
+    for q, q_end_date in enumerate(quarter_end_dates, start=1):
+        q_start = q_end_date - relativedelta(months=3)
+        total_passed = transitioned_qs.filter(
+            paediatric_diabetes_units__date_leaving_service__range=(q_start, q_end_date)
         ).count()
         result[q] = {
             "total_passed": total_passed,

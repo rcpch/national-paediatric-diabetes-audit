@@ -21,7 +21,15 @@ from project.npda.general_functions.map import (
 from project.npda.general_functions.rcpch_nhs_organisations import (
     fetch_organisation_by_ods_code,
 )
-from project.npda.kpi_class.kpis import CalculateKPIS
+from project.npda.general_functions.patient_report.queries import (
+    count_admissions,
+    count_admissions_by_quarter,
+    count_cgm_use,
+    count_hcl_use,
+    count_new_diagnoses_by_quarter,
+    count_pump_use,
+    count_service_transitions_by_quarter,
+)
 from project.npda.models.submission import Submission
 from project.npda.views.decorators import check_data_permissions, login_and_otp_required
 
@@ -113,9 +121,8 @@ def get_metric_scatter_plot(request, audit_period, pdu):
 
         if request.method == "POST":
             selected_chart = request.POST["scatter_plot_select"]
-            calculation_date = audit_period.kpi_calculation_date()
             data, title, tooltip_text = get_selected_chart_data(
-                selected_chart, calculation_date, pdu.pz_code
+                selected_chart, pdu, audit_period
             )
 
         if request.method == "GET":
@@ -262,21 +269,11 @@ def get_new_diagnoses_partial(request, audit_period, pdu):
 @login_and_otp_required()
 @check_data_permissions()
 def get_new_admissions_partial(request, audit_period, pdu):
-    """HTMX view that returns the number of new admissions for the current month"""
+    """HTMX view that returns the number of new admissions for the current audit period"""
 
-    # Get new admissions this month
+    n_admissions = count_admissions(pdu, audit_period)
 
-    calculate_kpis = CalculateKPIS(
-        calculation_date=audit_period.kpi_calculation_date(), return_pt_querysets=False
-    )
-
-    calculate_kpis.set_patients_for_calculation(pz_codes=[pdu.pz_code])
-
-    n_admissions_this_month = (
-        calculate_kpis.calculate_kpi_46_number_of_admissions().total_passed
-    )
-
-    context = {"number": n_admissions_this_month, "units": "children"}
+    context = {"number": n_admissions, "units": "children"}
 
     return render(
         request,
@@ -340,26 +337,15 @@ def get_moved_out_of_area_partial(request, audit_period, pdu):
 def get_n_on_hcl_partial(request, audit_period, pdu):
     """HTMX view that returns the number of patients who are on HCL"""
 
-    calculate_kpis = CalculateKPIS(
-        calculation_date=audit_period.kpi_calculation_date(), return_pt_querysets=True
-    )
-
-    calculate_kpis.set_patients_for_calculation(pz_codes=[pdu.pz_code])
-
-    hcl_use_kpi_result = calculate_kpis.calculate_kpi_24_hybrid_closed_loop_system()
+    passed, eligible = count_hcl_use(pdu, audit_period)
 
     pct_hcl_use = (
-        round(
-            hcl_use_kpi_result.total_passed / hcl_use_kpi_result.total_eligible * 100, 1
-        )
-        if hcl_use_kpi_result.total_eligible is not None
-        and hcl_use_kpi_result.total_eligible > 0
-        else 0
+        round(passed / eligible * 100, 1) if eligible and eligible > 0 else 0
     )
 
     context = {
-        "numerator": hcl_use_kpi_result.total_passed,
-        "denominator": hcl_use_kpi_result.total_eligible,
+        "numerator": passed,
+        "denominator": eligible,
         "units": f"({pct_hcl_use}%)",
         "description": "Number of children using a hybrid closed loop system as a percentage of all children with type 1 diabetes",
     }
@@ -376,23 +362,13 @@ def get_n_on_hcl_partial(request, audit_period, pdu):
 def get_pump_partial(request, audit_period, pdu):
     """HTMX view that returns the number of patients who are on pump"""
 
-    calculate_kpis = CalculateKPIS(
-        calculation_date=audit_period.kpi_calculation_date(), return_pt_querysets=True
-    )
+    passed, eligible = count_pump_use(pdu, audit_period)
 
-    calculate_kpis.set_patients_for_calculation(pz_codes=[pdu.pz_code])
-
-    pump_kpi_result = calculate_kpis.calculate_kpi_15_insulin_pump()
-
-    pct_pump = (
-        round(pump_kpi_result.total_passed / pump_kpi_result.total_eligible * 100, 1)
-        if pump_kpi_result.total_eligible > 0
-        else 0
-    )
+    pct_pump = round(passed / eligible * 100, 1) if eligible > 0 else 0
 
     context = {
-        "numerator": pump_kpi_result.total_passed,
-        "denominator": pump_kpi_result.total_eligible,
+        "numerator": passed,
+        "denominator": eligible,
         "units": f"({pct_pump}%)",
         "description": "Number of children using an insulin pump as a percentage of all children with type 1 diabetes",
     }
@@ -409,23 +385,13 @@ def get_pump_partial(request, audit_period, pdu):
 def get_cgm_partial(request, audit_period, pdu):
     """HTMX view that returns the number of patients who are on CGM"""
 
-    calculate_kpis = CalculateKPIS(
-        calculation_date=audit_period.kpi_calculation_date(), return_pt_querysets=True
-    )
+    passed, eligible = count_cgm_use(pdu, audit_period)
 
-    calculate_kpis.set_patients_for_calculation(pz_codes=[pdu.pz_code])
-
-    cgm_kpi_result = calculate_kpis.calculate_kpi_22_real_time_cgm_with_alarms()
-
-    pct_cgm = (
-        round(cgm_kpi_result.total_passed / cgm_kpi_result.total_eligible * 100, 1)
-        if cgm_kpi_result.total_eligible > 0
-        else 0
-    )
+    pct_cgm = round(passed / eligible * 100, 1) if eligible > 0 else 0
 
     context = {
-        "numerator": cgm_kpi_result.total_passed,
-        "denominator": cgm_kpi_result.total_eligible,
+        "numerator": passed,
+        "denominator": eligible,
         "units": f"({pct_cgm}%)",
     }
 
@@ -436,27 +402,24 @@ def get_cgm_partial(request, audit_period, pdu):
     )
 
 
-def get_selected_chart_data(selected_chart: str, calculation_date: date, pz_code: str):
+def get_selected_chart_data(selected_chart: str, pdu, audit_period):
     """Return the data for the selected chart"""
-
-    kpis = CalculateKPIS(calculation_date=calculation_date, return_pt_querysets=False)
-    kpis.set_patients_for_calculation(pz_codes=[pz_code])
 
     if selected_chart == "new_diagnoses":
         return (
-            kpis.calculate_kpi_2_total_new_diagnoses_stratified_by_quarter(),
+            count_new_diagnoses_by_quarter(pdu, audit_period),
             "All new diabetes diagnoses by quarter",
             "Numbers of patients newly diagnosed with any type of diabetes each quarter. These numbers include new diagnoses by quarter in blue. Cumulative totals by quarter are shown in grey.",
         )
     elif selected_chart == "new_admissions":
         return (
-            kpis.calculate_kpi_46_number_of_admissions_stratified_by_quarter(),
+            count_admissions_by_quarter(pdu, audit_period),
             "All new diabetes admissions by quarter",
             "Numbers of patients with diabetes admitted to hospital for any reason by quarter. These numbers include all admissions by quarter in blue. Cumulative totals by quarter are shown in grey.",
         )
     elif selected_chart == "transitioned_to_adult_service":
         return (
-            kpis.calculate_total_service_transitions_to_adults_stratified_by_quarter(),
+            count_service_transitions_by_quarter(pdu, audit_period),
             "All children transitioned to adult service by quarter",
             "Numbers of patients with diabetes transitioned to adult services by quarter. These numbers include all patients who transition to adults by quarter in blue. Cumulative totals by quarter are shown in grey.",
         )

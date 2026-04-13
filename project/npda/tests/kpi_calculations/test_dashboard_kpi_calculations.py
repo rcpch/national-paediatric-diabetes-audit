@@ -480,7 +480,9 @@ def test_count_cgm_use_2021_glucose_monitoring_4_is_passed(
     VisitFactory(
         patient=on_rtcgm,
         visit_date=visit_date,
-        glucose_monitoring=GLUCOSE_MONITORING_TYPES[3][0],  # 4 = real-time CGM with alarms
+        glucose_monitoring=GLUCOSE_MONITORING_TYPES[3][
+            0
+        ],  # 4 = real-time CGM with alarms
     )
     VisitFactory(
         patient=on_flash,
@@ -565,7 +567,6 @@ def test_count_admissions_counts_patients_with_valid_admission_in_audit_period(
     admitted = PatientFactory(
         diabetes_type=DIABETES_TYPES[0][0],
         date_of_birth=audit_period.start_date - relativedelta(years=10),
-        # diagnosis more than 90 days before admission so admission counts
         diagnosis_date=audit_period.start_date - relativedelta(days=91),
     )
     not_admitted = PatientFactory(
@@ -593,10 +594,15 @@ def test_count_admissions_counts_patients_with_valid_admission_in_audit_period(
 
 
 @pytest.mark.django_db
-def test_count_admissions_excludes_admission_within_90_days_of_diagnosis(
+def test_count_admissions_includes_admission_within_90_days_of_diagnosis(
     seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
 ):
-    """Admissions within 90 days of diagnosis (honeymoon DKA) are excluded."""
+    """Admissions within 90 days of diagnosis ARE counted.
+
+    count_admissions mirrors KPI 46, which does not apply the 90-day exclusion
+    used in the patient-report's annotate_admissions(). That exclusion is
+    intentional only for the patient-report row-level view.
+    """
     user, pdu = _get_user_and_pdu()
     audit_period = AuditPeriod.objects.get(slug="2024-2025")
     visit_date = audit_period.start_date + relativedelta(days=10)
@@ -604,7 +610,7 @@ def test_count_admissions_excludes_admission_within_90_days_of_diagnosis(
     newly_diagnosed = PatientFactory(
         diabetes_type=DIABETES_TYPES[0][0],
         date_of_birth=audit_period.start_date - relativedelta(years=10),
-        # Diagnosed only 30 days before the admission → within 90 day exclusion window
+        # Diagnosed only 30 days before the admission
         diagnosis_date=audit_period.start_date + relativedelta(days=5),
     )
     VisitFactory(
@@ -618,7 +624,8 @@ def test_count_admissions_excludes_admission_within_90_days_of_diagnosis(
     submission = _create_submission(user, pdu, audit_period)
     submission.patients.add(newly_diagnosed)
 
-    assert count_admissions(pdu, audit_period) == 0
+    # KPI 46 counts this — no 90-day exclusion
+    assert count_admissions(pdu, audit_period) == 1
 
 
 # ---------------------------------------------------------------------------
