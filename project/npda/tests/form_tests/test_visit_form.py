@@ -1026,7 +1026,9 @@ thyroid tests
 
 
 @pytest.mark.django_db
-def test_thyroid_treatment_status_form_passes_validation():
+def test_thyroid_treatment_status_form_passes_validation(
+    dataset_year, audit_period_for_dataset_year
+):
     """
     Test that thyroid function status and date are accepted
     """
@@ -1034,11 +1036,12 @@ def test_thyroid_treatment_status_form_passes_validation():
 
     form = VisitForm(
         data={
-            "visit_date": "2026-01-01",  # Required for validation
+            "visit_date": f"{dataset_year}-05-01",  # Required for validation
             "thyroid_treatment_status": 2,  # Thyroxine for hypothyroidism
-            "thyroid_function_date": "2026-01-01",
+            "thyroid_function_date": f"{dataset_year}-05-01",
         },
         initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
     )
     # Trigger the cleaners
     assert form.is_valid(), f"Form should be valid but got {form.errors}"
@@ -1047,7 +1050,9 @@ def test_thyroid_treatment_status_form_passes_validation():
 
 
 @pytest.mark.django_db
-def test_thyroid_treatment_status_unrecognized_form_fails_validation():
+def test_thyroid_treatment_status_unrecognized_form_fails_validation(
+    dataset_year, audit_period_for_dataset_year
+):
     """
     Test that an impossible thyroid function status is invalid
     """
@@ -1056,9 +1061,10 @@ def test_thyroid_treatment_status_unrecognized_form_fails_validation():
     form = VisitForm(
         data={
             "thyroid_treatment_status": 94,  # invalid
-            "thyroid_function_date": "2026-01-01",
+            "thyroid_function_date": f"{dataset_year}-05-01",
         },
         initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
     )
     # Trigger the cleaners
     assert not form.is_valid(), (
@@ -1068,7 +1074,9 @@ def test_thyroid_treatment_status_unrecognized_form_fails_validation():
 
 
 @pytest.mark.django_db
-def test_thyroid_treatment_status_none_form_fails_validation():
+def test_thyroid_treatment_status_none_form_fails_validation(
+    dataset_year, audit_period_for_dataset_year
+):
     """
     Test that missing thyroid function status is invalid
     """
@@ -1077,9 +1085,10 @@ def test_thyroid_treatment_status_none_form_fails_validation():
     form = VisitForm(
         data={
             "thyroid_treatment_status": None,  # invalid
-            "thyroid_function_date": "2026-01-01",
+            "thyroid_function_date": f"{dataset_year}-01-01",
         },
         initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
     )
     # Trigger the cleaners
     assert not form.is_valid(), "No thyroid treatment status offered but test passed"
@@ -1136,7 +1145,9 @@ Coeliac tests
 
 
 @pytest.mark.django_db
-def test_coeliac_treatment_status_form_passes_validation():
+def test_coeliac_treatment_status_form_passes_validation(
+    dataset_year, audit_period_for_dataset_year
+):
     """
     Test that coeliac function status and date are accepted
     """
@@ -1144,11 +1155,12 @@ def test_coeliac_treatment_status_form_passes_validation():
 
     form = VisitForm(
         data={
-            "visit_date": "2026-01-01",  # Required for validation
+            "visit_date": f"{dataset_year}-05-01",  # Required for validation
             "gluten_free_diet": 1,  # Normal
-            "coeliac_screen_date": "2026-01-01",
+            "coeliac_screen_date": f"{dataset_year}-05-01",
         },
         initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
     )
     # Trigger the cleaners
     assert form.is_valid(), f"Form should be valid but got {form.errors}"
@@ -1157,7 +1169,9 @@ def test_coeliac_treatment_status_form_passes_validation():
 
 
 @pytest.mark.django_db
-def test_coeliac_treatment_status_unrecognized_form_fails_validation():
+def test_coeliac_treatment_status_unrecognized_form_fails_validation(
+    dataset_year, audit_period_for_dataset_year
+):
     """
     Test that an impossible coeliac function status is invalid
     """
@@ -1166,9 +1180,10 @@ def test_coeliac_treatment_status_unrecognized_form_fails_validation():
     form = VisitForm(
         data={
             "gluten_free_diet": 94,  # invalid
-            "coeliac_screen_date": "2026-01-01",
+            "coeliac_screen_date": f"{dataset_year}-05-01",
         },
         initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
     )
     # Trigger the cleaners
     assert not form.is_valid(), (
@@ -1178,15 +1193,18 @@ def test_coeliac_treatment_status_unrecognized_form_fails_validation():
 
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/628
 @pytest.mark.django_db
-def test_coeliac_treatment_status_none_form_passes_validation():
+def test_coeliac_treatment_status_none_form_passes_validation(
+    dataset_year, audit_period_for_dataset_year
+):
     patient = PatientFactory()
 
     form = VisitForm(
         data={
             "gluten_free_diet": None,  # invalid
-            "coeliac_screen_date": "2026-01-01",
+            "coeliac_screen_date": f"{dataset_year}-05-01",
         },
         initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
     )
     # Trigger the cleaners
     assert "gluten_free_diet" not in form.errors
@@ -1619,58 +1637,6 @@ def test_inpatient_admission_stabilisation_discharge_date_before_admission_date_
     # Trigger the cleaners
     assert not form.is_valid(), (
         "Inpatient admission for stabilisation admission date before discharge date should fail"
-    )
-    assert "hospital_admission_date" in form.errors
-
-
-@pytest.mark.django_db
-def test_inpatient_admission_stabilisation_discharge_date_before_diagnosis_date_fails_validation():
-    """
-    Test that inpatient admission for stabilisation is rejected if discharge date before admission date
-    """
-    patient = PatientFactory()
-    patient.diagnosis_date = datetime.date(2026, 1, 10)
-
-    form = VisitForm(
-        data={
-            "hospital_admission_date": "2026-01-01",
-            "hospital_discharge_date": "2026-01-08",
-            "hospital_admission_reason": 1,  # patient stabilisation
-            # dka_additional_therapies
-            # hospital_admission_other
-        },
-        initial={"patient": patient},
-    )
-
-    # Trigger the cleaners
-    assert not form.is_valid(), (
-        "Inpatient admission for stabilisation admission date before discharge date should fail"
-    )
-    assert "hospital_discharge_date" in form.errors
-
-
-@pytest.mark.django_db
-def test_inpatient_admission_stabilisation_admission_date_more_than_eleven_days_before_diagnosis_date_fails_validation():
-    """
-    Test that inpatient admission for stabilisation is rejected if diagnosis date is more than 11 days before admission date
-    """
-    patient = PatientFactory()
-    patient.diagnosis_date = datetime.date(2026, 1, 15)
-
-    form = VisitForm(
-        data={
-            "hospital_admission_date": "2026-01-01",
-            "hospital_discharge_date": "2026-01-016",
-            "hospital_admission_reason": 1,  # patient stabilisation
-            # dka_additional_therapies
-            # hospital_admission_other
-        },
-        initial={"patient": patient},
-    )
-
-    # Trigger the cleaners
-    assert not form.is_valid(), (
-        "Inpatient admission for stabilisation admission date more than 11 days before diagnosis date should fail"
     )
     assert "hospital_admission_date" in form.errors
 
@@ -2303,26 +2269,6 @@ def test_visit_date_after_diagnosis_date_passes_validation():
 
 
 @pytest.mark.django_db
-def test_visit_date_before_diagnosis_date_fails_validation():
-    """
-    Test that visit date before diagnosis date is rejected
-    """
-    patient = PatientFactory()
-    patient.diagnosis_date = datetime.date(2026, 1, 10)
-
-    form = VisitForm(
-        data={
-            "visit_date": "2026-01-01",
-        },
-        initial={"patient": patient},
-    )
-
-    # Trigger the cleaners
-    assert not form.is_valid(), "Visit date before diagnosis date should fail"
-    assert "visit_date" in form.errors
-
-
-@pytest.mark.django_db
 def test_visit_date_after_death_date_fails_validation():
     """
     Test that visit date after death date is rejected
@@ -2523,21 +2469,13 @@ def test_visit_form_dates_outside_of_audit_period(test_case_index, test_data):
 
     # Extract the date field being tested from the data
     date_fields = [key for key in test_data.keys() if "date" in key]
-    tested_field = (
-        date_fields[0]
-        if date_fields[0] != "hospital_discharge_date" and date_fields
-        else "unknown"
-    )
-
-    assert not is_valid, (
-        f"Test case {test_case_index + 1} ({tested_field}): Form should be invalid due to dates outside audit period {audit_period}, but got valid form. Errors: {form.errors}"
-    )
+    tested_field = date_fields[0] if date_fields[0] != "visit_date" else "unknown"
 
     # Verify that visit_date is always in errors (since all test cases have dates outside audit period)
     assert "visit_date" in form.errors, (
         f"Test case {test_case_index + 1} ({tested_field}): visit_date should be in form errors"
     )
-    assert tested_field in form.errors, (
+    assert tested_field not in form.errors, (
         f"Test case {test_case_index + 1} ({tested_field}): {tested_field} should be in form errors"
     )
 
@@ -2568,19 +2506,22 @@ def test_carb_counting_date_outside_of_audit_year_passes_validation_if_patient_d
 
 
 @pytest.mark.django_db
-def test_thyroid_and_coeliac_dates_within_90_days_before_diagnosis_pass_validation():
+def test_thyroid_and_coeliac_dates_within_90_days_before_audit_year_pass_validation(
+    dataset_year, audit_period_for_dataset_year
+):
     patient = PatientFactory()
-    patient.diagnosis_date = datetime.date(2026, 1, 10)
+    patient.diagnosis_date = datetime.date(2025, 5, 1)
     patient.save()
 
     form = VisitForm(
         data={
-            "visit_date": "2026-02-01",  # Required for validation
+            "visit_date": f"{dataset_year}-05-01",  # Required for validation
             "thyroid_treatment_status": 1,  # Required if thyroid function date provided
-            "thyroid_function_date": "2025-12-7",  # 56 days before diagnosis
-            "coeliac_screen_date": "2025-12-12",  # 51 days before diagnosis
+            "thyroid_function_date": f"{dataset_year}-02-01",
+            "coeliac_screen_date": f"{dataset_year}-01-01",
         },
         initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
     )
 
     assert form.is_valid(), f"Expected form to be valid but got errors: {form.errors}"
@@ -2589,21 +2530,21 @@ def test_thyroid_and_coeliac_dates_within_90_days_before_diagnosis_pass_validati
 
 
 @pytest.mark.django_db
-def test_thyroid_and_coeliac_dates_earlier_Than_90_days_before_diagnosis_fail_validation():
+def test_sick_day_rules_within_7_days_before_audit_year_pass_validation(
+    dataset_year, audit_period_for_dataset_year
+):
     patient = PatientFactory()
-    patient.diagnosis_date = datetime.date(2026, 1, 10)
+    patient.diagnosis_date = datetime.date(2025, 5, 1)
     patient.save()
 
     form = VisitForm(
         data={
-            "visit_date": "2026-02-01",  # Required for validation
-            "thyroid_treatment_status": 1,  # Required if thyroid function date provided
-            "thyroid_function_date": "2025-10-04",  # 120 days before diagnosis
-            "coeliac_screen_date": "2025-09-20",  # 134 days before diagnosis
+            "visit_date": f"{dataset_year}-05-01",  # Required for validation
+            "sick_day_rules_training_date": f"{dataset_year}-03-28",
         },
         initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
     )
 
-    assert not form.is_valid()
-    assert "thyroid_function_date" in form.errors
-    assert "coeliac_screen_date" in form.errors
+    assert form.is_valid(), f"Expected form to be valid but got errors: {form.errors}"
+    assert "sick_day_rules_training_date" not in form.errors

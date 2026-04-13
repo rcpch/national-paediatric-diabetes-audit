@@ -1,4 +1,3 @@
-from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
 from django import forms
@@ -531,7 +530,6 @@ class VisitForm(forms.ModelForm):
             date_under_examination_label_name="Visit/Appointment Date",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
             audit_period=self.audit_period,
         )
@@ -547,9 +545,7 @@ class VisitForm(forms.ModelForm):
             date_under_examination_label_name="Observation Date (Height and weight)",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
-            audit_period=self.audit_period,
         )
         if not valid:
             raise ValidationError(error)
@@ -563,9 +559,7 @@ class VisitForm(forms.ModelForm):
             date_under_examination_label_name="Observation Date: Hba1c Value",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
-            audit_period=self.audit_period,
         )
         if not valid:
             raise ValidationError(error)
@@ -579,9 +573,7 @@ class VisitForm(forms.ModelForm):
             date_under_examination_label_name="Observation Date (Blood Pressure)",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
-            audit_period=self.audit_period,
         )
         if not valid:
             raise ValidationError(error)
@@ -595,9 +587,7 @@ class VisitForm(forms.ModelForm):
             date_under_examination_label_name="Foot Assessment / Examination Date",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
-            audit_period=self.audit_period,
         )
         if not valid:
             raise ValidationError(error)
@@ -611,9 +601,7 @@ class VisitForm(forms.ModelForm):
             date_under_examination=data,
             date_under_examination_label_name="Retinal Screening date",
             date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
-            audit_period=self.audit_period,
         )
         if not valid:
             raise ValidationError(error)
@@ -627,9 +615,7 @@ class VisitForm(forms.ModelForm):
             date_under_examination_label_name="Observation Date: Urinary Albumin Level",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
-            audit_period=self.audit_period,
         )
         if not valid:
             raise ValidationError(error)
@@ -643,9 +629,7 @@ class VisitForm(forms.ModelForm):
             date_under_examination_label_name="Observation Date: Total Cholesterol Level",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
-            audit_period=self.audit_period,
         )
         if not valid:
             raise ValidationError(error)
@@ -660,20 +644,10 @@ class VisitForm(forms.ModelForm):
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
             date_of_death=self.patient.death_date,
-            audit_period=self.audit_period,
         )
 
         if not valid:
             raise ValidationError(error)
-
-        if (
-            data
-            and self.patient.diagnosis_date
-            and data < self.patient.diagnosis_date - timedelta(days=90)
-        ):
-            raise ValidationError(
-                "Expected thyroid function date within 90 days before diagnosis."
-            )
 
         return self.cleaned_data["thyroid_function_date"]
 
@@ -685,20 +659,10 @@ class VisitForm(forms.ModelForm):
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
             date_of_death=self.patient.death_date,
-            audit_period=self.audit_period,
         )
 
         if not valid:
             raise ValidationError(error)
-
-        if (
-            data
-            and self.patient.diagnosis_date
-            and data < self.patient.diagnosis_date - timedelta(days=90)
-        ):
-            raise ValidationError(
-                "Expected coeliac screen date within 90 days before diagnosis."
-            )
 
         return self.cleaned_data["coeliac_screen_date"]
 
@@ -709,9 +673,7 @@ class VisitForm(forms.ModelForm):
             date_under_examination_label_name="Observation Date - Psychological Screening Assessment",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
-            audit_period=self.audit_period,
         )
         if not valid:
             raise ValidationError(error)
@@ -725,9 +687,7 @@ class VisitForm(forms.ModelForm):
             date_under_examination_label_name="Date of offer of referral to smoking cessation service (if patient is a current smoker)",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
-            audit_period=self.audit_period,
         )
         if not valid:
             raise ValidationError(error)
@@ -744,7 +704,6 @@ class VisitForm(forms.ModelForm):
             date_under_examination_label_name="Date of Level 3 carbohydrate counting education received",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
         )
 
@@ -760,9 +719,7 @@ class VisitForm(forms.ModelForm):
             date_under_examination_label_name="Date of additional appointment with dietitian",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
-            audit_period=self.audit_period,
         )
         if not valid:
             raise ValidationError(error)
@@ -776,9 +733,7 @@ class VisitForm(forms.ModelForm):
             date_under_examination_label_name="Date that influenza immunisation was recommended",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
-            audit_period=self.audit_period,
         )
         if not valid:
             raise ValidationError(error)
@@ -792,10 +747,8 @@ class VisitForm(forms.ModelForm):
             date_under_examination_label_name="Date of provision of advice ('sick-day rules') about managing diabetes during intercurrent illness or episodes of hyperglycaemia",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=self.patient.diagnosis_date,
-            date_of_death=self.patient.death_date,
-            audit_period=self.audit_period,
         )
+
         if not valid:
             raise ValidationError(error)
 
@@ -804,25 +757,12 @@ class VisitForm(forms.ModelForm):
     def clean_hospital_admission_date(self):
         data = self.cleaned_data["hospital_admission_date"]
 
-        if not self.patient.diagnosis_date:
-            diagnosis_date = None
-        else:
-            diagnosis_date = date(
-                year=self.patient.diagnosis_date.year,
-                month=self.patient.diagnosis_date.month,
-                day=self.patient.diagnosis_date.day,
-            )
-            # diagnosis date can be within 11 days of admission date
-            diagnosis_date = diagnosis_date - timedelta(days=11)
-
         valid, error = validate_date(
             date_under_examination_field_name="hospital_admission_date",
             date_under_examination_label_name="Start date (Hospital Provider Spell)",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=diagnosis_date,
             date_of_death=self.patient.death_date,
-            audit_period=self.audit_period,
         )
         if not valid:
             raise ValidationError(error)
@@ -836,9 +776,7 @@ class VisitForm(forms.ModelForm):
             date_under_examination_label_name="Discharge date (Hospital provider spell",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
-            audit_period=None,  # Hospital admission dates are not bound by the audit period
         )
         if not valid:
             raise ValidationError(error)
@@ -852,9 +790,7 @@ class VisitForm(forms.ModelForm):
             date_under_examination_label_name="Date Immunotherapy Started",
             date_under_examination=data,
             date_of_birth=self.patient.date_of_birth,
-            date_of_diagnosis=self.patient.diagnosis_date,
             date_of_death=self.patient.death_date,
-            audit_period=self.audit_period,
         )
         if valid is False:
             raise ValidationError(error)
