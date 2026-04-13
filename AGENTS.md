@@ -215,3 +215,134 @@ When adding a field that is dataset-year-specific:
 ## Notes on Jersey (PZ248)
 
 Patients at the Jersey PDU (`pz_code == "PZ248"`) use `unique_reference_number` as their identifier instead of `nhs_number`. The helper `_patient_identifier_field(pdu)` in `queries.py` handles this. Tests that check `patient_identifier` should be aware of this distinction.
+
+---
+
+## CSV pipeline — `csv_parse` and `csv_headings`
+
+### Key files
+
+| File | Purpose |
+|------|---------|
+| `project/constants/csv_headings.py` | `ALL_HEADINGS` master list + helper functions |
+| `project/npda/general_functions/csv/csv_parse.py` | Reads a CSV file into a pandas DataFrame, normalises headings, detects the unique identifier, and records parse errors |
+| `project/npda/general_functions/csv/csv_clean.py` | Converts date strings to `pd.Timestamp`, cleans sex/ethnicity/measurement columns |
+
+### `ALL_HEADINGS` structure
+
+Each entry in `ALL_HEADINGS` is a dict with:
+
+```python
+{
+    "heading": "<canonical CSV column name>",
+    "model_field": "<Django model field name>",
+    "model": "Patient" | "Visit" | "Transfer",  # absent for PDU Number
+    "data_type": "string" | "date" | "int64" | "float64",
+    "dataset_years": [2021] | [2026] | [2021, 2026],
+    "alternative_headings": [...],  # optional
+}
+```
+
+Fields shared between both years have `dataset_years: [2021, 2026]`. Year-specific fields have only their year in the list. When a heading *name* changes between years, two separate entries share the same `model_field` (the deduplication in `get_csv_heading_objects` ensures each year's canonical heading is returned once).
+
+### Helper functions in `csv_headings.py`
+
+| Function | Returns |
+|----------|---------|
+| `get_csv_heading_objects(dataset_year)` | Tuple of heading dicts for the given year (deduped by `model_field`) |
+| `get_csv_heading_objects_for_year_and_unique_identifier(dataset_year, unique_identifier)` | Like above but also prepends the correct patient identifier heading (England NHS number, Jersey URN, or both) |
+| `get_all_dates(dataset_year)` | List of CSV column *headings* whose `data_type == "date"` for the given year |
+| `csv_definition_for(model_field_or_column, dataset_year)` | Single heading dict for a model field name or column heading |
+
+### `csv_parse` flow
+
+1. Reads the CSV with `pd.read_csv` (UTF-8, fallback ISO-8859-1).
+2. Strips column whitespace and quotes; renames alternative headings to canonical ones.
+3. Detects the unique-identifier column (NHS Number / URN) — raises if neither or both present.
+4. Validates no row is missing its identifier.
+5. Detects and records duplicate columns (e.g. `"XYZ.1"`).
+6. Parses each column to its declared `data_type` using `pd.to_numeric` / `pd.to_datetime` etc., recording per-row parse errors in `errors_to_return`.
+7. Returns a `ParsedCSVFile` dataclass containing the DataFrame (`df`), identifier column, missing/additional/duplicate columns, and `errors_to_return`.
+
+### `csv_clean` flow
+
+Called inside `csv_upload` after `csv_parse`. Applies:
+- `pd.to_datetime` (day-first, mixed format) to all date columns returned by `get_all_dates(dataset_year)`.
+- Custom cleaners for `sex`, `ethnicity`, `height`, `weight`.
+- Whitespace stripping across all string/object columns.
+
+---
+
+## CSV pipeline — `csv_upload`
+
+### Overview
+
+`csv_upload` is an `async` function that processes an already-parsed-and-cleaned pandas DataFrame and persists the rows as `Patient`, `Transfer`, and `Visit` records. It is parallelised with an `asyncio.TaskGroup` (up to 5 concurrent patients).
+
+### Key file
+
+`project/npda/general_functions/csv/csv_upload.py`
+
+### High-level flow
+
+```
+csv_upload(dataframe, errors_to_return, csv_file_name, submission)
+  │
+  ├─ Infer dataset_year from submission.audit_period.get_dataset_year()
+  │    (sniff 2026-only headings in the dataframe to override if needed)
+  │
+  ├─ Build CSV_HEADINGS for this year + PDU identifier via
+  │    get_csv_heading_objects_for_year_and_unique_identifier()
+  │
+  ├─ csv_clean(dataframe, dataset_year)  — normalise dates, measurements, etc.
+  │
+  ├─ Group rows by patient identifier (NHS Number or URN)
+  │
+  └─ For each patient group (in parallel, semaphore=5):
+       │
+       ├─ merge_rows_for_patient()  — resolve conflicts across multiple rows
+       │                              (e.g. conflicting date-of-birth, diagnosis date,
+       │                               reason_leaving_service)
+       │
+       ├─ validate_patient_using_form(first_row)
+       │    row_to_dict(row, Patient) | row_to_dict(row, Transfer)
+       │    → PatientForm(fields)  — validates patient + transfer fields together
+       │    → validate_patient_async()  — external postcode / GP lookup
+       │
+       ├─ For each visit row:
+       │    validate_visit_using_form(row)
+       │    → VisitForm(fields)
+       │    → validate_visit_async()  — external BMI centile lookup
+       │
+       ├─ get_valid_transfer_fields(first_row, patient_form)
+       │    row_to_dict(row, Transfer)
+       │    Nulls out any Transfer field that has an "invalid" / "invalid_choice"
+       │    validation error on the PatientForm
+       │
+       └─ save_patient_and_transfer(patient_form, transfer_fields)
+            patient_form.save(commit=False) + patient.asave()
+            Transfer.objects.acreate(**transfer_fields)
+            submission.patients.aadd(patient)
+            → save_visits(patient, visit_forms)
+```
+
+### `row_to_dict(row, model)`
+
+Iterates `CSV_HEADINGS` filtering by `model`. For each matching entry it:
+1. Looks up the model field definition via `model._meta.get_field(model_field_name)`.
+2. Reads `row[entry["heading"]]`.
+3. Converts the value via `csv_value_to_model_value()` — handles NaN → None, `pd.Timestamp` → `datetime.date`, numpy scalars → Python scalars, integer-valued floats → int.
+
+### Transfer field handling
+
+`date_leaving_service` and `reason_leaving_service` live on the `Transfer` model but are also declared on `PatientForm` so they can be validated together with patient-level cross-field rules (see `PatientForm.clean()`). The save path is:
+
+1. Both fields enter `validate_patient_using_form` via `row_to_dict(row, Transfer)`.
+2. They are individually cleaned by `PatientForm.clean_date_leaving_service` / `clean_reason_leaving_service`.
+3. Cross-field rules in `PatientForm.clean()` ensure neither is supplied without the other.
+4. `get_valid_transfer_fields` calls `row_to_dict(row, Transfer)` again and nulls any field that has an "invalid" / "invalid_choice" form error.
+5. Both fields are passed to `Transfer.objects.acreate(**transfer_fields)`.
+
+### Error accumulation
+
+Errors are accumulated in `errors_to_return: dict[row_index, dict[field_name, list[str]]]` and come from two sources: `csv_parse` (type-parse errors recorded at read time) and the Django forms (validation errors recorded at upload time). Both sets are merged before being stored on `submission.errors` as JSON.
