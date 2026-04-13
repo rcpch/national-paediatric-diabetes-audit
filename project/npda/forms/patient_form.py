@@ -553,7 +553,7 @@ class PatientForm(forms.ModelForm):
                 nhs_number,
                 "nhs_number",
                 "patient__nhs_number",
-                "NHS Number must be unique within this submission.",
+                "A child with this NHS Number already exists in this submission.",
             )
 
         if unique_reference_number:
@@ -561,7 +561,7 @@ class PatientForm(forms.ModelForm):
                 unique_reference_number,
                 "unique_reference_number",
                 "patient__unique_reference_number",
-                "Unique Reference Number must be unique within this submission.",
+                "A child with this Unique Reference Number already exists in this submission.",
             )
 
     async def _validate_field_uniqueness_async(
@@ -604,7 +604,7 @@ class PatientForm(forms.ModelForm):
                 value=nhs_number,
                 field_name="nhs_number",
                 filter_field="patient__nhs_number",
-                error_message="NHS Number must be unique within this submission.",
+                error_message="A child with this NHS Number already exists in this submission.",
             )
 
         if unique_reference_number:
@@ -612,7 +612,7 @@ class PatientForm(forms.ModelForm):
                 value=unique_reference_number,
                 field_name="unique_reference_number",
                 filter_field="patient__unique_reference_number",
-                error_message="Unique Reference Number must be unique within this submission.",
+                error_message="A child with this Unique Reference Number already exists in this submission.",
             )
 
     def _validate_field_uniqueness(

@@ -12,6 +12,7 @@ from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
 from django.contrib.messages.views import SuccessMessageMixin
+from django.core.exceptions import ValidationError
 from django.db.models import Case, Count, F, Max, Q, When
 from django.forms import BaseForm
 from django.http import HttpResponse
@@ -387,7 +388,19 @@ class PatientCreateView(
                 "audit_period": audit_period,
             },
         )
-        submission.patients.add(patient)
+        try:
+            submission.add_patient(patient)
+        except ValidationError as exc:
+            # This can happen if a duplicate NHS number slips through form
+            # validation (e.g. a race condition with a concurrent request).
+            # Delete the orphaned patient record we just created and surface
+            # a user-friendly error via the form.
+            patient.delete()
+            form.add_error(
+                "nhs_number",
+                str(exc.message if hasattr(exc, "message") else exc),
+            )
+            return self.form_invalid(form)
         submission.save()
 
         return super().form_valid(form)
