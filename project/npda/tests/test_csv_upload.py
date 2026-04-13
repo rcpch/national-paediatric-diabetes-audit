@@ -5109,7 +5109,7 @@ def test_visit_form_dates_outside_of_audit_period(
     dataset_year,
 ):
     """
-    Test that all dates outside in a visit of the audit period are flagged as errors, but the visit is still created
+    Test that all dates outside in a visit of the audit period are allowed (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1379)
     2024 / 2025 audit period is seeded in the fixture
     All the dates tested include:
         visit_date
@@ -5124,12 +5124,12 @@ def test_visit_form_dates_outside_of_audit_period(
         coeliac_screen_date
         psychological_screening_assessment_date
         smoking_cessation_referral_date
-        carbohydrate_counting_level_three_education_date NOT INCLUDED (https://github.com/rcpch/national-paediatric-diabetes-audit/pull/1237)
+        carbohydrate_counting_level_three_education_date
         dietician_additional_appointment_date
         flu_immunisation_recommended_date
         sick_day_rules_training_date
         hospital_admission_date
-        **hospital_discharge_date NOT INCLUDED AS IT IS POSSIBLE TO BE DISCHARGED AFTER THE AUDIT ENDS**
+        hospital_discharge_date
     """
     birth_date = get_field_heading("date_of_birth", dataset_year)
     diagnosis_date = get_field_heading("diagnosis_date", dataset_year)
@@ -5166,16 +5166,6 @@ def test_visit_form_dates_outside_of_audit_period(
         )
 
     all_visits = get_all_visit_dates(dataset_year)
-    # Remove the dates not included in the test
-    all_visits.remove(
-        (
-            "carbohydrate_counting_level_three_education_date",
-            carbohydrate_counting_level_three_education_date,
-        )
-    )
-    all_visits.remove(
-        ("hospital_discharge_date", "Discharge date (Hospital provider spell)")
-    )
 
     assert Visit.objects.count() == 0, (
         "Expected no visits to be created before the test"
@@ -5184,10 +5174,14 @@ def test_visit_form_dates_outside_of_audit_period(
     errors = csv_upload_sync(
         test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
     )
+
+    assert "visit_date" in errors[0], f"Expected visit_date to be in errors, but got {errors}"
+
     for date_field in all_visits:
-        assert date_field[0] in errors[0], (
-            f"Expected {date_field} to be in errors, but got {errors}"
-        )
+        if date_field[0] != "visit_date":
+            assert date_field[0] not in errors[0], (
+                f"Expected {date_field} not to be in errors, but got {errors}"
+            )
     assert Visit.objects.count() == 1, (
         "Expected the visit still to be created even though visit date outside of audit period"
     )
