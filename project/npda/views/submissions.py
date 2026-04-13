@@ -81,14 +81,17 @@ class SubmissionsListView(
     permission_denied_message = "You do not have permission to view submissions."
 
     def get_queryset(self) -> Iterable[Any]:
+        base_args = {
+            "audit_period": self.audit_period,
+            "paediatric_diabetes_unit": self.pdu,
+        }
+
         if self.request.user.is_rcpch_audit_team_member:
-            base_queryset = self.model.objects.filter(
-                audit_period=self.audit_period
-            ).all()
-        else:
-            base_queryset = self.model.objects.filter(
-                paediatric_diabetes_unit=self.pdu, audit_period=self.audit_period
-            )
+            del base_args["paediatric_diabetes_unit"]
+            # Don't show inactive submissions to admins, it makes the page very heavy
+            base_args["submission_active"] = True
+
+        base_queryset = self.model.objects.filter(**base_args)
 
         # Avoid N+1 query problem, especially painful on national view
         final = base_queryset.select_related(
