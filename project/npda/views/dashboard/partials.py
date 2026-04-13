@@ -1,6 +1,5 @@
 import json
 import logging
-from datetime import date
 
 import plotly.graph_objects as go
 import plotly.io as pio
@@ -18,9 +17,6 @@ from project.npda.general_functions.map import (
     generate_distance_from_organisation_scatterplot_figure,
     get_children_by_pdu_audit_year,
 )
-from project.npda.general_functions.rcpch_nhs_organisations import (
-    fetch_organisation_by_ods_code,
-)
 from project.npda.general_functions.patient_report.queries import (
     count_admissions,
     count_admissions_by_quarter,
@@ -29,6 +25,9 @@ from project.npda.general_functions.patient_report.queries import (
     count_new_diagnoses_by_quarter,
     count_pump_use,
     count_service_transitions_by_quarter,
+)
+from project.npda.general_functions.rcpch_nhs_organisations import (
+    fetch_organisation_by_ods_code,
 )
 from project.npda.models.submission import Submission
 from project.npda.views.decorators import check_data_permissions, login_and_otp_required
@@ -339,9 +338,7 @@ def get_n_on_hcl_partial(request, audit_period, pdu):
 
     passed, eligible = count_hcl_use(pdu, audit_period)
 
-    pct_hcl_use = (
-        round(passed / eligible * 100, 1) if eligible and eligible > 0 else 0
-    )
+    pct_hcl_use = round(passed / eligible * 100, 1) if eligible and eligible > 0 else 0
 
     context = {
         "numerator": passed,
