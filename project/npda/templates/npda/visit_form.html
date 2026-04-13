@@ -10,7 +10,7 @@
       {% if title %}
       <strong>
         {{ title }} - NPDA ID {{ patient.pk }} ({% nhs_number_vs_urn pz_code %} {% nhs_number_vs_urn pz_code patient %})
-        at {{ paediatric_diabetes_unit.lead_organisation_name }} ({{ paediatric_diabetes_unit.pz_code }})
+        at {{ pdu.lead_organisation_name }} ({{ pdu.pz_code }})
       </strong>
       {% endif %}
       <form id="update-form"

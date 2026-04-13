@@ -1,4 +1,4 @@
-{% if patient.is_in_transfer_in_the_last_year or not pdu.active or is_csv_upload %}
+{% if patient.is_in_transfer_in_the_last_year or pdu and not pdu.active or is_csv_upload %}
     <div class="alert alert-info text-white" role="alert">
         <i class="fa-solid fa-info"></i>
         <div class="flex flex-col">
@@ -15,7 +15,7 @@
                         Browsing data from a CSV file. To make changes, edit the file and upload again.
                     {% endif %}
                 </span>
-            {% elif not pdu.active %}
+            {% elif pdu and not pdu.active %}
                 <span>
                     {% if data_upload_rules_overridden %}
                         Editing data for an inactive PDU.
@@ -25,7 +25,7 @@
                 </span>
             {% endif %}
         </div>
-        {% if is_csv_upload or not pdu.active %}
+        {% if is_csv_upload or pdu and not pdu.active %}
             {% if can_override_data_upload_rules and not data_upload_rules_overridden %}
                 <a href="{{request.path}}?unlock=true" class="btn text-rcpch_red">
                 <i class="fa-solid fa-lock"></i>

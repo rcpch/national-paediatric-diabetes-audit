@@ -92,10 +92,6 @@ class PatientVisitsListView(
         context["visits"] = calculated_visits
         context["patient"] = patient
         context["submission"] = submission
-        paediatric_diabetes_unit = getattr(
-            submission, "paediatric_diabetes_unit", getattr(self, "pdu", None)
-        )
-        context["paediatric_diabetes_unit"] = paediatric_diabetes_unit
 
         context["breadcrumbs"] = patient_breadcrumbs(
             self.pdu,
@@ -139,7 +135,7 @@ class VisitCreateView(
         context["visit_tabs"] = get_tabs(form=None)
         context["override_height_weight"] = False
         context["audit_period"] = self.audit_period
-        context["paediatric_diabetes_unit"] = self.pdu
+        context["pdu"] = self.pdu
 
         context["breadcrumbs"] = patient_breadcrumbs(
             self.pdu,
@@ -253,9 +249,6 @@ class VisitUpdateView(
         context["audit_period"] = self.audit_period
         patient = visit.patient
         context["patient"] = visit.patient
-        context["paediatric_diabetes_unit"] = (
-            patient.submissions.first().paediatric_diabetes_unit
-        )
 
         context["breadcrumbs"] = patient_breadcrumbs(
             self.pdu,
