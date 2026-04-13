@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 
 from dateutil.relativedelta import relativedelta
@@ -32,6 +32,8 @@ from project.constants.glucose_monitoring_types import GLUCOSE_MONITORING_TYPES
 from project.constants.hba1c_format import HBA1C_FORMATS
 from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
 from project.constants.yes_no_unknown import YES_NO_UNKNOWN
+from project.npda.general_functions.audit_period import get_quarters_for_audit_period
+from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
 from project.npda.models import Patient, Transfer, Visit
 from project.npda.models.db_functions import Round
 
@@ -854,6 +856,95 @@ def annotate_outcomes(qs, audit_period):
             output_field=DecimalField(max_digits=3, decimal_places=1),
         ),
     )
+
+
+# ---------------------------------------------------------------------------
+# Dashboard aggregate query functions (replace CalculateKPIS in dashboard views)
+# ---------------------------------------------------------------------------
+
+
+def count_eligible_patients(pdu, audit_period) -> int:
+    """Count of all patients eligible for the dashboard summary (equivalent to KPI 1).
+
+    Includes all diabetes types. A patient is eligible if they:
+    - Are in the active submission for this PDU and audit period
+    - Have at least one visit within the audit period
+    - Were under 25 at the start of the audit period
+    """
+    audit_range = (audit_period.start_date, audit_period.end_date)
+    return (
+        Patient.objects.filter(
+            submissions__submission_active=True,
+            submissions__audit_period=audit_period,
+            submissions__paediatric_diabetes_unit=pdu,
+            visit__visit_date__range=audit_range,
+            date_of_birth__gt=audit_period.start_date - relativedelta(years=25),
+        )
+        .distinct()
+        .count()
+    )
+
+
+def count_new_diagnoses_by_quarter(pdu, audit_period) -> dict:
+    """New diagnoses split by quarter, equivalent to
+    CalculateKPIS.calculate_kpi_2_total_new_diagnoses_stratified_by_quarter().
+
+    Returns a dict keyed by quarter number (1–4 for a complete year, 1–N for
+    an active period where N is the current quarter):
+
+        {q: {"total_passed": int, "total_eligible": int, "pct": float}}
+
+    total_eligible = total new diagnoses in the whole audit period.
+    total_passed   = new diagnoses whose diagnosis_date falls within that quarter.
+    Quarters beyond the current one are omitted for active audit periods.
+    """
+    audit_range = (audit_period.start_date, audit_period.end_date)
+    today = date.today()
+
+    eligible_qs = (
+        Patient.objects.filter(
+            submissions__submission_active=True,
+            submissions__audit_period=audit_period,
+            submissions__paediatric_diabetes_unit=pdu,
+            visit__visit_date__range=audit_range,
+            date_of_birth__gt=audit_period.start_date - relativedelta(years=25),
+        )
+        .distinct()
+    )
+
+    new_diagnoses_qs = eligible_qs.filter(diagnosis_date__range=audit_range)
+    total_eligible = new_diagnoses_qs.count()
+
+    quarter_end_dates = [
+        q[1]
+        for q in get_quarters_for_audit_period(
+            audit_period.start_date, audit_period.end_date
+        )
+    ]
+
+    # For a past period use the final quarter; for an active period use today.
+    if today > audit_period.end_date:
+        current_quarter = retrieve_quarter_for_date(audit_period.end_date)
+    else:
+        current_quarter = retrieve_quarter_for_date(today)
+    quarter_end_dates = quarter_end_dates[:current_quarter]
+
+    result = {}
+    for q, q_end_date in enumerate(quarter_end_dates, start=1):
+        q_start = q_end_date - relativedelta(months=3)
+        total_passed = new_diagnoses_qs.filter(
+            diagnosis_date__range=(q_start, q_end_date)
+        ).count()
+        result[q] = {
+            "total_passed": total_passed,
+            "total_eligible": total_eligible,
+            "pct": round(
+                (total_passed / total_eligible * 100) if total_eligible else 0,
+                1,
+            ),
+        }
+
+    return result
 
 
 def calculate_hba1c_values(qs, audit_period):

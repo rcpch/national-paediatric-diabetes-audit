@@ -8,8 +8,11 @@ from django.urls import reverse
 
 from project.npda.general_functions.audit_period import get_quarters_for_audit_period
 from project.npda.general_functions.breadcrumbs import data_breadcrumbs
+from project.npda.general_functions.patient_report.queries import (
+    count_eligible_patients,
+    count_new_diagnoses_by_quarter,
+)
 from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
-from project.npda.kpi_class.kpis import CalculateKPIS
 from project.npda.models.audit_period import AuditPeriod
 from project.npda.views.decorators import check_data_permissions, login_and_otp_required
 
@@ -49,19 +52,11 @@ def dashboard(request, audit_period, pdu):
             audit_period.end_date - current_date
         ).days
 
-    calculate_kpis = CalculateKPIS(
-        calculation_date=calculation_date, return_pt_querysets=True
-    )
+    no_eligible_patients = count_eligible_patients(pdu, audit_period)
 
-    calculate_kpis.set_patients_for_calculation(pz_codes=[pdu.pz_code])
-
-    no_eligible_patients = calculate_kpis.calculate_kpi_1_total_eligible()
-
-    # From this, gather specific chart data required
-
-    # new diagnoses
-    new_diagnosis_per_quarter_value_counts_pct = (
-        calculate_kpis.calculate_kpi_2_total_new_diagnoses_stratified_by_quarter()
+    # new diagnoses split by quarter
+    new_diagnosis_per_quarter_value_counts_pct = count_new_diagnoses_by_quarter(
+        pdu, audit_period
     )
 
     # Determine whether the user is viewing a closed period when a newer one is now current.
