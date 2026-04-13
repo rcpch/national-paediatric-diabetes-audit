@@ -114,3 +114,59 @@ class Submission(models.Model):
         if self.submission_active:
             raise ValidationError("Cannot delete an active submission.")
         super().delete(*args, **kwargs)
+
+    def add_patient(self, patient):
+        """
+        Add a patient to this submission, enforcing that no two patients with
+        the same NHS number (or Unique Reference Number for Jersey patients)
+        exist within any active submission for *this PDU*.
+
+        It is perfectly valid for the same patient identifier to appear in a
+        different PDU's submission (e.g. after a cross-PDU transfer).
+
+        Raises ValidationError if a duplicate identifier is detected.
+        """
+        if patient.nhs_number:
+            duplicate = (
+                self.patients.filter(
+                    nhs_number=patient.nhs_number,
+                )
+                .exclude(pk=patient.pk)
+                .exists()
+            )
+            if not duplicate:
+                # Also check other active submissions for this PDU in the same
+                # audit period in case there is more than one (edge case).
+                duplicate = (
+                    Submission.objects.filter(
+                        paediatric_diabetes_unit=self.paediatric_diabetes_unit,
+                        audit_period=self.audit_period,
+                        submission_active=True,
+                    )
+                    .exclude(pk=self.pk)
+                    .filter(patients__nhs_number=patient.nhs_number)
+                    .exclude(patients__pk=patient.pk)
+                    .exists()
+                )
+            if duplicate:
+                raise ValidationError(
+                    f"A patient with NHS number {patient.nhs_number} already "
+                    f"exists in an active submission for this PDU."
+                )
+
+        if patient.unique_reference_number:
+            duplicate = (
+                self.patients.filter(
+                    unique_reference_number=patient.unique_reference_number,
+                )
+                .exclude(pk=patient.pk)
+                .exists()
+            )
+            if duplicate:
+                raise ValidationError(
+                    f"A patient with Unique Reference Number "
+                    f"{patient.unique_reference_number} already exists in an "
+                    f"active submission for this PDU."
+                )
+
+        self.patients.add(patient)
