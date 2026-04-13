@@ -43,6 +43,17 @@ When working on patient report queries, always check `patient_report.md` for the
 
 `project/npda/general_functions/calculate_kpis/` — for **PDU-level aggregates only**. Not used directly in the patient report row-level queries.
 
+### Core models
+
+| Model | Path | Notes |
+|-------|------|-------|
+| `Patient` | `project/npda/models/patient.py` | `nhs_number` and `unique_reference_number` are both `unique=False` at the DB level — uniqueness within a PDU's submission is enforced by `Submission.add_patient()`, not a DB constraint |
+| `Submission` | `project/npda/models/submission.py` | One active submission per PDU per audit period. Use `Submission.objects.get_submission_for_request(pdu, audit_period)` to fetch it. **Always use `submission.add_patient(patient)` in production code** (see Submission wiring below) |
+| `PatientSubmission` | `project/npda/models/patientsubmission.py` | Through-table for the `Submission ↔ Patient` M2M. No custom validation — uniqueness lives on `Submission.add_patient()` |
+| `Transfer` | `project/npda/models/transfer.py` | One `Transfer` per `Patient`, recording their current PDU. Created alongside the `Patient` in `PatientCreateView.form_valid()` |
+| `Visit` | `project/npda/models/visit.py` | FK to `Patient`. Many visits per patient per audit period |
+| `AuditPeriod` | `project/npda/models/audit_period.py` | Use `AuditPeriod.objects.get_default_audit_period()` in tests. `audit_period.get_dataset_year()` is the single source of truth for 2021 vs 2026 |
+
 ### Constants
 
 `project/constants/` — canonical choice lists used across models, queries and templates.
@@ -101,7 +112,9 @@ client = login_and_verify_user(client, user)
 
 ### Submission wiring
 
-Patients must be added to a `Submission` to appear in patient report queries:
+Patients must be added to a `Submission` to appear in patient report queries.
+
+**In tests** use `submission.patients.add(patient)` directly — the uniqueness guard is not needed in test setup and bypassing it keeps fixtures simple:
 
 ```python
 submission = Submission.objects.create(
@@ -113,6 +126,13 @@ submission = Submission.objects.create(
     submission_active=True,
 )
 submission.patients.add(patient)
+```
+
+**In production code** (views, management commands, etc.) always use `submission.add_patient(patient)` instead of the bare `patients.add()`. This method enforces a PDU-scoped uniqueness rule: a patient with the same NHS number (or Unique Reference Number for Jersey patients) cannot appear more than once across any active submissions for the *same PDU* in the same audit period. The same identifier is allowed in a different PDU's submission (e.g. after a cross-PDU transfer). A `ValidationError` is raised on violation.
+
+```python
+# Raises ValidationError if NHS/URN already in an active submission for this PDU
+submission.add_patient(patient)
 ```
 
 ### Patient report response shape
