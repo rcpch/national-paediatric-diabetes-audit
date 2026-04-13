@@ -5175,7 +5175,9 @@ def test_visit_form_dates_outside_of_audit_period(
         test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
     )
 
-    assert "visit_date" in errors[0], f"Expected visit_date to be in errors, but got {errors}"
+    assert "visit_date" in errors[0], (
+        f"Expected visit_date to be in errors, but got {errors}"
+    )
 
     for date_field in all_visits:
         if date_field[0] != "visit_date":

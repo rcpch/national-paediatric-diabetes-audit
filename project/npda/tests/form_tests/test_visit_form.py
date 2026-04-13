@@ -2469,11 +2469,7 @@ def test_visit_form_dates_outside_of_audit_period(test_case_index, test_data):
 
     # Extract the date field being tested from the data
     date_fields = [key for key in test_data.keys() if "date" in key]
-    tested_field = (
-        date_fields[0]
-        if date_fields[0] != "visit_date"
-        else "unknown"
-    )
+    tested_field = date_fields[0] if date_fields[0] != "visit_date" else "unknown"
 
     # Verify that visit_date is always in errors (since all test cases have dates outside audit period)
     assert "visit_date" in form.errors, (
