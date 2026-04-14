@@ -119,7 +119,7 @@ class TestPatientReportHealthCheckQueries:
 
         assert row["is_gte_12yo"] is False
         assert row["passed_thyroid_screen"] is False
-    
+
     # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1399
     def test_thyroid_screening_required_after_first_year_of_diagnosis(
         self, seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
