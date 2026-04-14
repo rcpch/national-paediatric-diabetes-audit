@@ -10,6 +10,7 @@ from dateutil.relativedelta import relativedelta
 from django.urls import reverse
 
 from project.constants.diabetes_types import DIABETES_TYPES
+from project.constants.hba1c_format import HBA1C_FORMATS
 from project.constants.leave_pdu_reasons import LEAVE_PDU_REASONS
 
 # E12 imports
@@ -76,6 +77,7 @@ def test_count_of_patients_transitioning_to_adult_care_does_not_include_other_tr
         patient=patient,
         visit_date=audit_period.start_date + relativedelta(days=10),
         hba1c=60,  # 60 mmol/mol
+        hba1c_format=HBA1C_FORMATS[0][0],  # mmol/mol format
         hba1c_date=audit_period.start_date + relativedelta(days=10),
     )
 
