@@ -32,16 +32,44 @@ The patient report is driven by its own dedicated query layer — **do not reach
 
 | Path | Purpose |
 |------|---------|
-| `project/npda/general_functions/patient_report/queries.py` | All ORM queries that power the patient report (health checks, additional care processes, care at diagnosis, admissions, treatment, outcomes) |
+| `project/npda/general_functions/patient_report/queries.py` | All ORM queries that power the patient report **and the dashboard** (health checks, additional care processes, care at diagnosis, admissions, treatment, outcomes, plus all dashboard summary functions) |
 | `project/npda/views/patient_report/patient_report.py` | View logic, context assembly, sorting, pagination, XLSX export |
 | `project/npda/views/patient_report/patient_report.md` | Design intent, column definitions, edge cases, known shortcomings, and **the authoritative 2021/2026 field mapping per category — read this before touching any patient report query** |
 | `project/npda/templates/patient_report/` | Jinja/Django templates per category (e.g. `treatment_table_partial.html`) |
 
 When working on patient report queries, always check `patient_report.md` for the correct field to use for the active dataset year. Several fields changed or were added in 2026 (e.g. `treatment` → `insulin_regimen`, `glucose_monitoring` → `cgm_use`, `smoking_status` → `smoking_vaping_status`). The `audit_period.get_dataset_year()` method is the single source of truth — never hardcode a year.
 
+### Dashboard
+
+The dashboard views also use `queries.py` directly — **do not reach for the KPI class** when working on dashboard code.
+
+| Path | Purpose |
+|------|---------|
+| `project/npda/views/dashboard/dashboard.py` | Main dashboard view — eligible patient count and new-diagnoses quarter chart |
+| `project/npda/views/dashboard/partials.py` | HTMX partials — HCL, pump, CGM, admissions, service transitions, map |
+| `project/npda/views/dashboard/patient_measurements.py` | Measurements card — HbA1c stats by diabetes type, health-check pass/eligible counts |
+| `project/npda/templates/dashboard/` | Dashboard templates |
+
+**Dashboard query functions in `queries.py`** (all accept `pdu, audit_period`):
+
+| Function | Returns | Notes |
+|----------|---------|-------|
+| `count_eligible_patients` | `int` | All diabetes types, complete-year filter |
+| `count_new_diagnoses_by_quarter` | `dict[int, dict]` | `{q: {total_passed, total_eligible, pct}}` |
+| `count_hcl_use` | `tuple[int, int]` | `(passed, eligible)` — 2021/2026 aware |
+| `count_pump_use` | `tuple[int, int]` | `(passed, eligible)` — 2021/2026 aware |
+| `count_cgm_use` | `tuple[int, int]` | `(passed, eligible)` — 2021/2026 aware |
+| `count_admissions` | `int` | Total admissions count |
+| `count_admissions_by_quarter` | `dict[int, dict]` | Quarter-stratified admissions |
+| `count_service_transitions_by_quarter` | `dict[int, dict]` | Quarter-stratified adult-service transitions |
+| `hba1c_stats_by_diabetes_type` | `dict` | `{all, t1dm, t2dm, other}` each with `mean_mmol_mol`, `median_mmol_mol`, `mean_percent`, `median_percent`; 2021/2026 aware |
+| `dashboard_health_check_totals` | `dict` | `total_passed_*` / `total_eligible_*` for BMI, thyroid, BP, urinary albumin, foot exam; single aggregation query |
+
+All dashboard functions use `build_base_queryset()` as their base and respect `audit_period.get_dataset_year()`. They return plain Python values — no `KPIResult` objects.
+
 ### KPI class
 
-`project/npda/general_functions/calculate_kpis/` — for **PDU-level aggregates only**. Not used directly in the patient report row-level queries.
+`project/npda/general_functions/calculate_kpis/` — for **national benchmarking aggregates only**. Not used directly in patient report or dashboard views.
 
 ### Core models
 
