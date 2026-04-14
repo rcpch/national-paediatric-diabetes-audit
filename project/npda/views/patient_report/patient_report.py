@@ -427,7 +427,6 @@ class PatientReportView(
                 "urinary_albumin": "Not required as less than 12 years old",
                 "foot_exam": "Not required as less than 12 years old",
                 "retinal_screening": "Not required as less than 12 years old",
-                "thyroid_screen": "Not required as within 1 year of diagnosis",
             }
 
             qs = self.object_list

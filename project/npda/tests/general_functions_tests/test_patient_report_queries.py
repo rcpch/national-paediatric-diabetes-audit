@@ -92,9 +92,10 @@ class TestPatientReportHealthCheckQueries:
         assert row["passed_foot_exam"] is None
         assert row["num_total"] == 3
 
-    def test_thyroid_screening_not_required_within_first_year_of_diagnosis(
+    def test_thyroid_screening_required_within_first_year_of_diagnosis(
         self, seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
     ):
+        """Thyroid screen is always required regardless of diabetes duration."""
         user, pdu = self._get_user_and_pdu()
         audit_period = AuditPeriod.objects.get_default_audit_period()
 
@@ -117,7 +118,7 @@ class TestPatientReportHealthCheckQueries:
         row = rows[patient.pk]
 
         assert row["is_gte_12yo"] is False
-        assert row["passed_thyroid_screen"] is None
+        assert row["passed_thyroid_screen"] is False
     
     # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1399
     def test_thyroid_screening_required_after_first_year_of_diagnosis(
