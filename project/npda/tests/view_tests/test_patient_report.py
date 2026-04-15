@@ -2938,7 +2938,9 @@ def test_cgm_2021_on_cgm_is_annotated_correctly(
     VisitFactory(
         patient=patient,
         visit_date=audit_period.start_date + relativedelta(days=10),
-        glucose_monitoring=GLUCOSE_MONITORING_TYPES[3][0],  # 4 = real-time CGM with alarms
+        glucose_monitoring=GLUCOSE_MONITORING_TYPES[3][
+            0
+        ],  # 4 = real-time CGM with alarms
     )
     _make_submission(user, audit_period, patient)
 
