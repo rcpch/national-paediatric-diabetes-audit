@@ -172,8 +172,7 @@ def annotate_health_checks(qs, audit_period):
             output_field=BooleanField(),
         ),
         passed_thyroid_screen=Case(
-            When(Q(dx_over_1y=True) & thyroid_exists, then=True),
-            When(Q(dx_over_1y=False), then=None),
+            When(thyroid_exists, then=True),
             default=False,
             output_field=BooleanField(),
         ),

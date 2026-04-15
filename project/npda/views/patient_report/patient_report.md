@@ -165,16 +165,6 @@ This shows the mean and median HbA1c (both as IFCC and DCCT) of all visit HbA1cs
 |--------|------------|------------|-------|
 | All HbA1c values | `hba1c` + `hba1c_format` + `hba1c_date` | `hba1c` + `hba1c_date` | In 2026 `hba1c_format` is deprecated; values are always mmol/mol. Queries must not rely on `hba1c_format` being non-null for 2026 data. |
 
-## Shortcomings of the current methodology
-
-1. The queries that power the patient report come from the KPI class which are not optimised for generating patient level views, leading to long queries that are slow to run. The KPI class was originally written for PDU level summaries and does not work well at the patient level.
-2. The patient report should only capture patient visits in the audit period selected
-3. Edge cases appear where patients are flagged as having incomplete measures when they are in fact complete. These include:
-   1. thyroid screening: within the Health Check category, this applies to children with more than 1 year of diagnosis. They must have a thryoid function observation date within the audit year to show complete. If they do not they are incomplete. If they are within the first year of care they should be not required.
-   2. thyroid screening: within the Care at Diagnosis category, this applies to children who have had a thyroid function observation date filled within 90 days of the diagnosis date. If they do not, they are marked as incomplete. If they have had diabetes for more than a year, they are marked as not required.
-   3. eye screening: this is only required in the >=12y olds who have had diabetes more than one year. It is a measure that is captured every two years, so children must have had an eye screening result recorded in the current audit year or the previous to score as complete. If they do not they should be incomplete. If they are within a year of diagnosis, they should flag as not required. If they have transferred into the unit during the audit year they should flag as incomplete year of care.
-   4. carbohydrate counting date. This measure is counted in the Care at Diagnosis category and scores complete if a patient has received carbohydrate counting training within 14 days of diagnosis.
-   5. pH and bicarbonate levels at diagnosis are currently not captured and should be captured in the Care at Diagnosis category. (see issue #485)
 
 ## Implementation
 
@@ -221,7 +211,7 @@ This should involve:
 
 - HbA1c: `Exists` visit with `hba1c` and `hba1c_date` in audit range.
 - BMI: `Exists` visit with `bmi` and `height_weight_observation_date` in audit range.
-- Thyroid screen: `Exists` visit with `thyroid_function_date` in audit range; not required if diabetes duration < 1 year.
+- Thyroid screen: `Exists` visit with `thyroid_function_date` in audit range;
 - Blood pressure: `Exists` visit with `systolic_blood_pressure` and `blood_pressure_observation_date` in audit range; only required if >= 12.
 - Urinary albumin: `Exists` visit with `albumin_creatinine_ratio` and `albumin_creatinine_ratio_date` in audit range; only required if >= 12.
 - Foot exam: `Exists` visit with `foot_examination_observation_date` in audit range; only required if >= 12.
