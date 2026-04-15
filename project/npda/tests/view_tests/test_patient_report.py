@@ -2376,52 +2376,8 @@ def test_glucose_monitoring_missing_penultimate_visit_counted(
     )  # "Flash glucose monitor"
 
 
-@pytest.mark.django_db
-def test_hcl_missing_penultimate_visit_counted(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
-):
-    """
-    When the most recent visit has no closed_loop_system value, the hcl
-    annotation should fall back to the most recent visit that does have a value.
-    """
-    user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
-        role=test_user_audit_centre_editor_data.role,
-    ).first()
-
-    client = login_and_verify_user(client, user)
-
-    audit_period = AuditPeriod.objects.get_default_audit_period()
-    audit_period.is_open = True
-    audit_period.save()
-
-    date_of_birth = audit_period.start_date - relativedelta(years=10)
-
-    patient = PatientFactory(
-        nhs_number="5555555557",
-        diabetes_type=DIABETES_TYPES[0][0],  # T1DM
-        date_of_birth=date_of_birth,
-        diagnosis_date=audit_period.start_date - relativedelta(years=2),
-    )
-
-    visit_date = audit_period.start_date + relativedelta(days=10)
-
-    # Earlier visit WITH HCL data (value 2 = licenced closed loop → hcl = "Yes")
-    VisitFactory(
-        patient=patient,
-        visit_date=visit_date,
-        closed_loop_system=CLOSED_LOOP_TYPES[1][
-            0
-        ],  # 2 = "Closed loop system (licenced)"
-    )
-
-    # Most recent visit WITHOUT HCL data — the earlier value should still be used
-    VisitFactory(
-        patient=patient,
-        visit_date=visit_date + relativedelta(days=30),
-        closed_loop_system=None,
-    )
-
+def _make_submission(user, audit_period, patient):
+    """Helper: create an active submission and add patient to it."""
     submission = Submission.objects.create(
         paediatric_diabetes_unit=user.organisation_employers.first(),
         audit_year=audit_period.start_date.year,
@@ -2431,7 +2387,11 @@ def test_hcl_missing_penultimate_visit_counted(
         submission_active=True,
     )
     submission.patients.add(patient)
+    return submission
 
+
+def _get_treatment_patients(client, audit_period):
+    """Helper: GET the treatment tab and return the patients list from context."""
     url = reverse(
         "pdu-patient-report",
         kwargs={
@@ -2439,20 +2399,260 @@ def test_hcl_missing_penultimate_visit_counted(
             "pz_code": ALDER_HEY_PZ_CODE,
         },
     )
-
     response = client.get(
         url + f"?category={TableCategories.TREATMENT.value}",
         HTTP_HX_REQUEST="true",
     )
     assert response.status_code == HTTPStatus.OK
+    return response.context["patients"]
 
-    patients = response.context["patients"]
+
+# ── 2021 dataset HCL tests ─────────────────────────────────────────────────────
+
+
+@pytest.mark.django_db
+def test_hcl_pump_and_closed_loop_on_same_visit_is_yes(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    2021 dataset: a single visit with treatment=3 (pump) and closed_loop_system=2
+    (licenced) should produce hcl='Yes'.
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    patient = PatientFactory(
+        nhs_number="5555555557",
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=10),
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
+    )
+    VisitFactory(
+        patient=patient,
+        visit_date=audit_period.start_date + relativedelta(days=10),
+        treatment=TREATMENT_TYPES[2][0],  # 3 = Insulin pump
+        closed_loop_system=CLOSED_LOOP_TYPES[1][0],  # 2 = Closed loop (licenced)
+    )
+    _make_submission(user, audit_period, patient)
+
+    patients = _get_treatment_patients(client, audit_period)
     assert len(patients) == 1
+    assert patients[0]["hcl"] == "Yes"
 
-    patient_data = patients[0]
-    assert patient_data["patient_identifier"] == "5555555557"
-    # Should use the earlier visit's closed loop value, not the default "No"
-    assert patient_data["hcl"] == "Yes"
+
+@pytest.mark.django_db
+def test_hcl_pump_without_closed_loop_is_no(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    2021 dataset: treatment=3 (pump) with closed_loop_system=1 (No) should
+    produce hcl='No'.
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    patient = PatientFactory(
+        nhs_number="5555555558",
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=10),
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
+    )
+    VisitFactory(
+        patient=patient,
+        visit_date=audit_period.start_date + relativedelta(days=10),
+        treatment=TREATMENT_TYPES[2][0],  # 3 = Insulin pump
+        closed_loop_system=CLOSED_LOOP_TYPES[0][0],  # 1 = No
+    )
+    _make_submission(user, audit_period, patient)
+
+    patients = _get_treatment_patients(client, audit_period)
+    assert len(patients) == 1
+    assert patients[0]["hcl"] == "No"
+
+
+@pytest.mark.django_db
+def test_hcl_closed_loop_without_pump_treatment_is_no(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    2021 dataset: closed_loop_system=2 (licenced) but treatment=2 (injections,
+    not a pump) should produce hcl='No'. A closed loop device requires a pump.
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    patient = PatientFactory(
+        nhs_number="5555555559",
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=10),
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
+    )
+    VisitFactory(
+        patient=patient,
+        visit_date=audit_period.start_date + relativedelta(days=10),
+        treatment=TREATMENT_TYPES[1][0],  # 2 = Four or more injections/day
+        closed_loop_system=CLOSED_LOOP_TYPES[1][0],  # 2 = Closed loop (licenced)
+    )
+    _make_submission(user, audit_period, patient)
+
+    patients = _get_treatment_patients(client, audit_period)
+    assert len(patients) == 1
+    assert patients[0]["hcl"] == "No"
+
+
+@pytest.mark.django_db
+def test_hcl_reverted_from_hcl_to_injections_is_no(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    2021 dataset: patient was previously on HCL (earlier visit: pump + closed loop)
+    but their most recent treatment visit shows injections. hcl should be 'No'.
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    patient = PatientFactory(
+        nhs_number="5555555560",
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=10),
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
+    )
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    # Earlier visit: on HCL
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        treatment=TREATMENT_TYPES[2][0],  # 3 = Insulin pump
+        closed_loop_system=CLOSED_LOOP_TYPES[1][0],  # 2 = Closed loop (licenced)
+    )
+    # Most recent visit: back on injections, no closed loop
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date + relativedelta(days=90),
+        treatment=TREATMENT_TYPES[1][0],  # 2 = Four or more injections/day
+        closed_loop_system=CLOSED_LOOP_TYPES[0][0],  # 1 = No
+    )
+    _make_submission(user, audit_period, patient)
+
+    patients = _get_treatment_patients(client, audit_period)
+    assert len(patients) == 1
+    assert patients[0]["hcl"] == "No"
+
+
+@pytest.mark.django_db
+def test_hcl_pump_plus_other_with_closed_loop_is_yes(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    2021 dataset: treatment=6 (pump + other medication) with closed_loop_system=3
+    (DIY unlicenced) should produce hcl='Yes'. Treatment value 6 is also a pump.
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    patient = PatientFactory(
+        nhs_number="5555555561",
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=10),
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
+    )
+    VisitFactory(
+        patient=patient,
+        visit_date=audit_period.start_date + relativedelta(days=10),
+        treatment=TREATMENT_TYPES[5][0],  # 6 = Insulin pump + other medication
+        closed_loop_system=CLOSED_LOOP_TYPES[2][0],  # 3 = Closed loop (DIY)
+    )
+    _make_submission(user, audit_period, patient)
+
+    patients = _get_treatment_patients(client, audit_period)
+    assert len(patients) == 1
+    assert patients[0]["hcl"] == "Yes"
+
+
+@pytest.mark.django_db
+def test_hcl_latest_treatment_visit_with_null_closed_loop_is_no(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    2021 dataset: most recent treatment visit has treatment=3 (pump) but
+    closed_loop_system=None (not recorded). An older visit had closed_loop_system=2.
+    hcl should be 'No' — the closed_loop value must come from the same visit as
+    the latest treatment, not a historical one.
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    patient = PatientFactory(
+        nhs_number="5555555562",
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=10),
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
+    )
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    # Older visit: pump + closed loop recorded
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        treatment=TREATMENT_TYPES[2][0],  # 3 = Insulin pump
+        closed_loop_system=CLOSED_LOOP_TYPES[1][0],  # 2 = Closed loop (licenced)
+    )
+    # Most recent visit: still on pump, but closed_loop_system not recorded this time
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date + relativedelta(days=90),
+        treatment=TREATMENT_TYPES[2][0],  # 3 = Insulin pump
+        closed_loop_system=None,
+    )
+    _make_submission(user, audit_period, patient)
+
+    patients = _get_treatment_patients(client, audit_period)
+    assert len(patients) == 1
+    # closed_loop_system is null on the latest treatment visit → hcl='No'
+    assert patients[0]["hcl"] == "No"
 
 
 # ── 2026 dataset treatment fallback tests ─────────────────────────────────────
