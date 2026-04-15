@@ -215,7 +215,7 @@ This should involve:
 - Blood pressure: `Exists` visit with `systolic_blood_pressure` and `blood_pressure_observation_date` in audit range; only required if >= 12.
 - Urinary albumin: `Exists` visit with `albumin_creatinine_ratio` and `albumin_creatinine_ratio_date` in audit range; only required if >= 12.
 - Foot exam: `Exists` visit with `foot_examination_observation_date` in audit range; only required if >= 12.
-- Eye screen: `Exists` visit with `retinal_screening_observation_date` and `retinal_screening_result` in audit range; not required if < 12 or diabetes duration < 1 year.
+- Eye screen: `Exists` visit with `retinal_screening_observation_date` and `retinal_screening_result` in audit range; not required if < 12. 
   - If not present, return a blank entry in the report not "incomplete". This is because the screen is only mandatory bi-annually.
 - Total: `num_passed` vs `num_total` (3 for < 12, 6 for >= 12).
 

@@ -294,7 +294,7 @@ class TestPatientReportHealthCheckQueries:
 
         assert row["passed_retinal_screening"] == ""
 
-    def test_retinal_screening_not_required_within_first_year_of_diagnosis(
+    def test_retinal_screening_required_within_first_year_of_diagnosis(
         self, seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
     ):
         user, pdu = self._get_user_and_pdu()
@@ -321,7 +321,7 @@ class TestPatientReportHealthCheckQueries:
         row = rows[patient.pk]
 
         assert row["is_gte_12yo"] is True
-        assert row["passed_retinal_screening"] == "not_required"
+        assert row["passed_retinal_screening"] == ""
     
 
     def test_retinal_screening_required_after_first_year_of_diagnosis(
