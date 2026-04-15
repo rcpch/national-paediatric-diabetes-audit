@@ -322,7 +322,6 @@ class TestPatientReportHealthCheckQueries:
 
         assert row["is_gte_12yo"] is True
         assert row["passed_retinal_screening"] == ""
-    
 
     def test_retinal_screening_required_after_first_year_of_diagnosis(
         self, seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
@@ -351,8 +350,9 @@ class TestPatientReportHealthCheckQueries:
         row = rows[patient.pk]
 
         assert row["is_gte_12yo"] is True
-        assert row["passed_retinal_screening"] == "" # we don't fail, just blank (see #1272)
-
+        assert (
+            row["passed_retinal_screening"] == ""
+        )  # we don't fail, just blank (see #1272)
 
     def test_retinal_screening_with_date_but_no_result_is_blank(
         self, seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture

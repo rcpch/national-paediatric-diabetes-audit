@@ -196,9 +196,7 @@ def annotate_health_checks(qs, audit_period):
                 Q(is_gte_12yo=True) & retinal_exists,
                 then=Value("complete"),
             ),
-            When(
-                Q(is_gte_12yo=False), then=Value("not_required")
-            ),
+            When(Q(is_gte_12yo=False), then=Value("not_required")),
             default=Value(""),
             output_field=CharField(),
         ),
