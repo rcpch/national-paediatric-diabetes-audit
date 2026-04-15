@@ -738,6 +738,228 @@ def test_count_cgm_use_2026_cgm_use_yes_is_passed(
 
 
 # ---------------------------------------------------------------------------
+# count_cgm_use — regression: patients who reverted from CGM
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_count_cgm_use_2021_reverted_patient_excluded_from_total(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
+):
+    """
+    2021 dataset regression: a patient whose earlier visit recorded real-time CGM
+    (glucose_monitoring=4) but whose most recent non-null glucose_monitoring visit
+    shows a different monitoring type must NOT be counted in the CGM total.
+
+    Two patients:
+      - still_on_cgm:    latest glucose_monitoring=4 → passed
+      - reverted_to_flash: earlier=4, latest=2 (flash) → NOT passed
+
+    Expected: passed=1, eligible=2
+    """
+    user, pdu = _get_user_and_pdu()
+    audit_period = AuditPeriod.objects.get(slug="2024-2025")
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    still_on_cgm = PatientFactory(
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=10),
+        diagnosis_date=audit_period.start_date - relativedelta(days=1),
+    )
+    reverted_to_flash = PatientFactory(
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=10),
+        diagnosis_date=audit_period.start_date - relativedelta(days=1),
+    )
+
+    # still_on_cgm: single visit, real-time CGM
+    VisitFactory(
+        patient=still_on_cgm,
+        visit_date=visit_date,
+        glucose_monitoring=GLUCOSE_MONITORING_TYPES[3][0],  # 4 = real-time CGM
+    )
+
+    # reverted_to_flash: earlier visit was CGM, latest is flash
+    VisitFactory(
+        patient=reverted_to_flash,
+        visit_date=visit_date,
+        glucose_monitoring=GLUCOSE_MONITORING_TYPES[3][0],  # 4 = real-time CGM
+    )
+    VisitFactory(
+        patient=reverted_to_flash,
+        visit_date=visit_date + relativedelta(days=90),
+        glucose_monitoring=GLUCOSE_MONITORING_TYPES[1][0],  # 2 = flash
+    )
+
+    submission = _create_submission(user, pdu, audit_period)
+    submission.patients.add(still_on_cgm, reverted_to_flash)
+
+    passed, eligible = count_cgm_use(pdu, audit_period)
+
+    assert eligible == 2
+    assert passed == 1  # only still_on_cgm passes
+
+
+@pytest.mark.django_db
+def test_count_cgm_use_2021_later_visit_null_falls_back_to_earlier_cgm(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
+):
+    """
+    2021 dataset: a patient whose earlier visit recorded real-time CGM
+    (glucose_monitoring=4) and whose later visit has glucose_monitoring=None
+    (not recorded) must still be counted — the subquery falls back to the
+    most recent visit with a non-null value.
+
+    Expected: passed=1, eligible=1
+    """
+    user, pdu = _get_user_and_pdu()
+    audit_period = AuditPeriod.objects.get(slug="2024-2025")
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    patient = PatientFactory(
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=10),
+        diagnosis_date=audit_period.start_date - relativedelta(days=1),
+    )
+
+    # Earlier visit: CGM recorded
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        glucose_monitoring=GLUCOSE_MONITORING_TYPES[3][0],  # 4 = real-time CGM
+    )
+    # Later visit: glucose_monitoring not recorded
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date + relativedelta(days=90),
+        glucose_monitoring=None,
+    )
+
+    submission = _create_submission(user, pdu, audit_period)
+    submission.patients.add(patient)
+
+    passed, eligible = count_cgm_use(pdu, audit_period)
+
+    assert eligible == 1
+    assert passed == 1  # falls back to the earlier CGM visit
+
+
+@pytest.mark.django_db
+def test_count_cgm_use_2026_reverted_patient_excluded_from_total(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
+):
+    """
+    2026 dataset regression: a patient whose earlier visit had cgm_use=1 (Yes)
+    but whose most recent non-null cgm_use visit shows No (2) must NOT be counted.
+
+    Two patients:
+      - still_on_cgm:   latest cgm_use=1 → passed
+      - reverted_to_no: earlier=1, latest=2 → NOT passed
+
+    Expected: passed=1, eligible=2
+    """
+    user, pdu = _get_user_and_pdu()
+    audit_period = AuditPeriod.objects.get(slug="2026-2027")
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    still_on_cgm = PatientFactory(
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=10),
+        diagnosis_date=audit_period.start_date - relativedelta(days=1),
+    )
+    reverted_to_no = PatientFactory(
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=10),
+        diagnosis_date=audit_period.start_date - relativedelta(days=1),
+    )
+
+    # still_on_cgm: single visit, cgm_use=Yes
+    VisitFactory(
+        patient=still_on_cgm,
+        visit_date=visit_date,
+        treatment=None,
+        closed_loop_system=None,
+        glucose_monitoring=None,
+        cgm_use=1,  # Yes
+    )
+
+    # reverted_to_no: earlier visit was Yes, latest is No
+    VisitFactory(
+        patient=reverted_to_no,
+        visit_date=visit_date,
+        treatment=None,
+        closed_loop_system=None,
+        glucose_monitoring=None,
+        cgm_use=1,  # Yes
+    )
+    VisitFactory(
+        patient=reverted_to_no,
+        visit_date=visit_date + relativedelta(days=90),
+        treatment=None,
+        closed_loop_system=None,
+        glucose_monitoring=None,
+        cgm_use=2,  # No
+    )
+
+    submission = _create_submission(user, pdu, audit_period)
+    submission.patients.add(still_on_cgm, reverted_to_no)
+
+    passed, eligible = count_cgm_use(pdu, audit_period)
+
+    assert eligible == 2
+    assert passed == 1  # only still_on_cgm passes
+
+
+@pytest.mark.django_db
+def test_count_cgm_use_2026_later_visit_null_falls_back_to_earlier_cgm(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
+):
+    """
+    2026 dataset: a patient whose earlier visit had cgm_use=1 (Yes) and whose
+    later visit has cgm_use=None (not recorded) must still be counted — the
+    subquery falls back to the most recent non-null visit.
+
+    Expected: passed=1, eligible=1
+    """
+    user, pdu = _get_user_and_pdu()
+    audit_period = AuditPeriod.objects.get(slug="2026-2027")
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    patient = PatientFactory(
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=10),
+        diagnosis_date=audit_period.start_date - relativedelta(days=1),
+    )
+
+    # Earlier visit: cgm_use=Yes
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        treatment=None,
+        closed_loop_system=None,
+        glucose_monitoring=None,
+        cgm_use=1,  # Yes
+    )
+    # Later visit: cgm_use not recorded
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date + relativedelta(days=90),
+        treatment=None,
+        closed_loop_system=None,
+        glucose_monitoring=None,
+        cgm_use=None,
+    )
+
+    submission = _create_submission(user, pdu, audit_period)
+    submission.patients.add(patient)
+
+    passed, eligible = count_cgm_use(pdu, audit_period)
+
+    assert eligible == 1
+    assert passed == 1  # falls back to the earlier Yes visit
+
+
+# ---------------------------------------------------------------------------
 # count_admissions
 # ---------------------------------------------------------------------------
 

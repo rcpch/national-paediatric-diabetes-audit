@@ -2906,3 +2906,286 @@ def test_hcl_from_insulin_regimen_2026_missing_penultimate_visit_counted(
     assert patient_data["patient_identifier"] == "6666666663"
     # insulin_regimen == 5 means HCL, should derive hcl = "Yes"
     assert patient_data["hcl"] == "Yes"
+
+
+# ── 2021 dataset CGM tests ─────────────────────────────────────────────────────
+
+
+@pytest.mark.django_db
+def test_cgm_2021_on_cgm_is_annotated_correctly(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    2021 dataset: a single visit with glucose_monitoring=4 (real-time CGM with
+    alarms) should annotate glucose_monitoring as the matching label.
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    patient = PatientFactory(
+        nhs_number="7777777771",
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=10),
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
+    )
+    VisitFactory(
+        patient=patient,
+        visit_date=audit_period.start_date + relativedelta(days=10),
+        glucose_monitoring=GLUCOSE_MONITORING_TYPES[3][0],  # 4 = real-time CGM with alarms
+    )
+    _make_submission(user, audit_period, patient)
+
+    patients = _get_treatment_patients(client, audit_period)
+    assert len(patients) == 1
+    assert patients[0]["glucose_monitoring"] == GLUCOSE_MONITORING_TYPES[3][1]
+
+
+@pytest.mark.django_db
+def test_cgm_2021_reverted_from_cgm_shows_latest_value(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    2021 dataset: patient was on real-time CGM at an earlier visit
+    (glucose_monitoring=4) but their most recent non-null glucose_monitoring
+    visit shows flash (glucose_monitoring=2). The annotation must reflect the
+    latest non-null visit — flash, not CGM.
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    patient = PatientFactory(
+        nhs_number="7777777772",
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=10),
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
+    )
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    # Earlier visit: on real-time CGM
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        glucose_monitoring=GLUCOSE_MONITORING_TYPES[3][0],  # 4 = real-time CGM
+    )
+    # Most recent visit: downgraded to flash
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date + relativedelta(days=90),
+        glucose_monitoring=GLUCOSE_MONITORING_TYPES[1][0],  # 2 = flash
+    )
+    _make_submission(user, audit_period, patient)
+
+    patients = _get_treatment_patients(client, audit_period)
+    assert len(patients) == 1
+    # Latest non-null is flash, not CGM
+    assert patients[0]["glucose_monitoring"] == GLUCOSE_MONITORING_TYPES[1][1]
+
+
+@pytest.mark.django_db
+def test_cgm_2021_later_visit_null_cgm_falls_back_to_earlier_cgm(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    2021 dataset: patient's earlier visit has glucose_monitoring=4 (CGM) but a
+    later visit has glucose_monitoring=None (not recorded). The annotation must
+    fall back to the most recent visit that *does* have a value — the earlier CGM
+    visit — and still show CGM.
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    audit_period.is_open = True
+    audit_period.save()
+
+    patient = PatientFactory(
+        nhs_number="7777777773",
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=10),
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
+    )
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    # Earlier visit: CGM recorded
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        glucose_monitoring=GLUCOSE_MONITORING_TYPES[3][0],  # 4 = real-time CGM
+    )
+    # Later visit: glucose_monitoring not recorded at all
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date + relativedelta(days=90),
+        glucose_monitoring=None,
+    )
+    _make_submission(user, audit_period, patient)
+
+    patients = _get_treatment_patients(client, audit_period)
+    assert len(patients) == 1
+    # Latest non-null falls back to the earlier CGM visit
+    assert patients[0]["glucose_monitoring"] == GLUCOSE_MONITORING_TYPES[3][1]
+
+
+# ── 2026 dataset CGM tests ─────────────────────────────────────────────────────
+
+
+@pytest.mark.django_db
+def test_cgm_2026_on_cgm_is_annotated_correctly(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    2026 dataset: a single visit with cgm_use=1 (Yes) should annotate
+    glucose_monitoring as "Yes".
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get(slug="2026-2027")
+    audit_period.is_open = True
+    audit_period.save()
+
+    patient = PatientFactory(
+        nhs_number="7777777774",
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=10),
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
+    )
+    VisitFactory(
+        patient=patient,
+        visit_date=audit_period.start_date + relativedelta(days=10),
+        treatment=None,
+        closed_loop_system=None,
+        glucose_monitoring=None,
+        cgm_use=YES_NO_UNKNOWN[0][0],  # 1 = Yes
+    )
+    _make_submission(user, audit_period, patient)
+
+    patients = _get_treatment_patients(client, audit_period)
+    assert len(patients) == 1
+    assert patients[0]["glucose_monitoring"] == YES_NO_UNKNOWN[0][1]  # "Yes"
+
+
+@pytest.mark.django_db
+def test_cgm_2026_reverted_from_cgm_shows_latest_value(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    2026 dataset: patient had cgm_use=1 (Yes) at an earlier visit but their most
+    recent non-null cgm_use visit shows No (2). The annotation must reflect the
+    latest non-null visit — No, not Yes.
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get(slug="2026-2027")
+    audit_period.is_open = True
+    audit_period.save()
+
+    patient = PatientFactory(
+        nhs_number="7777777775",
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=10),
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
+    )
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    # Earlier visit: on CGM
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        treatment=None,
+        closed_loop_system=None,
+        glucose_monitoring=None,
+        cgm_use=YES_NO_UNKNOWN[0][0],  # 1 = Yes
+    )
+    # Most recent visit: no longer on CGM
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date + relativedelta(days=90),
+        treatment=None,
+        closed_loop_system=None,
+        glucose_monitoring=None,
+        cgm_use=YES_NO_UNKNOWN[1][0],  # 2 = No
+    )
+    _make_submission(user, audit_period, patient)
+
+    patients = _get_treatment_patients(client, audit_period)
+    assert len(patients) == 1
+    # Latest non-null shows No
+    assert patients[0]["glucose_monitoring"] == YES_NO_UNKNOWN[1][1]  # "No"
+
+
+@pytest.mark.django_db
+def test_cgm_2026_later_visit_null_cgm_falls_back_to_earlier_cgm(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    2026 dataset: patient's earlier visit has cgm_use=1 (Yes) but a later visit
+    has cgm_use=None (not recorded). The annotation must fall back to the most
+    recent visit that does have a value — the earlier Yes visit.
+    """
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get(slug="2026-2027")
+    audit_period.is_open = True
+    audit_period.save()
+
+    patient = PatientFactory(
+        nhs_number="7777777776",
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=10),
+        diagnosis_date=audit_period.start_date - relativedelta(years=2),
+    )
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    # Earlier visit: CGM recorded as Yes
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        treatment=None,
+        closed_loop_system=None,
+        glucose_monitoring=None,
+        cgm_use=YES_NO_UNKNOWN[0][0],  # 1 = Yes
+    )
+    # Later visit: cgm_use not recorded
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date + relativedelta(days=90),
+        treatment=None,
+        closed_loop_system=None,
+        glucose_monitoring=None,
+        cgm_use=None,
+    )
+    _make_submission(user, audit_period, patient)
+
+    patients = _get_treatment_patients(client, audit_period)
+    assert len(patients) == 1
+    # Falls back to the earlier non-null visit — still Yes
+    assert patients[0]["glucose_monitoring"] == YES_NO_UNKNOWN[0][1]  # "Yes"
