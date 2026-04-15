@@ -671,6 +671,71 @@ def test_care_at_diagnosis_for_type_1_patient(
     assert not patient["thyroid_disease_screening"]
 
 
+@pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
+@pytest.mark.django_db
+def test_patient_diagnosed_more_than_90_days_before_audit_date_is_not_in_care_at_diagnosis_view(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    audit_period_slug,
+):
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    audit_period = AuditPeriod.objects.get(slug=audit_period_slug)
+    audit_period.is_open = True
+    audit_period.save()
+
+    date_of_birth = audit_period.start_date - relativedelta(years=14)
+
+    patient = PatientFactory(
+        nhs_number="4444444444",
+        diabetes_type=DIABETES_TYPES[0][0],  # T1DM
+        date_of_birth=date_of_birth,
+        diagnosis_date=audit_period.start_date
+        - relativedelta(days=91),  # diagnosed more than 90 days before audit date
+    )
+
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        carbohydrate_counting_level_three_education_date=visit_date,
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=user.organisation_employers.first(),
+        audit_year=audit_period.start_date.year,
+        audit_period=audit_period,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(patient)
+
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": audit_period.slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
+
+    response = client.get(
+        url + f"?category={TableCategories.CARE_AT_DIAGNOSIS.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+
+    assert len(response.context["patients"]) == 0
+
+
 # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1301
 @pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
 @pytest.mark.django_db

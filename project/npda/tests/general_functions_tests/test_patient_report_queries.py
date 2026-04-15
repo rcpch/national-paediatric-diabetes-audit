@@ -294,7 +294,7 @@ class TestPatientReportHealthCheckQueries:
 
         assert row["passed_retinal_screening"] == ""
 
-    def test_retinal_screening_not_required_within_first_year_of_diagnosis(
+    def test_retinal_screening_required_within_first_year_of_diagnosis(
         self, seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
     ):
         user, pdu = self._get_user_and_pdu()
@@ -321,7 +321,38 @@ class TestPatientReportHealthCheckQueries:
         row = rows[patient.pk]
 
         assert row["is_gte_12yo"] is True
-        assert row["passed_retinal_screening"] == "not_required"
+        assert row["passed_retinal_screening"] == ""
+
+    def test_retinal_screening_required_after_first_year_of_diagnosis(
+        self, seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
+    ):
+        user, pdu = self._get_user_and_pdu()
+        audit_period = AuditPeriod.objects.get_default_audit_period()
+
+        patient = PatientFactory(
+            nhs_number="1212121212",
+            diabetes_type=DIABETES_TYPES[0][0],
+            date_of_birth=audit_period.start_date - relativedelta(years=14),
+            diagnosis_date=audit_period.start_date - relativedelta(days=30),
+        )
+
+        VisitFactory(
+            patient=patient,
+            visit_date=audit_period.start_date + relativedelta(days=10),
+            hba1c=55,
+            hba1c_format=HBA1C_FORMATS[0][0],
+            hba1c_date=audit_period.start_date + relativedelta(days=10),
+        )
+
+        self._create_submission(pdu, audit_period, user, [patient])
+
+        rows = self._get_health_check_rows(pdu, audit_period)
+        row = rows[patient.pk]
+
+        assert row["is_gte_12yo"] is True
+        assert (
+            row["passed_retinal_screening"] == ""
+        )  # we don't fail, just blank (see #1272)
 
     def test_retinal_screening_with_date_but_no_result_is_blank(
         self, seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture

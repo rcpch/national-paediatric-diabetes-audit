@@ -64,9 +64,6 @@ def build_base_queryset(pdu, audit_period, *, type1_only=True):
             is_gte_12yo=Q(
                 date_of_birth__lte=audit_period.start_date - relativedelta(years=12)
             ),
-            dx_over_1y=Q(
-                diagnosis_date__lte=audit_period.start_date - relativedelta(years=1)
-            ),
             is_incomplete_year_of_care=Case(
                 # Diagnosed within the audit year
                 When(
@@ -196,12 +193,10 @@ def annotate_health_checks(qs, audit_period):
         ),
         passed_retinal_screening=Case(
             When(
-                Q(is_gte_12yo=True) & Q(dx_over_1y=True) & retinal_exists,
+                Q(is_gte_12yo=True) & retinal_exists,
                 then=Value("complete"),
             ),
-            When(
-                Q(is_gte_12yo=False) | Q(dx_over_1y=False), then=Value("not_required")
-            ),
+            When(Q(is_gte_12yo=False), then=Value("not_required")),
             default=Value(""),
             output_field=CharField(),
         ),
@@ -497,35 +492,32 @@ def annotate_care_at_diagnosis(qs, audit_period):
             output_field=DateField(),
         ),
         carbohydrate_counting_education=Case(
-            When(Q(dx_over_1y=False) & carb_on_time, then=True),
-            When(Q(dx_over_1y=True), then=None),
+            When(carb_on_time, then=True),
             default=False,
             output_field=BooleanField(),
         ),
         carbohydrate_counting_missed=Case(
-            When(Q(dx_over_1y=False) & carb_missed, then=True),
+            When(carb_missed, then=True),
             default=False,
             output_field=BooleanField(),
         ),
         coeliac_disease_screening=Case(
-            When(Q(dx_over_1y=False) & coeliac_on_time, then=True),
-            When(Q(dx_over_1y=True), then=None),
+            When(coeliac_on_time, then=True),
             default=False,
             output_field=BooleanField(),
         ),
         coeliac_screen_missed=Case(
-            When(Q(dx_over_1y=False) & coeliac_missed, then=True),
+            When(coeliac_missed, then=True),
             default=False,
             output_field=BooleanField(),
         ),
         thyroid_disease_screening=Case(
-            When(Q(dx_over_1y=False) & thyroid_on_time, then=True),
-            When(Q(dx_over_1y=True), then=None),
+            When(thyroid_on_time, then=True),
             default=False,
             output_field=BooleanField(),
         ),
         thyroid_screen_missed=Case(
-            When(Q(dx_over_1y=False) & thyroid_missed, then=True),
+            When(thyroid_missed, then=True),
             default=False,
             output_field=BooleanField(),
         ),
