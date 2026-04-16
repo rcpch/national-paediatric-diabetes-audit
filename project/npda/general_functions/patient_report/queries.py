@@ -647,11 +647,13 @@ def annotate_treatment(qs, audit_period):
             .values("glucose_monitoring")[:1]
         )
 
+        # Anchored to the same visit as the latest treatment so that closed_loop_system
+        # reflects the patient's current regimen, not a historical visit.
         latest_closed_loop = Subquery(
             Visit.objects.filter(
                 patient=OuterRef("pk"),
                 visit_date__range=audit_range,
-                closed_loop_system__isnull=False,
+                treatment__isnull=False,
             )
             .order_by("-visit_date")
             .values("closed_loop_system")[:1]
@@ -675,8 +677,12 @@ def annotate_treatment(qs, audit_period):
             output_field=CharField(),
         )
 
+        # HCL requires both a pump treatment AND a closed loop system on that same visit.
         hcl_case = Case(
-            When(latest_closed_loop__in=[2, 3, 4], then=Value("Yes")),
+            When(
+                Q(latest_treatment__in=[3, 6]) & Q(latest_closed_loop__in=[2, 3, 4]),
+                then=Value("Yes"),
+            ),
             default=Value("No"),
             output_field=CharField(),
         )
