@@ -1,7 +1,9 @@
+import pathlib
+
 import pytest
 from django.urls import reverse
 
-from project.npda.models import AuditPeriod, NPDAUser, Submission
+from project.npda.models import AuditPeriod, NPDAUser
 from project.npda.tests.model_tests.test_submissions import (
     ALDER_HEY_PZ_CODE,
     GOSH_PZ_CODE,
@@ -14,35 +16,9 @@ from project.npda.tests.UserDataClasses import (
 )
 from project.npda.tests.utils import create_submission, login_and_verify_user
 
-
-@pytest.mark.django_db
-@pytest.fixture(scope="module", autouse=True)
-def setup(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    django_db_setup,
-    django_db_blocker,
-    request,
-):
-    file = (
-        request.config.rootdir
-        / "project"
-        / "npda"
-        / "dummy_sheets"
-        / "dummy_sheet_test.csv"
-    )
-    with open(file) as f:
-        csv_file_data = f.read()
-
-    with django_db_blocker.unblock():
-        for pz_code in [ALDER_HEY_PZ_CODE, GOSH_PZ_CODE]:
-            create_submission(
-                AuditPeriod.objects.get_default_audit_period(),
-                pz_code=pz_code,
-                csv_file_name="test_download.csv",
-                csv_file=csv_file_data.encode("utf-8"),
-            )
+_SHEETS_DIR = pathlib.Path(__file__).resolve().parents[2] / "dummy_sheets"
+_CSV_2021 = (_SHEETS_DIR / "dummy_sheet_test.csv").read_bytes()
+_CSV_2026 = (_SHEETS_DIR / "dummy_sheet_2026_test.csv").read_bytes()
 
 
 @pytest.mark.parametrize(
@@ -55,18 +31,28 @@ def setup(
     ],
 )
 @pytest.mark.django_db
-def test_uploaders_can_download_data_for_their_pdu(client, setup, role, action):
+def test_uploaders_can_download_data_for_their_pdu(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    role,
+    action,
+):
+    audit_period = AuditPeriod.objects.get(slug="2025-2026")
+    sub = create_submission(
+        audit_period,
+        pz_code=ALDER_HEY_PZ_CODE,
+        csv_file_name="test_download.csv",
+        csv_file=_CSV_2021,
+    )
+
     coordinator_user = NPDAUser.objects.filter(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
         role=role,
     ).first()
 
     client = login_and_verify_user(client, coordinator_user)
-
-    sub = Submission.objects.filter(
-        csv_file_name="test_download.csv",
-        paediatric_diabetes_unit__pz_code=ALDER_HEY_PZ_CODE,
-    ).first()
 
     download_url = reverse(
         "pdu-submissions",
@@ -116,24 +102,24 @@ def test_uploaders_can_download_data_for_their_pdu(client, setup, role, action):
 )
 @pytest.mark.django_db
 def test_uploaders_cannot_download_data_for_other_pdu(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
-    setup,
     role,
     action,
 ):
-    ah_coordinator_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
-        role=role,
-    ).first()
+    audit_period = AuditPeriod.objects.get(slug="2025-2026")
+    sub = create_submission(
+        audit_period,
+        pz_code=ALDER_HEY_PZ_CODE,
+        csv_file_name="test_download.csv",
+        csv_file=_CSV_2021,
+    )
 
     gosh_coordinator_user = NPDAUser.objects.filter(
         organisation_employers__pz_code=GOSH_PZ_CODE,
         role=role,
-    ).first()
-
-    sub = Submission.objects.filter(
-        csv_file_name="test_download.csv",
-        paediatric_diabetes_unit__pz_code=ALDER_HEY_PZ_CODE,
     ).first()
 
     download_url = reverse(
@@ -174,30 +160,30 @@ def test_uploaders_cannot_download_data_for_other_pdu(
 )
 @pytest.mark.django_db
 def test_readers_cannot_download_data_for_any_pdu(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
     client,
-    setup,
     action,
     home_pdu,
     requested_pdu,
 ):
+    audit_period = AuditPeriod.objects.get(slug="2025-2026")
+    sub = create_submission(
+        audit_period,
+        pz_code=requested_pdu,
+        csv_file_name="test_download.csv",
+        csv_file=_CSV_2021,
+    )
+
     home_pdu_user = NPDAUser.objects.filter(
         organisation_employers__pz_code=home_pdu,
         role=AUDIT_CENTRE_READER,
     ).first()
 
-    requested_pdu_editor = NPDAUser.objects.filter(
-        organisation_employers__pz_code=requested_pdu,
-        role=AUDIT_CENTRE_EDITOR,
-    ).first()
-
     requested_pdu_user = NPDAUser.objects.filter(
         organisation_employers__pz_code=requested_pdu,
         role=AUDIT_CENTRE_READER,
-    ).first()
-
-    sub = Submission.objects.filter(
-        csv_file_name="test_download.csv",
-        paediatric_diabetes_unit__pz_code=requested_pdu,
     ).first()
 
     download_url = reverse(
@@ -245,18 +231,28 @@ def test_readers_cannot_download_data_for_any_pdu(
     ],
 )
 @pytest.mark.django_db
-def test_rcpch_audit_team_can_download_data_for_any_pdu(client, setup, action, pz_code):
+def test_rcpch_audit_team_can_download_data_for_any_pdu(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    action,
+    pz_code,
+):
+    audit_period = AuditPeriod.objects.get(slug="2025-2026")
+    sub = create_submission(
+        audit_period,
+        pz_code=pz_code,
+        csv_file_name="test_download.csv",
+        csv_file=_CSV_2021,
+    )
+
     rcpch_user = NPDAUser.objects.filter(
         organisation_employers__pz_code=pz_code,
         role=RCPCH_AUDIT_TEAM,
     ).first()
 
     client = login_and_verify_user(client, rcpch_user)
-
-    sub = Submission.objects.filter(
-        csv_file_name="test_download.csv",
-        paediatric_diabetes_unit__pz_code=pz_code,
-    ).first()
 
     download_url = reverse(
         "pdu-submissions",
@@ -293,3 +289,49 @@ def test_rcpch_audit_team_can_download_data_for_any_pdu(client, setup, action, p
                 response["Content-Disposition"]
                 == 'attachment; filename="test_download.csv"'
             )
+
+
+@pytest.mark.django_db
+def test_can_download_report_for_2026_audit_period(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    audit_period = AuditPeriod.objects.get(slug="2026-2027")
+    sub = create_submission(
+        audit_period,
+        pz_code=ALDER_HEY_PZ_CODE,
+        csv_file_name="test_download_2026.csv",
+        csv_file=_CSV_2026,
+    )
+
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=AUDIT_CENTRE_EDITOR,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    download_url = reverse(
+        "pdu-submissions",
+        kwargs={
+            "pz_code": ALDER_HEY_PZ_CODE,
+            "audit_period": sub.audit_period.slug,
+        },
+    )
+
+    response = client.post(
+        download_url,
+        {
+            "submit-data": "download-report",
+            "audit_id": sub.id,
+        },
+    )
+
+    assert response.status_code == 200
+    assert (
+        response["Content-Type"]
+        == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    assert (
+        response["Content-Disposition"]
+        == 'attachment; filename="test_download_2026_data_quality_report.xlsx"'
+    )

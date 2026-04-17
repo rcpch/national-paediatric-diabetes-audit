@@ -18,7 +18,9 @@ from ...constants.csv_headings import csv_definition_for
 
 
 def write_errors_to_xlsx(
-    errors: dict[str, dict[str, list[str]]], original_csv_file_bytes: bytes
+    errors: dict[str, dict[str, list[str]]],
+    original_csv_file_bytes: bytes,
+    dataset_year: int = 2021,
 ) -> bytes:
     """
     Write errors to an Excel file. Highlight invalid cells in the source CSV.
@@ -31,7 +33,9 @@ def write_errors_to_xlsx(
     xlsx_file = io.BytesIO()
 
     # Get original data
-    parsed_csv = csv_parse(io.BytesIO(initial_bytes=original_csv_file_bytes))
+    parsed_csv = csv_parse(
+        io.BytesIO(initial_bytes=original_csv_file_bytes), dataset_year=dataset_year
+    )
 
     df = parsed_csv.df
 

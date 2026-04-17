@@ -42,7 +42,10 @@ def download_xlsx(request, submission_id):
     if submission.errors:
         errors = json.loads(submission.errors)
 
-    xlsx_file = write_errors_to_xlsx(errors or {}, submission.csv_file)
+    dataset_year = (
+        submission.audit_period.get_dataset_year() if submission.audit_period else 2021
+    )
+    xlsx_file = write_errors_to_xlsx(errors or {}, submission.csv_file, dataset_year)
 
     response = HttpResponse(
         xlsx_file,
