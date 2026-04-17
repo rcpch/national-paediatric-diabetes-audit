@@ -32,7 +32,12 @@ _CSV_2026 = (_SHEETS_DIR / "dummy_sheet_2026_test.csv").read_bytes()
 )
 @pytest.mark.django_db
 def test_uploaders_can_download_data_for_their_pdu(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, role, action
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    role,
+    action,
 ):
     audit_period = AuditPeriod.objects.get(slug="2025-2026")
     sub = create_submission(
@@ -97,7 +102,12 @@ def test_uploaders_can_download_data_for_their_pdu(
 )
 @pytest.mark.django_db
 def test_uploaders_cannot_download_data_for_other_pdu(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, role, action
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    role,
+    action,
 ):
     audit_period = AuditPeriod.objects.get(slug="2025-2026")
     sub = create_submission(
@@ -222,7 +232,12 @@ def test_readers_cannot_download_data_for_any_pdu(
 )
 @pytest.mark.django_db
 def test_rcpch_audit_team_can_download_data_for_any_pdu(
-    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client, action, pz_code
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    action,
+    pz_code,
 ):
     audit_period = AuditPeriod.objects.get(slug="2025-2026")
     sub = create_submission(
