@@ -86,8 +86,11 @@ class PatientVisitsListView(
             .order_by("is_valid", "id")
         )
         calculated_visits = []
+        dataset_year = self.audit_period.get_dataset_year()
         for visit in visits:
-            visit_categories = get_categories(instance=visit, form=None)
+            visit_categories = get_categories(
+                instance=visit, form=None, dataset_year=dataset_year
+            )
             calculated_visits.append({"visit": visit, "categories": visit_categories})
         context["visits"] = calculated_visits
         context["patient"] = patient
@@ -132,7 +135,9 @@ class VisitCreateView(
         context["title"] = "Add New Visit"
         context["form_method"] = "create"
         context["button_title"] = "Create New Visit"
-        context["visit_tabs"] = get_tabs(form=None)
+        context["visit_tabs"] = get_tabs(
+            form=None, dataset_year=self.audit_period.get_dataset_year()
+        )
         context["override_height_weight"] = False
         context["audit_period"] = self.audit_period
         context["pdu"] = self.pdu
@@ -244,7 +249,9 @@ class VisitUpdateView(
         context["title"] = "Edit/Update Visit Details"
         context["button_title"] = "Save Changes"
         context["form_method"] = "update"
-        context["visit_tabs"] = get_tabs(form=context["form"])
+        context["visit_tabs"] = get_tabs(
+            form=context["form"], dataset_year=self.audit_period.get_dataset_year()
+        )
         visit = Visit.objects.get(pk=self.kwargs["pk"])
         context["audit_period"] = self.audit_period
         patient = visit.patient

@@ -3,15 +3,20 @@ import urllib.parse
 from ...constants.visit_categories import VISIT_CATEGORIES_BY_TAB
 
 
-def get_categories(instance, form):
+def get_categories(instance, form, dataset_year):
     """
-    Returns visit categories present in this visit instance, and tags them as to whether they contain errors
+    Returns visit categories present in this visit instance, and tags them as to whether they contain errors.
+    Only fields matching dataset_year are included.
     """
     categories = []
 
     for _, tab in VISIT_CATEGORIES_BY_TAB.items():
         for category_name, category in tab.items():
-            fields = category["fields"]
+            fields = [
+                entry["field"]
+                for entry in category["fields"]
+                if dataset_year in entry["dataset_years"]
+            ]
 
             present = False
             errors = {}
@@ -38,9 +43,6 @@ def get_categories(instance, form):
                             errors[field] = [
                                 error["message"] for error in instance.errors[field]
                             ]
-                            errors[field] = [
-                                error["message"] for error in instance.errors[field]
-                            ]
 
             categories.append(
                 {
@@ -55,11 +57,11 @@ def get_categories(instance, form):
     return categories
 
 
-def get_tabs(form):
+def get_tabs(form, dataset_year):
     tabs = []
     instance = form.instance if form else None
 
-    all_categories = get_categories(instance, form)
+    all_categories = get_categories(instance, form, dataset_year)
     assigned_active_tab = False
 
     for tab_name, categories in VISIT_CATEGORIES_BY_TAB.items():
