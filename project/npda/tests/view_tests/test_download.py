@@ -35,14 +35,32 @@ def setup(
     with open(file) as f:
         csv_file_data = f.read()
 
+    file_2026 = (
+        request.config.rootdir
+        / "project"
+        / "npda"
+        / "dummy_sheets"
+        / "dummy_sheet_2026_test.csv"
+    )
+    with open(file_2026) as f:
+        csv_file_data_2026 = f.read()
+
     with django_db_blocker.unblock():
+        audit_period_2026 = AuditPeriod.objects.get(slug="2026-2027")
         for pz_code in [ALDER_HEY_PZ_CODE, GOSH_PZ_CODE]:
             create_submission(
-                AuditPeriod.objects.get_default_audit_period(),
+                audit_period_2026,
                 pz_code=pz_code,
                 csv_file_name="test_download.csv",
                 csv_file=csv_file_data.encode("utf-8"),
             )
+
+        create_submission(
+            audit_period_2026,
+            pz_code=ALDER_HEY_PZ_CODE,
+            csv_file_name="test_download_2026.csv",
+            csv_file=csv_file_data_2026.encode("utf-8"),
+        )
 
 
 @pytest.mark.parametrize(
@@ -293,3 +311,46 @@ def test_rcpch_audit_team_can_download_data_for_any_pdu(client, setup, action, p
                 response["Content-Disposition"]
                 == 'attachment; filename="test_download.csv"'
             )
+
+
+@pytest.mark.django_db
+def test_can_download_report_for_2026_audit_period(client, setup):
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=AUDIT_CENTRE_EDITOR,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    # Use order_by('-pk') to get the submission created by this fixture run, not one
+    # from a prior run that was kept by --reuse-db.
+    sub = Submission.objects.filter(
+        csv_file_name="test_download_2026.csv",
+        paediatric_diabetes_unit__pz_code=ALDER_HEY_PZ_CODE,
+    ).order_by("-pk").first()
+
+    download_url = reverse(
+        "pdu-submissions",
+        kwargs={
+            "pz_code": ALDER_HEY_PZ_CODE,
+            "audit_period": sub.audit_period.slug,
+        },
+    )
+
+    response = client.post(
+        download_url,
+        {
+            "submit-data": "download-report",
+            "audit_id": sub.id,
+        },
+    )
+
+    assert response.status_code == 200
+    assert (
+        response["Content-Type"]
+        == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    assert (
+        response["Content-Disposition"]
+        == 'attachment; filename="test_download_2026_data_quality_report.xlsx"'
+    )
