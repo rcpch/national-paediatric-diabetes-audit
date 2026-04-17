@@ -17,7 +17,7 @@ def all_fields_for_year(dataset_year):
     """Return a flat set of all field names visible for the given dataset year."""
     categories = get_categories(instance=None, form=None, dataset_year=dataset_year)
     fields = set()
-    for category in categories:
+    for _category in categories:
         # Categories don't expose their filtered field list directly, so we
         # re-derive it from VISIT_CATEGORIES_BY_TAB via a second import.
         pass
