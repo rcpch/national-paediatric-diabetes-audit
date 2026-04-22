@@ -1,32 +1,3 @@
-{% load static %}
-{% comment %} {% if error %}
-  <div class="alert alert-danger">
-    <i class="fa-solid fa-person-circle-exclamation"></i> {{ error }}
-  </div>
-{% elif info %}
-  <div class="alert alert-info">
-    <i class="fa-solid fa-person-circle-exclamation"></i> {{ info }}
-  </div>
-{% elif chart_html %}
-  <div id='chart_html'>{{ chart_html|safe }}</div>
-  {% if aggregated_distances.max_distance_travelled_km %}
-    <div class="badge bg-rcpch_pink text-white badge-lg">
-      Distances travelled to clinic:
-    </div>
-    <div class="badge bg-rcpch_light_blue text-white badge-lg">
-      Maximum: {{ aggregated_distances.max_distance_travelled_km }} km ({{ aggregated_distances.max_distance_travelled_mi }} miles)
-    </div>
-    <div class="badge bg-rcpch_light_blue text-white badge-lg">
-      Mean: {{ aggregated_distances.mean_distance_travelled_km }} km ({{ aggregated_distances.mean_distance_travelled_mi }} miles)
-    </div>
-    <div class="badge bg-rcpch_light_blue text-white badge-lg">
-      Median: {{ aggregated_distances.median_distance_travelled_km }} km ({{ aggregated_distances.median_distance_travelled_mi }} miles)
-    </div>
-    <div class="badge bg-rcpch_light_blue text-white badge-lg">
-      Standard Deviation: {{ aggregated_distances.std_distance_travelled_km }} km ({{ aggregated_distances.std_distance_travelled_mi }} miles)
-    </div>
-  {% endif %}
-{% endif %} {% endcomment %}
 {% if error %}
   <div class="alert alert-danger">{{ error }}</div>
 {% elif info %}
@@ -101,7 +72,7 @@
           tooltip: {
             areaLabel: 'Local area',
             patientLabel: 'Child',
-            patientTooltipText: token.patientLabel + ': ' + token.id + ' (' + (token.nhsNumber !='N/A' ? 'NHS: ' + token.nhsNumber + ')' : 'Unique Reference: ' + token.uniqueReferenceNumber + ')'),
+            patientTooltipText: token.patientLabel + ': ' + token.id + ' - ' + (token.nhsNumber !='N/A' ? 'NHS: ' + token.nhsNumber : 'Unique Reference: ' + token.uniqueReferenceNumber ),
             leadCentreTooltipText: token.leadCentreLabel + ': ' + token.label,
             backgroundColor: '#0d0d58',
             textColor: '#ffffff',
