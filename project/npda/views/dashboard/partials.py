@@ -31,6 +31,7 @@ from project.npda.general_functions.rcpch_nhs_organisations import (
 )
 from project.npda.models.submission import Submission
 from project.npda.views.decorators import check_data_permissions, login_and_otp_required
+from project.settings import RCPCH_DEPRIVATION_TILES_URL
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +88,7 @@ def get_map_chart_partial(request, audit_period, pdu):
             request,
             template_name="dashboard/map_chart_partial.html",
             context={
+                "RCPCH_DEPRIVATION_TILES_URL": RCPCH_DEPRIVATION_TILES_URL,
                 "chart_html": pio.to_html(
                     scatterplot_of_cases_for_selected_organisation_fig,
                     full_html=False,
@@ -94,6 +96,29 @@ def get_map_chart_partial(request, audit_period, pdu):
                     config={"displayModeBar": True},
                 ),
                 "aggregated_distances": aggregated_distances,
+                "map_payload": {
+                    "patients": [
+                        {
+                            "id": patient["pk"],
+                            "nhs_number": patient["nhs_number"]
+                            if patient["nhs_number"]
+                            else "N/A",
+                            "unique_reference_number": patient[
+                                "unique_reference_number"
+                            ]
+                            if patient["unique_reference_number"]
+                            else "N/A",
+                            "lat": patient["location_wgs84"].y,
+                            "lon": patient["location_wgs84"].x,
+                        }
+                        for patient in patients_to_plot
+                    ],
+                    "leadCentre": {
+                        "label": pdu.lead_organisation_name,
+                        "lat": pdu.lead_organisation_geocoordinates.y,
+                        "lon": pdu.lead_organisation_geocoordinates.x,
+                    },
+                },
             },
         )
 
