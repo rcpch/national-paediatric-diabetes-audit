@@ -54,6 +54,7 @@ def get_children_by_pdu_audit_year(
             "pk",
             "nhs_number",
             "unique_reference_number",
+            "index_of_multiple_deprivation_quintile",
             "location_bng",
             "location_wgs84",
             "distance_from_lead_organisation",

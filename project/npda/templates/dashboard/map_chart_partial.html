@@ -68,6 +68,7 @@
       uniqueReferenceNumber: '{% templatetag openvariable %}unique_reference_number{% templatetag closevariable %}',
       distanceKm: '{% templatetag openvariable %}distance_km{% templatetag closevariable %}',
       distanceMi: '{% templatetag openvariable %}distance_mi{% templatetag closevariable %}',
+      imdQuintile: '{% templatetag openvariable %}imd_quintile{% templatetag closevariable %}',
       leadCentreLabel: '{% templatetag openvariable %}leadCentreLabel{% templatetag closevariable %}',
       label: '{% templatetag openvariable %}label{% templatetag closevariable %}'
     };
@@ -92,7 +93,7 @@
           tooltip: {
             areaLabel: 'Local area',
             patientLabel: 'Child',
-            patientTooltipText: token.patientLabel + ': ' + token.id + ' - ' + (token.nhsNumber !='N/A' ? 'NHS: ' + token.nhsNumber : 'Unique Reference: ' + token.uniqueReferenceNumber ) + ' | Distance to Lead Centre: ' + token.distanceMi + ' mi (' + token.distanceKm + ' km)',
+            patientTooltipText: token.patientLabel + ': ' + token.id + ' - ' + (token.nhsNumber !='N/A' ? 'NHS: ' + token.nhsNumber : 'Unique Reference: ' + token.uniqueReferenceNumber ) + ' | Distance to Lead Centre: ' + token.distanceMi + ' mi (' + token.distanceKm + ' km)' + (token.imdQuintile && token.imdQuintile !== 'None' && token.imdQuintile !== 'null' ? ' | IMD Quintile: ' + token.imdQuintile : ''),
             leadCentreTooltipText: token.leadCentreLabel + ': ' + token.label,
             backgroundColor: '#0d0d58',
             textColor: '#ffffff',

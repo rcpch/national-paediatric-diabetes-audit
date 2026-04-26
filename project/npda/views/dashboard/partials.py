@@ -125,6 +125,7 @@ def get_map_chart_partial(request, audit_period, pdu):
                         "lon": patient["longitude"],
                         "distance_km": f"{patient['distance_km']:.2f}",
                         "distance_mi": f"{patient['distance_mi']:.2f}",
+                        "imd_quintile": patient["index_of_multiple_deprivation_quintile"],
                     }
                 )
 
