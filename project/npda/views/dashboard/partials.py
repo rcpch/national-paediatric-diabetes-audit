@@ -1,9 +1,6 @@
 import json
 import logging
 
-import plotly.graph_objects as go
-import plotly.io as pio
-
 # Django imports
 from django.http import HttpResponseBadRequest
 
@@ -14,7 +11,6 @@ import project.constants.colors as colors
 from project.constants.leave_pdu_reasons import LEAVE_PDU_REASONS
 from project.npda.general_functions.map import (
     generate_dataframe_and_aggregated_distance_data_from_cases,
-    generate_distance_from_organisation_scatterplot_figure,
     get_children_by_pdu_audit_year,
 )
 from project.npda.general_functions.patient_report.queries import (
@@ -113,48 +109,37 @@ def get_map_chart_partial(request, audit_period, pdu):
             )
         )
 
-        # generate scatterplot of patients by distance from the selected organisation
-        scatterplot_of_cases_for_selected_organisation_fig = (
-            generate_distance_from_organisation_scatterplot_figure(
-                geo_df=patient_distances_dataframe,
-                pdu_lead_organisation=pdu_lead_organisation,
-                paediatric_diabetes_unit=submission.paediatric_diabetes_unit,
-            )
-        )
+        map_patients = []
+        if not patient_distances_dataframe.empty:
+            for patient in patient_distances_dataframe.to_dict("records"):
+                map_patients.append(
+                    {
+                        "id": patient["pk"],
+                        "nhs_number": patient["nhs_number"]
+                        if patient["nhs_number"]
+                        else "N/A",
+                        "unique_reference_number": patient["unique_reference_number"]
+                        if patient["unique_reference_number"]
+                        else "N/A",
+                        "lat": patient["latitude"],
+                        "lon": patient["longitude"],
+                        "distance_km": f"{patient['distance_km']:.2f}",
+                        "distance_mi": f"{patient['distance_mi']:.2f}",
+                    }
+                )
 
         return render(
             request,
             template_name="dashboard/map_chart_partial.html",
             context={
                 "RCPCH_DEPRIVATION_TILES_URL": RCPCH_DEPRIVATION_TILES_URL,
-                "chart_html": pio.to_html(
-                    scatterplot_of_cases_for_selected_organisation_fig,
-                    full_html=False,
-                    include_plotlyjs=False,
-                    config={"displayModeBar": True},
-                ),
                 "aggregated_distances": aggregated_distances,
                 "map_payload": {
                     "initialEra": _map_initial_era_for_audit_period(audit_period),
                     "initialNation": _map_initial_nation_for_organisation(
                         pdu_lead_organisation
                     ),
-                    "patients": [
-                        {
-                            "id": patient["pk"],
-                            "nhs_number": patient["nhs_number"]
-                            if patient["nhs_number"]
-                            else "N/A",
-                            "unique_reference_number": patient[
-                                "unique_reference_number"
-                            ]
-                            if patient["unique_reference_number"]
-                            else "N/A",
-                            "lat": patient["location_wgs84"].y,
-                            "lon": patient["location_wgs84"].x,
-                        }
-                        for patient in patients_to_plot
-                    ],
+                    "patients": map_patients,
                     "leadCentre": {
                         "label": pdu.lead_organisation_name,
                         "lat": pdu.lead_organisation_geocoordinates.y,
