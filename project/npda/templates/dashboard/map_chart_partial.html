@@ -12,8 +12,7 @@
 
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-{% comment %} <script src="{% static 'js/vendor/rcpch-imd-map.min.js' %}"></script> {% endcomment %}
-<script src="https://cdn.jsdelivr.net/npm/@rcpch/imd-map@0.1.0/dist/umd/rcpch-imd-map.min.js" integrity="sha512-HxvDiTxqY6tdsC/YuL6B7y9f5gOq2/s+WcJn+TyN19kD/ftFC4AqYIG287jSIJK70ijmJbNavuLWj13ukb6vNg==" crossorigin="anonymous"> </script>
+<script src="https://cdn.jsdelivr.net/npm/@rcpch/imd-map@0.2.1/dist/umd/rcpch-imd-map.min.js" integrity="sha512-TKqNMyuHiEPc2WKKI3eNh6Vv98bu23MYDKXNVhvzIMgBG//ckkcYDTTq7BBH+LZvkHBnSGh6fH+PVEI8Sb4VSA==" crossorigin="anonymous"> </script>
 {% if RCPCH_DEPRIVATION_TILES_URL %}
 <script>
     // Map your setting name to the library's expected variable name
@@ -45,6 +44,11 @@
     const payload = JSON.parse(
       document.getElementById('organisation-cases-map-payload').textContent
     );
+    var hasLeadCentre =
+      payload &&
+      payload.leadCentre &&
+      typeof payload.leadCentre.lon === 'number' &&
+      typeof payload.leadCentre.lat === 'number';
 
     var token = {
       patientLabel: '{% templatetag openvariable %}patientLabel{% templatetag closevariable %}',
@@ -60,6 +64,8 @@
         container: container,
         tilesBaseUrl: tilesBaseUrl,
         initialNation: 'all',
+        center: hasLeadCentre ? [payload.leadCentre.lon, payload.leadCentre.lat] : undefined,
+        zoom: hasLeadCentre ? 11 : 5,
         style: {
           choropleth: {
             baseColorByNation: {
@@ -83,7 +89,6 @@
 
       window.__npdaMap.setPatients(payload.patients);
       window.__npdaMap.setLeadCentre(payload.leadCentre);
-      window.__npdaMap.fitToData({ zoom: 9 });
     } catch (error) {
       console.error('Error initializing map:', error);
     }
