@@ -1,3 +1,4 @@
+{% load npda_tags %}
 {% if error %}
   <div class="alert alert-danger">{{ error }}</div>
 {% elif info %}
@@ -8,14 +9,20 @@
   <div id="organisation-cases-map"
         style="width:100%;height:32rem;border-radius:4px;"></div>
   {{ map_payload|json_script:"organisation-cases-map-payload" }}
-  <div class="mt-2 text-xs text-gray-600">
-    {% if aggregated_distances and aggregated_distances.mean_distance_travelled_km != "~" %}
-      Mean: {{ aggregated_distances.mean_distance_travelled_km }} km ({{ aggregated_distances.mean_distance_travelled_mi }} mi)
-      | Min: {{ aggregated_distances.min_distance_travelled_km }} km ({{ aggregated_distances.min_distance_travelled_mi }} mi)
-      | Max: {{ aggregated_distances.max_distance_travelled_km }} km ({{ aggregated_distances.max_distance_travelled_mi }} mi)
-    {% else %}
-      Travel distance summary unavailable.
-    {% endif %}
+  <div class="mt-2 flex items-center gap-3 text-xs text-gray-600">
+    <span>
+      {% if aggregated_distances and aggregated_distances.mean_distance_travelled_km != "~" %}
+        Mean: {{ aggregated_distances.mean_distance_travelled_km }} km ({{ aggregated_distances.mean_distance_travelled_mi }} mi)
+        | Min: {{ aggregated_distances.min_distance_travelled_km }} km ({{ aggregated_distances.min_distance_travelled_mi }} mi)
+        | Max: {{ aggregated_distances.max_distance_travelled_km }} km ({{ aggregated_distances.max_distance_travelled_mi }} mi)
+      {% else %}
+        Travel distance summary unavailable.
+      {% endif %}
+    </span>
+    {% docs_url as docs_base_url %}
+    <div class="tooltip" data-tip="Learn more about Index of Multiple Deprivation">
+      {% include 'common/icon_link_button.html' with link=docs_base_url|add:"user-guide/maps" fa_icon_class="fa-solid fa-circle-question" extra_classes="text-rcpch_pink" %}
+    </div>
   </div>
 {% endif %}
 

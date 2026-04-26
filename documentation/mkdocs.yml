@@ -129,6 +129,7 @@ nav:
     - 'home/citation.md'
   - User Guide:
     - 'user-guide/user-guide.md'
+    - 'user-guide/maps.md'
   - Admin Guide:
     - 'admin-guide/admin-guide.md'
   - Contact:
