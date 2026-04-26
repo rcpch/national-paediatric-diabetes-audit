@@ -9,6 +9,7 @@ from httpx import AsyncClient, HTTPError
 from ...constants.postcodes import is_jersey_postcode, skip_api_validation_for_postcode
 from ..general_functions import (
     ValidatedPostcode,
+    country_from_validated_postcode,
     gp_details_for_ods_code,
     gp_ods_code_for_postcode,
     imd_for_postcode,
@@ -58,7 +59,10 @@ async def _lookup_postcode(
 
 
 async def _imd_for_postcode(
-    postcode: str | None, async_client: AsyncClient
+    postcode: str | None,
+    async_client: AsyncClient,
+    imd_year: int | None = None,
+    country: str | None = None,
 ) -> str | None:
     if (
         postcode
@@ -66,7 +70,12 @@ async def _imd_for_postcode(
         and not is_jersey_postcode(postcode)
     ):
         try:
-            imd = await imd_for_postcode(postcode, async_client)
+            imd = await imd_for_postcode(
+                postcode,
+                async_client,
+                year=imd_year,
+                country=country,
+            )
 
             return imd
         except HTTPError as err:
@@ -132,6 +141,7 @@ async def validate_patient_async(
     gp_practice_ods_code: str | None,
     gp_practice_postcode: str | None,
     async_client: AsyncClient,
+    england_imd_year: int | None = None,
 ) -> PatientExternalValidationResult:
     ret = PatientExternalValidationResult(None, None, None, None, None, None)
 
@@ -182,8 +192,17 @@ async def validate_patient_async(
         ret.location_bng = validated_postcode.location_bng
         ret.location_wgs84 = validated_postcode.location_wgs84
 
+        postcode_country = country_from_validated_postcode(validated_postcode)
+
+        imd_year = None
+        if england_imd_year is not None and postcode_country == "england":
+            imd_year = england_imd_year
+
         imd_task = _imd_for_postcode(
-            validated_postcode.normalised_postcode, async_client
+            validated_postcode.normalised_postcode,
+            async_client,
+            imd_year=imd_year,
+            country=postcode_country,
         )
 
     index_of_multiple_deprivation_quintile = await imd_task
@@ -216,12 +235,19 @@ async def validate_patient_async(
 
 
 def validate_patient_sync(
-    postcode: str, gp_practice_ods_code: str | None, gp_practice_postcode: str | None
+    postcode: str,
+    gp_practice_ods_code: str | None,
+    gp_practice_postcode: str | None,
+    england_imd_year: int | None = None,
 ) -> PatientExternalValidationResult:
     async def wrapper():
         async with AsyncClient() as client:
             ret = await validate_patient_async(
-                postcode, gp_practice_ods_code, gp_practice_postcode, client
+                postcode,
+                gp_practice_ods_code,
+                gp_practice_postcode,
+                client,
+                england_imd_year=england_imd_year,
             )
             return ret
 

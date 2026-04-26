@@ -130,6 +130,13 @@ class PatientForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self._init_fields_by_dataset_year()
 
+    def _england_imd_year_for_audit_period(self) -> int | None:
+        """Map NPDA dataset year to England IMD publication year for postcode lookup."""
+        if not self.audit_period:
+            return None
+
+        return 2025 if self.audit_period.get_dataset_year() >= 2026 else 2019
+
     def _init_fields_by_dataset_year(self):
         """
         Initialize form fields based on the dataset year.
@@ -499,6 +506,7 @@ class PatientForm(forms.ModelForm):
                 postcode=self.cleaned_data["postcode"],
                 gp_practice_ods_code=self.cleaned_data.get("gp_practice_ods_code"),
                 gp_practice_postcode=self.cleaned_data.get("gp_practice_postcode"),
+                england_imd_year=self._england_imd_year_for_audit_period(),
             )
 
         for key in [

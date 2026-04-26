@@ -16,15 +16,23 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
-async def imd_for_postcode(user_postcode: str, async_client: httpx.AsyncClient) -> int:
+async def imd_for_postcode(
+    user_postcode: str,
+    async_client: httpx.AsyncClient,
+    year: int | None = None,
+    country: str | None = None,
+) -> int:
     """
     Makes an API call to the RCPCH Census Platform with postcode and quantile_type
     Postcode - can have spaces or not - this is processed by the API
     Quantile - this is an integer representing what quantiles are requested (eg quintile, decile etc)
     """
 
+    year_query = f"&year={year}" if year is not None else ""
+    country_query = f"&country={country}" if country else ""
+
     response = await async_client.get(
-        url=f"{settings.RCPCH_CENSUS_PLATFORM_URL}/index_of_multiple_deprivation_quantile?postcode={user_postcode}&quantile=5",
+        url=f"{settings.RCPCH_CENSUS_PLATFORM_URL}/index_of_multiple_deprivation_quantile?postcode={user_postcode}&quantile=5{year_query}{country_query}",
         headers={"Subscription-Key": f"{settings.RCPCH_CENSUS_PLATFORM_TOKEN}"},
         timeout=10,  # times out after 10 seconds
     )

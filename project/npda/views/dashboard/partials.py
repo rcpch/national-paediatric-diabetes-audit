@@ -38,6 +38,44 @@ logger = logging.getLogger(__name__)
 DEFAULT_CHART_HTML_HEIGHT = "18rem"
 
 
+def _english_imd_year_for_audit_period(audit_period) -> int:
+    """Map NPDA dataset year to England IMD publication year."""
+    return 2025 if audit_period.get_dataset_year() >= 2026 else 2019
+
+
+def _map_initial_era_for_audit_period(audit_period) -> str:
+    """
+    Map library era semantics:
+    - 2021 era => England 2025 IMD (2021 boundaries)
+    - 2011 era => England 2019 IMD (2011 boundaries)
+    """
+    return (
+        "2021" if _english_imd_year_for_audit_period(audit_period) == 2025 else "2011"
+    )
+
+
+def _map_initial_nation_for_organisation(organisation: dict) -> str:
+    """Derive map nation from organisation country when available."""
+    country_raw = (
+        organisation.get("country")
+        or organisation.get("nation")
+        or organisation.get("country_name")
+        or ""
+    )
+
+    country = str(country_raw).strip().lower()
+    if country == "england":
+        return "england"
+    if country == "wales":
+        return "wales"
+    if country == "scotland":
+        return "scotland"
+    if country in {"northern ireland", "northern_ireland"}:
+        return "northern_ireland"
+
+    return "all"
+
+
 @login_and_otp_required()
 @check_data_permissions()
 def get_map_chart_partial(request, audit_period, pdu):
@@ -97,6 +135,10 @@ def get_map_chart_partial(request, audit_period, pdu):
                 ),
                 "aggregated_distances": aggregated_distances,
                 "map_payload": {
+                    "initialEra": _map_initial_era_for_audit_period(audit_period),
+                    "initialNation": _map_initial_nation_for_organisation(
+                        pdu_lead_organisation
+                    ),
                     "patients": [
                         {
                             "id": patient["pk"],

@@ -49,6 +49,8 @@
       payload.leadCentre &&
       typeof payload.leadCentre.lon === 'number' &&
       typeof payload.leadCentre.lat === 'number';
+    var initialNation = payload && payload.initialNation ? payload.initialNation : 'all';
+    var initialEra = payload && payload.initialEra ? payload.initialEra : '2021';
 
     var token = {
       patientLabel: '{% templatetag openvariable %}patientLabel{% templatetag closevariable %}',
@@ -63,7 +65,8 @@
       window.__npdaMap = RcpchImdMap.createImdMap({
         container: container,
         tilesBaseUrl: tilesBaseUrl,
-        initialNation: 'all',
+        initialNation: initialNation,
+        initialEra: initialEra,
         center: hasLeadCentre ? [payload.leadCentre.lon, payload.leadCentre.lat] : undefined,
         zoom: hasLeadCentre ? 11 : 5,
         style: {
