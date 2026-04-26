@@ -1,6 +1,8 @@
 import json
 import logging
 
+import plotly.graph_objects as go
+
 # Django imports
 from django.http import HttpResponseBadRequest
 
