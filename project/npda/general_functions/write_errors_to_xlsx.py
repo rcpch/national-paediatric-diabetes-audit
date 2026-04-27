@@ -71,6 +71,8 @@ def write_errors_to_xlsx(
         "Uploaded data (comments)"  # You can set any name for the copied sheet
     )
 
+    column_indices = {}
+
     # Style the openpyxl worksheet to highlight in red erroneous/invalid cells.
     # Also add comments to annotate the actual error.
     for _, patient_errors in df_errors.iterrows():
@@ -79,7 +81,12 @@ def write_errors_to_xlsx(
         field_name = patient_errors["Column"]
         field_errors = patient_errors["Errors"]
 
-        column_index = find_column_index_by_name(field_name, styled_sheet)
+        if field_name not in column_indices:
+            column_indices[field_name] = find_column_index_by_name(
+                field_name, styled_sheet
+            )
+
+        column_index = column_indices.get(field_name)
         if column_index:
             styled_sheet.cell(row=row_index, column=column_index).fill = PatternFill(
                 patternType="solid", fgColor="FFC9C9"
