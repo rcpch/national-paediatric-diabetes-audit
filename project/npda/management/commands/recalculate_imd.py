@@ -47,6 +47,14 @@ class Command(BaseCommand):
             action="store_true",
             help="Calculate but do not persist updates",
         )
+        parser.add_argument(
+            "--recalculate-missing",
+            action="store_true",
+            help=(
+                "Only process patients with missing IMD quintile and a calculable "
+                "non-Jersey postcode"
+            ),
+        )
 
     def _patients_queryset(self, audit_period, pz_code=None):
         queryset = Patient.objects.filter(
@@ -129,6 +137,7 @@ class Command(BaseCommand):
         pz_code = options.get("pz_code")
         limit = options.get("limit")
         dry_run = options.get("dry_run", False)
+        recalculate_missing = options.get("recalculate_missing", False)
 
         if audit_period_slug:
             audit_period = AuditPeriod.objects.filter(slug=audit_period_slug).first()
@@ -152,6 +161,16 @@ class Command(BaseCommand):
             )
         )
 
+        if recalculate_missing:
+            patient_rows = [
+                patient
+                for patient in patient_rows
+                if patient["index_of_multiple_deprivation_quintile"] is None
+                and patient["postcode"]
+                and not skip_api_validation_for_postcode(patient["postcode"])
+                and not is_jersey_postcode(patient["postcode"])
+            ]
+
         total = len(patient_rows)
         self.stdout.write(
             self.style.NOTICE(
@@ -161,6 +180,7 @@ class Command(BaseCommand):
                 f"across {total} patients"
                 + (f" in {pz_code}" if pz_code else "")
                 + (" [dry-run]" if dry_run else "")
+                + (" [missing-only]" if recalculate_missing else "")
             )
         )
 
