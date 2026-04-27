@@ -285,6 +285,7 @@ def test_spaces_removed_from_postcode(mocked_pdu):
             postcode="WC1X8SH",
             gp_practice_ods_code=VALID_FIELDS["gp_practice_ods_code"],
             gp_practice_postcode=None,
+            england_imd_year=None,
         )
 
 
@@ -307,6 +308,7 @@ def test_dashes_removed_from_postcode(mocked_pdu):
             postcode="WC1X8SH",
             gp_practice_ods_code=VALID_FIELDS["gp_practice_ods_code"],
             gp_practice_postcode=None,
+            england_imd_year=None,
         )
 
 
