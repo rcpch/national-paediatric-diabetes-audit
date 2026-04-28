@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from httpx import HTTPError
 
 from project.npda.forms.external_patient_validators import validate_patient_async
+from project.npda.general_functions.validate_postcode import ValidatedPostcode
 from project.npda.tests.factories.patient_factory import (
     GP_POSTCODE_NO_SPACES,
     GP_POSTCODE_WITH_SPACES,
@@ -462,3 +463,70 @@ async def test_terminated_postcode():
 
             assert result.postcode == VALID_PATIENT_POSTCODE.normalised_postcode
             assert mock_lookup_postcode.called
+
+
+def _validated_postcode_with_country(country: str) -> ValidatedPostcode:
+    return ValidatedPostcode(
+        normalised_postcode=PATIENT_POSTCODE_WITH_SPACES,
+        lon=VALID_PATIENT_POSTCODE.lon,
+        lat=VALID_PATIENT_POSTCODE.lat,
+        country=country,
+    )
+
+
+async def test_imd_call_uses_england_country_and_supplied_england_year():
+    with patch(
+        "project.npda.forms.external_patient_validators.lookup_postcode",
+        AsyncMock(return_value=_validated_postcode_with_country("England")),
+    ):
+        with patch(
+            "project.npda.forms.external_patient_validators.imd_for_postcode",
+            AsyncMock(return_value=INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE),
+        ) as mock_imd_for_postcode:
+            result = await validate_patient_async(
+                postcode=PATIENT_POSTCODE_NO_SPACES,
+                gp_practice_ods_code=VALID_FIELDS["gp_practice_ods_code"],
+                gp_practice_postcode=None,
+                async_client=async_client,
+                england_imd_year=2025,
+            )
+
+            assert (
+                result.index_of_multiple_deprivation_quintile
+                == INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE
+            )
+            mock_imd_for_postcode.assert_awaited_once_with(
+                PATIENT_POSTCODE_WITH_SPACES,
+                async_client,
+                year=2025,
+                country="england",
+            )
+
+
+async def test_imd_call_uses_wales_country_and_does_not_pass_england_year():
+    with patch(
+        "project.npda.forms.external_patient_validators.lookup_postcode",
+        AsyncMock(return_value=_validated_postcode_with_country("Wales")),
+    ):
+        with patch(
+            "project.npda.forms.external_patient_validators.imd_for_postcode",
+            AsyncMock(return_value=INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE),
+        ) as mock_imd_for_postcode:
+            result = await validate_patient_async(
+                postcode=PATIENT_POSTCODE_NO_SPACES,
+                gp_practice_ods_code=VALID_FIELDS["gp_practice_ods_code"],
+                gp_practice_postcode=None,
+                async_client=async_client,
+                england_imd_year=2025,
+            )
+
+            assert (
+                result.index_of_multiple_deprivation_quintile
+                == INDEX_OF_MULTIPLE_DEPRIVATION_QUINTILE
+            )
+            mock_imd_for_postcode.assert_awaited_once_with(
+                PATIENT_POSTCODE_WITH_SPACES,
+                async_client,
+                year=None,
+                country="wales",
+            )

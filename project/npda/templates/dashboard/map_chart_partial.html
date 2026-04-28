@@ -1,28 +1,119 @@
+{% load npda_tags %}
 {% if error %}
-  <div class="alert alert-danger">
-    <i class="fa-solid fa-person-circle-exclamation"></i> {{ error }}
-  </div>
+  <div class="alert alert-danger">{{ error }}</div>
 {% elif info %}
-  <div class="alert alert-info">
-    <i class="fa-solid fa-person-circle-exclamation"></i> {{ info }}
+  <div class="alert alert-info">{{ info }}</div>
+{% else %}
+  <link rel="stylesheet"
+        href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+  <div id="organisation-cases-map"
+        style="width:100%;height:32rem;border-radius:4px;"></div>
+  {{ map_payload|json_script:"organisation-cases-map-payload" }}
+  <div class="mt-2 flex items-center gap-3 text-xs text-gray-600">
+    <span>
+      {% if aggregated_distances and aggregated_distances.mean_distance_travelled_km != "~" %}
+        Mean: {{ aggregated_distances.mean_distance_travelled_km }} km ({{ aggregated_distances.mean_distance_travelled_mi }} mi)
+        | Min: {{ aggregated_distances.min_distance_travelled_km }} km ({{ aggregated_distances.min_distance_travelled_mi }} mi)
+        | Max: {{ aggregated_distances.max_distance_travelled_km }} km ({{ aggregated_distances.max_distance_travelled_mi }} mi)
+      {% else %}
+        Travel distance summary unavailable.
+      {% endif %}
+    </span>
+    {% docs_url as docs_base_url %}
+    <div class="tooltip" data-tip="Learn more about Index of Multiple Deprivation">
+      {% include 'common/icon_link_button.html' with link=docs_base_url|add:"user-guide/maps" fa_icon_class="fa-solid fa-circle-question" extra_classes="text-rcpch_pink" %}
+    </div>
   </div>
-{% elif chart_html %}
-  <div id='chart_html'>{{ chart_html|safe }}</div>
-  {% if aggregated_distances.max_distance_travelled_km %}
-    <div class="badge bg-rcpch_pink text-white badge-lg">
-      Distances travelled to clinic:
-    </div>
-    <div class="badge bg-rcpch_light_blue text-white badge-lg">
-      Maximum: {{ aggregated_distances.max_distance_travelled_km }} km ({{ aggregated_distances.max_distance_travelled_mi }} miles)
-    </div>
-    <div class="badge bg-rcpch_light_blue text-white badge-lg">
-      Mean: {{ aggregated_distances.mean_distance_travelled_km }} km ({{ aggregated_distances.mean_distance_travelled_mi }} miles)
-    </div>
-    <div class="badge bg-rcpch_light_blue text-white badge-lg">
-      Median: {{ aggregated_distances.median_distance_travelled_km }} km ({{ aggregated_distances.median_distance_travelled_mi }} miles)
-    </div>
-    <div class="badge bg-rcpch_light_blue text-white badge-lg">
-      Standard Deviation: {{ aggregated_distances.std_distance_travelled_km }} km ({{ aggregated_distances.std_distance_travelled_mi }} miles)
-    </div>
-  {% endif %}
+{% endif %}
+
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@rcpch/imd-map@0.2.1/dist/umd/rcpch-imd-map.min.js" integrity="sha512-TKqNMyuHiEPc2WKKI3eNh6Vv98bu23MYDKXNVhvzIMgBG//ckkcYDTTq7BBH+LZvkHBnSGh6fH+PVEI8Sb4VSA==" crossorigin="anonymous"> </script>
+{% if RCPCH_DEPRIVATION_TILES_URL %}
+<script>
+    // Map your setting name to the library's expected variable name
+    window.RCPCH_DEPRIVATION_TILES_URL = "{{ RCPCH_DEPRIVATION_TILES_URL }}";
+
+
+  (function () {
+    var container = document.getElementById('organisation-cases-map');
+    if (!container) return;
+
+    // Check if RcpchImdMap library is loaded
+    if (typeof RcpchImdMap === 'undefined') {
+      console.error('RcpchImdMap library is not loaded');
+      console.error('Available globals:', Object.keys(window).filter(k => k.includes('Rcpch') || k.includes('map')));
+      return;
+    }
+
+    // Destroy any previous instance to prevent GL context leaks on HTMX swaps.
+    if (window.__npdaMap) {
+      window.__npdaMap.destroy();
+      window.__npdaMap = null;
+    }
+
+    // The tile URL pattern the library constructs is:
+    // {tilesBaseUrl}/public.uk_master_2011_z0_4/{z}/{x}/{y}.pbf
+    // Check the Network tab to confirm tile requests reach the right endpoint.
+    var tilesBaseUrl = window.RCPCH_DEPRIVATION_TILES_URL.replace(/\/$/, '');
+
+    const payload = JSON.parse(
+      document.getElementById('organisation-cases-map-payload').textContent
+    );
+    var hasLeadCentre =
+      payload &&
+      payload.leadCentre &&
+      typeof payload.leadCentre.lon === 'number' &&
+      typeof payload.leadCentre.lat === 'number';
+    var initialNation = payload && payload.initialNation ? payload.initialNation : 'all';
+    var initialEra = payload && payload.initialEra ? payload.initialEra : '2021';
+
+    var token = {
+      patientLabel: '{% templatetag openvariable %}patientLabel{% templatetag closevariable %}',
+      id: '{% templatetag openvariable %}id{% templatetag closevariable %}',
+      nhsNumber: '{% templatetag openvariable %}nhs_number{% templatetag closevariable %}',
+      uniqueReferenceNumber: '{% templatetag openvariable %}unique_reference_number{% templatetag closevariable %}',
+      distanceKm: '{% templatetag openvariable %}distance_km{% templatetag closevariable %}',
+      distanceMi: '{% templatetag openvariable %}distance_mi{% templatetag closevariable %}',
+      imdQuintile: '{% templatetag openvariable %}imd_quintile{% templatetag closevariable %}',
+      leadCentreLabel: '{% templatetag openvariable %}leadCentreLabel{% templatetag closevariable %}',
+      label: '{% templatetag openvariable %}label{% templatetag closevariable %}'
+    };
+
+    try {
+      window.__npdaMap = RcpchImdMap.createImdMap({
+        container: container,
+        tilesBaseUrl: tilesBaseUrl,
+        initialNation: initialNation,
+        initialEra: initialEra,
+        center: hasLeadCentre ? [payload.leadCentre.lon, payload.leadCentre.lat] : undefined,
+        zoom: hasLeadCentre ? 11 : 5,
+        style: {
+          choropleth: {
+            baseColorByNation: {
+              england: '#d7191c',
+              wales: '#1a9641',
+              scotland: '#2b83ba',
+              northern_ireland: '#7f7f7f',
+            },
+          },
+          tooltip: {
+            areaLabel: 'Local area',
+            patientLabel: 'Child',
+            patientTooltipText: token.patientLabel + ': ' + token.id + ' - ' + (token.nhsNumber !='N/A' ? 'NHS: ' + token.nhsNumber : 'Unique Reference: ' + token.uniqueReferenceNumber ) + ' | Distance to Lead Centre: ' + token.distanceMi + ' mi (' + token.distanceKm + ' km)' + (token.imdQuintile && token.imdQuintile !== 'None' && token.imdQuintile !== 'null' ? ' | IMD Quintile: ' + token.imdQuintile : ''),
+            leadCentreTooltipText: token.leadCentreLabel + ': ' + token.label,
+            backgroundColor: '#0d0d58',
+            textColor: '#ffffff',
+          },
+        },
+      });
+
+
+      window.__npdaMap.setPatients(payload.patients);
+      window.__npdaMap.setLeadCentre(payload.leadCentre);
+    } catch (error) {
+      console.error('Error initializing map:', error);
+    }
+  })();
+</script>
 {% endif %}

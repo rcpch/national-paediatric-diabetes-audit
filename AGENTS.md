@@ -190,6 +190,21 @@ All convenience scripts live in `s/`. They must be run from the repo root.
 | `s/create-superuser` | Create a Django superuser inside the container |
 | `s/start-celery-dev` | Start Celery worker for local development |
 
+### IMD recalculation command (basic use)
+
+Use the management command below to recalculate `index_of_multiple_deprivation_quintile`
+for patients in an audit period using postcode country and audit-period-aware England year mapping.
+
+```bash
+# Dry run against default audit period
+python manage.py recalculate_imd --dry-run
+
+# Run for a specific audit period
+python manage.py recalculate_imd --audit-period 2026-2027
+```
+
+For full options and examples, see `documentation/docs/developer/useful-scripts.md`.
+
 ---
 
 ## Linting / formatting

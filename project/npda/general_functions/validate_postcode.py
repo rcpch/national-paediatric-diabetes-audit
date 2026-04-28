@@ -18,6 +18,7 @@ class ValidatedPostcode:
     normalised_postcode: str
     lon: float
     lat: float
+    country: str | None = None
 
     @property
     def location_wgs84(self) -> Point:
@@ -32,6 +33,16 @@ class ValidatedPostcode:
     @property
     def location_bng(self) -> Point:
         return self.location_wgs84.transform(27700, clone=True)
+
+
+def country_from_validated_postcode(
+    validated_postcode: ValidatedPostcode | None,
+) -> str | None:
+    """Return a normalized country slug from a validated postcode payload."""
+    if not validated_postcode or not validated_postcode.country:
+        return None
+
+    return validated_postcode.country.strip().lower().replace(" ", "_")
 
 
 async def lookup_postcode(
@@ -80,4 +91,5 @@ def handle_postcode_api_response(response: httpx.Response) -> ValidatedPostcode 
         normalised_postcode=result["postcode"],
         lon=result["longitude"],
         lat=result["latitude"],
+        country=result.get("country"),
     )

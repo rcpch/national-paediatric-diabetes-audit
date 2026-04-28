@@ -2,7 +2,6 @@ import json
 import logging
 
 import plotly.graph_objects as go
-import plotly.io as pio
 
 # Django imports
 from django.http import HttpResponseBadRequest
@@ -14,7 +13,6 @@ import project.constants.colors as colors
 from project.constants.leave_pdu_reasons import LEAVE_PDU_REASONS
 from project.npda.general_functions.map import (
     generate_dataframe_and_aggregated_distance_data_from_cases,
-    generate_distance_from_organisation_scatterplot_figure,
     get_children_by_pdu_audit_year,
 )
 from project.npda.general_functions.patient_report.queries import (
@@ -31,10 +29,49 @@ from project.npda.general_functions.rcpch_nhs_organisations import (
 )
 from project.npda.models.submission import Submission
 from project.npda.views.decorators import check_data_permissions, login_and_otp_required
+from project.settings import RCPCH_DEPRIVATION_TILES_URL
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_CHART_HTML_HEIGHT = "18rem"
+
+
+def _english_imd_year_for_audit_period(audit_period) -> int:
+    """Map NPDA dataset year to England IMD publication year."""
+    return 2025 if audit_period.get_dataset_year() >= 2026 else 2019
+
+
+def _map_initial_era_for_audit_period(audit_period) -> str:
+    """
+    Map library era semantics:
+    - 2021 era => England 2025 IMD (2021 boundaries)
+    - 2011 era => England 2019 IMD (2011 boundaries)
+    """
+    return (
+        "2021" if _english_imd_year_for_audit_period(audit_period) == 2025 else "2011"
+    )
+
+
+def _map_initial_nation_for_organisation(organisation: dict) -> str:
+    """Derive map nation from organisation country when available."""
+    country_raw = (
+        organisation.get("country")
+        or organisation.get("nation")
+        or organisation.get("country_name")
+        or ""
+    )
+
+    country = str(country_raw).strip().lower()
+    if country == "england":
+        return "england"
+    if country == "wales":
+        return "wales"
+    if country == "scotland":
+        return "scotland"
+    if country in {"northern ireland", "northern_ireland"}:
+        return "northern_ireland"
+
+    return "all"
 
 
 @login_and_otp_required()
@@ -74,26 +111,46 @@ def get_map_chart_partial(request, audit_period, pdu):
             )
         )
 
-        # generate scatterplot of patients by distance from the selected organisation
-        scatterplot_of_cases_for_selected_organisation_fig = (
-            generate_distance_from_organisation_scatterplot_figure(
-                geo_df=patient_distances_dataframe,
-                pdu_lead_organisation=pdu_lead_organisation,
-                paediatric_diabetes_unit=submission.paediatric_diabetes_unit,
-            )
-        )
+        map_patients = []
+        if not patient_distances_dataframe.empty:
+            for patient in patient_distances_dataframe.to_dict("records"):
+                map_patients.append(
+                    {
+                        "id": patient["pk"],
+                        "nhs_number": patient["nhs_number"]
+                        if patient["nhs_number"]
+                        else "N/A",
+                        "unique_reference_number": patient["unique_reference_number"]
+                        if patient["unique_reference_number"]
+                        else "N/A",
+                        "lat": patient["latitude"],
+                        "lon": patient["longitude"],
+                        "distance_km": f"{patient['distance_km']:.2f}",
+                        "distance_mi": f"{patient['distance_mi']:.2f}",
+                        "imd_quintile": patient[
+                            "index_of_multiple_deprivation_quintile"
+                        ],
+                    }
+                )
 
         return render(
             request,
             template_name="dashboard/map_chart_partial.html",
             context={
-                "chart_html": pio.to_html(
-                    scatterplot_of_cases_for_selected_organisation_fig,
-                    full_html=False,
-                    include_plotlyjs=False,
-                    config={"displayModeBar": True},
-                ),
+                "RCPCH_DEPRIVATION_TILES_URL": RCPCH_DEPRIVATION_TILES_URL,
                 "aggregated_distances": aggregated_distances,
+                "map_payload": {
+                    "initialEra": _map_initial_era_for_audit_period(audit_period),
+                    "initialNation": _map_initial_nation_for_organisation(
+                        pdu_lead_organisation
+                    ),
+                    "patients": map_patients,
+                    "leadCentre": {
+                        "label": pdu.lead_organisation_name,
+                        "lat": pdu.lead_organisation_geocoordinates.y,
+                        "lon": pdu.lead_organisation_geocoordinates.x,
+                    },
+                },
             },
         )
 

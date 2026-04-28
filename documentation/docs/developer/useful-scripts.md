@@ -30,3 +30,37 @@ s/watch-tailwind
     Tailwind tree-shakes unused CSS classes on build. Therefore, you must rebuild the `styles.css` file when adding new Tailwind classes not previously used.
 
     This script watches for changes and rebuilds the CSS file automatically.
+
+
+## Recalculate IMD quintiles for an audit period:
+
+Use the convenience management command to recalculate
+`index_of_multiple_deprivation_quintile` from postcode lookups.
+
+```console
+python manage.py recalculate_imd --dry-run
+```
+
+### Common usage patterns
+
+```console
+# Specific audit period
+python manage.py recalculate_imd --audit-period 2026-2027
+
+# Restrict to one PDU
+python manage.py recalculate_imd --audit-period 2026-2027 --pz-code PZ130
+
+# Limit records for a staged rollout
+python manage.py recalculate_imd --audit-period 2026-2027 --limit 100
+
+# Preview changes without saving
+python manage.py recalculate_imd --audit-period 2026-2027 --dry-run
+```
+
+### Notes
+
+- England year is derived from audit period dataset mapping:
+    - dataset year 2026+ -> England IMD year 2025
+    - dataset year 2021 -> England IMD year 2019
+- Country is resolved from postcode lookup and sent to the IMD endpoint.
+- Jersey and special non-geographic postcodes are skipped.
