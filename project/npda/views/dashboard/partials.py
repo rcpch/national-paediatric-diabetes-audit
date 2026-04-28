@@ -29,7 +29,7 @@ from project.npda.general_functions.rcpch_nhs_organisations import (
 )
 from project.npda.models.submission import Submission
 from project.npda.views.decorators import check_data_permissions, login_and_otp_required
-from project.settings import RCPCH_DEPRIVATION_TILES_URL
+from project.settings import RCPCH_CENSUS_PLATFORM_TOKEN, RCPCH_DEPRIVATION_TILES_URL
 
 logger = logging.getLogger(__name__)
 
@@ -138,6 +138,7 @@ def get_map_chart_partial(request, audit_period, pdu):
             template_name="dashboard/map_chart_partial.html",
             context={
                 "RCPCH_DEPRIVATION_TILES_URL": RCPCH_DEPRIVATION_TILES_URL,
+                "RCPCH_CENSUS_PLATFORM_TOKEN": RCPCH_CENSUS_PLATFORM_TOKEN,
                 "aggregated_distances": aggregated_distances,
                 "map_payload": {
                     "initialEra": _map_initial_era_for_audit_period(audit_period),

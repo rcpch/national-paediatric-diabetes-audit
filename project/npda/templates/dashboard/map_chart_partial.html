@@ -28,11 +28,12 @@
 
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@rcpch/imd-map@0.2.1/dist/umd/rcpch-imd-map.min.js" integrity="sha512-TKqNMyuHiEPc2WKKI3eNh6Vv98bu23MYDKXNVhvzIMgBG//ckkcYDTTq7BBH+LZvkHBnSGh6fH+PVEI8Sb4VSA==" crossorigin="anonymous"> </script>
+<script src="https://cdn.jsdelivr.net/npm/@rcpch/imd-map@0.3.1/dist/umd/rcpch-imd-map.min.js" integrity="sha512-nE5gt833x02gAJE9hWc8jmeYawgdHqwnHw34riKVSPm7z/gBSsGoJV4CedzC/zZ4sSeoNdr5vWDmQgoDFQkeig==" crossorigin="anonymous"> </script>
 {% if RCPCH_DEPRIVATION_TILES_URL %}
 <script>
     // Map your setting name to the library's expected variable name
     window.RCPCH_DEPRIVATION_TILES_URL = "{{ RCPCH_DEPRIVATION_TILES_URL }}";
+  window.RCPCH_CENSUS_PLATFORM_TOKEN = "{{ RCPCH_CENSUS_PLATFORM_TOKEN|default:''|escapejs }}";
 
 
   (function () {
@@ -84,6 +85,8 @@
       window.__npdaMap = RcpchImdMap.createImdMap({
         container: container,
         tilesBaseUrl: tilesBaseUrl,
+        tilesApiKey: window.RCPCH_CENSUS_PLATFORM_TOKEN || undefined,
+        tilesApiKeyParam: 'Subscription-Key',
         initialNation: initialNation,
         initialEra: initialEra,
         center: hasLeadCentre ? [payload.leadCentre.lon, payload.leadCentre.lat] : undefined,
