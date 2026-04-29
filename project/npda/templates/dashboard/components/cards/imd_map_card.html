@@ -4,19 +4,131 @@
   Distribution of patients - {{ pdu_object.lead_organisation_name }} ({{ pdu_object.pz_code }})
 {% endblock card_title %}
 {% block card_body %}
+  <link rel="stylesheet"
+        href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@rcpch/imd-map@0.3.1/dist/umd/rcpch-imd-map.min.js"
+          integrity="sha512-nE5gt833x02gAJE9hWc8jmeYawgdHqwnHw34riKVSPm7z/gBSsGoJV4CedzC/zZ4sSeoNdr5vWDmQgoDFQkeig=="
+          crossorigin="anonymous"></script>
+  <script>
+    window.npdaInitOrganisationCasesMap = function () {
+      function showMapLoadError() {
+        var errorElement = document.getElementById('organisation-cases-map-error');
+        if (!errorElement) return;
+        errorElement.classList.remove('hidden');
+      }
+
+      var container = document.getElementById('organisation-cases-map');
+      if (!container) {
+        showMapLoadError();
+        return;
+      }
+
+      var errorElement = document.getElementById('organisation-cases-map-error');
+      if (errorElement) {
+        errorElement.classList.add('hidden');
+      }
+
+      if (typeof RcpchImdMap === 'undefined') {
+        console.error('RcpchImdMap library is not loaded');
+        showMapLoadError();
+        return;
+      }
+
+      if (window.__npdaMap) {
+        window.__npdaMap.destroy();
+        window.__npdaMap = null;
+      }
+
+      var tilesBaseUrl = (container.dataset.tilesBaseUrl || '').replace(/\/$/, '');
+      if (!tilesBaseUrl) {
+        console.error('RCPCH_DEPRIVATION_TILES_URL not set for organisation cases map');
+        showMapLoadError();
+        return;
+      }
+
+      var payloadElement = document.getElementById('organisation-cases-map-payload');
+      if (!payloadElement) {
+        showMapLoadError();
+        return;
+      }
+
+      var payload = JSON.parse(payloadElement.textContent);
+      var hasLeadCentre =
+        payload &&
+        payload.leadCentre &&
+        typeof payload.leadCentre.lon === 'number' &&
+        typeof payload.leadCentre.lat === 'number';
+      var initialNation = payload && payload.initialNation ? payload.initialNation : 'all';
+      var initialEra = payload && payload.initialEra ? payload.initialEra : '2021';
+
+      var token = {
+        patientLabel: '{% templatetag openvariable %}patientLabel{% templatetag closevariable %}',
+        id: '{% templatetag openvariable %}id{% templatetag closevariable %}',
+        nhsNumber: '{% templatetag openvariable %}nhs_number{% templatetag closevariable %}',
+        uniqueReferenceNumber: '{% templatetag openvariable %}unique_reference_number{% templatetag closevariable %}',
+        distanceKm: '{% templatetag openvariable %}distance_km{% templatetag closevariable %}',
+        distanceMi: '{% templatetag openvariable %}distance_mi{% templatetag closevariable %}',
+        imdQuintile: '{% templatetag openvariable %}imd_quintile{% templatetag closevariable %}',
+        leadCentreLabel: '{% templatetag openvariable %}leadCentreLabel{% templatetag closevariable %}',
+        label: '{% templatetag openvariable %}label{% templatetag closevariable %}'
+      };
+
+      try {
+        window.__npdaMap = RcpchImdMap.createImdMap({
+          container: container,
+          tilesBaseUrl: tilesBaseUrl,
+          tilesApiKey: container.dataset.tilesApiKey || undefined,
+          tilesApiKeyParam: 'Subscription-Key',
+          initialNation: initialNation,
+          initialEra: initialEra,
+          center: hasLeadCentre ? [payload.leadCentre.lon, payload.leadCentre.lat] : undefined,
+          zoom: hasLeadCentre ? 11 : 5,
+          style: {
+            choropleth: {
+              baseColorByNation: {
+                england: '#d7191c',
+                wales: '#1a9641',
+                scotland: '#2b83ba',
+                northern_ireland: '#7f7f7f',
+              },
+            },
+            tooltip: {
+              areaLabel: 'Local area',
+              patientLabel: 'Child',
+              patientTooltipText: token.patientLabel + ': ' + token.id + ' - ' + (token.nhsNumber != 'N/A' ? 'NHS: ' + token.nhsNumber : 'Unique Reference: ' + token.uniqueReferenceNumber) + ' | Distance to Lead Centre: ' + token.distanceMi + ' mi (' + token.distanceKm + ' km)' + (token.imdQuintile && token.imdQuintile !== 'None' && token.imdQuintile !== 'null' ? ' | IMD Quintile: ' + token.imdQuintile : ''),
+              leadCentreTooltipText: token.leadCentreLabel + ': ' + token.label,
+              backgroundColor: '#0d0d58',
+              textColor: '#ffffff',
+            },
+          },
+        });
+
+        window.__npdaMap.setPatients(payload.patients);
+        window.__npdaMap.setLeadCentre(payload.leadCentre);
+      } catch (error) {
+        console.error('Error initializing map:', error);
+        showMapLoadError();
+      }
+    };
+  </script>
   <div hx-get="{% data_url 'pdu-get-map-chart-partial' %}"
        hx-trigger="load"
        hx-swap="innerHTML"
        hx-target="#organisation_cases_map"
-       hx-indicator="#loading-spinner-imd-map"
-       _="on htmx:afterSwap remove #loading-spinner-imd-map">
-    <figure>
-      <div id="organisation_cases_map" style="width: 100%">
-        {% include 'dashboard/map_chart_partial.html' with chart_html=chart_html aggregated_distances=aggregated_distances %}
-      </div>
-    </figure>
+      hx-indicator="#loading-spinner-imd-map">
   </div>
   <div id="loading-spinner-imd-map"
        class="loading loading-spinner text-rcpch_dark_blue flex flex-grow-1 justify-center items-center w-1/5 mx-auto bg-center">
   </div>
+  <figure>
+    <div id="organisation-cases-map-error"
+         class="alert alert-info hidden"
+         role="status">
+      The map has failed to load. Please check back later.
+    </div>
+    <div id="organisation_cases_map"
+         hx-on::after-swap="window.npdaInitOrganisationCasesMap(); document.getElementById('loading-spinner-imd-map')?.remove();"
+         style="width: 100%"></div>
+  </figure>
 {% endblock %}

@@ -67,6 +67,33 @@ The dashboard views also use `queries.py` directly — **do not reach for the KP
 
 All dashboard functions use `build_base_queryset()` as their base and respect `audit_period.get_dataset_year()`. They return plain Python values — no `KPIResult` objects.
 
+### Dashboard map component (IMD)
+
+The dashboard IMD map in `project/npda/templates/dashboard/map_chart_partial.html` uses the browser bundle from `@rcpch/imd-map`.
+
+- Current bundle version: `0.3.1`
+- Script URL:
+    `https://cdn.jsdelivr.net/npm/@rcpch/imd-map@0.3.1/dist/umd/rcpch-imd-map.min.js`
+- Current SRI:
+    `sha512-nE5gt833x02gAJE9hWc8jmeYawgdHqwnHw34riKVSPm7z/gBSsGoJV4CedzC/zZ4sSeoNdr5vWDmQgoDFQkeig==`
+
+Tile auth is now configured via map options (query-string auth), not request headers.
+
+- Token source: `settings.RCPCH_CENSUS_PLATFORM_TOKEN`
+- Passed from view context in `project/npda/views/dashboard/partials.py`
+- Consumed in JS as:
+
+```javascript
+RcpchImdMap.createImdMap({
+    container: container,
+    tilesBaseUrl: tilesBaseUrl,
+    tilesApiKey: window.RCPCH_CENSUS_PLATFORM_TOKEN || undefined,
+    tilesApiKeyParam: 'Subscription-Key',
+});
+```
+
+Keep the API key plumbing aligned with `project/npda/general_functions/index_multiple_deprivation.py`, which uses the same token setting for server-side deprivation requests.
+
 ### KPI class
 
 `project/npda/general_functions/calculate_kpis/` — for **national benchmarking aggregates only**. Not used directly in patient report or dashboard views.
