@@ -175,4 +175,43 @@
       </div>
     </div>
   </a>
+  <!-- Care Quality Stats -->
+  <a href="{% data_url 'pdu-patient-report' %}"
+     class="tooltip block mt-4"
+     data-tip="Click here to view care quality totals for all patients with T1 diabetes in this submission">
+    <!-- Care Quality Title -->
+    <div class="text-center mb-2">
+      <h3 class="text-base font-semibold text-rcpch_light_blue">Care Quality</h3>
+    </div>
+    <div class="stats stats-vertical lg:stats-horizontal shadow text-rcpch_light_blue w-full overflow-hidden">
+      <!-- 4+ HbA1c Stat -->
+      <div class="stat place-items-center p-2">
+        <div class="stat-figure">
+          <i class="fa-solid fa-vial fa-lg text-rcpch_light_blue"></i>
+        </div>
+        <div class="stat-title text-xs">4+ HbA1c</div>
+        <div class="stat-value text-sm text-rcpch_light_blue">
+          {{ total_passed_four_hba1cs|percentage:total_eligible_four_hba1cs }}
+        </div>
+        <div class="stat-desc text-xs">
+          {{ total_passed_four_hba1cs }}/{{ total_eligible_four_hba1cs }}
+        </div>
+        <div class="stat-desc text-xs">T1 patients with ≥4 HbA1c</div>
+      </div>
+      <!-- All Care Processes Complete Stat -->
+      <div class="stat place-items-center p-2">
+        <div class="stat-figure">
+          <i class="fa-solid fa-circle-check fa-lg text-rcpch_light_blue"></i>
+        </div>
+        <div class="stat-title text-xs">All Care Processes</div>
+        <div class="stat-value text-sm text-rcpch_light_blue">
+          {{ total_passed_all_care_processes|percentage:total_eligible_all_care_processes }}
+        </div>
+        <div class="stat-desc text-xs">
+          {{ total_passed_all_care_processes }}/{{ total_eligible_all_care_processes }}
+        </div>
+        <div class="stat-desc text-xs">T1 patients with all checks complete</div>
+      </div>
+    </div>
+  </a>
 </div>

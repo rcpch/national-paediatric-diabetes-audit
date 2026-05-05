@@ -1259,10 +1259,25 @@ def dashboard_health_check_totals(pdu, audit_period) -> dict:
         total_passed_thyroid_screen, total_eligible_thyroid_screen,
         total_passed_blood_pressure, total_eligible_blood_pressure,
         total_passed_urinary_albumin, total_eligible_urinary_albumin,
-        total_passed_foot_exam, total_eligible_foot_exam
+        total_passed_foot_exam, total_eligible_foot_exam,
+        total_passed_four_hba1cs, total_eligible_four_hba1cs,
+        total_passed_all_care_processes, total_eligible_all_care_processes
     """
+    audit_range = (audit_period.start_date, audit_period.end_date)
     qs = build_base_queryset(pdu, audit_period, type1_only=True)
     qs = annotate_health_checks(qs, audit_period)
+
+    # Annotate per-patient HbA1c count within the audit period (for 4+ HbA1c tile)
+    qs = qs.annotate(
+        hba1c_count=Count(
+            "visit",
+            filter=Q(
+                visit__hba1c__isnull=False,
+                visit__hba1c_date__range=audit_range,
+            ),
+            distinct=True,
+        )
+    )
 
     # Aggregate all counts in a single query
     agg = qs.aggregate(
@@ -1320,6 +1335,27 @@ def dashboard_health_check_totals(pdu, audit_period) -> dict:
         total_eligible_foot_exam=Count(
             "pk",
             filter=Q(is_complete_year_of_care=True, is_gte_12yo=True),
+        ),
+        # 4+ HbA1c measurements — all complete-year T1DM patients
+        total_passed_four_hba1cs=Count(
+            "pk",
+            filter=Q(hba1c_count__gte=4, is_complete_year_of_care=True),
+        ),
+        total_eligible_four_hba1cs=Count(
+            "pk",
+            filter=Q(is_complete_year_of_care=True),
+        ),
+        # All applicable care processes complete:
+        #   ≥12yo: all 6 (HbA1c, BMI, thyroid, BP, urinary albumin, foot exam)
+        #   <12yo: all 3 (HbA1c, BMI, thyroid)
+        total_passed_all_care_processes=Count(
+            "pk",
+            filter=Q(is_complete_year_of_care=True)
+            & (Q(is_gte_12yo=True, num_passed=6) | Q(is_gte_12yo=False, num_passed=3)),
+        ),
+        total_eligible_all_care_processes=Count(
+            "pk",
+            filter=Q(is_complete_year_of_care=True),
         ),
     )
     return agg
