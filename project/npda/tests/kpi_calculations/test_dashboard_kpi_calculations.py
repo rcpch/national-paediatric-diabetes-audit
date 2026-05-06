@@ -19,7 +19,7 @@ from dateutil.relativedelta import relativedelta
 from project.constants.closed_loop_types import CLOSED_LOOP_TYPES
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.constants.glucose_monitoring_types import GLUCOSE_MONITORING_TYPES
-from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
+from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS_2021
 from project.npda.general_functions.patient_report.queries import (
     count_admissions,
     count_cgm_use,
@@ -989,7 +989,7 @@ def test_count_admissions_counts_patients_with_valid_admission_in_audit_period(
         visit_date=visit_date,
         hospital_admission_date=admission_date,
         hospital_discharge_date=admission_date + relativedelta(days=2),
-        hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[0][0],
+        hospital_admission_reason=HOSPITAL_ADMISSION_REASONS_2021[0][0],
     )
     VisitFactory(
         patient=not_admitted,
@@ -1028,7 +1028,7 @@ def test_count_admissions_includes_admission_within_90_days_of_diagnosis(
         visit_date=visit_date,
         hospital_admission_date=audit_period.start_date + relativedelta(days=35),
         hospital_discharge_date=audit_period.start_date + relativedelta(days=37),
-        hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[1][0],  # DKA
+        hospital_admission_reason=HOSPITAL_ADMISSION_REASONS_2021[1][0],  # DKA
     )
 
     submission = _create_submission(user, pdu, audit_period)

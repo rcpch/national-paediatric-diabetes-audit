@@ -30,7 +30,7 @@ from project.constants.diabetes_treatment import INSULIN_TREATMENT
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.constants.glucose_monitoring_types import GLUCOSE_MONITORING_TYPES
 from project.constants.hba1c_format import HBA1C_FORMATS
-from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
+from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS_2021
 from project.constants.leave_pdu_reasons import LEAVE_PDU_REASONS
 from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 from project.npda.general_functions.audit_period import get_quarters_for_audit_period
@@ -526,7 +526,7 @@ def annotate_care_at_diagnosis(qs, audit_period):
 
 def annotate_admissions(qs, audit_period):
     audit_range = (audit_period.start_date, audit_period.end_date)
-    admission_reason_values = [choice[0] for choice in HOSPITAL_ADMISSION_REASONS]
+    admission_reason_values = [choice[0] for choice in HOSPITAL_ADMISSION_REASONS_2021]
 
     admission_filter = Q(
         Q(visit__hospital_admission_date__range=audit_range)
@@ -543,7 +543,9 @@ def annotate_admissions(qs, audit_period):
         Q(visit__hospital_admission_date__range=audit_range)
         | Q(visit__hospital_discharge_date__range=audit_range)
     )
-    dka_filter &= Q(visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[1][0])
+    dka_filter &= Q(
+        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS_2021[1][0]
+    )
     dka_filter &= Q(visit__visit_date__range=audit_range)
     dka_filter &= Q(
         visit__hospital_admission_date__gt=F("diagnosis_date")
@@ -1001,7 +1003,7 @@ def count_admissions(pdu, audit_period) -> int:
     discharge date within the audit period.
     """
     audit_range = (audit_period.start_date, audit_period.end_date)
-    valid_reasons = [choice[0] for choice in HOSPITAL_ADMISSION_REASONS]
+    valid_reasons = [choice[0] for choice in HOSPITAL_ADMISSION_REASONS_2021]
     return (
         Patient.objects.filter(
             submissions__submission_active=True,
@@ -1029,7 +1031,7 @@ def count_admissions_by_quarter(pdu, audit_period) -> dict:
     """
     audit_range = (audit_period.start_date, audit_period.end_date)
     today = date.today()
-    valid_reasons = [choice[0] for choice in HOSPITAL_ADMISSION_REASONS]
+    valid_reasons = [choice[0] for choice in HOSPITAL_ADMISSION_REASONS_2021]
 
     base_qs = Patient.objects.filter(
         submissions__submission_active=True,

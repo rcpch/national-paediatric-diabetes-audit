@@ -185,13 +185,13 @@ class VisitForm(forms.ModelForm):
     def clean_hospital_admission_reason(self):
         data = self.cleaned_data["hospital_admission_reason"]
         # Convert the list of tuples to a dictionary
-        hospital_admission_reason_dict = dict(HOSPITAL_ADMISSION_REASONS)
+        hospital_admission_reason_dict = dict(HOSPITAL_ADMISSION_REASONS_2021)
 
         if data is None or data in hospital_admission_reason_dict:
             return data
         else:
             options = (
-                str(HOSPITAL_ADMISSION_REASONS)
+                str(HOSPITAL_ADMISSION_REASONS_2021)
                 .strip("[]")
                 .replace(")", "")
                 .replace("(", "")

@@ -11,7 +11,7 @@ from project.constants import (
     DKA_ADDITIONAL_THERAPIES,
     GLUCOSE_MONITORING_TYPES,
     HBA1C_FORMATS,
-    HOSPITAL_ADMISSION_REASONS,
+    HOSPITAL_ADMISSION_REASONS_2021,
     RETINAL_SCREENING_RESULTS,
     SMOKING_STATUS,
     THYROID_TREATMENT_STATUS,
@@ -469,7 +469,7 @@ class FakePatientCreator:
         """
         hospital_admission_date = visit_date
         hospital_discharge_date = visit_date
-        hospital_admission_reason = random.choice(HOSPITAL_ADMISSION_REASONS)[0]
+        hospital_admission_reason = random.choice(HOSPITAL_ADMISSION_REASONS_2021)[0]
         dka_additional_therapies = (
             random.choice(DKA_ADDITIONAL_THERAPIES)[0]
             if hospital_admission_reason == 2
