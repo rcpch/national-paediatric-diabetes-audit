@@ -30,7 +30,10 @@ from project.constants.diabetes_treatment import INSULIN_TREATMENT
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.constants.glucose_monitoring_types import GLUCOSE_MONITORING_TYPES
 from project.constants.hba1c_format import HBA1C_FORMATS
-from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS_2021
+from project.constants.hospital_admission_reasons import (
+    HOSPITAL_ADMISSION_REASONS_2021,
+    HOSPITAL_ADMISSION_REASONS_2026,
+)
 from project.constants.leave_pdu_reasons import LEAVE_PDU_REASONS
 from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 from project.npda.general_functions.audit_period import get_quarters_for_audit_period
@@ -526,13 +529,24 @@ def annotate_care_at_diagnosis(qs, audit_period):
 
 def annotate_admissions(qs, audit_period):
     audit_range = (audit_period.start_date, audit_period.end_date)
-    admission_reason_values = [choice[0] for choice in HOSPITAL_ADMISSION_REASONS_2021]
+    admission_reason_values = (
+        [choice[0] for choice in HOSPITAL_ADMISSION_REASONS_2021]
+        if audit_period.get_dataset_year() < 2026
+        else [choice[0] for choice in HOSPITAL_ADMISSION_REASONS_2026]
+    )  # Exclude 'Not admitted' reason for 2026 onwards
 
     admission_filter = Q(
         Q(visit__hospital_admission_date__range=audit_range)
         | Q(visit__hospital_discharge_date__range=audit_range)
     )
-    admission_filter &= Q(visit__hospital_admission_reason__in=admission_reason_values)
+    if audit_period.get_dataset_year() < 2026:
+        admission_filter &= Q(
+            visit__hospital_admission_reason__in=admission_reason_values
+        )
+    elif audit_period.get_dataset_year() >= 2026:
+        admission_filter &= Q(
+            visit__hospital_admission_reason_2026__in=admission_reason_values
+        )
     admission_filter &= Q(visit__visit_date__range=audit_range)
     admission_filter &= Q(
         visit__hospital_admission_date__gt=F("diagnosis_date")
@@ -543,9 +557,18 @@ def annotate_admissions(qs, audit_period):
         Q(visit__hospital_admission_date__range=audit_range)
         | Q(visit__hospital_discharge_date__range=audit_range)
     )
-    dka_filter &= Q(
-        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS_2021[1][0]
-    )
+    if audit_period.get_dataset_year() < 2026:
+        dka_filter &= Q(
+            visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS_2021[1][
+                0
+            ]  # DKA
+        )
+    elif audit_period.get_dataset_year() >= 2026:
+        dka_filter &= Q(
+            visit__hospital_admission_reason_2026=HOSPITAL_ADMISSION_REASONS_2026[0][
+                0
+            ]  # DKA
+        )
     dka_filter &= Q(visit__visit_date__range=audit_range)
     dka_filter &= Q(
         visit__hospital_admission_date__gt=F("diagnosis_date")
@@ -1003,7 +1026,12 @@ def count_admissions(pdu, audit_period) -> int:
     discharge date within the audit period.
     """
     audit_range = (audit_period.start_date, audit_period.end_date)
-    valid_reasons = [choice[0] for choice in HOSPITAL_ADMISSION_REASONS_2021]
+    if audit_period.get_dataset_year() < 2026:
+        valid_reasons = [choice[0] for choice in HOSPITAL_ADMISSION_REASONS_2021]
+        visit_filter = Q(visit__hospital_admission_reason__in=valid_reasons)
+    else:
+        valid_reasons = [choice[0] for choice in HOSPITAL_ADMISSION_REASONS_2026]
+        visit_filter = Q(visit__hospital_admission_reason_2026__in=valid_reasons)
     return (
         Patient.objects.filter(
             submissions__submission_active=True,
@@ -1012,7 +1040,7 @@ def count_admissions(pdu, audit_period) -> int:
             visit__visit_date__range=audit_range,
             date_of_birth__gt=audit_period.start_date - relativedelta(years=25),
         )
-        .filter(visit__hospital_admission_reason__in=valid_reasons)
+        .filter(visit_filter)
         .filter(
             Q(visit__hospital_admission_date__range=audit_range)
             | Q(visit__hospital_discharge_date__range=audit_range)
@@ -1031,7 +1059,12 @@ def count_admissions_by_quarter(pdu, audit_period) -> dict:
     """
     audit_range = (audit_period.start_date, audit_period.end_date)
     today = date.today()
-    valid_reasons = [choice[0] for choice in HOSPITAL_ADMISSION_REASONS_2021]
+    reasons = (
+        HOSPITAL_ADMISSION_REASONS_2021
+        if audit_period.get_dataset_year() < 2026
+        else HOSPITAL_ADMISSION_REASONS_2026
+    )
+    valid_reasons = [choice[0] for choice in reasons]
 
     base_qs = Patient.objects.filter(
         submissions__submission_active=True,
@@ -1043,14 +1076,17 @@ def count_admissions_by_quarter(pdu, audit_period) -> dict:
     total_eligible = base_qs.count()
 
     # Patients with at least one valid admission within the audit period
-    admitted_qs = (
-        base_qs.filter(visit__hospital_admission_reason__in=valid_reasons)
-        .filter(
-            Q(visit__hospital_admission_date__range=audit_range)
-            | Q(visit__hospital_discharge_date__range=audit_range)
+    if audit_period.get_dataset_year() < 2026:
+        # 2021: filter by valid reasons here since the reason field is mandatory
+        base_qs = base_qs.filter(visit__hospital_admission_reason__in=valid_reasons)
+    else:
+        base_qs = base_qs.filter(
+            visit__hospital_admission_reason_2026__in=valid_reasons
         )
-        .distinct()
-    )
+    admitted_qs = base_qs.filter(
+        Q(visit__hospital_admission_date__range=audit_range)
+        | Q(visit__hospital_discharge_date__range=audit_range)
+    ).distinct()
 
     quarter_end_dates = [
         q[1]
