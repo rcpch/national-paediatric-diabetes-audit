@@ -3586,9 +3586,12 @@ def test_inpatient_admission_stabilisation_passes_validation(
     """
     hospital_admission_date = get_field_heading("hospital_admission_date", dataset_year)
     hospital_discharge_date = get_field_heading("hospital_discharge_date", dataset_year)
-    hospital_admission_reason = get_field_heading(
-        "hospital_admission_reason", dataset_year
+    admission_reason_field = (
+        "hospital_admission_reason_2026"
+        if dataset_year >= 2026
+        else "hospital_admission_reason"
     )
+    hospital_admission_reason = get_field_heading(admission_reason_field, dataset_year)
     dka_additional_therapies = get_field_heading(
         "dka_additional_therapies", dataset_year
     )
@@ -3602,7 +3605,9 @@ def test_inpatient_admission_stabilisation_passes_validation(
         audit_period_for_dataset_year.start_date + relativedelta(days=10)
     )
 
-    single_row_valid_df.loc[0, hospital_admission_reason] = 1  # Stabilisation
+    single_row_valid_df.loc[0, hospital_admission_reason] = (
+        1 if dataset_year < 2026 else 5
+    )  # Stabilisation for pre-2026 dataset, DKA for 2026 dataset
     single_row_valid_df.loc[
         0,
         dka_additional_therapies,
@@ -3630,9 +3635,14 @@ def test_inpatient_admission_stabilisation_passes_validation(
         visit.hospital_discharge_date
         == audit_period_for_dataset_year.start_date + relativedelta(days=10)
     ), f"Discharge date should be 2/1/2023, but was {visit.hospital_discharge_date}"
-    assert visit.hospital_admission_reason == 1, (
-        f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
-    )
+    if dataset_year < 2026:
+        assert visit.hospital_admission_reason == 1, (
+            f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
+        )
+    else:
+        assert visit.hospital_admission_reason_2026 == 5, (
+            f"Admission reason should be 5 (Stabilisation), but was {visit.hospital_admission_reason_2026}"
+        )
     assert visit.dka_additional_therapies is None, (
         f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
     )
@@ -3650,9 +3660,12 @@ def test_inpatient_admission_stabilisation_missing_date_fails_validation(
     """
     hospital_admission_date = get_field_heading("hospital_admission_date", dataset_year)
     hospital_discharge_date = get_field_heading("hospital_discharge_date", dataset_year)
-    hospital_admission_reason = get_field_heading(
-        "hospital_admission_reason", dataset_year
+    admission_reason_field = (
+        "hospital_admission_reason_2026"
+        if dataset_year >= 2026
+        else "hospital_admission_reason"
     )
+    hospital_admission_reason = get_field_heading(admission_reason_field, dataset_year)
     dka_additional_therapies = get_field_heading(
         "dka_additional_therapies", dataset_year
     )
@@ -3663,7 +3676,9 @@ def test_inpatient_admission_stabilisation_missing_date_fails_validation(
     single_row_valid_df.loc[0, hospital_discharge_date] = (
         audit_period_for_dataset_year.start_date + relativedelta(days=10)
     )
-    single_row_valid_df.loc[0, hospital_admission_reason] = 1
+    single_row_valid_df.loc[0, hospital_admission_reason] = (
+        1 if dataset_year < 2026 else 5
+    )  # Stabilisation for 2023-2025, DKA for 2026 onwards
     single_row_valid_df.loc[
         0,
         dka_additional_therapies,
@@ -3688,8 +3703,17 @@ def test_inpatient_admission_stabilisation_missing_date_fails_validation(
         visit.hospital_discharge_date
         == audit_period_for_dataset_year.start_date + relativedelta(days=10)
     )
-    assert visit.hospital_admission_reason == 1
-    assert visit.dka_additional_therapies is None
+    if dataset_year < 2026:
+        assert visit.hospital_admission_reason == 1, (
+            f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
+        )
+    else:
+        assert visit.hospital_admission_reason_2026 == 5, (
+            f"Admission reason should be 5 (Stabilisation), but was {visit.hospital_admission_reason_2026}"
+        )
+    assert visit.dka_additional_therapies is None, (
+        f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
+    )
     assert visit.hospital_admission_other is None
 
 
@@ -3702,9 +3726,12 @@ def test_inpatient_admission_stabilisation_discharge_date_before_admission_date_
     """
     hospital_admission_date = get_field_heading("hospital_admission_date", dataset_year)
     hospital_discharge_date = get_field_heading("hospital_discharge_date", dataset_year)
-    hospital_admission_reason = get_field_heading(
-        "hospital_admission_reason", dataset_year
+    admission_reason_field = (
+        "hospital_admission_reason_2026"
+        if dataset_year >= 2026
+        else "hospital_admission_reason"
     )
+    hospital_admission_reason = get_field_heading(admission_reason_field, dataset_year)
     dka_additional_therapies = get_field_heading(
         "dka_additional_therapies", dataset_year
     )
@@ -3717,7 +3744,9 @@ def test_inpatient_admission_stabilisation_discharge_date_before_admission_date_
     single_row_valid_df.loc[0, hospital_discharge_date] = (
         audit_period_for_dataset_year.start_date + relativedelta(days=1)
     )
-    single_row_valid_df.loc[0, hospital_admission_reason] = 1
+    single_row_valid_df.loc[0, hospital_admission_reason] = (
+        1 if dataset_year < 2026 else 5
+    )  # Stabilisation for 2023-2025, DKA for 2026 onwards
     single_row_valid_df.loc[
         0,
         dka_additional_therapies,
@@ -3740,9 +3769,20 @@ def test_inpatient_admission_stabilisation_discharge_date_before_admission_date_
         visit.hospital_discharge_date
         == audit_period_for_dataset_year.start_date + relativedelta(days=1)
     )
-    assert visit.hospital_admission_reason == 1
-    assert visit.dka_additional_therapies is None
-    assert visit.hospital_admission_other is None
+    if dataset_year < 2026:
+        assert visit.hospital_admission_reason == 1, (
+            f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
+        )
+    else:
+        assert visit.hospital_admission_reason_2026 == 5, (
+            f"Admission reason should be 5 (Stabilisation), but was {visit.hospital_admission_reason_2026}"
+        )
+    assert visit.dka_additional_therapies is None, (
+        f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
+    )
+    assert visit.hospital_admission_other is None, (
+        f"Hospital admission other should be None, but was {visit.hospital_admission_other}"
+    )
 
 
 @pytest.mark.django_db
@@ -3755,9 +3795,12 @@ def test_inpatient_admission_stabilisation_discharge_date_before_diagnosis_date_
     diagnosis_date = get_field_heading("diagnosis_date", dataset_year)
     hospital_admission_date = get_field_heading("hospital_admission_date", dataset_year)
     hospital_discharge_date = get_field_heading("hospital_discharge_date", dataset_year)
-    hospital_admission_reason = get_field_heading(
-        "hospital_admission_reason", dataset_year
+    admission_reason_field = (
+        "hospital_admission_reason_2026"
+        if dataset_year >= 2026
+        else "hospital_admission_reason"
     )
+    hospital_admission_reason = get_field_heading(admission_reason_field, dataset_year)
     dka_additional_therapies = get_field_heading(
         "dka_additional_therapies", dataset_year
     )
@@ -3773,7 +3816,9 @@ def test_inpatient_admission_stabilisation_discharge_date_before_diagnosis_date_
     single_row_valid_df.loc[0, hospital_discharge_date] = (
         audit_period_for_dataset_year.start_date + relativedelta(days=11)
     )
-    single_row_valid_df.loc[0, hospital_admission_reason] = 1
+    single_row_valid_df.loc[0, hospital_admission_reason] = (
+        1 if dataset_year < 2026 else 5
+    )  # Stabilisation
     single_row_valid_df.loc[
         0,
         dka_additional_therapies,
@@ -3816,9 +3861,14 @@ def test_inpatient_admission_stabilisation_discharge_date_before_diagnosis_date_
     ), (
         f"Discharge date should be {audit_period_for_dataset_year.start_date + relativedelta(days=1)}, but was {visit.hospital_discharge_date}"
     )
-    assert visit.hospital_admission_reason == 1, (
-        f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
-    )
+    if dataset_year < 2026:
+        assert visit.hospital_admission_reason == 1, (
+            f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
+        )
+    else:
+        assert visit.hospital_admission_reason_2026 == 5, (
+            f"Admission reason should be 5 (stabilisation in 2026), but was {visit.hospital_admission_reason_2026}"
+        )
     assert visit.dka_additional_therapies is None, (
         f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
     )
@@ -3837,9 +3887,12 @@ def test_inpatient_admission_stabilisation_discharge_date_after_date_of_death_fa
     death_date = get_field_heading("death_date", dataset_year)
     hospital_admission_date = get_field_heading("hospital_admission_date", dataset_year)
     hospital_discharge_date = get_field_heading("hospital_discharge_date", dataset_year)
-    hospital_admission_reason = get_field_heading(
-        "hospital_admission_reason", dataset_year
+    admission_reason_field = (
+        "hospital_admission_reason_2026"
+        if dataset_year >= 2026
+        else "hospital_admission_reason"
     )
+    hospital_admission_reason = get_field_heading(admission_reason_field, dataset_year)
     dka_additional_therapies = get_field_heading(
         "dka_additional_therapies", dataset_year
     )
@@ -3859,7 +3912,9 @@ def test_inpatient_admission_stabilisation_discharge_date_after_date_of_death_fa
     single_row_valid_df.loc[0, hospital_discharge_date] = (
         audit_period_for_dataset_year.start_date + relativedelta(days=8)
     )
-    single_row_valid_df.loc[0, hospital_admission_reason] = 1
+    single_row_valid_df.loc[0, hospital_admission_reason] = (
+        1 if dataset_year < 2026 else 5
+    )  # Stabilisation for pre-2026 dataset, DKA for 2026 dataset
     single_row_valid_df.loc[
         0,
         dka_additional_therapies,
@@ -3893,9 +3948,14 @@ def test_inpatient_admission_stabilisation_discharge_date_after_date_of_death_fa
     ), (
         f"Discharge date should be {audit_period_for_dataset_year.start_date + relativedelta(days=8)}, but was {visit.hospital_discharge_date}"
     )
-    assert visit.hospital_admission_reason == 1, (
-        f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
-    )
+    if dataset_year < 2026:
+        assert visit.hospital_admission_reason == 1, (
+            f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
+        )
+    else:
+        assert visit.hospital_admission_reason_2026 == 5, (
+            f"Admission reason should be 5 (stabilisation in 2026), but was {visit.hospital_admission_reason_2026}"
+        )
     assert visit.dka_additional_therapies is None, (
         f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
     )
@@ -3913,9 +3973,12 @@ def test_inpatient_admission_stabilisation_dka_additional_therapies_provided_fai
     """
     hospital_admission_date = get_field_heading("hospital_admission_date", dataset_year)
     hospital_discharge_date = get_field_heading("hospital_discharge_date", dataset_year)
-    hospital_admission_reason = get_field_heading(
-        "hospital_admission_reason", dataset_year
+    admission_reason_field = (
+        "hospital_admission_reason_2026"
+        if dataset_year >= 2026
+        else "hospital_admission_reason"
     )
+    hospital_admission_reason = get_field_heading(admission_reason_field, dataset_year)
     dka_additional_therapies = get_field_heading(
         "dka_additional_therapies", dataset_year
     )
@@ -3928,7 +3991,9 @@ def test_inpatient_admission_stabilisation_dka_additional_therapies_provided_fai
     single_row_valid_df.loc[0, hospital_discharge_date] = (
         audit_period_for_dataset_year.start_date + relativedelta(days=7)
     )
-    single_row_valid_df.loc[0, hospital_admission_reason] = 1
+    single_row_valid_df.loc[0, hospital_admission_reason] = (
+        1 if dataset_year < 2026 else 5
+    )  # Stabilisation for pre-2026 dataset, DKA for 2026 dataset
     single_row_valid_df.loc[0, dka_additional_therapies] = 1  # Hypertonic saline
     single_row_valid_df.loc[0, hospital_admission_other] = None
 
@@ -3952,9 +4017,14 @@ def test_inpatient_admission_stabilisation_dka_additional_therapies_provided_fai
     ), (
         f"Discharge date should be {audit_period_for_dataset_year.start_date + relativedelta(days=7)}, but was {visit.hospital_discharge_date}"
     )
-    assert visit.hospital_admission_reason == 1, (
-        f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
-    )
+    if dataset_year < 2026:
+        assert visit.hospital_admission_reason == 1, (
+            f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
+        )
+    else:
+        assert visit.hospital_admission_reason_2026 == 5, (
+            f"Admission reason should be 5 (stabilisation in 2026), but was {visit.hospital_admission_reason_2026}"
+        )
     assert visit.dka_additional_therapies == 1, (
         f"DKA additional therapies should be 1 (hypertonic saline), but was {visit.dka_additional_therapies}"
     )
@@ -3972,9 +4042,12 @@ def test_inpatient_admission_stabilisation_hospital_admission_other_provided_fai
     """
     hospital_admission_date = get_field_heading("hospital_admission_date", dataset_year)
     hospital_discharge_date = get_field_heading("hospital_discharge_date", dataset_year)
-    hospital_admission_reason = get_field_heading(
-        "hospital_admission_reason", dataset_year
+    admission_reason_field = (
+        "hospital_admission_reason_2026"
+        if dataset_year >= 2026
+        else "hospital_admission_reason"
     )
+    hospital_admission_reason = get_field_heading(admission_reason_field, dataset_year)
     dka_additional_therapies = get_field_heading(
         "dka_additional_therapies", dataset_year
     )
@@ -3987,7 +4060,9 @@ def test_inpatient_admission_stabilisation_hospital_admission_other_provided_fai
     single_row_valid_df.loc[0, hospital_discharge_date] = (
         audit_period_for_dataset_year.start_date + relativedelta(days=7)
     )
-    single_row_valid_df.loc[0, hospital_admission_reason] = 1
+    single_row_valid_df.loc[0, hospital_admission_reason] = (
+        1 if dataset_year < 2026 else 5
+    )  # Stabilisation for pre-2026 dataset, DKA for 2026 dataset
     single_row_valid_df.loc[
         0,
         dka_additional_therapies,
@@ -4014,9 +4089,14 @@ def test_inpatient_admission_stabilisation_hospital_admission_other_provided_fai
     ), (
         f"Discharge date should be {audit_period_for_dataset_year.start_date + relativedelta(days=7)}, but was {visit.hospital_discharge_date}"
     )
-    assert visit.hospital_admission_reason == 1, (
-        f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
-    )
+    if dataset_year < 2026:
+        assert visit.hospital_admission_reason == 1, (
+            f"Admission reason should be 1 (stabilisation), but was {visit.hospital_admission_reason}"
+        )
+    else:
+        assert visit.hospital_admission_reason_2026 == 5, (
+            f"Admission reason should be 5 (stabilisation in 2026), but was {visit.hospital_admission_reason_2026}"
+        )
     assert visit.dka_additional_therapies == 1, (
         f"DKA additional therapies should be 1 (hypertonic saline), but was {visit.dka_additional_therapies}"
     )
@@ -4034,9 +4114,12 @@ def test_inpatient_admission_dka_passes_validation(
     """
     hospital_admission_date = get_field_heading("hospital_admission_date", dataset_year)
     hospital_discharge_date = get_field_heading("hospital_discharge_date", dataset_year)
-    hospital_admission_reason = get_field_heading(
-        "hospital_admission_reason", dataset_year
+    admission_reason_field = (
+        "hospital_admission_reason_2026"
+        if dataset_year >= 2026
+        else "hospital_admission_reason"
     )
+    hospital_admission_reason = get_field_heading(admission_reason_field, dataset_year)
     dka_additional_therapies = get_field_heading(
         "dka_additional_therapies", dataset_year
     )
@@ -4052,7 +4135,9 @@ def test_inpatient_admission_dka_passes_validation(
     single_row_valid_df.loc[0, hospital_discharge_date] = (
         audit_period_for_dataset_year.start_date + relativedelta(days=7)
     )
-    single_row_valid_df.loc[0, hospital_admission_reason] = 2  # DKA
+    single_row_valid_df.loc[0, hospital_admission_reason] = (
+        2 if dataset_year < 2026 else 1
+    )  # DKA
     single_row_valid_df.loc[
         0,
         dka_additional_therapies,
@@ -4082,9 +4167,14 @@ def test_inpatient_admission_dka_passes_validation(
     ), (
         f"Discharge date should be {audit_period_for_dataset_year.start_date + relativedelta(days=7)}, but was {visit.hospital_discharge_date}"
     )
-    assert visit.hospital_admission_reason == 2, (
-        f"Admission reason should be 2 (DKA), but was {visit.hospital_admission_reason}"
-    )
+    if dataset_year < 2026:
+        assert visit.hospital_admission_reason == 2, (
+            f"Admission reason should be 2 (DKA), but was {visit.hospital_admission_reason}"
+        )
+    else:
+        assert visit.hospital_admission_reason_2026 == 1, (
+            f"Admission reason should be 1 (DKA in 2026), but was {visit.hospital_admission_reason_2026}"
+        )
     assert visit.dka_additional_therapies == 1, (
         f"DKA additional therapies should be 1 (hypertonic saline), but was {visit.dka_additional_therapies}"
     )
@@ -4102,9 +4192,12 @@ def test_inpatient_admission_dka_additional_therapies_missing_fails_validation(
     """
     hospital_admission_date = get_field_heading("hospital_admission_date", dataset_year)
     hospital_discharge_date = get_field_heading("hospital_discharge_date", dataset_year)
-    hospital_admission_reason = get_field_heading(
-        "hospital_admission_reason", dataset_year
+    admission_reason_field = (
+        "hospital_admission_reason_2026"
+        if dataset_year >= 2026
+        else "hospital_admission_reason"
     )
+    hospital_admission_reason = get_field_heading(admission_reason_field, dataset_year)
     dka_additional_therapies = get_field_heading(
         "dka_additional_therapies", dataset_year
     )
@@ -4117,7 +4210,9 @@ def test_inpatient_admission_dka_additional_therapies_missing_fails_validation(
     single_row_valid_df.loc[0, hospital_discharge_date] = (
         audit_period_for_dataset_year.start_date + relativedelta(days=7)
     )
-    single_row_valid_df.loc[0, hospital_admission_reason] = 2  # DKA
+    single_row_valid_df.loc[0, hospital_admission_reason] = (
+        2 if dataset_year < 2026 else 1
+    )  # DKA
     single_row_valid_df.loc[
         0,
         dka_additional_therapies,
@@ -4144,9 +4239,14 @@ def test_inpatient_admission_dka_additional_therapies_missing_fails_validation(
     ), (
         f"Discharge date should be {audit_period_for_dataset_year.start_date + relativedelta(days=7)}, but was {visit.hospital_discharge_date}"
     )
-    assert visit.hospital_admission_reason == 2, (
-        f"Admission reason should be 2 (DKA), but was {visit.hospital_admission_reason}"
-    )
+    if dataset_year < 2026:
+        assert visit.hospital_admission_reason == 2, (
+            f"Admission reason should be 2 (DKA), but was {visit.hospital_admission_reason}"
+        )
+    else:
+        assert visit.hospital_admission_reason_2026 == 1, (
+            f"Admission reason should be 1 (DKA in 2026), but was {visit.hospital_admission_reason_2026}"
+        )
     assert visit.dka_additional_therapies is None, (
         f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
     )
@@ -4164,9 +4264,12 @@ def test_inpatient_admission_dka_additional_therapies_hospital_admission_also_pr
     """
     hospital_admission_date = get_field_heading("hospital_admission_date", dataset_year)
     hospital_discharge_date = get_field_heading("hospital_discharge_date", dataset_year)
-    hospital_admission_reason = get_field_heading(
-        "hospital_admission_reason", dataset_year
+    admission_reason_field = (
+        "hospital_admission_reason_2026"
+        if dataset_year >= 2026
+        else "hospital_admission_reason"
     )
+    hospital_admission_reason = get_field_heading(admission_reason_field, dataset_year)
     dka_additional_therapies = get_field_heading(
         "dka_additional_therapies", dataset_year
     )
@@ -4179,7 +4282,9 @@ def test_inpatient_admission_dka_additional_therapies_hospital_admission_also_pr
     single_row_valid_df.loc[0, hospital_discharge_date] = (
         audit_period_for_dataset_year.start_date + relativedelta(days=7)
     )
-    single_row_valid_df.loc[0, hospital_admission_reason] = 2  # DKA
+    single_row_valid_df.loc[0, hospital_admission_reason] = (
+        2 if dataset_year < 2026 else 1
+    )  # DKA
     single_row_valid_df.loc[
         0,
         dka_additional_therapies,
@@ -4195,7 +4300,12 @@ def test_inpatient_admission_dka_additional_therapies_hospital_admission_also_pr
         test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
     )
 
-    assert "hospital_admission_reason" in errors[0]
+    expected_reason_key = (
+        "hospital_admission_reason_2026"
+        if dataset_year >= 2026
+        else "hospital_admission_reason"
+    )
+    assert expected_reason_key in errors[0]
 
     visit = Visit.objects.first()
 
@@ -4211,9 +4321,14 @@ def test_inpatient_admission_dka_additional_therapies_hospital_admission_also_pr
     ), (
         f"Discharge date should be {audit_period_for_dataset_year.start_date + relativedelta(days=7)}, but was {visit.hospital_discharge_date}"
     )
-    assert visit.hospital_admission_reason == 2, (
-        f"Admission reason should be 2 (DKA), but was {visit.hospital_admission_reason}"
-    )
+    if dataset_year < 2026:
+        assert visit.hospital_admission_reason == 2, (
+            f"Admission reason should be 2 (DKA), but was {visit.hospital_admission_reason}"
+        )
+    else:
+        assert visit.hospital_admission_reason_2026 == 1, (
+            f"Admission reason should be 1 (DKA in 2026), but was {visit.hospital_admission_reason_2026}"
+        )
     assert visit.dka_additional_therapies == 1, (
         f"DKA additional therapies should be 1 (hypertonic saline), but was {visit.dka_additional_therapies}"
     )
@@ -4235,9 +4350,12 @@ def test_inpatient_admission_other_passes_validation(
     """
     hospital_admission_date = get_field_heading("hospital_admission_date", dataset_year)
     hospital_discharge_date = get_field_heading("hospital_discharge_date", dataset_year)
-    hospital_admission_reason = get_field_heading(
-        "hospital_admission_reason", dataset_year
+    admission_reason_field = (
+        "hospital_admission_reason_2026"
+        if dataset_year >= 2026
+        else "hospital_admission_reason"
     )
+    hospital_admission_reason = get_field_heading(admission_reason_field, dataset_year)
     dka_additional_therapies = get_field_heading(
         "dka_additional_therapies", dataset_year
     )
@@ -4277,9 +4395,14 @@ def test_inpatient_admission_other_passes_validation(
     ), (
         f"Discharge date should be {audit_period_for_dataset_year.start_date + relativedelta(days=7)}   , but was {visit.hospital_discharge_date}"
     )
-    assert visit.hospital_admission_reason == 6, (
-        f"Admission reason should be 6 (other), but was {visit.hospital_admission_reason}"
-    )
+    if dataset_year < 2026:
+        assert visit.hospital_admission_reason == 6, (
+            f"Admission reason should be 6 (other), but was {visit.hospital_admission_reason}"
+        )
+    else:
+        assert visit.hospital_admission_reason_2026 == 6, (
+            f"Admission reason should be 6 (other), but was {visit.hospital_admission_reason}"
+        )
     assert visit.dka_additional_therapies is None, (
         f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
     )
@@ -4297,9 +4420,12 @@ def test_inpatient_admission_other_missing_fails_validation(
     """
     hospital_admission_date = get_field_heading("hospital_admission_date", dataset_year)
     hospital_discharge_date = get_field_heading("hospital_discharge_date", dataset_year)
-    hospital_admission_reason = get_field_heading(
-        "hospital_admission_reason", dataset_year
+    admission_reason_field = (
+        "hospital_admission_reason_2026"
+        if dataset_year >= 2026
+        else "hospital_admission_reason"
     )
+    hospital_admission_reason = get_field_heading(admission_reason_field, dataset_year)
     dka_additional_therapies = get_field_heading(
         "dka_additional_therapies", dataset_year
     )
@@ -4312,7 +4438,9 @@ def test_inpatient_admission_other_missing_fails_validation(
     single_row_valid_df.loc[0, hospital_discharge_date] = (
         audit_period_for_dataset_year.start_date + relativedelta(days=7)
     )
-    single_row_valid_df.loc[0, hospital_admission_reason] = 6  # Other
+    single_row_valid_df.loc[0, hospital_admission_reason] = (
+        6  # Other (same code in 2021 and 2026)
+    )
     single_row_valid_df.loc[0, hospital_admission_other] = "Other reason"
     single_row_valid_df.loc[
         0,
@@ -4340,9 +4468,14 @@ def test_inpatient_admission_other_missing_fails_validation(
     ), (
         f"Discharge date should be {audit_period_for_dataset_year.start_date + relativedelta(days=7)}, but was {visit.hospital_discharge_date}"
     )
-    assert visit.hospital_admission_reason == 6, (
-        f"Admission reason should be 6 (other), but was {visit.hospital_admission_reason}"
-    )
+    if dataset_year < 2026:
+        assert visit.hospital_admission_reason == 6, (
+            f"Admission reason should be 6 (other), but was {visit.hospital_admission_reason}"
+        )
+    else:
+        assert visit.hospital_admission_reason_2026 == 6, (
+            f"Admission reason should be 6 (other), but was {visit.hospital_admission_reason_2026}"
+        )
     assert visit.dka_additional_therapies is None, (
         f"DKA additional therapies should be None, but was {visit.dka_additional_therapies}"
     )
@@ -4636,6 +4769,7 @@ def test_case_insensitive_ethnic_category(test_user, dummy_sheet_csv):
         pytest.param("dietician_additional_appointment_offered"),
         pytest.param("ketone_meter_training"),
         pytest.param("hospital_admission_reason"),
+        pytest.param("hospital_admission_reason_2026"),
         pytest.param("dka_additional_therapies"),
     ],
 )
@@ -4651,6 +4785,7 @@ def test_bad_data_for_positive_small_integer_fields(
             "treatment",
             "closed_loop_system",
             "glucose_monitoring",
+            "hospital_admission_reason",
         ]
         and dataset_year >= 2026
     ):
@@ -4669,6 +4804,13 @@ def test_bad_data_for_positive_small_integer_fields(
                 pytest.skip(
                     "glucose_monitoring not in use for dataset year 2026 and beyond"
                 )
+            case "hospital_admission_reason":
+                model_field = "hospital_admission_reason_2026"
+
+    if model_field == "hospital_admission_reason_2026" and dataset_year < 2026:
+        pytest.skip(
+            "hospital_admission_reason_2026 only in use for dataset year 2026 and beyond"
+        )
 
     headings = csv_definition_for(model_field, dataset_year)
     column = headings["heading"]

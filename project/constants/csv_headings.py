@@ -616,7 +616,15 @@ ALL_HEADINGS = [
         "model": "Visit",
         "alternative_headings": [],
         "data_type": "int64",
-        "dataset_years": [2021, 2026],
+        "dataset_years": [2021],
+    },
+    {
+        "heading": "Reason for admission",
+        "model_field": "hospital_admission_reason_2026",
+        "model": "Visit",
+        "alternative_headings": [],
+        "data_type": "int64",
+        "dataset_years": [2026],
     },
     {
         "heading": "Only complete if OTHER selected: Reason for admission (free text)",

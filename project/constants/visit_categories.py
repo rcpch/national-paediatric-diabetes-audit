@@ -168,7 +168,8 @@ VISIT_CATEGORIES_BY_TAB = {
             "fields": [
                 {"field": "hospital_admission_date", "dataset_years": [2021, 2026]},
                 {"field": "hospital_discharge_date", "dataset_years": [2021, 2026]},
-                {"field": "hospital_admission_reason", "dataset_years": [2021, 2026]},
+                {"field": "hospital_admission_reason", "dataset_years": [2021]},
+                {"field": "hospital_admission_reason_2026", "dataset_years": [2026]},
                 {"field": "dka_additional_therapies", "dataset_years": [2021, 2026]},
                 {"field": "hospital_admission_other", "dataset_years": [2021, 2026]},
                 {"field": "blood_gas_ph", "dataset_years": [2026]},

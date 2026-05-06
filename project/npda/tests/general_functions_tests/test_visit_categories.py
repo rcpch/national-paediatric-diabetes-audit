@@ -248,7 +248,10 @@ def test_hospital_admission_core_fields_present_in_both_years():
         fields = fields_in_category("Hospital Admission", year)
         assert "hospital_admission_date" in fields
         assert "hospital_discharge_date" in fields
-        assert "hospital_admission_reason" in fields
+        if year == 2021:
+            assert "hospital_admission_reason" in fields
+        if year == 2026:
+            assert "hospital_admission_reason_2026" in fields
         assert "dka_additional_therapies" in fields
         assert "hospital_admission_other" in fields
 

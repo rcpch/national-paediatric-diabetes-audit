@@ -1829,12 +1829,13 @@ def test_inpatient_admission_dka_additional_therapies_missing_fails_validation(
         "visit_date": "2026-01-01",  # Required for validation
         "hospital_admission_date": "2026-01-01",
         "hospital_discharge_date": "2026-01-08",
-        "hospital_admission_reason": 2,  # DKA
+        "hospital_admission_reason": 2,
         "dka_additional_therapies": None,  # hypertonic saline
         "blood_gas_ph": None,
         "blood_gas_bicarbonate": None,
     }
     if dataset_year >= 2026:
+        data["hospital_admission_reason_2026"] = 1  # DKA
         with freeze_time(
             audit_period_for_dataset_year.end_date - datetime.timedelta(days=1)
         ):
@@ -1853,6 +1854,7 @@ def test_inpatient_admission_dka_additional_therapies_missing_fails_validation(
     form = VisitForm(
         data=data,
         initial={"patient": patient},
+        audit_period=audit_period_for_dataset_year,
     )
 
     # Trigger the cleaners
@@ -1988,6 +1990,8 @@ def test_dka_no_blood_gas_values_provided_fails_validation(
         "blood_gas_bicarbonate": None,
     }
 
+    if dataset_year >= 2026:
+        data["hospital_admission_reason_2026"] = 1  # DKA
     with freeze_time(
         audit_period_for_dataset_year.end_date - datetime.timedelta(days=1)
     ):
@@ -2035,6 +2039,8 @@ def test_dka_blood_gas_values_provided_passes_validation(
         "blood_gas_ph": 7.1,
         "blood_gas_bicarbonate": 12,
     }
+    if dataset_year >= 2026:
+        data["hospital_admission_reason_2026"] = 1  # DKA
 
     with freeze_time(
         audit_period_for_dataset_year.end_date - datetime.timedelta(days=1)
@@ -2081,6 +2087,8 @@ def test_dka_only_one_blood_gas_value_provided_fails_validation(
         "blood_gas_ph": 7.1,
         "blood_gas_bicarbonate": None,
     }
+    if dataset_year >= 2026:
+        data["hospital_admission_reason_2026"] = 1  # DKA
 
     with freeze_time(
         audit_period_for_dataset_year.end_date - datetime.timedelta(days=1)
