@@ -97,7 +97,21 @@
                             class="input rcpch-input-text rounded-none {% if not perms.npda.change_visit or not can_use_questionnaire or form.patient.is_in_transfer_in_the_last_year %}opacity-40 pointer-events-none{% endif %}"
                             {% if field.field.required %}placeholder="Required"{% endif %}>{{ field.value }}</textarea>
                 {% else %}
-                  {% if field.id_for_label != 'id_bmi' or field.id_for_label == 'id_bmi' and field.value is not None %}
+                  <!-- Special handling for HbA1c to add unit badge, and for BMI to hide if no value -->
+                {% if field.id_for_label == 'id_hba1c' %}
+
+                    <label class="input rcpch-input-text rounded-none flex items-center gap-2">
+                      <input type="text"
+                      id="{{ field.id_for_label }}"
+                      name="{{ field.html_name }}"
+                      class="grow bg-transparent"
+                      {% if field.field.required %}placeholder="Required"{% endif %}
+                      {% if field.value %}value={{ field.value }}{% endif %}>
+                      <span id="hba1c-conversion-label" class="text-xs text-gray-600 whitespace-nowrap"></span>
+                      <span id="hba1c-unit-badge" class="badge badge-lg bg-rcpch_light_blue text-white">mmol/mol</span>
+                    </label>
+
+                  {% elif field.id_for_label != 'id_bmi' or field.id_for_label == 'id_bmi' and field.value is not None %}
                     <!-- Hide BMI label if no value -->
                     <input type="text" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text rounded-none {% if not perms.npda.change_visit or not can_use_questionnaire or form.patient.is_in_transfer_in_the_last_year or field.id_for_label == 'id_bmi' %}opacity-40 pointer-events-none{% endif %}" {% if field.field.required %}placeholder="Required"{% endif %} {% if field.value %} value={{ field.value }} {% elif field.value == 0 %} value="0.0" {% endif %}>
                     {% if field.value is not None %}
@@ -197,6 +211,41 @@
 
   // Initialize all field dependencies when the page is loaded
   document.addEventListener('DOMContentLoaded', function() {
+    // HbA1c unit badge and opposite-unit conversion label update by entered value.
+    function updateHba1cDisplay() {
+      const hba1cInput = document.getElementById('id_hba1c');
+      const hba1cUnitBadge = document.getElementById('hba1c-unit-badge');
+      const hba1cConversionLabel = document.getElementById('hba1c-conversion-label');
+      if (!hba1cInput || !hba1cUnitBadge || !hba1cConversionLabel) return;
+
+      const parsedValue = Number.parseFloat(hba1cInput.value.trim().replace(',', '.'));
+      if (Number.isNaN(parsedValue)) {
+        hba1cUnitBadge.textContent = 'mmol/mol';
+        hba1cConversionLabel.textContent = '';
+        return;
+      }
+
+      if (parsedValue < 20) {
+        // Entered as % (NGSP), show opposite unit as mmol/mol (IFCC).
+        const mmolMol = Math.round((parsedValue - 2.15) * 10.929);
+        hba1cUnitBadge.textContent = '%';
+        hba1cConversionLabel.textContent = `${mmolMol} mmol/mol`;
+        return;
+      }
+
+      // Entered as mmol/mol (IFCC), show opposite unit as % (NGSP).
+      const percent = (0.09148 * parsedValue) + 2.152;
+      hba1cUnitBadge.textContent = 'mmol/mol';
+      hba1cConversionLabel.textContent = `${percent.toFixed(1)} %`;
+    }
+
+    const hba1cInput = document.getElementById('id_hba1c');
+    if (hba1cInput) {
+      hba1cInput.addEventListener('input', updateHba1cDisplay);
+      hba1cInput.addEventListener('keyup', updateHba1cDisplay);
+      updateHba1cDisplay();
+    }
+
     // Treatment field dependencies
     handleFieldDependency('id_treatment', [
       {
