@@ -9,7 +9,7 @@ from httpx import AsyncClient, HTTPError
 from ...constants.postcodes import (
     is_isle_of_man_postcode,
     is_jersey_postcode,
-    skip_api_validation_for_postcode
+    skip_api_validation_for_postcode,
 )
 from ..general_functions import (
     ValidatedPostcode,
