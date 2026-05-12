@@ -106,3 +106,12 @@ def is_jersey_postcode(postcode: str | None):
     to_check = postcode.replace(" ", "").upper()
 
     return to_check.startswith("JE")
+
+
+def is_isle_of_man_postcode(postcode: str | None):
+    if not postcode:
+        return False
+
+    to_check = postcode.replace(" ", "").upper()
+
+    return to_check.startswith("IM")
