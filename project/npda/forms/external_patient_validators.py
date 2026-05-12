@@ -6,7 +6,11 @@ from asgiref.sync import async_to_sync
 from django.core.exceptions import ValidationError
 from httpx import AsyncClient, HTTPError
 
-from ...constants.postcodes import is_jersey_postcode, skip_api_validation_for_postcode
+from ...constants.postcodes import (
+    is_isle_of_man_postcode,
+    is_jersey_postcode,
+    skip_api_validation_for_postcode
+)
 from ..general_functions import (
     ValidatedPostcode,
     country_from_validated_postcode,
@@ -68,6 +72,7 @@ async def _imd_for_postcode(
         postcode
         and not skip_api_validation_for_postcode(postcode)
         and not is_jersey_postcode(postcode)
+        and not is_isle_of_man_postcode(postcode)
     ):
         try:
             imd = await imd_for_postcode(
