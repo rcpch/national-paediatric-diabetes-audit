@@ -458,7 +458,7 @@ FIELD_NOTES_2026 = {
         "established patients), ketosis without acidosis, hypoglycaemia, surgical procedures or other causes."
     ),
     "hospital_discharge_date": ("For calculating number of bed days."),
-    "hospital_admission_reason": (
+    "hospital_admission_reason_2026": (
         "Record all diabetes related admissions.\n\n"
         "Option 1: Admissions for DKA either at the time of diagnosis or not at diagnosis\n\n"
         "Option 2: Acute admission, but not in DKA. This could include vomiting, diarrhoea, ketosis without acidosis, and unable "

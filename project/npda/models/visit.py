@@ -17,7 +17,8 @@ from ...constants import (
     DKA_ADDITIONAL_THERAPIES,
     GLUCOSE_MONITORING_TYPES,
     HBA1C_FORMATS,
-    HOSPITAL_ADMISSION_REASONS,
+    HOSPITAL_ADMISSION_REASONS_2021,
+    HOSPITAL_ADMISSION_REASONS_2026,
     INSULIN_TREATMENT,
     NON_INSULIN_TREATMENT,
     PSYCHOLOGICAL_SUPPORT_OUTCOMES,
@@ -398,7 +399,15 @@ class Visit(models.Model):
     )
 
     hospital_admission_reason = CategorisedPositiveSmallIntegerField(
-        choices=HOSPITAL_ADMISSION_REASONS,
+        choices=HOSPITAL_ADMISSION_REASONS_2021,
+        null=True,
+        blank=True,
+        default=None,
+        category="Hospital Admission",
+    )
+
+    hospital_admission_reason_2026 = CategorisedPositiveSmallIntegerField(
+        choices=HOSPITAL_ADMISSION_REASONS_2026,
         null=True,
         blank=True,
         default=None,

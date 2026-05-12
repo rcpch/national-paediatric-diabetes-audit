@@ -32,7 +32,7 @@ from django.db.models import (
 from project.constants.albuminuria_stage import ALBUMINURIA_STAGES
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.constants.hba1c_format import HBA1C_FORMATS
-from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
+from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS_2021
 from project.constants.leave_pdu_reasons import LEAVE_PDU_REASONS
 from project.constants.retinal_screening_results import RETINAL_SCREENING_RESULTS
 from project.constants.smoking_status import SMOKING_STATUS
@@ -3841,7 +3841,7 @@ class CalculateKPIS:
             ),
             # valid reason for admission
             hospital_admission_reason__in=[
-                choice[0] for choice in HOSPITAL_ADMISSION_REASONS
+                choice[0] for choice in HOSPITAL_ADMISSION_REASONS_2021
             ],
             patient=OuterRef("pk"),
             visit_date__range=self.AUDIT_DATE_RANGE,
@@ -3896,7 +3896,7 @@ class CalculateKPIS:
             ),
             # valid reason for admission
             hospital_admission_reason__in=[
-                choice[0] for choice in HOSPITAL_ADMISSION_REASONS
+                choice[0] for choice in HOSPITAL_ADMISSION_REASONS_2021
             ],
             patient=OuterRef("pk"),
             visit_date__range=self.AUDIT_DATE_RANGE,
@@ -4015,7 +4015,7 @@ class CalculateKPIS:
             Q(hospital_admission_date__range=self.AUDIT_DATE_RANGE)
             | Q(hospital_discharge_date__range=self.AUDIT_DATE_RANGE),
             hospital_admission_reason__in=[
-                choice[0] for choice in HOSPITAL_ADMISSION_REASONS
+                choice[0] for choice in HOSPITAL_ADMISSION_REASONS_2021
             ],
             patient__pk=pt_pk,
             visit_date__range=self.AUDIT_DATE_RANGE,
@@ -4053,7 +4053,7 @@ class CalculateKPIS:
                 | Q(hospital_discharge_date__range=self.AUDIT_DATE_RANGE)
             ),
             # DKA reason 2
-            hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[1][0],
+            hospital_admission_reason=HOSPITAL_ADMISSION_REASONS_2021[1][0],
             patient=OuterRef("pk"),
             visit_date__range=self.AUDIT_DATE_RANGE,
         )
@@ -4100,7 +4100,7 @@ class CalculateKPIS:
                 | Q(hospital_discharge_date__range=self.AUDIT_DATE_RANGE)
             ),
             # DKA reason 2
-            hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[1][0],
+            hospital_admission_reason=HOSPITAL_ADMISSION_REASONS_2021[1][0],
             patient__pk=pt_pk,
             visit_date__range=self.AUDIT_DATE_RANGE,
         ).count()

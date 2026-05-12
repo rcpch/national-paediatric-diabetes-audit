@@ -79,6 +79,7 @@ class VisitForm(forms.ModelForm):
             "hospital_admission_date": DateInput(),
             "hospital_discharge_date": DateInput(),
             "hospital_admission_reason": forms.Select(),
+            "hospital_admission_reason_2026": forms.Select(),
             "dka_additional_therapies": forms.Select(),
             "hospital_admission_other": forms.Textarea(),
         }
@@ -185,13 +186,31 @@ class VisitForm(forms.ModelForm):
     def clean_hospital_admission_reason(self):
         data = self.cleaned_data["hospital_admission_reason"]
         # Convert the list of tuples to a dictionary
-        hospital_admission_reason_dict = dict(HOSPITAL_ADMISSION_REASONS)
+        hospital_admission_reason_dict = dict(HOSPITAL_ADMISSION_REASONS_2021)
 
         if data is None or data in hospital_admission_reason_dict:
             return data
         else:
             options = (
-                str(HOSPITAL_ADMISSION_REASONS)
+                str(HOSPITAL_ADMISSION_REASONS_2021)
+                .strip("[]")
+                .replace(")", "")
+                .replace("(", "")
+            )
+            raise ValidationError(
+                f"'{data}' is not a value for 'Hospital Admission Reason'. Please select one of {options}."
+            )
+
+    def clean_hospital_admission_reason_2026(self):
+        data = self.cleaned_data["hospital_admission_reason_2026"]
+        # Convert the list of tuples to a dictionary
+        hospital_admission_reason_dict = dict(HOSPITAL_ADMISSION_REASONS_2026)
+
+        if data is None or data in hospital_admission_reason_dict:
+            return data
+        else:
+            options = (
+                str(HOSPITAL_ADMISSION_REASONS_2026)
                 .strip("[]")
                 .replace(")", "")
                 .replace("(", "")
@@ -1141,6 +1160,9 @@ class VisitForm(forms.ModelForm):
         hospital_admission_date = cleaned_data.get("hospital_admission_date")
         hospital_discharge_date = cleaned_data.get("hospital_discharge_date")
         hospital_admission_reason = cleaned_data.get("hospital_admission_reason")
+        hospital_admission_reason_2026 = cleaned_data.get(
+            "hospital_admission_reason_2026"
+        )
         dka_additional_therapies = cleaned_data.get("dka_additional_therapies")
         hospital_admission_other = cleaned_data.get("hospital_admission_other")
         blood_gas_ph = cleaned_data.get("blood_gas_ph")
@@ -1148,37 +1170,44 @@ class VisitForm(forms.ModelForm):
         # clean hospital admission fields
         if hospital_admission_other == "None":
             hospital_admission_other = None
+        # Select year-appropriate active field and DKA code
+        if self.dataset_year >= 2026:
+            active_reason = hospital_admission_reason_2026
+            active_reason_field = "hospital_admission_reason_2026"
+            DKA_CODE = 1
+        else:
+            active_reason = hospital_admission_reason
+            active_reason_field = "hospital_admission_reason"
+            DKA_CODE = 2
+        OTHER_CODE = 6  # Same in both 2021 and 2026 datasets
         if any(
             [
                 hospital_admission_date,
-                hospital_admission_reason,
+                active_reason,
                 dka_additional_therapies,
                 hospital_admission_other,
                 blood_gas_ph,
                 blood_gas_bicarbonate,
             ]
         ):
-            if hospital_admission_reason is not None:
-                if hospital_admission_reason == 2:  # DKA
+            if active_reason is not None and active_reason != 99:
+                if active_reason == DKA_CODE:  # DKA
                     items_to_include = [
                         {"hospital_admission_date": hospital_admission_date},
-                        {"hospital_admission_reason": hospital_admission_reason},
+                        {active_reason_field: active_reason},
                         {"dka_additional_therapies": dka_additional_therapies},
                     ]
                     if self.dataset_year >= 2026:
+                        items_to_include.append({"blood_gas_ph": blood_gas_ph})
                         items_to_include.append(
-                            {"blood_gas_ph": blood_gas_ph},
-                        )
-                        items_to_include.append(
-                            {"blood_gas_bicarbonate": blood_gas_bicarbonate},
+                            {"blood_gas_bicarbonate": blood_gas_bicarbonate}
                         )
                     all_items_must_be_filled_in(items_to_include)
-
-                elif hospital_admission_reason == 6:  # Other
+                elif active_reason == OTHER_CODE:  # Other
                     all_items_must_be_filled_in(
                         [
                             {"hospital_admission_date": hospital_admission_date},
-                            {"hospital_admission_reason": hospital_admission_reason},
+                            {active_reason_field: active_reason},
                             {"hospital_admission_other": hospital_admission_other},
                         ]
                     )
@@ -1186,13 +1215,13 @@ class VisitForm(forms.ModelForm):
                     all_items_must_be_filled_in(
                         [
                             {"hospital_admission_date": hospital_admission_date},
-                            {"hospital_admission_reason": hospital_admission_reason},
+                            {active_reason_field: active_reason},
                         ]
                     )
                     if hospital_admission_other is not None:
                         raise ValidationError(
                             {
-                                "hospital_admission_reason": [
+                                active_reason_field: [
                                     "Hospital Admission Reason must be 'Other' if 'Other' has been completed."
                                 ]
                             }
@@ -1206,23 +1235,22 @@ class VisitForm(forms.ModelForm):
                             }
                         )
             else:
-                # No hospital admission reason selected
+                # No admission reason selected — require it
                 all_items_must_be_filled_in(
                     [
                         {"hospital_admission_date": hospital_admission_date},
-                        {"hospital_admission_reason": hospital_admission_reason},
+                        {active_reason_field: active_reason},
                     ]
                 )
-
-            if hospital_admission_other is not None and hospital_admission_reason != 6:
+            # Prevent free-text "other" when reason is not Other
+            if hospital_admission_other is not None and active_reason != OTHER_CODE:
                 raise ValidationError(
                     {
-                        "hospital_admission_reason": [
+                        active_reason_field: [
                             "Hospital Admission Reason must be 'Other' if 'Other' is filled in"
                         ]
                     }
                 )
-
             if (
                 hospital_admission_date is not None
                 and hospital_discharge_date is not None
@@ -1235,7 +1263,6 @@ class VisitForm(forms.ModelForm):
                             ]
                         }
                     )
-
         return cleaned_data
 
     def save(self, commit=True):

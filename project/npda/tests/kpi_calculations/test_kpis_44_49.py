@@ -7,7 +7,7 @@ import pytest
 from dateutil.relativedelta import relativedelta
 
 from project.constants.albuminuria_stage import ALBUMINURIA_STAGES
-from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS
+from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS_2021
 from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 from project.npda.kpi_class.kpis import CalculateKPIS, KPIResult
 from project.npda.models import Patient
@@ -342,7 +342,7 @@ def test_kpi_calculation_46(AUDIT_START_DATE):
         # KPI1 eligible
         **eligible_criteria,
         # valid admission reason
-        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[0][0],
+        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS_2021[0][0],
         # admission date within audit range
         visit__hospital_admission_date=AUDIT_START_DATE + relativedelta(days=2),
     )
@@ -350,7 +350,7 @@ def test_kpi_calculation_46(AUDIT_START_DATE):
         # KPI1 eligible
         **eligible_criteria,
         # valid admission reason
-        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[-1][0],
+        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS_2021[-1][0],
         # discharge date within audit range
         visit__hospital_discharge_date=AUDIT_START_DATE + relativedelta(days=2),
     )
@@ -368,7 +368,7 @@ def test_kpi_calculation_46(AUDIT_START_DATE):
         # KPI1 eligible
         **eligible_criteria,
         # valid admission reason
-        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[-1][0],
+        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS_2021[-1][0],
         # admission date outside audit range
         visit__hospital_admission_date=AUDIT_START_DATE - relativedelta(days=2),
     )
@@ -448,7 +448,7 @@ def test_kpi_calculation_47(AUDIT_START_DATE):
             # KPI1 eligible
             **eligible_criteria,
             # valid dka admission reason
-            visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[1][0],
+            visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS_2021[1][0],
             # admission date within audit range
             visit__hospital_admission_date=AUDIT_START_DATE + relativedelta(days=2),
         )
@@ -458,7 +458,7 @@ def test_kpi_calculation_47(AUDIT_START_DATE):
             # KPI1 eligible
             **eligible_criteria,
             # valid dka admission reason
-            visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[1][0],
+            visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS_2021[1][0],
             # discharge date within audit range
             visit__hospital_discharge_date=AUDIT_START_DATE + relativedelta(days=2),
         )
@@ -469,7 +469,7 @@ def test_kpi_calculation_47(AUDIT_START_DATE):
         # KPI1 eligible
         **eligible_criteria,
         # invalid admission reason
-        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[0][0],
+        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS_2021[0][0],
         # admission date within audit range
         visit__hospital_admission_date=AUDIT_START_DATE + relativedelta(days=2),
     )
@@ -477,7 +477,7 @@ def test_kpi_calculation_47(AUDIT_START_DATE):
         # KPI1 eligible
         **eligible_criteria,
         # valid admission reason
-        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS[0][0],
+        visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS_2021[0][0],
         # admission date outside audit range
         visit__hospital_admission_date=AUDIT_START_DATE - relativedelta(days=2),
     )

@@ -139,7 +139,7 @@ VISIT_FIELD_HEADINGS_2026 = {
     # Admissions/Inpatient Entry
     "hospital_admission_date": "Start date (Hospital Provider Spell)",
     "hospital_discharge_date": "Discharge date (Hospital provider spell)",
-    "hospital_admission_reason": "Reason for admission",
+    "hospital_admission_reason_2026": "Reason for admission",
     "hospital_admission_other": "Only complete if OTHER selected: Reason for admission (free text)",
     "dka_additional_therapies": "Only complete if DKA selected in previous question: During this DKA admission did the patient receive any of the following therapies?",
     "blood_gas_ph": "Initial pH at admission",
