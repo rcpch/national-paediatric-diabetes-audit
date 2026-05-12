@@ -1140,3 +1140,307 @@ def test_dashboard_health_check_totals_2026_dataset(
 
     assert totals["total_eligible_blood_pressure"] == 1
     assert totals["total_passed_blood_pressure"] == 1
+
+
+# ---------------------------------------------------------------------------
+# dashboard_health_check_totals — 4+ HbA1c
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_four_hba1cs_patient_with_four_measurements_passes(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
+):
+    """A T1DM patient with exactly 4 HbA1c values in the audit period passes the tile."""
+    user, pdu = _get_user_and_pdu()
+    audit_period = AuditPeriod.objects.get(slug="2024-2025")
+
+    patient = PatientFactory(
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=14),
+        diagnosis_date=audit_period.start_date - relativedelta(days=2),
+    )
+    for offset_months in [1, 3, 6, 9]:
+        visit_date = audit_period.start_date + relativedelta(months=offset_months)
+        VisitFactory(
+            patient=patient,
+            visit_date=visit_date,
+            hba1c=60,
+            hba1c_date=visit_date,
+        )
+
+    submission = _create_submission(user, pdu, audit_period)
+    submission.patients.add(patient)
+
+    totals = dashboard_health_check_totals(pdu, audit_period)
+
+    assert totals["total_eligible_four_hba1cs"] == 1
+    assert totals["total_passed_four_hba1cs"] == 1
+
+
+@pytest.mark.django_db
+def test_four_hba1cs_patient_with_three_measurements_fails(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
+):
+    """A T1DM patient with only 3 HbA1c values in the audit period does not pass."""
+    user, pdu = _get_user_and_pdu()
+    audit_period = AuditPeriod.objects.get(slug="2024-2025")
+
+    patient = PatientFactory(
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=14),
+        diagnosis_date=audit_period.start_date - relativedelta(days=2),
+    )
+    for offset_months in [1, 3, 6]:
+        visit_date = audit_period.start_date + relativedelta(months=offset_months)
+        VisitFactory(
+            patient=patient,
+            visit_date=visit_date,
+            hba1c=60,
+            hba1c_date=visit_date,
+        )
+
+    submission = _create_submission(user, pdu, audit_period)
+    submission.patients.add(patient)
+
+    totals = dashboard_health_check_totals(pdu, audit_period)
+
+    assert totals["total_eligible_four_hba1cs"] == 1
+    assert totals["total_passed_four_hba1cs"] == 0
+
+
+@pytest.mark.django_db
+def test_four_hba1cs_visit_without_hba1c_value_not_counted(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
+):
+    """Visits where hba1c is None are not counted towards the 4+ HbA1c total."""
+    user, pdu = _get_user_and_pdu()
+    audit_period = AuditPeriod.objects.get(slug="2024-2025")
+
+    patient = PatientFactory(
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=14),
+        diagnosis_date=audit_period.start_date - relativedelta(days=2),
+    )
+    # 3 visits with a real HbA1c, 1 visit with hba1c=None
+    for offset_months in [1, 3, 6]:
+        visit_date = audit_period.start_date + relativedelta(months=offset_months)
+        VisitFactory(
+            patient=patient, visit_date=visit_date, hba1c=60, hba1c_date=visit_date
+        )
+    VisitFactory(
+        patient=patient,
+        visit_date=audit_period.start_date + relativedelta(months=9),
+        hba1c=None,
+        hba1c_date=None,
+    )
+
+    submission = _create_submission(user, pdu, audit_period)
+    submission.patients.add(patient)
+
+    totals = dashboard_health_check_totals(pdu, audit_period)
+
+    assert totals["total_eligible_four_hba1cs"] == 1
+    assert totals["total_passed_four_hba1cs"] == 0
+
+
+@pytest.mark.django_db
+def test_four_hba1cs_incomplete_year_patient_excluded(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
+):
+    """A patient who joined mid-audit (incomplete year) is excluded from the eligible count."""
+    user, pdu = _get_user_and_pdu()
+    audit_period = AuditPeriod.objects.get(slug="2024-2025")
+
+    # Diagnosed during the audit year → incomplete year of care
+    patient = PatientFactory(
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=14),
+        diagnosis_date=audit_period.start_date + relativedelta(months=2),
+    )
+    for offset_months in [3, 5, 7, 9]:
+        visit_date = audit_period.start_date + relativedelta(months=offset_months)
+        VisitFactory(
+            patient=patient, visit_date=visit_date, hba1c=60, hba1c_date=visit_date
+        )
+
+    submission = _create_submission(user, pdu, audit_period)
+    submission.patients.add(patient)
+
+    totals = dashboard_health_check_totals(pdu, audit_period)
+
+    assert totals["total_eligible_four_hba1cs"] == 0
+    assert totals["total_passed_four_hba1cs"] == 0
+
+
+# ---------------------------------------------------------------------------
+# dashboard_health_check_totals — all care processes complete
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_all_care_processes_over_12_all_six_complete_passes(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
+):
+    """A T1DM patient ≥12 with all 6 care processes recorded passes the tile."""
+    user, pdu = _get_user_and_pdu()
+    audit_period = AuditPeriod.objects.get(slug="2024-2025")
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    patient = PatientFactory(
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=14),
+        diagnosis_date=audit_period.start_date - relativedelta(days=2),
+    )
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        # HbA1c
+        hba1c=60,
+        hba1c_date=visit_date,
+        # BMI (bmi is a separate stored field, not auto-calculated from height/weight)
+        height=160,
+        weight=55,
+        bmi=21.5,
+        height_weight_observation_date=visit_date,
+        # Thyroid
+        thyroid_function_date=visit_date,
+        # Blood pressure
+        systolic_blood_pressure=110,
+        blood_pressure_observation_date=visit_date,
+        # Urinary albumin (ACR)
+        albumin_creatinine_ratio=1.2,
+        albumin_creatinine_ratio_date=visit_date,
+        # Foot exam
+        foot_examination_observation_date=visit_date,
+    )
+
+    submission = _create_submission(user, pdu, audit_period)
+    submission.patients.add(patient)
+
+    totals = dashboard_health_check_totals(pdu, audit_period)
+
+    assert totals["total_eligible_all_care_processes"] == 1
+    assert totals["total_passed_all_care_processes"] == 1
+
+
+@pytest.mark.django_db
+def test_all_care_processes_over_12_missing_one_fails(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
+):
+    """A T1DM patient ≥12 missing one of the 6 care processes does not pass."""
+    user, pdu = _get_user_and_pdu()
+    audit_period = AuditPeriod.objects.get(slug="2024-2025")
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    patient = PatientFactory(
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=14),
+        diagnosis_date=audit_period.start_date - relativedelta(days=2),
+    )
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        hba1c=60,
+        hba1c_date=visit_date,
+        height=160,
+        weight=55,
+        height_weight_observation_date=visit_date,
+        thyroid_function_date=visit_date,
+        systolic_blood_pressure=110,
+        blood_pressure_observation_date=visit_date,
+        albumin_creatinine_ratio=1.2,
+        albumin_creatinine_ratio_date=visit_date,
+        # foot exam intentionally omitted
+        foot_examination_observation_date=None,
+    )
+
+    submission = _create_submission(user, pdu, audit_period)
+    submission.patients.add(patient)
+
+    totals = dashboard_health_check_totals(pdu, audit_period)
+
+    assert totals["total_eligible_all_care_processes"] == 1
+    assert totals["total_passed_all_care_processes"] == 0
+
+
+@pytest.mark.django_db
+def test_all_care_processes_under_12_three_complete_passes(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
+):
+    """A T1DM patient <12 only needs HbA1c, BMI and thyroid to pass (not age-gated checks)."""
+    user, pdu = _get_user_and_pdu()
+    audit_period = AuditPeriod.objects.get(slug="2024-2025")
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    # Aged 11 at audit start
+    patient = PatientFactory(
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=11, days=2),
+        diagnosis_date=audit_period.start_date - relativedelta(days=2),
+    )
+    VisitFactory(
+        patient=patient,
+        visit_date=visit_date,
+        hba1c=60,
+        hba1c_date=visit_date,
+        # bmi is a separate stored field, not auto-calculated from height/weight
+        height=140,
+        weight=38,
+        bmi=19.4,
+        height_weight_observation_date=visit_date,
+        thyroid_function_date=visit_date,
+        # Age-gated checks should not be required
+        systolic_blood_pressure=None,
+        blood_pressure_observation_date=None,
+        albumin_creatinine_ratio=None,
+        albumin_creatinine_ratio_date=None,
+        foot_examination_observation_date=None,
+    )
+
+    submission = _create_submission(user, pdu, audit_period)
+    submission.patients.add(patient)
+
+    totals = dashboard_health_check_totals(pdu, audit_period)
+
+    assert totals["total_eligible_all_care_processes"] == 1
+    assert totals["total_passed_all_care_processes"] == 1
+
+
+@pytest.mark.django_db
+def test_all_care_processes_t2dm_patient_excluded(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
+):
+    """T2DM patients are excluded from both the eligible and passed counts (T1 only metric)."""
+    user, pdu = _get_user_and_pdu()
+    audit_period = AuditPeriod.objects.get(slug="2024-2025")
+    visit_date = audit_period.start_date + relativedelta(days=10)
+
+    t2_patient = PatientFactory(
+        diabetes_type=DIABETES_TYPES[1][0],  # T2DM
+        date_of_birth=audit_period.start_date - relativedelta(years=14),
+        diagnosis_date=audit_period.start_date - relativedelta(days=2),
+    )
+    VisitFactory(
+        patient=t2_patient,
+        visit_date=visit_date,
+        hba1c=60,
+        hba1c_date=visit_date,
+        height=160,
+        weight=55,
+        height_weight_observation_date=visit_date,
+        thyroid_function_date=visit_date,
+        systolic_blood_pressure=110,
+        blood_pressure_observation_date=visit_date,
+        albumin_creatinine_ratio=1.2,
+        albumin_creatinine_ratio_date=visit_date,
+        foot_examination_observation_date=visit_date,
+    )
+
+    submission = _create_submission(user, pdu, audit_period)
+    submission.patients.add(t2_patient)
+
+    totals = dashboard_health_check_totals(pdu, audit_period)
+
+    assert totals["total_eligible_all_care_processes"] == 0
+    assert totals["total_passed_all_care_processes"] == 0
