@@ -418,8 +418,8 @@ ALL_HEADINGS = [
         "model_field": "gluten_free_diet",
         "model": "Visit",
         "alternative_headings": [
-            "Has the patient been\xa0recommended a Gluten-free\xa0diet?", # sic from the old NPDA template (eugh non breaking spaces)
-            "Has the patient been recommended/prescribed a Gluten-free diet?" # Twinkle
+            "Has the patient been\xa0recommended a Gluten-free\xa0diet?",  # sic from the old NPDA template (eugh non breaking spaces)
+            "Has the patient been recommended/prescribed a Gluten-free diet?",  # Twinkle
         ],
         "data_type": "int64",
         "dataset_years": [2021, 2026],
@@ -497,7 +497,7 @@ ALL_HEADINGS = [
         "model_field": "smoking_vaping_status",
         "model": "Visit",
         "alternative_headings": [
-            "Does the patient smoke and/or vape?" # Twinkle
+            "Does the patient smoke and/or vape?"  # Twinkle
         ],
         "data_type": "int64",
         "dataset_years": [2026],
