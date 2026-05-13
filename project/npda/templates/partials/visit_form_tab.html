@@ -205,11 +205,21 @@
       }
     ]);
 
-    // Hospital admission reason dependencies
+    // Hospital admission reason dependencies (2021 uses hospital_admission_reason, 2026 uses hospital_admission_reason_2026)
     handleFieldDependency('id_hospital_admission_reason', [
       {
         targetId: 'id_dka_additional_therapies',
         condition: value => value === '2'
+      },
+      {
+        targetId: 'id_hospital_admission_other',
+        condition: value => value === '6'
+      }
+    ]);
+    handleFieldDependency('id_hospital_admission_reason_2026', [
+      {
+        targetId: 'id_dka_additional_therapies',
+        condition: value => value === '1'
       },
       {
         targetId: 'id_hospital_admission_other',
