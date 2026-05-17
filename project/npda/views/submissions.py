@@ -47,7 +47,12 @@ from ..general_functions.csv import (
     download_xlsx,
     export_as_csv,
 )
-from ..general_functions.patient_report.queries import all_pdus_t1dm_bubble_map_data
+from ..general_functions.patient_report.queries import (
+    all_pdus_age_map_data,
+    all_pdus_care_processes_map_data,
+    all_pdus_diabetes_type_map_data,
+    all_pdus_t1dm_bubble_map_data,
+)
 from ..general_functions.session import save_csv_uploading_user_to_visitactivity
 from ..models import (
     PaediatricDiabetesUnit,
@@ -196,6 +201,13 @@ class SubmissionsListView(
             context["bubble_map_centres"] = all_pdus_t1dm_bubble_map_data(
                 selected_audit_period
             )
+            context["bubble_map_care_processes"] = all_pdus_care_processes_map_data(
+                selected_audit_period
+            )
+            context["bubble_map_diabetes_type"] = all_pdus_diabetes_type_map_data(
+                selected_audit_period
+            )
+            context["bubble_map_age"] = all_pdus_age_map_data(selected_audit_period)
             context["RCPCH_DEPRIVATION_TILES_URL"] = RCPCH_DEPRIVATION_TILES_URL
             context["RCPCH_CENSUS_PLATFORM_TOKEN"] = RCPCH_CENSUS_PLATFORM_TOKEN
 

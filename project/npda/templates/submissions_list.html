@@ -2,287 +2,356 @@
 {% load static %}
 {% block content %}
   {% if request.user.is_rcpch_audit_team_member %}
-    <!-- Leaderboard tiles -->
-    <div class="px-4 mb-4 mt-4">
-      {% include 'partials/submission_stats.html' with submission_statistics=submission_statistics %}
-    </div>
+    <style>
+      .sbm-nav-btn.is-active {
+        background-color: oklch(var(--p) / 0.12);
+        color: oklch(var(--p));
+        font-weight: 600;
+      }
+    </style>
 
-    <!-- Searchable PDU submission table -->
-    {% if pdu_submission_data %}
-      {{ pdu_submission_data|json_script:"pdu-submission-data" }}
-      <div class="px-4 mb-6">
-        <h2 class="text-base font-semibold text-rcpch_dark_blue mb-3">PDU submissions by quarter — {{ audit_period }}</h2>
-        <!-- Controls -->
-        <div class="flex flex-wrap items-center gap-3 mb-3">
-          <input id="pdu-search"
-                 type="search"
-                 placeholder="Search by PZ code or lead centre…"
-                 class="input input-bordered input-sm w-64" />
-          <div class="flex gap-1" id="quarter-filters">
-            <button data-quarter="all" class="btn btn-sm btn-active pdu-qbtn">All</button>
-            <button data-quarter="1" class="btn btn-sm pdu-qbtn">Q1</button>
-            <button data-quarter="2" class="btn btn-sm pdu-qbtn">Q2</button>
-            <button data-quarter="3" class="btn btn-sm pdu-qbtn">Q3</button>
-            <button data-quarter="4" class="btn btn-sm pdu-qbtn">Q4</button>
-            <button data-quarter="0" class="btn btn-sm btn-error btn-outline pdu-qbtn">Not submitted</button>
-          </div>
-          <span id="pdu-visible-count" class="text-sm text-gray-500"></span>
-        </div>
-        <!-- Table -->
-        <div class="overflow-y-auto rounded-lg border border-base-300" style="max-height: 28rem;">
-          <table class="table table-xs table-zebra w-full">
-            <thead class="sticky top-0 z-10 bg-base-100">
-              <tr>
-                <th class="w-28">PZ Code</th>
-                <th>Lead Centre</th>
-                <th class="w-36 text-center">Latest Quarter</th>
-              </tr>
-            </thead>
-            <tbody id="pdu-table-body">
-              {% for row in pdu_submission_data %}
-                <tr data-quarter="{{ row.latest_visit_quarter }}"
-                    data-pz="{{ row.pz_code|lower }}"
-                    data-name="{{ row.lead_organisation_name|lower }}">
-                  <td class="font-mono">{{ row.pz_code }}</td>
-                  <td>{{ row.lead_organisation_name }}</td>
-                  <td class="text-center">
-                    {% if row.latest_visit_quarter == 0 %}
-                      <span class="badge badge-error badge-outline badge-sm">Not submitted</span>
-                    {% elif row.latest_visit_quarter == 1 %}
-                      <span class="badge badge-success badge-sm">Q1</span>
-                    {% elif row.latest_visit_quarter == 2 %}
-                      <span class="badge badge-success badge-sm">Q2</span>
-                    {% elif row.latest_visit_quarter == 3 %}
-                      <span class="badge badge-success badge-sm">Q3</span>
-                    {% elif row.latest_visit_quarter == 4 %}
-                      <span class="badge badge-success badge-sm">Q4</span>
-                    {% endif %}
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <script>
-        (function () {
-          var searchInput = document.getElementById('pdu-search');
-          var qButtons = document.querySelectorAll('.pdu-qbtn');
-          var rows = document.querySelectorAll('#pdu-table-body tr');
-          var countEl = document.getElementById('pdu-visible-count');
-          var activeQuarter = 'all';
+    <div class="flex min-h-screen">
 
-          function updateCount() {
-            var visible = document.querySelectorAll('#pdu-table-body tr:not([hidden])').length;
-            countEl.textContent = visible + ' of ' + rows.length + ' PDUs';
-          }
+      <!-- ── Sticky sidebar ──────────────────────────────── -->
+      <aside class="hidden lg:flex flex-col w-52 shrink-0 sticky top-0 self-start h-screen pt-6 pb-4 px-3 border-r border-base-300 bg-base-100 z-20">
+        <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3 px-2">Submissions</p>
+        <nav class="flex flex-col gap-1 text-sm">
+          <button class="sbm-nav-btn is-active flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-base-200 transition-colors text-left w-full"
+                  data-sbm-section="section-leaderboard">
+            <i class="fa-solid fa-trophy w-4 text-center"></i> Leaderboard
+          </button>
+          <button class="sbm-nav-btn flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-base-200 transition-colors text-left w-full"
+                  data-sbm-section="section-pdu-table">
+            <i class="fa-solid fa-table-list w-4 text-center"></i> PDU Submissions
+          </button>
+          <button class="sbm-nav-btn flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-base-200 transition-colors text-left w-full"
+                  data-sbm-section="section-national-map">
+            <i class="fa-solid fa-map w-4 text-center"></i> National Summary
+          </button>
+          <button class="sbm-nav-btn flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-base-200 transition-colors text-left w-full"
+                  data-sbm-section="section-submissions-list">
+            <i class="fa-solid fa-file-lines w-4 text-center"></i> Submissions List
+          </button>
+        </nav>
+      </aside>
 
-          function applyFilters() {
-            var term = searchInput.value.trim().toLowerCase();
-            rows.forEach(function (row) {
-              var qMatch = activeQuarter === 'all' || row.dataset.quarter === activeQuarter;
-              var textMatch = !term || row.dataset.pz.includes(term) || row.dataset.name.includes(term);
-              row.hidden = !(qMatch && textMatch);
-            });
-            updateCount();
-          }
+      <!-- ── Main content ────────────────────────────────── -->
+      <div class="flex-1 min-w-0 px-4 py-6">
 
-          searchInput.addEventListener('input', applyFilters);
+        <!-- Section 1: Leaderboard -->
+        <section id="section-leaderboard">
+          <h2 class="text-lg font-semibold text-rcpch_dark_blue mb-4">Leaderboard</h2>
+          {% include 'partials/submission_stats.html' with submission_statistics=submission_statistics %}
+        </section>
 
-          qButtons.forEach(function (btn) {
-            btn.addEventListener('click', function () {
-              activeQuarter = btn.dataset.quarter;
-              qButtons.forEach(function (b) { b.classList.remove('btn-active'); });
-              btn.classList.add('btn-active');
-              applyFilters();
-            });
-          });
-
-          updateCount();
-        })();
-      </script>
-    {% endif %}
-    {% if bubble_map_centres %}
-      <div class="px-4 mb-8">
-        <h2 class="text-lg font-semibold text-rcpch_dark_blue mb-2">Lead centre overview — {{ audit_period }}</h2>
-        <link rel="stylesheet"
-              href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
-        <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/@rcpch/imd-map@0.5.0/dist/umd/rcpch-imd-map.min.js"
-                integrity="sha512-Udl5igLQTnxSJGcneRNBfS+zFpzYUcNZW2kA+dkVf/9mNpmS9numEnCaFdtWLqndBqGUJisvJ4QSYudGOK5oYg=="
-                crossorigin="anonymous"></script>
-        <style>
-          #submissions-bubble-map .maplibregl-ctrl {
-            max-height: calc(38rem - 2rem);
-            overflow-y: auto;
-          }
-        </style>
-
-        {{ bubble_map_centres|json_script:"sbm-data-hba1c" }}
-        {{ bubble_map_care_processes|json_script:"sbm-data-care" }}
-        {{ bubble_map_diabetes_type|json_script:"sbm-data-type" }}
-        {{ bubble_map_age|json_script:"sbm-data-age" }}
-
-        <!-- Tabs -->
-        <div class="flex gap-2 mb-3 flex-wrap" id="sbm-tabs">
-          <button class="btn btn-sm btn-primary" data-sbm-tab="hba1c">By HbA1c</button>
-          <button class="btn btn-sm btn-outline" data-sbm-tab="care">% Complete care processes</button>
-          <button class="btn btn-sm btn-outline" data-sbm-tab="type">By diabetes type</button>
-          <button class="btn btn-sm btn-outline" data-sbm-tab="age">By age group</button>
-        </div>
-        <p id="sbm-tab-desc" class="text-sm text-gray-600 mb-3">
-          Bubble size = T1DM patients. Colour = median HbA1c (mmol/mol): blue (lower) → red (higher).
-        </p>
-
-        <div id="submissions-bubble-map"
-             data-tiles-base-url="{{ RCPCH_DEPRIVATION_TILES_URL|default:'' }}"
-             data-tiles-api-key="{{ RCPCH_CENSUS_PLATFORM_TOKEN|default:'' }}"
-             style="width:100%;height:38rem;border-radius:4px;"></div>
-
-        <script>
-          (function () {
-            var container = document.getElementById('submissions-bubble-map');
-            if (!container || typeof RcpchImdMap === 'undefined') return;
-
-            function parseData(id) {
-              var el = document.getElementById(id);
-              return el ? JSON.parse(el.textContent) : [];
-            }
-
-            var tilesBaseUrl = (container.dataset.tilesBaseUrl || '').replace(/\/$/, '') || undefined;
-            var tilesApiKey = container.dataset.tilesApiKey || undefined;
-
-            var TABS = {
-              hba1c: {
-                data: parseData('sbm-data-hba1c'),
-                desc: 'Bubble size = number of eligible T1DM patients. Colour = median HbA1c (mmol/mol): blue (lower) \u2192 red (higher).',
-                leadCentres: {
-                  sizeField: 'patient_count', sizeLabel: 'T1DM patients',
-                  colorField: 'median_hba1c', colorLabel: 'Median HbA1c',
-                  colorUnit: 'mmol/mol', colorMode: 'continuous',
-                  colorScale: ['#2166ac', '#ffffbf', '#d7191c'],
-                  minRadius: 8, maxRadius: 40,
-                },
-              },
-              care: {
-                data: parseData('sbm-data-care'),
-                desc: 'Bubble size = T1DM patients with complete year of care. Colour = % who completed all required care processes (green = higher).',
-                leadCentres: {
-                  sizeField: 'eligible_count', sizeLabel: 'Eligible T1DM patients',
-                  colorField: 'pct_complete', colorLabel: '% Complete care',
-                  colorUnit: '%', colorMode: 'continuous',
-                  colorScale: ['#d7191c', '#ffffbf', '#1a9641'],
-                  minRadius: 8, maxRadius: 40,
-                },
-              },
-              type: {
-                data: parseData('sbm-data-type'),
-                desc: 'Bubble size = all patients. Colour = dominant diabetes type at the lead centre.',
-                leadCentres: {
-                  sizeField: 'total_patients', sizeLabel: 'Total patients',
-                  colorField: 'dominant_type', colorLabel: 'Dominant diabetes type',
-                  colorMode: 'categorical',
-                  colorByCategory: { type1: '#4e79a7', type2: '#f28e2b', other: '#59a14f' },
-                  breakdownFields: [
-                    { field: 'pct_type1', label: 'Type 1', color: '#4e79a7' },
-                    { field: 'pct_type2', label: 'Type 2', color: '#f28e2b' },
-                    { field: 'pct_other', label: 'Other',  color: '#59a14f' },
-                  ],
-                  minRadius: 8, maxRadius: 40,
-                },
-              },
-              age: {
-                data: parseData('sbm-data-age'),
-                desc: 'Bubble size = T1DM patients. Colour = dominant age group at the lead centre.',
-                leadCentres: {
-                  sizeField: 'total_patients', sizeLabel: 'T1DM patients',
-                  colorField: 'dominant_age_group', colorLabel: 'Age group',
-                  colorMode: 'categorical',
-                  colorByCategory: { under_16: '#2166ac', over_16: '#d7191c' },
-                  breakdownFields: [
-                    { field: 'pct_under_16', label: 'Under 16',   color: '#2166ac' },
-                    { field: 'pct_over_16',  label: '16 and over', color: '#d7191c' },
-                  ],
-                  minRadius: 8, maxRadius: 40,
-                },
-              },
-            };
-
-            var descEl = document.getElementById('sbm-tab-desc');
-            var activeTabId = 'hba1c';
-
-            function buildMap(tabId) {
-              /* Destroy any existing instance before recreating — this is the only
-                 reliable way to switch between continuous and categorical colour
-                 modes, because setStyle() deep-merges and leaves stale keys. */
-              if (window.__npdaSubmissionsMap) {
-                window.__npdaSubmissionsMap.destroy();
-                window.__npdaSubmissionsMap = null;
-              }
-              var tab = TABS[tabId];
-              if (!tab) return;
-
-              var map = RcpchImdMap.createImdMap({
-                container: container,
-                tilesBaseUrl: tilesBaseUrl,
-                tilesApiKey: tilesApiKey,
-                tilesApiKeyParam: 'Subscription-Key',
-                initialNation: 'all',
-                initialEra: '2021',
-                zoom: 5,
-                legendCollapsed: true,
-                style: {
-                  legend: { width: 200 },
-                  leadCentres: tab.leadCentres,
-                  tooltip: { backgroundColor: '#0d0d58', textColor: '#ffffff' },
-                },
-                onWarning: function (w) {
-                  console.warn('[rcpch-imd-map]', w.code, w.message);
-                },
-              });
-
-              map.setLeadCentres(tab.data);
-              window.__npdaSubmissionsMap = map;
-            }
-
-            function switchTab(tabId) {
-              activeTabId = tabId;
-              document.querySelectorAll('[data-sbm-tab]').forEach(function (btn) {
-                var isActive = btn.dataset.sbmTab === tabId;
-                btn.classList.toggle('btn-primary', isActive);
-                btn.classList.toggle('btn-outline', !isActive);
-              });
-              var tab = TABS[tabId];
-              if (descEl && tab) descEl.textContent = tab.desc;
-              buildMap(tabId);
-            }
-
-            document.querySelectorAll('[data-sbm-tab]').forEach(function (btn) {
-              btn.addEventListener('click', function () { switchTab(btn.dataset.sbmTab); });
-            });
-
-            buildMap('hba1c');
-          })();
-        </script>
-      </div>
-    {% endif %}
-  {% endif %}
-  <section class="mb-5 container-mx-auto flex items-center justify-center">
-    <div class="w-full"
-         hx-get="/submissions"
-         hx-trigger="submissions from:body"
-         hx-target="#submissions_table">
-      <div class="flex flex-col justify-center px-10">
-        <div>
-          <div>
-            <div class="relative">
-              <div id="submissions_table" class="w-full mt-5 mx-2">
-                {% include 'partials/submission_history.html' with submissions=object_list data=data submission_errors=submission_errors patients=patients done=done %}
+        <!-- Section 2: PDU Submissions -->
+        {% if pdu_submission_data %}
+          {{ pdu_submission_data|json_script:"pdu-submission-data" }}
+          <section id="section-pdu-table" class="hidden">
+            <h2 class="text-lg font-semibold text-rcpch_dark_blue mb-4">PDU submissions by quarter — {{ audit_period }}</h2>
+            <div class="flex flex-wrap items-center gap-3 mb-3">
+              <input id="pdu-search"
+                     type="search"
+                     placeholder="Search by PZ code or lead centre…"
+                     class="input input-bordered input-sm w-64" />
+              <div class="flex gap-1 flex-wrap" id="quarter-filters">
+                <button data-quarter="all" class="btn btn-sm btn-active pdu-qbtn">All</button>
+                <button data-quarter="1" class="btn btn-sm pdu-qbtn">Q1</button>
+                <button data-quarter="2" class="btn btn-sm pdu-qbtn">Q2</button>
+                <button data-quarter="3" class="btn btn-sm pdu-qbtn">Q3</button>
+                <button data-quarter="4" class="btn btn-sm pdu-qbtn">Q4</button>
+                <button data-quarter="0" class="btn btn-sm btn-error btn-outline pdu-qbtn">Not submitted</button>
               </div>
+              <span id="pdu-visible-count" class="text-sm text-gray-500"></span>
+            </div>
+            <div class="overflow-y-auto rounded-lg border border-base-300" style="max-height: 28rem;">
+              <table class="table table-xs table-zebra w-full">
+                <thead class="sticky top-0 z-10 bg-base-100">
+                  <tr>
+                    <th class="w-28">PZ Code</th>
+                    <th>Lead Centre</th>
+                    <th class="w-36 text-center">Latest Quarter</th>
+                  </tr>
+                </thead>
+                <tbody id="pdu-table-body">
+                  {% for row in pdu_submission_data %}
+                    <tr data-quarter="{{ row.latest_visit_quarter }}"
+                        data-pz="{{ row.pz_code|lower }}"
+                        data-name="{{ row.lead_organisation_name|lower }}">
+                      <td class="font-mono">{{ row.pz_code }}</td>
+                      <td>{{ row.lead_organisation_name }}</td>
+                      <td class="text-center">
+                        {% if row.latest_visit_quarter == 0 %}
+                          <span class="badge badge-error badge-outline badge-sm">Not submitted</span>
+                        {% elif row.latest_visit_quarter == 1 %}
+                          <span class="badge badge-success badge-sm">Q1</span>
+                        {% elif row.latest_visit_quarter == 2 %}
+                          <span class="badge badge-success badge-sm">Q2</span>
+                        {% elif row.latest_visit_quarter == 3 %}
+                          <span class="badge badge-success badge-sm">Q3</span>
+                        {% elif row.latest_visit_quarter == 4 %}
+                          <span class="badge badge-success badge-sm">Q4</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </section>
+          <script>
+            (function () {
+              var searchInput = document.getElementById('pdu-search');
+              var qButtons = document.querySelectorAll('.pdu-qbtn');
+              var rows = document.querySelectorAll('#pdu-table-body tr');
+              var countEl = document.getElementById('pdu-visible-count');
+              var activeQuarter = 'all';
+
+              function updateCount() {
+                var visible = document.querySelectorAll('#pdu-table-body tr:not([hidden])').length;
+                countEl.textContent = visible + ' of ' + rows.length + ' PDUs';
+              }
+
+              function applyFilters() {
+                var term = searchInput.value.trim().toLowerCase();
+                rows.forEach(function (row) {
+                  var qMatch = activeQuarter === 'all' || row.dataset.quarter === activeQuarter;
+                  var textMatch = !term || row.dataset.pz.includes(term) || row.dataset.name.includes(term);
+                  row.hidden = !(qMatch && textMatch);
+                });
+                updateCount();
+              }
+
+              searchInput.addEventListener('input', applyFilters);
+              qButtons.forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                  activeQuarter = btn.dataset.quarter;
+                  qButtons.forEach(function (b) { b.classList.remove('btn-active'); });
+                  btn.classList.add('btn-active');
+                  applyFilters();
+                });
+              });
+              updateCount();
+            })();
+          </script>
+        {% endif %}
+
+        <!-- Section 3: National Summary Map -->
+        {% if bubble_map_centres %}
+          <section id="section-national-map" class="hidden">
+            <h2 class="text-lg font-semibold text-rcpch_dark_blue mb-2">National summary — {{ audit_period }}</h2>
+            <link rel="stylesheet"
+                  href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+            <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/@rcpch/imd-map@0.5.0/dist/umd/rcpch-imd-map.min.js"
+                    integrity="sha512-Udl5igLQTnxSJGcneRNBfS+zFpzYUcNZW2kA+dkVf/9mNpmS9numEnCaFdtWLqndBqGUJisvJ4QSYudGOK5oYg=="
+                    crossorigin="anonymous"></script>
+            <style>
+              #submissions-bubble-map .maplibregl-ctrl {
+                max-height: calc(38rem - 2rem);
+                overflow-y: auto;
+              }
+            </style>
+
+            {{ bubble_map_centres|json_script:"sbm-data-hba1c" }}
+            {{ bubble_map_care_processes|json_script:"sbm-data-care" }}
+            {{ bubble_map_diabetes_type|json_script:"sbm-data-type" }}
+            {{ bubble_map_age|json_script:"sbm-data-age" }}
+
+            <div class="flex gap-2 mb-3 flex-wrap" id="sbm-tabs">
+              <button class="btn btn-sm btn-primary" data-sbm-tab="hba1c">By HbA1c</button>
+              <button class="btn btn-sm btn-outline" data-sbm-tab="care">% Complete care processes</button>
+              <button class="btn btn-sm btn-outline" data-sbm-tab="type">By diabetes type</button>
+              <button class="btn btn-sm btn-outline" data-sbm-tab="age">By age group</button>
+            </div>
+            <p id="sbm-tab-desc" class="text-sm text-gray-600 mb-3">
+              Bubble size = T1DM patients. Colour = median HbA1c (mmol/mol): blue (lower) → red (higher).
+            </p>
+
+            <div id="submissions-bubble-map"
+                 data-tiles-base-url="{{ RCPCH_DEPRIVATION_TILES_URL|default:'' }}"
+                 data-tiles-api-key="{{ RCPCH_CENSUS_PLATFORM_TOKEN|default:'' }}"
+                 style="width:100%;height:38rem;border-radius:4px;"></div>
+
+            <script>
+              (function () {
+                var container = document.getElementById('submissions-bubble-map');
+                if (!container || typeof RcpchImdMap === 'undefined') return;
+
+                function parseData(id) {
+                  var el = document.getElementById(id);
+                  return el ? JSON.parse(el.textContent) : [];
+                }
+
+                var tilesBaseUrl = (container.dataset.tilesBaseUrl || '').replace(/\/$/, '') || undefined;
+                var tilesApiKey = container.dataset.tilesApiKey || undefined;
+
+                var TABS = {
+                  hba1c: {
+                    data: parseData('sbm-data-hba1c'),
+                    desc: 'Bubble size = number of eligible T1DM patients. Colour = median HbA1c (mmol/mol): blue (lower) \u2192 red (higher).',
+                    leadCentres: {
+                      sizeField: 'patient_count', sizeLabel: 'T1DM patients',
+                      colorField: 'median_hba1c', colorLabel: 'Median HbA1c',
+                      colorUnit: 'mmol/mol', colorMode: 'continuous',
+                      colorScale: ['#2166ac', '#ffffbf', '#d7191c'],
+                      minRadius: 8, maxRadius: 40,
+                    },
+                  },
+                  care: {
+                    data: parseData('sbm-data-care'),
+                    desc: 'Bubble size = T1DM patients with complete year of care. Colour = % who completed all required care processes (green = higher).',
+                    leadCentres: {
+                      sizeField: 'eligible_count', sizeLabel: 'Eligible T1DM patients',
+                      colorField: 'pct_complete', colorLabel: '% Complete care',
+                      colorUnit: '%', colorMode: 'continuous',
+                      colorScale: ['#d7191c', '#ffffbf', '#1a9641'],
+                      minRadius: 8, maxRadius: 40,
+                    },
+                  },
+                  type: {
+                    data: parseData('sbm-data-type'),
+                    desc: 'Bubble size = all patients. Colour = dominant diabetes type at the lead centre.',
+                    leadCentres: {
+                      sizeField: 'total_patients', sizeLabel: 'Total patients',
+                      colorField: 'dominant_type', colorLabel: 'Dominant diabetes type',
+                      colorMode: 'categorical',
+                      colorByCategory: { type1: '#4e79a7', type2: '#f28e2b', other: '#59a14f' },
+                      breakdownFields: [
+                        { field: 'pct_type1', label: 'Type 1', color: '#4e79a7' },
+                        { field: 'pct_type2', label: 'Type 2', color: '#f28e2b' },
+                        { field: 'pct_other', label: 'Other',  color: '#59a14f' },
+                      ],
+                      minRadius: 8, maxRadius: 40,
+                    },
+                  },
+                  age: {
+                    data: parseData('sbm-data-age'),
+                    desc: 'Bubble size = T1DM patients. Colour = dominant age group at the lead centre.',
+                    leadCentres: {
+                      sizeField: 'total_patients', sizeLabel: 'T1DM patients',
+                      colorField: 'dominant_age_group', colorLabel: 'Age group',
+                      colorMode: 'categorical',
+                      colorByCategory: { under_16: '#2166ac', over_16: '#d7191c' },
+                      breakdownFields: [
+                        { field: 'pct_under_16', label: 'Under 16',    color: '#2166ac' },
+                        { field: 'pct_over_16',  label: '16 and over', color: '#d7191c' },
+                      ],
+                      minRadius: 8, maxRadius: 40,
+                    },
+                  },
+                };
+
+                var descEl = document.getElementById('sbm-tab-desc');
+
+                function buildMap(tabId) {
+                  if (window.__npdaSubmissionsMap) {
+                    window.__npdaSubmissionsMap.destroy();
+                    window.__npdaSubmissionsMap = null;
+                  }
+                  var tab = TABS[tabId];
+                  if (!tab) return;
+                  var map = RcpchImdMap.createImdMap({
+                    container: container,
+                    tilesBaseUrl: tilesBaseUrl,
+                    tilesApiKey: tilesApiKey,
+                    tilesApiKeyParam: 'Subscription-Key',
+                    initialNation: 'all',
+                    initialEra: '2021',
+                    zoom: 5,
+                    legendCollapsed: true,
+                    style: {
+                      legend: { width: 200 },
+                      leadCentres: tab.leadCentres,
+                      tooltip: { backgroundColor: '#0d0d58', textColor: '#ffffff' },
+                    },
+                    onWarning: function (w) {
+                      console.warn('[rcpch-imd-map]', w.code, w.message);
+                    },
+                  });
+                  map.setLeadCentres(tab.data);
+                  window.__npdaSubmissionsMap = map;
+                }
+
+                function switchTab(tabId) {
+                  document.querySelectorAll('[data-sbm-tab]').forEach(function (btn) {
+                    var isActive = btn.dataset.sbmTab === tabId;
+                    btn.classList.toggle('btn-primary', isActive);
+                    btn.classList.toggle('btn-outline', !isActive);
+                  });
+                  var tab = TABS[tabId];
+                  if (descEl && tab) descEl.textContent = tab.desc;
+                  buildMap(tabId);
+                }
+
+                document.querySelectorAll('[data-sbm-tab]').forEach(function (btn) {
+                  btn.addEventListener('click', function () { switchTab(btn.dataset.sbmTab); });
+                });
+
+                window.__npdaActiveMapTab = 'hba1c';
+                window.__npdaBuildMap = buildMap;
+              })();
+            </script>
+          </section>
+        {% endif %}
+
+        <!-- Section 4: Submissions List -->
+        <section id="section-submissions-list" class="hidden">
+          <h2 class="text-lg font-semibold text-rcpch_dark_blue mb-4">Submissions list</h2>
+          <div hx-get="/submissions"
+               hx-trigger="submissions from:body"
+               hx-target="#submissions_table">
+            <div id="submissions_table">
+              {% include 'partials/submission_history.html' with submissions=object_list data=data submission_errors=submission_errors patients=patients done=done %}
             </div>
           </div>
+        </section>
+
+      </div>{# end main content #}
+    </div>{# end flex wrapper #}
+
+    <!-- Sidebar show/hide navigation -->
+    <script>
+      (function () {
+        var navBtns = document.querySelectorAll('.sbm-nav-btn');
+        var allSections = document.querySelectorAll('section[id^="section-"]');
+        var mapInitialised = false;
+
+        function showSection(sectionId) {
+          allSections.forEach(function (s) {
+            s.classList.toggle('hidden', s.id !== sectionId);
+          });
+          navBtns.forEach(function (btn) {
+            btn.classList.toggle('is-active', btn.dataset.sbmSection === sectionId);
+          });
+          // Lazy-init the map the first time the map section is shown
+          if (sectionId === 'section-national-map' && !mapInitialised && typeof window.__npdaBuildMap === 'function') {
+            mapInitialised = true;
+            window.__npdaBuildMap(window.__npdaActiveMapTab || 'hba1c');
+          }
+        }
+
+        navBtns.forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            showSection(btn.dataset.sbmSection);
+          });
+        });
+      })();
+    </script>
+
+  {% else %}
+    <!-- Non-admin: just the submissions list -->
+    <section class="mb-5 container-mx-auto flex items-center justify-center">
+      <div class="w-full"
+           hx-get="/submissions"
+           hx-trigger="submissions from:body"
+           hx-target="#submissions_table">
+        <div class="flex flex-col justify-center px-10">
+          <div id="submissions_table" class="w-full mt-5 mx-2">
+            {% include 'partials/submission_history.html' with submissions=object_list data=data submission_errors=submission_errors patients=patients done=done %}
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
+  {% endif %}
 {% endblock %}
