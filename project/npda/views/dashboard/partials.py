@@ -70,6 +70,14 @@ def _map_initial_nation_for_organisation(organisation: dict) -> str:
         return "scotland"
     if country in {"northern ireland", "northern_ireland"}:
         return "northern_ireland"
+    if country in {
+        "jersey",
+        "isle of man",
+        "isle_of_man",
+        "channel islands",
+        "channel_islands",
+    }:
+        return "channel_islands"
 
     return "all"
 
