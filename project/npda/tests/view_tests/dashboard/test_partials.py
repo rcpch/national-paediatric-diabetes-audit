@@ -21,6 +21,7 @@ from project.npda.tests.factories import test_user_audit_centre_editor_data
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
 from project.npda.tests.utils import login_and_verify_user
+from project.npda.views.dashboard.partials import _map_initial_nation_for_organisation
 
 
 def setup(audit_period, patient_args):
@@ -220,3 +221,40 @@ def test_partials_before_submission(
 
     assert response.status_code == HTTPStatus.OK
     assert response.context["number"] == 0
+
+
+@pytest.mark.parametrize(
+    ("organisation", "expected_nation"),
+    [
+        pytest.param({"country": "England"}, "england", id="england-country"),
+        pytest.param(
+            {"country": "Northern Ireland"},
+            "northern_ireland",
+            id="northern-ireland-country",
+        ),
+        pytest.param(
+            {"country": "Jersey"},
+            "channel_islands",
+            id="jersey-country",
+        ),
+        pytest.param(
+            {"country": "Isle of Man"},
+            "channel_islands",
+            id="isle-of-man-country",
+        ),
+        pytest.param(
+            {"country": "isle_of_man"},
+            "channel_islands",
+            id="isle-of-man-underscore",
+        ),
+        pytest.param(
+            {"country_name": "Channel Islands"},
+            "channel_islands",
+            id="channel-islands-country-name",
+        ),
+        pytest.param({"nation": "Wales"}, "wales", id="wales-nation-fallback"),
+        pytest.param({}, "all", id="missing-country-default-all"),
+    ],
+)
+def test_map_initial_nation_for_organisation(organisation, expected_nation):
+    assert _map_initial_nation_for_organisation(organisation) == expected_nation
