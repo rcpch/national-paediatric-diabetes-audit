@@ -4,9 +4,12 @@
   {% if request.user.is_rcpch_audit_team_member %}
     <style>
       .sbm-nav-btn.is-active {
-        background-color: oklch(var(--p) / 0.12);
-        color: oklch(var(--p));
+        background-color: #e00087;
+        color: #ffffff;
         font-weight: 600;
+      }
+      .sbm-nav-btn.is-active:hover {
+        background-color: #ab1368;
       }
     </style>
 
@@ -137,19 +140,32 @@
         {% endif %}
 
         <!-- Section 3: National Summary Map -->
-        {% if bubble_map_centres %}
-          <section id="section-national-map" class="hidden">
-            <h2 class="text-lg font-semibold text-rcpch_dark_blue mb-2">National summary — {{ audit_period }}</h2>
+         {% if bubble_map_centres %}
+          <section id="section-national-map" class="hidden -mx-4">
+            <div class="px-4">
+              <h2 class="text-lg font-semibold text-rcpch_dark_blue mb-2">National summary — {{ audit_period }}</h2>
+            </div>
             <link rel="stylesheet"
                   href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
             <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
             <script src="https://cdn.jsdelivr.net/npm/@rcpch/imd-map@0.5.0/dist/umd/rcpch-imd-map.min.js"
                     integrity="sha512-Udl5igLQTnxSJGcneRNBfS+zFpzYUcNZW2kA+dkVf/9mNpmS9numEnCaFdtWLqndBqGUJisvJ4QSYudGOK5oYg=="
                     crossorigin="anonymous"></script>
+            <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
             <style>
               #submissions-bubble-map .maplibregl-ctrl {
                 max-height: calc(38rem - 2rem);
                 overflow-y: auto;
+              }
+              .sbm-map-tab.is-active {
+                background-color: #e00087;
+                border-color: #e00087;
+                color: #ffffff;
+                font-weight: 600;
+              }
+              .sbm-map-tab.is-active:hover {
+                background-color: #ab1368;
+                border-color: #ab1368;
               }
             </style>
 
@@ -158,20 +174,27 @@
             {{ bubble_map_diabetes_type|json_script:"sbm-data-type" }}
             {{ bubble_map_age|json_script:"sbm-data-age" }}
 
-            <div class="flex gap-2 mb-3 flex-wrap" id="sbm-tabs">
-              <button class="btn btn-sm btn-primary" data-sbm-tab="hba1c">By HbA1c</button>
-              <button class="btn btn-sm btn-outline" data-sbm-tab="care">% Complete care processes</button>
-              <button class="btn btn-sm btn-outline" data-sbm-tab="type">By diabetes type</button>
-              <button class="btn btn-sm btn-outline" data-sbm-tab="age">By age group</button>
+            <div class="flex gap-2 mb-3 flex-wrap px-4" id="sbm-tabs">
+              <button class="sbm-map-tab btn btn-sm is-active" data-sbm-tab="hba1c">By HbA1c</button>
+              <button class="sbm-map-tab btn btn-sm btn-outline" data-sbm-tab="care">% Complete care processes</button>
+              <button class="sbm-map-tab btn btn-sm btn-outline" data-sbm-tab="type">By diabetes type</button>
+              <button class="sbm-map-tab btn btn-sm btn-outline" data-sbm-tab="age">By age group</button>
             </div>
-            <p id="sbm-tab-desc" class="text-sm text-gray-600 mb-3">
+            <p id="sbm-tab-desc" class="text-sm text-gray-600 mb-3 px-4">
               Bubble size = T1DM patients. Colour = median HbA1c (mmol/mol): blue (lower) → red (higher).
             </p>
 
+            <!-- Map view — full bleed -->
             <div id="submissions-bubble-map"
                  data-tiles-base-url="{{ RCPCH_DEPRIVATION_TILES_URL|default:'' }}"
                  data-tiles-api-key="{{ RCPCH_CENSUS_PLATFORM_TOKEN|default:'' }}"
-                 style="width:100%;height:38rem;border-radius:4px;"></div>
+                 style="width:100%;height:38rem;"></div>
+
+            <!-- League chart — auto-shown for continuous tabs (hba1c, care) -->
+            <div id="sbm-league-panel" class="hidden mt-2 px-2">
+              <p id="sbm-league-title" class="text-sm font-semibold text-rcpch_dark_blue mb-1 px-2"></p>
+              <div id="sbm-league-chart" style="width:100%;height:18rem;"></div>
+            </div>
 
             <script>
               (function () {
@@ -274,14 +297,95 @@
                 }
 
                 function switchTab(tabId) {
-                  document.querySelectorAll('[data-sbm-tab]').forEach(function (btn) {
+                  document.querySelectorAll('.sbm-map-tab').forEach(function (btn) {
                     var isActive = btn.dataset.sbmTab === tabId;
-                    btn.classList.toggle('btn-primary', isActive);
+                    btn.classList.toggle('is-active', isActive);
                     btn.classList.toggle('btn-outline', !isActive);
                   });
+                  var leaguePanel = document.getElementById('sbm-league-panel');
                   var tab = TABS[tabId];
                   if (descEl && tab) descEl.textContent = tab.desc;
                   buildMap(tabId);
+                  // Show league chart only for continuous (linear) tabs
+                  var leagueView = LEAGUE_VIEWS[tabId];
+                  if (leagueView) {
+                    leaguePanel.classList.remove('hidden');
+                    buildLeagueChart(tabId);
+                  } else {
+                    leaguePanel.classList.add('hidden');
+                    if (typeof Plotly !== 'undefined') Plotly.purge('sbm-league-chart');
+                  }
+                }
+
+                // ── League chart (continuous tabs only: hba1c, care) ───────
+                var allPdus = (function () {
+                  var el = document.getElementById('pdu-submission-data');
+                  return el ? JSON.parse(el.textContent) : [];
+                })();
+
+                function mergeLeagueData(mapData, valueField) {
+                  var lookup = {};
+                  mapData.forEach(function (d) { lookup[d.pz_code] = d; });
+                  return allPdus.map(function (pdu) {
+                    var match = lookup[pdu.pz_code] || {};
+                    return {
+                      pz_code: pdu.pz_code,
+                      name: pdu.lead_organisation_name,
+                      value: match[valueField] != null ? match[valueField] : null,
+                    };
+                  });
+                }
+
+                var LEAGUE_VIEWS = {
+                  hba1c: {
+                    rows: mergeLeagueData(parseData('sbm-data-hba1c'), 'median_hba1c'),
+                    label: 'Median HbA1c (mmol/mol)',
+                    title: 'PDUs ranked by median HbA1c — all PDUs (grey = no data)',
+                    color: '#0d0d58',
+                  },
+                  care: {
+                    rows: mergeLeagueData(parseData('sbm-data-care'), 'pct_complete'),
+                    label: '% Complete care processes',
+                    title: 'PDUs ranked by % complete care processes — all PDUs (grey = no data)',
+                    color: '#1a9641',
+                  },
+                };
+
+                function buildLeagueChart(tabId) {
+                  var view = LEAGUE_VIEWS[tabId];
+                  if (!view || typeof Plotly === 'undefined') return;
+                  var titleEl = document.getElementById('sbm-league-title');
+                  if (titleEl) titleEl.textContent = view.title;
+                  var sorted = view.rows.slice().sort(function (a, b) {
+                    if (a.value == null && b.value == null) return 0;
+                    if (a.value == null) return 1;
+                    if (b.value == null) return -1;
+                    return a.value - b.value;
+                  });
+                  Plotly.react('sbm-league-chart', [{
+                    type: 'bar',
+                    x: sorted.map(function (_, i) { return i; }),
+                    y: sorted.map(function (d) { return d.value != null ? d.value : 0; }),
+                    text: sorted.map(function (d) {
+                      return '<b>' + (d.name || d.pz_code) + '</b><br>' + d.pz_code +
+                             '<br>' + view.label + ': ' + (d.value != null ? d.value : 'No data');
+                    }),
+                    hovertemplate: '%{text}<extra></extra>',
+                    marker: {
+                      color: sorted.map(function (d) { return d.value != null ? view.color : '#d1d5db'; }),
+                    },
+                  }], {
+                    margin: { t: 5, b: 35, l: 60, r: 10 },
+                    xaxis: {
+                      showticklabels: false,
+                      title: { text: 'PDUs (ranked lowest → highest)', font: { size: 11 } },
+                      zeroline: false,
+                    },
+                    yaxis: { title: view.label },
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    font: { family: 'sans-serif', size: 12 },
+                  }, { responsive: true, displayModeBar: false });
                 }
 
                 document.querySelectorAll('[data-sbm-tab]').forEach(function (btn) {
@@ -289,7 +393,7 @@
                 });
 
                 window.__npdaActiveMapTab = 'hba1c';
-                window.__npdaBuildMap = buildMap;
+                window.__npdaSwitchTab = switchTab;
               })();
             </script>
           </section>
@@ -325,9 +429,9 @@
             btn.classList.toggle('is-active', btn.dataset.sbmSection === sectionId);
           });
           // Lazy-init the map the first time the map section is shown
-          if (sectionId === 'section-national-map' && !mapInitialised && typeof window.__npdaBuildMap === 'function') {
+          if (sectionId === 'section-national-map' && !mapInitialised && typeof window.__npdaSwitchTab === 'function') {
             mapInitialised = true;
-            window.__npdaBuildMap(window.__npdaActiveMapTab || 'hba1c');
+            window.__npdaSwitchTab(window.__npdaActiveMapTab || 'hba1c');
           }
         }
 
