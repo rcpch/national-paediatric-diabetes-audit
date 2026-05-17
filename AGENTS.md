@@ -71,11 +71,11 @@ All dashboard functions use `build_base_queryset()` as their base and respect `a
 
 The dashboard IMD map in `project/npda/templates/dashboard/map_chart_partial.html` uses the browser bundle from `@rcpch/imd-map`.
 
-- Current bundle version: `0.5.1`
+- Current bundle version: `0.5.2`
 - Script URL:
-  `https://cdn.jsdelivr.net/npm/@rcpch/imd-map@0.5.1/dist/umd/rcpch-imd-map.min.js`
+  `https://cdn.jsdelivr.net/npm/@rcpch/imd-map@0.5.2/dist/umd/rcpch-imd-map.min.js`
 - Current SRI:
-  `sha512-eL1iCgZ8KVnELAEum+mIwBG58FdZPUYJ/8B1eUHOGc0AQAdVIQoZSc6myiygjgLKZrB0I5XbU+ZDQpYb66EJkw==`
+  `sha512-a766qxZJXhOAclDsv1qP89xJMden52mrMRWvodABs3zs34TLx/roXRik7grS4skx2mTUvKyO22RAokkpJMCLqg==`
 
 Tile auth is now configured via map options (query-string auth), not request headers.
 
