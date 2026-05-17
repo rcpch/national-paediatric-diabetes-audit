@@ -141,10 +141,8 @@
 
         <!-- Section 3: National Summary Map -->
          {% if bubble_map_centres %}
-          <section id="section-national-map" class="hidden -mx-4">
-            <div class="px-4">
-              <h2 class="text-lg font-semibold text-rcpch_dark_blue mb-2">National summary — {{ audit_period }}</h2>
-            </div>
+          <section id="section-national-map" class="hidden">
+            <h2 class="text-lg font-semibold text-rcpch_dark_blue mb-2">National summary — {{ audit_period }}</h2>
             <link rel="stylesheet"
                   href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
             <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
@@ -170,26 +168,26 @@
             {{ bubble_map_diabetes_type|json_script:"sbm-data-type" }}
             {{ bubble_map_age|json_script:"sbm-data-age" }}
 
-            <div class="flex gap-2 mb-3 flex-wrap px-4" id="sbm-tabs">
+            <div class="flex gap-2 mb-3 flex-wrap" id="sbm-tabs">
               <button class="sbm-map-tab btn btn-sm is-active" data-sbm-tab="hba1c">By HbA1c</button>
               <button class="sbm-map-tab btn btn-sm btn-outline" data-sbm-tab="care">% Complete care processes</button>
               <button class="sbm-map-tab btn btn-sm btn-outline" data-sbm-tab="type">By diabetes type</button>
               <button class="sbm-map-tab btn btn-sm btn-outline" data-sbm-tab="age">By age group</button>
             </div>
-            <p id="sbm-tab-desc" class="text-sm text-gray-600 mb-3 px-4">
+            <p id="sbm-tab-desc" class="text-sm text-gray-600 mb-3">
               Bubble size = T1DM patients. Colour = median HbA1c (mmol/mol): blue (lower) → red (higher).
             </p>
 
-            <!-- Map view — full bleed -->
+            <!-- Map — margin trick to fill edge-to-edge within the flex-1 column -->
             <div id="submissions-bubble-map"
                  data-tiles-base-url="{{ RCPCH_DEPRIVATION_TILES_URL|default:'' }}"
                  data-tiles-api-key="{{ RCPCH_CENSUS_PLATFORM_TOKEN|default:'' }}"
-                 style="width:100%;height:38rem;"></div>
+                 style="margin-left:-1rem;margin-right:-1rem;width:calc(100% + 2rem);height:38rem;"></div>
 
             <!-- League chart — auto-shown for continuous tabs (hba1c, care) -->
-            <div id="sbm-league-panel" class="hidden mt-2 px-2">
-              <p id="sbm-league-title" class="text-sm font-semibold text-rcpch_dark_blue mb-1 px-2"></p>
-              <div id="sbm-league-chart" style="width:100%;height:18rem;"></div>
+            <div id="sbm-league-panel" class="hidden mt-2">
+              <p id="sbm-league-title" class="text-sm font-semibold text-rcpch_dark_blue mb-1"></p>
+              <div id="sbm-league-chart" style="margin-left:-1rem;margin-right:-1rem;width:calc(100% + 2rem);height:18rem;"></div>
             </div>
 
             <script>
