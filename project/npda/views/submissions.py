@@ -183,8 +183,11 @@ class SubmissionsListView(
                 .values("pz_code", "lead_organisation_name", "latest_visit_quarter")
             )
 
-            column_chart = create_column_chart(chart_data, selected_audit_period)
-            context["column_chart"] = column_chart.to_html(full_html=False)
+            context["pdu_submission_data"] = list(
+                chart_data.order_by("latest_visit_quarter", "pz_code").values(
+                    "pz_code", "lead_organisation_name", "latest_visit_quarter"
+                )
+            )
             context["non_submission_pdus"] = chart_data.filter(
                 latest_visit_quarter=0
             ).values_list("pz_code", "lead_organisation_name")
