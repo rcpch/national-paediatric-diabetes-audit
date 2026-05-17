@@ -55,6 +55,87 @@
         </div>
       </div>
     </div>
+    {% if bubble_map_centres %}
+      <div class="px-4 mb-8">
+        <h2 class="text-lg font-semibold text-rcpch_dark_blue mb-2">
+          Lead centres — T1DM patients &amp; median HbA1c ({{ audit_period }})
+        </h2>
+        <p class="text-sm text-gray-600 mb-3">
+          Bubble size = number of eligible T1DM patients. Colour = median HbA1c (mmol/mol):
+          blue (lower) → red (higher).
+        </p>
+        <link rel="stylesheet"
+              href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+        <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@rcpch/imd-map@0.5.0/dist/umd/rcpch-imd-map.min.js"
+                integrity="sha512-Udl5igLQTnxSJGcneRNBfS+zFpzYUcNZW2kA+dkVf/9mNpmS9numEnCaFdtWLqndBqGUJisvJ4QSYudGOK5oYg=="
+                crossorigin="anonymous"></script>
+        <style>
+          /* Make the bubble-map legend scrollable when it is taller than the map */
+          #submissions-bubble-map .maplibregl-ctrl {
+            max-height: calc(38rem - 2rem);
+            overflow-y: auto;
+          }
+        </style>
+        {{ bubble_map_centres|json_script:"submissions-bubble-map-data" }}
+        <div id="submissions-bubble-map"
+             data-tiles-base-url="{{ RCPCH_DEPRIVATION_TILES_URL|default:'' }}"
+             data-tiles-api-key="{{ RCPCH_CENSUS_PLATFORM_TOKEN|default:'' }}"
+             style="width:100%;height:38rem;border-radius:4px;"></div>
+        <script>
+          (function () {
+            var container = document.getElementById('submissions-bubble-map');
+            if (!container || typeof RcpchImdMap === 'undefined') return;
+
+            if (window.__npdaSubmissionsMap) {
+              window.__npdaSubmissionsMap.destroy();
+              window.__npdaSubmissionsMap = null;
+            }
+
+            var centres = JSON.parse(
+              document.getElementById('submissions-bubble-map-data').textContent
+            );
+
+            var map = RcpchImdMap.createImdMap({
+              container: container,
+              tilesBaseUrl: (container.dataset.tilesBaseUrl || '').replace(/\/$/, '') || undefined,
+              tilesApiKey: container.dataset.tilesApiKey || undefined,
+              tilesApiKeyParam: 'Subscription-Key',
+              initialNation: 'all',
+              initialEra: '2021',
+              zoom: 5,
+              legendCollapsed: true,
+              style: {
+                legend: {
+                  width: 200,
+                },
+                leadCentres: {
+                  sizeField: 'patient_count',
+                  sizeLabel: 'T1DM patients',
+                  colorField: 'median_hba1c',
+                  colorLabel: 'Median HbA1c',
+                  colorUnit: 'mmol/mol',
+                  colorMode: 'continuous',
+                  colorScale: ['#2166ac', '#ffffbf', '#d7191c'],
+                  minRadius: 8,
+                  maxRadius: 40,
+                },
+                tooltip: {
+                  backgroundColor: '#0d0d58',
+                  textColor: '#ffffff',
+                },
+              },
+              onWarning: function (w) {
+                console.warn('[rcpch-imd-map]', w.code, w.message);
+              },
+            });
+
+            map.setLeadCentres(centres);
+            window.__npdaSubmissionsMap = map;
+          })();
+        </script>
+      </div>
+    {% endif %}
   {% endif %}
   <section class="mb-5 container-mx-auto flex items-center justify-center">
     <div class="w-full"

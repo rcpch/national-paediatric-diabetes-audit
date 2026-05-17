@@ -37,6 +37,7 @@ from django.views.generic import ListView
 # RCPCH imports
 from project.constants.colors import RCPCH_LIGHT_BLUE
 from project.npda.views.decorators import check_data_permissions, login_and_otp_required
+from project.settings import RCPCH_CENSUS_PLATFORM_TOKEN, RCPCH_DEPRIVATION_TILES_URL
 
 from ..general_functions.breadcrumbs import data_breadcrumbs
 from ..general_functions.csv import (
@@ -46,6 +47,7 @@ from ..general_functions.csv import (
     download_xlsx,
     export_as_csv,
 )
+from ..general_functions.patient_report.queries import all_pdus_t1dm_bubble_map_data
 from ..general_functions.session import save_csv_uploading_user_to_visitactivity
 from ..models import (
     PaediatricDiabetesUnit,
@@ -188,6 +190,11 @@ class SubmissionsListView(
             ).values_list("pz_code", "lead_organisation_name")
             context["audit_period"] = selected_audit_period
             context["submission_statistics"] = submission_stats(selected_audit_period)
+            context["bubble_map_centres"] = all_pdus_t1dm_bubble_map_data(
+                selected_audit_period
+            )
+            context["RCPCH_DEPRIVATION_TILES_URL"] = RCPCH_DEPRIVATION_TILES_URL
+            context["RCPCH_CENSUS_PLATFORM_TOKEN"] = RCPCH_CENSUS_PLATFORM_TOKEN
 
         context["breadcrumbs"] = data_breadcrumbs(
             self.pdu,

@@ -38,7 +38,7 @@ from project.constants.leave_pdu_reasons import LEAVE_PDU_REASONS
 from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 from project.npda.general_functions.audit_period import get_quarters_for_audit_period
 from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
-from project.npda.models import Patient, Transfer, Visit
+from project.npda.models import PaediatricDiabetesUnit, Patient, Transfer, Visit
 from project.npda.models.db_functions import Round
 
 
@@ -1468,3 +1468,142 @@ def calculate_hba1c_values(qs, audit_period):
             patient["median_hba1c_pct"] = None
 
     return qs
+
+
+def all_pdus_t1dm_bubble_map_data(audit_period) -> list[dict]:
+    """Bubble map data for the national submissions overview (audit team only).
+
+    Returns one entry per PDU that has an active submission with T1DM patients and
+    a geocoordinate on record.  Each entry is a plain dict ready to be passed
+    directly to the map library's ``setLeadCentres()`` call:
+
+        {
+            "lat": float,
+            "lon": float,
+            "label": str,            # lead_organisation_name or pz_code
+            "pz_code": str,
+            "patient_count": int,    # eligible T1DM patients in the audit period
+            "median_hba1c": int | None,  # median HbA1c in mmol/mol
+        }
+
+    Uses the same eligibility filters as ``count_eligible_patients()`` and the
+    same HbA1c normalisation logic as ``hba1c_stats_by_diabetes_type()``.
+    Runs in ~4 DB round-trips regardless of the number of PDUs.
+    """
+    audit_range = (audit_period.start_date, audit_period.end_date)
+    dataset_year = audit_period.get_dataset_year()
+
+    # All active PDUs with a submission in this period and a geocoordinate
+    pdus = {
+        pdu.pz_code: pdu
+        for pdu in PaediatricDiabetesUnit.objects.filter(
+            active=True,
+            pdu_submissions__submission_active=True,
+            pdu_submissions__audit_period=audit_period,
+            lead_organisation_geocoordinates__isnull=False,
+        ).distinct()
+    }
+    if not pdus:
+        return []
+
+    # Eligible T1DM patients annotated with their PDU pz_code.
+    # distinct() on (pk, pz_code) gives one row per patient per PDU.
+    t1dm_rows = (
+        Patient.objects.filter(
+            submissions__submission_active=True,
+            submissions__audit_period=audit_period,
+            submissions__paediatric_diabetes_unit__pz_code__in=pdus.keys(),
+            diabetes_type=DIABETES_TYPES[0][0],
+            visit__visit_date__range=audit_range,
+            date_of_birth__gt=audit_period.start_date - relativedelta(years=25),
+        )
+        .distinct()
+        .values("pk", "submissions__paediatric_diabetes_unit__pz_code")
+    )
+
+    # Build patient→PDU map and per-PDU patient counts in one pass
+    patient_pdu_map: dict[int, str] = {}
+    patient_counts: dict[str, int] = defaultdict(int)
+    for row in t1dm_rows:
+        pk = row["pk"]
+        pz = row["submissions__paediatric_diabetes_unit__pz_code"]
+        if pk not in patient_pdu_map:
+            patient_pdu_map[pk] = pz
+            patient_counts[pz] += 1
+
+    if not patient_pdu_map:
+        return []
+
+    # Fetch HbA1c values for all T1DM patients in one query
+    if dataset_year == 2026:
+        hba1c_rows = Visit.objects.filter(
+            patient__pk__in=patient_pdu_map.keys(),
+            visit_date__range=audit_range,
+            hba1c__isnull=False,
+            hba1c_date__gt=F("patient__diagnosis_date") + timedelta(days=90),
+        ).values("patient__pk", "hba1c")
+        hba1c_key = "hba1c"
+    else:
+        hba1c_rows = (
+            Visit.objects.filter(
+                patient__pk__in=patient_pdu_map.keys(),
+                visit_date__range=audit_range,
+                hba1c__isnull=False,
+                hba1c_date__gt=F("patient__diagnosis_date") + timedelta(days=90),
+            )
+            .annotate(
+                hba1c_mmol_mol=Case(
+                    When(Q(hba1c_format=HBA1C_FORMATS[0][0]), then=F("hba1c")),
+                    When(
+                        Q(hba1c_format=HBA1C_FORMATS[1][0]),
+                        then=(F("hba1c") - Round(Decimal("2.152")))
+                        / Decimal("0.09148"),
+                    ),
+                    default=None,
+                    output_field=DecimalField(max_digits=5, decimal_places=2),
+                )
+            )
+            .filter(hba1c_mmol_mol__isnull=False)
+            .values("patient__pk", "hba1c_mmol_mol")
+        )
+        hba1c_key = "hba1c_mmol_mol"
+
+    # Group HbA1c values by PDU
+    hba1c_by_pdu: dict[str, list] = defaultdict(list)
+    for row in hba1c_rows:
+        pz = patient_pdu_map.get(row["patient__pk"])
+        if pz:
+            hba1c_by_pdu[pz].append(row[hba1c_key])
+
+    result = []
+    for pz_code, pdu in pdus.items():
+        count = patient_counts.get(pz_code, 0)
+        if count == 0:
+            continue
+
+        hba1c_vals = hba1c_by_pdu.get(pz_code, [])
+        if hba1c_vals:
+            sorted_vals = sorted(float(v) for v in hba1c_vals)
+            mid = len(sorted_vals) // 2
+            median_hba1c = (
+                (sorted_vals[mid - 1] + sorted_vals[mid]) / 2
+                if len(sorted_vals) % 2 == 0
+                else sorted_vals[mid]
+            )
+            median_hba1c = round(median_hba1c)
+        else:
+            median_hba1c = None
+
+        coords = pdu.lead_organisation_geocoordinates
+        result.append(
+            {
+                "lat": coords.y,
+                "lon": coords.x,
+                "label": pdu.lead_organisation_name or pdu.pz_code,
+                "pz_code": pz_code,
+                "patient_count": count,
+                "median_hba1c": median_hba1c,
+            }
+        )
+
+    return result
