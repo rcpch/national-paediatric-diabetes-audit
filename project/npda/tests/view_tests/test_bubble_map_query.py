@@ -9,11 +9,10 @@ from project.npda.general_functions.patient_report.queries import (
     all_pdus_t1dm_bubble_map_data,
 )
 from project.npda.models import AuditPeriod, NPDAUser, Submission
-from project.npda.tests.UserDataClasses import test_user_rcpch_audit_team_data
 from project.npda.tests.constants_for_tests import ALDER_HEY_PZ_CODE
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
-
+from project.npda.tests.UserDataClasses import test_user_rcpch_audit_team_data
 
 # ---------------------------------------------------------------------------
 # Helpers
