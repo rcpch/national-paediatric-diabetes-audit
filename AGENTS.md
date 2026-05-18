@@ -30,12 +30,12 @@ The script wraps: `docker compose run --rm django pytest -v $*`
 
 The patient report is driven by its own dedicated query layer — **do not reach for the KPI class** when working on it.
 
-| Path | Purpose |
-|------|---------|
+| Path                                                       | Purpose                                                                                                                                                                                                  |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `project/npda/general_functions/patient_report/queries.py` | All ORM queries that power the patient report **and the dashboard** (health checks, additional care processes, care at diagnosis, admissions, treatment, outcomes, plus all dashboard summary functions) |
-| `project/npda/views/patient_report/patient_report.py` | View logic, context assembly, sorting, pagination, XLSX export |
-| `project/npda/views/patient_report/patient_report.md` | Design intent, column definitions, edge cases, known shortcomings, and **the authoritative 2021/2026 field mapping per category — read this before touching any patient report query** |
-| `project/npda/templates/patient_report/` | Jinja/Django templates per category (e.g. `treatment_table_partial.html`) |
+| `project/npda/views/patient_report/patient_report.py`      | View logic, context assembly, sorting, pagination, XLSX export                                                                                                                                           |
+| `project/npda/views/patient_report/patient_report.md`      | Design intent, column definitions, edge cases, known shortcomings, and **the authoritative 2021/2026 field mapping per category — read this before touching any patient report query**                   |
+| `project/npda/templates/patient_report/`                   | Jinja/Django templates per category (e.g. `treatment_table_partial.html`)                                                                                                                                |
 
 When working on patient report queries, always check `patient_report.md` for the correct field to use for the active dataset year. Several fields changed or were added in 2026 (e.g. `treatment` → `insulin_regimen`, `glucose_monitoring` → `cgm_use`, `smoking_status` → `smoking_vaping_status`). The `audit_period.get_dataset_year()` method is the single source of truth — never hardcode a year.
 
@@ -43,27 +43,27 @@ When working on patient report queries, always check `patient_report.md` for the
 
 The dashboard views also use `queries.py` directly — **do not reach for the KPI class** when working on dashboard code.
 
-| Path | Purpose |
-|------|---------|
-| `project/npda/views/dashboard/dashboard.py` | Main dashboard view — eligible patient count and new-diagnoses quarter chart |
-| `project/npda/views/dashboard/partials.py` | HTMX partials — HCL, pump, CGM, admissions, service transitions, map |
+| Path                                                   | Purpose                                                                             |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| `project/npda/views/dashboard/dashboard.py`            | Main dashboard view — eligible patient count and new-diagnoses quarter chart        |
+| `project/npda/views/dashboard/partials.py`             | HTMX partials — HCL, pump, CGM, admissions, service transitions, map                |
 | `project/npda/views/dashboard/patient_measurements.py` | Measurements card — HbA1c stats by diabetes type, health-check pass/eligible counts |
-| `project/npda/templates/dashboard/` | Dashboard templates |
+| `project/npda/templates/dashboard/`                    | Dashboard templates                                                                 |
 
 **Dashboard query functions in `queries.py`** (all accept `pdu, audit_period`):
 
-| Function | Returns | Notes |
-|----------|---------|-------|
-| `count_eligible_patients` | `int` | All diabetes types, complete-year filter |
-| `count_new_diagnoses_by_quarter` | `dict[int, dict]` | `{q: {total_passed, total_eligible, pct}}` |
-| `count_hcl_use` | `tuple[int, int]` | `(passed, eligible)` — 2021/2026 aware |
-| `count_pump_use` | `tuple[int, int]` | `(passed, eligible)` — 2021/2026 aware |
-| `count_cgm_use` | `tuple[int, int]` | `(passed, eligible)` — 2021/2026 aware |
-| `count_admissions` | `int` | Total admissions count |
-| `count_admissions_by_quarter` | `dict[int, dict]` | Quarter-stratified admissions |
-| `count_service_transitions_by_quarter` | `dict[int, dict]` | Quarter-stratified adult-service transitions |
-| `hba1c_stats_by_diabetes_type` | `dict` | `{all, t1dm, t2dm, other}` each with `mean_mmol_mol`, `median_mmol_mol`, `mean_percent`, `median_percent`; 2021/2026 aware |
-| `dashboard_health_check_totals` | `dict` | `total_passed_*` / `total_eligible_*` for BMI, thyroid, BP, urinary albumin, foot exam; single aggregation query |
+| Function                               | Returns           | Notes                                                                                                                      |
+| -------------------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `count_eligible_patients`              | `int`             | All diabetes types, complete-year filter                                                                                   |
+| `count_new_diagnoses_by_quarter`       | `dict[int, dict]` | `{q: {total_passed, total_eligible, pct}}`                                                                                 |
+| `count_hcl_use`                        | `tuple[int, int]` | `(passed, eligible)` — 2021/2026 aware                                                                                     |
+| `count_pump_use`                       | `tuple[int, int]` | `(passed, eligible)` — 2021/2026 aware                                                                                     |
+| `count_cgm_use`                        | `tuple[int, int]` | `(passed, eligible)` — 2021/2026 aware                                                                                     |
+| `count_admissions`                     | `int`             | Total admissions count                                                                                                     |
+| `count_admissions_by_quarter`          | `dict[int, dict]` | Quarter-stratified admissions                                                                                              |
+| `count_service_transitions_by_quarter` | `dict[int, dict]` | Quarter-stratified adult-service transitions                                                                               |
+| `hba1c_stats_by_diabetes_type`         | `dict`            | `{all, t1dm, t2dm, other}` each with `mean_mmol_mol`, `median_mmol_mol`, `mean_percent`, `median_percent`; 2021/2026 aware |
+| `dashboard_health_check_totals`        | `dict`            | `total_passed_*` / `total_eligible_*` for BMI, thyroid, BP, urinary albumin, foot exam; single aggregation query           |
 
 All dashboard functions use `build_base_queryset()` as their base and respect `audit_period.get_dataset_year()`. They return plain Python values — no `KPIResult` objects.
 
@@ -71,11 +71,11 @@ All dashboard functions use `build_base_queryset()` as their base and respect `a
 
 The dashboard IMD map in `project/npda/templates/dashboard/map_chart_partial.html` uses the browser bundle from `@rcpch/imd-map`.
 
-- Current bundle version: `0.4.0`
+- Current bundle version: `0.5.2`
 - Script URL:
-    `https://cdn.jsdelivr.net/npm/@rcpch/imd-map@0.4.0/dist/umd/rcpch-imd-map.min.js`
+  `https://cdn.jsdelivr.net/npm/@rcpch/imd-map@0.5.2/dist/umd/rcpch-imd-map.min.js`
 - Current SRI:
-    `sha512-4icz8A609i4Dy78X8a2NYqhMNO6wyS+vpJ9ffcf6oLuyhpjLPGhnwmkZHZIpS1ZC7c5S2GpxqlK6oP+8Rawjag==`
+  `sha512-a766qxZJXhOAclDsv1qP89xJMden52mrMRWvodABs3zs34TLx/roXRik7grS4skx2mTUvKyO22RAokkpJMCLqg==`
 
 Tile auth is now configured via map options (query-string auth), not request headers.
 
@@ -85,10 +85,10 @@ Tile auth is now configured via map options (query-string auth), not request hea
 
 ```javascript
 RcpchImdMap.createImdMap({
-    container: container,
-    tilesBaseUrl: tilesBaseUrl,
-    tilesApiKey: window.RCPCH_CENSUS_PLATFORM_TOKEN || undefined,
-    tilesApiKeyParam: 'Subscription-Key',
+  container: container,
+  tilesBaseUrl: tilesBaseUrl,
+  tilesApiKey: window.RCPCH_CENSUS_PLATFORM_TOKEN || undefined,
+  tilesApiKeyParam: "Subscription-Key",
 });
 ```
 
@@ -100,27 +100,27 @@ Keep the API key plumbing aligned with `project/npda/general_functions/index_mul
 
 ### Core models
 
-| Model | Path | Notes |
-|-------|------|-------|
-| `Patient` | `project/npda/models/patient.py` | `nhs_number` and `unique_reference_number` are both `unique=False` at the DB level — uniqueness within a PDU's submission is enforced by `Submission.add_patient()`, not a DB constraint |
-| `Submission` | `project/npda/models/submission.py` | One active submission per PDU per audit period. Use `Submission.objects.get_submission_for_request(pdu, audit_period)` to fetch it. **Always use `submission.add_patient(patient)` in production code** (see Submission wiring below) |
-| `PatientSubmission` | `project/npda/models/patientsubmission.py` | Through-table for the `Submission ↔ Patient` M2M. No custom validation — uniqueness lives on `Submission.add_patient()` |
-| `Transfer` | `project/npda/models/transfer.py` | One `Transfer` per `Patient`, recording their current PDU. Created alongside the `Patient` in `PatientCreateView.form_valid()` |
-| `Visit` | `project/npda/models/visit.py` | FK to `Patient`. Many visits per patient per audit period |
-| `AuditPeriod` | `project/npda/models/audit_period.py` | Use `AuditPeriod.objects.get_default_audit_period()` in tests. `audit_period.get_dataset_year()` is the single source of truth for 2021 vs 2026 |
+| Model               | Path                                       | Notes                                                                                                                                                                                                                                 |
+| ------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Patient`           | `project/npda/models/patient.py`           | `nhs_number` and `unique_reference_number` are both `unique=False` at the DB level — uniqueness within a PDU's submission is enforced by `Submission.add_patient()`, not a DB constraint                                              |
+| `Submission`        | `project/npda/models/submission.py`        | One active submission per PDU per audit period. Use `Submission.objects.get_submission_for_request(pdu, audit_period)` to fetch it. **Always use `submission.add_patient(patient)` in production code** (see Submission wiring below) |
+| `PatientSubmission` | `project/npda/models/patientsubmission.py` | Through-table for the `Submission ↔ Patient` M2M. No custom validation — uniqueness lives on `Submission.add_patient()`                                                                                                               |
+| `Transfer`          | `project/npda/models/transfer.py`          | One `Transfer` per `Patient`, recording their current PDU. Created alongside the `Patient` in `PatientCreateView.form_valid()`                                                                                                        |
+| `Visit`             | `project/npda/models/visit.py`             | FK to `Patient`. Many visits per patient per audit period                                                                                                                                                                             |
+| `AuditPeriod`       | `project/npda/models/audit_period.py`      | Use `AuditPeriod.objects.get_default_audit_period()` in tests. `audit_period.get_dataset_year()` is the single source of truth for 2021 vs 2026                                                                                       |
 
 ### Constants
 
 `project/constants/` — canonical choice lists used across models, queries and templates.
 
-| File | Contains |
-|------|---------|
-| `diabetes_treatment.py` | `TREATMENT_TYPES` |
+| File                          | Contains                   |
+| ----------------------------- | -------------------------- |
+| `diabetes_treatment.py`       | `TREATMENT_TYPES`          |
 | `glucose_monitoring_types.py` | `GLUCOSE_MONITORING_TYPES` |
-| `closed_loop_types.py` | `CLOSED_LOOP_TYPES` |
-| `diabetes_types.py` | `DIABETES_TYPES` |
-| `smoking_status.py` | `SMOKING_STATUS` |
-| `hba1c_format.py` | `HBA1C_FORMATS` |
+| `closed_loop_types.py`        | `CLOSED_LOOP_TYPES`        |
+| `diabetes_types.py`           | `DIABETES_TYPES`           |
+| `smoking_status.py`           | `SMOKING_STATUS`           |
+| `hba1c_format.py`             | `HBA1C_FORMATS`            |
 
 ---
 
@@ -142,10 +142,10 @@ Use `ALDER_HEY_PZ_CODE` (imported from `project.npda.tests.constants_for_tests`)
 
 ### Factories
 
-| Factory | Import path |
-|---------|-------------|
+| Factory          | Import path                                    |
+| ---------------- | ---------------------------------------------- |
 | `PatientFactory` | `project.npda.tests.factories.patient_factory` |
-| `VisitFactory` | `project.npda.tests.factories.visit_factory` |
+| `VisitFactory`   | `project.npda.tests.factories.visit_factory`   |
 
 **`VisitFactory` has opinionated non-null defaults** for `treatment`, `closed_loop_system` and `glucose_monitoring`. Pass `None` explicitly when testing missing-data behaviour:
 
@@ -183,7 +183,7 @@ submission = Submission.objects.create(
 submission.patients.add(patient)
 ```
 
-**In production code** (views, management commands, etc.) always use `submission.add_patient(patient)` instead of the bare `patients.add()`. This method enforces a PDU-scoped uniqueness rule: a patient with the same NHS number (or Unique Reference Number for Jersey patients) cannot appear more than once across any active submissions for the *same PDU* in the same audit period. The same identifier is allowed in a different PDU's submission (e.g. after a cross-PDU transfer). A `ValidationError` is raised on violation.
+**In production code** (views, management commands, etc.) always use `submission.add_patient(patient)` instead of the bare `patients.add()`. This method enforces a PDU-scoped uniqueness rule: a patient with the same NHS number (or Unique Reference Number for Jersey patients) cannot appear more than once across any active submissions for the _same PDU_ in the same audit period. The same identifier is allowed in a different PDU's submission (e.g. after a cross-PDU transfer). A `ValidationError` is raised on violation.
 
 ```python
 # Raises ValidationError if NHS/URN already in an active submission for this PDU
@@ -201,21 +201,21 @@ Keys match the annotation names in `queries.py` (e.g. `"treatment_regimen"`, `"g
 
 All convenience scripts live in `s/`. They must be run from the repo root.
 
-| Script | What it does |
-|--------|-------------|
-| `s/up` | Start all Docker Compose services |
-| `s/down` | Stop all services |
-| `s/rebuild` | Remove containers/images then bring up fresh |
-| `s/local-clean-reset` | Nuclear reset: removes volumes and images, then `s/up` |
-| `s/start-dev` | Run migrations, seed data, start Django dev server on port 8008 |
-| `s/watch-tailwind` | Compile Tailwind CSS in watch mode |
-| `s/django-shell` | Open Django shell inside the running container |
-| `s/test` | Run pytest in a one-shot container (passes all args to pytest) |
-| `s/lint` | Run ruff formatter + linter in fix mode |
-| `s/lint --check` | Lint check only (used in CI, exits non-zero if unclean) |
-| `s/psql` | Connect to Postgres (local or Azure, see script for options) |
-| `s/create-superuser` | Create a Django superuser inside the container |
-| `s/start-celery-dev` | Start Celery worker for local development |
+| Script                | What it does                                                    |
+| --------------------- | --------------------------------------------------------------- |
+| `s/up`                | Start all Docker Compose services                               |
+| `s/down`              | Stop all services                                               |
+| `s/rebuild`           | Remove containers/images then bring up fresh                    |
+| `s/local-clean-reset` | Nuclear reset: removes volumes and images, then `s/up`          |
+| `s/start-dev`         | Run migrations, seed data, start Django dev server on port 8008 |
+| `s/watch-tailwind`    | Compile Tailwind CSS in watch mode                              |
+| `s/django-shell`      | Open Django shell inside the running container                  |
+| `s/test`              | Run pytest in a one-shot container (passes all args to pytest)  |
+| `s/lint`              | Run ruff formatter + linter in fix mode                         |
+| `s/lint --check`      | Lint check only (used in CI, exits non-zero if unclean)         |
+| `s/psql`              | Connect to Postgres (local or Azure, see script for options)    |
+| `s/create-superuser`  | Create a Django superuser inside the container                  |
+| `s/start-celery-dev`  | Start Celery worker for local development                       |
 
 ### IMD recalculation command (basic use)
 
@@ -255,14 +255,14 @@ There are two datasets: **2021** and **2026**. The dataset year is derived from 
 
 ### Where the dataset year is used
 
-| Location | Purpose |
-|----------|---------|
-| `project/npda/general_functions/headings.py` | `get_field_heading(field_name, dataset_year)` — returns the year-appropriate CSV column heading for a given model field |
-| `project/constants/csv_headings.py` | `ALL_HEADINGS` — master list of every field with a `dataset_years` list indicating which datasets include it |
-| `project/npda/general_functions/csv/csv_upload.py` | Infers `dataset_year` from the submission's audit period (or from column sniffing) before parsing |
-| `project/npda/models/patient.py` | `Patient.get_field_label()`, `get_sex_label()` etc. delegate to `get_field_heading` |
-| `project/npda/models/visit.py` | `Visit.get_field_label()` delegates to `get_field_heading` |
-| `project/npda/forms/patient_form.py` / `visit_form.py` | Form field labels are resolved via `get_field_heading` at form instantiation |
+| Location                                               | Purpose                                                                                                                 |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `project/npda/general_functions/headings.py`           | `get_field_heading(field_name, dataset_year)` — returns the year-appropriate CSV column heading for a given model field |
+| `project/constants/csv_headings.py`                    | `ALL_HEADINGS` — master list of every field with a `dataset_years` list indicating which datasets include it            |
+| `project/npda/general_functions/csv/csv_upload.py`     | Infers `dataset_year` from the submission's audit period (or from column sniffing) before parsing                       |
+| `project/npda/models/patient.py`                       | `Patient.get_field_label()`, `get_sex_label()` etc. delegate to `get_field_heading`                                     |
+| `project/npda/models/visit.py`                         | `Visit.get_field_label()` delegates to `get_field_heading`                                                              |
+| `project/npda/forms/patient_form.py` / `visit_form.py` | Form field labels are resolved via `get_field_heading` at form instantiation                                            |
 
 ### Key differences between datasets
 
@@ -312,11 +312,11 @@ Patients at the Jersey PDU (`pz_code == "PZ248"`) use `unique_reference_number` 
 
 ### Key files
 
-| File | Purpose |
-|------|---------|
-| `project/constants/csv_headings.py` | `ALL_HEADINGS` master list + helper functions |
+| File                                              | Purpose                                                                                                                |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `project/constants/csv_headings.py`               | `ALL_HEADINGS` master list + helper functions                                                                          |
 | `project/npda/general_functions/csv/csv_parse.py` | Reads a CSV file into a pandas DataFrame, normalises headings, detects the unique identifier, and records parse errors |
-| `project/npda/general_functions/csv/csv_clean.py` | Converts date strings to `pd.Timestamp`, cleans sex/ethnicity/measurement columns |
+| `project/npda/general_functions/csv/csv_clean.py` | Converts date strings to `pd.Timestamp`, cleans sex/ethnicity/measurement columns                                      |
 
 ### `ALL_HEADINGS` structure
 
@@ -333,16 +333,16 @@ Each entry in `ALL_HEADINGS` is a dict with:
 }
 ```
 
-Fields shared between both years have `dataset_years: [2021, 2026]`. Year-specific fields have only their year in the list. When a heading *name* changes between years, two separate entries share the same `model_field` (the deduplication in `get_csv_heading_objects` ensures each year's canonical heading is returned once).
+Fields shared between both years have `dataset_years: [2021, 2026]`. Year-specific fields have only their year in the list. When a heading _name_ changes between years, two separate entries share the same `model_field` (the deduplication in `get_csv_heading_objects` ensures each year's canonical heading is returned once).
 
 ### Helper functions in `csv_headings.py`
 
-| Function | Returns |
-|----------|---------|
-| `get_csv_heading_objects(dataset_year)` | Tuple of heading dicts for the given year (deduped by `model_field`) |
+| Function                                                                                  | Returns                                                                                                       |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `get_csv_heading_objects(dataset_year)`                                                   | Tuple of heading dicts for the given year (deduped by `model_field`)                                          |
 | `get_csv_heading_objects_for_year_and_unique_identifier(dataset_year, unique_identifier)` | Like above but also prepends the correct patient identifier heading (England NHS number, Jersey URN, or both) |
-| `get_all_dates(dataset_year)` | List of CSV column *headings* whose `data_type == "date"` for the given year |
-| `csv_definition_for(model_field_or_column, dataset_year)` | Single heading dict for a model field name or column heading |
+| `get_all_dates(dataset_year)`                                                             | List of CSV column _headings_ whose `data_type == "date"` for the given year                                  |
+| `csv_definition_for(model_field_or_column, dataset_year)`                                 | Single heading dict for a model field name or column heading                                                  |
 
 ### `csv_parse` flow
 
@@ -357,6 +357,7 @@ Fields shared between both years have `dataset_years: [2021, 2026]`. Year-specif
 ### `csv_clean` flow
 
 Called inside `csv_upload` after `csv_parse`. Applies:
+
 - `pd.to_datetime` (day-first, mixed format) to all date columns returned by `get_all_dates(dataset_year)`.
 - Custom cleaners for `sex`, `ethnicity`, `height`, `weight`.
 - Whitespace stripping across all string/object columns.
@@ -419,6 +420,7 @@ csv_upload(dataframe, errors_to_return, csv_file_name, submission)
 ### `row_to_dict(row, model)`
 
 Iterates `CSV_HEADINGS` filtering by `model`. For each matching entry it:
+
 1. Looks up the model field definition via `model._meta.get_field(model_field_name)`.
 2. Reads `row[entry["heading"]]`.
 3. Converts the value via `csv_value_to_model_value()` — handles NaN → None, `pd.Timestamp` → `datetime.date`, numpy scalars → Python scalars, integer-valued floats → int.

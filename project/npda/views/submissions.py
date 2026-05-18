@@ -37,6 +37,7 @@ from django.views.generic import ListView
 # RCPCH imports
 from project.constants.colors import RCPCH_LIGHT_BLUE
 from project.npda.views.decorators import check_data_permissions, login_and_otp_required
+from project.settings import RCPCH_CENSUS_PLATFORM_TOKEN, RCPCH_DEPRIVATION_TILES_URL
 
 from ..general_functions.breadcrumbs import data_breadcrumbs
 from ..general_functions.csv import (
@@ -45,6 +46,12 @@ from ..general_functions.csv import (
     download_csv_file,
     download_xlsx,
     export_as_csv,
+)
+from ..general_functions.patient_report.queries import (
+    all_pdus_age_map_data,
+    all_pdus_care_processes_map_data,
+    all_pdus_diabetes_type_map_data,
+    all_pdus_t1dm_bubble_map_data,
 )
 from ..general_functions.session import save_csv_uploading_user_to_visitactivity
 from ..models import (
@@ -181,13 +188,28 @@ class SubmissionsListView(
                 .values("pz_code", "lead_organisation_name", "latest_visit_quarter")
             )
 
-            column_chart = create_column_chart(chart_data, selected_audit_period)
-            context["column_chart"] = column_chart.to_html(full_html=False)
+            context["pdu_submission_data"] = list(
+                chart_data.order_by("latest_visit_quarter", "pz_code").values(
+                    "pz_code", "lead_organisation_name", "latest_visit_quarter"
+                )
+            )
             context["non_submission_pdus"] = chart_data.filter(
                 latest_visit_quarter=0
             ).values_list("pz_code", "lead_organisation_name")
             context["audit_period"] = selected_audit_period
             context["submission_statistics"] = submission_stats(selected_audit_period)
+            context["bubble_map_centres"] = all_pdus_t1dm_bubble_map_data(
+                selected_audit_period
+            )
+            context["bubble_map_care_processes"] = all_pdus_care_processes_map_data(
+                selected_audit_period
+            )
+            context["bubble_map_diabetes_type"] = all_pdus_diabetes_type_map_data(
+                selected_audit_period
+            )
+            context["bubble_map_age"] = all_pdus_age_map_data(selected_audit_period)
+            context["RCPCH_DEPRIVATION_TILES_URL"] = RCPCH_DEPRIVATION_TILES_URL
+            context["RCPCH_CENSUS_PLATFORM_TOKEN"] = RCPCH_CENSUS_PLATFORM_TOKEN
 
         context["breadcrumbs"] = data_breadcrumbs(
             self.pdu,

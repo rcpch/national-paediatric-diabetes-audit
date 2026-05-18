@@ -38,7 +38,7 @@ from project.constants.leave_pdu_reasons import LEAVE_PDU_REASONS
 from project.constants.yes_no_unknown import YES_NO_UNKNOWN
 from project.npda.general_functions.audit_period import get_quarters_for_audit_period
 from project.npda.general_functions.quarter_for_date import retrieve_quarter_for_date
-from project.npda.models import Patient, Transfer, Visit
+from project.npda.models import PaediatricDiabetesUnit, Patient, Transfer, Visit
 from project.npda.models.db_functions import Round
 
 
@@ -1468,3 +1468,431 @@ def calculate_hba1c_values(qs, audit_period):
             patient["median_hba1c_pct"] = None
 
     return qs
+
+
+def all_pdus_t1dm_bubble_map_data(audit_period) -> list[dict]:
+    """Bubble map data for the national submissions overview (audit team only).
+
+    Returns one entry per PDU that has an active submission with T1DM patients and
+    a geocoordinate on record.  Each entry is a plain dict ready to be passed
+    directly to the map library's ``setLeadCentres()`` call:
+
+        {
+            "lat": float,
+            "lon": float,
+            "label": str,            # lead_organisation_name or pz_code
+            "pz_code": str,
+            "patient_count": int,    # eligible T1DM patients in the audit period
+            "median_hba1c": int | None,  # median HbA1c in mmol/mol
+        }
+
+    Uses the same eligibility filters as ``count_eligible_patients()`` and the
+    same HbA1c normalisation logic as ``hba1c_stats_by_diabetes_type()``.
+    Runs in ~4 DB round-trips regardless of the number of PDUs.
+    """
+    audit_range = (audit_period.start_date, audit_period.end_date)
+    dataset_year = audit_period.get_dataset_year()
+
+    # All active PDUs with a submission in this period and a geocoordinate
+    pdus = {
+        pdu.pz_code: pdu
+        for pdu in PaediatricDiabetesUnit.objects.filter(
+            active=True,
+            pdu_submissions__submission_active=True,
+            pdu_submissions__audit_period=audit_period,
+            lead_organisation_geocoordinates__isnull=False,
+        ).distinct()
+    }
+    if not pdus:
+        return []
+
+    # Eligible T1DM patients annotated with their PDU pz_code.
+    # distinct() on (pk, pz_code) gives one row per patient per PDU.
+    t1dm_rows = (
+        Patient.objects.filter(
+            submissions__submission_active=True,
+            submissions__audit_period=audit_period,
+            submissions__paediatric_diabetes_unit__pz_code__in=pdus.keys(),
+            diabetes_type=DIABETES_TYPES[0][0],
+            visit__visit_date__range=audit_range,
+            date_of_birth__gt=audit_period.start_date - relativedelta(years=25),
+        )
+        .distinct()
+        .values("pk", "submissions__paediatric_diabetes_unit__pz_code")
+    )
+
+    # Build patient→PDU map and per-PDU patient counts in one pass
+    patient_pdu_map: dict[int, str] = {}
+    patient_counts: dict[str, int] = defaultdict(int)
+    for row in t1dm_rows:
+        pk = row["pk"]
+        pz = row["submissions__paediatric_diabetes_unit__pz_code"]
+        if pk not in patient_pdu_map:
+            patient_pdu_map[pk] = pz
+            patient_counts[pz] += 1
+
+    if not patient_pdu_map:
+        return []
+
+    # Fetch HbA1c values for all T1DM patients in one query
+    if dataset_year == 2026:
+        hba1c_rows = Visit.objects.filter(
+            patient__pk__in=patient_pdu_map.keys(),
+            visit_date__range=audit_range,
+            hba1c__isnull=False,
+            hba1c_date__gt=F("patient__diagnosis_date") + timedelta(days=90),
+        ).values("patient__pk", "hba1c")
+        hba1c_key = "hba1c"
+    else:
+        hba1c_rows = (
+            Visit.objects.filter(
+                patient__pk__in=patient_pdu_map.keys(),
+                visit_date__range=audit_range,
+                hba1c__isnull=False,
+                hba1c_date__gt=F("patient__diagnosis_date") + timedelta(days=90),
+            )
+            .annotate(
+                hba1c_mmol_mol=Case(
+                    When(Q(hba1c_format=HBA1C_FORMATS[0][0]), then=F("hba1c")),
+                    When(
+                        Q(hba1c_format=HBA1C_FORMATS[1][0]),
+                        then=(F("hba1c") - Round(Decimal("2.152")))
+                        / Decimal("0.09148"),
+                    ),
+                    default=None,
+                    output_field=DecimalField(max_digits=5, decimal_places=2),
+                )
+            )
+            .filter(hba1c_mmol_mol__isnull=False)
+            .values("patient__pk", "hba1c_mmol_mol")
+        )
+        hba1c_key = "hba1c_mmol_mol"
+
+    # Group HbA1c values by PDU
+    hba1c_by_pdu: dict[str, list] = defaultdict(list)
+    for row in hba1c_rows:
+        pz = patient_pdu_map.get(row["patient__pk"])
+        if pz:
+            hba1c_by_pdu[pz].append(row[hba1c_key])
+
+    result = []
+    for pz_code, pdu in pdus.items():
+        count = patient_counts.get(pz_code, 0)
+        if count == 0:
+            continue
+
+        hba1c_vals = hba1c_by_pdu.get(pz_code, [])
+        if hba1c_vals:
+            sorted_vals = sorted(float(v) for v in hba1c_vals)
+            mid = len(sorted_vals) // 2
+            median_hba1c = (
+                (sorted_vals[mid - 1] + sorted_vals[mid]) / 2
+                if len(sorted_vals) % 2 == 0
+                else sorted_vals[mid]
+            )
+            median_hba1c = round(median_hba1c)
+        else:
+            median_hba1c = None
+
+        coords = pdu.lead_organisation_geocoordinates
+        result.append(
+            {
+                "lat": coords.y,
+                "lon": coords.x,
+                "label": pdu.lead_organisation_name or pdu.pz_code,
+                "pz_code": pz_code,
+                "patient_count": count,
+                "median_hba1c": median_hba1c,
+            }
+        )
+
+    return result
+
+
+def all_pdus_care_processes_map_data(audit_period) -> list[dict]:
+    """% complete care processes per PDU for the national bubble map (T1DM only).
+
+    Each entry:
+        {
+            "lat": float, "lon": float, "label": str, "pz_code": str,
+            "eligible_count": int,   # T1DM patients with complete year of care
+            "pct_complete": int,     # % who passed all required care processes (0-100)
+        }
+
+    Uses the same eligibility and care-process definitions as
+    ``dashboard_health_check_totals`` (HbA1c, BMI, thyroid for all;
+    + BP, albumin, foot exam for patients aged ≥12).
+    """
+    audit_range = (audit_period.start_date, audit_period.end_date)
+
+    pdus = {
+        pdu.pz_code: pdu
+        for pdu in PaediatricDiabetesUnit.objects.filter(
+            active=True,
+            pdu_submissions__submission_active=True,
+            pdu_submissions__audit_period=audit_period,
+            lead_organisation_geocoordinates__isnull=False,
+        ).distinct()
+    }
+    if not pdus:
+        return []
+
+    # Build patient → PDU mapping for T1DM patients with visits in this period
+    t1dm_rows = (
+        Patient.objects.filter(
+            submissions__submission_active=True,
+            submissions__audit_period=audit_period,
+            submissions__paediatric_diabetes_unit__pz_code__in=pdus.keys(),
+            diabetes_type=DIABETES_TYPES[0][0],
+            visit__visit_date__range=audit_range,
+            date_of_birth__gt=audit_period.start_date - relativedelta(years=25),
+        )
+        .distinct()
+        .values("pk", "submissions__paediatric_diabetes_unit__pz_code")
+    )
+    patient_pdu_map: dict[int, str] = {}
+    for row in t1dm_rows:
+        pk = row["pk"]
+        if pk not in patient_pdu_map:
+            patient_pdu_map[pk] = row["submissions__paediatric_diabetes_unit__pz_code"]
+
+    if not patient_pdu_map:
+        return []
+
+    # Annotate each patient with care-process pass/fail
+    care_qs = (
+        Patient.objects.filter(pk__in=patient_pdu_map.keys())
+        .annotate(
+            is_gte_12yo=Q(
+                date_of_birth__lte=audit_period.start_date - relativedelta(years=12)
+            ),
+            is_incomplete_year_of_care=Case(
+                When(Q(diagnosis_date__range=audit_range), then=True),
+                When(
+                    Exists(
+                        Transfer.objects.filter(
+                            patient=OuterRef("pk"),
+                            date_leaving_service__range=audit_range,
+                        )
+                    ),
+                    then=True,
+                ),
+                default=False,
+                output_field=BooleanField(),
+            ),
+        )
+        .annotate(
+            is_complete_year_of_care=Case(
+                When(is_incomplete_year_of_care=True, then=False),
+                default=True,
+                output_field=BooleanField(),
+            )
+        )
+    )
+    care_qs = annotate_health_checks(care_qs, audit_period)
+
+    eligible: dict[str, int] = defaultdict(int)
+    passed_all: dict[str, int] = defaultdict(int)
+    for row in care_qs.values(
+        "pk", "is_complete_year_of_care", "is_gte_12yo", "num_passed"
+    ):
+        pz = patient_pdu_map.get(row["pk"])
+        if pz is None or not row["is_complete_year_of_care"]:
+            continue
+        eligible[pz] += 1
+        threshold = 6 if row["is_gte_12yo"] else 3
+        if row["num_passed"] == threshold:
+            passed_all[pz] += 1
+
+    result = []
+    for pz_code, pdu in pdus.items():
+        eligible_count = eligible.get(pz_code, 0)
+        if eligible_count == 0:
+            continue
+        passed_count = passed_all.get(pz_code, 0)
+        coords = pdu.lead_organisation_geocoordinates
+        result.append(
+            {
+                "lat": coords.y,
+                "lon": coords.x,
+                "label": pdu.lead_organisation_name or pdu.pz_code,
+                "pz_code": pz_code,
+                "eligible_count": eligible_count,
+                "pct_complete": round(passed_count / eligible_count * 100),
+            }
+        )
+
+    return result
+
+
+def all_pdus_diabetes_type_map_data(audit_period) -> list[dict]:
+    """Diabetes type breakdown per PDU for the national bubble map.
+
+    Each entry:
+        {
+            "lat": float, "lon": float, "label": str, "pz_code": str,
+            "total_patients": int,    # all eligible patients (all types)
+            "dominant_type": str,     # 'type1' | 'type2' | 'other'
+            "pct_type1": int,         # percentage type 1 (0-100)
+            "pct_type2": int,         # percentage type 2 (0-100)
+            "pct_other": int,         # percentage other (0-100)
+        }
+
+    Suitable for ``colorMode: 'categorical'`` in setLeadCentres().
+    """
+    audit_range = (audit_period.start_date, audit_period.end_date)
+
+    pdus = {
+        pdu.pz_code: pdu
+        for pdu in PaediatricDiabetesUnit.objects.filter(
+            active=True,
+            pdu_submissions__submission_active=True,
+            pdu_submissions__audit_period=audit_period,
+            lead_organisation_geocoordinates__isnull=False,
+        ).distinct()
+    }
+    if not pdus:
+        return []
+
+    rows = (
+        Patient.objects.filter(
+            submissions__submission_active=True,
+            submissions__audit_period=audit_period,
+            submissions__paediatric_diabetes_unit__pz_code__in=pdus.keys(),
+            visit__visit_date__range=audit_range,
+            date_of_birth__gt=audit_period.start_date - relativedelta(years=25),
+        )
+        .distinct()
+        .values("pk", "diabetes_type", "submissions__paediatric_diabetes_unit__pz_code")
+    )
+
+    type_counts: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    seen: set[int] = set()
+    for row in rows:
+        pk = row["pk"]
+        if pk in seen:
+            continue
+        seen.add(pk)
+        pz = row["submissions__paediatric_diabetes_unit__pz_code"]
+        dtype = row["diabetes_type"]
+        if dtype == DIABETES_TYPES[0][0]:
+            cat = "type1"
+        elif dtype == DIABETES_TYPES[1][0]:
+            cat = "type2"
+        else:
+            cat = "other"
+        type_counts[pz][cat] += 1
+
+    result = []
+    for pz_code, pdu in pdus.items():
+        counts = type_counts.get(pz_code, {})
+        total = sum(counts.values())
+        if total == 0:
+            continue
+        t1 = counts.get("type1", 0)
+        t2 = counts.get("type2", 0)
+        other = total - t1 - t2
+        if t1 >= t2 and t1 >= other:
+            dominant = "type1"
+        elif t2 >= other:
+            dominant = "type2"
+        else:
+            dominant = "other"
+        coords = pdu.lead_organisation_geocoordinates
+        result.append(
+            {
+                "lat": coords.y,
+                "lon": coords.x,
+                "label": pdu.lead_organisation_name or pdu.pz_code,
+                "pz_code": pz_code,
+                "total_patients": total,
+                "dominant_type": dominant,
+                "pct_type1": round(t1 / total * 100),
+                "pct_type2": round(t2 / total * 100),
+                "pct_other": round(other / total * 100),
+            }
+        )
+
+    return result
+
+
+def all_pdus_age_map_data(audit_period) -> list[dict]:
+    """Age-group breakdown per PDU for the national bubble map (T1DM only).
+
+    Patients are split at their 16th birthday (at audit start date):
+        - 'under_16': age < 16
+        - 'over_16':  age >= 16
+
+    Each entry:
+        {
+            "lat": float, "lon": float, "label": str, "pz_code": str,
+            "total_patients": int,
+            "dominant_age_group": "under_16" | "over_16",
+            "pct_under_16": int,   # 0-100
+            "pct_over_16": int,    # 0-100
+        }
+    """
+    audit_range = (audit_period.start_date, audit_period.end_date)
+
+    pdus = {
+        pdu.pz_code: pdu
+        for pdu in PaediatricDiabetesUnit.objects.filter(
+            active=True,
+            pdu_submissions__submission_active=True,
+            pdu_submissions__audit_period=audit_period,
+            lead_organisation_geocoordinates__isnull=False,
+        ).distinct()
+    }
+    if not pdus:
+        return []
+
+    rows = (
+        Patient.objects.filter(
+            submissions__submission_active=True,
+            submissions__audit_period=audit_period,
+            submissions__paediatric_diabetes_unit__pz_code__in=pdus.keys(),
+            diabetes_type=DIABETES_TYPES[0][0],
+            visit__visit_date__range=audit_range,
+            date_of_birth__gt=audit_period.start_date - relativedelta(years=25),
+        )
+        .distinct()
+        .values("pk", "date_of_birth", "submissions__paediatric_diabetes_unit__pz_code")
+    )
+
+    cutoff_16 = audit_period.start_date - relativedelta(years=16)
+    age_counts: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    seen: set[int] = set()
+    for row in rows:
+        pk = row["pk"]
+        if pk in seen:
+            continue
+        seen.add(pk)
+        pz = row["submissions__paediatric_diabetes_unit__pz_code"]
+        dob = row["date_of_birth"]
+        group = "under_16" if (dob is None or dob > cutoff_16) else "over_16"
+        age_counts[pz][group] += 1
+
+    result = []
+    for pz_code, pdu in pdus.items():
+        counts = age_counts.get(pz_code, {})
+        total = sum(counts.values())
+        if total == 0:
+            continue
+        under = counts.get("under_16", 0)
+        over = total - under
+        dominant = "under_16" if under >= over else "over_16"
+        coords = pdu.lead_organisation_geocoordinates
+        result.append(
+            {
+                "lat": coords.y,
+                "lon": coords.x,
+                "label": pdu.lead_organisation_name or pdu.pz_code,
+                "pz_code": pz_code,
+                "total_patients": total,
+                "dominant_age_group": dominant,
+                "pct_under_16": round(under / total * 100),
+                "pct_over_16": round(over / total * 100),
+            }
+        )
+
+    return result
