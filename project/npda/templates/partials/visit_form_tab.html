@@ -98,8 +98,8 @@
                             {% if field.field.required %}placeholder="Required"{% endif %}>{{ field.value }}</textarea>
                 {% else %}
                   <!-- Special handling for HbA1c to add unit badge, and for BMI to hide if no value -->
-                {% if field.id_for_label == 'id_hba1c' %}
-
+                {% if field.id_for_label == 'id_hba1c' and form.dataset_year >= 2026 %}
+                    {# For 2026+ there is no separate hba1c_format field — the unit is inferred from the value. #}
                     <label class="input rcpch-input-text rounded-none flex items-center gap-2">
                       <input type="text"
                       id="{{ field.id_for_label }}"
@@ -244,6 +244,22 @@
       hba1cInput.addEventListener('input', updateHba1cDisplay);
       hba1cInput.addEventListener('keyup', updateHba1cDisplay);
       updateHba1cDisplay();
+
+      // For 2026+ dataset: if the user entered a percentage value (< 20),
+      // convert it to mmol/mol before the form is submitted so the server
+      // always receives an IFCC value. CSV uploads bypass the form UI and
+      // send mmol/mol directly, so no server-side mutation is needed.
+      {% if form.dataset_year >= 2026 %}
+      const visitForm = document.getElementById('update-form');
+      if (visitForm) {
+        visitForm.addEventListener('submit', function() {
+          const val = Number.parseFloat(hba1cInput.value.trim().replace(',', '.'));
+          if (!Number.isNaN(val) && val < 20) {
+            hba1cInput.value = Math.round((val - 2.15) * 10.929);
+          }
+        });
+      }
+      {% endif %}
     }
 
     // Treatment field dependencies
