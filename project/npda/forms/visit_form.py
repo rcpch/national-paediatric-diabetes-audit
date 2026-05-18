@@ -898,11 +898,13 @@ class VisitForm(forms.ModelForm):
         hba1c_format = cleaned_data.get("hba1c_format")
         hba1c_date = cleaned_data.get("hba1c_date")
 
-        # For dataset years >= 2026 the `hba1c_format` column may be absent;
+        # For dataset years >= 2026 the `hba1c_format` column is absent;
         # treat missing format as IFCC (1) for range validation in 2026+.
+        # Percentage→mmol/mol conversion for web submissions is handled by JS
+        # before the form is POSTed, so the value arriving here is always IFCC.
         effective_hba1c_format = hba1c_format
         if (
-            getattr(self, "dataset_year", 2026) >= 2026
+            getattr(self, "dataset_year", 2021) >= 2026
             and effective_hba1c_format is None
         ):
             effective_hba1c_format = 1
