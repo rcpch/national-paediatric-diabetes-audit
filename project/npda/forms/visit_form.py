@@ -523,9 +523,9 @@ class VisitForm(forms.ModelForm):
         blood_gas_bicarbonate = self.cleaned_data["blood_gas_bicarbonate"]
 
         if blood_gas_bicarbonate:
-            if blood_gas_bicarbonate < 5:
+            if blood_gas_bicarbonate < 1:
                 raise ValidationError(
-                    "Blood Gas Bicarbonate out of range. Cannot be below 5"
+                    "Blood Gas Bicarbonate out of range. Cannot be below 1"
                 )
             elif blood_gas_bicarbonate > 50:
                 raise ValidationError(
