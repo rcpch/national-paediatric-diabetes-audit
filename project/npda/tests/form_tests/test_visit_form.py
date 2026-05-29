@@ -41,13 +41,7 @@ def dataset_year(request):
     return request.param
 
 
-@pytest.fixture
-def audit_period_for_dataset_year(dataset_year):
-    """Create an AuditPeriod for the supplied dataset_year for tests.
-
-    Tests that need a matching audit period for the CSV can depend on this
-    fixture and pass it into `csv_upload_sync` as `_audit_period`.
-    """
+def get_or_create_audit_period_for_dataset_year(dataset_year):
     slug = f"{dataset_year}-{dataset_year + 1}"
     audit_period, _ = AuditPeriod.objects.get_or_create(
         slug=slug,
@@ -59,6 +53,11 @@ def audit_period_for_dataset_year(dataset_year):
         },
     )
     return audit_period
+
+
+@pytest.fixture
+def audit_period_for_dataset_year(dataset_year):
+    return get_or_create_audit_period_for_dataset_year(dataset_year)
 
 
 def mock_external_validation_result(**kwargs):
@@ -2556,3 +2555,26 @@ def test_sick_day_rules_within_7_days_before_audit_year_pass_validation(
 
     assert form.is_valid(), f"Expected form to be valid but got errors: {form.errors}"
     assert "sick_day_rules_training_date" not in form.errors
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1431
+@pytest.mark.django_db
+def test_missing_lifestyle_and_dietary_modification_with_insulin_regimen_and_other_non_insulin_glucose_lowering_medication_passes_validation():
+    audit_period = get_or_create_audit_period_for_dataset_year(2026)
+
+    patient = PatientFactory()
+    patient.diagnosis_date = datetime.date(2025, 5, 1)
+    patient.save()
+
+    form = VisitForm(
+        data={
+            "visit_date": "2026-05-01",  # Required for validation
+            "insulin_regimen": 1,
+            "non_insulin_medication": 1,
+        },
+        initial={"patient": patient},
+        audit_period=audit_period,
+    )
+
+    assert form.is_valid(), f"Expected form to be valid but got errors: {form.errors}"
+    assert "dietary_lifestyle_modification" not in form.errors

@@ -988,26 +988,26 @@ class VisitForm(forms.ModelForm):
                     }
                 )
 
-        insulin_regimen = cleaned_data.get("insulin_regimen")
-        non_insulin_medication = cleaned_data.get("non_insulin_medication")
-        dietary_lifestyle_modification = cleaned_data.get(
-            "dietary_lifestyle_modification"
-        )
-        if any(
-            [insulin_regimen, non_insulin_medication, dietary_lifestyle_modification]
-        ):
-            # These medication fields share the visit date rather than a dedicated
-            # observation date field. If any are present, require `visit_date`.
-            visit_date = cleaned_data.get("visit_date")
-            measure_must_have_date_and_value(
-                visit_date,
-                "visit_date",
-                [
-                    {"insulin_regimen": insulin_regimen},
-                    {"non_insulin_medication": non_insulin_medication},
-                    {"dietary_lifestyle_modification": dietary_lifestyle_modification},
-                ],
-            )
+        for field in [
+            "insulin_regimen",
+            "non_insulin_medication",
+            "dietary_lifestyle_modification",
+        ]:
+            field_value = cleaned_data.get(field)
+
+            if field_value:
+                # These medication fields share the visit date rather than a dedicated
+                # observation date field. If any are present, require `visit_date`.
+                visit_date = cleaned_data.get("visit_date")
+
+                field_to_check = {}
+                field_to_check[field] = field_value
+
+                measure_must_have_date_and_value(
+                    visit_date,
+                    "visit_date",
+                    [field_to_check],
+                )
 
         # Immunotherapy fields moved to Patient model (handled on patient form)
 
