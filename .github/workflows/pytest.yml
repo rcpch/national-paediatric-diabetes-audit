@@ -22,12 +22,5 @@ jobs:
         with:
           fetch-depth: 0 # to allow git_context_processor.py to still work
 
-      - name: "Login via Azure CLI"
-        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
       - name: "Run PR check script"
         run: s/pr-check
