@@ -2,7 +2,7 @@
 
 az acr login --name ${AZURE_REGISTRY_NAME}
 
-cp envs/example.env .env
+cp envs/example.env envs/.env
 
 # Burn in build info (git hash, branch etc) into the image
 s/get-build-info > build_info.json

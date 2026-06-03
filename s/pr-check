@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-cp envs/example.env .env
+cp envs/example.env envs/.env
 
 # Build app image explicitly so services that reference it don't try to pull it
 DOCKER_BUILDKIT=0 docker compose build django
