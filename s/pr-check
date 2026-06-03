@@ -1,12 +1,6 @@
 #!/bin/bash -e
 
-az storage file download \
-  --auth-mode login \
-  --enable-file-backup-request-intent \
-  --account-name "${AZURE_CONFIG_STORAGE_ACCOUNT}" \
-  --share-name "${AZURE_CONFIG_FILE_SHARE}" \
-  --query 'size' \
-  --path .env --dest envs/.env
+cp envs/example.env .env
 
 # Build app image explicitly so services that reference it don't try to pull it
 DOCKER_BUILDKIT=0 docker compose build django
