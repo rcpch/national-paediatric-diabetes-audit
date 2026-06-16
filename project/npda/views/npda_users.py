@@ -302,17 +302,22 @@ class NPDAUserUpdateView(
         return my_pz_codes == their_pz_codes
 
     def get_restricted_fields(self):
+        if not self.request.user.is_rcpch_audit_team_member or not self.request.user.is_superuser:
+            return ["role", "email"]
+        
         # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1159
         # A coordinator can only change the role or email of a user if they share exactly the same PDU assignments
         # This prevents a coordinator accessing other PDUs by changing the email to one they control and doing a password reset
-        if (
-            self.user_in_exactly_the_same_pdus_as_requesting_user()
-            or self.request.user.is_superuser
-            or self.request.user.is_rcpch_audit_team_member
-        ):
-            return []
+        if not self.user_in_exactly_the_same_pdus_as_requesting_user():
+            return ["role", "email"]
+        
+        # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1449
+        # A normal audit team member can't change the email of a superuser, preventing privilege escalation by the same
+        # changing email and password reset process as above.
+        if self.get_object().is_superuser and not self.request.user.is_superuser:
+            return ["email"]
 
-        return ["role", "email"]
+        return []
 
     def get_form_kwargs(self):
         # add the request object to the form kwargs
