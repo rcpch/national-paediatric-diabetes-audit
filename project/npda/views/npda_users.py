@@ -507,6 +507,14 @@ class NPDAUserUpdateView(
             if request.user.is_superuser or request.user.is_rcpch_audit_team_member:
                 npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
 
+                if npda_user.is_superuser and not request.user.is_superuser:
+                    logger.warning(
+                        "User %s is trying to reset two-factor authentication for superuser %s",
+                        request.user.email,
+                        npda_user.email,
+                    )
+                    raise PermissionDenied("You do not have permission to reset two-factor authentication.")
+
                 devices = devices_for_user(user=npda_user)
                 for device in devices:
                     device.delete()
