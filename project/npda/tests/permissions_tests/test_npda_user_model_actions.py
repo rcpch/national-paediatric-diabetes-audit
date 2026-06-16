@@ -1821,7 +1821,9 @@ def test_audit_team_member_cannot_reset_two_factor_auth_for_superuser(
 
     # Login superuser (to set 2fa)
     client = login_and_verify_user(client, victim_superuser)
-    assert victim_superuser.totpdevice_set.exists(), "Superuser should have a TOTP device for 2FA"
+    assert victim_superuser.totpdevice_set.exists(), (
+        "Superuser should have a TOTP device for 2FA"
+    )
 
     # Login audit team member
     client = login_and_verify_user(client, malicious_audit_team_member)
@@ -1836,4 +1838,6 @@ def test_audit_team_member_cannot_reset_two_factor_auth_for_superuser(
 
     victim_superuser.refresh_from_db()
 
-    assert victim_superuser.totpdevice_set.exists(), "Superuser should still have a TOTP device for 2FA"
+    assert victim_superuser.totpdevice_set.exists(), (
+        "Superuser should still have a TOTP device for 2FA"
+    )
