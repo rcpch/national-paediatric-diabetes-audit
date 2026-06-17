@@ -536,11 +536,15 @@ class NPDAUserUpdateView(
 
         else:
             return super().post(request, *args, **kwargs)
-    
+
     def dispatch(self, request, *args, **kwargs):
         requested_user = self.get_object()
 
-        if request.user.is_superuser or request.user.is_rcpch_audit_team_member or self.user_shares_at_least_one_pdu_with_requesting_user():
+        if (
+            request.user.is_superuser
+            or request.user.is_rcpch_audit_team_member
+            or self.user_shares_at_least_one_pdu_with_requesting_user()
+        ):
             return super().dispatch(request, *args, **kwargs)
 
         raise PermissionDenied(

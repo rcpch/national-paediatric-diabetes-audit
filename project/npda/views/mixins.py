@@ -9,7 +9,6 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse
 
 from project.npda.models.audit_period import AuditPeriod
-from project.npda.models.npda_user import NPDAUser
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 from project.npda.models.patient import Patient
 from project.npda.models.submission import Submission
