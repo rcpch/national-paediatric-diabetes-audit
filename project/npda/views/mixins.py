@@ -108,16 +108,6 @@ class PDUPermissionMixin(AccessMixin):
                         pdu, audit_period, request.user, self.kwargs["patient_id"]
                     )
 
-                # PDU level permission checked in the request helpers above. This is to prevent access to models by guessing their pk.
-                case "NPDAUser" if "pk" in self.kwargs:
-                    requested_user = get_object_or_404(NPDAUser, pk=self.kwargs["pk"])
-                    if not requested_user.organisation_employers.filter(
-                        pz_code=pdu.pz_code
-                    ).exists():
-                        raise PermissionDenied(
-                            f"User {request.user} does not have permission to view {model} for PDU {pdu.pz_code} in audit period {audit_period.slug}"
-                        )
-
         self.audit_period = audit_period
         self.pdu = pdu
 
