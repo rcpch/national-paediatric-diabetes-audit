@@ -291,6 +291,16 @@ class NPDAUserUpdateView(
     success_message = "NPDA User record updated successfully"
     success_url = reverse_lazy("npda_users")
 
+    def user_shares_at_least_one_pdu_with_requesting_user(self):
+        my_pz_codes = set(
+            self.request.user.organisation_employers.values_list("pz_code", flat=True)
+        )
+        their_pz_codes = set(
+            self.get_object().organisation_employers.values_list("pz_code", flat=True)
+        )
+
+        return len(my_pz_codes & their_pz_codes) > 0
+
     def user_in_exactly_the_same_pdus_as_requesting_user(self):
         my_pz_codes = set(
             self.request.user.organisation_employers.values_list("pz_code", flat=True)
@@ -549,6 +559,20 @@ class NPDAUserUpdateView(
 
         else:
             return super().post(request, *args, **kwargs)
+
+    def dispatch(self, request, *args, **kwargs):
+        requested_user = self.get_object()
+
+        if (
+            request.user.is_superuser
+            or request.user.is_rcpch_audit_team_member
+            or self.user_shares_at_least_one_pdu_with_requesting_user()
+        ):
+            return super().dispatch(request, *args, **kwargs)
+
+        raise PermissionDenied(
+            f"User {request.user} does not have permission to view user {requested_user}"
+        )
 
 
 @login_and_otp_required()

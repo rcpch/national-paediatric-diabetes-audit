@@ -9,7 +9,6 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse
 
 from project.npda.models.audit_period import AuditPeriod
-from project.npda.models.npda_user import NPDAUser
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
 from project.npda.models.patient import Patient
 from project.npda.models.submission import Submission
@@ -107,16 +106,6 @@ class PDUPermissionMixin(AccessMixin):
                     self.check_patient_permissions(
                         pdu, audit_period, request.user, self.kwargs["patient_id"]
                     )
-
-                # PDU level permission checked in the request helpers above. This is to prevent access to models by guessing their pk.
-                case "NPDAUser" if "pk" in self.kwargs:
-                    requested_user = get_object_or_404(NPDAUser, pk=self.kwargs["pk"])
-                    if not requested_user.organisation_employers.filter(
-                        pz_code=pdu.pz_code
-                    ).exists():
-                        raise PermissionDenied(
-                            f"User {request.user} does not have permission to view {model} for PDU {pdu.pz_code} in audit period {audit_period.slug}"
-                        )
 
         self.audit_period = audit_period
         self.pdu = pdu
