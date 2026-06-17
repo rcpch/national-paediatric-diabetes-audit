@@ -304,19 +304,24 @@ class NPDAUserUpdateView(
     def get_restricted_fields(self):
         if self.request.user.is_superuser:
             return []
-        
+
         user_to_update = self.get_object()
-        
+
         # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1449
         # A normal audit team member can't change the email of a superuser, preventing privilege escalation by changing the email
         # to one they control, resetting the password and 2fa then logging in.
-        if self.request.user.is_rcpch_audit_team_member and not user_to_update.is_superuser:
+        if (
+            self.request.user.is_rcpch_audit_team_member
+            and not user_to_update.is_superuser
+        ):
             return []
-        
+
         # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1159
         # A coordinator can only change the role or email of a user if they share exactly the same PDU assignments
         # This prevents a coordinator accessing other PDUs by changing the email to one they control and doing a password reset
-        if self.user_in_exactly_the_same_pdus_as_requesting_user() and not (user_to_update.is_superuser or user_to_update.is_rcpch_audit_team_member):
+        if self.user_in_exactly_the_same_pdus_as_requesting_user() and not (
+            user_to_update.is_superuser or user_to_update.is_rcpch_audit_team_member
+        ):
             return []
 
         # Default - restrict
