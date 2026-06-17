@@ -39,7 +39,7 @@
                   <div class="indicator">
                     <span class="indicator-item badge badge-lg bg-rcpch_pink text-white ">Required</span>
                   </div>
-                  <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text {% if not perms.npda.change_visit or not can_use_questionnaire or form.patient.is_in_transfer_in_the_last_year %} opacity-40 pointer-events-none {% endif %}" {% if field.value %}value={{ field.value|stringformat:'s' }}{% endif %}>
+                  <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text {% if not perms.npda.change_visit or not can_use_questionnaire or form.patient.is_in_transfer_in_the_last_year %} opacity-40 pointer-events-none {% endif %}" {% if field.value %}value="{{ field.value|stringformat:'s' }}"{% endif %}>
                   <button type='button'
                           _="on click set #{{ field.id_for_label }}'s value to '{% today_date %}'"
                           class="btn rcpch-btn bg-rcpch_light_blue border border-rcpch_light_blue hover:bg-rcpch_strong_blue hover:border-rcpch_strong_blue {% if not perms.npda.change_visit or not can_use_questionnaire  or form.patient.is_in_transfer_in_the_last_year %}opacity-40 pointer-events-none{% endif %}">

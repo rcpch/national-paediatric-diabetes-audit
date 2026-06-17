@@ -92,7 +92,7 @@
               class="select rcpch-select w-full mb-2 {% if not perms.npda.change_patient or not can_use_questionnaire %}opacity-40 pointer-events-none{% endif %}">
             <option value="">Select a reason</option>
             {% for choice in form.reason_leaving_service.field.choices %}
-              <option value={{ choice.0 }} {% if form.reason_leaving_service.value == choice.0 %} selected="true" {% endif %}>
+              <option value="{{ choice.0 }}" {% if form.reason_leaving_service.value == choice.0 %} selected="true" {% endif %}>
                 {{ choice.1 }}
               </option>
             {% endfor %}

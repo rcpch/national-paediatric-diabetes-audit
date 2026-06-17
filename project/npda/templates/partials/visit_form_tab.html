@@ -78,7 +78,7 @@
                     {% endfor %}
                   </select>
                 {% elif field.field.widget|is_dateinput %}
-                  <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text flex-grow basis-2/3 {% if not perms.npda.change_visit or not can_use_questionnaire or form.patient.is_in_transfer_in_the_last_year %}opacity-40 pointer-events-none{% endif %}" {% if field.value %}value={{ field.value|stringformat:'s' }}{% endif %}>
+                  <input type="date" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text flex-grow basis-2/3 {% if not perms.npda.change_visit or not can_use_questionnaire or form.patient.is_in_transfer_in_the_last_year %}opacity-40 pointer-events-none{% endif %}" {% if field.value %}value="{{ field.value|stringformat:'s' }}"{% endif %}>
                   <div class="basis-1/3 flex">
                     <button type='button'
                             _="on click set #{{ field.id_for_label }}'s value to '{% today_date %}'"
@@ -106,14 +106,14 @@
                       name="{{ field.html_name }}"
                       class="grow bg-transparent"
                       {% if field.field.required %}placeholder="Required"{% endif %}
-                      {% if field.value %}value={{ field.value }}{% endif %}>
+                      {% if field.value %}value="{{ field.value }}"{% endif %}>
                       <span id="hba1c-conversion-label" class="text-xs text-gray-600 whitespace-nowrap"></span>
                       <span id="hba1c-unit-badge" class="badge badge-lg bg-rcpch_light_blue text-white">mmol/mol</span>
                     </label>
 
                   {% elif field.id_for_label != 'id_bmi' or field.id_for_label == 'id_bmi' and field.value is not None %}
                     <!-- Hide BMI label if no value -->
-                    <input type="text" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text rounded-none {% if not perms.npda.change_visit or not can_use_questionnaire or form.patient.is_in_transfer_in_the_last_year or field.id_for_label == 'id_bmi' %}opacity-40 pointer-events-none{% endif %}" {% if field.field.required %}placeholder="Required"{% endif %} {% if field.value %} value={{ field.value }} {% elif field.value == 0 %} value="0.0" {% endif %}>
+                    <input type="text" id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="input rcpch-input-text rounded-none {% if not perms.npda.change_visit or not can_use_questionnaire or form.patient.is_in_transfer_in_the_last_year or field.id_for_label == 'id_bmi' %}opacity-40 pointer-events-none{% endif %}" {% if field.field.required %}placeholder="Required"{% endif %} {% if field.value %} value="{{ field.value }}" {% elif field.value == 0 %} value="0.0" {% endif %}>
                     {% if field.value is not None %}
                       {% with field|centile_for_field:'centile' as centile %}
                         {% if centile %}
