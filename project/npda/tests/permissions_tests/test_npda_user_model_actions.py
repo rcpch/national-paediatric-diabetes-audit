@@ -140,6 +140,29 @@ def test_npda_user_list_view_users_can_only_see_users_from_their_pdu(
 
 
 @pytest.mark.django_db
+def test_npda_user_update_view_users_can_only_see_users_from_their_pdu(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+):
+    ah_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
+    ).first()
+
+    non_ah_user = NPDAUser.objects.exclude(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
+    ).first()
+
+    client = login_and_verify_user(client, ah_user)
+
+    url = reverse("npdauser-update", kwargs={"pk": non_ah_user.pk})
+    response = client.get(url)
+
+    assert response.status_code != HTTPStatus.OK
+
+
+@pytest.mark.django_db
 def test_npda_user_list_view_rcpch_audit_team_can_view_all_users(
     seed_groups_fixture,
     seed_users_fixture,
