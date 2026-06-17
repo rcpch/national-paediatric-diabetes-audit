@@ -1723,3 +1723,121 @@ def test_coordinator_cannot_change_role_for_user_with_multiple_pdus(
     assert victim_reader.role == AUDIT_CENTRE_READER, (
         "Malicious coordinator should not be able to change role of user in multiple PDUs."
     )
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1449
+@pytest.mark.django_db
+def test_audit_team_member_cannot_change_email_for_superuser(
+    client: Client,
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+):
+    # Create a test audit team member
+    malicious_audit_team_member = NPDAUserFactory(
+        first_name="Malicious",
+        surname="Audit Team Member",
+        role=RCPCH_AUDIT_TEAM,
+        is_active=True,
+        is_staff=False,
+        is_rcpch_audit_team_member=True,
+        is_rcpch_staff=True,
+        groups=[test_user_rcpch_audit_team_data.group_name],
+        organisation_employers=["PZ999"],
+    )
+
+    # Create a test superuser
+    victim_superuser = NPDAUserFactory(
+        first_name="Victim",
+        surname="Superuser",
+        role=RCPCH_AUDIT_TEAM,
+        is_active=True,
+        is_superuser=True,
+        is_staff=True,
+        is_rcpch_audit_team_member=True,
+        is_rcpch_staff=True,
+        groups=[test_user_rcpch_audit_team_data.group_name],
+        organisation_employers=["PZ999"],
+    )
+
+    # Login audit team member
+    client = login_and_verify_user(client, malicious_audit_team_member)
+
+    email_before = victim_superuser.email
+
+    url = reverse("npdauser-update", kwargs={"pk": victim_superuser.pk})
+    client.post(
+        url,
+        {
+            "email": "malicious@actor.com",
+            # Other required fields
+            "role": victim_superuser.role,
+            "surname": victim_superuser.surname,
+            "first_name": victim_superuser.first_name,
+        },
+    )
+
+    victim_superuser.refresh_from_db()
+
+    assert victim_superuser.email == email_before, (
+        "Malicious audit team member should not be able to change email of superuser."
+    )
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1449
+@pytest.mark.django_db
+def test_audit_team_member_cannot_reset_two_factor_auth_for_superuser(
+    client: Client,
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+):
+    # Create a test audit team member
+    malicious_audit_team_member = NPDAUserFactory(
+        first_name="Malicious",
+        surname="Audit Team Member",
+        role=RCPCH_AUDIT_TEAM,
+        is_active=True,
+        is_staff=False,
+        is_rcpch_audit_team_member=True,
+        is_rcpch_staff=True,
+        groups=[test_user_rcpch_audit_team_data.group_name],
+        organisation_employers=["PZ999"],
+    )
+
+    # Create a test superuser
+    victim_superuser = NPDAUserFactory(
+        first_name="Victim",
+        surname="Superuser",
+        role=RCPCH_AUDIT_TEAM,
+        is_active=True,
+        is_superuser=True,
+        is_staff=True,
+        is_rcpch_audit_team_member=True,
+        is_rcpch_staff=True,
+        groups=[test_user_rcpch_audit_team_data.group_name],
+        organisation_employers=["PZ999"],
+    )
+
+    # Login superuser (to set 2fa)
+    client = login_and_verify_user(client, victim_superuser)
+    assert victim_superuser.totpdevice_set.exists(), (
+        "Superuser should have a TOTP device for 2FA"
+    )
+
+    # Login audit team member
+    client = login_and_verify_user(client, malicious_audit_team_member)
+
+    url = reverse("npdauser-update", kwargs={"pk": victim_superuser.pk})
+    client.post(
+        url,
+        {
+            "reset-two-factor": "True",
+        },
+    )
+
+    victim_superuser.refresh_from_db()
+
+    assert victim_superuser.totpdevice_set.exists(), (
+        "Superuser should still have a TOTP device for 2FA"
+    )
