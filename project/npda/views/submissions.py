@@ -482,7 +482,7 @@ def upload_csv(request, audit_period, pdu):
             or parsed_csv.additional_columns
             or parsed_csv.duplicate_columns
         ):
-            logger.info(
+            logger.error(
                 "CSV upload failed due to column issues. pz_code=%s missing_columns=%s additional_columns=%s duplicate_columns=%s",
                 pz_code,
                 missing_columns,
