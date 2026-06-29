@@ -1488,6 +1488,47 @@ def test_first_row_with_extra_cell_on_the_end(test_user, single_row_valid_df):
 
 
 @pytest.mark.django_db
+def test_empty_csv_raises_error(
+    single_row_valid_df,
+    tmp_path,
+    client,
+    test_rcpch_user,
+    dataset_year,
+    audit_period_for_dataset_year,
+):
+    """A CSV with headers but no data rows should return a user-facing error, not a 500."""
+    headers_only = single_row_valid_df.iloc[:0].to_csv(index=False)
+
+    Submission.objects.all().delete()
+
+    tmp_csv_path = tmp_path / "empty_sheet.csv"
+    tmp_csv_path.write_text(headers_only)
+
+    client = login_and_verify_user(client, test_rcpch_user)
+
+    url = reverse(
+        "pdu-upload-csv",
+        kwargs={
+            "pz_code": ALDER_HEY_PZ_CODE,
+            "audit_period": audit_period_for_dataset_year.slug,
+        },
+    )
+
+    with open(tmp_csv_path, "rb") as csv_file:
+        response = client.post(url, {"csv_upload": csv_file}, format="multipart")
+
+    assert response.status_code == 302
+    assert response.url == url
+
+    error_messages = list(get_messages(response.wsgi_request))
+    assert len(error_messages) == 1
+    assert error_messages[0].tags == "error"
+    assert "no data rows" in error_messages[0].message
+
+    assert Submission.objects.count() == 0
+
+
+@pytest.mark.django_db
 def test_second_row_with_extra_cell_at_the_start(test_user, one_patient_two_visits):
     csv = one_patient_two_visits.to_csv(index=False, date_format="%d/%m/%Y")
 
