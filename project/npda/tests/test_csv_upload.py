@@ -1895,6 +1895,9 @@ HbA1c tests
 def test_hba1c_value_ifcc_less_than_20(
     test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
+    if dataset_year >= 2026:
+        pytest.skip("Test applies only to 2021 headings")
+
     hba1c_value = get_field_heading("hba1c", dataset_year)
     hba1c_date = get_field_heading("hba1c_date", dataset_year)
     visit_date = get_field_heading("visit_date", dataset_year)
