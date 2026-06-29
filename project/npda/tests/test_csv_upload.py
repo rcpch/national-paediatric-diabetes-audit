@@ -2015,7 +2015,7 @@ def test_hba1c_value_dcct_inferred_in_2026_dataset(
     assert visit.hba1c == 6
     assert visit.hba1c_format == 2  # DCCT (%)
 
-    assert "hba1c" not in visit.errors
+    assert visit.errors is None
 
 
 def test_hba1c_value_ifcc_inferred_in_2026_dataset(
@@ -2047,7 +2047,7 @@ def test_hba1c_value_ifcc_inferred_in_2026_dataset(
     assert visit.hba1c == 64
     assert visit.hba1c_format == 1  # IFCC (mmol/mol)
 
-    assert "hba1c" not in visit.errors
+    assert visit.errors is None
 
 
 @pytest.mark.django_db

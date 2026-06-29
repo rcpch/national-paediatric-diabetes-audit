@@ -910,6 +910,8 @@ class VisitForm(forms.ModelForm):
         else:
             effective_hba1c_format = 1  # IFCC (mmol/mol)
 
+        cleaned_data["hba1c_format"] = effective_hba1c_format
+
         def hba1c_error(msg):
             return ValidationError({"hba1c": [msg]})
 
