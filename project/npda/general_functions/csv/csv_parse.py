@@ -106,6 +106,11 @@ def csv_parse(csv_file, dataset_year=2021):
 
                 if lowercase_col in lowercase_alternative_headings:
                     df = df.rename(columns={column: heading["heading"]})
+    if df.empty:
+        raise ValueError(
+            "The CSV file contains no data rows. Please add patient data and upload again."
+        )
+
     # Pandas has strange behaviour for the first line in a CSV - additional cells become row labels
     # https://github.com/pandas-dev/pandas/issues/47490
     #
