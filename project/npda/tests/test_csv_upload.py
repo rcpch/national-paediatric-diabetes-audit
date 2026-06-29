@@ -1895,6 +1895,9 @@ HbA1c tests
 def test_hba1c_value_ifcc_less_than_20(
     test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
 ):
+    if dataset_year >= 2026:
+        pytest.skip("Test applies only to 2021 headings")
+
     hba1c_value = get_field_heading("hba1c", dataset_year)
     hba1c_date = get_field_heading("hba1c_date", dataset_year)
     visit_date = get_field_heading("visit_date", dataset_year)
@@ -1984,6 +1987,70 @@ def test_hba1c_value_dcct_more_than_20(
     # This would be rejected in the questionnaire but saved if it was a csv upload
     assert visit.hba1c == 21
     assert "hba1c" in visit.errors
+
+
+def test_hba1c_value_dcct_inferred_in_2026_dataset(
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
+):
+    if dataset_year < 2026:
+        pytest.skip("Test applies only to 2026+ headings")
+
+    hba1c_value = get_field_heading("hba1c", dataset_year)
+    hba1c_date = get_field_heading("hba1c_date", dataset_year)
+    visit_date = get_field_heading("visit_date", dataset_year)
+
+    single_row_valid_df.loc[0, hba1c_value] = 6
+    single_row_valid_df.loc[0, hba1c_date] = (
+        audit_period_for_dataset_year.start_date + relativedelta(months=1)
+    )
+    single_row_valid_df.loc[0, visit_date] = (
+        audit_period_for_dataset_year.start_date + relativedelta(months=1)
+    )
+
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
+
+    assert "hba1c" not in errors[0]
+
+    visit = Visit.objects.first()
+
+    assert visit.hba1c == 6
+    assert visit.hba1c_format == 2  # DCCT (%)
+
+    assert visit.errors is None
+
+
+def test_hba1c_value_ifcc_inferred_in_2026_dataset(
+    test_user, single_row_valid_df, audit_period_for_dataset_year, dataset_year
+):
+    if dataset_year < 2026:
+        pytest.skip("Test applies only to 2026+ headings")
+
+    hba1c_value = get_field_heading("hba1c", dataset_year)
+    hba1c_date = get_field_heading("hba1c_date", dataset_year)
+    visit_date = get_field_heading("visit_date", dataset_year)
+
+    single_row_valid_df.loc[0, hba1c_value] = 64
+    single_row_valid_df.loc[0, hba1c_date] = (
+        audit_period_for_dataset_year.start_date + relativedelta(months=1)
+    )
+    single_row_valid_df.loc[0, visit_date] = (
+        audit_period_for_dataset_year.start_date + relativedelta(months=1)
+    )
+
+    errors = csv_upload_sync(
+        test_user, single_row_valid_df, _audit_period=audit_period_for_dataset_year
+    )
+
+    assert "hba1c" not in errors[0]
+
+    visit = Visit.objects.first()
+
+    assert visit.hba1c == 64
+    assert visit.hba1c_format == 1  # IFCC (mmol/mol)
+
+    assert visit.errors is None
 
 
 @pytest.mark.django_db
