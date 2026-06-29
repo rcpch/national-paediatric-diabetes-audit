@@ -898,51 +898,42 @@ class VisitForm(forms.ModelForm):
         hba1c_format = cleaned_data.get("hba1c_format")
         hba1c_date = cleaned_data.get("hba1c_date")
 
-        # For dataset years >= 2026 the `hba1c_format` column is absent;
-        # treat missing format as IFCC (1) for range validation in 2026+.
-        # Percentage→mmol/mol conversion for web submissions is handled by JS
-        # before the form is POSTed, so the value arriving here is always IFCC.
-        effective_hba1c_format = hba1c_format
-        if (
-            getattr(self, "dataset_year", 2021) >= 2026
-            and effective_hba1c_format is None
-        ):
-            effective_hba1c_format = 1
+        # The `hba1c_format` column was removed in the 2026 CSV dataset.
+        # We now infer the format based on the value (IFCC < 20 >= DCCT).
+        # The questionnaire runs some JS to convert to mmol/mol before the
+        # form is submitted but we still infer for CSV uploads.
+
+        if hba1c_format is not None:
+            effective_hba1c_format = hba1c_format
+        elif hba1c is not None and hba1c < 20:
+            effective_hba1c_format = 2  # DCCT (%)
+        else:
+            effective_hba1c_format = 1  # IFCC (mmol/mol)
+
+        def hba1c_error(msg):
+            return ValidationError({"hba1c": [msg]})
 
         if hba1c is not None:
-            if effective_hba1c_format == 1:
-                # mmol/mol
-                if hba1c < 20:
-                    # Debug: record when we trigger the low-IFCC validation branch
-                    raise ValidationError(
-                        {
-                            "hba1c": [
-                                "Hba1c Value out of range (mmol/mol). Cannot be below 20. Did you mean to enter a DCCT (%) value?"
-                            ]
-                        }
-                    )
-                elif hba1c > 195:
-                    raise ValidationError(
-                        {
-                            "hba1c": [
-                                "Hba1c Value out of range (mmol/mol). Cannot be above 195"
-                            ]
-                        }
-                    )
-            elif hba1c_format == 2:
-                # %
-                if hba1c < 3:
-                    raise ValidationError(
-                        {"hba1c": ["Hba1c Value out of range (%). Cannot be below 3"]}
-                    )
-                elif hba1c > 20:
-                    raise ValidationError(
-                        {
-                            "hba1c": [
-                                "Hba1c Value out of range (%). Cannot be above 20. Did you mean to enter an IFCC (mmol/mol) value?"
-                            ]
-                        }
-                    )
+            match effective_hba1c_format:
+                case 1:  # IFCC (mmol/mol)
+                    if hba1c < 20:
+                        raise hba1c_error(
+                            "Hba1c Value out of range (mmol/mol). Cannot be below 20. Did you mean to enter a DCCT (%) value?"
+                        )
+                    elif hba1c > 195:
+                        raise hba1c_error(
+                            "Hba1c Value out of range (mmol/mol). Cannot be above 195"
+                        )
+                case 2:  # DCCT (%)
+                    if hba1c < 3:
+                        raise hba1c_error(
+                            "Hba1c Value out of range (%). Cannot be below 3"
+                        )
+                    elif hba1c > 20:
+                        raise hba1c_error(
+                            "Hba1c Value out of range (%). Cannot be above 20. Did you mean to enter an IFCC (mmol/mol) value?"
+                        )
+
         # Require the format field only for dataset years < 2026. For 2026+ we
         # require the value and date only (format is assumed IFCC if missing).
         if getattr(self, "dataset_year", 2026) < 2026:

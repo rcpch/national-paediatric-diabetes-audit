@@ -1995,7 +1995,7 @@ def test_hba1c_value_dcct_inferred_in_2026_dataset(
     hba1c_value = get_field_heading("hba1c", dataset_year)
     hba1c_date = get_field_heading("hba1c_date", dataset_year)
     visit_date = get_field_heading("visit_date", dataset_year)
-    
+
     single_row_valid_df.loc[0, hba1c_value] = 6
     single_row_valid_df.loc[0, hba1c_date] = (
         audit_period_for_dataset_year.start_date + relativedelta(months=1)
@@ -2027,7 +2027,7 @@ def test_hba1c_value_ifcc_inferred_in_2026_dataset(
     hba1c_value = get_field_heading("hba1c", dataset_year)
     hba1c_date = get_field_heading("hba1c_date", dataset_year)
     visit_date = get_field_heading("visit_date", dataset_year)
-    
+
     single_row_valid_df.loc[0, hba1c_value] = 64
     single_row_valid_df.loc[0, hba1c_date] = (
         audit_period_for_dataset_year.start_date + relativedelta(months=1)
