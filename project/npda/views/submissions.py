@@ -425,13 +425,6 @@ class SubmissionsListView(
 @check_data_permissions()
 def upload_csv(request, audit_period, pdu):
     def upload_error(message):
-        logger.error(
-            "CSV upload failed. pz_code=%s audit_period=%s error_message=%s",
-            pdu.pz_code,
-            audit_period.slug,
-            message,
-        )
-
         messages.error(
             request=request,
             message=message,
@@ -532,10 +525,9 @@ def upload_csv(request, audit_period, pdu):
             return upload_error(message)
 
         # 1316 - Twinkle/Diamond outputs PDU number without leading PZ and zeros
-        # 1464 - Twinkle outputs PDU number as a decimal
         expected_pdu_number = pdu.pz_code.lstrip("PZ").lstrip("0")
         pdu_number_in_csv = (
-            unique_pdu_numbers[0].lstrip("PZ").lstrip("0").rstrip(".0")
+            unique_pdu_numbers[0].lstrip("PZ").lstrip("0")
             if len(unique_pdu_numbers) > 0
             else None
         )
