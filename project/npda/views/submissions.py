@@ -425,13 +425,6 @@ class SubmissionsListView(
 @check_data_permissions()
 def upload_csv(request, audit_period, pdu):
     def upload_error(message):
-        logger.error(
-            "CSV upload failed. pz_code=%s audit_period=%s error_message=%s",
-            pdu.pz_code,
-            audit_period.slug,
-            message,
-        )
-
         messages.error(
             request=request,
             message=message,
