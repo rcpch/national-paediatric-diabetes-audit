@@ -105,12 +105,12 @@ def AUDIT_END_DATE():
 
 @pytest.fixture(scope="session")
 def test_pz_codes_fixture():
-    return ["PZ196", "PZ074", "PZ248", "PZ004"]  # GOSH, Alder Hey, Jersey, Northampton
+    return ["PZ196", "PZ074", "PZ248", "PZ004", "PZ180"]  # GOSH, Alder Hey, Jersey, Northampton, Kings Mill Hospital"
 
 
 @pytest.fixture(scope="function")
 def test_pz_codes_function_fixture():
-    return ["PZ196", "PZ074", "PZ248", "PZ004"]  # GOSH, Alder Hey, Jersey, Northampton
+    return ["PZ196", "PZ074", "PZ248", "PZ004", "PZ180"]  # GOSH, Alder Hey, Jersey, Northampton, Kings Mill Hospital
 
 
 @pytest.fixture(autouse=True)
