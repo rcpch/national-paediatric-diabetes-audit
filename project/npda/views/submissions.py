@@ -431,7 +431,7 @@ def upload_csv(request, audit_period, pdu):
             audit_period.slug,
             message,
         )
-        
+
         messages.error(
             request=request,
             message=message,
