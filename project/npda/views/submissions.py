@@ -535,8 +535,11 @@ def upload_csv(request, audit_period, pdu):
         expected_pdu_number = pdu.pz_code[2:].lstrip("0")
         
         if len(unique_pdu_numbers) > 0:
-            pdu_number_in_csv = unique_pdu_numbers[0][2:]
-            
+            pdu_number_in_csv = unique_pdu_numbers[0]
+
+            if pdu_number_in_csv.startswith("PZ"):
+                pdu_number_in_csv = pdu_number_in_csv[2:]
+
             # 1464 - Twinkle outputs PDU number as a decimal (e.g. "180.0")
             if pdu_number_in_csv.endswith(".0"):
                 pdu_number_in_csv = pdu_number_in_csv[:-2]
@@ -544,6 +547,8 @@ def upload_csv(request, audit_period, pdu):
             pdu_number_in_csv = pdu_number_in_csv.lstrip("0")
         else:
             pdu_number_in_csv = None
+
+        print(f"PDU number in CSV: {pdu_number_in_csv}, expected PDU number: {expected_pdu_number}")
 
         if pdu_number_in_csv != expected_pdu_number:
             message = f"PDU Number in CSV file ({unique_pdu_numbers[0]}) does not match the PDU you are looking at ({pdu.pz_code}). Please upload a file with the correct PDU Number."
