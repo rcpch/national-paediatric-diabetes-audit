@@ -526,7 +526,7 @@ def upload_csv(request, audit_period, pdu):
 
         # 1316 - Twinkle/Diamond outputs PDU number without leading PZ and zeros
         expected_pdu_number = pdu.pz_code[2:].lstrip("0")
-        
+
         if len(unique_pdu_numbers) > 0:
             pdu_number_in_csv = unique_pdu_numbers[0]
 
@@ -536,7 +536,7 @@ def upload_csv(request, audit_period, pdu):
             # 1464 - Twinkle outputs PDU number as a decimal (e.g. "180.0")
             if pdu_number_in_csv.endswith(".0"):
                 pdu_number_in_csv = pdu_number_in_csv[:-2]
-            
+
             pdu_number_in_csv = pdu_number_in_csv.lstrip("0")
         else:
             pdu_number_in_csv = None
