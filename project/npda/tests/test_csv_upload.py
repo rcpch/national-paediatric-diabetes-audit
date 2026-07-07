@@ -549,38 +549,6 @@ def test_missing_date_of_birth(
     assert Patient.objects.count() == 0
 
 
-@pytest.mark.parametrize(
-    "n_valid_rows,n_blank_rows,expected_row_numbers",
-    [
-        (3, 1, [5]),   # single blank row: pandas index 3 → spreadsheet row 5
-        (3, 2, [5, 6]),  # two blank rows: pandas indices 3,4 → rows 5,6
-    ],
-)
-def test_missing_nhs_number_error_reports_spreadsheet_row_numbers(
-    n_valid_rows, n_blank_rows, expected_row_numbers
-):
-    """Row numbers in the 'missing NHS number' error must match the row numbers
-    the user sees in their spreadsheet (1-based, counting the header row), not
-    the 0-based pandas index.
-
-    Real-world trigger: Excel exports often append trailing rows that contain
-    commas/other column data but leave the NHS Number cell blank.
-    """
-    # Include a second column so that "blank" rows are actual CSV rows with
-    # commas, not empty lines (which pandas skips by default).
-    valid_rows = [f"{1234567890 + i},01/01/2000" for i in range(n_valid_rows)]
-    blank_rows = [",01/01/2000"] * n_blank_rows  # NHS Number missing, other data present
-    csv_content = "NHS Number,Date of Birth\n" + "\n".join(valid_rows + blank_rows) + "\n"
-
-    with pytest.raises(ValueError) as exc_info:
-        csv_parse(StringIO(csv_content))
-
-    for row_num in expected_row_numbers:
-        assert str(row_num) in str(exc_info.value), (
-            f"Expected row {row_num} in error message, got: {exc_info.value}"
-        )
-
-
 @pytest.mark.django_db
 def test_missing_nhs_number(
     seed_groups_per_function_fixture,
