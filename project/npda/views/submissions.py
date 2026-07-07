@@ -541,8 +541,6 @@ def upload_csv(request, audit_period, pdu):
         else:
             pdu_number_in_csv = None
 
-        print(f"PDU number in CSV: {pdu_number_in_csv}, expected PDU number: {expected_pdu_number}")
-
         if pdu_number_in_csv != expected_pdu_number:
             message = f"PDU Number in CSV file ({unique_pdu_numbers[0]}) does not match the PDU you are looking at ({pdu.pz_code}). Please upload a file with the correct PDU Number."
             return upload_error(message)
