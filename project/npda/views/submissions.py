@@ -525,12 +525,21 @@ def upload_csv(request, audit_period, pdu):
             return upload_error(message)
 
         # 1316 - Twinkle/Diamond outputs PDU number without leading PZ and zeros
-        expected_pdu_number = pdu.pz_code.lstrip("PZ").lstrip("0")
-        pdu_number_in_csv = (
-            unique_pdu_numbers[0].lstrip("PZ").lstrip("0")
-            if len(unique_pdu_numbers) > 0
-            else None
-        )
+        expected_pdu_number = pdu.pz_code[2:].lstrip("0")
+
+        if len(unique_pdu_numbers) > 0:
+            pdu_number_in_csv = unique_pdu_numbers[0]
+
+            if pdu_number_in_csv.startswith("PZ"):
+                pdu_number_in_csv = pdu_number_in_csv[2:]
+
+            # 1464 - Twinkle outputs PDU number as a decimal (e.g. "180.0")
+            if pdu_number_in_csv.endswith(".0"):
+                pdu_number_in_csv = pdu_number_in_csv[:-2]
+
+            pdu_number_in_csv = pdu_number_in_csv.lstrip("0")
+        else:
+            pdu_number_in_csv = None
 
         if pdu_number_in_csv != expected_pdu_number:
             message = f"PDU Number in CSV file ({unique_pdu_numbers[0]}) does not match the PDU you are looking at ({pdu.pz_code}). Please upload a file with the correct PDU Number."
