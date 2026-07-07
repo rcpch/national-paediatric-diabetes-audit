@@ -549,6 +549,38 @@ def test_missing_date_of_birth(
     assert Patient.objects.count() == 0
 
 
+@pytest.mark.parametrize(
+    "n_valid_rows,n_blank_rows,expected_row_numbers",
+    [
+        (3, 1, [5]),   # single blank row: pandas index 3 → spreadsheet row 5
+        (3, 2, [5, 6]),  # two blank rows: pandas indices 3,4 → rows 5,6
+    ],
+)
+def test_missing_nhs_number_error_reports_spreadsheet_row_numbers(
+    n_valid_rows, n_blank_rows, expected_row_numbers
+):
+    """Row numbers in the 'missing NHS number' error must match the row numbers
+    the user sees in their spreadsheet (1-based, counting the header row), not
+    the 0-based pandas index.
+
+    Real-world trigger: Excel exports often append trailing rows that contain
+    commas/other column data but leave the NHS Number cell blank.
+    """
+    # Include a second column so that "blank" rows are actual CSV rows with
+    # commas, not empty lines (which pandas skips by default).
+    valid_rows = [f"{1234567890 + i},01/01/2000" for i in range(n_valid_rows)]
+    blank_rows = [",01/01/2000"] * n_blank_rows  # NHS Number missing, other data present
+    csv_content = "NHS Number,Date of Birth\n" + "\n".join(valid_rows + blank_rows) + "\n"
+
+    with pytest.raises(ValueError) as exc_info:
+        csv_parse(StringIO(csv_content))
+
+    for row_num in expected_row_numbers:
+        assert str(row_num) in str(exc_info.value), (
+            f"Expected row {row_num} in error message, got: {exc_info.value}"
+        )
+
+
 @pytest.mark.django_db
 def test_missing_nhs_number(
     seed_groups_per_function_fixture,
@@ -5584,6 +5616,47 @@ def test_uploading_csv_with_pdu_number_missing_leading_pz(
         "Submission should be created for PDU with missing leading PZ"
     )
     assert Submission.objects.first().paediatric_diabetes_unit.pz_code == "PZ004"
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1464
+@pytest.mark.django_db
+def test_uploading_csv_with_pdu_number_missing_leading_pz_and_trailing_decimal(
+    two_patients_with_one_visit_each, tmp_path, client, test_rcpch_user
+):
+    two_patients_with_one_visit_each = two_patients_with_one_visit_each.assign(
+        **{"PDU Number": "196.0"}
+    )
+
+    # write back into temp
+    tmp_csv_path = (
+        tmp_path
+        / "dummy_sheet_test_csv_upload_test_uploading_csv_with_pdu_number_missing_leading_pz_and_trailing_decimal.csv"
+    )
+    two_patients_with_one_visit_each.to_csv(tmp_csv_path, index=False)
+
+    # Log in user
+    client = login_and_verify_user(client, test_rcpch_user)
+
+    url = reverse(
+        "pdu-upload-csv", kwargs={"pz_code": "PZ196", "audit_period": "2025-2026"}
+    )
+
+    # Feed file to view
+    with open(tmp_csv_path, "rb") as csv_file:
+        response = client.post(url, {"csv_upload": csv_file}, format="multipart")
+
+    assert response.status_code == 302
+
+    redirect_url = reverse(
+        "pdu-upload-csv-in-progress",
+        kwargs={"pz_code": "PZ196", "audit_period": "2025-2026"},
+    )
+    assert response.url == redirect_url
+
+    assert Submission.objects.count() == 1, (
+        "Submission should be created for PDU with missing leading PZ"
+    )
+    assert Submission.objects.first().paediatric_diabetes_unit.pz_code == "PZ196"
 
 
 @pytest.mark.django_db
