@@ -1191,7 +1191,6 @@ def hba1c_stats_by_diabetes_type(pdu, audit_period) -> dict:
                   mmol/mol directly since the CSV pipeline stores them that way).
     """
     audit_range = (audit_period.start_date, audit_period.end_date)
-    dataset_year = audit_period.get_dataset_year()
 
     base_qs = Patient.objects.filter(
         submissions__submission_active=True,
