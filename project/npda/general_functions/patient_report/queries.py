@@ -1216,43 +1216,33 @@ def hba1c_stats_by_diabetes_type(pdu, audit_period) -> dict:
     ):
         patient_ids = list(qs.values_list("pk", flat=True))
 
-        if dataset_year == 2026:
-            # 2026: no hba1c_format field; values stored as mmol/mol
-            valid_visits = Visit.objects.filter(
+        # Normalise % → mmol/mol
+        valid_visits = (
+            Visit.objects.filter(
                 patient__pk__in=patient_ids,
                 visit_date__range=audit_range,
                 hba1c__isnull=False,
                 hba1c_date__gt=F("patient__diagnosis_date") + timedelta(days=90),
-            ).values("hba1c", "patient__pk")
-            hba1c_key = "hba1c"
-        else:
-            # 2021: normalise % → mmol/mol
-            valid_visits = (
-                Visit.objects.filter(
-                    patient__pk__in=patient_ids,
-                    visit_date__range=audit_range,
-                    hba1c__isnull=False,
-                    hba1c_date__gt=F("patient__diagnosis_date") + timedelta(days=90),
-                )
-                .annotate(
-                    hba1c_mmol_mol=Case(
-                        When(
-                            Q(hba1c_format=HBA1C_FORMATS[0][0]),
-                            then=F("hba1c"),
-                        ),
-                        When(
-                            Q(hba1c_format=HBA1C_FORMATS[1][0]),
-                            then=(F("hba1c") - Round(Decimal("2.152")))
-                            / Decimal("0.09148"),
-                        ),
-                        default=None,
-                        output_field=DecimalField(max_digits=5, decimal_places=2),
-                    )
-                )
-                .values("hba1c_mmol_mol", "patient__pk")
-                .filter(hba1c_mmol_mol__isnull=False)
             )
-            hba1c_key = "hba1c_mmol_mol"
+            .annotate(
+                hba1c_mmol_mol=Case(
+                    When(
+                        Q(hba1c_format=HBA1C_FORMATS[0][0]),
+                        then=F("hba1c"),
+                    ),
+                    When(
+                        Q(hba1c_format=HBA1C_FORMATS[1][0]),
+                        then=(F("hba1c") - Round(Decimal("2.152")))
+                        / Decimal("0.09148"),
+                    ),
+                    default=None,
+                    output_field=DecimalField(max_digits=5, decimal_places=2),
+                )
+            )
+            .values("hba1c_mmol_mol", "patient__pk")
+            .filter(hba1c_mmol_mol__isnull=False)
+        )
+        hba1c_key = "hba1c_mmol_mol"
 
         values_by_patient = defaultdict(list)
         for visit in valid_visits:
