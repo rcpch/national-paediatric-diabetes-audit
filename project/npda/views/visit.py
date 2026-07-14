@@ -5,6 +5,7 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
+from django.core.exceptions import PermissionDenied
 from django.forms import BaseModelForm
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
@@ -240,6 +241,17 @@ class VisitUpdateView(
     model = Visit
     form_class = VisitForm
 
+    def get_object(self, queryset=None):
+        # PDUPermissionMixin only authorises the patient_id in the URL, not the
+        # visit pk itself, so guard against a visit belonging to a different
+        # patient/PDU being edited by guessing its pk.
+        visit = super().get_object(queryset)
+        if visit.patient_id != int(self.kwargs["patient_id"]):
+            raise PermissionDenied(
+                "This visit does not belong to the specified patient."
+            )
+        return visit
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["pdu"] = self.pdu
@@ -359,6 +371,17 @@ class VisitDeleteView(
     permission_denied_message = "You do not have the appropriate permissions to access this page/feature. Contact your Coordinator for assistance."
     model = Visit
     success_message = "Visit removed successfully"
+
+    def get_object(self, queryset=None):
+        # PDUPermissionMixin only authorises the patient_id in the URL, not the
+        # visit pk itself, so guard against a visit belonging to a different
+        # patient/PDU being deleted by guessing its pk.
+        visit = super().get_object(queryset)
+        if visit.patient_id != int(self.kwargs["patient_id"]):
+            raise PermissionDenied(
+                "This visit does not belong to the specified patient."
+            )
+        return visit
 
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)

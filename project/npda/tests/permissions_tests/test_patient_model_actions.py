@@ -8,6 +8,7 @@ from django.apps import apps
 from django.urls import reverse
 
 # RCPCH imports
+from project.constants import AUDIT_CENTRE_COORDINATOR
 from project.npda.models import AuditPeriod, NPDAUser, Submission
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
@@ -323,11 +324,11 @@ def test_users_can_only_edit_patient_visits_from_their_own_pdu(
     client,
 ):
     gosh_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=GOSH_PZ_CODE
+        organisation_employers__pz_code=GOSH_PZ_CODE, role=AUDIT_CENTRE_COORDINATOR
     ).first()
 
     ah_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE, role=AUDIT_CENTRE_COORDINATOR
     ).first()
 
     ah_patient = create_submission_with_patient(ah_user)
@@ -352,6 +353,44 @@ def test_users_can_only_edit_patient_visits_from_their_own_pdu(
 
 
 @pytest.mark.django_db
+def test_users_cannot_edit_visit_from_other_pdu_by_guessing_the_pk(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+):
+    gosh_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=GOSH_PZ_CODE, role=AUDIT_CENTRE_COORDINATOR
+    ).first()
+
+    ah_user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE, role=AUDIT_CENTRE_COORDINATOR
+    ).first()
+
+    ah_patient = create_submission_with_patient(ah_user)
+    ah_visit = VisitFactory(patient=ah_patient)
+
+    gosh_patient = create_submission_with_patient(gosh_user)
+
+    client = login_and_verify_user(client, gosh_user)
+
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+
+    url = reverse(
+        "pdu-visit-update",
+        kwargs={
+            "audit_period": audit_period.slug,
+            "pz_code": GOSH_PZ_CODE,
+            "patient_id": gosh_patient.pk,
+            "pk": ah_visit.pk,
+        },
+    )
+    response = client.get(url)
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+@pytest.mark.django_db
 def test_rcpch_audit_team_can_edit_visits_from_all_pdus(
     seed_groups_fixture,
     seed_users_fixture,
@@ -359,7 +398,7 @@ def test_rcpch_audit_team_can_edit_visits_from_all_pdus(
     client,
 ):
     gosh_user = NPDAUser.objects.filter(
-        organisation_employers__pz_code=GOSH_PZ_CODE
+        organisation_employers__pz_code=GOSH_PZ_CODE,
     ).first()
 
     ah_user = NPDAUser.objects.filter(
