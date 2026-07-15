@@ -3191,3 +3191,67 @@ def test_cgm_2026_later_visit_null_cgm_falls_back_to_earlier_cgm(
     assert len(patients) == 1
     # Falls back to the earlier non-null visit — still Yes
     assert patients[0]["glucose_monitoring"] == YES_NO_UNKNOWN[0][1]  # "Yes"
+
+
+# https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1474
+@pytest.mark.parametrize("audit_period_slug", ["2024-2025", "2026-2027"])
+@pytest.mark.django_db
+def test_healthchecks_invalid_hba1c_measurement(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    client,
+    audit_period_slug,
+):
+    ah_rcpch_audit_team_user, audit_period, AUDIT_START_DATE, eligible_criteria = (
+        _create_outcomes_test_setup(client, audit_period_slug)
+    )
+
+    # Create patient with no HbA1c measurements (T1DM)
+    patient = PatientFactory(
+        nhs_number="1111111111",
+        diabetes_type=DIABETES_TYPES[0][0],  # T1DM,
+        **eligible_criteria,
+    )
+
+    visit = VisitFactory(
+        patient=patient,
+        visit_date=AUDIT_START_DATE + relativedelta(months=6),
+        hba1c=Decimal(0.00), # Invalid hba1c measurements are stored as 0 (https://github.com/rcpch/national-paediatric-diabetes-audit/pull/1054)
+        hba1c_format = HBA1C_FORMATS[0][0],  # 1 = mmol/mol
+        hba1c_date=AUDIT_START_DATE + relativedelta(months=6),
+    )
+
+    # Create submission
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=ah_rcpch_audit_team_user.organisation_employers.first(),
+        audit_year=AUDIT_START_DATE.year,
+        audit_period=audit_period,
+        submission_date=AUDIT_START_DATE,
+        submission_by=ah_rcpch_audit_team_user,
+        submission_active=True,
+    )
+    submission.patients.add(patient)
+
+    url = reverse(
+        "pdu-patient-report",
+        kwargs={
+            "audit_period": audit_period.slug,
+            "pz_code": ALDER_HEY_PZ_CODE,
+        },
+    )
+
+    # Get the patient report with outcomes category
+    response = client.get(
+        url + f"?category={TableCategories.HEALTH_CHECKS.value}",
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert response.context["selected_category"] == TableCategories.HEALTH_CHECKS.value
+
+    patients = response.context["patients"]
+    assert len(patients) == 1
+
+    patient = patients[0]
+    assert patient["patient_identifier"] == "1111111111"
+    assert patient["passed_hba1c"] is True
