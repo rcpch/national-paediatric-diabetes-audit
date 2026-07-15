@@ -13,7 +13,17 @@ from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import ValidationError
-from django.db.models import Case, Count, F, Max, Q, When
+from django.db.models import (
+    BooleanField,
+    Case,
+    Count,
+    Exists,
+    F,
+    Max,
+    OuterRef,
+    Q,
+    When,
+)
 from django.forms import BaseForm
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -31,6 +41,7 @@ from project.npda.general_functions import (
     visit_falls_within_audit_period_Q_object,
 )
 from project.npda.models import NPDAUser, Patient, Submission
+from project.npda.models.transfer import Transfer
 
 # RCPCH imports
 from ..forms.patient_form import PatientForm
@@ -134,12 +145,12 @@ class PatientListView(
 
         patient_queryset = patient_queryset.filter(filtered_patients)
 
-        a_year_ago = timezone.now() - timezone.timedelta(days=365)
-
         this_audit_year_visits = visit_falls_within_audit_period_Q_object(
             audit_start_date=self.audit_period.start_date,
             prepend_query_path="visit",
         )
+
+        audit_range = (self.audit_period.start_date, self.audit_period.end_date)
 
         patient_queryset = patient_queryset.annotate(
             audit_year=F("submissions__audit_period__start_date__year"),
@@ -148,7 +159,23 @@ class PatientListView(
             ),
             visits_this_audit_year=Count(this_audit_year_visits),
             incomplete_full_year_of_care=Case(
-                When(diagnosis_date__gt=a_year_ago, then=True), default=False
+                # Diagnosed within the audit year
+                When(
+                    Q(diagnosis_date__range=audit_range),
+                    then=True,
+                ),
+                # Transferred out during the audit year
+                When(
+                    Exists(
+                        Transfer.objects.filter(
+                            patient=OuterRef("pk"),
+                            date_leaving_service__range=audit_range,
+                        )
+                    ),
+                    then=True,
+                ),
+                default=False,
+                output_field=BooleanField(),
             ),
             last_upload_date=Max("submissions__submission_date"),
             most_recent_visit_date=Max("visit__visit_date"),

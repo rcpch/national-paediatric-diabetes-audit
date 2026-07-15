@@ -63,7 +63,7 @@ def test_patients_in_transfer_are_marked_as_incomplete_year_of_care_in_patient_l
     assert patient_list[1].is_first_valid_incomplete_full_year
 
     expected_incomplete_patient_ids = {
-        diagnosed_outside_audit_year.id,
+        diagnosed_in_audit_year.id,
         transferred_in_audit_year.id,
     }
     actual_incomplete_patient_ids = {patient_list[1].id, patient_list[2].id}
