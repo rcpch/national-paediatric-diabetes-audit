@@ -1,5 +1,4 @@
 from http import HTTPStatus
-from unittest.mock import patch
 
 import pytest
 
