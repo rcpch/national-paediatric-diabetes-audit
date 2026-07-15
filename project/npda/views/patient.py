@@ -10,7 +10,6 @@ from django.apps import apps
 from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.contrib.gis.db.models.functions import Distance
-from django.contrib.gis.geos import Point
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import ValidationError
 from django.db.models import Case, Count, F, Max, Q, When
