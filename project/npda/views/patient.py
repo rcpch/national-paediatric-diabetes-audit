@@ -10,7 +10,6 @@ from django.apps import apps
 from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.contrib.gis.db.models.functions import Distance
-from django.contrib.gis.geos import Point
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import ValidationError
 from django.db.models import Case, Count, F, Max, Q, When
@@ -25,7 +24,6 @@ from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 # Project imports
 from project.npda.general_functions import (
     data_breadcrumbs,
-    fetch_organisation_by_ods_code,
     patient_breadcrumbs,
     retrieve_quarter_for_date,
     visit_falls_within_audit_period_Q_object,
@@ -90,20 +88,6 @@ class PatientListView(
 
     def get_queryset(self):
         patient_queryset = super().get_queryset()
-
-        if self.pdu.lead_organisation_geocoordinates is None:
-            # we cannot make an API call for each patient  every time we load the page,
-            # so we only do it if the geocoordinates are missing
-            # This should have been done when the PDU was created
-            paediatric_diabetes_unit_lead_organisation = fetch_organisation_by_ods_code(
-                ods_code=self.pdu.lead_organisation_ods_code
-            )
-            self.pdu.lead_organisation_geocoordinates = Point(
-                paediatric_diabetes_unit_lead_organisation["longitude"],
-                paediatric_diabetes_unit_lead_organisation["latitude"],
-                srid=4326,
-            )
-            self.pdu.save()
 
         filtered_patients = Q(
             submissions__submission_active=True,

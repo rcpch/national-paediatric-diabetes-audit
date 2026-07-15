@@ -5,6 +5,7 @@ import logging
 
 # third-party imports
 import factory
+from django.contrib.gis.geos import Point
 
 # rcpch imports
 from project.npda.models.paediatric_diabetes_unit import PaediatricDiabetesUnit
@@ -52,6 +53,7 @@ class PaediatricsDiabetesUnitFactory(factory.django.DjangoModelFactory):
         pdu, created = PaediatricDiabetesUnit.objects.get_or_create(pz_code=pz_code)
         pdu.pz_code = pz_code
         pdu.lead_organisation_ods_code = lead_organisation_ods_code
+        pdu.lead_organisation_geocoordinates = Point(-2.9, 53.4, srid=4326)
 
         pdu.save()
         return pdu
