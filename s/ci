@@ -14,7 +14,13 @@ DOCKER_BUILDKIT=0 docker compose build
 s/lint --check
 
 # Tests (against local Postgres)
-docker compose up -d
+# Only bring up the dependencies tests actually need. Deliberately avoid
+# starting the `django` service itself here: its command (s/start-dev) runs
+# `collectstatic` against the bind-mounted staticfiles directory, which races
+# with WhiteNoise scanning that same directory inside the `s/test` container
+# and causes sporadic `FileNotFoundError`s during test runs.
+docker compose up -d postgis redis
+docker compose run --rm django python manage.py collectstatic --no-input
 s/test
 docker compose down
 
