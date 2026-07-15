@@ -3217,8 +3217,10 @@ def test_healthchecks_invalid_hba1c_measurement(
     visit = VisitFactory(
         patient=patient,
         visit_date=AUDIT_START_DATE + relativedelta(months=6),
-        hba1c=Decimal(0.00), # Invalid hba1c measurements are stored as 0 (https://github.com/rcpch/national-paediatric-diabetes-audit/pull/1054)
-        hba1c_format = HBA1C_FORMATS[0][0],  # 1 = mmol/mol
+        hba1c=Decimal(
+            0.00
+        ),  # Invalid hba1c measurements are stored as 0 (https://github.com/rcpch/national-paediatric-diabetes-audit/pull/1054)
+        hba1c_format=HBA1C_FORMATS[0][0],  # 1 = mmol/mol
         hba1c_date=AUDIT_START_DATE + relativedelta(months=6),
     )
 
