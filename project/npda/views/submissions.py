@@ -222,6 +222,19 @@ class SubmissionsListView(
 
         return context
 
+    def get_submission_checking_permission(self, user, submission_id):
+        submission = Submission.objects.get(pk=submission_id)
+
+        if (
+            user.is_rcpch_audit_team_member
+            or submission.paediatric_diabetes_unit in user.organisation_employers.all()
+        ):
+            return submission
+
+        raise PermissionDenied(
+            f"User {user.email} does not have permission to access submission {submission_id} under PDU {submission.paediatric_diabetes_unit.pz_code}.",
+        )
+
     def get(self, request, *args, **kwargs):
         """
         Handle the HTMX GET request to filter submissions based on the 'done' parameter.
@@ -265,16 +278,18 @@ class SubmissionsListView(
             return render(request=request, template_name=template, context=context)
 
         button_name = request.POST.get("submit-data")
+        submission_id = request.POST.get("audit_id")
+
         if button_name == "delete-data":
             # check if the user has permission to delete submissions
             if not request.user.has_perm("npda.delete_submission"):
                 raise PermissionDenied(
                     "You do not have permission to delete submissions.",
                 )
-            # retrieve the  submission instance
-            submission = Submission.objects.filter(
-                pk=request.POST.get("audit_id")
-            ).get()
+
+            submission = self.get_submission_checking_permission(
+                request.user, submission_id
+            )
 
             # check if the submission is active - if so, do not allow deletion, and return an error message
             if submission.submission_active:
@@ -292,10 +307,21 @@ class SubmissionsListView(
             submission.delete()
 
             # set the submission_active flag to True for the most recent submission
-            if Submission.objects.count() > 0:
-                new_first = Submission.objects.order_by("-submission_date").first()
-                new_first.submission_active = True
-                new_first.save()
+            # for the same PDU and audit period/year.
+            reactivation_queryset = Submission.objects.filter(
+                paediatric_diabetes_unit=submission.paediatric_diabetes_unit,
+                audit_year=submission.audit_year,
+            )
+            if submission.audit_period_id is not None:
+                reactivation_queryset = reactivation_queryset.filter(
+                    audit_period=submission.audit_period
+                )
+
+            if reactivation_queryset.exists():
+                new_first = reactivation_queryset.order_by("-submission_date").first()
+                if new_first is not None:
+                    new_first.submission_active = True
+                    new_first.save()
             messages.success(request, "Cohort submission deleted successfully")
 
         if button_name == "download-data":
@@ -304,22 +330,13 @@ class SubmissionsListView(
                 raise PermissionDenied(
                     "You do not have permission to download CSVs.",
                 )
-            submission = Submission.objects.filter(
-                pk=request.POST.get("audit_id")
-            ).get()
-            if (
-                request.user.is_rcpch_audit_team_member
-                or submission.paediatric_diabetes_unit
-                in request.user.organisation_employers.all()
-            ):
-                if submission.csv_file_name:
-                    return download_csv_file(request, submission.id)
-                else:
-                    return export_as_csv(request, submission)
+            submission = self.get_submission_checking_permission(
+                request.user, submission_id
+            )
+            if submission.csv_file_name:
+                return download_csv_file(request, submission.id)
             else:
-                raise PermissionDenied(
-                    f"User {request.user.email} does not have permission to download data for PDU {submission.paediatric_diabetes_unit.pz_code}.",
-                )
+                return export_as_csv(request, submission)
 
         if button_name == "download-report":
             # check if the user has permission to download submissions
@@ -327,19 +344,10 @@ class SubmissionsListView(
                 raise PermissionDenied(
                     "You do not have permission to download submissions.",
                 )
-            submission = Submission.objects.filter(
-                pk=request.POST.get("audit_id")
-            ).get()
-            if (
-                request.user.is_rcpch_audit_team_member
-                or submission.paediatric_diabetes_unit
-                in request.user.organisation_employers.all()
-            ):
-                return download_xlsx(request, submission.id)
-            else:
-                raise PermissionDenied(
-                    f"User {request.user.email} does not have permission to download data for PDU {submission.paediatric_diabetes_unit.pz_code}.",
-                )
+            submission = self.get_submission_checking_permission(
+                request.user, submission_id
+            )
+            return download_xlsx(request, submission.id)
 
         if button_name == "start-questionnaire-submission":
             previous_audit_period = self.audit_period.previous_audit_period()

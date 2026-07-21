@@ -15,7 +15,7 @@ Tests for NPDAUser model actions.
 """
 
 import logging
-from datetime import date
+from datetime import date, timedelta
 from http import HTTPStatus
 
 # Python imports
@@ -882,6 +882,128 @@ def test_users_can_download_report(
         response["Content-Type"]
         == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+
+@pytest.mark.django_db
+def test_lead_clinician_cannot_delete_submission(
+    client,
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    valid_df,
+):
+    """Test that lead-clinician-style users cannot delete a submission."""
+
+    lead_clinician_user = NPDAUser.objects.filter(
+        role=test_user_audit_centre_editor_data.role,
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+    ).first()
+
+    client = login_and_verify_user(client, lead_clinician_user)
+
+    audit_start_date, _ = get_audit_period_for_date(timezone.now())
+
+    submission = Submission.objects.create(
+        audit_year=audit_start_date.year,
+        submission_date=timezone.now(),
+        submission_active=False,
+        submission_by=lead_clinician_user,
+        paediatric_diabetes_unit=lead_clinician_user.organisation_employers.first(),
+        csv_file=valid_df.to_csv(index=False).encode("utf-8"),
+        csv_file_name="test_csv_file.csv",
+        errors={},
+    )
+
+    url = reverse(
+        "pdu-submissions",
+        kwargs={
+            "pz_code": lead_clinician_user.organisation_employers.first().pz_code,
+            "audit_period": f"{audit_start_date.year}-{audit_start_date.year + 1}",
+        },
+    )
+
+    response = client.post(
+        url,
+        {"submit-data": "delete-data", "audit_id": submission.pk},
+    )
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert Submission.objects.filter(pk=submission.pk).exists()
+
+
+@pytest.mark.django_db
+def test_deleting_submission_reactivates_previous_submission_for_same_pdu_only(
+    client,
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+):
+    """Deleting a submission should reactivate the previous submission for the same PDU, not the most recent submission globally."""
+
+    audit_team_user = NPDAUser.objects.filter(
+        role=test_user_rcpch_audit_team_data.role,
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+    ).first()
+
+    client = login_and_verify_user(client, audit_team_user)
+
+    audit_start_date, _ = get_audit_period_for_date(timezone.now())
+    pdu = audit_team_user.organisation_employers.first()
+    other_pdu = PaediatricDiabetesUnit.objects.get(pz_code=GOSH_PZ_CODE)
+
+    older_submission = Submission.objects.create(
+        audit_year=audit_start_date.year,
+        submission_date=timezone.now() - timedelta(days=2),
+        submission_active=True,
+        submission_by=audit_team_user,
+        paediatric_diabetes_unit=pdu,
+        csv_file=b"older_csv",
+        csv_file_name="older.csv",
+        errors={},
+    )
+    newer_submission = Submission.objects.create(
+        audit_year=audit_start_date.year,
+        submission_date=timezone.now() - timedelta(days=1),
+        submission_active=False,
+        submission_by=audit_team_user,
+        paediatric_diabetes_unit=pdu,
+        csv_file=b"newer_csv",
+        csv_file_name="newer.csv",
+        errors={},
+    )
+    unrelated_submission = Submission.objects.create(
+        audit_year=audit_start_date.year,
+        submission_date=timezone.now(),
+        submission_active=False,
+        submission_by=audit_team_user,
+        paediatric_diabetes_unit=other_pdu,
+        csv_file=b"other_csv",
+        csv_file_name="other.csv",
+        errors={},
+    )
+
+    url = reverse(
+        "pdu-submissions",
+        kwargs={
+            "pz_code": pdu.pz_code,
+            "audit_period": f"{audit_start_date.year}-{audit_start_date.year + 1}",
+        },
+    )
+
+    response = client.post(
+        url,
+        {"submit-data": "delete-data", "audit_id": newer_submission.pk},
+        follow=True,
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert Submission.objects.filter(pk=newer_submission.pk).count() == 0
+
+    older_submission.refresh_from_db()
+    unrelated_submission.refresh_from_db()
+
+    assert older_submission.submission_active is True
+    assert unrelated_submission.submission_active is False
 
 
 @pytest.mark.django_db
