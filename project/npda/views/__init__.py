@@ -16,7 +16,6 @@ from project.npda.views.dashboard.partials import (
 from .dashboard.dashboard import dashboard as dashboard
 from .errors import csrf_fail, error_400, error_403, error_404, error_500
 from .home import (
-    celery_test_task,
     download_template,
     feature_flags,
     home,

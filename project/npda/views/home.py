@@ -191,13 +191,6 @@ def download_template(request, audit_period, pdu):
 
 
 @login_and_otp_required()
-def celery_test_task(request):
-    test_task.delay()
-
-    return HttpResponse(status=204)
-
-
-@login_and_otp_required()
 def feature_flags(request):
     if not (request.user.is_superuser or request.user.is_rcpch_audit_team_member):
         raise PermissionDenied("Feature previews are restricted to audit team.")
