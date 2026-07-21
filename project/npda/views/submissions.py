@@ -271,10 +271,19 @@ class SubmissionsListView(
                 raise PermissionDenied(
                     "You do not have permission to delete submissions.",
                 )
-            # retrieve the  submission instance
-            submission = self.get_queryset().filter(
+            # retrieve the submission instance
+            submission = Submission.objects.filter(
                 pk=request.POST.get("audit_id")
             ).get()
+
+            if not (
+                request.user.is_rcpch_audit_team_member
+                or submission.paediatric_diabetes_unit
+                in request.user.organisation_employers.all()
+            ):
+                raise PermissionDenied(
+                    f"User {request.user.email} does not have permission to delete data for PDU {submission.paediatric_diabetes_unit.pz_code}.",
+                )
 
             # check if the submission is active - if so, do not allow deletion, and return an error message
             if submission.submission_active:
@@ -292,10 +301,21 @@ class SubmissionsListView(
             submission.delete()
 
             # set the submission_active flag to True for the most recent submission
-            if Submission.objects.count() > 0:
-                new_first = Submission.objects.order_by("-submission_date").first()
-                new_first.submission_active = True
-                new_first.save()
+            # for the same PDU and audit period/year.
+            reactivation_queryset = Submission.objects.filter(
+                paediatric_diabetes_unit=submission.paediatric_diabetes_unit,
+                audit_year=submission.audit_year,
+            )
+            if submission.audit_period_id is not None:
+                reactivation_queryset = reactivation_queryset.filter(
+                    audit_period=submission.audit_period
+                )
+
+            if reactivation_queryset.exists():
+                new_first = reactivation_queryset.order_by("-submission_date").first()
+                if new_first is not None:
+                    new_first.submission_active = True
+                    new_first.save()
             messages.success(request, "Cohort submission deleted successfully")
 
         if button_name == "download-data":
