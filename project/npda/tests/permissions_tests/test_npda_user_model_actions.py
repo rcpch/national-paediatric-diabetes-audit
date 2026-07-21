@@ -885,6 +885,49 @@ def test_users_can_download_report(
 
 
 @pytest.mark.django_db
+def test_coordinator_cannot_delete_employer_affiliation_for_other_pdu_user(
+    client,
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+):
+    """A coordinator should not be able to delete an employer affiliation for a user outside their PDU."""
+
+    coordinator_user = NPDAUser.objects.filter(
+        role=test_user_audit_centre_coordinator_data.role,
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+    ).first()
+    target_user = NPDAUser.objects.filter(
+        role=test_user_audit_centre_editor_data.role,
+        organisation_employers__pz_code=GOSH_PZ_CODE,
+    ).first()
+
+    client = login_and_verify_user(client, coordinator_user)
+
+    # `organisation_employers` is a M2M *through* OrganisationEmployer, so the
+    # through-row (not the PaediatricDiabetesUnit) carries the pk the view deletes.
+    target_employer_row = target_user.paediatric_diabetes_units.first()
+
+    client.post(
+        reverse("npdauser-pdu-update", kwargs={"pk": target_user.pk}),
+        {
+            "update": "delete",
+            "organisation_employer_id": target_employer_row.pk,
+        },
+        follow=True,
+    )
+
+    # The target user's employer affiliations should be unchanged: still exactly
+    # one employer, and it should be the same PDU it started with.
+    target_user.refresh_from_db()
+    remaining_employers = list(target_user.organisation_employers.all())
+
+    assert len(remaining_employers) == 1
+    assert remaining_employers[0].pz_code == GOSH_PZ_CODE
+    assert OrganisationEmployer.objects.filter(pk=target_employer_row.pk).exists()
+
+
+@pytest.mark.django_db
 def test_lead_clinician_cannot_delete_submission(
     client,
     seed_groups_fixture,
