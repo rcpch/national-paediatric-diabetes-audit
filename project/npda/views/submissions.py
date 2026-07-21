@@ -272,7 +272,7 @@ class SubmissionsListView(
                     "You do not have permission to delete submissions.",
                 )
             # retrieve the  submission instance
-            submission = Submission.objects.filter(
+            submission = self.get_queryset().filter(
                 pk=request.POST.get("audit_id")
             ).get()
 
