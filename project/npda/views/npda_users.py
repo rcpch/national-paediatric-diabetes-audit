@@ -594,6 +594,23 @@ def npdauser_pdu_update(request, pk):
     my_pz_codes = set(
         request.user.organisation_employers.values_list("pz_code", flat=True)
     )
+    their_pz_codes = set(
+        selected_npda_user.organisation_employers.values_list("pz_code", flat=True)
+    )
+
+    # The requester must already have some legitimate relationship with the
+    # target user (i.e. they already share a PDU) before they can manage that
+    # user's employer affiliations at all. Without this, the target PDU checks
+    # further down could otherwise be satisfied while the target user (`pk`) is
+    # a completely arbitrary existing user unrelated to the requester.
+    if not (
+        request.user.is_superuser
+        or request.user.is_rcpch_audit_team_member
+        or my_pz_codes & their_pz_codes
+    ):
+        raise PermissionDenied(
+            f"You do not have permission to edit user {selected_npda_user}. Contact the NPDA for assistance."
+        )
 
     if request.POST.get("update") == "delete":
         # delete the selected employer
