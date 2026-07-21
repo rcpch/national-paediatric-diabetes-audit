@@ -4,7 +4,7 @@ from http import HTTPStatus
 
 import pytest
 from django.test import Client
-from django.urls import NoReverseMatch, reverse
+from django.urls import reverse
 
 from project.npda.models.audit_period import AuditPeriod
 from project.npda.models.npda_user import NPDAUser
@@ -93,4 +93,3 @@ def test_login_from_direct_link_to_function_based_view(
 
     assert response.status_code == HTTPStatus.FOUND
     assert response.url == reverse("login") + "?next=" + url
-
