@@ -983,6 +983,55 @@ def test_coordinator_cannot_set_primary_employer_for_pdu_they_do_not_administer(
 
 
 @pytest.mark.django_db
+def test_coordinator_cannot_add_arbitrary_user_to_their_own_pdu(
+    client,
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+):
+    """A coordinator should not be able to add an arbitrary existing user - who has
+    no prior relationship with the coordinator's PDU - to their own PDU via the
+    npdauser-pdu-update HTMX endpoint. The `add_employer` branch correctly checks
+    the target PDU against the requester's own PDUs, but does not check that the
+    requester has any authority over the target user (`pk`), so any existing user
+    could otherwise be granted access to the coordinator's PDU's patient data."""
+
+    ah_coordinator = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_coordinator_data.role,
+    ).first()
+
+    # An arbitrary existing user with no relationship whatsoever to Alder Hey.
+    arbitrary_user = (
+        NPDAUser.objects.filter(
+            organisation_employers__pz_code=GOSH_PZ_CODE,
+            role=test_user_audit_centre_editor_data.role,
+        )
+        .exclude(pk=ah_coordinator.pk)
+        .first()
+    )
+
+    client = login_and_verify_user(client, ah_coordinator)
+
+    client.post(
+        reverse("npdauser-pdu-update", kwargs={"pk": arbitrary_user.pk}),
+        data={"add_employer": ALDER_HEY_PZ_CODE},
+        **{
+            # Gated on request.htmx
+            "HTTP_HX-Request": "true",
+        },
+    )
+
+    arbitrary_user.refresh_from_db()
+    employers = {e.pz_code for e in arbitrary_user.organisation_employers.all()}
+
+    # The arbitrary user should NOT have been added to Alder Hey by a coordinator
+    # who has no authority over them.
+    assert ALDER_HEY_PZ_CODE not in employers
+    assert employers == {GOSH_PZ_CODE}
+
+
+@pytest.mark.django_db
 def test_lead_clinician_cannot_delete_submission(
     client,
     seed_groups_fixture,
