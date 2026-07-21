@@ -20,7 +20,6 @@ from project.npda.general_functions.organisations_adapter import (
 from project.npda.general_functions.session import get_user_feature_flags
 from project.npda.models.audit_period import AuditPeriod
 from project.npda.models.submission import Submission
-from project.npda.tasks import test_task
 from project.npda.views.npda_users import get_user_home_page
 
 # RCPCH imports
@@ -188,13 +187,6 @@ def download_template(request, audit_period, pdu):
         content_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="npda_template.csv"'},
     )
-
-
-@login_and_otp_required()
-def celery_test_task(request):
-    test_task.delay()
-
-    return HttpResponse(status=204)
 
 
 @login_and_otp_required()
