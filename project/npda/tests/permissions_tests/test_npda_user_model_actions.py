@@ -885,6 +885,153 @@ def test_users_can_download_report(
 
 
 @pytest.mark.django_db
+def test_coordinator_cannot_delete_employer_affiliation_for_other_pdu_user(
+    client,
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+):
+    """A coordinator should not be able to delete an employer affiliation for a user outside their PDU."""
+
+    coordinator_user = NPDAUser.objects.filter(
+        role=test_user_audit_centre_coordinator_data.role,
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+    ).first()
+    target_user = NPDAUser.objects.filter(
+        role=test_user_audit_centre_editor_data.role,
+        organisation_employers__pz_code=GOSH_PZ_CODE,
+    ).first()
+
+    client = login_and_verify_user(client, coordinator_user)
+
+    # `organisation_employers` is a M2M *through* OrganisationEmployer, so the
+    # through-row (not the PaediatricDiabetesUnit) carries the pk the view deletes.
+    target_employer_row = target_user.paediatric_diabetes_units.first()
+
+    client.post(
+        reverse("npdauser-pdu-update", kwargs={"pk": target_user.pk}),
+        {
+            "update": "delete",
+            "organisation_employer_id": target_employer_row.pk,
+        },
+        follow=True,
+    )
+
+    # The target user's employer affiliations should be unchanged: still exactly
+    # one employer, and it should be the same PDU it started with.
+    target_user.refresh_from_db()
+    remaining_employers = list(target_user.organisation_employers.all())
+
+    assert len(remaining_employers) == 1
+    assert remaining_employers[0].pz_code == GOSH_PZ_CODE
+    assert OrganisationEmployer.objects.filter(pk=target_employer_row.pk).exists()
+
+
+@pytest.mark.django_db
+def test_coordinator_cannot_set_primary_employer_for_pdu_they_do_not_administer(
+    client,
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+):
+    """A coordinator should not be able to set a shared user's primary employer to
+    a PDU the coordinator does not themselves administer, even though they share
+    a different PDU with the target user."""
+
+    coordinator_user = NPDAUser.objects.filter(
+        role=test_user_audit_centre_coordinator_data.role,
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+    ).first()
+    target_user = NPDAUser.objects.filter(
+        role=test_user_audit_centre_editor_data.role,
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+    ).first()
+
+    # Give the target user a second employer at a PDU the coordinator does not
+    # administer. This is the affiliation shared with ALDER_HEY_PZ_CODE.
+    original_primary_employer = target_user.paediatric_diabetes_units.get(
+        paediatric_diabetes_unit__pz_code=ALDER_HEY_PZ_CODE
+    )
+    GOSH = PaediatricDiabetesUnit.objects.get(pz_code=GOSH_PZ_CODE)
+    other_pdu_employer = OrganisationEmployer.objects.create(
+        npda_user=target_user,
+        paediatric_diabetes_unit=GOSH,
+        is_primary_employer=False,
+    )
+
+    client = login_and_verify_user(client, coordinator_user)
+
+    response = client.post(
+        reverse("npdauser-pdu-update", kwargs={"pk": target_user.pk}),
+        {
+            "update": "update",
+            "organisation_employer_id": other_pdu_employer.pk,
+        },
+        follow=True,
+    )
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+    # The target user's primary employer should be unchanged: the GOSH
+    # affiliation (outside the coordinator's remit) must still be non-primary,
+    # and the original ALDER_HEY affiliation must still be primary.
+    other_pdu_employer.refresh_from_db()
+    original_primary_employer.refresh_from_db()
+
+    assert other_pdu_employer.is_primary_employer is False
+    assert original_primary_employer.is_primary_employer is True
+
+
+@pytest.mark.django_db
+def test_coordinator_cannot_add_arbitrary_user_to_their_own_pdu(
+    client,
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+):
+    """A coordinator should not be able to add an arbitrary existing user - who has
+    no prior relationship with the coordinator's PDU - to their own PDU via the
+    npdauser-pdu-update HTMX endpoint. The `add_employer` branch correctly checks
+    the target PDU against the requester's own PDUs, but does not check that the
+    requester has any authority over the target user (`pk`), so any existing user
+    could otherwise be granted access to the coordinator's PDU's patient data."""
+
+    ah_coordinator = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_coordinator_data.role,
+    ).first()
+
+    # An arbitrary existing user with no relationship whatsoever to Alder Hey.
+    arbitrary_user = (
+        NPDAUser.objects.filter(
+            organisation_employers__pz_code=GOSH_PZ_CODE,
+            role=test_user_audit_centre_editor_data.role,
+        )
+        .exclude(pk=ah_coordinator.pk)
+        .first()
+    )
+
+    client = login_and_verify_user(client, ah_coordinator)
+
+    client.post(
+        reverse("npdauser-pdu-update", kwargs={"pk": arbitrary_user.pk}),
+        data={"add_employer": ALDER_HEY_PZ_CODE},
+        **{
+            # Gated on request.htmx
+            "HTTP_HX-Request": "true",
+        },
+    )
+
+    arbitrary_user.refresh_from_db()
+    employers = {e.pz_code for e in arbitrary_user.organisation_employers.all()}
+
+    # The arbitrary user should NOT have been added to Alder Hey by a coordinator
+    # who has no authority over them.
+    assert ALDER_HEY_PZ_CODE not in employers
+    assert employers == {GOSH_PZ_CODE}
+
+
+@pytest.mark.django_db
 def test_lead_clinician_cannot_delete_submission(
     client,
     seed_groups_fixture,
