@@ -590,24 +590,56 @@ def npdauser_pdu_update(request, pk):
         )
 
     selected_npda_user = NPDAUser.objects.get(pk=pk)
+
+    my_pz_codes = set(
+        request.user.organisation_employers.values_list("pz_code", flat=True)
+    )
+
     if request.POST.get("update") == "delete":
         # delete the selected employer
         # cannot delete the primary employer but can set another employer as primary first and then delete the employer
-        OrganisationEmployer.objects.filter(
-            pk=request.POST.get("organisation_employer_id")
-        ).delete()
+        # scope to the selected user's own employer rows to prevent an IDOR where
+        # an arbitrary organisation_employer_id could delete any user's affiliation
+        employer_to_delete = OrganisationEmployer.objects.filter(
+            pk=request.POST.get("organisation_employer_id"),
+            npda_user=selected_npda_user,
+        ).select_related("paediatric_diabetes_unit").first()
+
+        if employer_to_delete is not None and not (
+            request.user.is_superuser
+            or request.user.is_rcpch_audit_team_member
+            or employer_to_delete.paediatric_diabetes_unit.pz_code in my_pz_codes
+        ):
+            raise PermissionDenied(
+                f"You do not have permission to remove users from {employer_to_delete.paediatric_diabetes_unit.pz_code}. Contact the NPDA for assistance."
+            )
+
+        if employer_to_delete is not None:
+            employer_to_delete.delete()
         template = "partials/employers.html"
     elif request.POST.get("update") == "update":
         # set the selected employer as the primary employer. Reset all other employers to False before setting the selected employer to True since only one employer can be primary
-        # set all employers to False
+        # scope to the selected user's own employer rows to prevent an IDOR
+        selected_employer = OrganisationEmployer.objects.filter(
+            pk=request.POST.get("organisation_employer_id"),
+            npda_user=selected_npda_user,
+        ).select_related("paediatric_diabetes_unit").get()
+
+        if not (
+            request.user.is_superuser
+            or request.user.is_rcpch_audit_team_member
+            or selected_employer.paediatric_diabetes_unit.pz_code in my_pz_codes
+        ):
+            raise PermissionDenied(
+                f"You do not have permission to set the primary employer to {selected_employer.paediatric_diabetes_unit.pz_code}. Contact the NPDA for assistance."
+            )
+
         template = "partials/employers.html"
+        # set all employers to False
         OrganisationEmployer.objects.filter(npda_user=selected_npda_user).update(
             is_primary_employer=False
         )
         # set the selected employer to True
-        selected_employer = OrganisationEmployer.objects.filter(
-            pk=request.POST.get("organisation_employer_id")
-        ).get()
         selected_employer.is_primary_employer = True
         selected_employer.save()
 
