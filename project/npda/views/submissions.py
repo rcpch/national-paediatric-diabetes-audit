@@ -227,11 +227,10 @@ class SubmissionsListView(
 
         if (
             user.is_rcpch_audit_team_member
-            or submission.paediatric_diabetes_unit
-            in user.organisation_employers.all()
+            or submission.paediatric_diabetes_unit in user.organisation_employers.all()
         ):
             return submission
-        
+
         raise PermissionDenied(
             f"User {user.email} does not have permission to access submission {submission_id} under PDU {submission.paediatric_diabetes_unit.pz_code}.",
         )
@@ -287,8 +286,10 @@ class SubmissionsListView(
                 raise PermissionDenied(
                     "You do not have permission to delete submissions.",
                 )
-            
-            submission = self.get_submission_checking_permission(request.user, submission_id)
+
+            submission = self.get_submission_checking_permission(
+                request.user, submission_id
+            )
 
             # check if the submission is active - if so, do not allow deletion, and return an error message
             if submission.submission_active:
@@ -329,7 +330,9 @@ class SubmissionsListView(
                 raise PermissionDenied(
                     "You do not have permission to download CSVs.",
                 )
-            submission = self.get_submission_checking_permission(request.user, submission_id)
+            submission = self.get_submission_checking_permission(
+                request.user, submission_id
+            )
             if submission.csv_file_name:
                 return download_csv_file(request, submission.id)
             else:
@@ -341,7 +344,9 @@ class SubmissionsListView(
                 raise PermissionDenied(
                     "You do not have permission to download submissions.",
                 )
-            submission = self.get_submission_checking_permission(request.user, submission_id)
+            submission = self.get_submission_checking_permission(
+                request.user, submission_id
+            )
             return download_xlsx(request, submission.id)
 
         if button_name == "start-questionnaire-submission":
