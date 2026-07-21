@@ -617,10 +617,14 @@ def npdauser_pdu_update(request, pk):
         # cannot delete the primary employer but can set another employer as primary first and then delete the employer
         # scope to the selected user's own employer rows to prevent an IDOR where
         # an arbitrary organisation_employer_id could delete any user's affiliation
-        employer_to_delete = OrganisationEmployer.objects.filter(
-            pk=request.POST.get("organisation_employer_id"),
-            npda_user=selected_npda_user,
-        ).select_related("paediatric_diabetes_unit").first()
+        employer_to_delete = (
+            OrganisationEmployer.objects.filter(
+                pk=request.POST.get("organisation_employer_id"),
+                npda_user=selected_npda_user,
+            )
+            .select_related("paediatric_diabetes_unit")
+            .first()
+        )
 
         if employer_to_delete is not None and not (
             request.user.is_superuser
@@ -637,10 +641,14 @@ def npdauser_pdu_update(request, pk):
     elif request.POST.get("update") == "update":
         # set the selected employer as the primary employer. Reset all other employers to False before setting the selected employer to True since only one employer can be primary
         # scope to the selected user's own employer rows to prevent an IDOR
-        selected_employer = OrganisationEmployer.objects.filter(
-            pk=request.POST.get("organisation_employer_id"),
-            npda_user=selected_npda_user,
-        ).select_related("paediatric_diabetes_unit").get()
+        selected_employer = (
+            OrganisationEmployer.objects.filter(
+                pk=request.POST.get("organisation_employer_id"),
+                npda_user=selected_npda_user,
+            )
+            .select_related("paediatric_diabetes_unit")
+            .get()
+        )
 
         if not (
             request.user.is_superuser
