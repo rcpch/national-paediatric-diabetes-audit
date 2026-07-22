@@ -30,6 +30,8 @@ from django.utils import timezone
 from project.constants.user import (
     AUDIT_CENTRE_COORDINATOR,
     AUDIT_CENTRE_READER,
+    DR,
+    MR,
     RCPCH_AUDIT_TEAM,
     TRUST_AUDIT_TEAM_COORDINATOR_ACCESS,
 )
@@ -2132,4 +2134,144 @@ def test_audit_team_member_cannot_reset_two_factor_auth_for_superuser(
 
     assert victim_superuser.totpdevice_set.exists(), (
         "Superuser should still have a TOTP device for 2FA"
+    )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "field, new_value, expected_value",
+    [
+        pytest.param("first_name", "Pwned", "Victim", id="first_name"),
+        pytest.param("surname", "Pwned", "Reader", id="surname"),
+        pytest.param("title", DR, MR, id="title"),
+    ],
+)
+def test_coordinator_cannot_change_unrestricted_fields_for_user_with_multiple_pdus(
+    client: Client,
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    field,
+    new_value,
+    expected_value,
+):
+    """A coordinator sharing only one PDU with a victim should not be able to
+    edit the victim's unrestricted fields (name, title) via the update form.
+
+    `role` and `email` are already gated by `get_restricted_fields`; the
+    remaining editable fields are not, so a coordinator who shares only one of
+    the victim's PDUs can mutate them. See security review finding M7.
+    """
+    malicious_coordinator = NPDAUserFactory(
+        first_name="Malicious",
+        surname="Coordinator",
+        role=AUDIT_CENTRE_COORDINATOR,
+        is_active=True,
+        is_staff=False,
+        is_rcpch_audit_team_member=False,
+        is_rcpch_staff=False,
+        groups=[test_user_audit_centre_coordinator_data.group_name],
+        organisation_employers=["PZ999"],
+    )
+    victim_reader = NPDAUserFactory(
+        first_name="Victim",
+        surname="Reader",
+        role=AUDIT_CENTRE_READER,
+        is_active=True,
+        is_staff=False,
+        is_rcpch_audit_team_member=False,
+        is_rcpch_staff=False,
+        groups=[test_user_audit_centre_reader_data.group_name],
+        organisation_employers=["PZ999", "PZ001"],
+    )
+
+    # Set a known starting value for the field under test
+    setattr(victim_reader, field, expected_value)
+    victim_reader.save()
+
+    client = login_and_verify_user(client, malicious_coordinator)
+
+    # Submit the full form, changing only the field under test
+    form_data = {
+        "first_name": victim_reader.first_name,
+        "surname": victim_reader.surname,
+        "email": victim_reader.email,
+        "role": victim_reader.role,
+    }
+    form_data[field] = new_value
+
+    url = reverse("npdauser-update", kwargs={"pk": victim_reader.pk})
+    client.post(url, form_data)
+
+    victim_reader.refresh_from_db()
+    assert getattr(victim_reader, field) == expected_value, (
+        f"Coordinator sharing only one PDU should not be able to change the {field} "
+        "of a user who is also a member of a different PDU."
+    )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "field, new_value",
+    [
+        pytest.param("first_name", "Updated", id="first_name"),
+        pytest.param("surname", "Updated", id="surname"),
+        pytest.param("title", DR, id="title"),
+    ],
+)
+def test_coordinator_can_change_unrestricted_fields_when_sharing_exactly_same_pdus(
+    client: Client,
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    field,
+    new_value,
+):
+    """Happy path counterpart to the M7 test above.
+
+    A coordinator who shares exactly the same PDU assignments as the victim
+    (including the multi-PDU case) should be able to edit the victim's
+    unrestricted fields (name, title) via the update form.
+    """
+    coordinator = NPDAUserFactory(
+        first_name="Legitimate",
+        surname="Coordinator",
+        role=AUDIT_CENTRE_COORDINATOR,
+        is_active=True,
+        is_staff=False,
+        is_rcpch_audit_team_member=False,
+        is_rcpch_staff=False,
+        groups=[test_user_audit_centre_coordinator_data.group_name],
+        organisation_employers=["PZ999", "PZ001"],
+    )
+    victim_reader = NPDAUserFactory(
+        first_name="Victim",
+        surname="Reader",
+        role=AUDIT_CENTRE_READER,
+        is_active=True,
+        is_staff=False,
+        is_rcpch_audit_team_member=False,
+        is_rcpch_staff=False,
+        groups=[test_user_audit_centre_reader_data.group_name],
+        organisation_employers=["PZ999", "PZ001"],
+    )
+
+    client = login_and_verify_user(client, coordinator)
+
+    # Submit the full form, changing only the field under test
+    form_data = {
+        "first_name": victim_reader.first_name,
+        "surname": victim_reader.surname,
+        "email": victim_reader.email,
+        "role": victim_reader.role,
+    }
+    form_data[field] = new_value
+
+    url = reverse("npdauser-update", kwargs={"pk": victim_reader.pk})
+    response = client.post(url, form_data)
+
+    victim_reader.refresh_from_db()
+    assert getattr(victim_reader, field) == new_value, (
+        f"Coordinator sharing exactly the same PDUs should be able to change the {field} "
+        "of a user with the same PDU assignments."
     )
