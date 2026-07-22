@@ -391,9 +391,8 @@ CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 
 # Required for STS to work - see https://docs.djangoproject.com/en/5.2/ref/middleware/#http-strict-transport-security
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-SECURE_HSTS_SECONDS = os.environ.get("SECURE_HSTS_SECONDS")
-SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get("SECURE_HSTS_INCLUDE_SUBDOMAINS")
-SECURE_HSTS_PRELOAD = os.environ.get("SECURE_HSTS_PRELOAD")
+SECURE_HSTS_SECONDS = 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = "True"
 
 ENABLE_REQUEST_LOGGING = os.getenv("ENABLE_REQUEST_LOGGING", "False") == "True"
 
