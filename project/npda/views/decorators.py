@@ -19,12 +19,12 @@ def login_and_otp_required():
         # Then, ensure 2fa verified
         user = request.user
         # Bypass 2fa if local dev, with warning message
-        if settings.DEBUG and user.is_authenticated:
+        if settings.LOCAL_DEV_BYPASS_2FA_AND_CAPTCHA and user.is_authenticated:
             logger.warning(
-                "User %s has bypassed 2FA for %s as settings.DEBUG is %s",
+                "User %s has bypassed 2FA for %s as settings.LOCAL_DEV_BYPASS_2FA_AND_CAPTCHA is %s",
                 user,
                 view,
-                settings.DEBUG,
+                settings.LOCAL_DEV_BYPASS_2FA_AND_CAPTCHA,
             )
             return True
 

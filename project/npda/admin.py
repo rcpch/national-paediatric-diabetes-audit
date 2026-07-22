@@ -19,7 +19,9 @@ from .models import (
 
 class NPDAAdminSite(AdminSiteOTPRequiredMixin, admin.AdminSite):
     def has_permission(self, request):
-        if settings.DEBUG and (request.user.is_superuser or request.user.is_staff):
+        if settings.LOCAL_DEV_BYPASS_2FA_AND_CAPTCHA and (
+            request.user.is_superuser or request.user.is_staff
+        ):
             return True
 
         return super().has_permission(request)

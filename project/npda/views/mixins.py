@@ -21,7 +21,7 @@ class LoginAndOTPRequiredMixin(AccessMixin):
     """
     Mixin that ensures the user is logged in and has verified via OTP.
 
-    Bypassed in local development is user.is_superuser AND settings.DEBUG==True.
+    Bypassed in local development if settings.LOCAL_DEV_BYPASS_2FA_AND_CAPTCHA==True.
     """
 
     def dispatch(self, request, *args, **kwargs):
@@ -30,13 +30,13 @@ class LoginAndOTPRequiredMixin(AccessMixin):
         if not request.user.is_authenticated:
             return self.handle_no_permission()
 
-        # Check if the user is superuser and bypass 2FA in debug mode
-        if settings.DEBUG and request.user.is_authenticated:
+        # Bypass 2FA in local development if enabled
+        if settings.LOCAL_DEV_BYPASS_2FA_AND_CAPTCHA and request.user.is_authenticated:
             logger.warning(
-                "User %s has bypassed 2FA for %s as settings.DEBUG is %s and user has role %s and is superuser status: %s",
+                "User %s has bypassed 2FA for %s as settings.LOCAL_DEV_BYPASS_2FA_AND_CAPTCHA is %s and user has role %s and is superuser status: %s",
                 request.user,
                 self.__class__.__name__,
-                settings.DEBUG,
+                settings.LOCAL_DEV_BYPASS_2FA_AND_CAPTCHA,
                 request.user.get_role_display(),
                 request.user.is_superuser,
             )
