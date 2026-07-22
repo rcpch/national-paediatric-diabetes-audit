@@ -17,7 +17,6 @@ from datetime import timedelta
 from pathlib import Path
 
 #  django imports
-from django.core.management.utils import get_random_secret_key
 from dotenv import load_dotenv
 
 # Has to be before logging_settings as that reads ENABLE_REQUEST_LOGGING
@@ -49,7 +48,7 @@ CSRF_TRUSTED_ORIGINS = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") +
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("NPDA_DJANGO_SECRET", get_random_secret_key())
+SECRET_KEY = os.getenv("NPDA_DJANGO_SECRET")
 
 # This is the token required for getting deprivation quintiles from the RCPCH Census Platform
 RCPCH_CENSUS_PLATFORM_URL = os.getenv("RCPCH_CENSUS_PLATFORM_URL")
