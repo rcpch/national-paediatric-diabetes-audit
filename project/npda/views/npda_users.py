@@ -566,7 +566,10 @@ class NPDAUserUpdateView(
         if request.user.is_superuser or request.user.is_rcpch_audit_team_member:
             return super().dispatch(request, *args, **kwargs)
 
-        if request.method == "GET" and self.user_shares_at_least_one_pdu_with_requesting_user():
+        if (
+            request.method == "GET"
+            and self.user_shares_at_least_one_pdu_with_requesting_user()
+        ):
             return super().dispatch(request, *args, **kwargs)
 
         if self.user_in_exactly_the_same_pdus_as_requesting_user():
