@@ -409,7 +409,7 @@ SILKY_AUTHORISATION = True  # User must have permissions
 def silky_permissions(user):
     if user.is_superuser:
         # 2fa bypass for local dev
-        if DEBUG and user.is_authenticated:
+        if LOCAL_DEV_BYPASS_2FA_AND_CAPTCHA and user.is_authenticated:
             return True
 
         # 2fa enabled
