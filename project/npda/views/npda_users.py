@@ -894,7 +894,7 @@ class RCPCHLoginView(TwoFactorLoginView):
     def post(self, *args, **kwargs):
         # In local development, override the token workflow, just sign in
         # the user without 2FA token
-        if settings.DEBUG:
+        if settings.LOCAL_DEV_BYPASS_2FA_AND_CAPTCHA:
             user = authenticate(
                 self.request,
                 username=self.request.POST.get("auth-username"),
