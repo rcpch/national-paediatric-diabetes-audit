@@ -51,7 +51,7 @@ watchdog==6.0.0
 # code linting and formatting
 autopep8==2.0.4
 djlint==1.36.3
-ruff>=0.4.0
+ruff==0.16.1
 
 # testing and code analysis
 coverage==7.13.5

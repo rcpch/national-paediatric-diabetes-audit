@@ -130,7 +130,7 @@ visits = fake_patient_creator.build_fake_visits(
     age_range=AgeRange.AGE_0_4,
     hb1ac_target_range=HbA1cTargetRange.WELL_ABOVE,
     visit_types=VISIT_TYPES,
-    is_valid=True  # Customise additional fields if necessary
+    is_valid=True,  # Customise additional fields if necessary
 )
 ```
 
@@ -169,7 +169,7 @@ saved_patients = fake_patient_creator.create_and_save_fake_patients(
     n=100,
     age_range=AgeRange.AGE_25_34,
     visit_types=[VisitType.CLINIC, VisitType.ANNUAL_REVIEW],
-    postcode="fake_postcode"  # Customise as needed
+    postcode="fake_postcode",  # Customise as needed
 )
 ```
 
@@ -184,6 +184,7 @@ import pytest
 from datetime import date
 from app.models import AgeRange, VisitType, HbA1cTargetRange
 from app.utils import FakePatientCreator, get_audit_period_for_date
+
 
 @pytest.mark.django_db
 def test_example_use_fake_patient_creator():
