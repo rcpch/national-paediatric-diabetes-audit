@@ -104,9 +104,7 @@ class KPIResult:
 ### Example usage
 
 ```python
-class PatientVisitsListView(
-    ...
-):
+class PatientVisitsListView(...):
     ...
 
     def get_context_data(self, **kwargs):
