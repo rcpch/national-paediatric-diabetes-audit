@@ -924,22 +924,6 @@ class RCPCHLoginView(TwoFactorLoginView):
         return reverse(settings.LOGIN_REDIRECT_URL)
 
     def _done(self, response, user):
-        # time since last set password
-        delta = timezone.now() - user.password_last_set
-        # if user has not renewed password in last 90 days, redirect to login page
-        password_reset_date = user.password_last_set + timezone.timedelta(days=90)
-        if (
-            user.is_active
-            and (password_reset_date <= timezone.now())
-            and user.is_superuser is False
-        ):
-            messages.add_message(
-                self.request,
-                messages.ERROR,
-                "Your password has expired. Please reset it.",
-            )
-            return redirect(reverse("password_reset"))
-
         last_logged_in = VisitActivity.objects.filter(
             activity=1, npdauser=user
         ).order_by("-activity_datetime")[:2]
@@ -947,7 +931,7 @@ class RCPCHLoginView(TwoFactorLoginView):
             messages.add_message(
                 self.request,
                 messages.INFO,
-                f"You are now logged in as {user.email}. You last logged in at {timezone.localtime(last_logged_in[1].activity_datetime).strftime('%H:%M %p on %A, %d %B %Y')} from {last_logged_in[1].ip_address}.\nYou have {90 - delta.days} days remaining until your password needs resetting.",
+                f"You are now logged in as {user.email}. You last logged in at {timezone.localtime(last_logged_in[1].activity_datetime).strftime('%H:%M %p on %A, %d %B %Y')} from {last_logged_in[1].ip_address}.",
             )
         else:
             messages.add_message(
