@@ -22,4 +22,7 @@ docker compose run --rm django pytest -v --create-db --ignore=project/npda/tests
 # Run csv upload tests separately so each batch starts with a clean process
 docker compose run --rm django pytest -v --create-db project/npda/tests/test_csv_upload.py
 
+# Check the build for the MkDocs static site
+docker compose run --rm mkdocs mkdocs build --config-file documentation/mkdocs.yml
+
 docker compose down -v
