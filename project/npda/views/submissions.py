@@ -477,6 +477,13 @@ def upload_csv(request, audit_period, pdu):
                 io.BytesIO(user_csv_bytes), dataset_year=dataset_year
             )
         except ValueError as e:
+            # Deliberately log at error to trigger an admin email so we can keep an eye on issues
+            logger.error(
+                "CSV upload failed due to invalid CSV format. pz_code=%s error=%s",
+                pz_code,
+                str(e),
+            )
+
             return upload_error(f"Invalid CSV format: {e}")
 
         missing_columns = parsed_csv.missing_columns
