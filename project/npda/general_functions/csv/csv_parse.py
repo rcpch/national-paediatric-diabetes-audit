@@ -195,6 +195,29 @@ def csv_parse(csv_file, dataset_year=2021):
 
         raise ValueError(user_error_message)
 
+    # Reject the upload if any identifier value contains characters other than
+    # digits, whitespace, or dashes. Spaced/dashed NHS numbers (e.g.
+    # "719 573 0220", "719-573 0220") are still accepted because they are
+    # normalised downstream; values like "fishfinger" or "abc123" are not.
+    invalid_identifier_rows = [
+        str(i)
+        for i, value in df[identifier_column].items()
+        if re.fullmatch(r"[\d\s-]+", str(value)) is None
+    ]
+    if invalid_identifier_rows:
+        if len(invalid_identifier_rows) == 1:
+            user_error_message = (
+                f"Row {invalid_identifier_rows[0]} has an invalid {identifier_column}. "
+                f"It must contain numbers, spaces and dashes only. Please correct it and upload the file again."
+            )
+        else:
+            user_error_message = (
+                f"{len(invalid_identifier_rows)} rows have an invalid {identifier_column}. "
+                f"It must contain numbers, spaces and dashes only. Please correct them and upload the file again. "
+                f"The rows with an invalid {identifier_column} are: {','.join(invalid_identifier_rows)}"
+            )
+        raise ValueError(user_error_message)
+
     # Duplicate columns appear in the dataframe as XYZ.1, XYZ.2 etc
     duplicate_columns = []
 
