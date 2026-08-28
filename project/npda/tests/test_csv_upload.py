@@ -1660,9 +1660,10 @@ def test_both_identifier_columns_causes_an_error(
 def test_non_numeric_identifier_is_rejected(
     test_rcpch_user, one_patient_two_visits, client, tmp_path
 ):
-    """Identifiers may contain digits and whitespace only. Anything else (e.g.
-    'fishfinger', '12-34') must fully reject the upload, not just record a
-    per-row error."""
+    """Identifiers may contain digits, whitespace and dashes only. Anything
+    else (e.g. 'fishfinger', 'abc123') must fully reject the upload, not just
+    record a per-row error.
+    """
     df = one_patient_two_visits.copy()
     df["NHS Number"] = ["719 573 0220", "fishfinger"]
 
@@ -1694,19 +1695,21 @@ def test_non_numeric_identifier_is_rejected(
 
 
 @pytest.mark.django_db
-def test_spaced_nhs_number_is_accepted(
+def test_spaced_or_dashed_nhs_number_is_accepted(
     test_rcpch_user, one_patient_two_visits, client, tmp_path
 ):
-    """A spaced NHS number such as '719 573 0220' is valid and must not be
-    rejected by the non-numeric identifier check (it is normalised downstream)."""
+    """Spaced and dashed NHS numbers (e.g. '719 573 0220', '719-573 0220') are
+    valid and must not be rejected by the non-numeric identifier check (they
+    are normalised downstream by NHSNumberField).
+    """
     df = one_patient_two_visits.copy()
-    df["NHS Number"] = ["719 573 0220", "653 765 1948"]
+    df["NHS Number"] = ["719 573 0220", "719-573 0220"]
 
     parsed = read_csv_from_str(
         df.to_csv(index=False, date_format="%d/%m/%Y"), dataset_year=2021
     )
     assert parsed.identifier_column == "NHS Number"
-    assert list(parsed.df["NHS Number"]) == ["719 573 0220", "653 765 1948"]
+    assert list(parsed.df["NHS Number"]) == ["719 573 0220", "719-573 0220"]
 
 
 @pytest.mark.django_db
