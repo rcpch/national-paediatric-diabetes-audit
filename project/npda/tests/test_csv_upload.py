@@ -1657,6 +1657,59 @@ def test_both_identifier_columns_causes_an_error(
 
 
 @pytest.mark.django_db
+def test_non_numeric_identifier_is_rejected(
+    test_rcpch_user, one_patient_two_visits, client, tmp_path
+):
+    """Identifiers may contain digits and whitespace only. Anything else (e.g.
+    'bartyparty', '12-34') must fully reject the upload, not just record a
+    per-row error."""
+    df = one_patient_two_visits.copy()
+    df["NHS Number"] = ["719 573 0220", "bartyparty"]
+
+    tmp_csv_path = tmp_path / "dummy_sheet_test.csv"
+    df.to_csv(tmp_csv_path, index=False, date_format="%d/%m/%Y")
+
+    client = login_and_verify_user(client, test_rcpch_user)
+
+    url = reverse(
+        "pdu-upload-csv",
+        kwargs={"pz_code": ALDER_HEY_PZ_CODE, "audit_period": "2025-2026"},
+    )
+
+    with open(tmp_csv_path, "rb") as csv_file:
+        response = client.post(url, {"csv_upload": csv_file}, format="multipart")
+
+    assert response.status_code == 302
+    assert response.url == url
+
+    error_messages = list(get_messages(response.wsgi_request))
+    assert len(error_messages) == 1
+    assert error_messages[0].tags == "error"
+
+    message = error_messages[0].message
+    assert "Invalid CSV format:" in message
+    assert "invalid NHS Number" in message
+    # The offending row (row 1) is reported
+    assert "1" in message
+
+
+@pytest.mark.django_db
+def test_spaced_nhs_number_is_accepted(
+    test_rcpch_user, one_patient_two_visits, client, tmp_path
+):
+    """A spaced NHS number such as '719 573 0220' is valid and must not be
+    rejected by the non-numeric identifier check (it is normalised downstream)."""
+    df = one_patient_two_visits.copy()
+    df["NHS Number"] = ["719 573 0220", "653 765 1948"]
+
+    parsed = read_csv_from_str(
+        df.to_csv(index=False, date_format="%d/%m/%Y"), dataset_year=2021
+    )
+    assert parsed.identifier_column == "NHS Number"
+    assert list(parsed.df["NHS Number"]) == ["719 573 0220", "653 765 1948"]
+
+
+@pytest.mark.django_db
 def test_dates_with_short_year(one_patient_two_visits):
     csv = one_patient_two_visits.to_csv(index=False, date_format="%d/%m/%y")
     df = read_csv_from_str(csv).df
