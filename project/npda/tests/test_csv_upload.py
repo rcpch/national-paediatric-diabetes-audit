@@ -1661,10 +1661,10 @@ def test_non_numeric_identifier_is_rejected(
     test_rcpch_user, one_patient_two_visits, client, tmp_path
 ):
     """Identifiers may contain digits and whitespace only. Anything else (e.g.
-    'bartyparty', '12-34') must fully reject the upload, not just record a
+    'fishfinger', '12-34') must fully reject the upload, not just record a
     per-row error."""
     df = one_patient_two_visits.copy()
-    df["NHS Number"] = ["719 573 0220", "bartyparty"]
+    df["NHS Number"] = ["719 573 0220", "fishfinger"]
 
     tmp_csv_path = tmp_path / "dummy_sheet_test.csv"
     df.to_csv(tmp_csv_path, index=False, date_format="%d/%m/%Y")

@@ -197,7 +197,7 @@ def csv_parse(csv_file, dataset_year=2021):
 
     # Reject the upload if any identifier value contains characters other than
     # digits or whitespace. Spaced NHS numbers (e.g. "719 573 0220") are still
-    # accepted because they are normalised downstream; values like "bartyparty"
+    # accepted because they are normalised downstream; values like "fishfinger"
     # or "12-34" are not.
     invalid_identifier_rows = [
         str(i)
