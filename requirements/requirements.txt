@@ -73,7 +73,7 @@ bump2version
 
 # Further information is at https://squidfunk.github.io/mkdocs-material/insiders/getting-started/
 
-mkdocs-material==9.5.13
+mkdocs-material==9.7.7
 mkdocs-git-committers-plugin-2==2.3.0 # displays authors at the bottom of the page
 mkdocs-git-revision-date-localized-plugin==1.2.4 # displays last edit date at the bottom of the page
 mkdocs-macros-plugin==1.0.5 # enables 'foldable' admonition text (used for large code blocks)
