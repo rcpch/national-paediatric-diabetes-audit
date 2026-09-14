@@ -351,7 +351,7 @@ async def csv_upload(
             patient = await sync_to_async(lambda: patient_form.save(commit=False))()
 
             # Throw database level issues not covered by the form (eg missing both nhs_number and urn)
-            await sync_to_async(patient.clean)()
+            patient.clean()
             await patient.asave()
 
             if patient:
@@ -416,7 +416,7 @@ async def csv_upload(
                 )
 
                 # Pull through cleaned_data
-                await sync_to_async(visit_form.is_valid)()
+                visit_form.is_valid()
 
                 visit_forms.append((visit_form, int(row["row_index"])))
 
