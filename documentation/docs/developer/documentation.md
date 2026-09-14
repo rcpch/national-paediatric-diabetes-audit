@@ -48,10 +48,6 @@ On top of the basic features of Markdown, Zensical adds all the nice website app
 
 A good overview can be had from looking at the [Zensical documentation](https://zensical.org/docs/) and from copying existing code in our documentation that does what you need.
 
-### MkDocs
-
-If you can't find functionality documented in the Zensical site, this is usually because it is functionality which comes from MkDocs, the underlying framework, itself. See the [MkDocs](https://www.mkdocs.org/user-guide/writing-your-docs/#writing-with-markdown) site for these features.
-
 ### Pymdownx extensions
 
 Some of the features such as [Keys](https://zensical.org/docs/) come from extensions like [Pymdownx](https://facelessuser.github.io/pymdown-extensions/extensions/arithmatex/)
