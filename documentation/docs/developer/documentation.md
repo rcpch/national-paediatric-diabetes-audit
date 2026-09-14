@@ -65,10 +65,6 @@ If you are not a member of the RCPCH Developer team, you many not have commit ri
 * Go to your fork of the repository on GitHub and click the 'Pull Request' button.
 * Submit a pull request from your fork to the **`development`** branch of the main repository.
 
-## Deployment (for RCPCH Developer team)
-
-See [Deployment](./deployment.md) for details of how the documentation site is deployed.
-
 ## NOT RECOMMENDED: Setting up a Python and Pyenv development environment for the NPDA documentation site
 
 !!! warning "Use the Dockerised development environment if you can"
