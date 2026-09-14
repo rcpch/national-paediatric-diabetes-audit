@@ -8,7 +8,7 @@ DOCKER_BUILDKIT=0 docker compose build django
 # Lint checks (fails fast if code is not clean)
 s/lint --check
 
-# Only services needed for tests (avoids running flower/mkdocs/etc)
+# Only services needed for tests (avoids running flower/zensical/etc)
 DOCKER_BUILDKIT=0 docker compose up -d postgis redis
 
 # Regenerate static files manifest in the mounted volume (volume overrides the
@@ -22,7 +22,7 @@ docker compose run --rm django pytest -v --create-db --ignore=project/npda/tests
 # Run csv upload tests separately so each batch starts with a clean process
 docker compose run --rm django pytest -v --create-db project/npda/tests/test_csv_upload.py
 
-# Check the build for the MkDocs static site
-docker compose run --rm mkdocs mkdocs build --config-file documentation/mkdocs.yml
+# Check the build for the Zensical static site (auto-discovers ./mkdocs.yml at the repo root)
+docker compose run --rm zensical zensical build
 
 docker compose down -v

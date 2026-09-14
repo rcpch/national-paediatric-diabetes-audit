@@ -11,7 +11,7 @@ RUN apt-get update &&\
     apt-get install -y  libz-dev libjpeg-dev libfreetype6-dev\
     && apt-get install -y nodejs npm
 
-# Extra packages required for Material for MkDocs plugins (dependency for git and pdf plugins)
+# Extra packages required for CAPTCHA, Zensical (successor to Material for MkDocs) plugins
 RUN apt install -y git python3-cffi python3-brotli libpango-1.0-0 libpangoft2-1.0-0
 
 # Add requirements
