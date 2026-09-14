@@ -60,6 +60,7 @@ pytest-factoryboy==2.8.1
 pytest-asyncio==1.3.0
 freezegun==1.5.1
 pytest==9.0.3
+beautifulsoup4==4.15.0
 
 # versioning
 bump2version
