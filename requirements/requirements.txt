@@ -60,24 +60,23 @@ pytest-factoryboy==2.8.1
 pytest-asyncio==1.3.0
 freezegun==1.5.1
 pytest==9.0.3
+beautifulsoup4==4.15.0
 
 # versioning
 bump2version
 
-# DOCUMENTATION - MATERIAL FOR MKDOCS INSIDERS
-# IMPORTANT: This project uses Material for MkDocs **INSIDERS** Edition.
-# To install this you will need a GitHub token which is available (for RCPCH team only)
-# in our .env files
+# Documentation site theme
+# Ported from Material for MkDocs to Zensical (the successor, built by the same
+# team). See https://zensical.org/docs/get-started/
+zensical==0.0.59
 
-# git+https://${MATERIAL_FOR_MKDOCS_INSIDERS_TOKEN}@github.com/squidfunk/mkdocs-material-insiders.git
-
-# Further information is at https://squidfunk.github.io/mkdocs-material/insiders/getting-started/
-
-mkdocs-material==9.5.13
-mkdocs-git-committers-plugin-2==2.3.0 # displays authors at the bottom of the page
-mkdocs-git-revision-date-localized-plugin==1.2.4 # displays last edit date at the bottom of the page
-mkdocs-macros-plugin==1.0.5 # enables 'foldable' admonition text (used for large code blocks)
-mkdocs-with-pdf==0.9.3 # PDF export feature
+# The following MkDocs plugins are NOT yet compatible with Zensical and are
+# suspended pending Zensical's module system. Re-enable each when the
+# corresponding Zensical backlog issue is resolved.
+# mkdocs-git-committers-plugin-2==2.3.0            # https://github.com/zensical/backlog/issues/17
+# mkdocs-git-revision-date-localized-plugin==1.2.4 # https://github.com/zensical/backlog/issues/18
+# mkdocs-macros-plugin==1.0.5                      # replaced by zensical.extensions.macros (built into Zensical >=0.0.40)
+# mkdocs-with-pdf==0.9.3                          # https://github.com/zensical/backlog/issues/25
 
 # for colored logs
 colorlog==6.8.2

@@ -54,7 +54,7 @@ Which should result in something like:
 NAME                                IMAGE                             COMMAND                  SERVICE             CREATED             STATUS              PORTS
 npda-caddy-1          caddy                             "caddy run --config …"   caddy               27 minutes ago      Up 19 minutes       0.0.0.0:80->80/tcp, 0.0.0.0:443->443/tcp, 443/udp, 2019/tcp
 npda-django-1         npda-django         "sh -c 'python manag…"   django              27 minutes ago      Up 19 minutes
-npda-mkdocs-1         npda-mkdocs         "sh -c 'mkdocs build…"   mkdocs              27 minutes ago      Up 19 minutes       0.0.0.0:8001->8001/tcp
+npda-zensical-1       npda-zensical       "sh -c 'zensical build…"   zensical            27 minutes ago      Up 19 minutes       0.0.0.0:8007->8007/tcp
 npda-postgis-1        postgis/postgis:15-3.3            "docker-entrypoint.s…"   postgis             27 minutes ago      Up 19 minutes       5432/tcp
 ```
 

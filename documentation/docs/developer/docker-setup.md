@@ -26,7 +26,7 @@ cd national-paediatric-diabetes-audit
 ```
 
 !!! warning "Windows Setup"
-    **If you are on Windows**, after installing Docker and cloning the repository, please now skip to the [(Windows) Setup for development using Docker Compose](./docker-setup.md#windows-setup-for-development-using-docker-compose) section.
+    **If you are on Windows**, after installing Docker and cloning the repository, please now skip to the [(Windows) Setup for development using Docker Compose](./docker-setup-windows.md) section.
 
 ### Ensure you are on the default `development` branch
 

@@ -4,6 +4,13 @@ site_description: RCPCH National Paediatric Diabetes Audit - Documentation Site
 site_author: The Royal College of Paediatrics and Child Health
 site_url: !ENV DOCS_URL
 
+# docs live under documentation/docs and the built site is written to ./staticdocs
+# (served in production by Caddy from /srv/staticdocs -> /docs, see Caddyfile).
+# The config lives at the repo root so that `site_dir` is within Zensical's
+# project root (the repo root) and Zensical auto-discovers ./mkdocs.yml.
+docs_dir: documentation/docs
+site_dir: staticdocs
+
 # copyright information which is shown in the footer
 copyright: Copyright &copy; 2022-23 Royal College of Paediatrics and Child Health (RCPCH)
 
@@ -12,16 +19,15 @@ repo_url: https://github.com/rcpch/national-paediatric-diabetes-audit
 repo_name: rcpch/national-paediatric-diabetes-audit
 edit_uri: blob/development/documentation/docs
 
-# `mkdocs serve` serves the documentation at custom port (to avoid clashing with other services we commonly run)
+# `zensical serve` serves the documentation at custom port (to avoid clashing with other services we commonly run)
 dev_addr: "0.0.0.0:8007"
 
-# Specifies the destination directory in which to build the static site
-site_dir: ../staticdocs
-
 # theme settings, fonts, colours
+# Zensical is the successor to Material for MkDocs, built by the same team.
+# See https://zensical.org/docs/get-started/
 theme:
+  variant: classic
   favicon: _assets/_images/npda-_assets/_images/rcpch_logo.png.png
-  name: material
   #custom_dir: rcpch-theme
   features:
     - content.action.edit # explicitly adds edit button (Material4MkDocs9.0)
@@ -50,50 +56,36 @@ theme:
   # favicon: _assets/_images/dynamic-child-favicon.png
   logo: _assets/_images/rcpch_logo.png
 
-# mkdocs plugins
+# Zensical plugins
+# NOTE: several MkDocs plugins below are suspended pending Zensical's module
+# system. Re-enable each once the corresponding Zensical backlog issue lands.
 plugins:
-  - git-committers:
-      repository: rcpch/national-paediatric-diabetes-audit
-      branch: live
-      enabled: !ENV [ENABLE_GIT_COMMITTERS, false] # makes Git Committers optional
-  # - git-revision-date-localized:
-  #     enable_creation_date: true
   - search
-  - with-pdf:
-      back_cover: false
-      cover_title: RCPCH National Paediatric Diabetes Audit Documentation
-      cover_subtitle: User, Clinician, Admin and Developer Manual
-      #custom_template_path: TEMPLATES PATH
-      #toc_title: TOC TITLE TEXT
-      #heading_shift: false
-      #toc_level: 3
-      #ordered_chapter_level: 2
-      #excludes_children:
-      exclude_pages:
-        - 'home/download/'
-      #convert_iframe:
-      #    - src: IFRAME SRC
-      #      img: POSTER IMAGE URL
-      #      text: ALTERNATE TEXT
-      #    - src: ...
-      #two_columns_level: 3
-      #render_js: true
-      #headless_chrome_path: headless-chromium
-      output_path: pdf/rcpch-npda-full-documentation.pdf
-      enabled_if_env: ENABLE_PDF_EXPORT
-      #debug_html: true
-      #show_anchors: true
-      #verbose: true
+  # - git-committers:       # https://github.com/zensical/backlog/issues/17
+  #     repository: rcpch/national-paediatric-diabetes-audit
+  #     branch: live
+  #     enabled: !ENV [ENABLE_GIT_COMMITTERS, false] # makes Git Committers optional
+  # - git-revision-date-localized:  # https://github.com/zensical/backlog/issues/18
+  #     enable_creation_date: true
+  # - with-pdf:             # https://github.com/zensical/backlog/issues/25
+  #     back_cover: false
+  #     cover_title: RCPCH National Paediatric Diabetes Audit Documentation
+  #     cover_subtitle: User, Clinician, Admin and Developer Manual
+  #     exclude_pages:
+  #       - 'home/download/'
+  #     output_path: pdf/rcpch-npda-full-documentation.pdf
+  #     enabled_if_env: ENABLE_PDF_EXPORT
 
 # additional markdown features
 markdown_extensions:
   - abbr
   - admonition
   - attr_list
+  - md_in_html # insiders
   - pymdownx.highlight
   - pymdownx.emoji:
-      emoji_index: !!python/name:material.extensions.emoji.twemoji
-      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+      emoji_index: !!python/name:zensical.extensions.emoji.twemoji
+      emoji_generator: !!python/name:zensical.extensions.emoji.to_svg
   - pymdownx.inlinehilite
   - pymdownx.keys
   - pymdownx.snippets:
