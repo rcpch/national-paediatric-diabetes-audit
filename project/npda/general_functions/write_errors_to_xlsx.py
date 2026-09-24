@@ -13,12 +13,13 @@ from pandas.api.types import is_datetime64_any_dtype
 # import functions
 from project.npda.general_functions.csv.csv_parse import csv_read
 
-# import csv mappings
-from ...constants.csv_headings import csv_definition_for
 from ...constants import (
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
 )
+
+# import csv mappings
+from ...constants.csv_headings import csv_definition_for
 
 
 def write_errors_to_xlsx(
@@ -36,14 +37,14 @@ def write_errors_to_xlsx(
     xlsx_file = io.BytesIO()
 
     # Get original data
-    df = csv_read(
-        io.BytesIO(initial_bytes=original_csv_file_bytes)
-    )
+    df = csv_read(io.BytesIO(initial_bytes=original_csv_file_bytes))
 
     identifier_england = UNIQUE_IDENTIFIER_ENGLAND[0]["heading"]
     identifier_jersey = UNIQUE_IDENTIFIER_JERSEY[0]["heading"]
 
-    identifier_column = identifier_jersey if identifier_jersey in df.columns else identifier_england
+    identifier_column = (
+        identifier_jersey if identifier_jersey in df.columns else identifier_england
+    )
 
     # Convert datetime columns to date (strip time)
     df = strip_time_in_dataframe(df)

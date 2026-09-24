@@ -166,7 +166,9 @@ def csv_parse(csv_file, dataset_year=2021):
             "This file appears to be using the 2021 template but you have selected 2026 as the dataset year. Please check your file and upload again."
         )
 
-    identifier_column = identifier_jersey if identifier_jersey in df.columns else identifier_england
+    identifier_column = (
+        identifier_jersey if identifier_jersey in df.columns else identifier_england
+    )
 
     _headings_list = [
         heading for heading in HEADINGS_LIST if heading != identifier_column
